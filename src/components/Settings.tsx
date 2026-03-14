@@ -1,0 +1,788 @@
+import React, { useState } from 'react';
+import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2 } from 'lucide-react';
+import { useSettings } from '../contexts/SettingsContext';
+import { useNotification } from '../contexts/NotificationContext';
+import { cn } from '../lib/utils';
+
+export function Settings() {
+  const { 
+    companyName, 
+    companyAddress,
+    slogan, 
+    printHeader,
+    printFooter,
+    printPhone,
+    printEmail,
+    printWebsite,
+    showPrintHeader,
+    showPrintPhone,
+    showPrintEmail,
+    showPrintWebsite,
+    showPrintFooter,
+    printSignature1,
+    printSignature2,
+    printSignature3,
+    showSignature1,
+    showSignature2,
+    showSignature3,
+    signatureAlignment,
+    showDeveloperContact,
+    notifications, 
+    features = [], 
+    updateSettings 
+  } = useSettings();
+  const { showNotification } = useNotification();
+  const [activeTab, setActiveTab] = useState('general');
+  
+  // Local state for form fields
+  const [localCompanyName, setLocalCompanyName] = useState(companyName);
+  const [localCompanyAddress, setLocalCompanyAddress] = useState(companyAddress);
+  const [localSlogan, setLocalSlogan] = useState(slogan);
+  const [localPrintHeader, setLocalPrintHeader] = useState(printHeader);
+  const [localPrintFooter, setLocalPrintFooter] = useState(printFooter);
+  const [localPrintPhone, setLocalPrintPhone] = useState(printPhone);
+  const [localPrintEmail, setLocalPrintEmail] = useState(printEmail);
+  const [localPrintWebsite, setLocalPrintWebsite] = useState(printWebsite);
+  const [localShowPrintHeader, setLocalShowPrintHeader] = useState(showPrintHeader);
+  const [localShowPrintPhone, setLocalShowPrintPhone] = useState(showPrintPhone);
+  const [localShowPrintEmail, setLocalShowPrintEmail] = useState(showPrintEmail);
+  const [localShowPrintWebsite, setLocalShowPrintWebsite] = useState(showPrintWebsite);
+  const [localShowPrintFooter, setLocalShowPrintFooter] = useState(showPrintFooter);
+  const [localPrintSignature1, setLocalPrintSignature1] = useState(printSignature1);
+  const [localPrintSignature2, setLocalPrintSignature2] = useState(printSignature2);
+  const [localPrintSignature3, setLocalPrintSignature3] = useState(printSignature3);
+  const [localShowSignature1, setLocalShowSignature1] = useState(showSignature1);
+  const [localShowSignature2, setLocalShowSignature2] = useState(showSignature2);
+  const [localShowSignature3, setLocalShowSignature3] = useState(showSignature3);
+  const [localSignatureAlignment, setLocalSignatureAlignment] = useState(signatureAlignment);
+  const [localShowDeveloperContact, setLocalShowDeveloperContact] = useState(showDeveloperContact);
+  const [localNotifications, setLocalNotifications] = useState(notifications);
+
+  const handleSaveGeneral = () => {
+    updateSettings({ 
+      companyName: localCompanyName, 
+      companyAddress: localCompanyAddress,
+      slogan: localSlogan 
+    });
+    showNotification(notifications.settingsUpdated);
+  };
+
+  const handleSavePrint = () => {
+    updateSettings({ 
+      printHeader: localPrintHeader, 
+      printFooter: localPrintFooter,
+      printPhone: localPrintPhone,
+      printEmail: localPrintEmail,
+      printWebsite: localPrintWebsite,
+      showPrintHeader: localShowPrintHeader,
+      showPrintPhone: localShowPrintPhone,
+      showPrintEmail: localShowPrintEmail,
+      showPrintWebsite: localShowPrintWebsite,
+      showPrintFooter: localShowPrintFooter,
+      printSignature1: localPrintSignature1,
+      printSignature2: localPrintSignature2,
+      printSignature3: localPrintSignature3,
+      showSignature1: localShowSignature1,
+      showSignature2: localShowSignature2,
+      showSignature3: localShowSignature3,
+      signatureAlignment: localSignatureAlignment as any,
+      showDeveloperContact: localShowDeveloperContact
+    });
+    showNotification(notifications.settingsUpdated);
+  };
+
+  const handleSaveNotifications = () => {
+    updateSettings({ notifications: localNotifications });
+    showNotification(notifications.settingsUpdated);
+  };
+
+  const toggleFeature = (id: string) => {
+    const updatedFeatures = features.map(f => f.id === id ? { ...f, enabled: !f.enabled } : f);
+    updateSettings({ features: updatedFeatures });
+    showNotification(notifications.settingsUpdated);
+  };
+
+  const tabs = [
+    { id: 'general', label: 'General', icon: SettingsIcon },
+    { id: 'print', label: 'Print Settings', icon: Printer },
+    { id: 'features', label: 'F11 Features', icon: Database },
+    { id: 'security', label: 'Security', icon: Shield },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
+    { id: 'backup', label: 'Backup & Export', icon: Cloud },
+    { id: 'integrations', label: 'Integrations', icon: Share2 },
+  ];
+
+  const shortcuts = [
+    { key: 'Alt + G', action: 'Go To Search' },
+    { key: 'Alt + C', action: 'Create Master' },
+    { key: 'Alt + A', action: 'Alter Master' },
+    { key: 'F1', action: 'Help' },
+    { key: 'F2', action: 'Change Date' },
+    { key: 'F3', action: 'Select Company' },
+    { key: 'F4', action: 'Contra Voucher' },
+    { key: 'F5', action: 'Payment Voucher' },
+    { key: 'F6', action: 'Receipt Voucher' },
+    { key: 'F7', action: 'Journal Voucher' },
+    { key: 'F8', action: 'Sales Voucher' },
+    { key: 'F9', action: 'Purchase Voucher' },
+    { key: 'Ctrl + P', action: 'Print' },
+    { key: 'Ctrl + E', action: 'Export' },
+  ];
+
+  return (
+    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="border-b border-border pb-4">
+          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">System Settings</h1>
+          <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Configure your ERP environment</p>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+          {/* Tabs */}
+          <div className="w-full lg:w-64 flex lg:flex-col overflow-x-auto no-scrollbar lg:overflow-visible gap-1 pb-2 lg:pb-0">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 text-[11px] uppercase tracking-widest transition-all ${
+                  activeTab === tab.id 
+                    ? 'bg-foreground text-background font-bold' 
+                    : 'text-gray-500 hover:bg-foreground/10 hover:text-foreground border border-transparent lg:border-none'
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                <span className="whitespace-nowrap">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 bg-card border border-border p-4 lg:p-8">
+            {activeTab === 'general' && (
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
+                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">Company Information</h3>
+                    <button 
+                      onClick={handleSaveGeneral}
+                      className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+                    >
+                      <Save className="w-3 h-3" /> Save Changes
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Company Name</label>
+                      <input 
+                        type="text" 
+                        value={localCompanyName || ''} 
+                        onChange={(e) => setLocalCompanyName(e.target.value)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Company Slogan</label>
+                      <input 
+                        type="text" 
+                        value={localSlogan || ''} 
+                        onChange={(e) => setLocalSlogan(e.target.value)}
+                        placeholder="e.g. Enterprise ERP Solution"
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Company Address</label>
+                      <textarea 
+                        value={localCompanyAddress || ''} 
+                        onChange={(e) => setLocalCompanyAddress(e.target.value)}
+                        rows={2}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground resize-none" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Financial Year Start</label>
+                      <input type="date" defaultValue="2024-04-01" className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Regional Settings</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Base Currency Symbol</label>
+                      <input type="text" defaultValue="৳" className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Timezone</label>
+                      <select className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground">
+                        <option>UTC+06:00 (Dhaka)</option>
+                        <option>UTC+05:30 (Kolkata)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'print' && (
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
+                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">Print Customization</h3>
+                    <button 
+                      onClick={handleSavePrint}
+                      className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+                    >
+                      <Save className="w-3 h-3" /> Save Changes
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] text-gray-500 uppercase">Default Print Header</label>
+                        <button 
+                          onClick={() => setLocalShowPrintHeader(!localShowPrintHeader)}
+                          className={cn(
+                            "w-8 h-4 rounded-full transition-colors relative",
+                            localShowPrintHeader ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowPrintHeader ? "right-0.5" : "left-0.5"
+                          )} />
+                        </button>
+                      </div>
+                      <input 
+                        type="text" 
+                        disabled={!localShowPrintHeader}
+                        value={localPrintHeader || ''} 
+                        onChange={(e) => setLocalPrintHeader(e.target.value)}
+                        className={cn(
+                          "w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground",
+                          !localShowPrintHeader && "opacity-50 cursor-not-allowed"
+                        )} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] text-gray-500 uppercase">Contact Phone</label>
+                        <button 
+                          onClick={() => setLocalShowPrintPhone(!localShowPrintPhone)}
+                          className={cn(
+                            "w-8 h-4 rounded-full transition-colors relative",
+                            localShowPrintPhone ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowPrintPhone ? "right-0.5" : "left-0.5"
+                          )} />
+                        </button>
+                      </div>
+                      <input 
+                        type="text" 
+                        disabled={!localShowPrintPhone}
+                        value={localPrintPhone || ''} 
+                        onChange={(e) => setLocalPrintPhone(e.target.value)}
+                        className={cn(
+                          "w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground",
+                          !localShowPrintPhone && "opacity-50 cursor-not-allowed"
+                        )} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] text-gray-500 uppercase">Contact Email</label>
+                        <button 
+                          onClick={() => setLocalShowPrintEmail(!localShowPrintEmail)}
+                          className={cn(
+                            "w-8 h-4 rounded-full transition-colors relative",
+                            localShowPrintEmail ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowPrintEmail ? "right-0.5" : "left-0.5"
+                          )} />
+                        </button>
+                      </div>
+                      <input 
+                        type="text" 
+                        disabled={!localShowPrintEmail}
+                        value={localPrintEmail || ''} 
+                        onChange={(e) => setLocalPrintEmail(e.target.value)}
+                        className={cn(
+                          "w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground",
+                          !localShowPrintEmail && "opacity-50 cursor-not-allowed"
+                        )} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] text-gray-500 uppercase">Website URL</label>
+                        <button 
+                          onClick={() => setLocalShowPrintWebsite(!localShowPrintWebsite)}
+                          className={cn(
+                            "w-8 h-4 rounded-full transition-colors relative",
+                            localShowPrintWebsite ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowPrintWebsite ? "right-0.5" : "left-0.5"
+                          )} />
+                        </button>
+                      </div>
+                      <input 
+                        type="text" 
+                        disabled={!localShowPrintWebsite}
+                        value={localPrintWebsite || ''} 
+                        onChange={(e) => setLocalPrintWebsite(e.target.value)}
+                        className={cn(
+                          "w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground",
+                          !localShowPrintWebsite && "opacity-50 cursor-not-allowed"
+                        )} 
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] text-gray-500 uppercase">Default Print Footer</label>
+                        <button 
+                          onClick={() => setLocalShowPrintFooter(!localShowPrintFooter)}
+                          className={cn(
+                            "w-8 h-4 rounded-full transition-colors relative",
+                            localShowPrintFooter ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowPrintFooter ? "right-0.5" : "left-0.5"
+                          )} />
+                        </button>
+                      </div>
+                      <textarea 
+                        disabled={!localShowPrintFooter}
+                        value={localPrintFooter || ''} 
+                        onChange={(e) => setLocalPrintFooter(e.target.value)}
+                        rows={2}
+                        className={cn(
+                          "w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground resize-none",
+                          !localShowPrintFooter && "opacity-50 cursor-not-allowed"
+                        )} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
+                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">Signature Labels</h3>
+                    <div className="flex items-center gap-4">
+                      <label className="text-[10px] text-gray-500 uppercase">Alignment:</label>
+                      <select 
+                        value={localSignatureAlignment}
+                        onChange={(e) => setLocalSignatureAlignment(e.target.value as any)}
+                        className="bg-background border border-border text-foreground px-2 py-1 text-[10px] outline-none focus:border-foreground"
+                      >
+                        <option value="spread">Spread Out</option>
+                        <option value="left">All Left</option>
+                        <option value="center">All Center</option>
+                        <option value="right">All Right</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] text-gray-500 uppercase">Signature 1</label>
+                        <button 
+                          onClick={() => setLocalShowSignature1(!localShowSignature1)}
+                          className={cn(
+                            "w-8 h-4 rounded-full transition-colors relative",
+                            localShowSignature1 ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowSignature1 ? "right-0.5" : "left-0.5"
+                          )} />
+                        </button>
+                      </div>
+                      <input 
+                        type="text" 
+                        disabled={!localShowSignature1}
+                        value={localPrintSignature1 || ''} 
+                        onChange={(e) => setLocalPrintSignature1(e.target.value)}
+                        className={cn(
+                          "w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground",
+                          !localShowSignature1 && "opacity-50 cursor-not-allowed"
+                        )} 
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] text-gray-500 uppercase">Signature 2</label>
+                        <button 
+                          onClick={() => setLocalShowSignature2(!localShowSignature2)}
+                          className={cn(
+                            "w-8 h-4 rounded-full transition-colors relative",
+                            localShowSignature2 ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowSignature2 ? "right-0.5" : "left-0.5"
+                          )} />
+                        </button>
+                      </div>
+                      <input 
+                        type="text" 
+                        disabled={!localShowSignature2}
+                        value={localPrintSignature2 || ''} 
+                        onChange={(e) => setLocalPrintSignature2(e.target.value)}
+                        className={cn(
+                          "w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground",
+                          !localShowSignature2 && "opacity-50 cursor-not-allowed"
+                        )} 
+                      />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] text-gray-500 uppercase">Signature 3</label>
+                        <button 
+                          onClick={() => setLocalShowSignature3(!localShowSignature3)}
+                          className={cn(
+                            "w-8 h-4 rounded-full transition-colors relative",
+                            localShowSignature3 ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowSignature3 ? "right-0.5" : "left-0.5"
+                          )} />
+                        </button>
+                      </div>
+                      <input 
+                        type="text" 
+                        disabled={!localShowSignature3}
+                        value={localPrintSignature3 || ''} 
+                        onChange={(e) => setLocalPrintSignature3(e.target.value)}
+                        className={cn(
+                          "w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground",
+                          !localShowSignature3 && "opacity-50 cursor-not-allowed"
+                        )} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Additional Options</h3>
+                  <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground uppercase">Show Developer Contact</h4>
+                      <p className="text-[10px] text-gray-500">Display software provider contact info at the bottom right of prints.</p>
+                    </div>
+                    <button 
+                      onClick={() => setLocalShowDeveloperContact(!localShowDeveloperContact)}
+                      className={cn(
+                        "w-10 h-5 rounded-full transition-colors relative",
+                        localShowDeveloperContact ? "bg-emerald-500" : "bg-gray-600"
+                      )}
+                    >
+                      <div className={cn(
+                        "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                        localShowDeveloperContact ? "right-1" : "left-1"
+                      )} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-foreground/5 border border-border space-y-4">
+                  <h4 className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Print Preview (Mock)</h4>
+                  <div className="bg-white p-8 shadow-sm border border-gray-200 text-gray-800 font-serif max-w-md mx-auto">
+                    <div className="text-center border-b border-gray-300 pb-4 mb-4">
+                      <h2 className="text-xl font-bold uppercase">{localCompanyName}</h2>
+                      <p className="text-[10px] whitespace-pre-line">{localCompanyAddress}</p>
+                      <p className="text-[9px] text-gray-600">
+                        {localShowPrintPhone && localPrintPhone && `Phone: ${localPrintPhone}`} 
+                        {localShowPrintEmail && localPrintEmail && ` • Email: ${localPrintEmail}`}
+                        {localShowPrintWebsite && localPrintWebsite && ` • Web: ${localPrintWebsite}`}
+                      </p>
+                      {localShowPrintHeader && <div className="mt-2 text-[10px] italic text-gray-500 border-t border-gray-100 pt-1">{localPrintHeader}</div>}
+                    </div>
+                    <div className="h-20 border border-dashed border-gray-200 flex items-center justify-center text-[10px] text-gray-300 uppercase tracking-widest">
+                      Voucher Content Area
+                    </div>
+                    <div className={cn(
+                      "mt-8 flex text-[8px] uppercase font-bold",
+                      localSignatureAlignment === 'spread' ? 'justify-between' : 
+                      localSignatureAlignment === 'left' ? 'justify-start gap-8' :
+                      localSignatureAlignment === 'center' ? 'justify-center gap-8' :
+                      'justify-end gap-8'
+                    )}>
+                      {localShowSignature1 && <div className="border-t border-gray-400 pt-1 w-20 text-center">{localPrintSignature1}</div>}
+                      {localShowSignature2 && <div className="border-t border-gray-400 pt-1 w-20 text-center">{localPrintSignature2}</div>}
+                      {localShowSignature3 && <div className="border-t border-gray-400 pt-1 w-20 text-center">{localPrintSignature3}</div>}
+                    </div>
+                    <div className="mt-4 pt-2 border-t border-gray-200 text-center text-[8px] text-gray-500 relative">
+                      {localShowPrintFooter && localPrintFooter}
+                      {localShowDeveloperContact && (
+                        <div className="absolute right-0 bottom-0 text-[6px] text-gray-400 text-right opacity-50">
+                          Software by TallyFlow<br/>
+                          +880 1234 567890
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'features' && (
+              <div className="space-y-6">
+                <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Accounting & Inventory Features</h3>
+                <div className="space-y-4">
+                  {features.map((f) => (
+                    <div key={f.id} className="flex items-center justify-between py-2 border-b border-border/50">
+                      <span className="text-xs text-gray-400">{f.label}</span>
+                      <div 
+                        onClick={() => toggleFeature(f.id)}
+                        className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${f.enabled ? 'bg-emerald-500' : 'bg-border'}`}
+                      >
+                        <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${f.enabled ? 'right-1' : 'left-1'}`} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'backup' && (
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Data Backup & Recovery</h3>
+                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 flex gap-4">
+                    <Cloud className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                    <div>
+                      <h4 className="text-xs font-bold text-emerald-500 uppercase">Auto Backup Enabled</h4>
+                      <p className="text-[10px] text-emerald-500/80 uppercase tracking-widest mt-1">
+                        Your data is automatically backed up to the cloud every 24 hours.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button 
+                      onClick={() => {
+                        showNotification('Generating full system backup...');
+                        setTimeout(() => showNotification('Backup downloaded successfully.'), 2000);
+                      }}
+                      className="p-6 border border-border bg-foreground/5 hover:bg-foreground/10 transition-all text-left space-y-2 group"
+                    >
+                      <Download className="w-6 h-6 text-gray-500 group-hover:text-foreground transition-colors" />
+                      <h4 className="text-xs font-bold uppercase tracking-widest">Manual Backup</h4>
+                      <p className="text-[10px] text-gray-500 uppercase">Download all company data as a secure JSON/Excel file.</p>
+                    </button>
+                    <button className="p-6 border border-border bg-foreground/5 hover:bg-foreground/10 transition-all text-left space-y-2 group">
+                      <Database className="w-6 h-6 text-gray-500 group-hover:text-foreground transition-colors" />
+                      <h4 className="text-xs font-bold uppercase tracking-widest">Restore Data</h4>
+                      <p className="text-[10px] text-gray-500 uppercase">Upload a previous backup file to restore your system state.</p>
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Export History</h3>
+                  <div className="border border-border overflow-hidden">
+                    <table className="w-full text-left text-[10px] uppercase tracking-widest">
+                      <thead className="bg-foreground/5 border-b border-border">
+                        <tr>
+                          <th className="px-4 py-2">Date</th>
+                          <th className="px-4 py-2">Type</th>
+                          <th className="px-4 py-2">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        <tr>
+                          <td className="px-4 py-2 text-gray-500">2024-03-14 10:00</td>
+                          <td className="px-4 py-2">Full Backup</td>
+                          <td className="px-4 py-2 text-emerald-500 font-bold">Success</td>
+                        </tr>
+                        <tr>
+                          <td className="px-4 py-2 text-gray-500">2024-03-13 10:00</td>
+                          <td className="px-4 py-2">Auto Backup</td>
+                          <td className="px-4 py-2 text-emerald-500 font-bold">Success</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'integrations' && (
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Communication Channels</h3>
+                  <div className="space-y-4">
+                    <div className="p-4 border border-border bg-foreground/5 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-emerald-500/20 rounded flex items-center justify-center">
+                          <MessageSquare className="w-5 h-5 text-emerald-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold uppercase">WhatsApp Integration</h4>
+                          <p className="text-[10px] text-gray-500 uppercase">Send invoices and reports directly to customers.</p>
+                        </div>
+                      </div>
+                      <button className="px-4 py-1.5 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all">
+                        Configure
+                      </button>
+                    </div>
+                    <div className="p-4 border border-border bg-foreground/5 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-blue-500/20 rounded flex items-center justify-center">
+                          <Mail className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold uppercase">Email (SMTP)</h4>
+                          <p className="text-[10px] text-gray-500 uppercase">Automated email reports and transaction alerts.</p>
+                        </div>
+                      </div>
+                      <button className="px-4 py-1.5 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all">
+                        Configure
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Third-Party Services</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 border border-border bg-foreground/5 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold uppercase">Google Drive</span>
+                        <span className="text-[8px] bg-emerald-500 text-white px-1.5 py-0.5 rounded">Connected</span>
+                      </div>
+                      <p className="text-[9px] text-gray-500 uppercase">Cloud storage for backups and documents.</p>
+                    </div>
+                    <div className="p-4 border border-border bg-foreground/5 space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold uppercase">SMS Gateway</span>
+                        <span className="text-[8px] bg-gray-600 text-white px-1.5 py-0.5 rounded">Disconnected</span>
+                      </div>
+                      <p className="text-[9px] text-gray-500 uppercase">Send transaction alerts via SMS.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'security' && (
+              <div className="space-y-6">
+                <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Security Settings</h3>
+                <div className="space-y-6">
+                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 flex gap-4">
+                    <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                    <p className="text-[10px] text-amber-500 uppercase tracking-widest leading-relaxed">
+                      Two-factor authentication is highly recommended for administrative accounts.
+                    </p>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between py-2 border-b border-border/50">
+                      <span className="text-xs text-gray-400">Enable TallyVault Password</span>
+                      <div className="w-10 h-5 rounded-full bg-border relative cursor-pointer">
+                        <div className="absolute top-1 left-1 w-3 h-3 rounded-full bg-white" />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-border/50">
+                      <span className="text-xs text-gray-400">Use Security Control</span>
+                      <div className="w-10 h-5 rounded-full bg-emerald-500 relative cursor-pointer">
+                        <div className="absolute top-1 right-1 w-3 h-3 rounded-full bg-white" />
+                      </div>
+                    </div>
+                  </div>
+                  <button className="px-6 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all">
+                    Change Admin Password
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'notifications' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center border-b border-border pb-2">
+                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">Popup Notification Messages</h3>
+                  <button 
+                    onClick={handleSaveNotifications}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+                  >
+                    <Save className="w-3 h-3" /> Save Messages
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-gray-500 uppercase">Voucher Saved Message</label>
+                    <input 
+                      type="text" 
+                      value={localNotifications.voucherSaved || ''} 
+                      onChange={(e) => setLocalNotifications({...localNotifications, voucherSaved: e.target.value})}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-gray-500 uppercase">Ledger Created Message</label>
+                    <input 
+                      type="text" 
+                      value={localNotifications.ledgerCreated || ''} 
+                      onChange={(e) => setLocalNotifications({...localNotifications, ledgerCreated: e.target.value})}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-gray-500 uppercase">Stock Item Created Message</label>
+                    <input 
+                      type="text" 
+                      value={localNotifications.itemCreated || ''} 
+                      onChange={(e) => setLocalNotifications({...localNotifications, itemCreated: e.target.value})}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-gray-500 uppercase">Settings Updated Message</label>
+                    <input 
+                      type="text" 
+                      value={localNotifications.settingsUpdated || ''} 
+                      onChange={(e) => setLocalNotifications({...localNotifications, settingsUpdated: e.target.value})}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-8 space-y-4">
+                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">System Alerts</h3>
+                  <div className="space-y-4">
+                    {[
+                      { label: 'Email Alerts for Large Transactions', enabled: true },
+                      { label: 'Daily Summary Report', enabled: false },
+                      { label: 'Inventory Reorder Level Alerts', enabled: true },
+                      { label: 'System Update Notifications', enabled: true },
+                    ].map((n, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-border/50">
+                        <span className="text-xs text-gray-400">{n.label}</span>
+                        <div className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${n.enabled ? 'bg-emerald-500' : 'bg-border'}`}>
+                          <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${n.enabled ? 'right-1' : 'left-1'}`} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
