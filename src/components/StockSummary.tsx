@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Search, Printer, Download, ChevronDown, ChevronRight, Loader2, Filter, MapPin, Activity } from 'lucide-react';
+import { Package, Search, Printer, Download, ChevronDown, ChevronRight, Loader2, Filter, MapPin, Activity, AlertTriangle } from 'lucide-react';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { erpService } from '../services/erpService';
 import { supabase } from '../lib/supabase';

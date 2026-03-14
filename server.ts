@@ -2,12 +2,93 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import PDFDocument from "pdfkit";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import db from "./db.js";
+
+const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
+
+  // Middleware: Auth
+  const authenticateToken = (req: any, res: any, next: any) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+      if (err) return res.status(403).json({ error: "Forbidden" });
+      req.user = user;
+      next();
+    });
+  };
+
+  // API: Auth - Register
+  app.post("/api/auth/register", async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: "Missing fields" });
+
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const stmt = db.prepare("INSERT INTO users (username, password) VALUES (?, ?)");
+      stmt.run(username, hashedPassword);
+      res.status(201).json({ message: "User created" });
+    } catch (err: any) {
+      if (err.message.includes("UNIQUE constraint failed")) {
+        res.status(400).json({ error: "Username already exists" });
+      } else {
+        res.status(500).json({ error: "Internal server error" });
+      }
+    }
+  });
+
+  // API: Auth - Login
+  app.post("/api/auth/login", async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: "Missing fields" });
+
+    const user: any = db.prepare("SELECT * FROM users WHERE username = ?").get(username);
+    if (!user) return res.status(400).json({ error: "Invalid credentials" });
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) return res.status(400).json({ error: "Invalid credentials" });
+
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
+    res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
+  });
+
+  // API: Auth - Me
+  app.get("/api/auth/me", authenticateToken, (req: any, res) => {
+    res.json({ user: req.user });
+  });
+
+  // API: Users - List
+  app.get("/api/users", authenticateToken, (req: any, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: "Forbidden" });
+    const users = db.prepare("SELECT id, username, role, created_at FROM users").all();
+    res.json(users);
+  });
+
+  // API: Users - Update Role
+  app.patch("/api/users/:id/role", authenticateToken, (req: any, res) => {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: "Forbidden" });
+    const { id } = req.params;
+    const { role } = req.body;
+    if (!role) return res.status(400).json({ error: "Missing role" });
+
+    try {
+      const stmt = db.prepare("UPDATE users SET role = ? WHERE id = ?");
+      stmt.run(role, id);
+      res.json({ message: "Role updated" });
+    } catch (err) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
 
   // API: Health Check
   app.get("/api/health", (req, res) => {

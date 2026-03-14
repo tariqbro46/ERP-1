@@ -693,7 +693,7 @@ export function VoucherEntry() {
                       <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.qty ?? ''} onChange={e => {
                         const next = [...invEntries];
                         next[idx].qty = Number(e.target.value);
-                        next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent);
+                        next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
                         setInvEntries(next);
                       }} />
                     </td>
@@ -701,7 +701,7 @@ export function VoucherEntry() {
                       <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.rate ?? ''} onChange={e => {
                         const next = [...invEntries];
                         next[idx].rate = Number(e.target.value);
-                        next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent);
+                        next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
                         setInvEntries(next);
                       }} />
                     </td>

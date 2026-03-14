@@ -1,15 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { useAuth, Profile, UserRole } from '../contexts/AuthContext';
 import { Users, Shield, ShieldCheck, ShieldAlert, Mail, Calendar, Loader2, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export const UserManagement: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, token } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchProfiles();
@@ -17,12 +16,13 @@ export const UserManagement: React.FC = () => {
 
   const fetchProfiles = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('email');
-      
-      if (error) throw error;
+      const res = await fetch('/api/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) throw new Error('Failed to fetch users');
+      const data = await res.json();
       setProfiles(data || []);
     } catch (err) {
       console.error('Error fetching profiles:', err);
@@ -31,15 +31,19 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const updateRole = async (userId: string, newRole: UserRole) => {
+  const updateRole = async (userId: number, newRole: UserRole) => {
     setUpdatingId(userId);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', userId);
+      const res = await fetch(`/api/users/${userId}/role`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ role: newRole })
+      });
       
-      if (error) throw error;
+      if (!res.ok) throw new Error('Failed to update role');
       
       setProfiles(profiles.map(p => p.id === userId ? { ...p, role: newRole } : p));
     } catch (err) {
@@ -51,8 +55,7 @@ export const UserManagement: React.FC = () => {
   };
 
   const filteredProfiles = profiles.filter(p => 
-    p.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    p.username?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (!isAdmin) {
@@ -115,11 +118,11 @@ export const UserManagement: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-foreground font-bold text-xs">
-                        {profile.email?.[0].toUpperCase()}
+                        {profile.username?.[0].toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm text-foreground font-medium">{profile.full_name || profile.email?.split('@')[0]}</p>
-                        <p className="text-[10px] text-gray-500 font-mono">{profile.email}</p>
+                        <p className="text-sm text-foreground font-medium">{profile.username}</p>
+                        <p className="text-[10px] text-gray-500 font-mono">ID: {profile.id}</p>
                       </div>
                     </div>
                   </td>

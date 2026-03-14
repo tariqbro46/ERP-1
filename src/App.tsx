@@ -20,7 +20,8 @@ import {
   Sun,
   Moon,
   Menu,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { VoucherEntry } from './components/VoucherEntry';
@@ -40,7 +41,10 @@ import { TrialBalance } from './components/TrialBalance';
 import { RatioAnalysis } from './components/RatioAnalysis';
 import { FinancialInsights } from './components/FinancialInsights';
 import { GodownMaster } from './components/GodownMaster';
+import { UserManagement } from './components/UserManagement';
 import { cn } from './lib/utils';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Login, Register } from './components/Auth';
 
 const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => (
   <Link
@@ -99,6 +103,7 @@ import { useSettings } from './contexts/SettingsContext';
 function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
+  const { user, logout, isAdmin } = useAuth();
   const { companyName, slogan, features = [] } = useSettings();
   const [dbStatus, setDbStatus] = React.useState<'checking' | 'connected' | 'error'>('checking');
 
@@ -249,6 +254,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             onToggle={() => toggleGroup('Utilities')}
           >
             <SidebarItem to="/notes" icon={StickyNote} label={isSidebarCollapsed ? "" : "Notes / Memo"} active={location.pathname === '/notes'} />
+            {isAdmin && <SidebarItem to="/users" icon={Users} label={isSidebarCollapsed ? "" : "User Management"} active={location.pathname === '/users'} />}
             <SidebarItem to="/settings" icon={SettingsIcon} label={isSidebarCollapsed ? "" : "Settings (F11)"} active={location.pathname === '/settings'} />
           </SidebarGroup>
         </nav>
@@ -310,10 +316,16 @@ function Layout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-3 border-l border-border pl-4 lg:pl-6">
               <div className="text-right hidden sm:block">
-                <p className="text-[10px] text-foreground font-mono">Admin User</p>
-                <p className="text-[9px] text-gray-500 uppercase font-mono">Super Admin</p>
+                <p className="text-[10px] text-foreground font-mono">{user?.username || 'Admin User'}</p>
+                <p className="text-[9px] text-gray-500 uppercase font-mono">{user?.role || 'Super Admin'}</p>
               </div>
-              <div className="w-8 h-8 rounded-full bg-card border border-border" />
+              <button 
+                onClick={logout}
+                className="p-2 rounded-full hover:bg-red-50 text-gray-500 hover:text-red-600 transition-colors"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </header>
@@ -379,7 +391,30 @@ function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
+function AppContent() {
+  const { user, loading } = useAuth();
+  const [isRegister, setIsRegister] = React.useState(false);
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50 p-4">
+        {isRegister ? (
+          <Register onToggle={() => setIsRegister(false)} />
+        ) : (
+          <Login onToggle={() => setIsRegister(true)} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <Router>
       <Layout>
@@ -404,9 +439,18 @@ export default function App() {
           <Route path="/reports/ledger" element={<LedgerStatement />} />
           <Route path="/accounts" element={<ChartOfAccounts />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/users" element={<UserManagement />} />
           <Route path="*" element={<div className="p-10 text-foreground font-mono">404 - Feature Not Implemented</div>} />
         </Routes>
       </Layout>
     </Router>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

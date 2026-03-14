@@ -8,6 +8,7 @@ import { erpService } from '../services/erpService';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const mockChartData = [
   { name: 'Jan', value: 4000 },
@@ -46,6 +47,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const { companyName, financialYearStart, financialYearEnd } = useSettings();
+  const { isAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
   
   // Default to current month
@@ -201,6 +203,14 @@ export function Dashboard() {
           >
             <Plus className="w-3 h-3" /> New Godown
           </button>
+          {isAdmin && (
+            <button 
+              onClick={() => navigate('/users')}
+              className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2"
+            >
+              <Users className="w-3 h-3" /> User Management
+            </button>
+          )}
         </div>
       </div>
 
