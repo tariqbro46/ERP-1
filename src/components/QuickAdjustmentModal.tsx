@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, Calculator } from 'lucide-react';
 import { erpService } from '../services/erpService';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface QuickAdjustmentModalProps {
   isOpen: boolean;
@@ -13,6 +13,7 @@ interface QuickAdjustmentModalProps {
 }
 
 export function QuickAdjustmentModal({ isOpen, onClose, onSuccess, partyLedgerId, partyName, currentBalance }: QuickAdjustmentModalProps) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [adjustmentLedgers, setAdjustmentLedgers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -29,20 +30,16 @@ export function QuickAdjustmentModal({ isOpen, onClose, onSuccess, partyLedgerId
   }, [isOpen]);
 
   async function fetchAdjustmentLedgers() {
+    if (!user?.companyId) return;
     try {
       // Fetch ledgers under Indirect Expenses or Direct Expenses
-      const { data: groups } = await supabase
-        .from('ledger_groups')
-        .select('id')
-        .in('name', ['Indirect Expenses', 'Direct Expenses']);
+      const groups = await erpService.getLedgerGroups(user.companyId);
+      const targetGroups = groups.filter(g => ['Indirect Expenses', 'Direct Expenses'].includes(g.name));
       
-      if (groups && groups.length > 0) {
-        const groupIds = groups.map(g => g.id);
-        const { data: ledgers } = await supabase
-          .from('ledgers')
-          .select('*')
-          .in('group_id', groupIds)
-          .order('name');
+      if (targetGroups.length > 0) {
+        const groupIds = targetGroups.map(g => g.id);
+        const allLedgers = await erpService.getLedgers(user.companyId);
+        const ledgers = allLedgers.filter(l => groupIds.includes(l.group_id));
         
         if (ledgers) {
           setAdjustmentLedgers(ledgers);
@@ -67,11 +64,11 @@ export function QuickAdjustmentModal({ isOpen, onClose, onSuccess, partyLedgerId
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.adjustmentLedgerId || formData.amount === 0) return;
+    if (!formData.adjustmentLedgerId || formData.amount === 0 || !user?.companyId) return;
 
     setLoading(true);
     try {
-      const v_no = await erpService.getNextVoucherNumber('Journal');
+      const v_no = await erpService.getNextVoucherNumber(user.companyId, 'Journal');
       
       // Journal Entry:
       // If we want to REDUCE a Debit balance (Asset/Debtor), we CREDIT the party.
@@ -101,7 +98,7 @@ export function QuickAdjustmentModal({ isOpen, onClose, onSuccess, partyLedgerId
         total_amount: formData.amount
       };
 
-      await erpService.createVoucher(voucher, entries);
+      await erpService.createVoucher(user.companyId, user.uid, voucher, entries);
       onSuccess();
       onClose();
     } catch (err) {

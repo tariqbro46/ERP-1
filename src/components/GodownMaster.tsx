@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, Loader2, MapPin } from 'lucide-react';
 import { erpService } from '../services/erpService';
+import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 
 export function GodownMaster() {
+  const { user } = useAuth();
   const [godowns, setGodowns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -14,12 +16,13 @@ export function GodownMaster() {
 
   useEffect(() => {
     fetchGodowns();
-  }, []);
+  }, [user?.companyId]);
 
   async function fetchGodowns() {
+    if (!user?.companyId) return;
     setLoading(true);
     try {
-      const data = await erpService.getGodowns();
+      const data = await erpService.getGodowns(user.companyId);
       setGodowns(data);
     } catch (err: any) {
       console.error('Error fetching godowns:', err);
@@ -38,7 +41,7 @@ export function GodownMaster() {
       if (editingGodown) {
         await erpService.updateGodown(editingGodown.id, { name, description });
       } else {
-        await erpService.createGodown({ name, description });
+        await erpService.createGodown(user!.companyId, { name, description });
       }
       showNotification(editingGodown ? 'Godown updated successfully' : 'Godown saved successfully');
       setIsModalOpen(false);

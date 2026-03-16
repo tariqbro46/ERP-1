@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { erpService } from '../services/erpService';
+import { useAuth } from '../contexts/AuthContext';
 import { ChevronRight, ChevronDown, Folder, FileText, Edit2, Search, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function ChartOfAccounts() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [groups, setGroups] = useState<any[]>([]);
   const [ledgers, setLedgers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -12,9 +14,12 @@ export function ChartOfAccounts() {
 
   useEffect(() => {
     async function fetchData() {
+      if (!user?.companyId) return;
       try {
-        const { data: g } = await supabase.from('ledger_groups').select('*').order('name');
-        const { data: l } = await supabase.from('ledgers').select('*').order('name');
+        const [g, l] = await Promise.all([
+          erpService.getLedgerGroups(user.companyId),
+          erpService.getLedgers(user.companyId)
+        ]);
         
         // Ensure unique groups by name if duplicates somehow exist
         const uniqueGroups = Array.from(new Map((g || []).map(item => [item.name, item])).values());
@@ -28,7 +33,7 @@ export function ChartOfAccounts() {
       }
     }
     fetchData();
-  }, []);
+  }, [user?.companyId]);
 
   const filteredGroups = groups.filter(group => 
     group.name.toLowerCase().includes(search.toLowerCase()) ||

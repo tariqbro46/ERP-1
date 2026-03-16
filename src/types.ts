@@ -18,12 +18,18 @@ export interface Company {
 export interface Ledger {
   id: string;
   name: string;
+  group_id: string;
   group_name: string;
   nature: 'Asset' | 'Liability' | 'Income' | 'Expense';
   opening_balance: number;
   current_balance: number;
   vat_no?: string;
   currency?: string;
+  contact_name?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  bank_account_no?: string;
+  bank_name?: string;
 }
 
 export interface Voucher {
@@ -67,6 +73,8 @@ export interface Item {
   unit_name: string;
   current_stock: number;
   avg_cost: number;
+  opening_qty?: number;
+  opening_rate?: number;
   barcode?: string;
   category?: string;
   low_stock_threshold?: number;

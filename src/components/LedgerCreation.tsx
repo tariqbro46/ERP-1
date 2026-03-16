@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Save, ArrowLeft, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { erpService } from '../services/erpService';
+import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 
 export function LedgerCreation() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { showNotification } = useNotification();
   const { notifications, companyName, features = [] } = useSettings();
   const { id } = useParams();
@@ -20,13 +22,16 @@ export function LedgerCreation() {
   const [deleting, setDeleting] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
   const [groups, setGroups] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [hasTransactions, setHasTransactions] = useState(false);
+  const [originalLedger, setOriginalLedger] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     alias: '',
     group_id: '',
     opening_balance: 0,
+    opening_balance_type: 'Dr', // Added Dr/Cr type
     // Mailing Details
     mailing_name: '',
     address: '',
@@ -54,20 +59,25 @@ export function LedgerCreation() {
 
   useEffect(() => {
     async function init() {
+      if (!user?.companyId) return;
+      setError(null);
       try {
-        const gData = await erpService.getLedgerGroups();
+        const gData = await erpService.getLedgerGroups(user.companyId);
         setGroups(gData);
 
         if (isEdit) {
           const [lData, hasTx] = await Promise.all([
-            erpService.getLedgerById(id),
-            erpService.checkLedgerTransactions(id)
+            erpService.getLedgerById(id!),
+            erpService.checkLedgerTransactions(id!)
           ]);
+          setOriginalLedger(lData);
           setHasTransactions(hasTx);
+          const ob = lData.opening_balance || 0;
           setFormData({
             ...formData,
             ...lData,
-            opening_balance: lData.opening_balance || 0,
+            opening_balance: Math.abs(ob),
+            opening_balance_type: ob >= 0 ? 'Dr' : 'Cr',
             provide_contact_details: !!(lData.contact_name || lData.contact_phone || lData.contact_email),
             provide_bank_details: !!(lData.bank_account_no || lData.bank_name)
           });
@@ -75,14 +85,15 @@ export function LedgerCreation() {
           const sundryDebtors = gData.find(g => g.name === 'Sundry Debtors');
           setFormData(prev => ({ ...prev, group_id: sundryDebtors?.id || gData[0].id }));
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error initializing ledger form:', err);
+        setError(err.message || 'Failed to initialize form. Please check your permissions.');
       } finally {
         setFetching(false);
       }
     }
     init();
-  }, [id, isEdit]);
+  }, [id, isEdit, user?.companyId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,14 +108,26 @@ export function LedgerCreation() {
         created_at: _ca, 
         provide_contact_details, 
         provide_bank_details, 
+        opening_balance,
+        opening_balance_type,
         ...cleanData 
       } = formData as any;
 
+      const finalOpeningBalance = opening_balance_type === 'Dr' ? Math.abs(opening_balance) : -Math.abs(opening_balance);
+
       if (isEdit) {
-        await erpService.updateLedger(id, cleanData);
+        const oldOpeningBalance = originalLedger?.opening_balance || 0;
+        const balanceDiff = finalOpeningBalance - oldOpeningBalance;
+        const newCurrentBalance = (originalLedger?.current_balance || 0) + balanceDiff;
+
+        await erpService.updateLedger(id!, { 
+          ...cleanData, 
+          opening_balance: finalOpeningBalance,
+          current_balance: newCurrentBalance
+        });
         showNotification(notifications.ledgerCreated.replace('created', 'updated'));
       } else {
-        await erpService.createLedger(cleanData);
+        await erpService.createLedger(user!.companyId, { ...cleanData, opening_balance: finalOpeningBalance });
         showNotification(notifications.ledgerCreated);
       }
       navigate('/accounts');
@@ -135,6 +158,30 @@ export function LedgerCreation() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="w-8 h-8 text-foreground animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-6">
+        <div className="max-w-md w-full bg-card border border-border p-8 text-center space-y-6">
+          <div className="flex justify-center">
+            <div className="p-4 bg-rose-500/10 rounded-full">
+              <AlertTriangle className="w-12 h-12 text-rose-500" />
+            </div>
+          </div>
+          <h2 className="text-lg font-bold uppercase tracking-widest text-foreground">Initialization Error</h2>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            {error.includes('authInfo') ? 'You do not have permission to access this data. Please ensure you are logged in with the correct account.' : error}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -464,12 +511,22 @@ export function LedgerCreation() {
           <div className="pt-8 border-t border-border flex flex-col items-end">
             <div className="w-full md:w-1/2 space-y-2">
               <label className="text-[10px] text-gray-500 uppercase tracking-widest block text-right">Opening Balance (৳)</label>
-              <input
-                type="number"
-                value={formData.opening_balance ?? ''}
-                onChange={e => setFormData({ ...formData, opening_balance: Number(e.target.value) })}
-                className="w-full bg-background border border-border text-foreground p-4 text-lg font-bold outline-none focus:border-foreground transition-colors text-right"
-              />
+              <div className="flex gap-2">
+                <select
+                  value={formData.opening_balance_type}
+                  onChange={e => setFormData({ ...formData, opening_balance_type: e.target.value })}
+                  className="bg-background border border-border text-foreground p-4 text-lg font-bold outline-none focus:border-foreground transition-colors w-24"
+                >
+                  <option value="Dr">Dr</option>
+                  <option value="Cr">Cr</option>
+                </select>
+                <input
+                  type="number"
+                  value={formData.opening_balance ?? ''}
+                  onChange={e => setFormData({ ...formData, opening_balance: Number(e.target.value) })}
+                  className="flex-1 bg-background border border-border text-foreground p-4 text-lg font-bold outline-none focus:border-foreground transition-colors text-right"
+                />
+              </div>
             </div>
           </div>
 

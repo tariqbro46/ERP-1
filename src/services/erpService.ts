@@ -1,343 +1,346 @@
-import { supabase } from '../lib/supabase';
-import { Voucher, VoucherEntry, Item, Ledger } from '../types';
+import { db, auth } from '../firebase';
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  getDoc, 
+  doc, 
+  query, 
+  where, 
+  updateDoc, 
+  deleteDoc, 
+  orderBy, 
+  limit, 
+  setDoc,
+  serverTimestamp,
+  increment,
+  writeBatch,
+  Timestamp
+} from 'firebase/firestore';
+import { Voucher, Item, Ledger } from '../types';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+// Helper to get collection with company filter
+async function getCollection<T = any>(colName: string, companyId: string): Promise<T[]> {
+  try {
+    const q = query(collection(db, colName), where('companyId', '==', companyId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as T));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, colName);
+    return [];
+  }
+}
 
 export const erpService = {
-  async logActivity(action: string, details: string, entity_type?: string, entity_id?: string) {
+  getCollection,
+
+  async logActivity(companyId: string, userId: string, action: string, details: string, entity_type?: string, entity_id?: string) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from('activity_log').insert([{
-        user_id: user?.id,
+      await addDoc(collection(db, 'activity_log'), {
+        companyId,
+        userId,
         action,
         details,
         entity_type,
         entity_id,
-        created_at: new Date().toISOString()
-      }]);
+        createdAt: serverTimestamp()
+      });
     } catch (err) {
       console.error('Error logging activity:', err);
     }
   },
 
   // Vouchers
-  async createVoucher(voucher: any, entries: any[], inventoryEntries?: any[]) {
-    const { data: vData, error: vError } = await supabase
-      .from('vouchers')
-      .insert([voucher])
-      .select()
-      .single();
+  async createVoucher(companyId: string, userId: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
+    const batch = writeBatch(db);
+    
+    // 1. Create Voucher Header
+    const vRef = doc(collection(db, 'vouchers'));
+    const vData = {
+      ...voucher,
+      id: vRef.id,
+      companyId,
+      createdBy: userId,
+      createdAt: serverTimestamp()
+    };
+    batch.set(vRef, vData);
 
-    if (vError) throw vError;
-
-    const entryPayload = entries.map(e => ({
-      voucher_id: vData.id,
-      ledger_id: e.ledger_id,
-      debit: e.debit,
-      credit: e.credit
-    }));
-
-    const { error: eError } = await supabase
-      .from('voucher_entries')
-      .insert(entryPayload);
-
-    if (eError) throw eError;
-
-    // Update Ledger Balances
+    // 2. Create Accounting Entries
     for (const entry of entries) {
-      if (entry.ledger_id) {
-        const { data: ledger } = await supabase.from('ledgers').select('current_balance').eq('id', entry.ledger_id).single();
-        if (ledger) {
-          const newBalance = (ledger.current_balance || 0) + (entry.debit || 0) - (entry.credit || 0);
-          await supabase.from('ledgers').update({ current_balance: newBalance }).eq('id', entry.ledger_id);
-        }
-      }
-    }
-
-    if (inventoryEntries && inventoryEntries.length > 0) {
-      const invPayload = inventoryEntries.map(i => {
-        const payload: any = {
-          voucher_id: vData.id,
-          item_id: i.item_id,
-          qty: i.qty,
-          rate: i.rate,
-          amount: i.amount,
-          discount_percent: i.disc_percent || 0,
-          movement_type: i.movement_type || i.m_type || (voucher.v_type === 'Sales' ? 'Outward' : 'Inward')
-        };
-        if (i.godown_id) payload.godown_id = i.godown_id;
-        return payload;
+      const eRef = doc(collection(db, 'voucher_entries'));
+      batch.set(eRef, {
+        ...entry,
+        voucher_id: vRef.id,
+        companyId,
+        created_at: serverTimestamp()
       });
 
-      const { error: iError } = await supabase
-        .from('inventory_entries')
-        .insert(invPayload);
-
-      if (iError) {
-        console.error('Inventory Save Error:', iError);
-        throw new Error(`Inventory Error: ${iError.message}`);
-      }
-
-      // Recalculate Item Stats (Stock & Avg Cost)
-      const uniqueItemIds = Array.from(new Set(inventoryEntries.map(i => i.item_id)));
-      for (const itemId of uniqueItemIds) {
-        await this.recalculateItemStats(itemId);
+      // Update Ledger Balance
+      if (entry.ledger_id) {
+        const lRef = doc(db, 'ledgers', entry.ledger_id);
+        const balanceChange = (entry.debit || 0) - (entry.credit || 0);
+        batch.update(lRef, { current_balance: increment(balanceChange) });
       }
     }
 
+    // 3. Create Inventory Entries
+    if (inventoryEntries && inventoryEntries.length > 0) {
+      for (const i of inventoryEntries) {
+        const iRef = doc(collection(db, 'inventory_entries'));
+        const movementType = i.movement_type || i.m_type || (voucher.v_type === 'Sales' ? 'Outward' : 'Inward');
+        batch.set(iRef, {
+          ...i,
+          voucher_id: vRef.id,
+          companyId,
+          movement_type: movementType,
+          created_at: serverTimestamp()
+        });
+
+        // Update Item Stats (Simplified for now, real-time recalculation is better)
+        const itemRef = doc(db, 'items', i.item_id);
+        const stockChange = movementType === 'Inward' ? i.qty : -i.qty;
+        batch.update(itemRef, { current_stock: increment(stockChange) });
+      }
+    }
+
+    await batch.commit();
     return vData;
   },
 
-  async recalculateItemStats(itemId: string) {
-    // 1. Get opening stats
-    const { data: item, error: iError } = await supabase
-      .from('items')
-      .select('opening_qty, opening_rate')
-      .eq('id', itemId)
-      .single();
-    
-    if (iError || !item) return;
+  async getVoucherById(id: string): Promise<any> {
+    const vSnap = await getDoc(doc(db, 'vouchers', id));
+    if (!vSnap.exists()) throw new Error('Voucher not found');
+    const voucher = vSnap.data();
 
-    // 2. Get all inventory entries for this item, ordered by date
-    // We need to join with vouchers to get the date
-    const { data: entries, error: eError } = await supabase
-      .from('inventory_entries')
-      .select(`
-        qty,
-        rate,
-        movement_type,
-        vouchers(v_date)
-      `)
-      .eq('item_id', itemId);
-    
-    if (eError || !entries) return;
+    const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id)));
+    const entries = eSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // Sort entries by date
-    const sortedEntries = entries.sort((a: any, b: any) => {
-      const vA = Array.isArray(a.vouchers) ? a.vouchers[0] : a.vouchers;
-      const vB = Array.isArray(b.vouchers) ? b.vouchers[0] : b.vouchers;
-      const dateA = new Date(vA?.v_date || 0).getTime();
-      const dateB = new Date(vB?.v_date || 0).getTime();
-      return dateA - dateB;
-    });
+    const iSnap = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id)));
+    const inventory = iSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // 3. Calculate Moving Weighted Average
-    let currentStock = Number(item.opening_qty) || 0;
-    let currentAvgCost = Number(item.opening_rate) || 0;
-
-    for (const entry of sortedEntries) {
-      const qty = Number(entry.qty) || 0;
-      const rate = Number(entry.rate) || 0;
-      
-      if (entry.movement_type === 'Inward') {
-        // For Inward (Purchases), update Average Cost
-        const oldTotalValue = currentStock * currentAvgCost;
-        const newPurchaseValue = qty * rate;
-        const newTotalQty = currentStock + qty;
-        
-        if (newTotalQty > 0) {
-          currentAvgCost = (oldTotalValue + newPurchaseValue) / newTotalQty;
-        }
-        currentStock = newTotalQty;
-      } else {
-        // For Outward (Sales), Average Cost remains same, only Stock decreases
-        currentStock -= qty;
-      }
-    }
-
-    // 4. Update Item
-    await supabase.from('items').update({
-      current_stock: currentStock,
-      avg_cost: currentAvgCost
-    }).eq('id', itemId);
-  },
-
-  async getVoucherById(id: string) {
-    const { data: voucher, error: vError } = await supabase
-      .from('vouchers')
-      .select('*')
-      .eq('id', id)
-      .single();
-    if (vError) throw vError;
-
-    const { data: entries, error: eError } = await supabase
-      .from('voucher_entries')
-      .select('*, ledgers(name)')
-      .eq('voucher_id', id);
-    if (eError) throw eError;
-
-    const { data: inventory, error: iError } = await supabase
-      .from('inventory_entries')
-      .select('*, items(name, units(name))')
-      .eq('voucher_id', id);
-    if (iError) throw iError;
-
-    return { ...voucher, entries, inventory };
-  },
-
-  async updateVoucher(id: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
-    // To update properly, we first reverse the old voucher's impact
-    const oldVoucher = await this.getVoucherById(id);
-    if (oldVoucher) {
-      // Reverse Ledgers
-      for (const entry of oldVoucher.entries) {
-        const { data: ledger } = await supabase.from('ledgers').select('current_balance').eq('id', entry.ledger_id).single();
-        if (ledger) {
-          const reversedBalance = (ledger.current_balance || 0) - (entry.debit || 0) + (entry.credit || 0);
-          await supabase.from('ledgers').update({ current_balance: reversedBalance }).eq('id', entry.ledger_id);
-        }
-      }
-    }
-
-    // 1. Update voucher header
-    const { error: vError } = await supabase
-      .from('vouchers')
-      .update(voucher)
-      .eq('id', id);
-    if (vError) throw vError;
-
-    // 2. Delete existing entries
-    await supabase.from('voucher_entries').delete().eq('voucher_id', id);
-    await supabase.from('inventory_entries').delete().eq('voucher_id', id);
-
-    // 3. Insert new entries
-    const entryPayload = entries.map(e => ({
-      voucher_id: id,
-      ledger_id: e.ledger_id,
-      debit: e.debit,
-      credit: e.credit
-    }));
-
-    const { error: eError } = await supabase
-      .from('voucher_entries')
-      .insert(entryPayload);
-    if (eError) throw eError;
-
-    // Apply New Ledger Balances
-    for (const entry of entries) {
-      if (entry.ledger_id) {
-        const { data: ledger } = await supabase.from('ledgers').select('current_balance').eq('id', entry.ledger_id).single();
-        if (ledger) {
-          const newBalance = (ledger.current_balance || 0) + (entry.debit || 0) - (entry.credit || 0);
-          await supabase.from('ledgers').update({ current_balance: newBalance }).eq('id', entry.ledger_id);
-        }
-      }
-    }
-
-    if (inventoryEntries && inventoryEntries.length > 0) {
-      const invPayload = inventoryEntries.map(i => {
-        const payload: any = {
-          voucher_id: id,
-          item_id: i.item_id,
-          qty: i.qty,
-          rate: i.rate,
-          amount: i.amount,
-          discount_percent: i.disc_percent || 0,
-          movement_type: i.movement_type || i.m_type || (voucher.v_type === 'Sales' ? 'Outward' : 'Inward')
-        };
-        if (i.godown_id) payload.godown_id = i.godown_id;
-        return payload;
-      });
-
-      const { error: iError } = await supabase
-        .from('inventory_entries')
-        .insert(invPayload);
-      if (iError) throw iError;
-    }
-
-    // Recalculate Item Stats (Stock & Avg Cost) for all items involved
-    const itemIdsToUpdate = new Set<string>();
-    if (oldVoucher && oldVoucher.inventory) {
-      oldVoucher.inventory.forEach((i: any) => itemIdsToUpdate.add(i.item_id));
-    }
-    if (inventoryEntries) {
-      inventoryEntries.forEach(i => itemIdsToUpdate.add(i.item_id));
-    }
-    
-    for (const itemId of Array.from(itemIdsToUpdate)) {
-      await this.recalculateItemStats(itemId);
-    }
-
-    return true;
+    return { ...voucher, entries, inventory, id: vSnap.id };
   },
 
   async deleteVoucher(id: string) {
-    console.log('erpService: Starting deletion for voucher ID:', id);
-    
-    let oldVoucher: any = null;
-    try {
-      // Reverse impact before deleting
-      oldVoucher = await this.getVoucherById(id);
-      if (oldVoucher) {
-        console.log('erpService: Reversing ledger balances...');
-        // Reverse Ledgers
-        for (const entry of oldVoucher.entries) {
-          const { data: ledger } = await supabase.from('ledgers').select('current_balance').eq('id', entry.ledger_id).single();
-          if (ledger) {
-            const reversedBalance = (ledger.current_balance || 0) - (entry.debit || 0) + (entry.credit || 0);
-            await supabase.from('ledgers').update({ current_balance: reversedBalance }).eq('id', entry.ledger_id);
-          }
-        }
-      }
-    } catch (reverseError) {
-      console.error('erpService: Warning - Could not reverse balances before deletion:', reverseError);
-      // We continue with deletion anyway to allow the user to clean up corrupted data
-    }
+    const voucher = await this.getVoucherById(id);
+    const batch = writeBatch(db);
 
-    console.log('erpService: Deleting child records...');
-    // Manually delete children to avoid FK issues if cascade is missing in DB
-    const { error: eError } = await supabase.from('voucher_entries').delete().eq('voucher_id', id);
-    if (eError) console.error('Error deleting voucher_entries:', eError);
-    
-    const { error: iError } = await supabase.from('inventory_entries').delete().eq('voucher_id', id);
-    if (iError) console.error('Error deleting inventory_entries:', iError);
-
-    // Recalculate Item Stats after deletion
-    if (oldVoucher && oldVoucher.inventory) {
-      const uniqueItemIds = Array.from(new Set(oldVoucher.inventory.map((i: any) => i.item_id)));
-      for (const itemId of uniqueItemIds) {
-        await this.recalculateItemStats(itemId as string);
+    // Reverse Ledger Balances
+    for (const entry of voucher.entries) {
+      if (entry.ledger_id) {
+        const lRef = doc(db, 'ledgers', entry.ledger_id);
+        const balanceChange = (entry.credit || 0) - (entry.debit || 0);
+        batch.update(lRef, { current_balance: increment(balanceChange) });
       }
     }
 
-    console.log('erpService: Deleting voucher record...');
-    const { error } = await supabase
-      .from('vouchers')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      console.error('erpService: Error deleting voucher:', error);
-      throw error;
+    // Reverse Inventory Stats
+    for (const i of voucher.inventory) {
+      const itemRef = doc(db, 'items', i.item_id);
+      const stockChange = i.movement_type === 'Inward' ? -i.qty : i.qty;
+      batch.update(itemRef, { current_stock: increment(stockChange) });
     }
-    console.log('erpService: Voucher deleted successfully');
+
+    // Delete Entries
+    const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id)));
+    eSnap.docs.forEach(d => batch.delete(d.ref));
+
+    const iSnap = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id)));
+    iSnap.docs.forEach(d => batch.delete(d.ref));
+
+    // Delete Voucher
+    batch.delete(doc(db, 'vouchers', id));
+
+    await batch.commit();
+  },
+
+  async updateVoucher(id: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
+    // To update, we first reverse the effects of the old voucher and delete its entries,
+    // then we apply the new effects.
+    
+    const oldVoucher = await this.getVoucherById(id);
+    const batch = writeBatch(db);
+
+    // 1. Reverse Old Ledger Balances
+    for (const entry of oldVoucher.entries) {
+      if (entry.ledger_id) {
+        const lRef = doc(db, 'ledgers', entry.ledger_id);
+        const balanceChange = (entry.credit || 0) - (entry.debit || 0);
+        batch.update(lRef, { current_balance: increment(balanceChange) });
+      }
+    }
+
+    // 2. Reverse Old Inventory Stats
+    for (const i of oldVoucher.inventory) {
+      const itemRef = doc(db, 'items', i.item_id);
+      const stockChange = i.movement_type === 'Inward' ? -i.qty : i.qty;
+      batch.update(itemRef, { current_stock: increment(stockChange) });
+    }
+
+    // 3. Delete Old Entries
+    const eSnapOld = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id)));
+    eSnapOld.docs.forEach(d => batch.delete(d.ref));
+
+    const iSnapOld = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id)));
+    iSnapOld.docs.forEach(d => batch.delete(d.ref));
+
+    // 4. Update Voucher Header
+    const vRef = doc(db, 'vouchers', id);
+    batch.update(vRef, {
+      ...voucher,
+      updated_at: serverTimestamp()
+    });
+
+    // 5. Create New Accounting Entries
+    for (const entry of entries) {
+      const eRef = doc(collection(db, 'voucher_entries'));
+      batch.set(eRef, {
+        ...entry,
+        voucher_id: id,
+        companyId: oldVoucher.companyId,
+        created_at: serverTimestamp()
+      });
+
+      // Update Ledger Balance
+      if (entry.ledger_id) {
+        const lRef = doc(db, 'ledgers', entry.ledger_id);
+        const balanceChange = (entry.debit || 0) - (entry.credit || 0);
+        batch.update(lRef, { current_balance: increment(balanceChange) });
+      }
+    }
+
+    // 6. Create New Inventory Entries
+    if (inventoryEntries && inventoryEntries.length > 0) {
+      for (const i of inventoryEntries) {
+        const iRef = doc(collection(db, 'inventory_entries'));
+        const movementType = i.movement_type || i.m_type || (voucher.v_type === 'Sales' ? 'Outward' : 'Inward');
+        batch.set(iRef, {
+          ...i,
+          voucher_id: id,
+          companyId: oldVoucher.companyId,
+          movement_type: movementType,
+          created_at: serverTimestamp()
+        });
+
+        // Update Item Stats
+        const itemRef = doc(db, 'items', i.item_id);
+        const stockChange = movementType === 'Inward' ? i.qty : -i.qty;
+        batch.update(itemRef, { current_stock: increment(stockChange) });
+      }
+    }
+
+    await batch.commit();
   },
 
   // Ledgers
-  async getLedgers() {
-    const { data, error } = await supabase
-      .from('ledgers')
-      .select('*, ledger_groups(name, nature)');
-    if (error) throw error;
-    return data;
+  async getLedgers(companyId: string): Promise<Ledger[]> {
+    return getCollection<Ledger>('ledgers', companyId);
   },
 
-  async getLedgerGroups() {
-    const { data, error } = await supabase
-      .from('ledger_groups')
-      .select('*')
-      .order('name');
-    if (error) throw error;
-    
-    if (data.length === 0) {
-      return await this.seedDefaultGroups();
+  async getLedgerById(id: string): Promise<Ledger> {
+    try {
+      const snap = await getDoc(doc(db, 'ledgers', id));
+      if (!snap.exists()) throw new Error('Ledger not found');
+      return { id: snap.id, ...snap.data() } as Ledger;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `ledgers/${id}`);
+      throw error;
     }
-    
-    return data;
   },
 
-  async seedDefaultGroups() {
+  async checkLedgerTransactions(id: string) {
+    try {
+      const q = query(collection(db, 'voucher_entries'), where('ledger_id', '==', id), limit(1));
+      const snap = await getDocs(q);
+      return !snap.empty;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'voucher_entries');
+      return false;
+    }
+  },
+
+  async getLedgerGroups(companyId: string): Promise<any[]> {
+    try {
+      const groups = await getCollection<any>('ledger_groups', companyId);
+      if (groups.length === 0) {
+        // Use a lock or check again to prevent duplicate seeding
+        const secondCheck = await getCollection<any>('ledger_groups', companyId);
+        if (secondCheck.length > 0) return secondCheck;
+        return await this.seedDefaultGroups(companyId);
+      }
+      // Ensure unique by name just in case
+      const unique = Array.from(new Map(groups.map(g => [g.name, g])).values());
+      return unique;
+    } catch (error) {
+      // Retry once if it's a permission error (might be race condition during registration)
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const groups = await getCollection<any>('ledger_groups', companyId);
+        if (groups.length === 0) {
+          return await this.seedDefaultGroups(companyId);
+        }
+        return groups;
+      } catch (retryError) {
+        handleFirestoreError(retryError, OperationType.LIST, 'ledger_groups');
+        return [];
+      }
+    }
+  },
+
+  async seedDefaultGroups(companyId: string) {
     const defaultGroups = [
       { name: 'Bank Accounts', nature: 'Asset' },
-      { name: 'Bank OD A/c', nature: 'Liability' },
       { name: 'Cash-in-Hand', nature: 'Asset' },
       { name: 'Current Assets', nature: 'Asset' },
       { name: 'Current Liabilities', nature: 'Liability' },
@@ -346,260 +349,322 @@ export const erpService = {
       { name: 'Fixed Assets', nature: 'Asset' },
       { name: 'Indirect Expenses', nature: 'Expense' },
       { name: 'Indirect Incomes', nature: 'Income' },
-      { name: 'Investments', nature: 'Asset' },
-      { name: 'Loans (Liability)', nature: 'Liability' },
       { name: 'Purchase Accounts', nature: 'Expense' },
       { name: 'Sales Accounts', nature: 'Income' },
-      { name: 'Stock-in-Hand', nature: 'Asset' },
       { name: 'Sundry Creditors', nature: 'Liability' },
       { name: 'Sundry Debtors', nature: 'Asset' },
-      { name: 'Capital Account', nature: 'Liability' },
-      { name: 'Duties & Taxes', nature: 'Liability' },
-      { name: 'Provisions', nature: 'Liability' },
-      { name: 'Reserves & Surplus', nature: 'Liability' },
-      { name: 'Suspense A/c', nature: 'Asset' }
+      { name: 'Capital Account', nature: 'Liability' }
     ];
 
-    // Use upsert with 'name' as the unique constraint to prevent duplicates
-    const { data, error } = await supabase
-      .from('ledger_groups')
-      .upsert(defaultGroups, { onConflict: 'name' })
-      .select();
-
-    if (error) throw error;
-    return data;
+    const batch = writeBatch(db);
+    const results: any[] = [];
+    for (const g of defaultGroups) {
+      const ref = doc(collection(db, 'ledger_groups'));
+      const data = { ...g, id: ref.id, companyId };
+      batch.set(ref, data);
+      results.push(data);
+    }
+    await batch.commit();
+    return results;
   },
 
-  async createLedger(ledger: any) {
-    // Initialize current_balance with opening_balance
-    const payload = {
-      ...ledger,
-      current_balance: ledger.opening_balance || 0
-    };
-    const { data, error } = await supabase
-      .from('ledgers')
-      .insert([payload])
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
+  async createLedger(companyId: string, ledger: any) {
+    try {
+      const ref = doc(collection(db, 'ledgers'));
+      const data = {
+        ...ledger,
+        id: ref.id,
+        companyId,
+        current_balance: ledger.opening_balance || 0
+      };
+      await setDoc(ref, data);
+      return data;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'ledgers');
+    }
   },
 
   async updateLedger(id: string, ledger: any) {
-    // Get old ledger to calculate difference in opening_balance
-    const { data: oldLedger } = await supabase.from('ledgers').select('opening_balance, current_balance').eq('id', id).single();
-    
-    let payload = { ...ledger };
-    
-    if (oldLedger && ledger.opening_balance !== undefined) {
-      const diff = (ledger.opening_balance || 0) - (oldLedger.opening_balance || 0);
-      payload.current_balance = (oldLedger.current_balance || 0) + diff;
+    try {
+      const ref = doc(db, 'ledgers', id);
+      await updateDoc(ref, ledger);
+      return { id, ...ledger };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `ledgers/${id}`);
     }
-
-    const { data, error } = await supabase
-      .from('ledgers')
-      .update(payload)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  },
-
-  async getLedgerById(id: string) {
-    const { data, error } = await supabase
-      .from('ledgers')
-      .select('*, ledger_groups(*)')
-      .eq('id', id)
-      .single();
-    if (error) throw error;
-    return data;
   },
 
   async deleteLedger(id: string) {
-    const { error } = await supabase
-      .from('ledgers')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
-  },
-
-  async checkLedgerTransactions(id: string) {
-    const { count, error } = await supabase
-      .from('voucher_entries')
-      .select('id', { count: 'exact', head: true })
-      .eq('ledger_id', id);
-    if (error) throw error;
-    return (count || 0) > 0;
+    await deleteDoc(doc(db, 'ledgers', id));
   },
 
   // Items
-  async getItems() {
-    const { data, error } = await supabase
-      .from('items')
-      .select('*, units(name)');
-    if (error) throw error;
-    return data;
+  async getItemById(id: string): Promise<Item> {
+    const snap = await getDoc(doc(db, 'items', id));
+    if (!snap.exists()) throw new Error('Item not found');
+    return { id: snap.id, ...snap.data() } as Item;
   },
 
-  async getItemById(id: string) {
-    const { data, error } = await supabase
-      .from('items')
-      .select('*, units(*)')
-      .eq('id', id)
-      .single();
-    if (error) throw error;
+  async checkItemTransactions(id: string) {
+    const q = query(collection(db, 'inventory_entries'), where('item_id', '==', id), limit(1));
+    const snap = await getDocs(q);
+    return !snap.empty;
+  },
+
+  async getUnits(companyId: string) {
+    const units = await this.getCollection('units', companyId);
+    if (units.length === 0) {
+      return await this.seedDefaultUnits(companyId);
+    }
+    return units;
+  },
+
+  async seedDefaultUnits(companyId: string) {
+    const defaults = [
+      { name: 'Pcs', formal_name: 'Pieces' },
+      { name: 'Kg', formal_name: 'Kilograms' },
+      { name: 'Ltr', formal_name: 'Liters' },
+      { name: 'Box', formal_name: 'Boxes' },
+      { name: 'Nos', formal_name: 'Numbers' }
+    ];
+    const batch = writeBatch(db);
+    const results: any[] = [];
+    for (const u of defaults) {
+      const ref = doc(collection(db, 'units'));
+      const data = { ...u, id: ref.id, companyId };
+      batch.set(ref, data);
+      results.push(data);
+    }
+    await batch.commit();
+    return results;
+  },
+
+  async getItems(companyId: string): Promise<Item[]> {
+    return getCollection<Item>('items', companyId);
+  },
+
+  async createItem(companyId: string, item: any) {
+    const ref = doc(collection(db, 'items'));
+    const data = {
+      ...item,
+      id: ref.id,
+      companyId,
+      current_stock: item.opening_qty || 0,
+      avg_cost: item.opening_rate || 0
+    };
+    await setDoc(ref, data);
     return data;
   },
 
   async updateItem(id: string, item: any) {
-    const { data, error } = await supabase
-      .from('items')
-      .update(item)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
+    await updateDoc(doc(db, 'items', id), item);
   },
 
   async deleteItem(id: string) {
-    const { error } = await supabase
-      .from('items')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
-  },
-
-  async createItem(item: any) {
-    const { data, error } = await supabase
-      .from('items')
-      .insert([{
-        ...item,
-        current_stock: item.opening_qty || 0,
-        avg_cost: item.opening_rate || 0
-      }])
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
-  },
-
-  async checkItemTransactions(id: string) {
-    const { count, error } = await supabase
-      .from('inventory_entries')
-      .select('id', { count: 'exact', head: true })
-      .eq('item_id', id);
-    if (error) throw error;
-    return (count || 0) > 0;
+    await deleteDoc(doc(db, 'items', id));
   },
 
   // Godowns
-  async getGodowns() {
-    const { data, error } = await supabase
-      .from('godowns')
-      .select('*')
-      .order('name');
-    if (error) throw error;
-    return data;
+  async getGodowns(companyId: string) {
+    return this.getCollection('godowns', companyId);
   },
 
-  async createGodown(godown: any) {
-    const { data, error } = await supabase
-      .from('godowns')
-      .insert([godown])
-      .select()
-      .single();
-    if (error) throw error;
+  async createGodown(companyId: string, godown: any) {
+    const ref = doc(collection(db, 'godowns'));
+    const data = { ...godown, id: ref.id, companyId };
+    await setDoc(ref, data);
     return data;
   },
 
   async updateGodown(id: string, godown: any) {
-    const { data, error } = await supabase
-      .from('godowns')
-      .update(godown)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data;
+    await updateDoc(doc(db, 'godowns', id), godown);
   },
 
   async deleteGodown(id: string) {
-    const { error } = await supabase
-      .from('godowns')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
+    await deleteDoc(doc(db, 'godowns', id));
   },
 
-  // Dashboard Stats
-  async getDashboardStats() {
-    try {
-      const [ledgers, vouchers, items] = await Promise.all([
-        this.getLedgers(),
-        supabase.from('vouchers').select('total_amount, v_type, v_date'),
-        this.getItems()
-      ]);
-
-      const revenue = vouchers.data?.filter(v => v.v_type === 'Sales').reduce((sum, v) => sum + (v.total_amount || 0), 0) || 0;
-      const stockValue = items.reduce((sum, i) => sum + (i.current_stock * i.avg_cost), 0);
-      const activeLedgers = ledgers.length;
-      
-      // Simplified profit calculation for dashboard
-      const expenses = vouchers.data?.filter(v => v.v_type === 'Payment').reduce((sum, v) => sum + (v.total_amount || 0), 0) || 0;
-      const profit = revenue - expenses;
-
-      // Calculate monthly revenue for chart
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const chartData = months.map(m => ({ name: m, value: 0 }));
-      
-      vouchers.data?.filter(v => v.v_type === 'Sales').forEach(v => {
-        const month = new Date(v.v_date).getMonth();
-        chartData[month].value += (v.total_amount || 0);
-      });
-
-      return { revenue, profit, activeLedgers, stockValue, chartData };
-    } catch (err) {
-      console.error('Error getting dashboard stats:', err);
-      return { revenue: 0, profit: 0, activeLedgers: 0, stockValue: 0 };
-    }
-  },
-
-  async getRecentVouchers(limit = 5) {
-    const { data, error } = await supabase
-      .from('vouchers')
-      .select(`
-        *,
-        voucher_entries(
-          ledgers(name)
-        )
-      `)
-      .order('v_date', { ascending: false })
-      .limit(limit);
-    if (error) throw error;
+  async recalculateItemStats(itemId: string) {
+    const q = query(collection(db, 'inventory_entries'), where('item_id', '==', itemId));
+    const snap = await getDocs(q);
+    const entries = snap.docs.map(d => d.data());
     
-    return (data || []).map(v => ({
+    let stock = 0;
+    for (const e of entries) {
+      const movementType = e.movement_type || e.m_type;
+      stock += movementType === 'Inward' ? e.qty : -e.qty;
+    }
+    
+    await updateDoc(doc(db, 'items', itemId), { current_stock: stock });
+  },
+
+  async getVoucherEntriesByDate(companyId: string, asOnDate: string): Promise<any[]> {
+    // We need to fetch vouchers first to filter by date, then get their entries
+    // Or we can denormalize v_date into voucher_entries.
+    // For now, let's fetch vouchers in range and then their entries.
+    const vouchersQuery = query(
+      collection(db, 'vouchers'),
+      where('companyId', '==', companyId),
+      where('v_date', '<=', asOnDate)
+    );
+    const vouchersSnap = await getDocs(vouchersQuery);
+    const voucherIds = vouchersSnap.docs.map(d => d.id);
+    
+    if (voucherIds.length === 0) return [];
+    
+    // Firestore 'in' query limit is 10, so we might need to chunk or use a different approach
+    // For simplicity in this ERP, we'll fetch all entries for the company and filter in memory if needed,
+    // but better to filter by voucherIds if possible.
+    // Actually, let's just fetch all entries for the company and filter by voucher date if we had it there.
+    // Since we don't have v_date in entries, we'll fetch all and filter.
+    const entriesQuery = query(collection(db, 'voucher_entries'), where('companyId', '==', companyId));
+    const entriesSnap = await getDocs(entriesQuery);
+    return entriesSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter((e: any) => voucherIds.includes(e.voucher_id));
+  },
+
+  async getInventoryEntriesByDate(companyId: string, endDate: string): Promise<any[]> {
+    const q = query(
+      collection(db, 'inventory_entries'),
+      where('companyId', '==', companyId),
+      where('created_at', '<=', endDate + 'T23:59:59Z')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  async getVoucherWithEntries(companyId: string, ledgerId: string, startDate: string, endDate: string): Promise<any[]> {
+    // Fetch vouchers in range
+    const vouchersQuery = query(
+      collection(db, 'vouchers'),
+      where('companyId', '==', companyId),
+      where('v_date', '>=', startDate),
+      where('v_date', '<=', endDate)
+    );
+    const vouchersSnap = await getDocs(vouchersQuery);
+    const vouchers = vouchersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    if (vouchers.length === 0) return [];
+    
+    // Fetch ALL entries for these vouchers
+    const entriesQuery = query(collection(db, 'voucher_entries'), where('companyId', '==', companyId));
+    const entriesSnap = await getDocs(entriesQuery);
+    const allEntries = entriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Filter vouchers that have an entry for the specific ledger
+    const filteredVouchers = vouchers.filter((v: any) => 
+      allEntries.some((e: any) => e.voucher_id === v.id && e.ledger_id === ledgerId)
+    );
+    
+    // Map them together
+    return filteredVouchers.map((v: any) => ({
       ...v,
-      particulars: v.voucher_entries?.[0]?.ledgers?.name || 'Journal Entry'
+      voucher_entries: allEntries.filter((e: any) => e.voucher_id === v.id)
     }));
   },
 
-  async getNextVoucherNumber(type: string) {
-    const { data, error } = await supabase
-      .from('vouchers')
-      .select('v_no')
-      .eq('v_type', type)
-      .order('created_at', { ascending: false })
-      .limit(1);
+  // Dashboard Stats
+  async getDashboardStats(companyId: string) {
+    try {
+      const [vouchers, items, ledgers] = await Promise.all([
+        getDocs(query(collection(db, 'vouchers'), where('companyId', '==', companyId))),
+        this.getItems(companyId),
+        this.getLedgers(companyId)
+      ]);
+
+      const vDocs = vouchers.docs.map(d => d.data());
+      const revenue = vDocs.filter(v => v.v_type === 'Sales').reduce((sum, v) => sum + (v.total_amount || 0), 0);
+      const expenses = vDocs.filter(v => v.v_type === 'Payment').reduce((sum, v) => sum + (v.total_amount || 0), 0);
+      const stockValue = items.reduce((sum: number, i: any) => sum + (i.current_stock * i.avg_cost), 0);
+      
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const chartData = months.map(m => ({ name: m, value: 0 }));
+      
+      vDocs.filter(v => v.v_type === 'Sales').forEach(v => {
+        const date = v.v_date instanceof Timestamp ? v.v_date.toDate() : new Date(v.v_date);
+        const month = date.getMonth();
+        chartData[month].value += (v.total_amount || 0);
+      });
+
+      return { 
+        revenue, 
+        profit: revenue - expenses, 
+        activeLedgers: ledgers.length, 
+        stockValue, 
+        chartData 
+      };
+    } catch (err) {
+      console.error('Error getting dashboard stats:', err);
+      return { revenue: 0, profit: 0, activeLedgers: 0, stockValue: 0, chartData: [] };
+    }
+  },
+
+  async getRecentVouchers(companyId: string, limitCount = 5): Promise<any[]> {
+    const q = query(
+      collection(db, 'vouchers'), 
+      where('companyId', '==', companyId),
+      orderBy('v_date', 'desc'),
+      limit(limitCount)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), particulars: 'Transaction' }));
+  },
+
+  async getVouchersByDateRange(companyId: string, startDate: string, endDate: string): Promise<any[]> {
+    const q = query(
+      collection(db, 'vouchers'),
+      where('companyId', '==', companyId),
+      where('v_date', '>=', startDate),
+      where('v_date', '<=', endDate),
+      orderBy('v_date', 'desc')
+    );
+    const snapshot = await getDocs(q);
     
-    if (error || !data || data.length === 0) {
+    // In a real app, we'd fetch entries too. For now, we'll simplify or use a separate fetch.
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  },
+
+  async getUsers(companyId: string): Promise<any[]> {
+    const q = query(collection(db, 'users'), where('companyId', '==', companyId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+  },
+
+  async getItemByBarcode(companyId: string, barcode: string): Promise<any | null> {
+    const q = query(
+      collection(db, 'items'), 
+      where('companyId', '==', companyId),
+      where('barcode', '==', barcode),
+      limit(1)
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+  },
+
+  async updateUserRole(uid: string, role: string): Promise<void> {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, { role });
+  },
+
+  async getNextVoucherNumber(companyId: string, type: string): Promise<string> {
+    const q = query(
+      collection(db, 'vouchers'),
+      where('companyId', '==', companyId),
+      where('v_type', '==', type),
+      orderBy('created_at', 'desc'),
+      limit(1)
+    );
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
       const prefix = type.substring(0, 3).toUpperCase();
       const year = new Date().getFullYear();
       return `${prefix}/${year}/001`;
     }
 
-    const lastNo = data[0].v_no;
+    const lastNo = snapshot.docs[0].data().v_no;
     const parts = lastNo.split('/');
     if (parts.length === 3) {
       const nextNum = String(parseInt(parts[2]) + 1).padStart(3, '0');
@@ -607,5 +672,92 @@ export const erpService = {
     }
     
     return lastNo + '-1';
+  },
+
+  async getLedgerBalance(ledgerId: string, companyId: string): Promise<number> {
+    try {
+      const [ledger, entries] = await Promise.all([
+        this.getLedgerById(ledgerId),
+        getDocs(query(collection(db, 'voucher_entries'), where('ledger_id', '==', ledgerId), where('companyId', '==', companyId)))
+      ]);
+      
+      const movement = entries.docs.reduce((sum, doc) => {
+        const data = doc.data();
+        return sum + (data.debit || 0) - (data.credit || 0);
+      }, 0);
+      
+      return (ledger.opening_balance || 0) + movement;
+    } catch (err) {
+      console.error('Error getting ledger balance:', err);
+      return 0;
+    }
+  },
+
+  // Company Management
+  async createCompany(userId: string, companyData: any) {
+    try {
+      const ref = doc(collection(db, 'companies'));
+      const data = {
+        ...companyData,
+        id: ref.id,
+        createdBy: userId,
+        createdAt: serverTimestamp()
+      };
+      await setDoc(ref, data);
+      
+      // Update user's current companyId
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, { companyId: ref.id });
+      
+      // Seed default groups for the new company
+      await this.seedDefaultGroups(ref.id);
+      
+      return data;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'companies');
+    }
+  },
+
+  async getUserCompanies(userId: string) {
+    try {
+      const q = query(collection(db, 'companies'), where('createdBy', '==', userId));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'companies');
+      return [];
+    }
+  },
+
+  async switchCompany(userId: string, companyId: string) {
+    try {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, { companyId });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+    }
+  },
+
+  // Settings
+  async getSettings(companyId: string) {
+    try {
+      const ref = doc(db, 'settings', companyId);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        return snap.data();
+      }
+      return null;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `settings/${companyId}`);
+    }
+  },
+
+  async updateSettings(companyId: string, settings: any) {
+    try {
+      const ref = doc(db, 'settings', companyId);
+      await setDoc(ref, { ...settings, companyId }, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `settings/${companyId}`);
+    }
   }
 };

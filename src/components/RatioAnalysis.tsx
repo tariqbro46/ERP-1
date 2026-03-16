@@ -2,18 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Activity, TrendingUp, Scale, Package, Loader2, Download, Printer } from 'lucide-react';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { erpService } from '../services/erpService';
+import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { printReport } from '../utils/printUtils';
 
 export function RatioAnalysis() {
+  const { user } = useAuth();
   const settings = useSettings();
   const [loading, setLoading] = useState(true);
   const [ratios, setRatios] = useState<any>(null);
 
   useEffect(() => {
     async function fetchRatios() {
+      if (!user?.companyId) return;
       try {
-        const stats = await erpService.getDashboardStats();
+        const stats = await erpService.getDashboardStats(user.companyId);
         // Calculate some basic ratios
         const currentAssets = stats.stockValue + 500000; // Mocking some cash
         const currentLiabilities = 300000; // Mocking
@@ -21,8 +24,8 @@ export function RatioAnalysis() {
         setRatios({
           currentRatio: (currentAssets / currentLiabilities).toFixed(2),
           quickRatio: ((currentAssets - stats.stockValue) / currentLiabilities).toFixed(2),
-          grossProfitMargin: ((stats.profit / stats.revenue) * 100).toFixed(2),
-          inventoryTurnover: (stats.revenue / stats.stockValue).toFixed(2),
+          grossProfitMargin: stats.revenue > 0 ? ((stats.profit / stats.revenue) * 100).toFixed(2) : '0.00',
+          inventoryTurnover: stats.stockValue > 0 ? (stats.revenue / stats.stockValue).toFixed(2) : '0.00',
           debtToEquity: (0.45).toFixed(2) // Mock
         });
       } catch (err) {
@@ -32,7 +35,7 @@ export function RatioAnalysis() {
       }
     }
     fetchRatios();
-  }, []);
+  }, [user?.companyId]);
 
   const handlePrint = () => {
     const printData = [

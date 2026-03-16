@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Printer, Download, ChevronDown, ChevronRight } from 'lucide-react';
 import { erpService } from '../services/erpService';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { printProfitAndLoss } from '../utils/printUtils';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 
 export function ProfitAndLoss() {
+  const { user } = useAuth();
   const settings = useSettings();
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState(() => {
@@ -33,47 +34,50 @@ export function ProfitAndLoss() {
 
   useEffect(() => {
     async function fetchPL() {
+      if (!user?.companyId) return;
       setLoading(true);
       try {
-        const ledgers = await erpService.getLedgers();
+        const ledgers = await erpService.getLedgers(user.companyId);
         
-        // Fetch inventory entries for closing stock calculation based on date
-        const { data: invEntries } = await supabase
-          .from('inventory_entries')
-          .select('*, items(avg_cost)')
-          .lte('created_at', endDate + 'T23:59:59Z');
-
         // Calculate closing stock based on movements up to endDate
+        const [allItems, invEntries] = await Promise.all([
+          erpService.getItems(user.companyId),
+          erpService.getInventoryEntriesByDate(user.companyId, endDate)
+        ]);
+
         const itemStocks: Record<string, { qty: number, cost: number }> = {};
-        invEntries?.forEach(entry => {
+        
+        // Initialize with opening stock if needed, or just from entries
+        for (const entry of invEntries) {
           if (!itemStocks[entry.item_id]) {
-            itemStocks[entry.item_id] = { qty: 0, cost: entry.items?.avg_cost || 0 };
+            const item = allItems.find(i => i.id === entry.item_id);
+            itemStocks[entry.item_id] = { qty: 0, cost: item?.avg_cost || item?.opening_rate || 0 };
           }
-          if (entry.movement_type === 'Inward') {
+          const movementType = entry.movement_type || entry.m_type;
+          if (movementType === 'Inward') {
             itemStocks[entry.item_id].qty += entry.qty;
           } else {
             itemStocks[entry.item_id].qty -= entry.qty;
           }
-        });
+        }
 
         const closingStock = Object.values(itemStocks).reduce((sum, item) => sum + (item.qty * item.cost), 0);
 
         // Fetch voucher entries within date range for P&L
-        const { data: vEntries } = await supabase
-          .from('voucher_entries')
-          .select('*, vouchers!inner(v_date, v_type)')
-          .gte('vouchers.v_date', startDate)
-          .lte('vouchers.v_date', endDate);
+        const vEntries = await erpService.getVouchersByDateRange(user.companyId, startDate, endDate);
+        // We need the entries for these vouchers
+        const allVoucherEntries = await erpService.getCollection('voucher_entries', user.companyId);
+        const filteredVEntries = allVoucherEntries.filter((e: any) => vEntries.some((v: any) => v.id === e.voucher_id));
 
         const groups: Record<string, any> = {};
         
         // Initialize groups from ledgers to ensure all groups are present
         ledgers.forEach(l => {
-          const groupName = l.ledger_groups?.name || 'Uncategorized';
+          const groupName = l.group_name || 'Uncategorized';
           if (!groups[groupName]) {
             groups[groupName] = {
               name: groupName,
-              nature: l.ledger_groups?.nature,
+              nature: l.nature,
               balance: 0,
               ledgers: []
             };
@@ -81,10 +85,10 @@ export function ProfitAndLoss() {
           // We don't use current_balance here, we'll calculate from vEntries
         });
 
-        vEntries?.forEach(e => {
+        filteredVEntries.forEach((e: any) => {
           const ledger = ledgers.find(l => l.id === e.ledger_id);
           if (ledger) {
-            const groupName = ledger.ledger_groups?.name || 'Uncategorized';
+            const groupName = ledger.group_name || 'Uncategorized';
             if (groups[groupName]) {
               groups[groupName].balance += (e.debit - e.credit);
               // Add ledger to group if not already there
@@ -136,11 +140,13 @@ export function ProfitAndLoss() {
   const totalPurchases = tradingData.purchaseGroups.reduce((s: number, g: any) => s + g.balance, 0);
   const totalSales = tradingData.salesGroups.reduce((s: number, g: any) => s + g.balance, 0);
   const totalDirectExp = tradingData.directExpenseGroups.reduce((s: number, g: any) => s + g.balance, 0);
+  const totalDirectInc = tradingData.directIncomeGroups.reduce((s: number, g: any) => s + g.balance, 0);
   
-  const grossProfit = (Math.abs(totalSales) + tradingData.closingStock) - (tradingData.openingStock + Math.abs(totalPurchases) + totalDirectExp);
+  const grossProfit = (Math.abs(totalSales) + tradingData.closingStock + Math.abs(totalDirectInc)) - (tradingData.openingStock + Math.abs(totalPurchases) + totalDirectExp);
   
   const totalIndirectExp = plData.indirectExpenseGroups.reduce((s: number, g: any) => s + g.balance, 0);
-  const netProfit = grossProfit - totalIndirectExp;
+  const totalIndirectInc = plData.indirectIncomeGroups.reduce((s: number, g: any) => s + g.balance, 0);
+  const netProfit = (grossProfit + Math.abs(totalIndirectInc)) - totalIndirectExp;
 
   const handlePrint = () => {
     printProfitAndLoss({

@@ -1,4 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
+import { erpService } from '../services/erpService';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 
 interface NotificationSettings {
   voucherSaved: string;
@@ -88,22 +92,38 @@ const defaultSettings: SettingsContextType = {
 const SettingsContext = createContext<SettingsContextType>(defaultSettings);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<SettingsContextType>(() => {
-    const saved = localStorage.getItem('tallyflow_settings');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Merge with defaultSettings to ensure new properties like 'features' exist
-      return { ...defaultSettings, ...parsed };
-    }
-    return defaultSettings;
-  });
+  const { user } = useAuth();
+  const [settings, setSettings] = useState<SettingsContextType>(defaultSettings);
 
-  const updateSettings = (newSettings: Partial<SettingsContextType>) => {
-    setSettings(prev => {
-      const updated = { ...prev, ...newSettings };
-      localStorage.setItem('tallyflow_settings', JSON.stringify(updated));
-      return updated;
+  useEffect(() => {
+    if (!user?.companyId) {
+      setSettings(defaultSettings);
+      return;
+    }
+
+    const ref = doc(db, 'settings', user.companyId);
+    const unsubscribe = onSnapshot(ref, (snap) => {
+      if (snap.exists()) {
+        setSettings(prev => ({ ...defaultSettings, ...snap.data(), updateSettings: prev.updateSettings }));
+      } else {
+        // If no settings exist for this company, use defaults
+        setSettings(prev => ({ ...defaultSettings, updateSettings: prev.updateSettings }));
+      }
     });
+
+    return () => unsubscribe();
+  }, [user?.companyId]);
+
+  const updateSettings = async (newSettings: Partial<SettingsContextType>) => {
+    if (!user?.companyId) return;
+    
+    try {
+      // Remove updateSettings function before saving
+      const { updateSettings: _, ...dataToSave } = newSettings as any;
+      await erpService.updateSettings(user.companyId, dataToSave);
+    } catch (err) {
+      console.error('Error updating settings:', err);
+    }
   };
 
   return (

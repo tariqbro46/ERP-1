@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Save, ArrowLeft, Loader2, Package, Trash2, AlertTriangle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { erpService } from '../services/erpService';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 
 export function ItemCreation() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { showNotification } = useNotification();
   const { notifications, features = [] } = useSettings();
   const { id } = useParams();
@@ -42,22 +43,22 @@ export function ItemCreation() {
 
   useEffect(() => {
     async function init() {
+      if (!user?.companyId) return;
       try {
-        const { data: uData, error: uError } = await supabase.from('units').select('*').order('name');
-        if (uError) throw uError;
+        const uData = await erpService.getUnits(user.companyId);
         setUnits(uData || []);
 
         // Fetch unique categories
-        const { data: iDataAll, error: iError } = await supabase.from('items').select('category');
-        if (!iError && iDataAll) {
+        const iDataAll = await erpService.getItems(user.companyId);
+        if (iDataAll) {
           const uniqueCats = Array.from(new Set(iDataAll.map(i => i.category).filter(Boolean)));
           setCategories(uniqueCats as string[]);
         }
 
         if (isEdit) {
           const [iData, hasTx] = await Promise.all([
-            erpService.getItemById(id),
-            erpService.checkItemTransactions(id)
+            erpService.getItemById(id!),
+            erpService.checkItemTransactions(id!)
           ]);
           setHasTransactions(hasTx);
           setFormData({
@@ -77,7 +78,7 @@ export function ItemCreation() {
       }
     }
     init();
-  }, [id, isEdit]);
+  }, [id, isEdit, user?.companyId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,18 +90,10 @@ export function ItemCreation() {
       const { units: _u, id: _id, created_at: _ca, current_stock: _cs, avg_cost: _ac, ...cleanData } = formData as any;
       
       if (isEdit) {
-        await erpService.updateItem(id, cleanData);
+        await erpService.updateItem(id!, cleanData);
         showNotification(notifications.itemCreated.replace('added', 'updated'));
       } else {
-        // Initialize current_stock with opening_qty on creation
-        // Also initialize avg_cost with opening_rate
-        const payload = { 
-          ...cleanData, 
-          current_stock: cleanData.opening_qty,
-          avg_cost: cleanData.opening_rate
-        };
-        const { error } = await supabase.from('items').insert([payload]);
-        if (error) throw error;
+        await erpService.createItem(user!.companyId, cleanData);
         showNotification(notifications.itemCreated);
       }
       navigate('/inventory/items');

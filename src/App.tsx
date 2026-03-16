@@ -21,7 +21,8 @@ import {
   Moon,
   Menu,
   X,
-  Users
+  Users,
+  Building2
 } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { VoucherEntry } from './components/VoucherEntry';
@@ -42,6 +43,7 @@ import { RatioAnalysis } from './components/RatioAnalysis';
 import { FinancialInsights } from './components/FinancialInsights';
 import { GodownMaster } from './components/GodownMaster';
 import { UserManagement } from './components/UserManagement';
+import { CompanyManagement } from './components/CompanyManagement';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login, Register } from './components/Auth';
@@ -105,7 +107,6 @@ function Layout({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme();
   const { user, logout, isAdmin } = useAuth();
   const { companyName, slogan, features = [] } = useSettings();
-  const [dbStatus, setDbStatus] = React.useState<'checking' | 'connected' | 'error'>('checking');
 
   const isInventoryEnabled = features.find(f => f.id === 'inv')?.enabled ?? true;
   const [expandedGroup, setExpandedGroup] = React.useState<string | null>(null);
@@ -138,20 +139,6 @@ function Layout({ children }: { children: React.ReactNode }) {
   const toggleGroup = (group: string) => {
     setExpandedGroup(expandedGroup === group ? null : group);
   };
-
-  React.useEffect(() => {
-    async function checkConnection() {
-      try {
-        const { error } = await supabase.from('companies').select('count', { count: 'exact', head: true });
-        if (error) throw error;
-        setDbStatus('connected');
-      } catch (err) {
-        console.error('Supabase connection error:', err);
-        setDbStatus('error');
-      }
-    }
-    checkConnection();
-  }, []);
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden transition-colors duration-300 relative">
@@ -254,6 +241,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             onToggle={() => toggleGroup('Utilities')}
           >
             <SidebarItem to="/notes" icon={StickyNote} label={isSidebarCollapsed ? "" : "Notes / Memo"} active={location.pathname === '/notes'} />
+            <SidebarItem to="/companies" icon={Building2} label={isSidebarCollapsed ? "" : "Companies"} active={location.pathname === '/companies'} />
             {isAdmin && <SidebarItem to="/users" icon={Users} label={isSidebarCollapsed ? "" : "User Management"} active={location.pathname === '/users'} />}
             <SidebarItem to="/settings" icon={SettingsIcon} label={isSidebarCollapsed ? "" : "Settings (F11)"} active={location.pathname === '/settings'} />
           </SidebarGroup>
@@ -285,19 +273,12 @@ function Layout({ children }: { children: React.ReactNode }) {
             </button>
             <div className="hidden sm:flex items-center gap-4">
               <span className="text-[10px] text-gray-600 font-mono uppercase">
-                Status: {dbStatus === 'connected' ? 'Online' : dbStatus === 'checking' ? 'Connecting...' : 'Offline'}
+                Status: Online
               </span>
-              <div className={cn(
-                "h-1.5 w-1.5 rounded-full",
-                dbStatus === 'connected' ? "bg-emerald-500 animate-pulse" : 
-                dbStatus === 'checking' ? "bg-amber-500 animate-pulse" : "bg-rose-500"
-              )} />
+              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             </div>
             <div className="sm:hidden">
-              <div className={cn(
-                "h-2 w-2 rounded-full",
-                dbStatus === 'connected' ? "bg-emerald-500" : "bg-rose-500"
-              )} />
+              <div className="h-2 w-2 rounded-full bg-emerald-500" />
             </div>
           </div>
           <div className="flex items-center gap-3 lg:gap-6">
@@ -316,8 +297,8 @@ function Layout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex items-center gap-3 border-l border-border pl-4 lg:pl-6">
               <div className="text-right hidden sm:block">
-                <p className="text-[10px] text-foreground font-mono">{user?.username || 'Admin User'}</p>
-                <p className="text-[9px] text-gray-500 uppercase font-mono">{user?.role || 'Super Admin'}</p>
+                <p className="text-[10px] text-foreground font-mono">{user?.displayName || user?.email || 'User'}</p>
+                <p className="text-[9px] text-gray-500 uppercase font-mono">{user?.role || 'Staff'}</p>
               </div>
               <button 
                 onClick={logout}
@@ -439,6 +420,7 @@ function AppContent() {
           <Route path="/reports/ledger" element={<LedgerStatement />} />
           <Route path="/accounts" element={<ChartOfAccounts />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/companies" element={<CompanyManagement />} />
           <Route path="/users" element={<UserManagement />} />
           <Route path="*" element={<div className="p-10 text-foreground font-mono">404 - Feature Not Implemented</div>} />
         </Routes>

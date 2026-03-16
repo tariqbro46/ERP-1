@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Calendar, ArrowRight, Download, Printer, BarChart3, PieChart as PieChartIcon, CheckCircle2, XCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { erpService } from '../services/erpService';
+import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 
 export function FinancialInsights() {
+  const { user } = useAuth();
   const settings = useSettings();
   const [loading, setLoading] = useState(true);
   const [cashFlowData, setCashFlowData] = useState<any[]>([]);
@@ -14,23 +16,21 @@ export function FinancialInsights() {
 
   useEffect(() => {
     async function fetchData() {
+      if (!user?.companyId) return;
       setLoading(true);
       try {
         // Fetch last 6 months of data for forecast
         const now = new Date();
-        const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString();
+        const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1).toISOString().split('T')[0];
         
-        const { data: vouchers } = await supabase
-          .from('vouchers')
-          .select('*')
-          .gte('v_date', sixMonthsAgo)
-          .order('v_date', { ascending: true });
+        const vouchers = await erpService.getCollection('vouchers', user.companyId);
+        const filteredVouchers = vouchers.filter((v: any) => v.v_date >= sixMonthsAgo);
 
-        if (vouchers) {
+        if (filteredVouchers) {
           // Process for Cash Flow Forecast (Simple moving average or trend)
           const monthlyData: Record<string, { month: string, inflow: number, outflow: number }> = {};
           
-          vouchers.forEach(v => {
+          filteredVouchers.forEach((v: any) => {
             const m = new Date(v.v_date).toLocaleString('default', { month: 'short', year: '2-digit' });
             if (!monthlyData[m]) monthlyData[m] = { month: m, inflow: 0, outflow: 0 };
             
@@ -44,8 +44,8 @@ export function FinancialInsights() {
           const chartData = Object.values(monthlyData);
           
           // Simple Forecast for next 3 months
-          const avgInflow = chartData.reduce((sum, d) => sum + d.inflow, 0) / chartData.length;
-          const avgOutflow = chartData.reduce((sum, d) => sum + d.outflow, 0) / chartData.length;
+          const avgInflow = chartData.length > 0 ? chartData.reduce((sum, d) => sum + d.inflow, 0) / chartData.length : 0;
+          const avgOutflow = chartData.length > 0 ? chartData.reduce((sum, d) => sum + d.outflow, 0) / chartData.length : 0;
           
           const forecast = [];
           for (let i = 1; i <= 3; i++) {
@@ -66,11 +66,11 @@ export function FinancialInsights() {
           const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
           const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-          const currMonthVouchers = vouchers.filter(v => {
+          const currMonthVouchers = filteredVouchers.filter((v: any) => {
             const d = new Date(v.v_date);
             return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
           });
-          const prevMonthVouchers = vouchers.filter(v => {
+          const prevMonthVouchers = filteredVouchers.filter((v: any) => {
             const d = new Date(v.v_date);
             return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
           });
@@ -78,13 +78,13 @@ export function FinancialInsights() {
           const compare = [
             {
               name: 'Revenue',
-              current: currMonthVouchers.filter(v => v.v_type === 'Sales').reduce((sum, v) => sum + v.total_amount, 0),
-              previous: prevMonthVouchers.filter(v => v.v_type === 'Sales').reduce((sum, v) => sum + v.total_amount, 0)
+              current: currMonthVouchers.filter((v: any) => v.v_type === 'Sales').reduce((sum: number, v: any) => sum + v.total_amount, 0),
+              previous: prevMonthVouchers.filter((v: any) => v.v_type === 'Sales').reduce((sum: number, v: any) => sum + v.total_amount, 0)
             },
             {
               name: 'Expenses',
-              current: currMonthVouchers.filter(v => v.v_type === 'Payment' || v.v_type === 'Purchase').reduce((sum, v) => sum + v.total_amount, 0),
-              previous: prevMonthVouchers.filter(v => v.v_type === 'Payment' || v.v_type === 'Purchase').reduce((sum, v) => sum + v.total_amount, 0)
+              current: currMonthVouchers.filter((v: any) => v.v_type === 'Payment' || v.v_type === 'Purchase').reduce((sum: number, v: any) => sum + v.total_amount, 0),
+              previous: prevMonthVouchers.filter((v: any) => v.v_type === 'Payment' || v.v_type === 'Purchase').reduce((sum: number, v: any) => sum + v.total_amount, 0)
             }
           ];
           setComparisonData(compare);
@@ -96,7 +96,7 @@ export function FinancialInsights() {
       }
     }
     fetchData();
-  }, [period]);
+  }, [user?.companyId, period]);
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">

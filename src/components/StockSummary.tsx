@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Package, Search, Printer, Download, ChevronDown, ChevronRight, Loader2, Filter, MapPin, Activity, AlertTriangle } from 'lucide-react';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { erpService } from '../services/erpService';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 
 export function StockSummary() {
+  const { user } = useAuth();
   const settings = useSettings();
   const { showNotification } = useNotification();
   const [items, setItems] = useState<any[]>([]);
@@ -22,17 +23,13 @@ export function StockSummary() {
 
   useEffect(() => {
     async function fetchData() {
+      if (!user?.companyId) return;
       try {
-        const [itemsRes, godownsRes, invRes] = await Promise.all([
-          supabase.from('items').select('*, units(name)'),
-          erpService.getGodowns(),
-          supabase.from('inventory_entries').select('*')
+        const [allItems, godownsRes, allInv] = await Promise.all([
+          erpService.getItems(user.companyId),
+          erpService.getGodowns(user.companyId),
+          erpService.getCollection('inventory_entries', user.companyId)
         ]);
-
-        if (itemsRes.error) throw itemsRes.error;
-        
-        const allItems = itemsRes.data || [];
-        const allInv = invRes.data || [];
         
         // Calculate stock per item per godown if needed
         // For now, we'll store the raw inventory entries to calculate on the fly
@@ -50,7 +47,7 @@ export function StockSummary() {
       }
     }
     fetchData();
-  }, []);
+  }, [user?.companyId]);
 
   const [inventory, setInventory] = useState<any[]>([]);
 

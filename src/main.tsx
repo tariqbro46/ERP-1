@@ -10,13 +10,13 @@ import { AuthProvider } from './contexts/AuthContext.tsx';
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
-      <SettingsProvider>
-        <NotificationProvider>
-          <AuthProvider>
+      <AuthProvider>
+        <SettingsProvider>
+          <NotificationProvider>
             <App />
-          </AuthProvider>
-        </NotificationProvider>
-      </SettingsProvider>
+          </NotificationProvider>
+        </SettingsProvider>
+      </AuthProvider>
     </ThemeProvider>
   </StrictMode>,
 );

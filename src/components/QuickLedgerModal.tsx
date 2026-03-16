@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2 } from 'lucide-react';
 import { erpService } from '../services/erpService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface QuickLedgerModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface QuickLedgerModalProps {
 }
 
 export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: QuickLedgerModalProps) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -25,8 +27,9 @@ export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: Q
   }, [isOpen]);
 
   async function fetchGroups() {
+    if (!user?.companyId) return;
     try {
-      const data = await erpService.getLedgerGroups();
+      const data = await erpService.getLedgerGroups(user.companyId);
       setGroups(data);
       
       // Try to find a matching group based on initialGroup hint
@@ -52,7 +55,7 @@ export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: Q
 
     setLoading(true);
     try {
-      const newLedger = await erpService.createLedger(formData);
+      const newLedger = await erpService.createLedger(user!.companyId, formData);
       onSuccess(newLedger);
       onClose();
       setFormData({ name: '', group_id: '', opening_balance: 0 });

@@ -47,7 +47,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const { companyName, financialYearStart, financialYearEnd } = useSettings();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [loading, setLoading] = useState(true);
   
   // Default to current month
@@ -86,11 +86,12 @@ export function Dashboard() {
 
   useEffect(() => {
     async function fetchData() {
+      if (!user?.companyId) return;
       setLoading(true);
       try {
         const [s, v] = await Promise.all([
-          erpService.getDashboardStats(),
-          erpService.getRecentVouchers(5)
+          erpService.getDashboardStats(user.companyId),
+          erpService.getRecentVouchers(user.companyId, 5)
         ]);
         setStats(s);
         setRecentVouchers(v);
@@ -101,7 +102,7 @@ export function Dashboard() {
       }
     }
     fetchData();
-  }, [periodStart, periodEnd]);
+  }, [periodStart, periodEnd, user?.companyId]);
 
   const formatFY = (start: string, end: string) => {
     const s = new Date(start).getFullYear().toString().slice(-2);

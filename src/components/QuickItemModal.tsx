@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, Package, Plus } from 'lucide-react';
 import { erpService } from '../services/erpService';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface QuickItemModalProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ interface QuickItemModalProps {
 }
 
 export function QuickItemModal({ isOpen, onClose, onSuccess }: QuickItemModalProps) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [units, setUnits] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -30,17 +31,18 @@ export function QuickItemModal({ isOpen, onClose, onSuccess }: QuickItemModalPro
   }, [isOpen]);
 
   async function fetchData() {
+    if (!user?.companyId) return;
     try {
-      const { data: uData } = await supabase.from('units').select('*').order('name');
+      const uData = await erpService.getUnits(user.companyId);
       if (uData) {
         setUnits(uData);
-        const pcs = uData.find(u => u.name.toLowerCase() === 'pcs');
+        const pcs = uData.find((u: any) => u.name.toLowerCase() === 'pcs');
         setFormData(prev => ({ ...prev, unit_id: pcs?.id || uData[0].id }));
       }
 
-      const { data: iData } = await supabase.from('items').select('category');
+      const iData = await erpService.getItems(user.companyId);
       if (iData) {
-        const cats = Array.from(new Set(iData.map(i => i.category).filter(Boolean)));
+        const cats = Array.from(new Set(iData.map((i: any) => i.category).filter(Boolean)));
         setCategories(cats as string[]);
       }
     } catch (err) {
@@ -62,7 +64,7 @@ export function QuickItemModal({ isOpen, onClose, onSuccess }: QuickItemModalPro
         opening_rate: formData.opening_rate
       };
 
-      const newItem = await erpService.createItem(payload);
+      const newItem = await erpService.createItem(user!.companyId, payload);
       onSuccess(newItem);
       onClose();
       // Reset form

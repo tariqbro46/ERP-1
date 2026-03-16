@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Loader2, Printer, Download, ChevronDown, ChevronRight } from 'lucide-react';
 import { erpService } from '../services/erpService';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { useSettings } from '../contexts/SettingsContext';
 import { printBalanceSheet } from '../utils/printUtils';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 
 export function BalanceSheet() {
+  const { user } = useAuth();
   const settings = useSettings();
   const [loading, setLoading] = useState(true);
   const [asOnDate, setAsOnDate] = useState(() => {
@@ -20,29 +21,44 @@ export function BalanceSheet() {
 
   useEffect(() => {
     async function fetchBalances() {
+      if (!user?.companyId) return;
       setLoading(true);
       try {
-        const ledgers = await erpService.getLedgers();
-        
-        // Fetch all voucher entries up to asOnDate to calculate balances
-        const { data: vEntries } = await supabase
-          .from('voucher_entries')
-          .select('*, vouchers!inner(v_date)')
-          .lte('vouchers.v_date', asOnDate);
+        const [ledgers, vEntries, items, invEntries] = await Promise.all([
+          erpService.getLedgers(user.companyId),
+          erpService.getVoucherEntriesByDate(user.companyId, asOnDate),
+          erpService.getItems(user.companyId),
+          erpService.getInventoryEntriesByDate(user.companyId, asOnDate)
+        ]);
 
-        // Group ledgers by their group name
+        // Calculate Closing Stock
+        const itemStocks: Record<string, { qty: number, cost: number }> = {};
+        for (const entry of invEntries) {
+          if (!itemStocks[entry.item_id]) {
+            const item = items.find(i => i.id === entry.item_id);
+            itemStocks[entry.item_id] = { qty: 0, cost: item?.avg_cost || item?.opening_rate || 0 };
+          }
+          const movementType = entry.movement_type || entry.m_type;
+          if (movementType === 'Inward') {
+            itemStocks[entry.item_id].qty += entry.qty;
+          } else {
+            itemStocks[entry.item_id].qty -= entry.qty;
+          }
+        }
+        const closingStockValue = Object.values(itemStocks).reduce((sum, item) => sum + (item.qty * item.cost), 0);
+
+        // Group ledgers by their group name and calculate balances
         const groups: Record<string, any> = {};
         ledgers.forEach(l => {
-          const groupName = l.ledger_groups?.name || 'Uncategorized';
+          const groupName = l.group_name || 'Uncategorized';
           if (!groups[groupName]) {
             groups[groupName] = {
               name: groupName,
-              nature: l.ledger_groups?.nature,
+              nature: l.nature,
               balance: 0,
               ledgers: []
             };
           }
-          // We'll calculate balance from vEntries + opening_balance
           const ledgerEntries = vEntries?.filter(e => e.ledger_id === l.id) || [];
           const periodMovement = ledgerEntries.reduce((sum, e) => sum + (e.debit - e.credit), 0);
           const currentBalance = (l.opening_balance || 0) + periodMovement;
@@ -54,8 +70,30 @@ export function BalanceSheet() {
         });
 
         const gList = Object.values(groups);
-        setAssetGroups(gList.filter(g => g.nature === 'Asset'));
-        setLiabilityGroups(gList.filter(g => g.nature === 'Liability'));
+        
+        // Calculate Net Profit
+        const totalSales = gList.filter(g => g.nature === 'Income' && g.name.includes('Sales')).reduce((s, g) => s + g.balance, 0);
+        const totalPurchases = gList.filter(g => g.nature === 'Expense' && g.name.includes('Purchase')).reduce((s, g) => s + g.balance, 0);
+        const totalDirectExp = gList.filter(g => g.nature === 'Expense' && g.name.includes('Direct')).reduce((s, g) => s + g.balance, 0);
+        const totalDirectInc = gList.filter(g => g.nature === 'Income' && g.name.includes('Direct')).reduce((s, g) => s + g.balance, 0);
+        
+        const grossProfit = (Math.abs(totalSales) + closingStockValue + totalDirectInc) - (Math.abs(totalPurchases) + totalDirectExp);
+        
+        const totalIndirectExp = gList.filter(g => g.nature === 'Expense' && !g.name.includes('Direct') && !g.name.includes('Purchase')).reduce((s, g) => s + g.balance, 0);
+        const totalIndirectInc = gList.filter(g => g.nature === 'Income' && !g.name.includes('Direct') && !g.name.includes('Sales')).reduce((s, g) => s + g.balance, 0);
+        
+        const netProfit = (grossProfit + totalIndirectInc) - totalIndirectExp;
+
+        setAssetGroups([
+          ...gList.filter(g => g.nature === 'Asset'),
+          { name: 'Closing Stock', balance: closingStockValue, ledgers: [], isSystem: true }
+        ]);
+
+        setLiabilityGroups([
+          ...gList.filter(g => g.nature === 'Liability'),
+          { name: 'Profit & Loss A/c', balance: -netProfit, ledgers: [], isSystem: true }
+        ]);
+
       } catch (err) {
         console.error('Error fetching balance sheet:', err);
       } finally {

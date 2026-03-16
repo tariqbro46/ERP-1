@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Printer, Download, Filter, Loader2 } from 'lucide-react';
 import { erpService } from '../services/erpService';
+import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { useSettings } from '../contexts/SettingsContext';
 import { printReport } from '../utils/printUtils';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 
 export function TrialBalance() {
+  const { user } = useAuth();
   const settings = useSettings();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any[]>([]);
@@ -14,8 +16,9 @@ export function TrialBalance() {
 
   useEffect(() => {
     async function fetchData() {
+      if (!user?.companyId) return;
       try {
-        const ledgers = await erpService.getLedgers();
+        const ledgers = await erpService.getLedgers(user.companyId);
         // Group by nature or just list all ledgers with their balances
         setData(ledgers);
       } catch (err) {
@@ -25,7 +28,7 @@ export function TrialBalance() {
       }
     }
     fetchData();
-  }, []);
+  }, [user?.companyId]);
 
   const filteredData = data.filter(l => 
     l.name.toLowerCase().includes(search.toLowerCase()) ||

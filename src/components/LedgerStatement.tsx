@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Search, Printer, Download, ArrowLeft, Calculator } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
-import { supabase } from '../lib/supabase';
+import { erpService } from '../services/erpService';
+import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { printReport } from '../utils/printUtils';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { QuickAdjustmentModal } from './QuickAdjustmentModal';
 
 export function LedgerStatement() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const settings = useSettings();
   const [ledgers, setLedgers] = useState<any[]>([]);
@@ -29,58 +31,36 @@ export function LedgerStatement() {
 
   useEffect(() => {
     async function fetchLedgers() {
-      const { data } = await supabase.from('ledgers').select('*').order('name');
+      if (!user?.companyId) return;
+      const data = await erpService.getLedgers(user.companyId);
       if (data) setLedgers(data);
     }
     fetchLedgers();
-  }, []);
+  }, [user?.companyId]);
 
   const fetchEntries = async () => {
-    if (!selectedLedger) {
+    if (!selectedLedger || !user?.companyId) {
       setEntries([]);
       return;
     }
     
     setLoading(true);
     try {
-      // Permanent Fix: Start from vouchers table (like Daybook) to ensure data visibility
-      // We filter vouchers that have at least one entry for the selected ledger
-      const { data, error } = await supabase
-        .from('vouchers')
-        .select(`
-          *,
-          voucher_entries!inner (
-            ledger_id,
-            debit,
-            credit
-          ),
-          all_entries:voucher_entries (
-            ledger_id,
-            ledgers (name)
-          )
-        `)
-        .eq('voucher_entries.ledger_id', selectedLedger)
-        .gte('v_date', startDate)
-        .lte('v_date', endDate)
-        .order('v_date', { ascending: true });
+      const data = await erpService.getVoucherWithEntries(user.companyId, selectedLedger, startDate, endDate);
       
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        setEntries([]);
-        return;
-      }
-
-      const processed = data.map(v => {
+      const processed = data.map((v: any) => {
         // Find the specific entry for our selected ledger
         const mainEntry = v.voucher_entries.find((e: any) => e.ledger_id === selectedLedger);
         
         // Find the "other side" particulars from all_entries
-        const otherEntries = v.all_entries.filter((e: any) => e.ledger_id !== selectedLedger);
+        const otherEntries = v.voucher_entries.filter((e: any) => e.ledger_id !== selectedLedger);
         
         let particulars = 'Self';
         if (otherEntries.length === 1) {
-          particulars = otherEntries[0].ledgers?.name || 'Unknown';
+          // We need to fetch the ledger name for otherEntries[0].ledger_id
+          // For now, we'll assume we can find it in our ledgers state
+          const otherLedger = ledgers.find(l => l.id === otherEntries[0].ledger_id);
+          particulars = otherLedger?.name || 'Unknown';
         } else if (otherEntries.length > 1) {
           particulars = 'As per details';
         }
@@ -96,7 +76,7 @@ export function LedgerStatement() {
 
       setEntries(processed);
     } catch (err) {
-      console.error('LedgerStatement Permanent Fix Error:', err);
+      console.error('LedgerStatement Error:', err);
       setEntries([]);
     } finally {
       setLoading(false);
@@ -405,7 +385,8 @@ export function LedgerStatement() {
             fetchEntries();
             // Also refresh ledgers to get updated balance
             async function refreshLedgers() {
-              const { data } = await supabase.from('ledgers').select('*').order('name');
+              if (!user?.companyId) return;
+              const data = await erpService.getLedgers(user.companyId);
               if (data) setLedgers(data);
             }
             refreshLedgers();

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, Printer, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { erpService } from '../services/erpService';
+import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { printReport } from '../utils/printUtils';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
@@ -10,6 +11,7 @@ import { exportService } from '../services/exportService';
 
 export function Daybook() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const settings = useSettings();
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,50 +25,20 @@ export function Daybook() {
   });
 
   const fetchVouchers = async () => {
+    if (!user?.companyId) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from('vouchers')
-      .select(`
-        *,
-        voucher_entries(
-          ledger_id,
-          ledgers(name)
-        ),
-        inventory_entries(
-          qty,
-          rate,
-          amount,
-          items(name)
-        )
-      `)
-      .gte('v_date', startDate)
-      .lte('v_date', endDate)
-      .order('v_date', { ascending: false });
-    
-    if (!error) {
-      const processed = (data || []).map(v => {
-        let particulars = 'Journal Entry';
-        if (v.v_type === 'Sales' || v.v_type === 'Purchase') {
-          particulars = v.voucher_entries?.[0]?.ledgers?.name || 'Inventory Voucher';
-        } else if (v.v_type === 'Payment' || v.v_type === 'Receipt' || v.v_type === 'Contra') {
-          // Show the non-cash/bank side
-          const nonBankEntry = v.voucher_entries?.find((e: any) => 
-            !e.ledgers?.name.toLowerCase().includes('cash') && 
-            !e.ledgers?.name.toLowerCase().includes('bank')
-          );
-          particulars = nonBankEntry?.ledgers?.name || v.voucher_entries?.[0]?.ledgers?.name || 'Accounting Voucher';
-        } else {
-          particulars = v.voucher_entries?.[0]?.ledgers?.name || 'Journal Entry';
-        }
-        
-        return {
-          ...v,
-          particulars
-        };
-      });
+    try {
+      const data = await erpService.getVouchersByDateRange(user.companyId, startDate, endDate);
+      const processed = (data || []).map(v => ({
+        ...v,
+        particulars: v.particulars || 'Transaction'
+      }));
       setVouchers(processed);
+    } catch (err) {
+      console.error('Error fetching vouchers:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {

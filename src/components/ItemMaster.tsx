@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { erpService } from '../services/erpService';
+import { useAuth } from '../contexts/AuthContext';
 import { Package, Search, Edit2, Plus, Loader2, Filter, List, Grid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function ItemMaster() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -13,8 +15,9 @@ export function ItemMaster() {
 
   useEffect(() => {
     async function fetchItems() {
+      if (!user?.companyId) return;
       try {
-        const data = await erpService.getItems();
+        const data = await erpService.getItems(user.companyId);
         setItems(data || []);
       } catch (err) {
         console.error('Error fetching items:', err);
@@ -23,7 +26,7 @@ export function ItemMaster() {
       }
     }
     fetchItems();
-  }, []);
+  }, [user?.companyId]);
 
   const categories = ['All', ...Array.from(new Set(items.map(i => i.category)))];
 

@@ -2,27 +2,24 @@ import React, { useEffect, useState } from 'react';
 import { useAuth, Profile, UserRole } from '../contexts/AuthContext';
 import { Users, Shield, ShieldCheck, ShieldAlert, Mail, Calendar, Loader2, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { erpService } from '../services/erpService';
 
 export const UserManagement: React.FC = () => {
-  const { isAdmin, token } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchProfiles();
-  }, []);
+    if (user?.companyId) {
+      fetchProfiles();
+    }
+  }, [user?.companyId]);
 
   const fetchProfiles = async () => {
     try {
-      const res = await fetch('/api/users', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (!res.ok) throw new Error('Failed to fetch users');
-      const data = await res.json();
+      const data = await erpService.getUsers(user!.companyId);
       setProfiles(data || []);
     } catch (err) {
       console.error('Error fetching profiles:', err);
@@ -31,21 +28,11 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const updateRole = async (userId: number, newRole: UserRole) => {
-    setUpdatingId(userId);
+  const updateRole = async (uid: string, newRole: UserRole) => {
+    setUpdatingId(uid);
     try {
-      const res = await fetch(`/api/users/${userId}/role`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ role: newRole })
-      });
-      
-      if (!res.ok) throw new Error('Failed to update role');
-      
-      setProfiles(profiles.map(p => p.id === userId ? { ...p, role: newRole } : p));
+      await erpService.updateUserRole(uid, newRole);
+      setProfiles(profiles.map(p => p.uid === uid ? { ...p, role: newRole } : p));
     } catch (err) {
       console.error('Error updating role:', err);
       alert('Failed to update role');
@@ -55,7 +42,8 @@ export const UserManagement: React.FC = () => {
   };
 
   const filteredProfiles = profiles.filter(p => 
-    p.username?.toLowerCase().includes(searchTerm.toLowerCase())
+    p.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (!isAdmin) {
@@ -114,15 +102,15 @@ export const UserManagement: React.FC = () => {
               </tr>
             ) : (
               filteredProfiles.map((profile) => (
-                <tr key={profile.id} className="hover:bg-foreground/[0.02] transition-colors group">
+                <tr key={profile.uid} className="hover:bg-foreground/[0.02] transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-foreground font-bold text-xs">
-                        {profile.username?.[0].toUpperCase()}
+                        {profile.displayName?.[0]?.toUpperCase() || profile.email?.[0]?.toUpperCase()}
                       </div>
                       <div>
-                        <p className="text-sm text-foreground font-medium">{profile.username}</p>
-                        <p className="text-[10px] text-gray-500 font-mono">ID: {profile.id}</p>
+                        <p className="text-sm text-foreground font-medium">{profile.displayName || 'No Name'}</p>
+                        <p className="text-[10px] text-gray-500 font-mono">{profile.email}</p>
                       </div>
                     </div>
                   </td>
@@ -141,12 +129,12 @@ export const UserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      {updatingId === profile.id ? (
+                      {updatingId === profile.uid ? (
                         <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
                       ) : (
                         <select
                           value={profile.role}
-                          onChange={(e) => updateRole(profile.id, e.target.value as UserRole)}
+                          onChange={(e) => updateRole(profile.uid, e.target.value as UserRole)}
                           className="bg-background border border-border rounded px-2 py-1 text-[10px] text-foreground/60 focus:outline-none focus:border-foreground/20"
                         >
                           <option value="staff">Staff</option>

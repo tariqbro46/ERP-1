@@ -1,0 +1,192 @@
+{
+  "entities": {
+    "Company": {
+      "title": "Company",
+      "description": "Represents a business entity in the ERP system.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "ownerId"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and role information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "companyId": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "manager", "staff"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "companyId", "role"]
+    },
+    "LedgerGroup": {
+      "title": "Ledger Group",
+      "description": "Classification for ledgers (e.g., Assets, Liabilities).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nature": { "type": "string" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["name", "companyId"]
+    },
+    "Ledger": {
+      "title": "Ledger",
+      "description": "An account in the chart of accounts.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "group_id": { "type": "string" },
+        "companyId": { "type": "string" },
+        "opening_balance": { "type": "number" },
+        "current_balance": { "type": "number" }
+      },
+      "required": ["name", "group_id", "companyId"]
+    },
+    "Unit": {
+      "title": "Unit",
+      "description": "Unit of measurement for items.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "formal_name": { "type": "string" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["name", "companyId"]
+    },
+    "Godown": {
+      "title": "Godown",
+      "description": "Warehouse or storage location.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["name", "companyId"]
+    },
+    "Item": {
+      "title": "Item",
+      "description": "Inventory item or product.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "unit_id": { "type": "string" },
+        "companyId": { "type": "string" },
+        "current_stock": { "type": "number" }
+      },
+      "required": ["name", "unit_id", "companyId"]
+    },
+    "Voucher": {
+      "title": "Voucher",
+      "description": "Financial or inventory transaction header.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "v_no": { "type": "string" },
+        "v_type": { "type": "string" },
+        "v_date": { "type": "string" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["v_no", "v_type", "v_date", "companyId"]
+    },
+    "VoucherEntry": {
+      "title": "Voucher Entry",
+      "description": "Accounting entry within a voucher.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "voucher_id": { "type": "string" },
+        "ledger_id": { "type": "string" },
+        "debit": { "type": "number" },
+        "credit": { "type": "number" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["voucher_id", "ledger_id", "companyId"]
+    },
+    "InventoryEntry": {
+      "title": "Inventory Entry",
+      "description": "Stock movement entry within a voucher.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "voucher_id": { "type": "string" },
+        "item_id": { "type": "string" },
+        "qty": { "type": "number" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["voucher_id", "item_id", "companyId"]
+    },
+    "ActivityLog": {
+      "title": "Activity Log",
+      "description": "Log of user actions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "companyId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "action", "companyId"]
+    }
+  },
+  "firestore": {
+    "/companies/{companyId}": {
+      "schema": "Company",
+      "description": "Collection of companies."
+    },
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "Collection of user profiles."
+    },
+    "/ledger_groups/{id}": {
+      "schema": "LedgerGroup",
+      "description": "Collection of ledger groups."
+    },
+    "/ledgers/{id}": {
+      "schema": "Ledger",
+      "description": "Collection of ledgers."
+    },
+    "/units/{id}": {
+      "schema": "Unit",
+      "description": "Collection of units."
+    },
+    "/godowns/{id}": {
+      "schema": "Godown",
+      "description": "Collection of godowns."
+    },
+    "/items/{id}": {
+      "schema": "Item",
+      "description": "Collection of items."
+    },
+    "/vouchers/{id}": {
+      "schema": "Voucher",
+      "description": "Collection of vouchers."
+    },
+    "/voucher_entries/{id}": {
+      "schema": "VoucherEntry",
+      "description": "Collection of voucher entries."
+    },
+    "/inventory_entries/{id}": {
+      "schema": "InventoryEntry",
+      "description": "Collection of inventory entries."
+    },
+    "/activity_log/{id}": {
+      "schema": "ActivityLog",
+      "description": "Collection of activity logs."
+    }
+  }
+}

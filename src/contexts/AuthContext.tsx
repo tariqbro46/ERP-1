@@ -1,20 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { auth, db } from '../firebase';
+import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 
-export type UserRole = 'admin' | 'manager' | 'staff' | 'user';
+export type UserRole = 'admin' | 'manager' | 'staff';
 
 export interface Profile {
-  id: number;
-  username: string;
+  uid: string;
+  email: string;
+  displayName: string;
   role: UserRole;
-  full_name?: string;
-  email?: string;
+  companyId: string;
 }
 
 interface AuthContextType {
   user: Profile | null;
-  token: string | null;
-  login: (token: string, user: Profile) => void;
-  logout: () => void;
+  firebaseUser: FirebaseUser | null;
+  logout: () => Promise<void>;
   loading: boolean;
   isAdmin: boolean;
 }
@@ -22,51 +24,42 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [user, setUser] = useState<Profile | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
-    const fetchMe = async () => {
-      if (token) {
-        try {
-          const res = await fetch('/api/auth/me', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setUser(data.user);
+    const unsubscribe = onAuthStateChanged(auth, async (fUser) => {
+      setFirebaseUser(fUser);
+      if (fUser) {
+        // Listen to user profile changes
+        const userRef = doc(db, 'users', fUser.uid);
+        const unsubProfile = onSnapshot(userRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setUser(docSnap.data() as Profile);
           } else {
-            logout();
+            setUser(null);
           }
-        } catch (err) {
-          console.error("Auth error", err);
-          logout();
-        }
+          setLoading(false);
+        });
+        return () => unsubProfile();
+      } else {
+        setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
-    };
-    fetchMe();
-  }, [token]);
+    });
 
-  const login = (newToken: string, newUser: Profile) => {
-    localStorage.setItem('token', newToken);
-    setToken(newToken);
-    setUser(newUser);
-  };
+    return () => unsubscribe();
+  }, []);
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
+  const logout = async () => {
+    await signOut(auth);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading, isAdmin }}>
+    <AuthContext.Provider value={{ user, firebaseUser, logout, loading, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

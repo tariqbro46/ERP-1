@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, Printer, Loader2, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
 import { QuickLedgerModal } from './QuickLedgerModal';
 import { QuickItemModal } from './QuickItemModal';
@@ -15,6 +15,7 @@ import { pdfService } from '../services/pdfService';
 export function VoucherEntry() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuth();
   const isEdit = !!id;
   const { showNotification } = useNotification();
   const settings = useSettings();
@@ -54,7 +55,43 @@ export function VoucherEntry() {
   const [globalDiscountType, setGlobalDiscountType] = useState<'fixed' | 'percent'>('fixed');
   const [currency, setCurrency] = useState(baseCurrency);
   const [exchangeRate, setExchangeRate] = useState(1);
+  const [itemStocks, setItemStocks] = useState<Record<string, number>>({});
+  const [balances, setBalances] = useState<Record<string, number>>({});
   const [barcodeInput, setBarcodeInput] = useState('');
+
+  const fetchItemStock = async (itemId: string, godownId: string) => {
+    if (!itemId || !user?.companyId) return;
+    // We can use erpService.getItemStock or calculate from inventory entries
+    // For now, let's just use the item's current_stock if no godown is selected,
+    // or fetch inventory entries if godown is selected.
+    const items = await erpService.getItems(user.companyId);
+    const item = items.find(i => i.id === itemId);
+    setItemStocks(prev => ({ ...prev, [`${itemId}-${godownId}`]: item?.current_stock || 0 }));
+  };
+
+  const fetchBalance = async (ledgerId: string) => {
+    if (!ledgerId || !user?.companyId) return;
+    const bal = await erpService.getLedgerBalance(ledgerId, user.companyId);
+    setBalances(prev => ({ ...prev, [ledgerId]: bal }));
+  };
+
+  useEffect(() => {
+    if (partyLedgerId) fetchBalance(partyLedgerId);
+  }, [partyLedgerId]);
+
+  useEffect(() => {
+    if (salesPurchaseLedgerId) fetchBalance(salesPurchaseLedgerId);
+  }, [salesPurchaseLedgerId]);
+
+  useEffect(() => {
+    if (bankCashLedgerId) fetchBalance(bankCashLedgerId);
+  }, [bankCashLedgerId]);
+
+  const formatBalance = (bal: number) => {
+    const abs = Math.abs(bal);
+    const type = bal >= 0 ? 'Dr' : 'Cr';
+    return `৳ ${abs.toLocaleString()} ${type}`;
+  };
 
   // Inventory Entries (Sales/Purchase)
   const [invEntries, setInvEntries] = useState([
@@ -67,6 +104,18 @@ export function VoucherEntry() {
   ]);
 
   useEffect(() => {
+    invEntries.forEach(e => {
+      if (e.item_id) fetchItemStock(e.item_id, e.godown_id);
+    });
+  }, [invEntries]);
+
+  useEffect(() => {
+    accEntries.forEach(e => {
+      if (e.ledger_id && !balances[e.ledger_id]) fetchBalance(e.ledger_id);
+    });
+  }, [accEntries]);
+
+  useEffect(() => {
     fetchData();
     if (isEdit) {
       fetchVoucher();
@@ -76,8 +125,9 @@ export function VoucherEntry() {
   }, [id]);
 
   async function fetchNextNo() {
+    if (!user?.companyId) return;
     try {
-      const nextNo = await erpService.getNextVoucherNumber(vType);
+      const nextNo = await erpService.getNextVoucherNumber(user.companyId, vType);
       setRefNo(nextNo);
     } catch (err) {
       console.error('Error fetching next no:', err);
@@ -117,7 +167,7 @@ export function VoucherEntry() {
           batch_no: i.batch_no || '',
           expiry_date: i.expiry_date || '',
           amount: i.amount,
-          unit: i.items?.units?.name || 'pcs'
+          unit: i.unit_name || 'pcs'
         }));
         setInvEntries(inv.length > 0 ? inv : [{ item_id: '', godown_id: '', qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
       } else if (v.v_type === 'Journal') {
@@ -171,10 +221,11 @@ export function VoucherEntry() {
   }, [vType, ledgers]);
 
   async function fetchData() {
+    if (!user?.companyId) return;
     const [lData, iData, gData] = await Promise.all([
-      erpService.getLedgers(),
-      erpService.getItems(),
-      erpService.getGodowns()
+      erpService.getLedgers(user.companyId),
+      erpService.getItems(user.companyId),
+      erpService.getGodowns(user.companyId)
     ]);
     setLedgers(lData);
     setItems(iData);
@@ -201,7 +252,7 @@ export function VoucherEntry() {
     if (pendingRowIdx !== null) {
       const next = [...invEntries];
       next[pendingRowIdx].item_id = newItem.id;
-      next[pendingRowIdx].unit = newItem.units?.name || 'pcs';
+      next[pendingRowIdx].unit = newItem.unit_name || 'pcs';
       setInvEntries(next);
     }
     showNotification('Item created successfully');
@@ -219,10 +270,10 @@ export function VoucherEntry() {
   const isJournal = vType === 'Journal';
 
   const handleBarcodeScan = async (code: string) => {
-    if (!code.trim()) return;
+    if (!code.trim() || !user?.companyId) return;
     try {
-      const { data, error } = await supabase.from('items').select('*, units(name)').eq('barcode', code).single();
-      if (data && !error) {
+      const data = await erpService.getItemByBarcode(user.companyId, code);
+      if (data) {
         const newItem = {
           item_id: data.id,
           godown_id: '',
@@ -231,7 +282,7 @@ export function VoucherEntry() {
           disc_percent: 0,
           tax_percent: data.tax_percent || 0,
           amount: vType === 'Sales' ? data.avg_cost || 0 : 0,
-          unit: data.units?.name || 'pcs',
+          unit: data.unit_name || 'pcs',
           batch_no: '',
           expiry_date: ''
         };
@@ -288,27 +339,11 @@ export function VoucherEntry() {
   };
 
   const handleSave = async () => {
-    if (!isBalanced()) return;
+    if (!isBalanced() || !user?.companyId) return;
     setLoading(true);
     try {
-      // Check for duplicate reference number if it's a new voucher
-      if (!isEdit && refNo) {
-        const { data: existing } = await supabase
-          .from('vouchers')
-          .select('id')
-          .eq('v_no', refNo)
-          .eq('v_type', vType)
-          .maybeSingle();
-        
-        if (existing) {
-          alert(`Voucher number ${refNo} already exists for ${vType}. Please use a different number.`);
-          setLoading(false);
-          return;
-        }
-      }
-
       const voucher = {
-        v_no: refNo || `${vType.substring(0, 3).toUpperCase()}/${new Date().getFullYear()}/${Math.floor(Math.random() * 1000)}`,
+        v_no: refNo,
         v_type: vType,
         v_date: vDate,
         narration,
@@ -325,13 +360,13 @@ export function VoucherEntry() {
         finalAccEntries = [
           {
             ledger_id: partyLedgerId,
-            debit: vType === 'Sales' ? totalInvAmount : 0,
-            credit: vType === 'Purchase' ? totalInvAmount : 0
+            debit: vType === 'Sales' ? finalTotal : 0,
+            credit: vType === 'Purchase' ? finalTotal : 0
           },
           {
             ledger_id: salesPurchaseLedgerId,
-            debit: vType === 'Purchase' ? totalInvAmount : 0,
-            credit: vType === 'Sales' ? totalInvAmount : 0
+            debit: vType === 'Purchase' ? finalTotal : 0,
+            credit: vType === 'Sales' ? finalTotal : 0
           }
         ];
       } else if (isSingleEntry) {
@@ -360,6 +395,8 @@ export function VoucherEntry() {
         showNotification('Voucher updated successfully');
       } else {
         await erpService.createVoucher(
+          user.companyId,
+          user.uid,
           voucher, 
           finalAccEntries, 
           isInventory ? invEntries.map(i => ({ ...i, m_type: vType === 'Sales' ? 'Outward' : 'Inward' })) : []
@@ -369,15 +406,14 @@ export function VoucherEntry() {
       navigate('/reports/daybook');
     } catch (err) {
       console.error('Error saving voucher:', err);
-      alert('Failed to save voucher.');
+      showNotification('Failed to save voucher');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    // window.confirm can be flaky in iframes, so we'll just proceed for now or use a custom UI
-    // For now, let's just log and execute to see if it's the confirm that's blocking
+    if (!user?.companyId) return;
     console.log('Deleting voucher with ID:', id);
     setLoading(true);
     try {
@@ -533,6 +569,11 @@ export function VoucherEntry() {
                   <option value="">Select Party...</option>
                   {ledgers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
+                {partyLedgerId && balances[partyLedgerId] !== undefined && (
+                  <p className="text-[9px] text-gray-500 uppercase mt-1">
+                    Current Balance: <span className="font-bold text-foreground">{formatBalance(balances[partyLedgerId])}</span>
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -560,6 +601,11 @@ export function VoucherEntry() {
                     <option key={l.id} value={l.id}>{l.name}</option>
                   ))}
                 </select>
+                {salesPurchaseLedgerId && balances[salesPurchaseLedgerId] !== undefined && (
+                  <p className="text-[9px] text-gray-500 uppercase mt-1">
+                    Current Balance: <span className="font-bold text-foreground">{formatBalance(balances[salesPurchaseLedgerId])}</span>
+                  </p>
+                )}
               </div>
             </>
           )}
@@ -586,6 +632,11 @@ export function VoucherEntry() {
                   <option key={l.id} value={l.id}>{l.name}</option>
                 ))}
               </select>
+              {bankCashLedgerId && balances[bankCashLedgerId] !== undefined && (
+                <p className="text-[9px] text-gray-500 uppercase mt-1">
+                  Current Balance: <span className="font-bold text-foreground">{formatBalance(balances[bankCashLedgerId])}</span>
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -631,20 +682,28 @@ export function VoucherEntry() {
                 {invEntries.map((entry, idx) => (
                   <tr key={idx} className="group hover:bg-foreground/5">
                     <td className="px-4 lg:px-6 py-2">
-                      <select
-                        value={entry.item_id}
-                        onChange={e => {
-                          const next = [...invEntries];
-                          const item = items.find(i => i.id === e.target.value);
-                          next[idx].item_id = e.target.value;
-                          next[idx].unit = item?.units?.name || 'pcs';
-                          setInvEntries(next);
-                        }}
-                        className="bg-transparent border-none text-foreground outline-none w-full"
-                      >
-                        <option value="">Select Item...</option>
-                        {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
-                      </select>
+                      <div className="flex flex-col gap-1">
+                        <select
+                          value={entry.item_id}
+                          onChange={e => {
+                            const next = [...invEntries];
+                            const item = items.find(i => i.id === e.target.value);
+                            next[idx].item_id = e.target.value;
+                            next[idx].unit = item?.unit_name || 'pcs';
+                            setInvEntries(next);
+                            fetchItemStock(e.target.value, entry.godown_id);
+                          }}
+                          className="bg-transparent border-none text-foreground outline-none w-full"
+                        >
+                          <option value="">Select Item...</option>
+                          {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                        </select>
+                        {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
+                          <p className="text-[8px] text-gray-500 uppercase">
+                            Stock: <span className="font-bold text-foreground">{itemStocks[`${entry.item_id}-${entry.godown_id}`]} {entry.unit}</span>
+                          </p>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 lg:px-6 py-2">
                       <select
