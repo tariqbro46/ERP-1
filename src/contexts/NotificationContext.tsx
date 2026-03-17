@@ -4,12 +4,12 @@ import { cn } from '../lib/utils';
 
 interface Notification {
   id: string;
-  message: string;
+  message: React.ReactNode;
   type: 'success' | 'error' | 'info';
 }
 
 interface NotificationContextType {
-  showNotification: (message: string, type?: 'success' | 'error' | 'info') => void;
+  showNotification: (message: React.ReactNode, type?: 'success' | 'error' | 'info') => void;
 }
 
 const NotificationContext = createContext<NotificationContextType>({
@@ -19,7 +19,7 @@ const NotificationContext = createContext<NotificationContextType>({
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+  const showNotification = (message: React.ReactNode, type: 'success' | 'error' | 'info' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
     setNotifications(prev => [...prev, { id, message, type }]);
     
@@ -49,9 +49,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             ) : (
               <AlertCircle className="w-5 h-5 text-rose-500" />
             )}
-            <p className="text-[11px] font-mono uppercase tracking-widest text-foreground flex-1">
+            <div className="text-[11px] font-mono uppercase tracking-widest text-foreground flex-1">
               {n.message}
-            </p>
+            </div>
             <button 
               onClick={() => removeNotification(n.id)}
               className="p-1 hover:bg-foreground/5 rounded transition-colors"

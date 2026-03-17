@@ -666,6 +666,26 @@ export const erpService = {
     return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
   },
 
+  async getAllUsers(): Promise<any[]> {
+    try {
+      const snapshot = await getDocs(collection(db, 'users'));
+      return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'users');
+      return [];
+    }
+  },
+
+  async getAllCompanies(): Promise<any[]> {
+    try {
+      const snapshot = await getDocs(collection(db, 'companies'));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'companies');
+      return [];
+    }
+  },
+
   async getItemByBarcode(companyId: string, barcode: string): Promise<any | null> {
     const q = query(
       collection(db, 'items'), 
@@ -786,7 +806,12 @@ export const erpService = {
         ...companyData,
         id: ref.id,
         createdBy: userId,
-        createdAt: serverTimestamp()
+        ownerId: userId,
+        createdAt: serverTimestamp(),
+        isAccessEnabled: true,
+        subscriptionStatus: 'Trial',
+        plan: 'Standard',
+        expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 15 days trial
       };
       await setDoc(ref, data);
       
@@ -800,6 +825,101 @@ export const erpService = {
       return data;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'companies');
+    }
+  },
+
+  async updateCompany(companyId: string, data: any) {
+    try {
+      const ref = doc(db, 'companies', companyId);
+      await updateDoc(ref, {
+        ...data,
+        updatedAt: serverTimestamp()
+      });
+      return { id: companyId, ...data };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `companies/${companyId}`);
+    }
+  },
+
+  async deleteCompany(companyId: string) {
+    try {
+      const batch = writeBatch(db);
+      
+      // List of collections to clean up
+      const collections = [
+        'vouchers', 'voucher_entries', 'inventory_entries', 
+        'ledgers', 'ledger_groups', 'items', 'godowns', 
+        'units', 'activity_log', 'settings', 'users'
+      ];
+
+      for (const colName of collections) {
+        let q = query(collection(db, colName), where('companyId', '==', companyId));
+        const snap = await getDocs(q);
+        snap.docs.forEach(d => {
+          // Special protection for Founder: do not delete their user profile
+          if (colName === 'users' && d.data().email === 'sapientman46@gmail.com') {
+            return;
+          }
+          batch.delete(d.ref);
+        });
+      }
+
+      // Delete the company document itself
+      batch.delete(doc(db, 'companies', companyId));
+
+      await batch.commit();
+      return { success: true };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `companies/${companyId}`);
+    }
+  },
+
+  async deleteUserAccount(userId: string) {
+    try {
+      const batch = writeBatch(db);
+      
+      // 1. Find all companies created by this user
+      const companiesQuery = query(collection(db, 'companies'), where('createdBy', '==', userId));
+      const companiesSnap = await getDocs(companiesQuery);
+      
+      // 2. For each company, delete all its data
+      for (const companyDoc of companiesSnap.docs) {
+        const companyId = companyDoc.id;
+        const collections = [
+          'vouchers', 'voucher_entries', 'inventory_entries', 
+          'ledgers', 'ledger_groups', 'items', 'godowns', 
+          'units', 'activity_log', 'settings', 'users'
+        ];
+
+        for (const colName of collections) {
+          const q = query(collection(db, colName), where('companyId', '==', companyId));
+          const snap = await getDocs(q);
+          snap.docs.forEach(d => batch.delete(d.ref));
+        }
+        batch.delete(companyDoc.ref);
+      }
+
+      // 3. Delete the user profile
+      batch.delete(doc(db, 'users', userId));
+
+      await batch.commit();
+      
+      // 4. Delete Auth account (if possible)
+      // Note: Client-side auth deletion requires recent login.
+      if (auth.currentUser && auth.currentUser.uid === userId) {
+        try {
+          await auth.currentUser.delete();
+        } catch (authError: any) {
+          if (authError.code === 'auth/requires-recent-login') {
+            throw new Error('This operation is sensitive and requires recent authentication. Please log out and log back in, then try again.');
+          }
+          throw authError;
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
     }
   },
 
@@ -841,6 +961,18 @@ export const erpService = {
     try {
       const ref = doc(db, 'settings', companyId);
       await setDoc(ref, { ...settings, companyId }, { merge: true });
+
+      // If companyName, companyAddress, phone, email, or website is updated, also update the main company document
+      if (settings.companyName || settings.companyAddress || settings.printPhone || settings.printEmail || settings.printWebsite) {
+        const companyRef = doc(db, 'companies', companyId);
+        const companyUpdates: any = {};
+        if (settings.companyName) companyUpdates.name = settings.companyName;
+        if (settings.companyAddress) companyUpdates.address = settings.companyAddress;
+        if (settings.printPhone) companyUpdates.phone = settings.printPhone;
+        if (settings.printEmail) companyUpdates.email = settings.printEmail;
+        if (settings.printWebsite) companyUpdates.website = settings.printWebsite;
+        await updateDoc(companyRef, companyUpdates);
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `settings/${companyId}`);
     }

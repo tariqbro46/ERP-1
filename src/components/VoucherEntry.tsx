@@ -20,7 +20,7 @@ export function VoucherEntry() {
   const isEdit = !!id;
   const { showNotification } = useNotification();
   const settings = useSettings();
-  const { notifications, features = [], companyName, baseCurrency = 'BDT' } = settings;
+  const { notifications, features = [], companyName, baseCurrencySymbol = '৳' } = settings;
   const [vType, setVType] = useState('Sales');
 
   const isInventoryEnabled = features.find(f => f.id === 'inv')?.enabled ?? true;
@@ -57,7 +57,7 @@ export function VoucherEntry() {
   const [narration, setNarration] = useState('');
   const [globalDiscount, setGlobalDiscount] = useState(0);
   const [globalDiscountType, setGlobalDiscountType] = useState<'fixed' | 'percent'>('fixed');
-  const [currency, setCurrency] = useState(baseCurrency);
+  const [currency, setCurrency] = useState(baseCurrencySymbol);
   const [exchangeRate, setExchangeRate] = useState(1);
   const [itemStocks, setItemStocks] = useState<Record<string, number>>({});
   const [balances, setBalances] = useState<Record<string, number>>({});
@@ -154,7 +154,7 @@ export function VoucherEntry() {
       setNarration(v.narration);
       setGlobalDiscount(v.discount_amount || 0);
       setGlobalDiscountType(v.discount_type || 'fixed');
-      setCurrency(v.currency || baseCurrency);
+      setCurrency(v.currency || baseCurrencySymbol);
       setExchangeRate(v.exchange_rate || 1);
 
       if (v.v_type === 'Sales' || v.v_type === 'Purchase') {
@@ -483,7 +483,7 @@ export function VoucherEntry() {
                 setSalesPurchaseLedgerId('');
                 setBankCashLedgerId('');
                 setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }]);
-                setInvEntries([{ item_id: '', godown_id: '', qty: 0, rate: 0, disc_percent: 0, amount: 0, unit: 'pcs' }]);
+                setInvEntries([{ item_id: '', godown_id: '', qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
               }}
               className={cn(
                 "px-4 lg:px-6 py-3 text-[10px] uppercase tracking-widest font-bold border-r border-border transition-all flex-shrink-0",

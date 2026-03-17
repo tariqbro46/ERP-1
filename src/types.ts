@@ -1,5 +1,5 @@
 export type VoucherType = 'Sales' | 'Purchase' | 'Payment' | 'Receipt' | 'Contra' | 'Journal' | 'Credit Note' | 'Debit Note';
-export type UserRole = 'Admin' | 'Manager' | 'Staff';
+export type UserRole = 'Founder' | 'Marketing Manager' | 'Admin' | 'Manager' | 'Staff';
 
 export interface Company {
   id: string;
@@ -13,6 +13,12 @@ export interface Company {
   phone?: string;
   email?: string;
   website?: string;
+  subscriptionStatus: 'active' | 'inactive' | 'trial';
+  planType: 'monthly' | 'yearly' | 'free';
+  expiryDate: string;
+  isAccessEnabled: boolean;
+  createdBy?: string;
+  ownerId?: string;
 }
 
 export interface Ledger {

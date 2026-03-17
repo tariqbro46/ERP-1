@@ -22,7 +22,8 @@ import {
   Menu,
   X,
   Users,
-  Building2
+  Building2,
+  Shield
 } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { VoucherEntry } from './components/VoucherEntry';
@@ -44,6 +45,9 @@ import { FinancialInsights } from './components/FinancialInsights';
 import { GodownMaster } from './components/GodownMaster';
 import { UserManagement } from './components/UserManagement';
 import { CompanyManagement } from './components/CompanyManagement';
+import FounderPanel from './components/FounderPanel';
+import SubscriptionRequired from './components/SubscriptionRequired';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login, Register } from './components/Auth';
@@ -105,8 +109,14 @@ import { useSettings } from './contexts/SettingsContext';
 function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, company, logout, isAdmin, isSuperAdmin } = useAuth();
   const { companyName, slogan, features = [] } = useSettings();
+
+  // If access is disabled and user is not a super admin, show subscription required page
+  // We only block if isAccessEnabled is explicitly false
+  if (company && company.isAccessEnabled === false && !isSuperAdmin) {
+    return <SubscriptionRequired />;
+  }
 
   const isInventoryEnabled = features.find(f => f.id === 'inv')?.enabled ?? true;
   const [expandedGroup, setExpandedGroup] = React.useState<string | null>(null);
@@ -257,6 +267,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <SidebarItem to="/notes" icon={StickyNote} label={isSidebarCollapsed ? "" : "Notes / Memo"} active={location.pathname === '/notes'} />
             <SidebarItem to="/companies" icon={Building2} label={isSidebarCollapsed ? "" : "Companies"} active={location.pathname === '/companies'} />
             {isAdmin && <SidebarItem to="/users" icon={Users} label={isSidebarCollapsed ? "" : "User Management"} active={location.pathname === '/users'} />}
+            {isSuperAdmin && <SidebarItem to="/founder" icon={Shield} label={isSidebarCollapsed ? "" : "Founder Panel"} active={location.pathname === '/founder'} />}
             <SidebarItem to="/settings" icon={SettingsIcon} label={isSidebarCollapsed ? "" : "Settings (F11)"} active={location.pathname === '/settings'} />
           </SidebarGroup>
         </nav>
@@ -320,12 +331,13 @@ function Layout({ children }: { children: React.ReactNode }) {
               >
                 <div className="w-8 h-8 rounded-full border border-border overflow-hidden bg-card hover:border-foreground transition-all">
                   <img 
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'default'}`} 
+                    src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
                     alt="Profile"
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                   />
                 </div>
+                {isSuperAdmin && <div className="absolute -top-1 -left-1 w-3 h-3 bg-primary rounded-full border-2 border-background" title="Founder/Marketing Manager" />}
                 <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-background rounded-full" />
               </button>
 
@@ -339,13 +351,15 @@ function Layout({ children }: { children: React.ReactNode }) {
                     </div>
                   </div>
                   
-                  <Link 
-                    to="/settings" 
-                    className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
-                  >
-                    <SettingsIcon className="w-3.5 h-3.5" />
-                    System Settings
-                  </Link>
+                  {isSuperAdmin && (
+                    <Link 
+                      to="/founder" 
+                      className="flex items-center gap-3 px-4 py-2 text-[10px] text-primary hover:bg-primary/5 uppercase tracking-widest transition-colors font-bold"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      Founder Panel
+                    </Link>
+                  )}
                   
                   {isAdmin && (
                     <Link 
@@ -450,7 +464,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, isSuperAdmin, logout } = useAuth();
   const [isRegister, setIsRegister] = React.useState(false);
 
   if (loading) {
@@ -473,10 +487,35 @@ function AppContent() {
     );
   }
 
+  // Force company setup if not present and not super admin
+  if (!user.companyId && !isSuperAdmin) {
+    return (
+      <Router>
+        <div className="h-screen bg-background flex flex-col">
+          <header className="h-14 border-b border-border bg-background flex items-center justify-between px-6">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
+                <span className="text-background font-bold">E</span>
+              </div>
+              <span className="text-sm font-bold uppercase tracking-tighter">ERP System</span>
+            </div>
+            <button onClick={() => logout()} className="text-[10px] uppercase font-bold tracking-widest text-rose-500 hover:text-rose-600">
+              Logout
+            </button>
+          </header>
+          <div className="flex-1 overflow-y-auto">
+            <CompanyManagement />
+          </div>
+        </div>
+      </Router>
+    );
+  }
+
   return (
     <Router>
       <Layout>
-        <Routes>
+        <ErrorBoundary>
+          <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/vouchers/new" element={<VoucherEntry />} />
           <Route path="/vouchers/edit/:id" element={<VoucherEntry />} />
@@ -499,10 +538,12 @@ function AppContent() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/companies" element={<CompanyManagement />} />
           <Route path="/users" element={<UserManagement />} />
+          <Route path="/founder" element={<FounderPanel />} />
           <Route path="*" element={<div className="p-10 text-foreground font-mono">404 - Feature Not Implemented</div>} />
         </Routes>
-      </Layout>
-    </Router>
+      </ErrorBoundary>
+    </Layout>
+  </Router>
   );
 }
 

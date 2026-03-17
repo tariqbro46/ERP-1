@@ -5,7 +5,7 @@ import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
 
 export const UserManagement: React.FC = () => {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, isSuperAdmin, user } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,7 +17,7 @@ export const UserManagement: React.FC = () => {
     email: '',
     password: '',
     displayName: '',
-    role: 'staff' as UserRole
+    role: 'Staff' as UserRole
   });
   const [addLoading, setAddLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
@@ -65,7 +65,7 @@ export const UserManagement: React.FC = () => {
         companyId: user!.companyId
       });
       setShowAddModal(false);
-      setNewUser({ email: '', password: '', displayName: '', role: 'staff' });
+      setNewUser({ email: '', password: '', displayName: '', role: 'Staff' });
       fetchProfiles();
     } catch (err: any) {
       alert(err.message || 'Failed to add user');
@@ -190,12 +190,15 @@ export const UserManagement: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className={cn(
                       "inline-flex items-center gap-1.5 px-2 py-1 rounded text-[9px] uppercase font-bold tracking-wider",
-                      profile.role === 'admin' ? "bg-amber-500/10 text-amber-500" :
-                      profile.role === 'manager' ? "bg-emerald-500/10 text-emerald-500" :
+                      profile.role === 'Admin' ? "bg-amber-500/10 text-amber-500" :
+                      profile.role === 'Manager' ? "bg-emerald-500/10 text-emerald-500" :
+                      profile.role === 'Founder' ? "bg-primary/10 text-primary" :
+                      profile.role === 'Marketing Manager' ? "bg-indigo-500/10 text-indigo-500" :
                       "bg-gray-500/10 text-gray-500"
                     )}>
-                      {profile.role === 'admin' ? <ShieldAlert className="w-3 h-3" /> :
-                       profile.role === 'manager' ? <ShieldCheck className="w-3 h-3" /> :
+                      {profile.role === 'Admin' ? <ShieldAlert className="w-3 h-3" /> :
+                       profile.role === 'Manager' ? <ShieldCheck className="w-3 h-3" /> :
+                       profile.role === 'Founder' ? <ShieldCheck className="w-3 h-3" /> :
                        <Shield className="w-3 h-3" />}
                       {profile.role}
                     </div>
@@ -212,9 +215,15 @@ export const UserManagement: React.FC = () => {
                             disabled={profile.uid === user?.uid}
                             className="bg-background border border-border rounded px-2 py-1 text-[10px] text-foreground/60 focus:outline-none focus:border-foreground/20 disabled:opacity-50"
                           >
-                            <option value="staff">Staff</option>
-                            <option value="manager">Manager</option>
-                            <option value="admin">Admin</option>
+                            <option value="Staff">Staff</option>
+                            <option value="Manager">Manager</option>
+                            <option value="Admin">Admin</option>
+                            {isSuperAdmin && (
+                              <>
+                                <option value="Marketing Manager">Marketing Manager</option>
+                                <option value="Founder">Founder</option>
+                              </>
+                            )}
                           </select>
                           
                           <button
@@ -296,9 +305,15 @@ export const UserManagement: React.FC = () => {
                   onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
                   className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
                 >
-                  <option value="staff">Staff</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
+                  <option value="Staff">Staff</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Admin">Admin</option>
+                  {isSuperAdmin && (
+                    <>
+                      <option value="Marketing Manager">Marketing Manager</option>
+                      <option value="Founder">Founder</option>
+                    </>
+                  )}
                 </select>
               </div>
               <div className="pt-4 flex gap-3">

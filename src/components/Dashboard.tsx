@@ -3,12 +3,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area
 } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
+import { format, differenceInDays } from 'date-fns';
 
 const mockChartData = [
   { name: 'Jan', value: 4000 },
@@ -73,6 +74,7 @@ export function Dashboard() {
   };
 
   const defaultPeriod = getDefaultPeriod();
+  const { company } = useAuth();
   const [stats, setStats] = useState({
     revenue: 0,
     profit: 0,
@@ -111,7 +113,14 @@ export function Dashboard() {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+    try {
+      if (!dateStr) return 'N/A';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return 'N/A';
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+    } catch (e) {
+      return 'N/A';
+    }
   };
 
   return (
@@ -176,6 +185,57 @@ export function Dashboard() {
         />
       </div>
 
+      {/* Subscription Status Widget */}
+      {company && (
+        <div className={`bg-card border p-4 flex flex-col sm:flex-row items-center justify-between gap-4 ${
+          company.subscriptionStatus === 'trial' ? 'border-amber-500/20 bg-amber-500/5' :
+          company.subscriptionStatus === 'active' ? 'border-emerald-500/20 bg-emerald-500/5' :
+          'border-rose-500/20 bg-rose-500/5'
+        }`}>
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-full ${
+              company.subscriptionStatus === 'trial' ? 'bg-amber-500/10 text-amber-500' :
+              company.subscriptionStatus === 'active' ? 'bg-emerald-500/10 text-emerald-500' :
+              'bg-rose-500/10 text-rose-500'
+            }`}>
+              {company.subscriptionStatus === 'trial' ? <AlertTriangle className="w-6 h-6" /> :
+               company.subscriptionStatus === 'active' ? <ShieldCheck className="w-6 h-6" /> :
+               <Activity className="w-6 h-6" />}
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground uppercase tracking-tight">
+                {company.subscriptionStatus === 'trial' ? 'Trial Period' : 
+                 company.subscriptionStatus === 'active' ? 'Subscription Active' : 
+                 'Subscription Inactive'}
+              </h3>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                Plan: {company.planType} • {company.expiryDate ? differenceInDays(new Date(company.expiryDate), new Date()) : 'N/A'} days remaining
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right hidden sm:block">
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">Expires On</p>
+              <p className="text-sm font-mono text-foreground">
+                {company.expiryDate ? format(new Date(company.expiryDate), 'dd MMM yyyy') : 'Not Set'}
+              </p>
+            </div>
+            <button 
+              onClick={() => {
+                if (company.subscriptionStatus === 'inactive') {
+                  alert('Your subscription has expired. Please contact support at sapientman46@gmail.com to renew your plan.');
+                } else {
+                  window.location.href = 'mailto:sapientman46@gmail.com?subject=Subscription Renewal Request for ' + company.name;
+                }
+              }}
+              className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center gap-2"
+            >
+              <CreditCard className="w-3 h-3" /> Renew Plan
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions */}
       <div className="bg-card border border-border p-4">
         <h3 className="text-[11px] font-mono text-gray-500 uppercase mb-4 tracking-widest">Quick Actions</h3>
@@ -218,8 +278,8 @@ export function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card border border-border p-6">
           <h3 className="text-[11px] font-mono text-gray-500 uppercase mb-6 tracking-widest">Revenue Trajectory</h3>
-          <div className="h-[300px] w-full min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -242,8 +302,8 @@ export function Dashboard() {
 
         <div className="bg-card border border-border p-6">
           <h3 className="text-[11px] font-mono text-gray-500 uppercase mb-6 tracking-widest">Expense Distribution</h3>
-          <div className="h-[300px] w-full min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
                 <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} />

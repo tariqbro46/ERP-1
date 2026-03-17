@@ -44,7 +44,16 @@ export const pdfService = {
     doc.setFont('helvetica', 'bold');
     doc.text('Date:', 140, 65);
     doc.setFont('helvetica', 'normal');
-    doc.text(format(new Date(voucher.v_date), 'dd-MMM-yyyy'), 165, 65);
+    const safeDate = (dateStr: string) => {
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return 'N/A';
+        return format(d, 'dd-MMM-yyyy');
+      } catch (e) {
+        return 'N/A';
+      }
+    };
+    doc.text(safeDate(voucher.v_date), 165, 65);
 
     // Table
     const tableData = (voucher.inventory || []).map((item: any, index: number) => [

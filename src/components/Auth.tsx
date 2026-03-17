@@ -218,22 +218,34 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
 
       // 2. Create Company
       const companyRef = doc(collection(db, 'companies'));
+      const trialExpiry = new Date();
+      trialExpiry.setDate(trialExpiry.getDate() + 14); // 14 days trial
+
       await setDoc(companyRef, {
         id: companyRef.id,
         name: companyName,
         slogan,
         address,
+        phone: contactPhone,
+        email: contactEmail || email,
+        website: websiteUrl,
         ownerId: user.uid,
-        createdAt: serverTimestamp()
+        createdBy: user.uid,
+        createdAt: serverTimestamp(),
+        subscriptionStatus: 'trial',
+        planType: 'free',
+        expiryDate: trialExpiry.toISOString(),
+        isAccessEnabled: true
       });
 
       // 3. Create User Profile
+      const isFounder = email === 'sapientman46@gmail.com';
       await setDoc(doc(db, 'users', user.uid), {
         uid: user.uid,
         email: user.email,
         displayName: displayName || email.split('@')[0],
         companyId: companyRef.id,
-        role: 'admin',
+        role: isFounder ? 'Founder' : 'Admin',
         createdAt: serverTimestamp()
       });
 

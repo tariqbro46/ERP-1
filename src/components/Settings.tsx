@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2 } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { useAuth } from '../contexts/AuthContext';
+import { erpService } from '../services/erpService';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
 export function Settings() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const { 
     companyName, 
     companyAddress,
@@ -145,6 +150,40 @@ export function Settings() {
     const updatedFeatures = features.map(f => f.id === id ? { ...f, enabled: !f.enabled } : f);
     updateSettings({ features: updatedFeatures });
     showNotification(notifications.settingsUpdated);
+  };
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (!user?.email) return;
+    try {
+      await erpService.adminResetPassword(user.uid, user.email);
+      showNotification('Password reset email sent to ' + user.email);
+    } catch (error) {
+      console.error('Error sending reset email:', error);
+      showNotification('Failed to send reset email.');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user?.uid) return;
+    setIsDeleting(true);
+    try {
+      await erpService.deleteUserAccount(user.uid);
+      await logout();
+      navigate('/login');
+      showNotification('Account and all associated data deleted successfully.');
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      const errorMessage = error.message?.includes('re-authenticate') 
+        ? error.message 
+        : 'Failed to delete account. You may need to re-login to perform this sensitive action.';
+      showNotification(errorMessage);
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const tabs = [
@@ -762,9 +801,53 @@ export function Settings() {
                       </div>
                     </div>
                   </div>
-                  <button className="px-6 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all">
-                    Change Admin Password
-                  </button>
+                  
+                  <div className="pt-6 border-t border-border space-y-6">
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-widest">Account Actions</h4>
+                      <p className="text-[10px] text-gray-500">Manage your account and data.</p>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-4">
+                      <button 
+                        onClick={handleChangePassword}
+                        className="px-6 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+                      >
+                        Change Admin Password
+                      </button>
+                      
+                      {!showDeleteConfirm ? (
+                        <button 
+                          onClick={() => setShowDeleteConfirm(true)}
+                          className="px-6 py-2 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-rose-700 transition-all flex items-center gap-2"
+                        >
+                          <Trash2 className="w-3 h-3" /> Delete Account & All Data
+                        </button>
+                      ) : (
+                        <div className="flex flex-col gap-3 p-4 bg-rose-500/10 border border-rose-500/20 rounded w-full max-w-md">
+                          <p className="text-[10px] text-rose-500 font-bold uppercase tracking-widest">
+                            CRITICAL: Are you sure? This will permanently delete your profile and ALL companies you created. This action CANNOT be undone.
+                          </p>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={handleDeleteAccount}
+                              disabled={isDeleting}
+                              className="px-4 py-1.5 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-rose-700 disabled:opacity-50"
+                            >
+                              {isDeleting ? 'Deleting...' : 'Yes, Delete Everything'}
+                            </button>
+                            <button 
+                              onClick={() => setShowDeleteConfirm(false)}
+                              disabled={isDeleting}
+                              className="px-4 py-1.5 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/5"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
