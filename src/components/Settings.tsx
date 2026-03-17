@@ -64,6 +64,42 @@ export function Settings() {
   const [localTimezone, setLocalTimezone] = useState(timezone);
   const [localNotifications, setLocalNotifications] = useState(notifications);
 
+  // Sync local state when settings change (e.g. after registration or initial load)
+  React.useEffect(() => {
+    setLocalCompanyName(companyName);
+    setLocalCompanyAddress(companyAddress);
+    setLocalSlogan(slogan);
+    setLocalPrintHeader(printHeader);
+    setLocalPrintFooter(printFooter);
+    setLocalPrintPhone(printPhone);
+    setLocalPrintEmail(printEmail);
+    setLocalPrintWebsite(printWebsite);
+    setLocalShowPrintHeader(showPrintHeader);
+    setLocalShowPrintPhone(showPrintPhone);
+    setLocalShowPrintEmail(showPrintEmail);
+    setLocalShowPrintWebsite(showPrintWebsite);
+    setLocalShowPrintFooter(showPrintFooter);
+    setLocalPrintSignature1(printSignature1);
+    setLocalPrintSignature2(printSignature2);
+    setLocalPrintSignature3(printSignature3);
+    setLocalShowSignature1(showSignature1);
+    setLocalShowSignature2(showSignature2);
+    setLocalShowSignature3(showSignature3);
+    setLocalSignatureAlignment(signatureAlignment);
+    setLocalShowDeveloperContact(showDeveloperContact);
+    setLocalFinancialYearStart(financialYearStart);
+    setLocalBaseCurrencySymbol(baseCurrencySymbol);
+    setLocalTimezone(timezone);
+    setLocalNotifications(notifications);
+  }, [
+    companyName, companyAddress, slogan, printHeader, printFooter, printPhone, 
+    printEmail, printWebsite, showPrintHeader, showPrintPhone, showPrintEmail, 
+    showPrintWebsite, showPrintFooter, printSignature1, printSignature2, 
+    printSignature3, showSignature1, showSignature2, showSignature3, 
+    signatureAlignment, showDeveloperContact, financialYearStart, 
+    baseCurrencySymbol, timezone, notifications
+  ]);
+
   const handleSaveGeneral = () => {
     updateSettings({ 
       companyName: localCompanyName, 

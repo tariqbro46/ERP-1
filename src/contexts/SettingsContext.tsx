@@ -89,6 +89,8 @@ const defaultSettings: SettingsContextType = {
     { id: 'cat', label: 'Maintain Stock Categories', enabled: true },
     { id: 'batch', label: 'Maintain Stock Batches', enabled: false },
     { id: 'expiry', label: 'Track Expiry Dates', enabled: false },
+    { id: 'tax', label: 'Enable Tax % in Vouchers', enabled: true },
+    { id: 'barcode', label: 'Enable Barcode Scanning', enabled: false },
   ],
   updateSettings: () => {}
 };

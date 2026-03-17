@@ -4,6 +4,7 @@ import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
+import { SearchableSelect } from './SearchableSelect';
 import { QuickLedgerModal } from './QuickLedgerModal';
 import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
@@ -25,6 +26,9 @@ export function VoucherEntry() {
   const isInventoryEnabled = features.find(f => f.id === 'inv')?.enabled ?? true;
   const isTaxEnabled = features.find(f => f.id === 'tax')?.enabled ?? true;
   const isMultiCurrencyEnabled = features.find(f => f.id === 'curr')?.enabled ?? true;
+  const isBatchEnabled = features.find(f => f.id === 'batch')?.enabled ?? false;
+  const isExpiryEnabled = features.find(f => f.id === 'expiry')?.enabled ?? false;
+  const isBarcodeEnabled = features.find(f => f.id === 'barcode')?.enabled ?? false;
 
   useEffect(() => {
     if (!isInventoryEnabled && (vType === 'Sales' || vType === 'Purchase')) {
@@ -513,7 +517,37 @@ export function VoucherEntry() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Voucher Type</label>
+            <div className="flex justify-between items-center">
+              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Voucher Type</label>
+              <button 
+                onClick={() => {
+                  const shortcuts = [
+                    { key: 'F4', action: 'Contra' },
+                    { key: 'F5', action: 'Payment' },
+                    { key: 'F6', action: 'Receipt' },
+                    { key: 'F7', action: 'Journal' },
+                    { key: 'F8', action: 'Sales' },
+                    { key: 'F9', action: 'Purchase' },
+                    { key: 'Alt + C', action: 'Quick Create' },
+                    { key: 'Alt + S', action: 'Save' },
+                  ];
+                  showNotification(
+                    <div className="space-y-2 p-2">
+                      <p className="font-bold border-b border-border pb-1">SHORTCUTS</p>
+                      {shortcuts.map(s => (
+                        <div key={s.key} className="flex justify-between gap-4 text-[10px]">
+                          <span className="text-emerald-500 font-bold">{s.key}</span>
+                          <span className="uppercase">{s.action}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }}
+                className="text-[9px] text-emerald-500 hover:underline font-bold uppercase"
+              >
+                Shortcuts
+              </button>
+            </div>
             <div className="p-2 text-sm text-emerald-500 bg-background border border-border uppercase font-bold">
               {vType}
             </div>
@@ -561,14 +595,13 @@ export function VoucherEntry() {
                     <PlusCircle className="w-3 h-3" /> Quick Create
                   </button>
                 </div>
-                <select
+                <SearchableSelect
+                  options={ledgers}
                   value={partyLedgerId}
-                  onChange={e => setPartyLedgerId(e.target.value)}
-                  className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
-                >
-                  <option value="">Select Party...</option>
-                  {ledgers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                </select>
+                  onChange={setPartyLedgerId}
+                  placeholder="Select Party..."
+                  onQuickCreate={() => openQuickLedger('Sundry', 'party')}
+                />
                 {partyLedgerId && balances[partyLedgerId] !== undefined && (
                   <p className="text-[9px] text-gray-500 uppercase mt-1">
                     Current Balance: <span className="font-bold text-foreground">{formatBalance(balances[partyLedgerId])}</span>
@@ -591,16 +624,13 @@ export function VoucherEntry() {
                     <PlusCircle className="w-3 h-3" /> Quick Create
                   </button>
                 </div>
-                <select
+                <SearchableSelect
+                  options={ledgers.filter(l => l.ledger_groups?.name.includes(vType))}
                   value={salesPurchaseLedgerId}
-                  onChange={e => setSalesPurchaseLedgerId(e.target.value)}
-                  className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
-                >
-                  <option value="">Select {vType} Ledger...</option>
-                  {ledgers.filter(l => l.ledger_groups?.name.includes(vType)).map(l => (
-                    <option key={l.id} value={l.id}>{l.name}</option>
-                  ))}
-                </select>
+                  onChange={setSalesPurchaseLedgerId}
+                  placeholder={`Select ${vType} Ledger...`}
+                  onQuickCreate={() => openQuickLedger(vType, 'sales')}
+                />
                 {salesPurchaseLedgerId && balances[salesPurchaseLedgerId] !== undefined && (
                   <p className="text-[9px] text-gray-500 uppercase mt-1">
                     Current Balance: <span className="font-bold text-foreground">{formatBalance(balances[salesPurchaseLedgerId])}</span>
@@ -622,16 +652,13 @@ export function VoucherEntry() {
                   <PlusCircle className="w-3 h-3" /> Quick Create
                 </button>
               </div>
-              <select
+              <SearchableSelect
+                options={ledgers.filter(l => l.ledger_groups?.name.includes('Bank') || l.ledger_groups?.name.includes('Cash'))}
                 value={bankCashLedgerId}
-                onChange={e => setBankCashLedgerId(e.target.value)}
-                className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
-              >
-                <option value="">Select Account...</option>
-                {ledgers.filter(l => l.ledger_groups?.name.includes('Bank') || l.ledger_groups?.name.includes('Cash')).map(l => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
-                ))}
-              </select>
+                onChange={setBankCashLedgerId}
+                placeholder="Select Account..."
+                onQuickCreate={() => openQuickLedger('Bank', 'account')}
+              />
               {bankCashLedgerId && balances[bankCashLedgerId] !== undefined && (
                 <p className="text-[9px] text-gray-500 uppercase mt-1">
                   Current Balance: <span className="font-bold text-foreground">{formatBalance(balances[bankCashLedgerId])}</span>
@@ -663,17 +690,19 @@ export function VoucherEntry() {
                     </div>
                   </th>
                   <th className="px-4 lg:px-6 py-3 border-b border-border">Godown</th>
-                  {isInventory && (vType === 'Sales' || vType === 'Purchase') && (
-                    <>
-                      <th className="px-4 lg:px-6 py-3 border-b border-border text-left w-32">Batch</th>
-                      <th className="px-4 lg:px-6 py-3 border-b border-border text-left w-32">Expiry</th>
-                    </>
+                  {isBatchEnabled && (
+                    <th className="px-4 lg:px-6 py-3 border-b border-border text-left w-32">Batch</th>
+                  )}
+                  {isExpiryEnabled && (
+                    <th className="px-4 lg:px-6 py-3 border-b border-border text-left w-32">Expiry</th>
                   )}
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Quantity</th>
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-32">Rate</th>
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-center w-20">per</th>
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Disc %</th>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Tax %</th>
+                  {isTaxEnabled && (
+                    <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Tax %</th>
+                  )}
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-40">Amount</th>
                   <th className="px-4 lg:px-6 py-3 border-b border-border w-10"></th>
                 </tr>
@@ -683,21 +712,23 @@ export function VoucherEntry() {
                   <tr key={idx} className="group hover:bg-foreground/5">
                     <td className="px-4 lg:px-6 py-2">
                       <div className="flex flex-col gap-1">
-                        <select
+                        <SearchableSelect
+                          options={items}
                           value={entry.item_id}
-                          onChange={e => {
+                          onChange={(val) => {
                             const next = [...invEntries];
-                            const item = items.find(i => i.id === e.target.value);
-                            next[idx].item_id = e.target.value;
+                            const item = items.find(i => i.id === val);
+                            next[idx].item_id = val;
                             next[idx].unit = item?.unit_name || 'pcs';
                             setInvEntries(next);
-                            fetchItemStock(e.target.value, entry.godown_id);
+                            fetchItemStock(val, entry.godown_id);
                           }}
-                          className="bg-transparent border-none text-foreground outline-none w-full"
-                        >
-                          <option value="">Select Item...</option>
-                          {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
-                        </select>
+                          placeholder="Select Item..."
+                          onQuickCreate={() => {
+                            setPendingRowIdx(idx);
+                            setIsQuickItemOpen(true);
+                          }}
+                        />
                         {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
                           <p className="text-[8px] text-gray-500 uppercase">
                             Stock: <span className="font-bold text-foreground">{itemStocks[`${entry.item_id}-${entry.godown_id}`]} {entry.unit}</span>
@@ -706,47 +737,45 @@ export function VoucherEntry() {
                       </div>
                     </td>
                     <td className="px-4 lg:px-6 py-2">
-                      <select
+                      <SearchableSelect
+                        options={godowns}
                         value={entry.godown_id}
-                        onChange={e => {
+                        onChange={(val) => {
                           const next = [...invEntries];
-                          next[idx].godown_id = e.target.value;
+                          next[idx].godown_id = val;
                           setInvEntries(next);
                         }}
-                        className="bg-transparent border-none text-foreground outline-none w-full"
-                      >
-                        <option value="">Select Godown...</option>
-                        {godowns.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                      </select>
+                        placeholder="Select Godown..."
+                      />
                     </td>
-                    {isInventory && (vType === 'Sales' || vType === 'Purchase') && (
-                      <>
-                        <td className="px-4 lg:px-6 py-2">
-                          <input 
-                            type="text" 
-                            className="bg-transparent border-none text-foreground outline-none w-full text-xs" 
-                            placeholder="Batch"
-                            value={entry.batch_no || ''} 
-                            onChange={e => {
-                              const next = [...invEntries];
-                              next[idx].batch_no = e.target.value;
-                              setInvEntries(next);
-                            }} 
-                          />
-                        </td>
-                        <td className="px-4 lg:px-6 py-2">
-                          <input 
-                            type="date" 
-                            className="bg-transparent border-none text-foreground outline-none w-full text-[10px]" 
-                            value={entry.expiry_date || ''} 
-                            onChange={e => {
-                              const next = [...invEntries];
-                              next[idx].expiry_date = e.target.value;
-                              setInvEntries(next);
-                            }} 
-                          />
-                        </td>
-                      </>
+                    {isBatchEnabled && (
+                      <td className="px-4 lg:px-6 py-2">
+                        <input 
+                          type="text" 
+                          className="bg-transparent border border-border text-foreground outline-none w-full text-xs p-1 focus:border-foreground" 
+                          placeholder="Batch"
+                          value={entry.batch_no || ''} 
+                          onChange={e => {
+                            const next = [...invEntries];
+                            next[idx].batch_no = e.target.value;
+                            setInvEntries(next);
+                          }} 
+                        />
+                      </td>
+                    )}
+                    {isExpiryEnabled && (
+                      <td className="px-4 lg:px-6 py-2">
+                        <input 
+                          type="date" 
+                          className="bg-transparent border border-border text-foreground outline-none w-full text-[10px] p-1 focus:border-foreground" 
+                          value={entry.expiry_date || ''} 
+                          onChange={e => {
+                            const next = [...invEntries];
+                            next[idx].expiry_date = e.target.value;
+                            setInvEntries(next);
+                          }} 
+                        />
+                      </td>
                     )}
                     <td className="px-4 lg:px-6 py-2">
                       <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.qty ?? ''} onChange={e => {
@@ -773,14 +802,16 @@ export function VoucherEntry() {
                         setInvEntries(next);
                       }} />
                     </td>
-                    <td className="px-4 lg:px-6 py-2">
-                      <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.tax_percent ?? ''} onChange={e => {
-                        const next = [...invEntries];
-                        next[idx].tax_percent = Number(e.target.value);
-                        next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
-                        setInvEntries(next);
-                      }} />
-                    </td>
+                    {isTaxEnabled && (
+                      <td className="px-4 lg:px-6 py-2">
+                        <input type="number" className="bg-transparent border border-border text-foreground outline-none w-full text-right p-1 focus:border-foreground" value={entry.tax_percent ?? ''} onChange={e => {
+                          const next = [...invEntries];
+                          next[idx].tax_percent = Number(e.target.value);
+                          next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
+                          setInvEntries(next);
+                        }} />
+                      </td>
+                    )}
                     <td className="px-4 lg:px-6 py-2 text-right text-foreground font-bold">৳ {entry.amount.toLocaleString()}</td>
                     <td className="px-4 lg:px-6 py-2"><button onClick={() => setInvEntries(invEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
                   </tr>
@@ -801,25 +832,17 @@ export function VoucherEntry() {
                   <tr key={idx} className="group hover:bg-foreground/5">
                     <td className="px-4 lg:px-6 py-2">
                       <div className="flex items-center gap-2">
-                        <select
+                        <SearchableSelect
+                          options={ledgers}
                           value={entry.ledger_id}
-                          onChange={e => {
+                          onChange={(val) => {
                             const next = [...accEntries];
-                            next[idx].ledger_id = e.target.value;
+                            next[idx].ledger_id = val;
                             setAccEntries(next);
                           }}
-                          className="bg-transparent border-none text-foreground outline-none flex-1"
-                        >
-                          <option value="">Select Particulars...</option>
-                          {ledgers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                        </select>
-                        <button 
-                          type="button"
-                          onClick={() => openQuickLedger('', 'particulars', idx)}
-                          className="text-gray-600 hover:text-foreground transition-colors"
-                        >
-                          <PlusCircle className="w-3 h-3" />
-                        </button>
+                          placeholder="Select Particulars..."
+                          onQuickCreate={() => openQuickLedger('', 'particulars', idx)}
+                        />
                       </div>
                     </td>
                     <td className="px-4 lg:px-6 py-2">
@@ -866,25 +889,17 @@ export function VoucherEntry() {
                     </td>
                     <td className="px-4 lg:px-6 py-2">
                       <div className="flex items-center gap-2">
-                        <select
+                        <SearchableSelect
+                          options={ledgers}
                           value={entry.ledger_id}
-                          onChange={e => {
+                          onChange={(val) => {
                             const next = [...accEntries];
-                            next[idx].ledger_id = e.target.value;
+                            next[idx].ledger_id = val;
                             setAccEntries(next);
                           }}
-                          className="bg-transparent border-none text-foreground outline-none flex-1"
-                        >
-                          <option value="">Select Particulars...</option>
-                          {ledgers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                        </select>
-                        <button 
-                          type="button"
-                          onClick={() => openQuickLedger('', 'particulars', idx)}
-                          className="text-gray-600 hover:text-foreground transition-colors"
-                        >
-                          <PlusCircle className="w-3 h-3" />
-                        </button>
+                          placeholder="Select Particulars..."
+                          onQuickCreate={() => openQuickLedger('', 'particulars', idx)}
+                        />
                       </div>
                     </td>
                     <td className="px-4 lg:px-6 py-2">
@@ -934,7 +949,7 @@ export function VoucherEntry() {
             <Plus className="w-3 h-3" /> Add Line
           </button>
 
-          {isInventory && (
+          {isInventory && isBarcodeEnabled && (
             <div className="flex items-center gap-2">
               <label className="text-[9px] text-gray-500 uppercase font-bold">Barcode Scan</label>
               <input

@@ -5,7 +5,8 @@ import {
   createUserWithEmailAndPassword, 
   sendPasswordResetEmail 
 } from 'firebase/auth';
-import { doc, setDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { erpService } from '../services/erpService';
+import { doc, setDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, UserPlus, Loader2, KeyRound, Building2 } from 'lucide-react';
 
@@ -240,18 +241,44 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
       await setDoc(doc(db, 'settings', companyRef.id), {
         companyId: companyRef.id,
         companyName,
-        companySlogan: slogan,
+        slogan: slogan || 'Enterprise ERP Solution',
         companyAddress: address,
         financialYearStart,
         baseCurrencySymbol: currencySymbol,
         timezone,
-        defaultPrintHeader: printHeader || companyName,
-        contactPhone,
-        contactEmail: contactEmail || email,
-        websiteUrl,
-        defaultPrintFooter: printFooter,
+        printHeader: printHeader || companyName,
+        printPhone: contactPhone,
+        printEmail: contactEmail || email,
+        printWebsite: websiteUrl,
+        printFooter: printFooter,
+        showPrintHeader: true,
+        showPrintPhone: true,
+        showPrintEmail: true,
+        showPrintWebsite: !!websiteUrl,
+        showPrintFooter: true,
         updatedAt: serverTimestamp()
       });
+
+      // 5. Create Default Ledgers
+      const groups = await erpService.seedDefaultGroups(companyRef.id);
+      const getGroupId = (name: string) => groups.find(g => g.name === name)?.id;
+
+      const defaultLedgers = [
+        { name: 'Sales A/c', group_id: getGroupId('Sales Accounts'), opening_balance: 0 },
+        { name: 'Purchase A/c', group_id: getGroupId('Purchase Accounts'), opening_balance: 0 },
+        { name: 'Cash', group_id: getGroupId('Cash-in-Hand'), opening_balance: 0 },
+        { name: 'Bank', group_id: getGroupId('Bank Accounts'), opening_balance: 0 },
+        { name: 'Profit & Loss A/c', group_id: getGroupId('Indirect Expenses'), opening_balance: 0 },
+        { name: 'Bad Debts', group_id: getGroupId('Indirect Expenses'), opening_balance: 0 },
+        { name: 'Management Cost', group_id: getGroupId('Indirect Expenses'), opening_balance: 0 },
+        { name: 'Utility Bill', group_id: getGroupId('Indirect Expenses'), opening_balance: 0 },
+      ];
+
+      for (const ledger of defaultLedgers) {
+        if (ledger.group_id) {
+          await erpService.createLedger(companyRef.id, ledger);
+        }
+      }
 
     } catch (err: any) {
       console.error(err);
@@ -410,13 +437,13 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Website URL</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Website URL (Optional)</label>
                 <input
-                  type="url"
+                  type="text"
                   value={websiteUrl}
                   onChange={(e) => setWebsiteUrl(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
-                  placeholder="https://..."
+                  placeholder="www.example.com"
                 />
               </div>
             </div>
