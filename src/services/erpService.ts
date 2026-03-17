@@ -17,7 +17,15 @@ import {
   writeBatch,
   Timestamp
 } from 'firebase/firestore';
+import { initializeApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
+import firebaseConfig from '../../firebase-applet-config.json';
 import { Voucher, Item, Ledger } from '../types';
+
+// Initialize a secondary auth instance for admin tasks (adding users)
+// This avoids signing out the current admin user
+const secondaryApp = initializeApp(firebaseConfig, 'Secondary');
+const secondaryAuth = getAuth(secondaryApp);
 
 enum OperationType {
   CREATE = 'create',
@@ -27,6 +35,7 @@ enum OperationType {
   GET = 'get',
   WRITE = 'write',
 }
+// ... (rest of the error handling code remains same)
 
 interface FirestoreErrorInfo {
   error: string;
@@ -162,11 +171,12 @@ export const erpService = {
     const vSnap = await getDoc(doc(db, 'vouchers', id));
     if (!vSnap.exists()) throw new Error('Voucher not found');
     const voucher = vSnap.data();
+    const companyId = voucher.companyId;
 
-    const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id)));
+    const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
     const entries = eSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    const iSnap = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id)));
+    const iSnap = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
     const inventory = iSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     return { ...voucher, entries, inventory, id: vSnap.id };
@@ -174,6 +184,7 @@ export const erpService = {
 
   async deleteVoucher(id: string) {
     const voucher = await this.getVoucherById(id);
+    const companyId = voucher.companyId;
     const batch = writeBatch(db);
 
     // Reverse Ledger Balances
@@ -193,10 +204,10 @@ export const erpService = {
     }
 
     // Delete Entries
-    const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id)));
+    const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
     eSnap.docs.forEach(d => batch.delete(d.ref));
 
-    const iSnap = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id)));
+    const iSnap = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
     iSnap.docs.forEach(d => batch.delete(d.ref));
 
     // Delete Voucher
@@ -229,10 +240,11 @@ export const erpService = {
     }
 
     // 3. Delete Old Entries
-    const eSnapOld = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id)));
+    const companyId = oldVoucher.companyId;
+    const eSnapOld = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
     eSnapOld.docs.forEach(d => batch.delete(d.ref));
 
-    const iSnapOld = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id)));
+    const iSnapOld = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
     iSnapOld.docs.forEach(d => batch.delete(d.ref));
 
     // 4. Update Voucher Header
@@ -299,9 +311,14 @@ export const erpService = {
     }
   },
 
-  async checkLedgerTransactions(id: string) {
+  async checkLedgerTransactions(id: string, companyId: string) {
     try {
-      const q = query(collection(db, 'voucher_entries'), where('ledger_id', '==', id), limit(1));
+      const q = query(
+        collection(db, 'voucher_entries'), 
+        where('ledger_id', '==', id), 
+        where('companyId', '==', companyId),
+        limit(1)
+      );
       const snap = await getDocs(q);
       return !snap.empty;
     } catch (error) {
@@ -405,8 +422,13 @@ export const erpService = {
     return { id: snap.id, ...snap.data() } as Item;
   },
 
-  async checkItemTransactions(id: string) {
-    const q = query(collection(db, 'inventory_entries'), where('item_id', '==', id), limit(1));
+  async checkItemTransactions(id: string, companyId: string) {
+    const q = query(
+      collection(db, 'inventory_entries'), 
+      where('item_id', '==', id), 
+      where('companyId', '==', companyId),
+      limit(1)
+    );
     const snap = await getDocs(q);
     return !snap.empty;
   },
@@ -646,6 +668,56 @@ export const erpService = {
   async updateUserRole(uid: string, role: string): Promise<void> {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, { role });
+  },
+
+  async adminAddUser(data: { email: string; password: string; displayName: string; role: string; companyId: string }) {
+    try {
+      // Create user in Firebase Auth using the secondary instance
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, data.email, data.password);
+      const uid = userCredential.user.uid;
+
+      // Create the user profile in Firestore
+      await setDoc(doc(db, 'users', uid), {
+        uid,
+        email: data.email,
+        displayName: data.displayName,
+        role: data.role,
+        companyId: data.companyId,
+        createdAt: serverTimestamp(),
+      });
+
+      // Sign out from the secondary instance immediately
+      await signOut(secondaryAuth);
+
+      return { uid };
+    } catch (error: any) {
+      console.error('Error in adminAddUser:', error);
+      throw new Error(error.message || 'Failed to add user');
+    }
+  },
+
+  async adminDeleteUser(uid: string) {
+    try {
+      // We can't delete the Auth account from client-side without admin SDK
+      // but we can remove their profile so they can't access the app data
+      await deleteDoc(doc(db, 'users', uid));
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error in adminDeleteUser:', error);
+      throw new Error(error.message || 'Failed to delete user');
+    }
+  },
+
+  async adminResetPassword(uid: string, email: string) {
+    try {
+      // Instead of setting password directly (which requires Admin SDK),
+      // we send a password reset email which is the standard secure way.
+      await sendPasswordResetEmail(auth, email);
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error in adminResetPassword:', error);
+      throw new Error(error.message || 'Failed to send reset email');
+    }
   },
 
   async getNextVoucherNumber(companyId: string, type: string): Promise<string> {

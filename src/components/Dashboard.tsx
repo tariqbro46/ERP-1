@@ -218,8 +218,8 @@ export function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card border border-border p-6">
           <h3 className="text-[11px] font-mono text-gray-500 uppercase mb-6 tracking-widest">Revenue Trajectory</h3>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[300px] w-full min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%" minHeight={300}>
               <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -242,8 +242,8 @@ export function Dashboard() {
 
         <div className="bg-card border border-border p-6">
           <h3 className="text-[11px] font-mono text-gray-500 uppercase mb-6 tracking-widest">Expense Distribution</h3>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[300px] w-full min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%" minHeight={300}>
               <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
                 <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} />

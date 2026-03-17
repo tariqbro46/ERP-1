@@ -11,27 +11,36 @@ service cloud.firestore {
     
     function isSuperAdmin() {
       return isAuthenticated() && 
+             'email' in request.auth.token &&
              request.auth.token.email == "sapientman46@gmail.com";
-             // Temporarily removed email_verified check for debugging
     }
 
     function getUserData() {
-      // Use get() carefully. Firestore rules cache get() results within a request.
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
     
     function isCompanyMember(companyId) {
       return isAuthenticated() && (
-        isSuperAdmin() || 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == companyId
+        isSuperAdmin() || (
+          userExists() && 
+          'companyId' in getUserData() &&
+          getUserData().companyId == companyId
+        )
       );
     }
     
     function isCompanyAdmin(companyId) {
       return isAuthenticated() && (
         isSuperAdmin() || (
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == companyId && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+          userExists() && 
+          'companyId' in getUserData() &&
+          getUserData().companyId == companyId && 
+          'role' in getUserData() &&
+          getUserData().role == 'admin'
         )
       );
     }
@@ -40,18 +49,36 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
+    // Settings
+    match /settings/{companyId} {
+      allow read: if isCompanyMember(companyId);
+      allow write: if isCompanyAdmin(companyId);
+    }
+
     // Companies
     match /companies/{companyId} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || isCompanyMember(companyId));
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || 
+        isCompanyMember(companyId) || 
+        resource.data.ownerId == request.auth.uid || 
+        resource.data.createdBy == request.auth.uid
+      );
       allow create: if isAuthenticated();
       allow update: if isCompanyAdmin(companyId);
     }
 
     // User Profiles
     match /users/{uid} {
-      allow read: if isAuthenticated() && (request.auth.uid == uid || isSuperAdmin() || getUserData().companyId == resource.data.companyId);
+      allow read: if isAuthenticated() && (
+        request.auth.uid == uid || 
+        isSuperAdmin() || 
+        (userExists() && getUserData().companyId == resource.data.companyId)
+      );
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (request.auth.uid == uid || isCompanyAdmin(resource.data.companyId));
+      allow update: if isAuthenticated() && (
+        request.auth.uid == uid || 
+        (userExists() && isCompanyAdmin(resource.data.companyId))
+      );
     }
 
     // ERP Data

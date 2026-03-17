@@ -5,6 +5,24 @@ import PDFDocument from "pdfkit";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import db from "./db.js";
+import admin from "firebase-admin";
+import firebaseConfig from "./firebase-applet-config.json" assert { type: "json" };
+
+// Initialize Firebase Admin
+try {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+    projectId: firebaseConfig.projectId,
+  });
+} catch (error) {
+  console.error("Firebase Admin initialization error:", error);
+  // Fallback for local development if applicationDefault fails
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      projectId: firebaseConfig.projectId,
+    });
+  }
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
 
@@ -14,7 +32,7 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Middleware: Auth
+  // Middleware: Auth (for SQLite - if still used)
   const authenticateToken = (req: any, res: any, next: any) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -28,7 +46,86 @@ async function startServer() {
     });
   };
 
-  // API: Auth - Register
+  // Firebase Admin Auth Middleware
+  const authenticateFirebase = async (req: any, res: any, next: any) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      req.user = decodedToken;
+      next();
+    } catch (error) {
+      res.status(403).json({ error: "Invalid Firebase Token" });
+    }
+  };
+
+  // API: Firebase User Management - Add User
+  app.post("/api/admin/users", authenticateFirebase, async (req: any, res) => {
+    const { email, password, displayName, role, companyId } = req.body;
+
+    try {
+      // 1. Create User in Firebase Auth
+      const userRecord = await admin.auth().createUser({
+        email,
+        password,
+        displayName,
+      });
+
+      // 2. Create User Profile in Firestore
+      await admin.firestore().collection('users').doc(userRecord.uid).set({
+        uid: userRecord.uid,
+        email,
+        displayName,
+        role: role || 'staff',
+        companyId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      res.status(201).json({ uid: userRecord.uid });
+    } catch (error: any) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // API: Firebase User Management - Delete User
+  app.delete("/api/admin/users/:uid", authenticateFirebase, async (req: any, res) => {
+    const { uid } = req.params;
+
+    try {
+      // 1. Delete from Firebase Auth
+      await admin.auth().deleteUser(uid);
+
+      // 2. Delete from Firestore
+      await admin.firestore().collection('users').doc(uid).delete();
+
+      res.json({ message: "User deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // API: Firebase User Management - Reset Password
+  app.post("/api/admin/users/:uid/reset-password", authenticateFirebase, async (req: any, res) => {
+    const { uid } = req.params;
+    const { newPassword } = req.body;
+
+    try {
+      await admin.auth().updateUser(uid, {
+        password: newPassword,
+      });
+      res.json({ message: "Password reset successfully" });
+    } catch (error: any) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // API: Auth - Register (SQLite - Left for compatibility)
   app.post("/api/auth/register", async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: "Missing fields" });

@@ -68,7 +68,7 @@ export function LedgerCreation() {
         if (isEdit) {
           const [lData, hasTx] = await Promise.all([
             erpService.getLedgerById(id!),
-            erpService.checkLedgerTransactions(id!)
+            erpService.checkLedgerTransactions(id!, user.companyId)
           ]);
           setOriginalLedger(lData);
           setHasTransactions(hasTx);

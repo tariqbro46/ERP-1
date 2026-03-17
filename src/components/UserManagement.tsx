@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth, Profile, UserRole } from '../contexts/AuthContext';
-import { Users, Shield, ShieldCheck, ShieldAlert, Mail, Calendar, Loader2, Search } from 'lucide-react';
+import { Users, Shield, ShieldCheck, ShieldAlert, Mail, Calendar, Loader2, Search, UserPlus, Trash2, Key, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
 
@@ -10,6 +10,17 @@ export const UserManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  
+  // Add User Form
+  const [newUser, setNewUser] = useState({
+    email: '',
+    password: '',
+    displayName: '',
+    role: 'staff' as UserRole
+  });
+  const [addLoading, setAddLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
     if (user?.companyId) {
@@ -29,6 +40,10 @@ export const UserManagement: React.FC = () => {
   };
 
   const updateRole = async (uid: string, newRole: UserRole) => {
+    if (uid === user?.uid) {
+      alert("You cannot change your own role.");
+      return;
+    }
     setUpdatingId(uid);
     try {
       await erpService.updateUserRole(uid, newRole);
@@ -38,6 +53,55 @@ export const UserManagement: React.FC = () => {
       alert('Failed to update role');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddLoading(true);
+    try {
+      await erpService.adminAddUser({
+        ...newUser,
+        companyId: user!.companyId
+      });
+      setShowAddModal(false);
+      setNewUser({ email: '', password: '', displayName: '', role: 'staff' });
+      fetchProfiles();
+    } catch (err: any) {
+      alert(err.message || 'Failed to add user');
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (uid: string) => {
+    if (uid === user?.uid) {
+      alert("You cannot delete yourself.");
+      return;
+    }
+    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+    
+    setUpdatingId(uid);
+    try {
+      await erpService.adminDeleteUser(uid);
+      setProfiles(profiles.filter(p => p.uid !== uid));
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete user');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleResetPassword = async (uid: string, email: string) => {
+    if (!window.confirm(`Send a password reset email to ${email}?`)) return;
+    setResetLoading(true);
+    try {
+      await erpService.adminResetPassword(uid, email);
+      alert('Password reset email sent successfully');
+    } catch (err: any) {
+      alert(err.message || 'Failed to send reset email');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -66,15 +130,24 @@ export const UserManagement: React.FC = () => {
           <p className="text-gray-500 text-xs uppercase tracking-widest mt-1">Manage system access and roles</p>
         </div>
         
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={searchTerm || ''}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-card border border-border rounded-lg py-2 pl-10 pr-4 text-foreground text-xs focus:outline-none focus:border-foreground/20 transition-colors"
-          />
+        <div className="flex items-center gap-4">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchTerm || ''}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-card border border-border rounded-lg py-2 pl-10 pr-4 text-foreground text-xs focus:outline-none focus:border-foreground/20 transition-colors"
+            />
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors"
+          >
+            <UserPlus className="w-4 h-4" />
+            Add New User
+          </button>
         </div>
       </div>
 
@@ -128,19 +201,40 @@ export const UserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-3">
                       {updatingId === profile.uid ? (
                         <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
                       ) : (
-                        <select
-                          value={profile.role}
-                          onChange={(e) => updateRole(profile.uid, e.target.value as UserRole)}
-                          className="bg-background border border-border rounded px-2 py-1 text-[10px] text-foreground/60 focus:outline-none focus:border-foreground/20"
-                        >
-                          <option value="staff">Staff</option>
-                          <option value="manager">Manager</option>
-                          <option value="admin">Admin</option>
-                        </select>
+                        <>
+                          <select
+                            value={profile.role}
+                            onChange={(e) => updateRole(profile.uid, e.target.value as UserRole)}
+                            disabled={profile.uid === user?.uid}
+                            className="bg-background border border-border rounded px-2 py-1 text-[10px] text-foreground/60 focus:outline-none focus:border-foreground/20 disabled:opacity-50"
+                          >
+                            <option value="staff">Staff</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                          
+                          <button
+                            onClick={() => handleResetPassword(profile.uid, profile.email)}
+                            disabled={resetLoading}
+                            title="Send Reset Email"
+                            className="p-1.5 text-gray-400 hover:text-indigo-500 transition-colors disabled:opacity-30"
+                          >
+                            {resetLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteUser(profile.uid)}
+                            disabled={profile.uid === user?.uid}
+                            title="Delete User"
+                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-30"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -150,6 +244,83 @@ export const UserManagement: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Add User Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-border flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Add New User</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleAddUser} className="p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newUser.displayName}
+                  onChange={(e) => setNewUser({ ...newUser, displayName: e.target.value })}
+                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
+                  placeholder="John Doe"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
+                  placeholder="john@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
+                  placeholder="••••••••"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Initial Role</label>
+                <select
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
+                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="staff">Staff</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 px-4 py-2 border border-border rounded-lg text-sm font-semibold text-foreground hover:bg-foreground/5 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addLoading}
+                  className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  {addLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create User"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 bg-amber-500/5 border border-amber-500/10 rounded-lg p-4">
         <div className="flex gap-3">

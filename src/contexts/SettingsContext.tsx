@@ -109,6 +109,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         // If no settings exist for this company, use defaults
         setSettings(prev => ({ ...defaultSettings, updateSettings: prev.updateSettings }));
       }
+    }, (error) => {
+      console.error("Settings snapshot error:", error);
     });
 
     return () => unsubscribe();

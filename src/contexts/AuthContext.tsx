@@ -31,27 +31,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
+    let unsubProfile: (() => void) | null = null;
+
     const unsubscribe = onAuthStateChanged(auth, async (fUser) => {
       setFirebaseUser(fUser);
+      
+      if (unsubProfile) {
+        unsubProfile();
+        unsubProfile = null;
+      }
+
       if (fUser) {
         // Listen to user profile changes
         const userRef = doc(db, 'users', fUser.uid);
-        const unsubProfile = onSnapshot(userRef, (docSnap) => {
+        unsubProfile = onSnapshot(userRef, (docSnap) => {
           if (docSnap.exists()) {
             setUser(docSnap.data() as Profile);
           } else {
             setUser(null);
           }
           setLoading(false);
+        }, (error) => {
+          console.error("Auth profile snapshot error:", error);
+          // If we get a permission error, it might be because the document doesn't exist yet
+          // or we're in a logout transition.
+          setLoading(false);
         });
-        return () => unsubProfile();
       } else {
         setUser(null);
         setLoading(false);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (unsubProfile) unsubProfile();
+    };
   }, []);
 
   const logout = async () => {

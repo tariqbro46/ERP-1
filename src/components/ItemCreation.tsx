@@ -58,7 +58,7 @@ export function ItemCreation() {
         if (isEdit) {
           const [iData, hasTx] = await Promise.all([
             erpService.getItemById(id!),
-            erpService.checkItemTransactions(id!)
+            erpService.checkItemTransactions(id!, user.companyId)
           ]);
           setHasTransactions(hasTx);
           setFormData({
