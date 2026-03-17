@@ -112,16 +112,30 @@ function Layout({ children }: { children: React.ReactNode }) {
   const [expandedGroup, setExpandedGroup] = React.useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
 
   // Close sidebar and scroll to top on navigation
   React.useEffect(() => {
     setIsSidebarOpen(false);
+    setIsProfileDropdownOpen(false);
     if (scrollRef.current) {
       scrollRef.current.scrollTo(0, 0);
     }
   }, [location.pathname]);
+
+  // Handle click outside for profile dropdown
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Auto-expand group based on current path
   React.useEffect(() => {
@@ -295,18 +309,81 @@ function Layout({ children }: { children: React.ReactNode }) {
               <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-gray-400">G</kbd>
               <span className="ml-1 uppercase tracking-widest">Go To</span>
             </div>
-            <div className="flex items-center gap-3 border-l border-border pl-4 lg:pl-6">
+            <div className="flex items-center gap-3 border-l border-border pl-4 lg:pl-6 relative" ref={dropdownRef}>
               <div className="text-right hidden sm:block">
                 <p className="text-[10px] text-foreground font-mono">{user?.displayName || user?.email || 'User'}</p>
                 <p className="text-[9px] text-gray-500 uppercase font-mono">{user?.role || 'Staff'}</p>
               </div>
               <button 
-                onClick={logout}
-                className="p-2 rounded-full hover:bg-red-50 text-gray-500 hover:text-red-600 transition-colors"
-                title="Logout"
+                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                className="relative group"
               >
-                <LogOut className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-full border border-border overflow-hidden bg-card hover:border-foreground transition-all">
+                  <img 
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'default'}`} 
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-background rounded-full" />
               </button>
+
+              {isProfileDropdownOpen && (
+                <div className="absolute top-full right-0 mt-2 w-56 bg-card border border-border shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 py-3 border-b border-border mb-2">
+                    <p className="text-[10px] font-bold text-foreground uppercase tracking-widest truncate">{user?.displayName || 'User'}</p>
+                    <p className="text-[9px] text-gray-500 truncate">{user?.email}</p>
+                    <div className="mt-2 inline-block px-2 py-0.5 bg-foreground/5 rounded text-[8px] font-bold text-foreground uppercase tracking-widest">
+                      {user?.role || 'Staff'}
+                    </div>
+                  </div>
+                  
+                  <Link 
+                    to="/settings" 
+                    className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
+                  >
+                    <SettingsIcon className="w-3.5 h-3.5" />
+                    System Settings
+                  </Link>
+                  
+                  {isAdmin && (
+                    <Link 
+                      to="/users" 
+                      className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      User Management
+                    </Link>
+                  )}
+
+                  <Link 
+                    to="/companies" 
+                    className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
+                  >
+                    <Building2 className="w-3.5 h-3.5" />
+                    Company Info
+                  </Link>
+
+                  <div className="h-[1px] bg-border my-2" />
+
+                  <button 
+                    onClick={toggleTheme}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
+                  >
+                    {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                  </button>
+
+                  <button 
+                    onClick={logout}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-[10px] text-red-500 hover:bg-red-500/5 uppercase tracking-widest transition-colors"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Logout Session
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>

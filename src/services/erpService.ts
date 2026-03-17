@@ -297,7 +297,20 @@ export const erpService = {
 
   // Ledgers
   async getLedgers(companyId: string): Promise<Ledger[]> {
-    return getCollection<Ledger>('ledgers', companyId);
+    try {
+      const [ledgers, groups] = await Promise.all([
+        getCollection<Ledger>('ledgers', companyId),
+        getCollection<any>('ledger_groups', companyId)
+      ]);
+      
+      return ledgers.map(l => ({
+        ...l,
+        ledger_groups: groups.find(g => g.id === l.group_id)
+      }));
+    } catch (error) {
+      console.error('Error in getLedgers:', error);
+      return [];
+    }
   },
 
   async getLedgerById(id: string): Promise<Ledger> {

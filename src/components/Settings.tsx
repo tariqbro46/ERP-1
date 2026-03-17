@@ -27,6 +27,9 @@ export function Settings() {
     showSignature3,
     signatureAlignment,
     showDeveloperContact,
+    financialYearStart,
+    baseCurrencySymbol,
+    timezone,
     notifications, 
     features = [], 
     updateSettings 
@@ -56,13 +59,19 @@ export function Settings() {
   const [localShowSignature3, setLocalShowSignature3] = useState(showSignature3);
   const [localSignatureAlignment, setLocalSignatureAlignment] = useState(signatureAlignment);
   const [localShowDeveloperContact, setLocalShowDeveloperContact] = useState(showDeveloperContact);
+  const [localFinancialYearStart, setLocalFinancialYearStart] = useState(financialYearStart);
+  const [localBaseCurrencySymbol, setLocalBaseCurrencySymbol] = useState(baseCurrencySymbol);
+  const [localTimezone, setLocalTimezone] = useState(timezone);
   const [localNotifications, setLocalNotifications] = useState(notifications);
 
   const handleSaveGeneral = () => {
     updateSettings({ 
       companyName: localCompanyName, 
       companyAddress: localCompanyAddress,
-      slogan: localSlogan 
+      slogan: localSlogan,
+      financialYearStart: localFinancialYearStart,
+      baseCurrencySymbol: localBaseCurrencySymbol,
+      timezone: localTimezone
     });
     showNotification(notifications.settingsUpdated);
   };
@@ -202,7 +211,12 @@ export function Settings() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] text-gray-500 uppercase">Financial Year Start</label>
-                      <input type="date" defaultValue="2024-04-01" className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" />
+                      <input 
+                        type="date" 
+                        value={localFinancialYearStart} 
+                        onChange={(e) => setLocalFinancialYearStart(e.target.value)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                      />
                     </div>
                   </div>
                 </div>
@@ -212,13 +226,22 @@ export function Settings() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] text-gray-500 uppercase">Base Currency Symbol</label>
-                      <input type="text" defaultValue="৳" className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" />
+                      <input 
+                        type="text" 
+                        value={localBaseCurrencySymbol} 
+                        onChange={(e) => setLocalBaseCurrencySymbol(e.target.value)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] text-gray-500 uppercase">Timezone</label>
-                      <select className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground">
-                        <option>UTC+06:00 (Dhaka)</option>
-                        <option>UTC+05:30 (Kolkata)</option>
+                      <select 
+                        value={localTimezone}
+                        onChange={(e) => setLocalTimezone(e.target.value)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        <option value="UTC+06:00 (Dhaka)">UTC+06:00 (Dhaka)</option>
+                        <option value="UTC+05:30 (Kolkata)">UTC+05:30 (Kolkata)</option>
                       </select>
                     </div>
                   </div>

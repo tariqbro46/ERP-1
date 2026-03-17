@@ -41,6 +41,8 @@ interface SettingsContextType {
   showSignature3: boolean;
   signatureAlignment: 'left' | 'center' | 'right' | 'spread';
   showDeveloperContact: boolean;
+  baseCurrencySymbol: string;
+  timezone: string;
   notifications: NotificationSettings;
   features: FeatureSettings[];
   updateSettings: (newSettings: Partial<SettingsContextType>) => void;
@@ -70,6 +72,8 @@ const defaultSettings: SettingsContextType = {
   showSignature3: true,
   signatureAlignment: 'spread',
   showDeveloperContact: true,
+  baseCurrencySymbol: '৳',
+  timezone: 'UTC+06:00 (Dhaka)',
   notifications: {
     voucherSaved: 'Voucher has been saved successfully!',
     ledgerCreated: 'New ledger account created.',
