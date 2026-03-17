@@ -40,6 +40,8 @@ export function VoucherEntry() {
   const [ledgers, setLedgers] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [godowns, setGodowns] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [salespersonId, setSalespersonId] = useState('');
   
   // Quick Create State
   const [isQuickLedgerOpen, setIsQuickLedgerOpen] = useState(false);
@@ -99,7 +101,7 @@ export function VoucherEntry() {
 
   // Inventory Entries (Sales/Purchase)
   const [invEntries, setInvEntries] = useState([
-    { item_id: '', godown_id: '', qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }
+    { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }
   ]);
 
   // Accounting Entries (Journal/Payment/Receipt/Contra)
@@ -156,6 +158,7 @@ export function VoucherEntry() {
       setGlobalDiscountType(v.discount_type || 'fixed');
       setCurrency(v.currency || baseCurrencySymbol);
       setExchangeRate(v.exchange_rate || 1);
+      setSalespersonId(v.salesperson_id || '');
 
       if (v.v_type === 'Sales' || v.v_type === 'Purchase') {
         // In our save logic: entries[0] is party, entries[1] is sales/purchase
@@ -165,6 +168,7 @@ export function VoucherEntry() {
           item_id: i.item_id,
           godown_id: i.godown_id || '',
           qty: i.qty,
+          free_qty: i.free_qty || 0,
           rate: i.rate,
           disc_percent: i.discount_percent || 0,
           tax_percent: i.tax_percent || 0,
@@ -173,7 +177,7 @@ export function VoucherEntry() {
           amount: i.amount,
           unit: i.unit_name || 'pcs'
         }));
-        setInvEntries(inv.length > 0 ? inv : [{ item_id: '', godown_id: '', qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
+        setInvEntries(inv.length > 0 ? inv : [{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
       } else if (v.v_type === 'Journal') {
         // For Journal, we might have a party tagged in the first entry if it's a specific type
         setPartyLedgerId(v.entries[0]?.ledger_id || '');
@@ -226,14 +230,16 @@ export function VoucherEntry() {
 
   async function fetchData() {
     if (!user?.companyId) return;
-    const [lData, iData, gData] = await Promise.all([
+    const [lData, iData, gData, uData] = await Promise.all([
       erpService.getLedgers(user.companyId),
       erpService.getItems(user.companyId),
-      erpService.getGodowns(user.companyId)
+      erpService.getGodowns(user.companyId),
+      erpService.getCompanyUsers(user.companyId)
     ]);
     setLedgers(lData);
     setItems(iData);
     setGodowns(gData);
+    setUsers(uData);
   }
 
   const handleQuickLedgerSuccess = (newLedger: any) => {
@@ -282,6 +288,7 @@ export function VoucherEntry() {
           item_id: data.id,
           godown_id: '',
           qty: 1,
+          free_qty: 0,
           rate: vType === 'Sales' ? data.avg_cost || 0 : 0,
           disc_percent: 0,
           tax_percent: data.tax_percent || 0,
@@ -356,7 +363,8 @@ export function VoucherEntry() {
         discount_amount: globalDiscount,
         discount_type: globalDiscountType,
         currency,
-        exchange_rate: exchangeRate
+        exchange_rate: exchangeRate,
+        salesperson_id: salespersonId
       };
       
       let finalAccEntries = [];
@@ -483,7 +491,7 @@ export function VoucherEntry() {
                 setSalesPurchaseLedgerId('');
                 setBankCashLedgerId('');
                 setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }]);
-                setInvEntries([{ item_id: '', godown_id: '', qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
+                setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
               }}
               className={cn(
                 "px-4 lg:px-6 py-3 text-[10px] uppercase tracking-widest font-bold border-r border-border transition-all flex-shrink-0",
@@ -579,6 +587,22 @@ export function VoucherEntry() {
                 />
               </div>
             </>
+          )}
+
+          {vType === 'Sales' && (
+            <div className="space-y-2">
+              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Salesperson</label>
+              <select
+                value={salespersonId}
+                onChange={e => setSalespersonId(e.target.value)}
+                className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
+              >
+                <option value="">Select Salesperson...</option>
+                {users.map(u => (
+                  <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>
+                ))}
+              </select>
+            </div>
           )}
 
           {/* Type Specific Header Fields */}
@@ -697,6 +721,7 @@ export function VoucherEntry() {
                     <th className="px-4 lg:px-6 py-3 border-b border-border text-left w-32">Expiry</th>
                   )}
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Quantity</th>
+                  <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Free</th>
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-32">Rate</th>
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-center w-20">per</th>
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Disc %</th>
@@ -780,8 +805,24 @@ export function VoucherEntry() {
                     <td className="px-4 lg:px-6 py-2">
                       <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.qty ?? ''} onChange={e => {
                         const next = [...invEntries];
-                        next[idx].qty = Number(e.target.value);
+                        const val = Number(e.target.value);
+                        next[idx].qty = val;
+                        
+                        // Auto-calculate free quantity based on scheme
+                        const item = items.find(i => i.id === entry.item_id);
+                        if (item && item.scheme_qty && item.scheme_free_qty && val >= item.scheme_qty) {
+                          const multiplier = Math.floor(val / item.scheme_qty);
+                          next[idx].free_qty = multiplier * item.scheme_free_qty;
+                        }
+
                         next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
+                        setInvEntries(next);
+                      }} />
+                    </td>
+                    <td className="px-4 lg:px-6 py-2">
+                      <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right text-emerald-500 font-bold" value={entry.free_qty ?? ''} onChange={e => {
+                        const next = [...invEntries];
+                        next[idx].free_qty = Number(e.target.value);
                         setInvEntries(next);
                       }} />
                     </td>
@@ -943,7 +984,7 @@ export function VoucherEntry() {
         </div>
         <div className="p-4 border-b border-border flex justify-between items-center">
           <button 
-            onClick={() => isInventory ? setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]) : setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
+            onClick={() => isInventory ? setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]) : setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
             className="text-[9px] text-gray-600 uppercase hover:text-foreground flex items-center gap-2"
           >
             <Plus className="w-3 h-3" /> Add Line

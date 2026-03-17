@@ -17,7 +17,8 @@ export const UserManagement: React.FC = () => {
     email: '',
     password: '',
     displayName: '',
-    role: 'Staff' as UserRole
+    role: 'Staff' as UserRole,
+    target_amount: 0
   });
   const [addLoading, setAddLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
@@ -65,7 +66,7 @@ export const UserManagement: React.FC = () => {
         companyId: user!.companyId
       });
       setShowAddModal(false);
-      setNewUser({ email: '', password: '', displayName: '', role: 'Staff' });
+      setNewUser({ email: '', password: '', displayName: '', role: 'Staff', target_amount: 0 });
       fetchProfiles();
     } catch (err: any) {
       alert(err.message || 'Failed to add user');
@@ -157,6 +158,7 @@ export const UserManagement: React.FC = () => {
             <tr className="border-b border-border bg-foreground/5">
               <th className="px-6 py-4 text-[10px] text-gray-500 uppercase tracking-widest font-mono">User / Email</th>
               <th className="px-6 py-4 text-[10px] text-gray-500 uppercase tracking-widest font-mono">Current Role</th>
+              <th className="px-6 py-4 text-[10px] text-gray-500 uppercase tracking-widest font-mono text-right">Sales Target</th>
               <th className="px-6 py-4 text-[10px] text-gray-500 uppercase tracking-widest font-mono text-right">Actions</th>
             </tr>
           </thead>
@@ -202,6 +204,24 @@ export const UserManagement: React.FC = () => {
                        <Shield className="w-3 h-3" />}
                       {profile.role}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <input
+                      type="number"
+                      defaultValue={profile.target_amount || 0}
+                      onBlur={async (e) => {
+                        const val = Number(e.target.value);
+                        if (val !== profile.target_amount) {
+                          try {
+                            await erpService.updateTargetAmount(profile.uid, val);
+                            setProfiles(profiles.map(p => p.uid === profile.uid ? { ...p, target_amount: val } : p));
+                          } catch (err) {
+                            console.error('Error updating target:', err);
+                          }
+                        }
+                      }}
+                      className="w-24 bg-background border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-indigo-500 text-right"
+                    />
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-3">
@@ -315,6 +335,16 @@ export const UserManagement: React.FC = () => {
                     </>
                   )}
                 </select>
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Monthly Sales Target</label>
+                <input
+                  type="number"
+                  value={newUser.target_amount}
+                  onChange={(e) => setNewUser({ ...newUser, target_amount: Number(e.target.value) })}
+                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
+                  placeholder="0"
+                />
               </div>
               <div className="pt-4 flex gap-3">
                 <button

@@ -23,7 +23,8 @@ import {
   X,
   Users,
   Building2,
-  Shield
+  Shield,
+  Award
 } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { VoucherEntry } from './components/VoucherEntry';
@@ -45,6 +46,7 @@ import { FinancialInsights } from './components/FinancialInsights';
 import { GodownMaster } from './components/GodownMaster';
 import { UserManagement } from './components/UserManagement';
 import { CompanyManagement } from './components/CompanyManagement';
+import { SalespersonReport } from './components/SalespersonReport';
 import FounderPanel from './components/FounderPanel';
 import SubscriptionRequired from './components/SubscriptionRequired';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -257,6 +259,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <SidebarItem to="/reports/financial-insights" icon={TrendingUp} label={isSidebarCollapsed ? "" : "Financial Insights"} active={location.pathname === '/reports/financial-insights'} />
             {isInventoryEnabled && <SidebarItem to="/reports/stock" icon={Package} label={isSidebarCollapsed ? "" : "Stock Summary"} active={location.pathname === '/reports/stock'} />}
             <SidebarItem to="/reports/ledger" icon={ClipboardList} label={isSidebarCollapsed ? "" : "Ledger Statement"} active={location.pathname === '/reports/ledger'} />
+            <SidebarItem to="/reports/sales-performance" icon={Award} label={isSidebarCollapsed ? "" : "Sales Performance"} active={location.pathname === '/reports/sales-performance'} />
           </SidebarGroup>
 
           <SidebarGroup 
@@ -534,6 +537,7 @@ function AppContent() {
           <Route path="/reports/ratios" element={<RatioAnalysis />} />
           <Route path="/reports/financial-insights" element={<FinancialInsights />} />
           <Route path="/reports/ledger" element={<LedgerStatement />} />
+          <Route path="/reports/sales-performance" element={<SalespersonReport />} />
           <Route path="/accounts" element={<ChartOfAccounts />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/companies" element={<CompanyManagement />} />

@@ -38,7 +38,9 @@ export function ItemCreation() {
     has_expiry: false,
     barcode: '',
     low_stock_threshold: 0,
-    tax_percent: 0
+    tax_percent: 0,
+    scheme_qty: 0,
+    scheme_free_qty: 0
   });
 
   useEffect(() => {
@@ -301,6 +303,29 @@ export function ItemCreation() {
                   type="number"
                   value={formData.tax_percent ?? ''}
                   onChange={e => setFormData({ ...formData, tax_percent: Number(e.target.value) })}
+                  className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Scheme Qty (Buy)</label>
+                <input
+                  type="number"
+                  value={formData.scheme_qty ?? ''}
+                  onChange={e => setFormData({ ...formData, scheme_qty: Number(e.target.value) })}
+                  className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Free Qty (Get)</label>
+                <input
+                  type="number"
+                  value={formData.scheme_free_qty ?? ''}
+                  onChange={e => setFormData({ ...formData, scheme_free_qty: Number(e.target.value) })}
                   className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
                   placeholder="0"
                 />

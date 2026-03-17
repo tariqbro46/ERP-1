@@ -158,7 +158,8 @@ export const erpService = {
 
         // Update Item Stats (Simplified for now, real-time recalculation is better)
         const itemRef = doc(db, 'items', i.item_id);
-        const stockChange = movementType === 'Inward' ? i.qty : -i.qty;
+        const totalQty = (i.qty || 0) + (i.free_qty || 0);
+        const stockChange = movementType === 'Inward' ? totalQty : -totalQty;
         batch.update(itemRef, { current_stock: increment(stockChange) });
       }
     }
@@ -199,7 +200,8 @@ export const erpService = {
     // Reverse Inventory Stats
     for (const i of voucher.inventory) {
       const itemRef = doc(db, 'items', i.item_id);
-      const stockChange = i.movement_type === 'Inward' ? -i.qty : i.qty;
+      const totalQty = (i.qty || 0) + (i.free_qty || 0);
+      const stockChange = i.movement_type === 'Inward' ? -totalQty : totalQty;
       batch.update(itemRef, { current_stock: increment(stockChange) });
     }
 
@@ -235,7 +237,8 @@ export const erpService = {
     // 2. Reverse Old Inventory Stats
     for (const i of oldVoucher.inventory) {
       const itemRef = doc(db, 'items', i.item_id);
-      const stockChange = i.movement_type === 'Inward' ? -i.qty : i.qty;
+      const totalQty = (i.qty || 0) + (i.free_qty || 0);
+      const stockChange = i.movement_type === 'Inward' ? -totalQty : totalQty;
       batch.update(itemRef, { current_stock: increment(stockChange) });
     }
 
@@ -287,7 +290,8 @@ export const erpService = {
 
         // Update Item Stats
         const itemRef = doc(db, 'items', i.item_id);
-        const stockChange = movementType === 'Inward' ? i.qty : -i.qty;
+        const totalQty = (i.qty || 0) + (i.free_qty || 0);
+        const stockChange = movementType === 'Inward' ? totalQty : -totalQty;
         batch.update(itemRef, { current_stock: increment(stockChange) });
       }
     }
@@ -703,7 +707,7 @@ export const erpService = {
     await updateDoc(userRef, { role });
   },
 
-  async adminAddUser(data: { email: string; password: string; displayName: string; role: string; companyId: string }) {
+  async adminAddUser(data: { email: string; password: string; displayName: string; role: string; companyId: string; target_amount?: number }) {
     try {
       // Create user in Firebase Auth using the secondary instance
       const userCredential = await createUserWithEmailAndPassword(secondaryAuth, data.email, data.password);
@@ -716,6 +720,7 @@ export const erpService = {
         displayName: data.displayName,
         role: data.role,
         companyId: data.companyId,
+        target_amount: data.target_amount || 0,
         createdAt: serverTimestamp(),
       });
 
@@ -975,6 +980,26 @@ export const erpService = {
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `settings/${companyId}`);
+    }
+  },
+
+  async getCompanyUsers(companyId: string) {
+    try {
+      const q = query(collection(db, 'users'), where('companyId', '==', companyId));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'users');
+      return [];
+    }
+  },
+
+  async updateTargetAmount(uid: string, target_amount: number) {
+    try {
+      const userRef = doc(db, 'users', uid);
+      await updateDoc(userRef, { target_amount });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
     }
   }
 };

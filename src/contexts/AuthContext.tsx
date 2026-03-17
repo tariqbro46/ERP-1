@@ -11,6 +11,7 @@ export interface Profile {
   displayName: string;
   role: UserRole;
   companyId: string;
+  target_amount?: number;
 }
 
 export interface CompanyData {

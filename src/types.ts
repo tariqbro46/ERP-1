@@ -49,8 +49,18 @@ export interface Voucher {
   discount_amount?: number;
   currency?: string;
   exchange_rate?: number;
+  salesperson_id?: string;
   entries: VoucherEntry[];
   inventory?: InventoryEntry[];
+}
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  companyId: string;
+  target_amount?: number;
 }
 
 export interface VoucherEntry {
@@ -64,6 +74,7 @@ export interface InventoryEntry {
   item_id: string;
   item_name?: string;
   qty: number;
+  free_qty?: number;
   rate: number;
   amount: number;
   discount_percent?: number;
@@ -85,4 +96,6 @@ export interface Item {
   category?: string;
   low_stock_threshold?: number;
   tax_percent?: number;
+  scheme_qty?: number;
+  scheme_free_qty?: number;
 }
