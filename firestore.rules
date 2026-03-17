@@ -25,23 +25,17 @@ service cloud.firestore {
     
     function isCompanyMember(companyId) {
       return isAuthenticated() && (
-        isSuperAdmin() || (
-          userExists() && 
-          'companyId' in getUserData() &&
-          getUserData().companyId == companyId
-        )
+        isSuperAdmin() || 
+        (userExists() && 'companyId' in getUserData() && getUserData().companyId == companyId) ||
+        (exists(/databases/$(database)/documents/companies/$(companyId)) && get(/databases/$(database)/documents/companies/$(companyId)).data.ownerId == request.auth.uid)
       );
     }
     
     function isCompanyAdmin(companyId) {
       return isAuthenticated() && (
-        isSuperAdmin() || (
-          userExists() && 
-          'companyId' in getUserData() &&
-          getUserData().companyId == companyId && 
-          'role' in getUserData() &&
-          getUserData().role == 'admin'
-        )
+        isSuperAdmin() || 
+        (userExists() && 'companyId' in getUserData() && getUserData().companyId == companyId && 'role' in getUserData() && getUserData().role == 'admin') ||
+        (exists(/databases/$(database)/documents/companies/$(companyId)) && get(/databases/$(database)/documents/companies/$(companyId)).data.ownerId == request.auth.uid)
       );
     }
 
@@ -74,7 +68,7 @@ service cloud.firestore {
         isSuperAdmin() || 
         (userExists() && getUserData().companyId == resource.data.companyId)
       );
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == uid;
       allow update: if isAuthenticated() && (
         request.auth.uid == uid || 
         (userExists() && isCompanyAdmin(resource.data.companyId))

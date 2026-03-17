@@ -226,7 +226,17 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
         createdAt: serverTimestamp()
       });
 
-      // 3. Create Settings
+      // 3. Create User Profile
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        email: user.email,
+        displayName: displayName || email.split('@')[0],
+        companyId: companyRef.id,
+        role: 'admin',
+        createdAt: serverTimestamp()
+      });
+
+      // 4. Create Settings
       await setDoc(doc(db, 'settings', companyRef.id), {
         companyId: companyRef.id,
         companyName,
@@ -241,16 +251,6 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
         websiteUrl,
         defaultPrintFooter: printFooter,
         updatedAt: serverTimestamp()
-      });
-
-      // 4. Create User Profile
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        email: user.email,
-        displayName: displayName || email.split('@')[0],
-        companyId: companyRef.id,
-        role: 'admin',
-        createdAt: serverTimestamp()
       });
 
     } catch (err: any) {
