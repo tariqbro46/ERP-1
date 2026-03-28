@@ -230,10 +230,10 @@ async function startServer() {
     // Table Rows
     let y = tableTop + 25;
     (items || []).forEach((item: any) => {
-      doc.text(item.name, 50, y);
-      doc.text(item.qty.toString(), 300, y, { width: 50, align: 'right' });
-      doc.text(item.rate.toFixed(2), 350, y, { width: 70, align: 'right' });
-      doc.text(item.amount.toFixed(2), 420, y, { width: 100, align: 'right' });
+      doc.text(item.name || 'Item', 50, y);
+      doc.text((item.qty || 0).toString(), 300, y, { width: 50, align: 'right' });
+      doc.text((item.rate || 0).toFixed(2), 350, y, { width: 70, align: 'right' });
+      doc.text((item.amount || 0).toFixed(2), 420, y, { width: 100, align: 'right' });
       y += 20;
     });
 

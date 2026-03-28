@@ -169,7 +169,7 @@ export function Dashboard() {
         />
         <StatCard 
           title="Active Ledgers" 
-          value={stats.activeLedgers.toString()} 
+          value={stats.activeLedgers?.toString() || '0'} 
           change="+3" 
           icon={Users} 
           trend="up" 

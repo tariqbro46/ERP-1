@@ -17,6 +17,7 @@ interface SearchableSelectProps {
   onQuickCreate?: () => void;
   quickCreateLabel?: string;
   disabled?: boolean;
+  tabIndex?: number;
 }
 
 export function SearchableSelect({
@@ -27,7 +28,8 @@ export function SearchableSelect({
   className,
   onQuickCreate,
   quickCreateLabel = "Quick Create",
-  disabled = false
+  disabled = false,
+  tabIndex
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,8 +70,15 @@ export function SearchableSelect({
     <div className={cn("relative w-full", className)} ref={containerRef}>
       <div
         onClick={toggleOpen}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleOpen();
+          }
+        }}
+        tabIndex={tabIndex}
         className={cn(
-          "flex items-center justify-between w-full bg-background border border-border p-2 text-sm cursor-pointer transition-all",
+          "flex items-center justify-between w-full bg-background border border-border p-2 text-sm cursor-pointer transition-all outline-none focus:border-foreground focus:ring-1 focus:ring-foreground/10",
           isOpen ? "border-foreground ring-1 ring-foreground/10" : "hover:border-foreground/50",
           disabled && "opacity-50 cursor-not-allowed"
         )}

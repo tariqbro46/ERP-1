@@ -114,6 +114,18 @@ export const erpService = {
   async createVoucher(companyId: string, userId: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
     const batch = writeBatch(db);
     
+    // Check existence of ledgers and items
+    const ledgerIds = Array.from(new Set(entries.map(e => e.ledger_id).filter(Boolean)));
+    const itemIds = Array.from(new Set((inventoryEntries || []).map(i => i.item_id).filter(Boolean)));
+    
+    const [ledgerSnaps, itemSnaps] = await Promise.all([
+      Promise.all(ledgerIds.map(id => getDoc(doc(db, 'ledgers', id as string)))),
+      Promise.all(itemIds.map(id => getDoc(doc(db, 'items', id as string))))
+    ]);
+    
+    const existingLedgers = new Set(ledgerSnaps.filter(s => s.exists()).map(s => s.id));
+    const existingItems = new Set(itemSnaps.filter(s => s.exists()).map(s => s.id));
+
     // 1. Create Voucher Header
     const vRef = doc(collection(db, 'vouchers'));
     const vData = {
@@ -136,7 +148,7 @@ export const erpService = {
       });
 
       // Update Ledger Balance
-      if (entry.ledger_id) {
+      if (entry.ledger_id && existingLedgers.has(entry.ledger_id)) {
         const lRef = doc(db, 'ledgers', entry.ledger_id);
         const balanceChange = (entry.debit || 0) - (entry.credit || 0);
         batch.update(lRef, { current_balance: increment(balanceChange) });
@@ -156,11 +168,13 @@ export const erpService = {
           created_at: serverTimestamp()
         });
 
-        // Update Item Stats (Simplified for now, real-time recalculation is better)
-        const itemRef = doc(db, 'items', i.item_id);
-        const totalQty = (i.qty || 0) + (i.free_qty || 0);
-        const stockChange = movementType === 'Inward' ? totalQty : -totalQty;
-        batch.update(itemRef, { current_stock: increment(stockChange) });
+        // Update Item Stats
+        if (i.item_id && existingItems.has(i.item_id)) {
+          const itemRef = doc(db, 'items', i.item_id);
+          const totalQty = (i.qty || 0) + (i.free_qty || 0);
+          const stockChange = movementType === 'Inward' ? totalQty : -totalQty;
+          batch.update(itemRef, { current_stock: increment(stockChange) });
+        }
       }
     }
 
@@ -175,7 +189,7 @@ export const erpService = {
     const companyId = voucher.companyId;
 
     const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
-    const entries = eSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const entries = eSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a: any, b: any) => (a.entry_index || 0) - (b.entry_index || 0));
 
     const iSnap = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
     const inventory = iSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -188,9 +202,21 @@ export const erpService = {
     const companyId = voucher.companyId;
     const batch = writeBatch(db);
 
+    // Check existence of ledgers and items
+    const ledgerIds = Array.from(new Set(voucher.entries.map((e: any) => e.ledger_id).filter(Boolean)));
+    const itemIds = Array.from(new Set(voucher.inventory.map((i: any) => i.item_id).filter(Boolean)));
+    
+    const [ledgerSnaps, itemSnaps] = await Promise.all([
+      Promise.all(ledgerIds.map(id => getDoc(doc(db, 'ledgers', id as string)))),
+      Promise.all(itemIds.map(id => getDoc(doc(db, 'items', id as string))))
+    ]);
+    
+    const existingLedgers = new Set(ledgerSnaps.filter(s => s.exists()).map(s => s.id));
+    const existingItems = new Set(itemSnaps.filter(s => s.exists()).map(s => s.id));
+
     // Reverse Ledger Balances
     for (const entry of voucher.entries) {
-      if (entry.ledger_id) {
+      if (entry.ledger_id && existingLedgers.has(entry.ledger_id)) {
         const lRef = doc(db, 'ledgers', entry.ledger_id);
         const balanceChange = (entry.credit || 0) - (entry.debit || 0);
         batch.update(lRef, { current_balance: increment(balanceChange) });
@@ -199,10 +225,12 @@ export const erpService = {
 
     // Reverse Inventory Stats
     for (const i of voucher.inventory) {
-      const itemRef = doc(db, 'items', i.item_id);
-      const totalQty = (i.qty || 0) + (i.free_qty || 0);
-      const stockChange = i.movement_type === 'Inward' ? -totalQty : totalQty;
-      batch.update(itemRef, { current_stock: increment(stockChange) });
+      if (i.item_id && existingItems.has(i.item_id)) {
+        const itemRef = doc(db, 'items', i.item_id);
+        const totalQty = (i.qty || 0) + (i.free_qty || 0);
+        const stockChange = i.movement_type === 'Inward' ? -totalQty : totalQty;
+        batch.update(itemRef, { current_stock: increment(stockChange) });
+      }
     }
 
     // Delete Entries
@@ -225,9 +253,26 @@ export const erpService = {
     const oldVoucher = await this.getVoucherById(id);
     const batch = writeBatch(db);
 
+    // Collect all unique ledger and item IDs from both old and new voucher
+    const oldLedgerIds = oldVoucher.entries.map((e: any) => e.ledger_id).filter(Boolean);
+    const newLedgerIds = entries.map(e => e.ledger_id).filter(Boolean);
+    const ledgerIds = Array.from(new Set([...oldLedgerIds, ...newLedgerIds]));
+
+    const oldItemIds = oldVoucher.inventory.map((i: any) => i.item_id).filter(Boolean);
+    const newItemIds = (inventoryEntries || []).map(i => i.item_id).filter(Boolean);
+    const itemIds = Array.from(new Set([...oldItemIds, ...newItemIds]));
+
+    const [ledgerSnaps, itemSnaps] = await Promise.all([
+      Promise.all(ledgerIds.map(id => getDoc(doc(db, 'ledgers', id as string)))),
+      Promise.all(itemIds.map(id => getDoc(doc(db, 'items', id as string))))
+    ]);
+    
+    const existingLedgers = new Set(ledgerSnaps.filter(s => s.exists()).map(s => s.id));
+    const existingItems = new Set(itemSnaps.filter(s => s.exists()).map(s => s.id));
+
     // 1. Reverse Old Ledger Balances
     for (const entry of oldVoucher.entries) {
-      if (entry.ledger_id) {
+      if (entry.ledger_id && existingLedgers.has(entry.ledger_id)) {
         const lRef = doc(db, 'ledgers', entry.ledger_id);
         const balanceChange = (entry.credit || 0) - (entry.debit || 0);
         batch.update(lRef, { current_balance: increment(balanceChange) });
@@ -236,10 +281,12 @@ export const erpService = {
 
     // 2. Reverse Old Inventory Stats
     for (const i of oldVoucher.inventory) {
-      const itemRef = doc(db, 'items', i.item_id);
-      const totalQty = (i.qty || 0) + (i.free_qty || 0);
-      const stockChange = i.movement_type === 'Inward' ? -totalQty : totalQty;
-      batch.update(itemRef, { current_stock: increment(stockChange) });
+      if (i.item_id && existingItems.has(i.item_id)) {
+        const itemRef = doc(db, 'items', i.item_id);
+        const totalQty = (i.qty || 0) + (i.free_qty || 0);
+        const stockChange = i.movement_type === 'Inward' ? -totalQty : totalQty;
+        batch.update(itemRef, { current_stock: increment(stockChange) });
+      }
     }
 
     // 3. Delete Old Entries
@@ -268,7 +315,7 @@ export const erpService = {
       });
 
       // Update Ledger Balance
-      if (entry.ledger_id) {
+      if (entry.ledger_id && existingLedgers.has(entry.ledger_id)) {
         const lRef = doc(db, 'ledgers', entry.ledger_id);
         const balanceChange = (entry.debit || 0) - (entry.credit || 0);
         batch.update(lRef, { current_balance: increment(balanceChange) });
@@ -289,10 +336,12 @@ export const erpService = {
         });
 
         // Update Item Stats
-        const itemRef = doc(db, 'items', i.item_id);
-        const totalQty = (i.qty || 0) + (i.free_qty || 0);
-        const stockChange = movementType === 'Inward' ? totalQty : -totalQty;
-        batch.update(itemRef, { current_stock: increment(stockChange) });
+        if (i.item_id && existingItems.has(i.item_id)) {
+          const itemRef = doc(db, 'items', i.item_id);
+          const totalQty = (i.qty || 0) + (i.free_qty || 0);
+          const stockChange = movementType === 'Inward' ? totalQty : -totalQty;
+          batch.update(itemRef, { current_stock: increment(stockChange) });
+        }
       }
     }
 
@@ -317,14 +366,14 @@ export const erpService = {
     }
   },
 
-  async getLedgerById(id: string): Promise<Ledger> {
+  async getLedgerById(id: string): Promise<Ledger | null> {
     try {
       const snap = await getDoc(doc(db, 'ledgers', id));
-      if (!snap.exists()) throw new Error('Ledger not found');
+      if (!snap.exists()) return null;
       return { id: snap.id, ...snap.data() } as Ledger;
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, `ledgers/${id}`);
-      throw error;
+      return null;
     }
   },
 
@@ -428,15 +477,24 @@ export const erpService = {
     }
   },
 
-  async deleteLedger(id: string) {
+  async deleteLedger(id: string, companyId: string) {
+    const hasTransactions = await this.checkLedgerTransactions(id, companyId);
+    if (hasTransactions) {
+      throw new Error('Cannot delete ledger with transactions. Please delete all vouchers associated with this ledger first.');
+    }
     await deleteDoc(doc(db, 'ledgers', id));
   },
 
   // Items
-  async getItemById(id: string): Promise<Item> {
-    const snap = await getDoc(doc(db, 'items', id));
-    if (!snap.exists()) throw new Error('Item not found');
-    return { id: snap.id, ...snap.data() } as Item;
+  async getItemById(id: string): Promise<Item | null> {
+    try {
+      const snap = await getDoc(doc(db, 'items', id));
+      if (!snap.exists()) return null;
+      return { id: snap.id, ...snap.data() } as Item;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `items/${id}`);
+      return null;
+    }
   },
 
   async checkItemTransactions(id: string, companyId: string) {
@@ -499,7 +557,11 @@ export const erpService = {
     await updateDoc(doc(db, 'items', id), item);
   },
 
-  async deleteItem(id: string) {
+  async deleteItem(id: string, companyId: string) {
+    const hasTransactions = await this.checkItemTransactions(id, companyId);
+    if (hasTransactions) {
+      throw new Error('Cannot delete item with transactions. Please delete all vouchers associated with this item first.');
+    }
     await deleteDoc(doc(db, 'items', id));
   },
 
@@ -521,6 +583,86 @@ export const erpService = {
 
   async deleteGodown(id: string) {
     await deleteDoc(doc(db, 'godowns', id));
+  },
+
+  // Employees
+  async getEmployees(companyId: string) {
+    return this.getCollection('employees', companyId);
+  },
+
+  async createEmployee(companyId: string, employee: any) {
+    const ref = doc(collection(db, 'employees'));
+    const data = { ...employee, id: ref.id, companyId, createdAt: serverTimestamp() };
+    await setDoc(ref, data);
+    return data;
+  },
+
+  async updateEmployee(id: string, employee: any) {
+    await updateDoc(doc(db, 'employees', id), { ...employee, updatedAt: serverTimestamp() });
+  },
+
+  async deleteEmployee(id: string) {
+    await deleteDoc(doc(db, 'employees', id));
+  },
+
+  // Salary Sheets
+  async getSalarySheets(companyId: string) {
+    return this.getCollection('salary_sheets', companyId);
+  },
+
+  async createSalarySheet(companyId: string, data: any) {
+    const ref = doc(collection(db, 'salary_sheets'));
+    const docData = { ...data, id: ref.id, companyId, createdAt: serverTimestamp() };
+    await setDoc(ref, docData);
+    return docData;
+  },
+
+  async updateSalarySheet(id: string, data: any) {
+    await updateDoc(doc(db, 'salary_sheets', id), { ...data, updatedAt: serverTimestamp() });
+  },
+
+  async deleteSalarySheet(id: string) {
+    await deleteDoc(doc(db, 'salary_sheets', id));
+  },
+
+  // Advances
+  async getAdvances(companyId: string) {
+    return this.getCollection('advances', companyId);
+  },
+
+  async createAdvance(companyId: string, data: any) {
+    const ref = doc(collection(db, 'advances'));
+    const docData = { ...data, id: ref.id, companyId, createdAt: serverTimestamp() };
+    await setDoc(ref, docData);
+    return docData;
+  },
+
+  async updateAdvance(id: string, data: any) {
+    await updateDoc(doc(db, 'advances', id), { ...data, updatedAt: serverTimestamp() });
+  },
+
+  async deleteAdvance(id: string) {
+    await deleteDoc(doc(db, 'advances', id));
+  },
+
+  // Loans
+  async getLoans(companyId: string) {
+    return this.getCollection('loans', companyId);
+  },
+
+  async createLoan(companyId: string, data: any) {
+    const ref = doc(collection(db, 'loans'));
+    const docData = { ...data, id: ref.id, companyId, createdAt: serverTimestamp() };
+    await setDoc(ref, docData);
+    return docData;
+  },
+
+  async updateLoan(id: string, data: any) {
+    await updateDoc(doc(db, 'loans', id), { ...data, updatedAt: serverTimestamp() });
+  },
+
+  async deleteLoan(id: string) {
+    await deleteDoc(doc(db, 'loans', id));
   },
 
   async recalculateItemStats(itemId: string) {
@@ -587,9 +729,12 @@ export const erpService = {
     if (vouchers.length === 0) return [];
     
     // Fetch ALL entries for these vouchers
-    const entriesQuery = query(collection(db, 'voucher_entries'), where('companyId', '==', companyId));
-    const entriesSnap = await getDocs(entriesQuery);
+    const [entriesSnap, invEntriesSnap] = await Promise.all([
+      getDocs(query(collection(db, 'voucher_entries'), where('companyId', '==', companyId))),
+      getDocs(query(collection(db, 'inventory_entries'), where('companyId', '==', companyId)))
+    ]);
     const allEntries = entriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const allInvEntries = invEntriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     
     // Filter vouchers that have an entry for the specific ledger
     const filteredVouchers = vouchers.filter((v: any) => 
@@ -599,7 +744,8 @@ export const erpService = {
     // Map them together
     return filteredVouchers.map((v: any) => ({
       ...v,
-      voucher_entries: allEntries.filter((e: any) => e.voucher_id === v.id)
+      voucher_entries: allEntries.filter((e: any) => e.voucher_id === v.id),
+      inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id)
     }));
   },
 
@@ -660,8 +806,31 @@ export const erpService = {
     );
     const snapshot = await getDocs(q);
     
-    // In a real app, we'd fetch entries too. For now, we'll simplify or use a separate fetch.
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  },
+
+  async getVouchersDetailedByDateRange(companyId: string, startDate: string, endDate: string): Promise<any[]> {
+    const vouchers = await this.getVouchersByDateRange(companyId, startDate, endDate);
+    if (vouchers.length === 0) return [];
+
+    const voucherIds = vouchers.map(v => v.id);
+    
+    // Fetch all entries for these vouchers
+    // Note: Firestore 'in' query limit is 30. If we have more than 30 vouchers, we need to chunk.
+    // For now, we'll fetch all entries for the company and filter in memory, similar to other methods.
+    const [accEntriesSnap, invEntriesSnap] = await Promise.all([
+      getDocs(query(collection(db, 'voucher_entries'), where('companyId', '==', companyId))),
+      getDocs(query(collection(db, 'inventory_entries'), where('companyId', '==', companyId)))
+    ]);
+
+    const allAccEntries = accEntriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const allInvEntries = invEntriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    return vouchers.map(v => ({
+      ...v,
+      entries: allAccEntries.filter((e: any) => e.voucher_id === v.id),
+      inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id)
+    }));
   },
 
   async getUsers(companyId: string): Promise<any[]> {
@@ -758,30 +927,41 @@ export const erpService = {
     }
   },
 
-  async getNextVoucherNumber(companyId: string, type: string): Promise<string> {
+  async getNextVoucherNumber(companyId: string, type: string, format?: string): Promise<string> {
     const q = query(
       collection(db, 'vouchers'),
       where('companyId', '==', companyId),
       where('v_type', '==', type),
+      orderBy('v_date', 'desc'),
       orderBy('created_at', 'desc'),
       limit(1)
     );
     const snapshot = await getDocs(q);
     
+    const year = new Date().getFullYear();
+    const prefix = type.substring(0, 3).toUpperCase();
+    const defaultFormat = '{PREFIX}/{YEAR}/{NO}';
+    const activeFormat = format || defaultFormat;
+
     if (snapshot.empty) {
-      const prefix = type.substring(0, 3).toUpperCase();
-      const year = new Date().getFullYear();
-      return `${prefix}/${year}/001`;
+      return activeFormat
+        .replace('{PREFIX}', prefix)
+        .replace('{YEAR}', String(year))
+        .replace('{NO}', '001');
     }
 
     const lastNo = snapshot.docs[0].data().v_no;
-    const parts = lastNo.split('/');
-    if (parts.length === 3) {
-      const nextNum = String(parseInt(parts[2]) + 1).padStart(3, '0');
-      return `${parts[0]}/${parts[1]}/${nextNum}`;
-    }
     
-    return lastNo + '-1';
+    // Try to extract the number part. This is tricky if format changed.
+    // We'll look for the last numeric part in the string.
+    const match = lastNo.match(/(\d+)(?!.*\d)/);
+    const lastNum = match ? parseInt(match[0]) : 0;
+    const nextNum = String(lastNum + 1).padStart(3, '0');
+
+    return activeFormat
+      .replace('{PREFIX}', prefix)
+      .replace('{YEAR}', String(year))
+      .replace('{NO}', nextNum);
   },
 
   async getLedgerBalance(ledgerId: string, companyId: string): Promise<number> {
@@ -796,6 +976,7 @@ export const erpService = {
         return sum + (data.debit || 0) - (data.credit || 0);
       }, 0);
       
+      if (!ledger) return movement;
       return (ledger.opening_balance || 0) + movement;
     } catch (err) {
       console.error('Error getting ledger balance:', err);

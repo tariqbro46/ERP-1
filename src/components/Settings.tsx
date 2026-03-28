@@ -35,6 +35,12 @@ export function Settings() {
     financialYearStart,
     baseCurrencySymbol,
     timezone,
+    refNoFormat,
+    showFreeQty,
+    showDiscPercent,
+    showTaxPercent,
+    menuBarStyle,
+    sidebarDefaultExpanded,
     notifications, 
     features = [], 
     updateSettings 
@@ -46,6 +52,7 @@ export function Settings() {
   const [localCompanyName, setLocalCompanyName] = useState(companyName);
   const [localCompanyAddress, setLocalCompanyAddress] = useState(companyAddress);
   const [localSlogan, setLocalSlogan] = useState(slogan);
+  const [localMenuBarStyle, setLocalMenuBarStyle] = useState(menuBarStyle);
   const [localPrintHeader, setLocalPrintHeader] = useState(printHeader);
   const [localPrintFooter, setLocalPrintFooter] = useState(printFooter);
   const [localPrintPhone, setLocalPrintPhone] = useState(printPhone);
@@ -67,6 +74,11 @@ export function Settings() {
   const [localFinancialYearStart, setLocalFinancialYearStart] = useState(financialYearStart);
   const [localBaseCurrencySymbol, setLocalBaseCurrencySymbol] = useState(baseCurrencySymbol);
   const [localTimezone, setLocalTimezone] = useState(timezone);
+  const [localRefNoFormat, setLocalRefNoFormat] = useState(refNoFormat);
+  const [localShowFreeQty, setLocalShowFreeQty] = useState(showFreeQty);
+  const [localShowDiscPercent, setLocalShowDiscPercent] = useState(showDiscPercent);
+  const [localShowTaxPercent, setLocalShowTaxPercent] = useState(showTaxPercent);
+  const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded);
   const [localNotifications, setLocalNotifications] = useState(notifications);
 
   // Sync local state when settings change (e.g. after registration or initial load)
@@ -95,6 +107,12 @@ export function Settings() {
     setLocalFinancialYearStart(financialYearStart);
     setLocalBaseCurrencySymbol(baseCurrencySymbol);
     setLocalTimezone(timezone);
+    setLocalRefNoFormat(refNoFormat);
+    setLocalShowFreeQty(showFreeQty);
+    setLocalShowDiscPercent(showDiscPercent);
+    setLocalShowTaxPercent(showTaxPercent);
+    setLocalSidebarDefaultExpanded(sidebarDefaultExpanded);
+    setLocalMenuBarStyle(menuBarStyle);
     setLocalNotifications(notifications);
   }, [
     companyName, companyAddress, slogan, printHeader, printFooter, printPhone, 
@@ -102,7 +120,8 @@ export function Settings() {
     showPrintWebsite, showPrintFooter, printSignature1, printSignature2, 
     printSignature3, showSignature1, showSignature2, showSignature3, 
     signatureAlignment, showDeveloperContact, financialYearStart, 
-    baseCurrencySymbol, timezone, notifications
+    baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
+    showTaxPercent, menuBarStyle, sidebarDefaultExpanded, notifications
   ]);
 
   const handleSaveGeneral = () => {
@@ -110,6 +129,8 @@ export function Settings() {
       companyName: localCompanyName, 
       companyAddress: localCompanyAddress,
       slogan: localSlogan,
+      menuBarStyle: localMenuBarStyle,
+      sidebarDefaultExpanded: localSidebarDefaultExpanded,
       financialYearStart: localFinancialYearStart,
       baseCurrencySymbol: localBaseCurrencySymbol,
       timezone: localTimezone
@@ -137,6 +158,16 @@ export function Settings() {
       showSignature3: localShowSignature3,
       signatureAlignment: localSignatureAlignment as any,
       showDeveloperContact: localShowDeveloperContact
+    });
+    showNotification(notifications.settingsUpdated);
+  };
+
+  const handleSaveVoucher = () => {
+    updateSettings({ 
+      refNoFormat: localRefNoFormat,
+      showFreeQty: localShowFreeQty,
+      showDiscPercent: localShowDiscPercent,
+      showTaxPercent: localShowTaxPercent
     });
     showNotification(notifications.settingsUpdated);
   };
@@ -188,6 +219,7 @@ export function Settings() {
 
   const tabs = [
     { id: 'general', label: 'General', icon: SettingsIcon },
+    { id: 'voucher', label: 'Voucher Settings', icon: Database },
     { id: 'print', label: 'Print Settings', icon: Printer },
     { id: 'features', label: 'F11 Features', icon: Database },
     { id: 'security', label: 'Security', icon: Shield },
@@ -243,6 +275,96 @@ export function Settings() {
 
           {/* Content */}
           <div className="flex-1 bg-card border border-border p-4 lg:p-8">
+            {activeTab === 'voucher' && (
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
+                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">Voucher Configuration</h3>
+                    <button 
+                      onClick={handleSaveVoucher}
+                      className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+                    >
+                      <Save className="w-3 h-3" /> Save Changes
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Reference No. Default Format</label>
+                      <input 
+                        type="text" 
+                        value={localRefNoFormat || ''} 
+                        onChange={(e) => setLocalRefNoFormat(e.target.value)}
+                        placeholder="e.g. SAL/{YEAR}/{NO}"
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                      />
+                      <p className="text-[9px] text-gray-500 uppercase">Use <span className="text-emerald-500 font-bold">{'{YEAR}'}</span> for current year and <span className="text-emerald-500 font-bold">{'{NO}'}</span> for sequence number.</p>
+                    </div>
+
+                    <div className="space-y-4 pt-4">
+                      <h4 className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Field Visibility</h4>
+                      
+                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground uppercase">Show Free Quantity</h4>
+                          <p className="text-[10px] text-gray-500">Enable/Disable Free Quantity column in vouchers.</p>
+                        </div>
+                        <button 
+                          onClick={() => setLocalShowFreeQty(!localShowFreeQty)}
+                          className={cn(
+                            "w-10 h-5 rounded-full transition-colors relative",
+                            localShowFreeQty ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowFreeQty ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground uppercase">Show Discount %</h4>
+                          <p className="text-[10px] text-gray-500">Enable/Disable Discount % column in vouchers.</p>
+                        </div>
+                        <button 
+                          onClick={() => setLocalShowDiscPercent(!localShowDiscPercent)}
+                          className={cn(
+                            "w-10 h-5 rounded-full transition-colors relative",
+                            localShowDiscPercent ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowDiscPercent ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground uppercase">Show Tax %</h4>
+                          <p className="text-[10px] text-gray-500">Enable/Disable Tax % column in vouchers.</p>
+                        </div>
+                        <button 
+                          onClick={() => setLocalShowTaxPercent(!localShowTaxPercent)}
+                          className={cn(
+                            "w-10 h-5 rounded-full transition-colors relative",
+                            localShowTaxPercent ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowTaxPercent ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'general' && (
               <div className="space-y-8">
                 <div className="space-y-4">
@@ -297,16 +419,62 @@ export function Settings() {
                 </div>
 
                 <div className="space-y-4">
+                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">UI Customization</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Menu Bar Style</label>
+                      <select 
+                        value={localMenuBarStyle}
+                        onChange={(e) => setLocalMenuBarStyle(e.target.value as any)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        <option value="classic">Classic Sidebar (Default)</option>
+                        <option value="ribbon">Microsoft Office Ribbon</option>
+                        <option value="macos">macOS Top Menu Bar</option>
+                        <option value="windows11">Windows 11 Taskbar Style</option>
+                      </select>
+                      <p className="text-[9px] text-gray-500 uppercase">Choose your preferred navigation layout.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground uppercase">Sidebar Default Expanded</h4>
+                          <p className="text-[10px] text-gray-500">Enable to have all sidebar menus expanded by default.</p>
+                        </div>
+                        <button 
+                          onClick={() => setLocalSidebarDefaultExpanded(!localSidebarDefaultExpanded)}
+                          className={cn(
+                            "w-10 h-5 rounded-full transition-colors relative",
+                            localSidebarDefaultExpanded ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                            localSidebarDefaultExpanded ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
                   <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Regional Settings</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] text-gray-500 uppercase">Base Currency Symbol</label>
-                      <input 
-                        type="text" 
-                        value={localBaseCurrencySymbol} 
+                      <select 
+                        value={localBaseCurrencySymbol}
                         onChange={(e) => setLocalBaseCurrencySymbol(e.target.value)}
-                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
-                      />
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        <option value="৳">BDT (৳)</option>
+                        <option value="$">Dollar ($)</option>
+                        <option value="₹">Indian Rupee (₹)</option>
+                        <option value="€">Euro (€)</option>
+                        <option value="£">Pound (£)</option>
+                      </select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] text-gray-500 uppercase">Timezone</label>

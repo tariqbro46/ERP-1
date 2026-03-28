@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Loader2, MapPin } from 'lucide-react';
+import { Plus, Trash2, Edit2, Loader2, MapPin, User, Phone } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -11,6 +11,9 @@ export function GodownMaster() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGodown, setEditingGodown] = useState<any>(null);
   const [name, setName] = useState('');
+  const [location, setLocation] = useState('');
+  const [contactPerson, setContactPerson] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [description, setDescription] = useState('');
   const { showNotification } = useNotification();
 
@@ -39,13 +42,28 @@ export function GodownMaster() {
     setLoading(true);
     try {
       if (editingGodown) {
-        await erpService.updateGodown(editingGodown.id, { name, description });
+        await erpService.updateGodown(editingGodown.id, { 
+          name, 
+          location, 
+          contact_person: contactPerson, 
+          phone_number: phoneNumber, 
+          description 
+        });
       } else {
-        await erpService.createGodown(user!.companyId, { name, description });
+        await erpService.createGodown(user!.companyId, { 
+          name, 
+          location, 
+          contact_person: contactPerson, 
+          phone_number: phoneNumber, 
+          description 
+        });
       }
       showNotification(editingGodown ? 'Godown updated successfully' : 'Godown saved successfully');
       setIsModalOpen(false);
       setName('');
+      setLocation('');
+      setContactPerson('');
+      setPhoneNumber('');
       setDescription('');
       setEditingGodown(null);
       fetchGodowns();
@@ -85,6 +103,9 @@ export function GodownMaster() {
             onClick={() => {
               setEditingGodown(null);
               setName('');
+              setLocation('');
+              setContactPerson('');
+              setPhoneNumber('');
               setDescription('');
               setIsModalOpen(true);
             }}
@@ -108,7 +129,24 @@ export function GodownMaster() {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-foreground uppercase tracking-tight">{g.name}</h3>
-                    <p className="text-[10px] text-gray-500 mt-1">{g.description || 'No description provided'}</p>
+                    {g.location && (
+                      <p className="text-[10px] text-gray-500 mt-0.5 flex items-center gap-1">
+                        <MapPin className="w-2 h-2" /> {g.location}
+                      </p>
+                    )}
+                    <div className="flex gap-3 mt-2">
+                      {g.contact_person && (
+                        <p className="text-[9px] text-gray-400 flex items-center gap-1">
+                          <User className="w-2 h-2" /> {g.contact_person}
+                        </p>
+                      )}
+                      {g.phone_number && (
+                        <p className="text-[9px] text-gray-400 flex items-center gap-1">
+                          <Phone className="w-2 h-2" /> {g.phone_number}
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-2 italic">{g.description || 'No description provided'}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -116,6 +154,9 @@ export function GodownMaster() {
                     onClick={() => {
                       setEditingGodown(g);
                       setName(g.name);
+                      setLocation(g.location || '');
+                      setContactPerson(g.contact_person || '');
+                      setPhoneNumber(g.phone_number || '');
                       setDescription(g.description || '');
                       setIsModalOpen(true);
                     }}
@@ -142,9 +183,9 @@ export function GodownMaster() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-card border border-border w-full max-w-md overflow-hidden shadow-2xl">
-            <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-foreground/5">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-start md:items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-card border border-border w-full max-w-md overflow-hidden shadow-2xl my-auto md:my-8">
+            <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-foreground/5 sticky top-0 z-10 backdrop-blur-sm">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">
                 {editingGodown ? 'Edit Godown' : 'Create New Godown'}
               </h3>
@@ -163,6 +204,38 @@ export function GodownMaster() {
                   className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
                   placeholder="e.g. Main Warehouse"
                 />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Location</label>
+                <input 
+                  type="text" 
+                  value={location || ''}
+                  onChange={e => setLocation(e.target.value)}
+                  className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                  placeholder="e.g. Industrial Area, Block A"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Contact Person</label>
+                  <input 
+                    type="text" 
+                    value={contactPerson || ''}
+                    onChange={e => setContactPerson(e.target.value)}
+                    className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                    placeholder="Name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Phone Number</label>
+                  <input 
+                    type="text" 
+                    value={phoneNumber || ''}
+                    onChange={e => setPhoneNumber(e.target.value)}
+                    className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                    placeholder="Phone"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Description</label>

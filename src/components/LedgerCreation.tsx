@@ -70,6 +70,13 @@ export function LedgerCreation() {
             erpService.getLedgerById(id!),
             erpService.checkLedgerTransactions(id!, user.companyId)
           ]);
+          
+          if (!lData) {
+            setError('Ledger not found. It may have been deleted.');
+            setFetching(false);
+            return;
+          }
+
           setOriginalLedger(lData);
           setHasTransactions(hasTx);
           const ob = lData.opening_balance || 0;
@@ -94,6 +101,20 @@ export function LedgerCreation() {
     }
     init();
   }, [id, isEdit, user?.companyId]);
+
+  useEffect(() => {
+    if (!formData.group_id || groups.length === 0 || isEdit) return;
+    
+    const selectedGroup = groups.find(g => g.id === formData.group_id);
+    if (selectedGroup) {
+      const gName = selectedGroup.name.toLowerCase();
+      if (gName.includes('debtor')) {
+        setFormData(prev => ({ ...prev, opening_balance_type: 'Dr' }));
+      } else if (gName.includes('creditor')) {
+        setFormData(prev => ({ ...prev, opening_balance_type: 'Cr' }));
+      }
+    }
+  }, [formData.group_id, groups, isEdit]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,7 +164,7 @@ export function LedgerCreation() {
     if (!id) return;
     setDeleting(true);
     try {
-      await erpService.deleteLedger(id);
+      await erpService.deleteLedger(id, user.companyId);
       navigate('/accounts');
     } catch (err) {
       console.error('Error deleting ledger:', err);
@@ -233,7 +254,14 @@ export function LedgerCreation() {
                       type="text"
                       required
                       value={formData.name || ''}
-                      onChange={e => setFormData({ ...formData, name: e.target.value, mailing_name: formData.mailing_name || e.target.value })}
+                      onChange={e => {
+                        const newName = e.target.value;
+                        setFormData(prev => ({
+                          ...prev,
+                          name: newName,
+                          mailing_name: (prev.mailing_name === prev.name || !prev.mailing_name) ? newName : prev.mailing_name
+                        }));
+                      }}
                       className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
                       placeholder="e.g., Company Name"
                     />
@@ -252,7 +280,24 @@ export function LedgerCreation() {
                     <select
                       required
                       value={formData.group_id}
-                      onChange={e => setFormData({ ...formData, group_id: e.target.value })}
+                      onChange={e => {
+                        const groupId = e.target.value;
+                        const selectedGroup = groups.find(g => g.id === groupId);
+                        const groupName = selectedGroup?.name.toLowerCase() || '';
+                        
+                        let newBalanceType = formData.opening_balance_type;
+                        if (groupName.includes('debtor')) {
+                          newBalanceType = 'Dr';
+                        } else if (groupName.includes('creditor')) {
+                          newBalanceType = 'Cr';
+                        }
+                        
+                        setFormData({ 
+                          ...formData, 
+                          group_id: groupId,
+                          opening_balance_type: newBalanceType
+                        });
+                      }}
                       className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
                     >
                       {groups.map(group => (

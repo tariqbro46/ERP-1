@@ -70,8 +70,8 @@ export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: Q
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto no-scrollbar">
+    <div className="fixed inset-0 z-[60] flex items-start md:items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="bg-card border border-border w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 my-auto md:my-8">
         <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-border bg-card/95 backdrop-blur-sm">
           <h2 className="text-xs font-bold text-foreground uppercase tracking-widest">Quick Ledger Creation</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-foreground transition-colors">

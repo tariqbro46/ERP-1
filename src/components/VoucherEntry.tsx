@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, Printer, Loader2, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Trash2, Save, Printer, Loader2, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon, AlertCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,7 +20,7 @@ export function VoucherEntry() {
   const isEdit = !!id;
   const { showNotification } = useNotification();
   const settings = useSettings();
-  const { notifications, features = [], companyName, baseCurrencySymbol = '৳' } = settings;
+  const { notifications, features = [], companyName, baseCurrencySymbol = '৳', refNoFormat, showFreeQty, showDiscPercent, showTaxPercent } = settings;
   const [vType, setVType] = useState('Sales');
 
   const isInventoryEnabled = features.find(f => f.id === 'inv')?.enabled ?? true;
@@ -133,7 +133,7 @@ export function VoucherEntry() {
   async function fetchNextNo() {
     if (!user?.companyId) return;
     try {
-      const nextNo = await erpService.getNextVoucherNumber(user.companyId, vType);
+      const nextNo = await erpService.getNextVoucherNumber(user.companyId, vType, refNoFormat);
       setRefNo(nextNo);
     } catch (err) {
       console.error('Error fetching next no:', err);
@@ -161,9 +161,20 @@ export function VoucherEntry() {
       setSalespersonId(v.salesperson_id || '');
 
       if (v.v_type === 'Sales' || v.v_type === 'Purchase') {
-        // In our save logic: entries[0] is party, entries[1] is sales/purchase
-        setPartyLedgerId(v.entries[0]?.ledger_id || '');
-        setSalesPurchaseLedgerId(v.entries[1]?.ledger_id || '');
+        // Identify party and sales/purchase ledger based on debit/credit
+        // Sales: Party Dr (debit > 0), Sales Cr (credit > 0)
+        // Purchase: Purchase Dr (debit > 0), Party Cr (credit > 0)
+        let partyEntry, spEntry;
+        if (v.v_type === 'Sales') {
+          partyEntry = v.entries.find((e: any) => e.debit > 0);
+          spEntry = v.entries.find((e: any) => e.credit > 0);
+        } else {
+          partyEntry = v.entries.find((e: any) => e.credit > 0);
+          spEntry = v.entries.find((e: any) => e.debit > 0);
+        }
+        
+        setPartyLedgerId(partyEntry?.ledger_id || '');
+        setSalesPurchaseLedgerId(spEntry?.ledger_id || '');
         const inv = v.inventory.map((i: any) => ({
           item_id: i.item_id,
           godown_id: i.godown_id || '',
@@ -373,28 +384,35 @@ export function VoucherEntry() {
           {
             ledger_id: partyLedgerId,
             debit: vType === 'Sales' ? finalTotal : 0,
-            credit: vType === 'Purchase' ? finalTotal : 0
+            credit: vType === 'Purchase' ? finalTotal : 0,
+            entry_index: 0
           },
           {
             ledger_id: salesPurchaseLedgerId,
             debit: vType === 'Purchase' ? finalTotal : 0,
-            credit: vType === 'Sales' ? finalTotal : 0
+            credit: vType === 'Sales' ? finalTotal : 0,
+            entry_index: 1
           }
         ];
       } else if (isSingleEntry) {
         const mainEntry = {
           ledger_id: bankCashLedgerId,
           debit: vType === 'Receipt' ? totalSingleAmount : 0,
-          credit: vType === 'Payment' ? totalSingleAmount : 0
+          credit: vType === 'Payment' ? totalSingleAmount : 0,
+          entry_index: accEntries.length
         };
-        const subEntries = accEntries.filter(e => e.ledger_id && e.amount > 0).map(e => ({
+        const subEntries = accEntries.filter(e => e.ledger_id && e.amount > 0).map((e, idx) => ({
           ledger_id: e.ledger_id,
           debit: vType === 'Payment' ? e.amount : 0,
-          credit: vType === 'Receipt' ? e.amount : 0
+          credit: vType === 'Receipt' ? e.amount : 0,
+          entry_index: idx
         }));
         finalAccEntries = [...subEntries, mainEntry];
       } else if (isJournal) {
-        finalAccEntries = accEntries.filter(e => e.ledger_id && (e.debit > 0 || e.credit > 0));
+        finalAccEntries = accEntries.filter(e => e.ledger_id && (e.debit > 0 || e.credit > 0)).map((e, idx) => ({
+          ...e,
+          entry_index: idx
+        }));
       }
 
       if (isEdit) {
@@ -443,11 +461,31 @@ export function VoucherEntry() {
 
   const handleDownloadPDF = () => {
     if (!refNo) return;
-    pdfService.generateInvoice({
+    const doc = pdfService.generateVoucherPDF({
       v_no: refNo,
       v_date: vDate,
       v_type: vType,
-      party_name: ledgers.find(l => l.id === partyLedgerId)?.name || 'Cash',
+      narration,
+      total_amount: finalTotal,
+      entries: isInventory ? [
+        { ledger_name: ledgers.find(l => l.id === partyLedgerId)?.name || 'Party', debit: vType === 'Sales' ? finalTotal : 0, credit: vType === 'Purchase' ? finalTotal : 0 },
+        { ledger_name: ledgers.find(l => l.id === salesPurchaseLedgerId)?.name || 'Sales/Purchase', debit: vType === 'Purchase' ? finalTotal : 0, credit: vType === 'Sales' ? finalTotal : 0 }
+      ] : accEntries.map(e => ({
+        ledger_name: ledgers.find(l => l.id === e.ledger_id)?.name || 'Unknown',
+        debit: e.debit,
+        credit: e.credit
+      }))
+    }, settings);
+    doc.save(`Voucher_${refNo}.pdf`);
+  };
+
+  const handleShare = (platform: 'whatsapp' | 'email') => {
+    const partyName = ledgers.find(l => l.id === partyLedgerId)?.name || 'Customer';
+    const voucherData = {
+      v_no: refNo,
+      v_date: vDate,
+      v_type: vType,
+      party_name: partyName,
       items: invEntries.map(entry => ({
         name: items.find(i => i.id === entry.item_id)?.name || 'Unknown Item',
         quantity: entry.qty,
@@ -460,17 +498,14 @@ export function VoucherEntry() {
       total_amount: finalTotal,
       currency,
       exchange_rate: exchangeRate
-    }, settings);
-  };
+    };
 
-  const handleShare = (platform: 'whatsapp' | 'email') => {
-    const partyName = ledgers.find(l => l.id === partyLedgerId)?.name || 'Customer';
-    const message = `Invoice ${refNo} for ${partyName} - Total: ${currency} ${finalTotal.toLocaleString()}`;
-    
     if (platform === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+      pdfService.shareViaWhatsApp(voucherData, settings);
+      showNotification('Opening WhatsApp...', 'success');
     } else {
-      window.location.href = `mailto:?subject=Invoice ${refNo}&body=${encodeURIComponent(message)}`;
+      pdfService.shareViaEmail(voucherData, settings);
+      showNotification('Opening Email Client...', 'success');
     }
     setShowShareMenu(false);
   };
@@ -512,6 +547,7 @@ export function VoucherEntry() {
               value={refNo || ''}
               onChange={e => setRefNo(e.target.value)}
               placeholder="e.g. REF-001"
+              tabIndex={1}
               className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground" 
             />
           </div>
@@ -521,6 +557,7 @@ export function VoucherEntry() {
               type="date" 
               value={vDate || ''}
               onChange={e => setVDate(e.target.value)}
+              tabIndex={2}
               className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground" 
             />
           </div>
@@ -568,6 +605,7 @@ export function VoucherEntry() {
                 <select
                   value={currency}
                   onChange={e => setCurrency(e.target.value)}
+                  tabIndex={3}
                   className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
                 >
                   <option value="BDT">BDT (৳)</option>
@@ -577,12 +615,21 @@ export function VoucherEntry() {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Ex. Rate</label>
+                <div className="flex items-center gap-2">
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Ex. Rate</label>
+                  <div className="group relative">
+                    <AlertCircle className="w-3 h-3 text-gray-400 cursor-help" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-foreground text-background text-[8px] uppercase tracking-widest rounded hidden group-hover:block z-50">
+                      Exchange Rate: Multiplier to convert transaction currency to base currency ({baseCurrencySymbol}).
+                    </div>
+                  </div>
+                </div>
                 <input
                   type="number"
                   step="0.0001"
                   value={exchangeRate}
                   onChange={e => setExchangeRate(Number(e.target.value))}
+                  tabIndex={4}
                   className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
                 />
               </div>
@@ -595,6 +642,7 @@ export function VoucherEntry() {
               <select
                 value={salespersonId}
                 onChange={e => setSalespersonId(e.target.value)}
+                tabIndex={5}
                 className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
               >
                 <option value="">Select Salesperson...</option>
@@ -614,9 +662,9 @@ export function VoucherEntry() {
                   <button 
                     type="button" 
                     onClick={() => openQuickLedger('Sundry', 'party')}
-                    className="text-[9px] text-gray-500 hover:text-foreground flex items-center gap-1"
+                    className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
                   >
-                    <PlusCircle className="w-3 h-3" /> Quick Create
+                    <PlusCircle className="w-2 h-2" /> Quick
                   </button>
                 </div>
                 <SearchableSelect
@@ -625,6 +673,7 @@ export function VoucherEntry() {
                   onChange={setPartyLedgerId}
                   placeholder="Select Party..."
                   onQuickCreate={() => openQuickLedger('Sundry', 'party')}
+                  tabIndex={6}
                 />
                 {partyLedgerId && balances[partyLedgerId] !== undefined && (
                   <p className="text-[9px] text-gray-500 uppercase mt-1">
@@ -643,9 +692,9 @@ export function VoucherEntry() {
                   <button 
                     type="button" 
                     onClick={() => openQuickLedger(vType, 'sales')}
-                    className="text-[9px] text-gray-500 hover:text-foreground flex items-center gap-1"
+                    className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
                   >
-                    <PlusCircle className="w-3 h-3" /> Quick Create
+                    <PlusCircle className="w-2 h-2" /> Quick
                   </button>
                 </div>
                 <SearchableSelect
@@ -654,6 +703,7 @@ export function VoucherEntry() {
                   onChange={setSalesPurchaseLedgerId}
                   placeholder={`Select ${vType} Ledger...`}
                   onQuickCreate={() => openQuickLedger(vType, 'sales')}
+                  tabIndex={7}
                 />
                 {salesPurchaseLedgerId && balances[salesPurchaseLedgerId] !== undefined && (
                   <p className="text-[9px] text-gray-500 uppercase mt-1">
@@ -671,9 +721,9 @@ export function VoucherEntry() {
                 <button 
                   type="button" 
                   onClick={() => openQuickLedger('Bank', 'account')}
-                  className="text-[9px] text-gray-500 hover:text-foreground flex items-center gap-1"
+                  className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
                 >
-                  <PlusCircle className="w-3 h-3" /> Quick Create
+                  <PlusCircle className="w-2 h-2" /> Quick
                 </button>
               </div>
               <SearchableSelect
@@ -682,6 +732,7 @@ export function VoucherEntry() {
                 onChange={setBankCashLedgerId}
                 placeholder="Select Account..."
                 onQuickCreate={() => openQuickLedger('Bank', 'account')}
+                tabIndex={6}
               />
               {bankCashLedgerId && balances[bankCashLedgerId] !== undefined && (
                 <p className="text-[9px] text-gray-500 uppercase mt-1">
@@ -721,11 +772,15 @@ export function VoucherEntry() {
                     <th className="px-4 lg:px-6 py-3 border-b border-border text-left w-32">Expiry</th>
                   )}
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Quantity</th>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Free</th>
+                  {showFreeQty && (
+                    <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Free</th>
+                  )}
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-32">Rate</th>
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-center w-20">per</th>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Disc %</th>
-                  {isTaxEnabled && (
+                  {showDiscPercent && (
+                    <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Disc %</th>
+                  )}
+                  {isTaxEnabled && showTaxPercent && (
                     <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Tax %</th>
                   )}
                   <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-40">Amount</th>
@@ -753,6 +808,7 @@ export function VoucherEntry() {
                             setPendingRowIdx(idx);
                             setIsQuickItemOpen(true);
                           }}
+                          tabIndex={8 + idx * 10}
                         />
                         {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
                           <p className="text-[8px] text-gray-500 uppercase">
@@ -771,6 +827,7 @@ export function VoucherEntry() {
                           setInvEntries(next);
                         }}
                         placeholder="Select Godown..."
+                        tabIndex={9 + idx * 10}
                       />
                     </td>
                     {isBatchEnabled && (
@@ -803,57 +860,105 @@ export function VoucherEntry() {
                       </td>
                     )}
                     <td className="px-4 lg:px-6 py-2">
-                      <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.qty ?? ''} onChange={e => {
-                        const next = [...invEntries];
-                        const val = Number(e.target.value);
-                        next[idx].qty = val;
-                        
-                        // Auto-calculate free quantity based on scheme
-                        const item = items.find(i => i.id === entry.item_id);
-                        if (item && item.scheme_qty && item.scheme_free_qty && val >= item.scheme_qty) {
-                          const multiplier = Math.floor(val / item.scheme_qty);
-                          next[idx].free_qty = multiplier * item.scheme_free_qty;
-                        }
-
-                        next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
-                        setInvEntries(next);
-                      }} />
-                    </td>
-                    <td className="px-4 lg:px-6 py-2">
-                      <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right text-emerald-500 font-bold" value={entry.free_qty ?? ''} onChange={e => {
-                        const next = [...invEntries];
-                        next[idx].free_qty = Number(e.target.value);
-                        setInvEntries(next);
-                      }} />
-                    </td>
-                    <td className="px-4 lg:px-6 py-2">
-                      <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.rate ?? ''} onChange={e => {
-                        const next = [...invEntries];
-                        next[idx].rate = Number(e.target.value);
-                        next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
-                        setInvEntries(next);
-                      }} />
-                    </td>
-                    <td className="px-4 lg:px-6 py-2 text-center text-gray-500 uppercase text-[10px]">{entry.unit}</td>
-                    <td className="px-4 lg:px-6 py-2">
-                      <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.disc_percent ?? ''} onChange={e => {
-                        const next = [...invEntries];
-                        next[idx].disc_percent = Number(e.target.value);
-                        next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
-                        setInvEntries(next);
-                      }} />
-                    </td>
-                    {isTaxEnabled && (
-                      <td className="px-4 lg:px-6 py-2">
-                        <input type="number" className="bg-transparent border border-border text-foreground outline-none w-full text-right p-1 focus:border-foreground" value={entry.tax_percent ?? ''} onChange={e => {
+                      <input 
+                        type="number" 
+                        tabIndex={10 + idx * 10}
+                        className="bg-transparent border-none text-foreground outline-none w-full text-right" 
+                        value={entry.qty ?? ''} 
+                        onChange={e => {
                           const next = [...invEntries];
-                          next[idx].tax_percent = Number(e.target.value);
+                          const val = Number(e.target.value);
+                          next[idx].qty = val;
+                          
+                          // Auto-calculate free quantity based on scheme
+                          const item = items.find(i => i.id === entry.item_id);
+                          if (item && item.scheme_qty && item.scheme_free_qty && val >= item.scheme_qty) {
+                            const multiplier = Math.floor(val / item.scheme_qty);
+                            next[idx].free_qty = multiplier * item.scheme_free_qty;
+                          }
+
                           next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
                           setInvEntries(next);
-                        }} />
+                        }} 
+                      />
+                    </td>
+                    {showFreeQty && (
+                      <td className="px-4 lg:px-6 py-2">
+                        <input 
+                          type="number" 
+                          tabIndex={11 + idx * 10}
+                          className="bg-transparent border-none text-foreground outline-none w-full text-right text-emerald-500 font-bold" 
+                          value={entry.free_qty ?? ''} 
+                          onChange={e => {
+                            const next = [...invEntries];
+                            next[idx].free_qty = Number(e.target.value);
+                            setInvEntries(next);
+                          }} 
+                        />
                       </td>
                     )}
-                    <td className="px-4 lg:px-6 py-2 text-right text-foreground font-bold">৳ {entry.amount.toLocaleString()}</td>
+                    <td className="px-4 lg:px-6 py-2">
+                      <input 
+                        type="number" 
+                        tabIndex={12 + idx * 10}
+                        className="bg-transparent border-none text-foreground outline-none w-full text-right" 
+                        value={entry.rate ?? ''} 
+                        onChange={e => {
+                          const next = [...invEntries];
+                          next[idx].rate = Number(e.target.value);
+                          next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
+                          setInvEntries(next);
+                        }} 
+                      />
+                    </td>
+                    <td className="px-4 lg:px-6 py-2 text-center text-gray-500 uppercase text-[10px]">
+                      <span 
+                        tabIndex={13 + idx * 10}
+                        className="outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded"
+                      >
+                        {entry.unit}
+                      </span>
+                    </td>
+                    {showDiscPercent && (
+                      <td className="px-4 lg:px-6 py-2">
+                        <input 
+                          type="number" 
+                          tabIndex={14 + idx * 10}
+                          className="bg-transparent border-none text-foreground outline-none w-full text-right" 
+                          value={entry.disc_percent ?? ''} 
+                          onChange={e => {
+                            const next = [...invEntries];
+                            next[idx].disc_percent = Number(e.target.value);
+                            next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
+                            setInvEntries(next);
+                          }} 
+                        />
+                      </td>
+                    )}
+                    {isTaxEnabled && showTaxPercent && (
+                      <td className="px-4 lg:px-6 py-2">
+                        <input 
+                          type="number" 
+                          tabIndex={15 + idx * 10}
+                          className="bg-transparent border border-border text-foreground outline-none w-full text-right p-1 focus:border-foreground" 
+                          value={entry.tax_percent ?? ''} 
+                          onChange={e => {
+                            const next = [...invEntries];
+                            next[idx].tax_percent = Number(e.target.value);
+                            next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
+                            setInvEntries(next);
+                          }} 
+                        />
+                      </td>
+                    )}
+                    <td className="px-4 lg:px-6 py-2 text-right text-foreground font-bold">
+                      <span 
+                        tabIndex={16 + idx * 10}
+                        className="outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded block"
+                      >
+                        {baseCurrencySymbol} {entry.amount.toLocaleString()}
+                      </span>
+                    </td>
                     <td className="px-4 lg:px-6 py-2"><button onClick={() => setInvEntries(invEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
                   </tr>
                 ))}
@@ -983,12 +1088,7 @@ export function VoucherEntry() {
           )}
         </div>
         <div className="p-4 border-b border-border flex justify-between items-center">
-          <button 
-            onClick={() => isInventory ? setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]) : setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
-            className="text-[9px] text-gray-600 uppercase hover:text-foreground flex items-center gap-2"
-          >
-            <Plus className="w-3 h-3" /> Add Line
-          </button>
+          <div />
 
           {isInventory && isBarcodeEnabled && (
             <div className="flex items-center gap-2">
@@ -1012,12 +1112,23 @@ export function VoucherEntry() {
 
         {/* Footer Section */}
         <div className="p-4 lg:p-6 border-t border-border bg-foreground/5 space-y-6">
+          <div className="flex justify-start mb-4">
+            <button 
+              onClick={() => isInventory ? setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]) : setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
+              tabIndex={500}
+              className="px-6 py-2 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 transition-all flex items-center gap-2 shadow-lg"
+            >
+              <PlusCircle className="w-4 h-4" /> Add Line Item
+            </button>
+          </div>
+
           <div className="flex flex-col lg:grid lg:grid-cols-2 gap-6 lg:gap-8">
             <div className="space-y-2 order-2 lg:order-1">
               <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Narration</label>
               <textarea
                 value={narration || ''}
                 onChange={e => setNarration(e.target.value)}
+                tabIndex={501}
                 className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors h-20 lg:h-24 resize-none"
                 placeholder="Enter narration details..."
               />
@@ -1030,15 +1141,17 @@ export function VoucherEntry() {
                     type="number" 
                     value={globalDiscount ?? ''} 
                     onChange={e => setGlobalDiscount(Number(e.target.value))}
+                    tabIndex={502}
                     className="w-20 bg-transparent border-none text-right text-sm outline-none font-bold"
                     placeholder="0"
                   />
                   <select 
                     value={globalDiscountType}
                     onChange={e => setGlobalDiscountType(e.target.value as 'fixed' | 'percent')}
+                    tabIndex={503}
                     className="bg-transparent border-none text-[10px] outline-none font-bold text-gray-500"
                   >
-                    <option value="fixed">৳</option>
+                    <option value="fixed">{baseCurrencySymbol}</option>
                     <option value="percent">%</option>
                   </select>
                 </div>
@@ -1065,7 +1178,7 @@ export function VoucherEntry() {
                     <Trash className="w-3 h-3" /> Delete
                   </button>
                 )}
-                {isEdit && (
+                {(isEdit || isBalanced()) && (
                   <div className="relative flex-1 lg:flex-none">
                     <button 
                       type="button"
@@ -1098,6 +1211,7 @@ export function VoucherEntry() {
                   type="button"
                   onClick={handleDownloadPDF}
                   disabled={loading || !isBalanced()}
+                  tabIndex={504}
                   className="flex-1 lg:flex-none px-6 lg:px-8 py-2 border border-border text-[10px] text-gray-500 uppercase tracking-widest hover:text-foreground transition-colors disabled:opacity-50"
                 >
                   Print
@@ -1105,6 +1219,7 @@ export function VoucherEntry() {
                 <button
                   onClick={handleSave}
                   disabled={!isBalanced() || loading}
+                  tabIndex={505}
                   className={cn(
                     "flex-1 lg:flex-none px-8 lg:px-12 py-2 text-[10px] font-bold uppercase tracking-widest transition-all",
                     isBalanced() ? "bg-foreground text-background hover:opacity-90 shadow-lg" : "bg-border text-gray-600 cursor-not-allowed"

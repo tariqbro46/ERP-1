@@ -264,9 +264,9 @@ export function CompanyManagement() {
 
                 {/* Edit Modal / Inline Form */}
                 {editingId && (
-                  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-card border border-border p-6 w-full max-w-md space-y-6 animate-in zoom-in-95 duration-200">
-                      <div className="flex items-center justify-between border-b border-border pb-4">
+                  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-start md:items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-card border border-border p-6 w-full max-w-md space-y-6 animate-in zoom-in-95 duration-200 my-auto md:my-8">
+                      <div className="flex items-center justify-between border-b border-border pb-4 sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
                         <h2 className="text-xs font-bold uppercase tracking-widest">Edit Company</h2>
                         <button onClick={() => setEditingId(null)} className="text-gray-500 hover:text-foreground">
                           <X className="w-4 h-4" />

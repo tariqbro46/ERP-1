@@ -141,6 +141,90 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "action", "companyId"]
+    },
+    "Employee": {
+      "title": "Employee",
+      "description": "Represents an employee in the company.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "designation": { "type": "string" },
+        "department": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "bloodGroup": { "type": "string", "enum": ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"] },
+        "presentAddress": { "type": "string" },
+        "permanentAddress": { "type": "string" },
+        "nidNumber": { "type": "string" },
+        "drivingLicense": { "type": "string" },
+        "passportNo": { "type": "string" },
+        "bankName": { "type": "string" },
+        "bankBranch": { "type": "string" },
+        "bankAccountNumber": { "type": "string" },
+        "bankRoutingNumber": { "type": "string" },
+        "emergencyContactName": { "type": "string" },
+        "emergencyContactRelation": { "type": "string" },
+        "emergencyContactPhone": { "type": "string" },
+        "emergencyContact2Name": { "type": "string" },
+        "emergencyContact2Relation": { "type": "string" },
+        "emergencyContact2Phone": { "type": "string" },
+        "emergencyContact3Name": { "type": "string" },
+        "emergencyContact3Relation": { "type": "string" },
+        "emergencyContact3Phone": { "type": "string" },
+        "joining_date": { "type": "string", "format": "date" },
+        "salary": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Inactive", "On Leave"] },
+        "companyId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "companyId"]
+    },
+    "SalarySheet": {
+      "title": "Salary Sheet",
+      "description": "Monthly salary record for an employee.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyId": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "month": { "type": "string" },
+        "basicSalary": { "type": "number" },
+        "netSalary": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["Pending", "Paid"] }
+      },
+      "required": ["companyId", "employeeId", "month", "netSalary"]
+    },
+    "Advance": {
+      "title": "Advance",
+      "description": "Employee advance payment.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyId": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pending", "Deducted", "Cancelled"] }
+      },
+      "required": ["companyId", "employeeId", "amount"]
+    },
+    "Loan": {
+      "title": "Loan",
+      "description": "Employee loan record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyId": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "amount": { "type": "number" },
+        "interestRate": { "type": "number" },
+        "emiDuration": { "type": "integer" },
+        "monthlyEMI": { "type": "number" },
+        "remainingBalance": { "type": "number" },
+        "status": { "type": "string", "enum": ["Active", "Closed", "Cancelled"] }
+      },
+      "required": ["companyId", "employeeId", "amount", "remainingBalance"]
     }
   },
   "firestore": {
@@ -187,6 +271,22 @@
     "/activity_log/{id}": {
       "schema": "ActivityLog",
       "description": "Collection of activity logs."
+    },
+    "/employees/{id}": {
+      "schema": "Employee",
+      "description": "Collection of employees."
+    },
+    "/salary_sheets/{id}": {
+      "schema": "SalarySheet",
+      "description": "Collection of salary sheets."
+    },
+    "/advances/{id}": {
+      "schema": "Advance",
+      "description": "Collection of employee advances."
+    },
+    "/loans/{id}": {
+      "schema": "Loan",
+      "description": "Collection of employee loans."
     }
   }
 }

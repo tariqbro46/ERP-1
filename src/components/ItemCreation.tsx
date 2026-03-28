@@ -62,6 +62,13 @@ export function ItemCreation() {
             erpService.getItemById(id!),
             erpService.checkItemTransactions(id!, user.companyId)
           ]);
+          
+          if (!iData) {
+            showNotification('Item not found. It may have been deleted.');
+            setFetching(false);
+            return;
+          }
+
           setHasTransactions(hasTx);
           setFormData({
             ...formData,
@@ -111,7 +118,7 @@ export function ItemCreation() {
     if (!id) return;
     setDeleting(true);
     try {
-      await erpService.deleteItem(id);
+      await erpService.deleteItem(id, user.companyId);
       navigate('/inventory/items');
     } catch (err) {
       console.error('Error deleting item:', err);

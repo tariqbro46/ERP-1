@@ -276,9 +276,9 @@ export const UserManagement: React.FC = () => {
 
       {/* Add User Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-border flex items-center justify-between">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start md:items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden my-auto md:my-8">
+            <div className="p-6 border-b border-border flex items-center justify-between sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
               <h3 className="text-lg font-bold text-foreground">Add New User</h3>
               <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-foreground">
                 <X className="w-5 h-5" />

@@ -17,6 +17,8 @@ interface FeatureSettings {
   enabled: boolean;
 }
 
+export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11';
+
 interface SettingsContextType {
   companyName: string;
   companyAddress: string;
@@ -43,6 +45,12 @@ interface SettingsContextType {
   showDeveloperContact: boolean;
   baseCurrencySymbol: string;
   timezone: string;
+  refNoFormat: string;
+  showFreeQty: boolean;
+  showDiscPercent: boolean;
+  showTaxPercent: boolean;
+  menuBarStyle: MenuBarStyle;
+  sidebarDefaultExpanded: boolean;
   notifications: NotificationSettings;
   features: FeatureSettings[];
   updateSettings: (newSettings: Partial<SettingsContextType>) => void;
@@ -74,6 +82,12 @@ const defaultSettings: SettingsContextType = {
   showDeveloperContact: true,
   baseCurrencySymbol: '৳',
   timezone: 'UTC+06:00 (Dhaka)',
+  refNoFormat: 'SAL/{YEAR}/{NO}',
+  showFreeQty: true,
+  showDiscPercent: true,
+  showTaxPercent: true,
+  menuBarStyle: 'classic',
+  sidebarDefaultExpanded: true,
   notifications: {
     voucherSaved: 'Voucher has been saved successfully!',
     ledgerCreated: 'New ledger account created.',

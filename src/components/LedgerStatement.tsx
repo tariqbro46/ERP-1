@@ -27,15 +27,24 @@ export function LedgerStatement() {
   });
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isDetailed, setIsDetailed] = useState(false);
+  const [items, setItems] = useState<any[]>([]);
+  const [godowns, setGodowns] = useState<any[]>([]);
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
 
   useEffect(() => {
-    async function fetchLedgers() {
+    async function fetchData() {
       if (!user?.companyId) return;
-      const data = await erpService.getLedgers(user.companyId);
-      if (data) setLedgers(data);
+      const [lData, iData, gData] = await Promise.all([
+        erpService.getLedgers(user.companyId),
+        erpService.getItems(user.companyId),
+        erpService.getGodowns(user.companyId)
+      ]);
+      if (lData) setLedgers(lData);
+      setItems(iData);
+      setGodowns(gData);
     }
-    fetchLedgers();
+    fetchData();
   }, [user?.companyId]);
 
   const fetchEntries = async () => {
@@ -268,6 +277,15 @@ export function LedgerStatement() {
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
             <button 
+              onClick={() => setIsDetailed(!isDetailed)}
+              className={cn(
+                "flex-1 sm:flex-none px-3 py-2 border border-border transition-colors flex items-center gap-2 text-[10px] font-bold uppercase",
+                isDetailed ? "bg-foreground text-background" : "text-gray-500 hover:text-foreground"
+              )}
+            >
+              {isDetailed ? 'Condensed' : 'Detailed'}
+            </button>
+            <button 
               onClick={fetchEntries}
               disabled={loading || !selectedLedger}
               className="flex-1 sm:flex-none p-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center disabled:opacity-50"
@@ -348,26 +366,64 @@ export function LedgerStatement() {
                     <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-600 italic">No transactions found for this period</td></tr>
                   ) : entries.map((e) => {
                     runningBalance += (e.debit || 0) - (e.credit || 0);
+                    const currentBalance = runningBalance;
                     return (
-                      <tr 
-                        key={e.id} 
-                        className="border-b border-border/50 hover:bg-foreground/5 transition-colors cursor-pointer group"
-                        onClick={() => navigate(`/vouchers/edit/${e.id}`)}
-                      >
-                        <td className="px-6 py-4">{e.vouchers?.v_date}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col">
-                            <span className="text-foreground">{e.particulars}</span>
-                            <span className="text-[10px] text-gray-500">{e.vouchers?.v_no}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_type}</td>
-                        <td className="px-6 py-4 text-right">{e.debit > 0 ? `৳ ${e.debit.toLocaleString()}` : '-'}</td>
-                        <td className="px-6 py-4 text-right">{e.credit > 0 ? `৳ ${e.credit.toLocaleString()}` : '-'}</td>
-                        <td className="px-6 py-4 text-right text-foreground font-bold">
-                          ৳ {Math.abs(runningBalance).toLocaleString()} {runningBalance >= 0 ? 'Dr' : 'Cr'}
-                        </td>
-                      </tr>
+                      <React.Fragment key={e.id}>
+                        <tr 
+                          className="border-b border-border/50 hover:bg-foreground/5 transition-colors cursor-pointer group"
+                          onClick={() => navigate(`/vouchers/edit/${e.id}`)}
+                        >
+                          <td className="px-6 py-4">{e.vouchers?.v_date}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col">
+                              <span className="text-foreground">{e.particulars}</span>
+                              <span className="text-[10px] text-gray-500">{e.vouchers?.v_no}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_type}</td>
+                          <td className="px-6 py-4 text-right">{e.debit > 0 ? `৳ ${e.debit.toLocaleString()}` : '-'}</td>
+                          <td className="px-6 py-4 text-right">{e.credit > 0 ? `৳ ${e.credit.toLocaleString()}` : '-'}</td>
+                          <td className="px-6 py-4 text-right text-foreground font-bold">
+                            ৳ {Math.abs(currentBalance).toLocaleString()} {currentBalance >= 0 ? 'Dr' : 'Cr'}
+                          </td>
+                        </tr>
+                        {isDetailed && e.vouchers?.inventory && e.vouchers.inventory.length > 0 && (
+                          <tr className="bg-foreground/[0.02] border-b border-border/30">
+                            <td colSpan={6} className="px-6 py-2">
+                              <table className="w-full text-[10px] text-gray-500">
+                                <thead>
+                                  <tr className="border-b border-border/20 uppercase text-[8px]">
+                                    <th className="py-1 text-left">Name of Item</th>
+                                    <th className="py-1 text-left">Godown</th>
+                                    <th className="py-1 text-right">Quantity</th>
+                                    <th className="py-1 text-right">Free</th>
+                                    <th className="py-1 text-right">Rate</th>
+                                    <th className="py-1 text-center">per</th>
+                                    <th className="py-1 text-right">Disc %</th>
+                                    <th className="py-1 text-right">Tax %</th>
+                                    <th className="py-1 text-right">Amount</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {e.vouchers.inventory.map((item: any, idx: number) => (
+                                    <tr key={idx} className="border-b border-border/10 last:border-0">
+                                      <td className="py-1">{items.find(i => i.id === item.item_id)?.name || 'Unknown Item'}</td>
+                                      <td className="py-1">{godowns.find(g => g.id === item.godown_id)?.name || '-'}</td>
+                                      <td className="py-1 text-right">{item.qty}</td>
+                                      <td className="py-1 text-right">{item.free_qty || 0}</td>
+                                      <td className="py-1 text-right">{item.rate.toLocaleString()}</td>
+                                      <td className="py-1 text-center">{item.unit || 'pcs'}</td>
+                                      <td className="py-1 text-right">{item.disc_percent || 0}%</td>
+                                      <td className="py-1 text-right">{item.tax_percent || 0}%</td>
+                                      <td className="py-1 text-right font-bold text-foreground/70">{item.amount.toLocaleString()}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </>

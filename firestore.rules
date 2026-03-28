@@ -164,6 +164,34 @@ service cloud.firestore {
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
+    match /employees/{id} {
+      allow read: if isCompanyMember(resource.data.companyId);
+      allow create: if isCompanyMember(request.resource.data.companyId);
+      allow update: if isCompanyMember(request.resource.data.companyId);
+      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+    }
+
+    match /salary_sheets/{id} {
+      allow read: if isCompanyMember(resource.data.companyId);
+      allow create: if isCompanyMember(request.resource.data.companyId);
+      allow update: if isCompanyMember(request.resource.data.companyId);
+      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+    }
+
+    match /advances/{id} {
+      allow read: if isCompanyMember(resource.data.companyId);
+      allow create: if isCompanyMember(request.resource.data.companyId);
+      allow update: if isCompanyMember(request.resource.data.companyId);
+      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+    }
+
+    match /loans/{id} {
+      allow read: if isCompanyMember(resource.data.companyId);
+      allow create: if isCompanyMember(request.resource.data.companyId);
+      allow update: if isCompanyMember(request.resource.data.companyId);
+      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+    }
+
     match /activity_log/{id} {
       allow read: if isCompanyAdmin(resource.data.companyId);
       allow create: if isAuthenticated() && request.resource.data.companyId == getUserData().companyId;

@@ -99,3 +99,70 @@ export interface Item {
   scheme_qty?: number;
   scheme_free_qty?: number;
 }
+
+export interface Employee {
+  id: string;
+  companyId: string;
+  name: string;
+  designation: string;
+  department?: string;
+  joiningDate: string;
+  basicSalary: number;
+  allowances?: number;
+  deductions?: number;
+  contactNumber?: string;
+  email?: string;
+  address?: string;
+  status: 'Active' | 'Inactive';
+  createdAt: any;
+  updatedAt?: any;
+}
+
+export interface SalarySheet {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  employeeName: string;
+  month: string; // YYYY-MM
+  basicSalary: number;
+  allowances: number;
+  deductions: number;
+  advanceDeduction: number;
+  loanDeduction: number;
+  netSalary: number;
+  paymentStatus: 'Pending' | 'Paid';
+  paymentDate?: string;
+  paymentMethod?: string;
+  voucherId?: string; // Reference to the payment voucher
+  createdAt: any;
+}
+
+export interface Advance {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  employeeName: string;
+  amount: number;
+  date: string;
+  reason?: string;
+  status: 'Pending' | 'Deducted' | 'Cancelled';
+  deductedInMonth?: string; // YYYY-MM
+  voucherId?: string;
+  createdAt: any;
+}
+
+export interface Loan {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  employeeName: string;
+  amount: number;
+  date: string;
+  interestRate?: number;
+  totalRepayable: number;
+  monthlyEMI: number;
+  remainingBalance: number;
+  status: 'Active' | 'Closed' | 'Cancelled';
+  voucherId?: string;
+  createdAt: any;
+}
