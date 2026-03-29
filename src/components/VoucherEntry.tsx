@@ -512,7 +512,7 @@ export function VoucherEntry() {
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="max-w-6xl mx-auto bg-card border border-border overflow-hidden">
+      <div className="bg-card border border-border overflow-hidden">
         {/* Tally-style Top Bar */}
         <div className="flex bg-card border-b border-border overflow-x-auto no-scrollbar whitespace-nowrap">
           {['Sales', 'Purchase', 'Payment', 'Receipt', 'Contra', 'Journal']

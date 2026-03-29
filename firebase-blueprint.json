@@ -205,6 +205,8 @@
         "companyId": { "type": "string" },
         "employeeId": { "type": "string" },
         "amount": { "type": "number" },
+        "applicationDate": { "type": "string", "format": "date" },
+        "approvalDate": { "type": "string", "format": "date" },
         "status": { "type": "string", "enum": ["Pending", "Deducted", "Cancelled"] }
       },
       "required": ["companyId", "employeeId", "amount"]
@@ -225,6 +227,22 @@
         "status": { "type": "string", "enum": ["Active", "Closed", "Cancelled"] }
       },
       "required": ["companyId", "employeeId", "amount", "remainingBalance"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "System-wide settings for a company.",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "companyAddress": { "type": "string" },
+        "slogan": { "type": "string" },
+        "menuBarStyle": { "type": "string", "enum": ["classic", "ribbon", "macos", "windows11"] },
+        "layoutWidth": { "type": "string", "enum": ["responsive", "constrained"] },
+        "sidebarDefaultExpanded": { "type": "boolean" },
+        "baseCurrencySymbol": { "type": "string" },
+        "timezone": { "type": "string" }
+      },
+      "required": ["companyName"]
     }
   },
   "firestore": {
@@ -235,6 +253,10 @@
     "/users/{uid}": {
       "schema": "User",
       "description": "Collection of user profiles."
+    },
+    "/settings/{companyId}": {
+      "schema": "Settings",
+      "description": "System settings for each company."
     },
     "/ledger_groups/{id}": {
       "schema": "LedgerGroup",

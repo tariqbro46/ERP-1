@@ -51,6 +51,8 @@ export function PayrollManagement() {
   const [monthlyEMI, setMonthlyEMI] = useState('');
   const [interestRate, setInterestRate] = useState('0');
   const [emiDuration, setEmiDuration] = useState('12');
+  const [applicationDate, setApplicationDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [approvalDate, setApprovalDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   
   // Salary specific
   const [allowances, setAllowances] = useState('0');
@@ -59,7 +61,7 @@ export function PayrollManagement() {
   const [loanDeduction, setLoanDeduction] = useState(0);
 
   useEffect(() => {
-    if (selectedEmployeeId && activeTab === 'salary') {
+    if (selectedEmployeeId && (activeTab === 'salary' || activeTab === 'bulk')) {
       const empAdvances = advances.filter(a => a.employeeId === selectedEmployeeId && a.status === 'Pending');
       const totalAdvance = empAdvances.reduce((sum, a) => sum + a.amount, 0);
       setAdvanceDeduction(totalAdvance);
@@ -168,6 +170,8 @@ export function PayrollManagement() {
         employeeId: selectedEmployeeId,
         employeeName: employee.name,
         amount: parseFloat(amount) || 0,
+        applicationDate,
+        approvalDate,
         date: format(new Date(), 'yyyy-MM-dd'),
         reason,
         status: status
@@ -181,12 +185,47 @@ export function PayrollManagement() {
       
       showNotification('Advance saved successfully');
       setIsModalOpen(false);
-      fetchData();
+      await fetchData();
+      // Sync existing pending salary sheets for this employee
+      await syncSalarySheet(selectedEmployeeId);
     } catch (err: any) {
       showNotification('Failed to save advance', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const syncSalarySheet = async (employeeId: string) => {
+    // Find ALL pending sheets for this employee to ensure "realtime" sync
+    const pendingSheets = salarySheets.filter(s => s.employeeId === employeeId && s.paymentStatus === 'Pending');
+    for (const existingSheet of pendingSheets) {
+      const empAdvances = advances.filter(a => a.employeeId === employeeId && a.status === 'Pending');
+      const totalAdvance = empAdvances.reduce((sum, a) => sum + a.amount, 0);
+      
+      const empLoans = loans.filter(l => l.employeeId === employeeId && l.status === 'Active');
+      const totalLoanEMI = empLoans.reduce((sum, l) => {
+        let emi = l.monthlyEMI || 0;
+        if (emi === 0 && l.amount > 0) {
+          const P = l.amount;
+          const R = (l.interestRate || 0) / 100 / 12;
+          const N = l.emiDuration || 12;
+          emi = R > 0 ? (P * R * Math.pow(1 + R, N)) / (Math.pow(1 + R, N) - 1) : P / N;
+        }
+        return sum + emi;
+      }, 0);
+      
+      const basic = parseFloat(existingSheet.basicSalary) || 0;
+      const allow = parseFloat(existingSheet.allowances) || 0;
+      const deduct = parseFloat(existingSheet.deductions) || 0;
+      const net = basic + allow - deduct - totalAdvance - totalLoanEMI;
+
+      await erpService.updateSalarySheet(existingSheet.id, {
+        advanceDeduction: totalAdvance,
+        loanDeduction: totalLoanEMI,
+        netSalary: net
+      });
+    }
+    await fetchData();
   };
 
   const handleLoanSubmit = async (e: React.FormEvent) => {
@@ -220,7 +259,9 @@ export function PayrollManagement() {
       
       showNotification('Loan saved successfully');
       setIsModalOpen(false);
-      fetchData();
+      await fetchData();
+      // Sync existing pending salary sheets for this employee
+      await syncSalarySheet(selectedEmployeeId);
     } catch (err: any) {
       showNotification('Failed to save loan', 'error');
     } finally {
@@ -231,11 +272,20 @@ export function PayrollManagement() {
   const handleDelete = async (id: string, type: Tab) => {
     setLoading(true);
     try {
+      let employeeId = '';
+      if (type === 'advance') employeeId = advances.find(a => a.id === id)?.employeeId || '';
+      if (type === 'loan') employeeId = loans.find(l => l.id === id)?.employeeId || '';
+
       if (type === 'salary') await erpService.deleteSalarySheet(id);
       if (type === 'advance') await erpService.deleteAdvance(id);
       if (type === 'loan') await erpService.deleteLoan(id);
+      
       showNotification('Entry deleted successfully');
-      fetchData();
+      await fetchData();
+      
+      if (employeeId) {
+        await syncSalarySheet(employeeId);
+      }
     } catch (err: any) {
       showNotification('Failed to delete entry', 'error');
     } finally {
@@ -254,6 +304,8 @@ export function PayrollManagement() {
     } else if (type === 'advance') {
       setAmount(item.amount?.toString() || '0');
       setReason(item.reason || '');
+      setApplicationDate(item.applicationDate || format(new Date(), 'yyyy-MM-dd'));
+      setApprovalDate(item.approvalDate || format(new Date(), 'yyyy-MM-dd'));
       setStatus(item.status || 'Pending');
     } else if (type === 'loan') {
       setAmount(item.amount?.toString() || '0');
@@ -316,7 +368,7 @@ export function PayrollManagement() {
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
           <div>
             <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Payroll Management</h1>
@@ -343,6 +395,8 @@ export function PayrollManagement() {
                   setMonthlyEMI('');
                   setInterestRate('0');
                   setEmiDuration('12');
+                  setApplicationDate(format(new Date(), 'yyyy-MM-dd'));
+                  setApprovalDate(format(new Date(), 'yyyy-MM-dd'));
                   setStatus('Pending');
                   setIsModalOpen(true);
                 }}
@@ -356,8 +410,8 @@ export function PayrollManagement() {
         </div>
 
         {/* Tabs */}
-        {activeTab !== 'bulk' && (
-          <div className="flex border-b border-border overflow-x-auto no-scrollbar">
+        <div className="flex flex-col md:flex-row justify-between items-center border-b border-border gap-4">
+          <div className="flex overflow-x-auto no-scrollbar w-full md:w-auto">
             <button 
               onClick={() => setActiveTab('salary')}
               className={cn(
@@ -386,113 +440,215 @@ export function PayrollManagement() {
               Loans
             </button>
           </div>
-        )}
+          
+          <div className="flex items-center gap-2 pb-2 md:pb-0">
+            <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Select Month</label>
+            <input 
+              type="month" 
+              value={month}
+              onChange={e => setMonth(e.target.value)}
+              className="bg-background border border-border text-foreground p-1.5 text-xs outline-none focus:border-foreground"
+            />
+          </div>
+        </div>
 
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
           </div>
         ) : activeTab === 'bulk' ? (
-          <div className="bg-card border border-border overflow-x-auto shadow-sm">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
-              <thead>
-                <tr className="bg-foreground/5 border-b border-border">
-                  <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Employee</th>
-                  <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Basic</th>
-                  <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Allowances</th>
-                  <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Deductions</th>
-                  <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Adv/Loan</th>
-                  <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Net Payable</th>
-                  <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Status</th>
-                  <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {employees.map(emp => {
-                  const sheet = salarySheets.find(s => s.employeeId === emp.id && s.month === month);
-                  return (
-                    <tr key={emp.id} className="hover:bg-foreground/5 transition-colors group">
-                      <td className="p-4">
-                        <p className="text-xs font-bold uppercase">{emp.name}</p>
-                        <p className="text-[9px] text-gray-500 uppercase">{emp.designation}</p>
-                      </td>
-                      <td className="p-4 text-xs">৳{emp.salary || 0}</td>
-                      <td className="p-4 text-xs">৳{sheet?.allowances || 0}</td>
-                      <td className="p-4 text-xs">৳{sheet?.deductions || 0}</td>
-                      <td className="p-4 text-xs text-rose-500">-৳{(sheet?.advanceDeduction || 0) + (sheet?.loanDeduction || 0)}</td>
-                      <td className="p-4 text-xs font-bold text-emerald-500">৳{sheet?.netSalary || 0}</td>
-                      <td className="p-4">
-                        <span className={cn(
-                          "text-[8px] font-bold uppercase px-2 py-0.5 rounded-full tracking-widest",
-                          sheet?.paymentStatus === 'Paid' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
-                        )}>
-                          {sheet?.paymentStatus || 'Not Generated'}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        {sheet ? (
-                          <div className="flex justify-end gap-2">
-                            <button onClick={() => handlePrint(sheet)} className="p-1.5 hover:bg-foreground/10 rounded transition-colors" title="Print PDF"><Printer className="w-3 h-3" /></button>
-                            <button onClick={() => handleWhatsApp(sheet)} className="p-1.5 hover:bg-foreground/10 rounded transition-colors text-emerald-500" title="WhatsApp"><MessageSquare className="w-3 h-3" /></button>
-                            <button onClick={() => handleEmail(sheet)} className="p-1.5 hover:bg-foreground/10 rounded transition-colors text-blue-500" title="Email"><Mail className="w-3 h-3" /></button>
-                          </div>
-                        ) : (
-                          <button 
-                            onClick={() => {
-                              setSelectedEmployeeId(emp.id);
-                              setEditingItem(null);
-                              setIsModalOpen(true);
-                            }}
-                            className="text-[9px] font-bold uppercase tracking-widest text-primary hover:underline"
-                          >
-                            Generate
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <button 
+                onClick={async () => {
+                  setLoading(true);
+                  try {
+                    const pendingEmployees = employees.filter(emp => !salarySheets.find(s => s.employeeId === emp.id && s.month === month));
+                    for (const emp of pendingEmployees) {
+                      const empAdvances = advances.filter(a => a.employeeId === emp.id && a.status === 'Pending');
+                      const totalAdvance = empAdvances.reduce((sum, a) => sum + a.amount, 0);
+                      const empLoans = loans.filter(l => l.employeeId === emp.id && l.status === 'Active');
+                      const totalLoanEMI = empLoans.reduce((sum, l) => sum + (l.monthlyEMI || 0), 0);
+                      
+                      const basic = parseFloat(emp.salary) || 0;
+                      const net = basic - totalAdvance - totalLoanEMI;
+
+                      await erpService.createSalarySheet(user!.companyId, {
+                        employeeId: emp.id,
+                        employeeName: emp.name,
+                        month,
+                        basicSalary: basic,
+                        allowances: 0,
+                        deductions: 0,
+                        advanceDeduction: totalAdvance,
+                        loanDeduction: totalLoanEMI,
+                        netSalary: net,
+                        paymentStatus: 'Pending'
+                      });
+                    }
+                    showNotification(`Generated ${pendingEmployees.length} salary sheets`);
+                    fetchData();
+                  } catch (err) {
+                    showNotification('Failed to generate bulk salary sheets', 'error');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-2"
+              >
+                <CheckCircle className="w-3 h-3" />
+                Generate All Pending
+              </button>
+            </div>
+            <div className="bg-card border border-border overflow-x-auto shadow-sm">
+              <table className="w-full text-left border-collapse min-w-[1000px]">
+                <thead>
+                  <tr className="bg-foreground/5 border-b border-border">
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Employee</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Basic</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Allowances</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Deductions</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Adv/Loan</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Net Payable</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Status</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {employees.map(emp => {
+                    const sheet = salarySheets.find(s => s.employeeId === emp.id && s.month === month);
+                    
+                    // Calculate current deductions for preview if sheet doesn't exist or is pending
+                    const empAdvances = advances.filter(a => a.employeeId === emp.id && a.status === 'Pending');
+                    const totalAdvance = empAdvances.reduce((sum, a) => sum + a.amount, 0);
+                    const empLoans = loans.filter(l => l.employeeId === emp.id && l.status === 'Active');
+                    const totalLoanEMI = empLoans.reduce((sum, l) => sum + (l.monthlyEMI || 0), 0);
+                    
+                    const basic = parseFloat(emp.salary) || 0;
+                    const advLoan = sheet && sheet.paymentStatus === 'Paid' 
+                      ? (sheet.advanceDeduction || 0) + (sheet.loanDeduction || 0)
+                      : totalAdvance + totalLoanEMI;
+                    
+                    const net = sheet && sheet.paymentStatus === 'Paid'
+                      ? sheet.netSalary
+                      : basic + (parseFloat(sheet?.allowances || '0')) - (parseFloat(sheet?.deductions || '0')) - totalAdvance - totalLoanEMI;
+
+                    return (
+                      <tr key={emp.id} className="hover:bg-foreground/5 transition-colors group">
+                        <td className="p-4">
+                          <p className="text-xs font-bold uppercase">{emp.name}</p>
+                          <p className="text-[9px] text-gray-500 uppercase">{emp.designation}</p>
+                        </td>
+                        <td className="p-4 text-xs">৳{emp.salary || 0}</td>
+                        <td className="p-4 text-xs">৳{sheet?.allowances || 0}</td>
+                        <td className="p-4 text-xs">৳{sheet?.deductions || 0}</td>
+                        <td className="p-4 text-xs text-rose-500">-৳{advLoan}</td>
+                        <td className="p-4 text-xs font-bold text-emerald-500">৳{net}</td>
+                        <td className="p-4">
+                          <span className={cn(
+                            "text-[8px] font-bold uppercase px-2 py-0.5 rounded-full tracking-widest",
+                            sheet?.paymentStatus === 'Paid' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                          )}>
+                            {sheet?.paymentStatus || 'Not Generated'}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right">
+                          {sheet ? (
+                            <div className="flex justify-end gap-2">
+                              <button onClick={() => handlePrint(sheet)} className="p-1.5 hover:bg-foreground/10 rounded transition-colors" title="Print PDF"><Printer className="w-3 h-3" /></button>
+                              <button onClick={() => handleWhatsApp(sheet)} className="p-1.5 hover:bg-foreground/10 rounded transition-colors text-emerald-500" title="WhatsApp"><MessageSquare className="w-3 h-3" /></button>
+                              <button onClick={() => handleEmail(sheet)} className="p-1.5 hover:bg-foreground/10 rounded transition-colors text-blue-500" title="Email"><Mail className="w-3 h-3" /></button>
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={() => {
+                                setSelectedEmployeeId(emp.id);
+                                setEditingItem(null);
+                                setIsModalOpen(true);
+                              }}
+                              className="text-[9px] font-bold uppercase tracking-widest text-primary hover:underline"
+                            >
+                              Generate
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activeTab === 'salary' && salarySheets.map((s) => (
-              <div key={s.id} className="bg-card border border-border p-4 space-y-3 hover:border-foreground transition-colors group relative">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-sm font-bold uppercase tracking-tight text-foreground">{s.employeeName}</h3>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">{s.month}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className={cn(
-                      "text-[8px] font-bold uppercase px-2 py-0.5 rounded-full tracking-widest",
-                      s.paymentStatus === 'Paid' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
-                    )}>
-                      {s.paymentStatus}
-                    </span>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleEdit(s, 'salary')} className="p-1 hover:bg-foreground/10 rounded"><Edit2 className="w-3 h-3" /></button>
-                      <button onClick={() => handleDelete(s.id, 'salary')} className="p-1 hover:bg-rose-500/10 text-rose-500 rounded"><Trash2 className="w-3 h-3" /></button>
+            {activeTab === 'salary' && salarySheets.map((s) => {
+              // Recalculate if pending to show "realtime" data as requested
+              let currentAdvance = s.advanceDeduction || 0;
+              let currentLoan = s.loanDeduction || 0;
+              let currentNet = s.netSalary;
+
+              if (s.paymentStatus === 'Pending') {
+                const empAdvances = advances.filter(a => a.employeeId === s.employeeId && a.status === 'Pending');
+                currentAdvance = empAdvances.reduce((sum, a) => sum + a.amount, 0);
+                const empLoans = loans.filter(l => l.employeeId === s.employeeId && l.status === 'Active');
+                currentLoan = empLoans.reduce((sum, l) => {
+                  let emi = l.monthlyEMI || 0;
+                  if (emi === 0 && l.amount > 0) {
+                    const P = l.amount;
+                    const R = (l.interestRate || 0) / 100 / 12;
+                    const N = l.emiDuration || 12;
+                    emi = R > 0 ? (P * R * Math.pow(1 + R, N)) / (Math.pow(1 + R, N) - 1) : P / N;
+                  }
+                  return sum + emi;
+                }, 0);
+                currentNet = s.basicSalary + (s.allowances || 0) - (s.deductions || 0) - currentAdvance - currentLoan;
+              }
+
+              return (
+                <div key={s.id} className="bg-card border border-border p-4 space-y-3 hover:border-foreground transition-colors group relative">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-tight text-foreground">{s.employeeName}</h3>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest">{s.month}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className={cn(
+                        "text-[8px] font-bold uppercase px-2 py-0.5 rounded-full tracking-widest",
+                        s.paymentStatus === 'Paid' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                      )}>
+                        {s.paymentStatus}
+                      </span>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => handleEdit(s, 'salary')} className="p-1 hover:bg-foreground/10 rounded"><Edit2 className="w-3 h-3" /></button>
+                        <button onClick={() => handleDelete(s.id, 'salary')} className="p-1 hover:bg-rose-500/10 text-rose-500 rounded"><Trash2 className="w-3 h-3" /></button>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border">
-                  <div>
-                    <p className="text-[8px] text-gray-500 uppercase tracking-widest">Basic</p>
-                    <p className="text-xs font-bold">৳{s.basicSalary}</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2 border-t border-border">
+                    <div>
+                      <p className="text-[8px] text-gray-500 uppercase tracking-widest">Basic Salary</p>
+                      <p className="text-xs font-bold">৳{s.basicSalary}</p>
+                    </div>
+                    <div>
+                      <p className="text-[8px] text-gray-500 uppercase tracking-widest">Advance Ded.</p>
+                      <p className="text-xs font-bold text-rose-500">৳{currentAdvance.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[8px] text-gray-500 uppercase tracking-widest">Loan EMI</p>
+                      <p className="text-xs font-bold text-rose-500">৳{currentLoan.toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[8px] text-gray-500 uppercase tracking-widest">Net Payable</p>
+                      <p className="text-xs font-bold text-emerald-500">৳{currentNet.toFixed(2)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[8px] text-gray-500 uppercase tracking-widest">Net Salary</p>
-                    <p className="text-xs font-bold text-emerald-500">৳{s.netSalary}</p>
+                  <div className="flex gap-2 pt-2 border-t border-border">
+                    <button onClick={() => handlePrint(s)} className="flex-1 py-1.5 bg-foreground/5 hover:bg-foreground/10 text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Printer className="w-3 h-3" /> Print</button>
+                    <button onClick={() => handleWhatsApp(s)} className="flex-1 py-1.5 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-500 text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2"><MessageSquare className="w-3 h-3" /> WA</button>
                   </div>
                 </div>
-                <div className="flex gap-2 pt-2 border-t border-border">
-                  <button onClick={() => handlePrint(s)} className="flex-1 py-1.5 bg-foreground/5 hover:bg-foreground/10 text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2"><Printer className="w-3 h-3" /> Print</button>
-                  <button onClick={() => handleWhatsApp(s)} className="flex-1 py-1.5 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-500 text-[9px] font-bold uppercase tracking-widest flex items-center justify-center gap-2"><MessageSquare className="w-3 h-3" /> WA</button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             {activeTab === 'advance' && advances.map((a) => (
               <div key={a.id} className="bg-card border border-border p-4 space-y-3 hover:border-foreground transition-colors group">
@@ -514,9 +670,23 @@ export function PayrollManagement() {
                     </div>
                   </div>
                 </div>
-                <div className="pt-2 border-t border-border">
-                  <p className="text-[8px] text-gray-500 uppercase tracking-widest">Amount</p>
-                  <p className="text-lg font-bold text-rose-500">৳{a.amount}</p>
+                <div className="pt-2 border-t border-border space-y-2">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-[8px] text-gray-500 uppercase tracking-widest">Amount</p>
+                      <p className="text-lg font-bold text-rose-500">৳{a.amount}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[8px] text-gray-500 uppercase tracking-widest">App Date</p>
+                      <p className="text-[10px] font-medium">{a.applicationDate || a.date}</p>
+                    </div>
+                  </div>
+                  {a.approvalDate && (
+                    <div className="flex justify-between items-center bg-foreground/5 p-1.5 rounded">
+                      <p className="text-[8px] text-gray-500 uppercase tracking-widest">Approved On</p>
+                      <p className="text-[10px] font-bold text-emerald-500">{a.approvalDate}</p>
+                    </div>
+                  )}
                   {a.reason && <p className="text-[10px] text-gray-400 mt-1 italic">"{a.reason}"</p>}
                 </div>
               </div>
@@ -749,6 +919,30 @@ export function PayrollManagement() {
                       </>
                     )}
                   </select>
+                </div>
+              )}
+
+              {activeTab === 'advance' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Application Date</label>
+                    <input 
+                      type="date" 
+                      value={applicationDate}
+                      onChange={e => setApplicationDate(e.target.value)}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Approval Date</label>
+                    <input 
+                      type="date" 
+                      value={approvalDate}
+                      onChange={e => setApprovalDate(e.target.value)}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                    />
+                  </div>
                 </div>
               )}
 

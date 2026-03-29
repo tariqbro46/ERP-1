@@ -121,7 +121,7 @@ export const UserManagement: React.FC = () => {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto transition-colors">
+    <div className="p-8 transition-colors">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-3">

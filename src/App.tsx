@@ -25,7 +25,8 @@ import {
   Building2,
   Shield,
   Award,
-  DollarSign
+  DollarSign,
+  Search
 } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { VoucherEntry } from './components/VoucherEntry';
@@ -160,11 +161,39 @@ const NAV_ITEMS = [
   }
 ];
 
+const PAGE_TITLES: Record<string, string> = {
+  '/': 'Dashboard',
+  '/accounts/ledgers/new': 'Create Ledger',
+  '/inventory/items/new': 'Create Item',
+  '/inventory/godowns': 'Godown Master',
+  '/employees': 'Employee Master',
+  '/accounts': 'Chart of Accounts',
+  '/inventory/items': 'Item Master',
+  '/vouchers/new': 'Voucher Entry',
+  '/payroll': 'Payroll Management',
+  '/reports/daybook': 'Daybook',
+  '/reports/balance-sheet': 'Balance Sheet',
+  '/reports/trial-balance': 'Trial Balance',
+  '/reports/pl': 'Profit & Loss',
+  '/reports/ratios': 'Ratio Analysis',
+  '/reports/financial-insights': 'Financial Insights',
+  '/reports/stock': 'Stock Summary',
+  '/reports/ledger': 'Ledger Statement',
+  '/reports/sales-performance': 'Sales Performance',
+  '/notes': 'Notes / Memo',
+  '/companies': 'Company Management',
+  '/users': 'User Management',
+  '/founder': 'Founder Panel',
+  '/settings': 'Settings',
+};
+
 function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
   const { user, company, logout, isAdmin, isSuperAdmin } = useAuth();
-  const { companyName, slogan, features = [], menuBarStyle = 'classic', sidebarDefaultExpanded = true } = useSettings();
+  const { companyName, slogan, features = [], menuBarStyle = 'classic', layoutWidth = 'constrained', sidebarDefaultExpanded = true } = useSettings();
+
+  const currentPageTitle = PAGE_TITLES[location.pathname] || (location.pathname.includes('/edit/') ? 'Edit Record' : 'ERP System');
 
   // If access is disabled and user is not a super admin, show subscription required page
   // We only block if isAccessEnabled is explicitly false
@@ -178,6 +207,9 @@ function Layout({ children }: { children: React.ReactNode }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const [activeRibbonTab, setActiveRibbonTab] = React.useState('Masters');
+  const [hoveredMacGroup, setHoveredMacGroup] = React.useState<string | null>(null);
+  const [isWinStartOpen, setIsWinStartOpen] = React.useState(false);
+  const macMenuTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -364,7 +396,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </div>
         <div className="p-4 flex items-center gap-8 overflow-x-auto no-scrollbar">
-          {NAV_ITEMS.find(g => g.group === activeRibbonTab)?.items.map(item => {
+          {NAV_ITEMS.find(g => g.group === activeRibbonTab)?.items.map((item: any) => {
             if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
             if (item.adminOnly && !isAdmin) return null;
             if (item.superAdminOnly && !isSuperAdmin) return null;
@@ -406,73 +438,210 @@ function Layout({ children }: { children: React.ReactNode }) {
       </div>
       
       {NAV_ITEMS.map(group => (
-        <div key={group.group} className="relative group/mac">
-          <button className="text-[11px] font-medium text-gray-500 hover:text-foreground px-2 py-1 rounded hover:bg-foreground/5 transition-colors">
+        <div 
+          key={group.group} 
+          className="relative"
+          onMouseEnter={() => {
+            if (macMenuTimeoutRef.current) clearTimeout(macMenuTimeoutRef.current);
+            setHoveredMacGroup(group.group);
+          }}
+          onMouseLeave={() => {
+            macMenuTimeoutRef.current = setTimeout(() => {
+              setHoveredMacGroup(null);
+            }, 300);
+          }}
+        >
+          <button className={cn(
+            "text-[11px] font-medium px-2 py-1 rounded transition-colors",
+            hoveredMacGroup === group.group ? "bg-foreground/5 text-foreground" : "text-gray-500 hover:text-foreground"
+          )}>
             {group.group}
           </button>
-          <div className="absolute top-full left-0 mt-1 w-48 bg-card border border-border shadow-2xl py-1 hidden group-hover/mac:block z-50 rounded-md overflow-hidden">
-            {group.items.map(item => {
-              if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
-              if (item.adminOnly && !isAdmin) return null;
-              if (item.superAdminOnly && !isSuperAdmin) return null;
-              
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-2 text-[11px] transition-colors",
-                    location.pathname === item.to 
-                      ? "bg-primary text-white" 
-                      : "text-gray-500 hover:text-foreground hover:bg-foreground/5"
-                  )}
-                >
-                  <item.icon className="w-3.5 h-3.5" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
+          {hoveredMacGroup === group.group && (
+            <div 
+              className="absolute top-full left-0 mt-0 w-48 bg-card border border-border shadow-2xl py-1 z-50 rounded-b-md overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+              onMouseEnter={() => {
+                if (macMenuTimeoutRef.current) clearTimeout(macMenuTimeoutRef.current);
+              }}
+              onMouseLeave={() => {
+                macMenuTimeoutRef.current = setTimeout(() => {
+                  setHoveredMacGroup(null);
+                }, 300);
+              }}
+            >
+              {group.items.map((item: any) => {
+                if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
+                if (item.adminOnly && !isAdmin) return null;
+                if (item.superAdminOnly && !isSuperAdmin) return null;
+                
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-2 text-[11px] transition-colors",
+                      location.pathname === item.to 
+                        ? "bg-primary text-white" 
+                        : "text-gray-500 hover:text-foreground hover:bg-foreground/5"
+                    )}
+                  >
+                    <item.icon className="w-3.5 h-3.5" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       ))}
     </div>
   );
 
-  const renderWindows11Menu = () => (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-xl border border-border/50 h-14 px-2 rounded-2xl flex items-center gap-1 shadow-2xl z-50 hidden lg:flex">
-      <Link 
-        to="/" 
-        className={cn(
-          "p-2.5 rounded-xl transition-all hover:bg-foreground/10 group relative",
-          location.pathname === '/' ? "bg-foreground/5" : ""
+  const renderWindows11Menu = () => {
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const allItems = NAV_ITEMS.flatMap(g => g.items).filter((item: any) => {
+      if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return false;
+      if (item.adminOnly && !isAdmin) return false;
+      if (item.superAdminOnly && !isSuperAdmin) return false;
+      if (searchQuery && !item.label.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    });
+
+    return (
+      <>
+        {isWinStartOpen && (
+          <div 
+            className="fixed inset-0 z-[60]"
+            onClick={() => setIsWinStartOpen(false)}
+          >
+            <div 
+              className="absolute bottom-20 left-1/2 -translate-x-1/2 w-[600px] max-w-[95vw] bg-background/90 backdrop-blur-2xl border border-border/50 rounded-3xl shadow-2xl p-8 animate-in slide-in-from-bottom-10 duration-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input 
+                    type="text"
+                    placeholder="Search for apps, settings, and documents"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-foreground/5 border border-border/50 rounded-xl py-3 pl-12 pr-4 text-xs font-mono outline-none focus:border-primary transition-colors"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                    {searchQuery ? 'Search Results' : 'Pinned Apps'}
+                  </h3>
+                  {!searchQuery && (
+                    <button className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">
+                      All Apps
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-6 gap-2 max-h-[320px] overflow-y-auto no-scrollbar">
+                  {allItems.map(item => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => {
+                        setIsWinStartOpen(false);
+                        setSearchQuery('');
+                      }}
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-foreground/5 transition-all group"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm">
+                        <item.icon className="w-5 h-5 text-foreground/70" />
+                      </div>
+                      <span className="text-[9px] text-center font-medium truncate w-full">{item.label}</span>
+                    </Link>
+                  ))}
+                  {allItems.length === 0 && (
+                    <div className="col-span-6 py-10 text-center text-gray-500 text-[10px] uppercase tracking-widest">
+                      No results found
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="pt-6 border-t border-border flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full border border-border overflow-hidden bg-card">
+                    <img 
+                      src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">{user?.displayName || 'User'}</span>
+                </div>
+                <button 
+                  onClick={logout}
+                  className="p-2 hover:bg-rose-500/10 rounded-lg text-rose-500 transition-colors"
+                  title="Sign out"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
         )}
-      >
-        <LayoutDashboard className={cn("w-6 h-6", location.pathname === '/' ? "text-primary" : "text-gray-500")} />
-        {location.pathname === '/' && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />}
-      </Link>
-      
-      <div className="w-[1px] h-6 bg-border mx-2" />
-      
-      {NAV_ITEMS.flatMap(g => g.items).filter(item => {
-        // Show only a few key items in the taskbar style
-        const taskbarItems = ['Voucher Entry', 'Daybook', 'Balance Sheet', 'Settings (F11)'];
-        return taskbarItems.includes(item.label);
-      }).map(item => (
-        <Link 
-          key={item.to}
-          to={item.to} 
-          className={cn(
-            "p-2.5 rounded-xl transition-all hover:bg-foreground/10 group relative",
-            location.pathname === item.to ? "bg-foreground/5" : ""
-          )}
-          title={item.label}
-        >
-          <item.icon className={cn("w-6 h-6", location.pathname === item.to ? "text-primary" : "text-gray-500")} />
-          {location.pathname === item.to && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />}
-        </Link>
-      ))}
-    </div>
-  );
+        
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-xl border border-border/50 h-14 px-2 rounded-2xl flex items-center gap-1 shadow-2xl z-50 hidden lg:flex">
+          <button 
+            onClick={() => setIsWinStartOpen(!isWinStartOpen)}
+            className={cn(
+              "p-2.5 rounded-xl transition-all hover:bg-foreground/10 group relative",
+              isWinStartOpen ? "bg-foreground/5" : ""
+            )}
+          >
+            <div className="grid grid-cols-2 gap-0.5 w-6 h-6">
+              <div className="bg-blue-500 rounded-sm" />
+              <div className="bg-emerald-500 rounded-sm" />
+              <div className="bg-amber-500 rounded-sm" />
+              <div className="bg-rose-500 rounded-sm" />
+            </div>
+          </button>
+
+          <div className="w-[1px] h-6 bg-border mx-2" />
+
+          <Link 
+            to="/" 
+            className={cn(
+              "p-2.5 rounded-xl transition-all hover:bg-foreground/10 group relative",
+              location.pathname === '/' ? "bg-foreground/5" : ""
+            )}
+          >
+            <LayoutDashboard className={cn("w-6 h-6", location.pathname === '/' ? "text-primary" : "text-gray-500")} />
+            {location.pathname === '/' && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />}
+          </Link>
+          
+          {NAV_ITEMS.flatMap(g => g.items).filter(item => {
+            // Show only a few key items in the taskbar style
+            const taskbarItems = ['Voucher Entry', 'Daybook', 'Balance Sheet', 'Settings (F11)'];
+            return taskbarItems.includes(item.label);
+          }).map(item => (
+            <Link 
+              key={item.to}
+              to={item.to} 
+              className={cn(
+                "p-2.5 rounded-xl transition-all hover:bg-foreground/10 group relative",
+                location.pathname === item.to ? "bg-foreground/5" : ""
+              )}
+              title={item.label}
+            >
+              <item.icon className={cn("w-6 h-6", location.pathname === item.to ? "text-primary" : "text-gray-500")} />
+              {location.pathname === item.to && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />}
+            </Link>
+          ))}
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className="flex h-screen h-[100dvh] bg-background text-foreground overflow-hidden transition-colors duration-300 relative">
@@ -489,40 +658,44 @@ function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden w-full">
-        {/* Conditional Top Menu rendering */}
-        {menuBarStyle === 'ribbon' && renderRibbonMenu()}
-        {menuBarStyle === 'macos' && renderMacOSMenu()}
-
-        <header className="h-14 border-b border-border bg-background flex items-center justify-between px-4 lg:px-6">
-          <div className="flex items-center gap-3 lg:gap-4">
-            {(menuBarStyle !== 'classic') && (
-              <div className="flex items-center gap-3 mr-4 hidden lg:flex">
-                <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
-                  <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
-                </div>
-                <div>
-                  <h1 className="text-sm font-bold text-foreground tracking-tighter truncate max-w-[120px]">{companyName}</h1>
-                  <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate max-w-[120px]">{slogan}</p>
-                </div>
+        <header className="h-14 border-b border-border bg-background flex items-center px-4 lg:px-6 relative">
+          <div className="flex items-center gap-3 lg:gap-4 z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
+                <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
               </div>
-            )}
+              <h1 className="text-sm font-bold text-foreground tracking-tighter truncate hidden sm:block">
+                {companyName}
+              </h1>
+            </div>
+
             <button 
               onClick={() => setIsSidebarOpen(true)}
               className={cn(
                 "p-1.5 hover:bg-foreground/5 rounded",
-                menuBarStyle === 'classic' ? "lg:hidden" : ""
+                menuBarStyle === 'classic' ? "lg:hidden" : "",
+                menuBarStyle === 'ribbon' ? "lg:hidden" : ""
               )}
             >
               <Menu className="w-5 h-5 text-foreground" />
             </button>
-            <div className="hidden sm:flex items-center gap-4">
+            
+            <div className="hidden sm:flex items-center gap-4 border-l border-border pl-4">
               <span className="text-[10px] text-gray-600 font-mono uppercase">
                 Status: Online
               </span>
               <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             </div>
           </div>
-          <div className="flex items-center gap-3 lg:gap-6">
+
+          {/* Center Title */}
+          <div className="absolute left-1/2 -translate-x-1/2 hidden md:block pointer-events-none">
+            <h2 className="text-sm font-bold text-foreground uppercase tracking-widest">
+              {currentPageTitle}
+            </h2>
+          </div>
+
+          <div className="ml-auto flex items-center gap-3 lg:gap-6 z-10">
             <button 
               onClick={toggleTheme}
               className="p-2 rounded-full hover:bg-card transition-colors text-gray-500 hover:text-foreground"
@@ -618,8 +791,17 @@ function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
+        {/* Conditional Top Menu rendering */}
+        {menuBarStyle === 'ribbon' && renderRibbonMenu()}
+        {menuBarStyle === 'macos' && renderMacOSMenu()}
+
         <div ref={scrollRef} className="flex-1 overflow-y-auto no-scrollbar pb-16 lg:pb-0">
-          {children}
+          <div className={cn(
+            "w-full mx-auto",
+            layoutWidth === 'constrained' ? "max-w-7xl" : "max-w-full"
+          )}>
+            {children}
+          </div>
         </div>
 
         {/* Windows 11 Style Taskbar */}

@@ -40,6 +40,7 @@ export function Settings() {
     showDiscPercent,
     showTaxPercent,
     menuBarStyle,
+    layoutWidth,
     sidebarDefaultExpanded,
     notifications, 
     features = [], 
@@ -53,6 +54,7 @@ export function Settings() {
   const [localCompanyAddress, setLocalCompanyAddress] = useState(companyAddress);
   const [localSlogan, setLocalSlogan] = useState(slogan);
   const [localMenuBarStyle, setLocalMenuBarStyle] = useState(menuBarStyle);
+  const [localLayoutWidth, setLocalLayoutWidth] = useState(layoutWidth);
   const [localPrintHeader, setLocalPrintHeader] = useState(printHeader);
   const [localPrintFooter, setLocalPrintFooter] = useState(printFooter);
   const [localPrintPhone, setLocalPrintPhone] = useState(printPhone);
@@ -113,6 +115,7 @@ export function Settings() {
     setLocalShowTaxPercent(showTaxPercent);
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded);
     setLocalMenuBarStyle(menuBarStyle);
+    setLocalLayoutWidth(layoutWidth);
     setLocalNotifications(notifications);
   }, [
     companyName, companyAddress, slogan, printHeader, printFooter, printPhone, 
@@ -121,7 +124,7 @@ export function Settings() {
     printSignature3, showSignature1, showSignature2, showSignature3, 
     signatureAlignment, showDeveloperContact, financialYearStart, 
     baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
-    showTaxPercent, menuBarStyle, sidebarDefaultExpanded, notifications
+    showTaxPercent, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications
   ]);
 
   const handleSaveGeneral = () => {
@@ -130,6 +133,7 @@ export function Settings() {
       companyAddress: localCompanyAddress,
       slogan: localSlogan,
       menuBarStyle: localMenuBarStyle,
+      layoutWidth: localLayoutWidth,
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
       financialYearStart: localFinancialYearStart,
       baseCurrencySymbol: localBaseCurrencySymbol,
@@ -248,7 +252,7 @@ export function Settings() {
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="space-y-6">
         <div className="border-b border-border pb-4">
           <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">System Settings</h1>
           <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Configure your ERP environment</p>
@@ -434,6 +438,19 @@ export function Settings() {
                         <option value="windows11">Windows 11 Taskbar Style</option>
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">Choose your preferred navigation layout.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Layout Width</label>
+                      <select 
+                        value={localLayoutWidth}
+                        onChange={(e) => setLocalLayoutWidth(e.target.value as any)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        <option value="responsive">Full Responsive (Dashboard Style)</option>
+                        <option value="constrained">Founder Panel Style (Max 7xl)</option>
+                      </select>
+                      <p className="text-[9px] text-gray-500 uppercase">Choose how wide the application content should be.</p>
                     </div>
 
                     <div className="space-y-2">

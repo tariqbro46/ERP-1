@@ -125,7 +125,7 @@ export function CompanyManagement() {
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono">
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="space-y-8">
         <div className="border-b border-border pb-4">
           <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Company Management</h1>
           <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Manage and switch between your business entities</p>

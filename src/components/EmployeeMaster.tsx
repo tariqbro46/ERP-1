@@ -134,7 +134,7 @@ export function EmployeeMaster() {
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="space-y-6">
         <div className="flex justify-between items-end border-b border-border pb-4">
           <div>
             <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Employee Management</h1>

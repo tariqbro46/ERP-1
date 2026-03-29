@@ -139,7 +139,7 @@ export function ItemCreation() {
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="max-w-4xl mx-auto bg-card border border-border overflow-hidden">
+      <div className="bg-card border border-border overflow-hidden">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 lg:px-6 py-4 border-b border-border bg-foreground/5 gap-4">
           <div className="flex items-center gap-4">
             <button onClick={() => navigate(-1)} className="p-1 hover:bg-foreground/10 rounded transition-colors text-gray-500 hover:text-foreground">

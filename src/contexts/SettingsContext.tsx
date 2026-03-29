@@ -50,6 +50,7 @@ interface SettingsContextType {
   showDiscPercent: boolean;
   showTaxPercent: boolean;
   menuBarStyle: MenuBarStyle;
+  layoutWidth: 'responsive' | 'constrained';
   sidebarDefaultExpanded: boolean;
   notifications: NotificationSettings;
   features: FeatureSettings[];
@@ -87,6 +88,7 @@ const defaultSettings: SettingsContextType = {
   showDiscPercent: true,
   showTaxPercent: true,
   menuBarStyle: 'classic',
+  layoutWidth: 'constrained',
   sidebarDefaultExpanded: true,
   notifications: {
     voucherSaved: 'Voucher has been saved successfully!',

@@ -100,7 +100,7 @@ export function FinancialInsights() {
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div>
             <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Financial Insights</h1>

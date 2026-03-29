@@ -209,7 +209,7 @@ export function LedgerCreation() {
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="max-w-6xl mx-auto bg-card border border-border overflow-hidden">
+      <div className="bg-card border border-border overflow-hidden">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 lg:px-6 py-4 border-b border-border bg-foreground/5 gap-4">
           <div className="flex items-center gap-4">
@@ -651,7 +651,7 @@ export function LedgerCreation() {
       )}
 
       {/* Keyboard Shortcuts Help */}
-      <div className="max-w-6xl mx-auto mt-6 hidden sm:flex gap-6 text-[9px] text-gray-600 uppercase font-mono">
+      <div className="mt-6 hidden sm:flex gap-6 text-[9px] text-gray-600 uppercase font-mono">
         <div className="flex items-center gap-2">
           <kbd className="px-1.5 py-0.5 bg-card border border-border rounded">Enter</kbd>
           <span>Next Field</span>

@@ -39,7 +39,7 @@ export function ItemMaster() {
 
   return (
     <div className="p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="space-y-6">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-6">
           <div className="space-y-1">

@@ -181,7 +181,7 @@ export function BalanceSheet() {
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex-1 w-full sm:max-w-md space-y-4">

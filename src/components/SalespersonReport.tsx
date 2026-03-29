@@ -77,7 +77,7 @@ export function SalespersonReport() {
   const topPerformer = stats.length > 0 ? stats[0] : null;
 
   return (
-    <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-8 font-mono transition-colors">
+    <div className="p-4 lg:p-8 space-y-8 font-mono transition-colors">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-3">
