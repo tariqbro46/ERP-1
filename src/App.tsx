@@ -209,6 +209,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   const [activeRibbonTab, setActiveRibbonTab] = React.useState('Masters');
   const [hoveredMacGroup, setHoveredMacGroup] = React.useState<string | null>(null);
   const [isWinStartOpen, setIsWinStartOpen] = React.useState(false);
+  const [winSearchQuery, setWinSearchQuery] = React.useState('');
   const macMenuTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -285,22 +286,19 @@ function Layout({ children }: { children: React.ReactNode }) {
       "fixed inset-y-0 left-0 z-50 border-r border-border flex flex-col bg-background transition-all duration-300",
       menuBarStyle === 'classic' ? "lg:relative lg:translate-x-0" : "lg:fixed lg:z-[60]",
       isSidebarOpen ? "translate-x-0" : "-translate-x-full",
-      isSidebarCollapsed ? "w-20" : "w-64"
+      "w-64"
     )}>
       <div className={cn(
-        "p-6 border-b border-border flex items-center justify-between",
-        isSidebarCollapsed && "px-4"
+        "p-6 border-b border-border flex items-center justify-between"
       )}>
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-8 h-8 bg-foreground rounded-sm flex-shrink-0 flex items-center justify-center cursor-pointer" onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
+          <div className="w-8 h-8 bg-foreground rounded-sm flex-shrink-0 flex items-center justify-center">
             <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
           </div>
-          {!isSidebarCollapsed && (
-            <div className="transition-opacity duration-300">
-              <h1 className="text-sm font-bold text-foreground tracking-tighter truncate max-w-[120px]">{companyName}</h1>
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate max-w-[120px]">{slogan}</p>
-            </div>
-          )}
+          <div className="transition-opacity duration-300">
+            <h1 className="text-sm font-bold text-foreground tracking-tighter truncate max-w-[120px]">{companyName}</h1>
+            <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate max-w-[120px]">{slogan}</p>
+          </div>
         </div>
         <button 
           onClick={() => setIsSidebarOpen(false)}
@@ -308,22 +306,6 @@ function Layout({ children }: { children: React.ReactNode }) {
         >
           <X className="w-5 h-5 text-gray-500" />
         </button>
-        {!isSidebarCollapsed && (
-          <button 
-            onClick={() => setIsSidebarCollapsed(true)}
-            className="p-1 hover:bg-foreground/5 rounded hidden lg:block text-gray-400 hover:text-foreground"
-          >
-            <ChevronRight className="w-4 h-4 rotate-180" />
-          </button>
-        )}
-        {isSidebarCollapsed && (
-          <button 
-            onClick={() => setIsSidebarCollapsed(false)}
-            className="p-1 hover:bg-foreground/5 rounded hidden lg:block text-gray-400 hover:text-foreground absolute -right-3 top-8 bg-background border border-border rounded-full"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        )}
       </div>
 
       <nav className="flex-1 py-6 overflow-y-auto no-scrollbar overflow-x-hidden">
@@ -429,39 +411,23 @@ function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const renderMacOSMenu = () => (
-    <div className="bg-background/80 backdrop-blur-md border-b border-border h-10 px-4 items-center gap-6 hidden lg:flex">
-      <div className="flex items-center gap-2 mr-4">
-        <div className="w-5 h-5 bg-foreground rounded-full flex items-center justify-center">
-          <span className="text-background font-bold text-[10px]">{companyName.charAt(0)}</span>
+    <div className="bg-background/80 backdrop-blur-md border-b border-border h-10 px-4 flex items-center justify-between hidden lg:flex fixed top-0 left-0 right-0 z-[60]">
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 mr-4">
+          <div className="w-5 h-5 bg-foreground rounded-full flex items-center justify-center">
+            <span className="text-background font-bold text-[10px]">{companyName.charAt(0)}</span>
+          </div>
+          <span className="text-xs font-bold">{companyName}</span>
         </div>
-        <span className="text-xs font-bold">{companyName}</span>
-      </div>
-      
-      {NAV_ITEMS.map(group => (
-        <div 
-          key={group.group} 
-          className="relative"
-          onMouseEnter={() => {
-            if (macMenuTimeoutRef.current) clearTimeout(macMenuTimeoutRef.current);
-            setHoveredMacGroup(group.group);
-          }}
-          onMouseLeave={() => {
-            macMenuTimeoutRef.current = setTimeout(() => {
-              setHoveredMacGroup(null);
-            }, 300);
-          }}
-        >
-          <button className={cn(
-            "text-[11px] font-medium px-2 py-1 rounded transition-colors",
-            hoveredMacGroup === group.group ? "bg-foreground/5 text-foreground" : "text-gray-500 hover:text-foreground"
-          )}>
-            {group.group}
-          </button>
-          {hoveredMacGroup === group.group && (
+        
+        <div className="flex items-center gap-2">
+          {NAV_ITEMS.map(group => (
             <div 
-              className="absolute top-full left-0 mt-0 w-48 bg-card border border-border shadow-2xl py-1 z-50 rounded-b-md overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+              key={group.group} 
+              className="relative"
               onMouseEnter={() => {
                 if (macMenuTimeoutRef.current) clearTimeout(macMenuTimeoutRef.current);
+                setHoveredMacGroup(group.group);
               }}
               onMouseLeave={() => {
                 macMenuTimeoutRef.current = setTimeout(() => {
@@ -469,41 +435,126 @@ function Layout({ children }: { children: React.ReactNode }) {
                 }, 300);
               }}
             >
-              {group.items.map((item: any) => {
-                if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
-                if (item.adminOnly && !isAdmin) return null;
-                if (item.superAdminOnly && !isSuperAdmin) return null;
-                
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    className={cn(
-                      "flex items-center gap-3 px-4 py-2 text-[11px] transition-colors",
-                      location.pathname === item.to 
-                        ? "bg-primary text-white" 
-                        : "text-gray-500 hover:text-foreground hover:bg-foreground/5"
-                    )}
-                  >
-                    <item.icon className="w-3.5 h-3.5" />
-                    {item.label}
-                  </Link>
-                );
-              })}
+              <button className={cn(
+                "text-[11px] font-medium px-2 py-1 rounded transition-colors",
+                hoveredMacGroup === group.group ? "bg-foreground/5 text-foreground" : "text-gray-500 hover:text-foreground"
+              )}>
+                {group.group}
+              </button>
+              {hoveredMacGroup === group.group && (
+                <div 
+                  className="absolute top-full left-0 mt-0 w-48 bg-card border border-border shadow-2xl py-1 z-50 rounded-b-md overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+                  onMouseEnter={() => {
+                    if (macMenuTimeoutRef.current) clearTimeout(macMenuTimeoutRef.current);
+                  }}
+                  onMouseLeave={() => {
+                    macMenuTimeoutRef.current = setTimeout(() => {
+                      setHoveredMacGroup(null);
+                    }, 300);
+                  }}
+                >
+                  {group.items.map((item: any) => {
+                    if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
+                    if (item.adminOnly && !isAdmin) return null;
+                    if (item.superAdminOnly && !isSuperAdmin) return null;
+                    
+                    return (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        className={cn(
+                          "flex items-center gap-3 px-4 py-2 text-[11px] transition-colors",
+                          location.pathname === item.to 
+                            ? "bg-primary text-white" 
+                            : "text-gray-500 hover:text-foreground hover:bg-foreground/5"
+                        )}
+                      >
+                        <item.icon className="w-3.5 h-3.5" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Center Title for macOS */}
+      <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none">
+        <span className="text-[11px] font-bold text-primary uppercase tracking-widest">
+          {currentPageTitle}
+        </span>
+      </div>
+
+      {/* Right side controls for macOS */}
+      <div className="flex items-center gap-4">
+        <button 
+          onClick={toggleTheme}
+          className="p-1.5 rounded-full hover:bg-foreground/5 transition-colors text-gray-500 hover:text-foreground"
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+        </button>
+        
+        <div className="relative" ref={dropdownRef}>
+          <button 
+            onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+            className="flex items-center gap-2 hover:bg-foreground/5 px-2 py-1 rounded transition-colors"
+          >
+            <div className="w-5 h-5 rounded-full border border-border overflow-hidden bg-card">
+              <img 
+                src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
+                alt="Profile"
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{user?.displayName || 'User'}</span>
+          </button>
+
+          {isProfileDropdownOpen && (
+            <div className="absolute top-full right-0 mt-1 w-56 bg-card border border-border shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="px-4 py-3 border-b border-border mb-2">
+                <p className="text-[10px] font-bold text-foreground uppercase tracking-widest truncate">{user?.displayName || 'User'}</p>
+                <p className="text-[9px] text-gray-500 truncate">{user?.email}</p>
+              </div>
+              
+              {isSuperAdmin && (
+                <Link to="/founder" className="flex items-center gap-3 px-4 py-2 text-[10px] text-primary hover:bg-primary/5 uppercase tracking-widest transition-colors font-bold">
+                  <Shield className="w-3.5 h-3.5" /> Founder Panel
+                </Link>
+              )}
+              
+              {isAdmin && (
+                <Link to="/users" className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors">
+                  <Users className="w-3.5 h-3.5" /> User Management
+                </Link>
+              )}
+
+              <Link to="/companies" className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors">
+                <Building2 className="w-3.5 h-3.5" /> Company Info
+              </Link>
+
+              <div className="h-[1px] bg-border my-2" />
+
+              <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2 text-[10px] text-red-500 hover:bg-red-500/5 uppercase tracking-widest transition-colors">
+                <LogOut className="w-3.5 h-3.5" /> Logout Session
+              </button>
             </div>
           )}
         </div>
-      ))}
+      </div>
     </div>
   );
 
   const renderWindows11Menu = () => {
-    const [searchQuery, setSearchQuery] = React.useState('');
     const allItems = NAV_ITEMS.flatMap(g => g.items).filter((item: any) => {
       if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return false;
       if (item.adminOnly && !isAdmin) return false;
       if (item.superAdminOnly && !isSuperAdmin) return false;
-      if (searchQuery && !item.label.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (winSearchQuery && !item.label.toLowerCase().includes(winSearchQuery.toLowerCase())) return false;
       return true;
     });
 
@@ -524,8 +575,8 @@ function Layout({ children }: { children: React.ReactNode }) {
                   <input 
                     type="text"
                     placeholder="Search for apps, settings, and documents"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    value={winSearchQuery}
+                    onChange={(e) => setWinSearchQuery(e.target.value)}
                     className="w-full bg-foreground/5 border border-border/50 rounded-xl py-3 pl-12 pr-4 text-xs font-mono outline-none focus:border-primary transition-colors"
                     autoFocus
                   />
@@ -535,9 +586,9 @@ function Layout({ children }: { children: React.ReactNode }) {
               <div className="mb-8">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                    {searchQuery ? 'Search Results' : 'Pinned Apps'}
+                    {winSearchQuery ? 'Search Results' : 'Pinned Apps'}
                   </h3>
-                  {!searchQuery && (
+                  {!winSearchQuery && (
                     <button className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">
                       All Apps
                     </button>
@@ -550,7 +601,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                       to={item.to}
                       onClick={() => {
                         setIsWinStartOpen(false);
-                        setSearchQuery('');
+                        setWinSearchQuery('');
                       }}
                       className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-foreground/5 transition-all group"
                     >
@@ -658,144 +709,152 @@ function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden w-full">
-        <header className="h-14 border-b border-border bg-background flex items-center px-4 lg:px-6 relative">
-          <div className="flex items-center gap-3 lg:gap-4 z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
-                <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
-              </div>
-              <h1 className="text-sm font-bold text-foreground tracking-tighter truncate hidden sm:block">
-                {companyName}
-              </h1>
-            </div>
-
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className={cn(
-                "p-1.5 hover:bg-foreground/5 rounded",
-                menuBarStyle === 'classic' ? "lg:hidden" : "",
-                menuBarStyle === 'ribbon' ? "lg:hidden" : ""
-              )}
-            >
-              <Menu className="w-5 h-5 text-foreground" />
-            </button>
-            
-            <div className="hidden sm:flex items-center gap-4 border-l border-border pl-4">
-              <span className="text-[10px] text-gray-600 font-mono uppercase">
-                Status: Online
-              </span>
-              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            </div>
-          </div>
-
-          {/* Center Title */}
-          <div className="absolute left-1/2 -translate-x-1/2 hidden md:block pointer-events-none">
-            <h2 className="text-sm font-bold text-foreground uppercase tracking-widest">
-              {currentPageTitle}
-            </h2>
-          </div>
-
-          <div className="ml-auto flex items-center gap-3 lg:gap-6 z-10">
-            <button 
-              onClick={toggleTheme}
-              className="p-2 rounded-full hover:bg-card transition-colors text-gray-500 hover:text-foreground"
-              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-            <div className="hidden md:flex items-center gap-2 text-[10px] text-gray-500 font-mono">
-              <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-gray-400">Alt</kbd>
-              <span>+</span>
-              <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-gray-400">G</kbd>
-              <span className="ml-1 uppercase tracking-widest">Go To</span>
-            </div>
-            <div className="flex items-center gap-3 border-l border-border pl-4 lg:pl-6 relative" ref={dropdownRef}>
-              <div className="text-right hidden sm:block">
-                <p className="text-[10px] text-foreground font-mono">{user?.displayName || user?.email || 'User'}</p>
-                <p className="text-[9px] text-gray-500 uppercase font-mono">{user?.role || 'Staff'}</p>
-              </div>
-              <button 
-                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                className="relative group"
-              >
-                <div className="w-8 h-8 rounded-full border border-border overflow-hidden bg-card hover:border-foreground transition-all">
-                  <img 
-                    src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-                {isSuperAdmin && <div className="absolute -top-1 -left-1 w-3 h-3 bg-primary rounded-full border-2 border-background" title="Founder/Marketing Manager" />}
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-background rounded-full" />
-              </button>
-
-              {isProfileDropdownOpen && (
-                <div className="absolute top-full right-0 mt-2 w-56 bg-card border border-border shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="px-4 py-3 border-b border-border mb-2">
-                    <p className="text-[10px] font-bold text-foreground uppercase tracking-widest truncate">{user?.displayName || 'User'}</p>
-                    <p className="text-[9px] text-gray-500 truncate">{user?.email}</p>
-                    <div className="mt-2 inline-block px-2 py-0.5 bg-foreground/5 rounded text-[8px] font-bold text-foreground uppercase tracking-widest">
-                      {user?.role || 'Staff'}
-                    </div>
+        {menuBarStyle !== 'macos' && (
+          <header className="h-14 border-b border-border bg-background flex items-center px-4 lg:px-6 relative">
+            <div className="flex items-center gap-3 lg:gap-4 z-10">
+              {menuBarStyle !== 'classic' && (
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
+                    <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
                   </div>
-                  
-                  {isSuperAdmin && (
+                  <h1 className="text-sm font-bold text-foreground tracking-tighter truncate hidden sm:block">
+                    {companyName}
+                  </h1>
+                </div>
+              )}
+
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className={cn(
+                  "p-1.5 hover:bg-foreground/5 rounded",
+                  menuBarStyle === 'classic' ? "lg:hidden" : "",
+                  menuBarStyle === 'ribbon' ? "lg:hidden" : "",
+                  menuBarStyle === 'windows11' ? "lg:hidden" : ""
+                )}
+              >
+                <Menu className="w-5 h-5 text-foreground" />
+              </button>
+              
+              <div className="hidden sm:flex items-center gap-4 border-l border-border pl-4">
+                <span className="text-[10px] text-gray-600 font-mono uppercase">
+                  Status: Online
+                </span>
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+            </div>
+
+            {/* Center Title */}
+            <div className="absolute left-1/2 -translate-x-1/2 hidden md:block pointer-events-none">
+              <h2 className="text-sm font-bold text-primary uppercase tracking-widest">
+                {currentPageTitle}
+              </h2>
+            </div>
+
+            <div className="ml-auto flex items-center gap-3 lg:gap-6 z-10">
+              <button 
+                onClick={toggleTheme}
+                className="p-2 rounded-full hover:bg-card transition-colors text-gray-500 hover:text-foreground"
+                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+              <div className="hidden md:flex items-center gap-2 text-[10px] text-gray-500 font-mono">
+                <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-gray-400">Alt</kbd>
+                <span>+</span>
+                <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-gray-400">G</kbd>
+                <span className="ml-1 uppercase tracking-widest">Go To</span>
+              </div>
+              <div className="flex items-center gap-3 border-l border-border pl-4 lg:pl-6 relative" ref={dropdownRef}>
+                <div className="text-right hidden sm:block">
+                  <p className="text-[10px] text-foreground font-mono">{user?.displayName || user?.email || 'User'}</p>
+                  <p className="text-[9px] text-gray-500 uppercase font-mono">{user?.role || 'Staff'}</p>
+                </div>
+                <button 
+                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                  className="relative group"
+                >
+                  <div className="w-8 h-8 rounded-full border border-border overflow-hidden bg-card hover:border-foreground transition-all">
+                    <img 
+                      src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  {isSuperAdmin && <div className="absolute -top-1 -left-1 w-3 h-3 bg-primary rounded-full border-2 border-background" title="Founder/Marketing Manager" />}
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-background rounded-full" />
+                </button>
+
+                {isProfileDropdownOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-56 bg-card border border-border shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-4 py-3 border-b border-border mb-2">
+                      <p className="text-[10px] font-bold text-foreground uppercase tracking-widest truncate">{user?.displayName || 'User'}</p>
+                      <p className="text-[9px] text-gray-500 truncate">{user?.email}</p>
+                      <div className="mt-2 inline-block px-2 py-0.5 bg-foreground/5 rounded text-[8px] font-bold text-foreground uppercase tracking-widest">
+                        {user?.role || 'Staff'}
+                      </div>
+                    </div>
+                    
+                    {isSuperAdmin && (
+                      <Link 
+                        to="/founder" 
+                        className="flex items-center gap-3 px-4 py-2 text-[10px] text-primary hover:bg-primary/5 uppercase tracking-widest transition-colors font-bold"
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        Founder Panel
+                      </Link>
+                    )}
+                    
+                    {isAdmin && (
+                      <Link 
+                        to="/users" 
+                        className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        User Management
+                      </Link>
+                    )}
+
                     <Link 
-                      to="/founder" 
-                      className="flex items-center gap-3 px-4 py-2 text-[10px] text-primary hover:bg-primary/5 uppercase tracking-widest transition-colors font-bold"
-                    >
-                      <Shield className="w-3.5 h-3.5" />
-                      Founder Panel
-                    </Link>
-                  )}
-                  
-                  {isAdmin && (
-                    <Link 
-                      to="/users" 
+                      to="/companies" 
                       className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
                     >
-                      <Users className="w-3.5 h-3.5" />
-                      User Management
+                      <Building2 className="w-3.5 h-3.5" />
+                      Company Info
                     </Link>
-                  )}
 
-                  <Link 
-                    to="/companies" 
-                    className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
-                  >
-                    <Building2 className="w-3.5 h-3.5" />
-                    Company Info
-                  </Link>
+                    <div className="h-[1px] bg-border my-2" />
 
-                  <div className="h-[1px] bg-border my-2" />
+                    <button 
+                      onClick={toggleTheme}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
+                    >
+                      {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                      {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                    </button>
 
-                  <button 
-                    onClick={toggleTheme}
-                    className="w-full flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
-                  >
-                    {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-                    {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                  </button>
-
-                  <button 
-                    onClick={logout}
-                    className="w-full flex items-center gap-3 px-4 py-2 text-[10px] text-red-500 hover:bg-red-500/5 uppercase tracking-widest transition-colors"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    Logout Session
-                  </button>
-                </div>
-              )}
+                    <button 
+                      onClick={logout}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-[10px] text-red-500 hover:bg-red-500/5 uppercase tracking-widest transition-colors"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      Logout Session
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         {/* Conditional Top Menu rendering */}
         {menuBarStyle === 'ribbon' && renderRibbonMenu()}
         {menuBarStyle === 'macos' && renderMacOSMenu()}
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto no-scrollbar pb-16 lg:pb-0">
+        <div ref={scrollRef} className={cn(
+          "flex-1 overflow-y-auto no-scrollbar pb-16 lg:pb-0",
+          menuBarStyle === 'macos' && "pt-10"
+        )}>
           <div className={cn(
             "w-full mx-auto",
             layoutWidth === 'constrained' ? "max-w-7xl" : "max-w-full"

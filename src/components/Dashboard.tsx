@@ -126,9 +126,9 @@ export function Dashboard() {
   return (
     <div className="p-4 lg:p-6 space-y-6 bg-background min-h-screen transition-colors">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-        <div>
+        <div className="flex items-baseline gap-4">
           <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Gateway of {companyName}</h1>
-          <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest mt-1">Technical Overview • Financial Year {formatFY(periodStart, periodEnd)}</p>
+          <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Technical Overview • Financial Year {formatFY(periodStart, periodEnd)}</p>
         </div>
         <div className="flex flex-col items-end sm:items-end gap-2 w-full sm:w-auto">
           <p className="text-[10px] text-gray-500 font-mono uppercase w-full text-right">Current Period</p>

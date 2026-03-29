@@ -162,9 +162,9 @@ export function StockSummary() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div>
+          <div className="flex items-baseline gap-4">
             <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Stock Summary</h1>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Inventory Valuation • Dutch Bangla Bank (Sample) • as on {asOnDate}</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest">Inventory Valuation • Dutch Bangla Bank (Sample) • as on {asOnDate}</p>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 w-full sm:w-auto">
             <div className="text-left sm:text-right sm:mr-6">

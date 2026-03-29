@@ -370,9 +370,9 @@ export function PayrollManagement() {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
-          <div>
+          <div className="flex items-baseline gap-4">
             <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Payroll Management</h1>
-            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest mt-1">Manage Salaries, Advances, and Loans</p>
+            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Manage Salaries, Advances, and Loans</p>
           </div>
           <div className="flex gap-2">
             <button 

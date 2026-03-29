@@ -253,9 +253,9 @@ export function Settings() {
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
-        <div className="border-b border-border pb-4">
+        <div className="border-b border-border pb-4 flex items-baseline gap-4">
           <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">System Settings</h1>
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Configure your ERP environment</p>
+          <p className="text-[10px] text-gray-500 uppercase tracking-widest">Configure your ERP environment</p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">

@@ -82,9 +82,9 @@ export function RatioAnalysis() {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div>
+          <div className="flex items-baseline gap-4">
             <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Ratio Analysis</h1>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Key Performance Indicators • Financial Year 2024-25</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest">Key Performance Indicators • Financial Year 2024-25</p>
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
             <button 

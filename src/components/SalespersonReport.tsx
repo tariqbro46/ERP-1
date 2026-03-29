@@ -79,12 +79,12 @@ export function SalespersonReport() {
   return (
     <div className="p-4 lg:p-8 space-y-8 font-mono transition-colors">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+        <div className="flex items-baseline gap-4">
           <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-3">
             <Award className="w-6 h-6 text-amber-500" />
             Sales Performance
           </h1>
-          <p className="text-gray-500 text-[10px] uppercase tracking-widest mt-1">Track salesperson targets and achievements</p>
+          <p className="text-gray-500 text-[10px] uppercase tracking-widest">Track salesperson targets and achievements</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

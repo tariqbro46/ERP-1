@@ -44,9 +44,9 @@ export function ChartOfAccounts() {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div>
+          <div className="flex items-baseline gap-4">
             <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Chart of Accounts</h1>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Hierarchy of Ledgers and Groups</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest">Hierarchy of Ledgers and Groups</p>
           </div>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-600" />

@@ -123,12 +123,12 @@ export const UserManagement: React.FC = () => {
   return (
     <div className="p-8 transition-colors">
       <div className="flex items-center justify-between mb-8">
-        <div>
+        <div className="flex items-baseline gap-4">
           <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-3">
             <Users className="w-6 h-6 text-amber-500" />
             User Management
           </h1>
-          <p className="text-gray-500 text-xs uppercase tracking-widest mt-1">Manage system access and roles</p>
+          <p className="text-gray-500 text-xs uppercase tracking-widest">Manage system access and roles</p>
         </div>
         
         <div className="flex items-center gap-4">

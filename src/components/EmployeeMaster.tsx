@@ -136,9 +136,9 @@ export function EmployeeMaster() {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
         <div className="flex justify-between items-end border-b border-border pb-4">
-          <div>
+          <div className="flex items-baseline gap-4">
             <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Employee Management</h1>
-            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest mt-1">Manage company staff records</p>
+            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Manage company staff records</p>
           </div>
           <button 
             onClick={() => {

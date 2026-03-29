@@ -88,9 +88,9 @@ export function TrialBalance() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div>
+          <div className="flex items-baseline gap-4">
             <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Trial Balance</h1>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">Dutch Bangla Bank (Sample) • {firstDay} to {lastDay}</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest">Dutch Bangla Bank (Sample) • {firstDay} to {lastDay}</p>
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
             <button 
