@@ -120,7 +120,7 @@ export function GodownMaster() {
             <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {godowns.map((g) => (
               <div key={g.id} className="bg-card border border-border p-4 flex justify-between items-start hover:border-foreground/30 transition-colors group">
                 <div className="flex items-start gap-3">

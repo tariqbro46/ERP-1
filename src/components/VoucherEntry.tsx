@@ -514,7 +514,7 @@ export function VoucherEntry() {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="bg-card border border-border overflow-hidden">
         {/* Tally-style Top Bar */}
-        <div className="flex bg-card border-b border-border overflow-x-auto no-scrollbar whitespace-nowrap">
+        <div className="flex bg-card border-b border-border overflow-x-auto no-scrollbar whitespace-nowrap p-1 gap-1">
           {['Sales', 'Purchase', 'Payment', 'Receipt', 'Contra', 'Journal']
             .filter(type => isInventoryEnabled || (type !== 'Sales' && type !== 'Purchase'))
             .map(type => (
@@ -529,8 +529,8 @@ export function VoucherEntry() {
                 setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
               }}
               className={cn(
-                "px-4 lg:px-6 py-3 text-[10px] uppercase tracking-widest font-bold border-r border-border transition-all flex-shrink-0",
-                vType === type ? "bg-foreground text-background" : "text-gray-500 hover:text-foreground"
+                "px-4 lg:px-6 py-3 text-[10px] uppercase tracking-widest font-bold transition-all flex-1 min-w-[100px]",
+                vType === type ? "bg-foreground text-background" : "bg-foreground/5 text-gray-500 hover:text-foreground"
               )}
             >
               {type}

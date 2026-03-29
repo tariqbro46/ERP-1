@@ -308,8 +308,8 @@ function Layout({ children }: { children: React.ReactNode }) {
         </button>
       </div>
 
-      <nav className="flex-1 py-6 overflow-y-auto no-scrollbar overflow-x-hidden">
-        <div className={cn("px-4 mb-6", isSidebarCollapsed && "px-2")}>
+      <nav className="flex-1 py-2 overflow-y-auto no-scrollbar overflow-x-hidden">
+        <div className={cn("px-4 mb-2", isSidebarCollapsed && "px-2")}>
           <SidebarItem to="/" icon={LayoutDashboard} label={isSidebarCollapsed ? "" : "Dashboard"} active={location.pathname === '/'} />
         </div>
 
@@ -343,17 +343,8 @@ function Layout({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      <div className={cn("p-4 border-t border-border", isSidebarCollapsed && "p-2")}>
-        <button 
-          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          className="flex items-center gap-3 px-4 py-2 w-full text-gray-500 hover:text-foreground transition-colors group"
-        >
-          <ChevronRight className={cn(
-            "w-4 h-4 transition-transform duration-300",
-            isSidebarCollapsed ? "" : "rotate-180"
-          )} />
-          {!isSidebarCollapsed && <span className="text-[10px] font-mono uppercase tracking-widest">Collapse Sidebar</span>}
-        </button>
+      <div className={cn("p-4 border-t border-border flex flex-col items-center", isSidebarCollapsed && "p-2")}>
+        <span className="text-[9px] text-gray-400 font-mono uppercase tracking-widest">v1.0.1</span>
       </div>
     </aside>
   );
@@ -367,7 +358,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               key={group.group}
               onClick={() => setActiveRibbonTab(group.group)}
               className={cn(
-                "px-6 py-2 text-[10px] font-bold uppercase tracking-widest transition-all border-b-2",
+                "px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-all border-b-2",
                 activeRibbonTab === group.group 
                   ? "border-primary text-primary" 
                   : "border-transparent text-gray-500 hover:text-foreground"
@@ -377,7 +368,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             </button>
           ))}
         </div>
-        <div className="p-4 flex items-center gap-8 overflow-x-auto no-scrollbar">
+        <div className="p-2 flex items-center gap-6 overflow-x-auto no-scrollbar">
           {NAV_ITEMS.find(g => g.group === activeRibbonTab)?.items.map((item: any) => {
             if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
             if (item.adminOnly && !isAdmin) return null;
@@ -388,16 +379,16 @@ function Layout({ children }: { children: React.ReactNode }) {
                 key={item.to}
                 to={item.to}
                 className={cn(
-                  "flex flex-col items-center gap-2 min-w-[80px] p-2 rounded hover:bg-foreground/5 transition-all group",
+                  "flex flex-col items-center gap-1 min-w-[70px] p-1.5 rounded hover:bg-foreground/5 transition-all group",
                   location.pathname === item.to ? "bg-foreground/5" : ""
                 )}
               >
                 <item.icon className={cn(
-                  "w-6 h-6 transition-transform group-hover:scale-110",
+                  "w-5 h-5 transition-transform group-hover:scale-110",
                   location.pathname === item.to ? "text-primary" : "text-gray-500"
                 )} />
                 <span className={cn(
-                  "text-[9px] font-bold uppercase tracking-tighter text-center",
+                  "text-[8px] font-bold uppercase tracking-tighter text-center",
                   location.pathname === item.to ? "text-primary" : "text-gray-500"
                 )}>
                   {item.label}

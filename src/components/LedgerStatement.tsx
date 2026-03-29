@@ -210,7 +210,7 @@ export function LedgerStatement() {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div className="flex-1 w-full sm:max-w-md space-y-4">
+          <div className="flex-1 w-full sm:max-w-2xl space-y-4">
             <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Ledger Statement</h1>
             
             <div className="relative">

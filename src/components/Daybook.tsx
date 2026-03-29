@@ -115,7 +115,7 @@ export function Daybook() {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div className="flex-1 w-full sm:max-w-md space-y-4">
+          <div className="flex-1 w-full sm:max-w-2xl space-y-4">
             <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Daybook</h1>
             <div className="flex items-center gap-2">
               <div className="flex-1">
@@ -250,7 +250,7 @@ export function Daybook() {
                       <td className="px-4 lg:px-6 py-4">{v.v_no}</td>
                       <td className="px-4 lg:px-6 py-4 text-right text-foreground font-mono">৳ {v.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                       <td className="px-4 lg:px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex justify-end gap-2">
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(v); }}
                             className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded transition-colors"

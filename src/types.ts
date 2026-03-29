@@ -88,6 +88,8 @@ export interface Item {
   id: string;
   name: string;
   unit_name: string;
+  unit_id?: string;
+  part_no?: string;
   current_stock: number;
   avg_cost: number;
   opening_qty?: number;

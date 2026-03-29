@@ -209,8 +209,8 @@ export default function FounderPanel() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Activity className="w-8 h-8 animate-spin text-primary" />
+      <div className="fixed inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm z-[100]">
+        <Activity className="w-12 h-12 animate-spin text-primary" />
       </div>
     );
   }

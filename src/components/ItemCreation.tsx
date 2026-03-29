@@ -48,7 +48,18 @@ export function ItemCreation() {
       if (!user?.companyId) return;
       try {
         const uData = await erpService.getUnits(user.companyId);
-        setUnits(uData || []);
+        // Filter duplicates by name for UI
+        const uniqueUnits: any[] = [];
+        const names = new Set();
+        if (uData) {
+          for (const u of uData) {
+            if (!names.has(u.name.toLowerCase())) {
+              names.add(u.name.toLowerCase());
+              uniqueUnits.push(u);
+            }
+          }
+        }
+        setUnits(uniqueUnits);
 
         // Fetch unique categories
         const iDataAll = await erpService.getItems(user.companyId);

@@ -119,7 +119,7 @@ export function SalespersonReport() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-card border border-border p-6 rounded-xl shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <div className="p-2 bg-indigo-500/10 rounded-lg">

@@ -14,18 +14,27 @@ export function ItemMaster() {
   const [viewMode, setViewMode] = useState<'master' | 'pricelist'>('master');
 
   useEffect(() => {
-    async function fetchItems() {
+    async function fetchData() {
       if (!user?.companyId) return;
       try {
-        const data = await erpService.getItems(user.companyId);
-        setItems(data || []);
+        const [itemsData, unitsData] = await Promise.all([
+          erpService.getItems(user.companyId),
+          erpService.getUnits(user.companyId)
+        ]);
+        
+        const itemsWithUnits = itemsData.map(item => ({
+          ...item,
+          units: unitsData.find(u => u.id === item.unit_id) || unitsData.find(u => u.name.toLowerCase() === item.unit_id?.toLowerCase())
+        }));
+        
+        setItems(itemsWithUnits);
       } catch (err) {
         console.error('Error fetching items:', err);
       } finally {
         setLoading(false);
       }
     }
-    fetchItems();
+    fetchData();
   }, [user?.companyId]);
 
   const categories = ['All', ...Array.from(new Set(items.map(i => i.category)))];

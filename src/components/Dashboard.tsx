@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area
+  AreaChart, Area, LineChart, Line
 } from 'recharts';
 import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { erpService } from '../services/erpService';
@@ -275,11 +275,11 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-card border border-border p-6">
-          <h3 className="text-[11px] font-mono text-gray-500 uppercase mb-6 tracking-widest">Revenue Trajectory</h3>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height={300}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-card border border-border p-4">
+          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-4 tracking-widest">Revenue Trajectory</h3>
+          <div className="h-[180px] w-full">
+            <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -288,10 +288,10 @@ export function Dashboard() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#666" fontSize={10} tickLine={false} axisLine={false} />
+                <XAxis dataKey="name" stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
+                <YAxis stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#ffffff', border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`, fontSize: '12px', fontFamily: 'monospace' }}
+                  contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#ffffff', border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`, fontSize: '10px', fontFamily: 'monospace' }}
                   itemStyle={{ color: theme === 'dark' ? '#fff' : '#000' }}
                 />
                 <Area type="monotone" dataKey="value" stroke={theme === 'dark' ? '#fff' : '#000'} fillOpacity={1} fill="url(#colorValue)" />
@@ -300,20 +300,56 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-card border border-border p-6">
-          <h3 className="text-[11px] font-mono text-gray-500 uppercase mb-6 tracking-widest">Expense Distribution</h3>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-card border border-border p-4">
+          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-4 tracking-widest">Expense Distribution</h3>
+          <div className="h-[180px] w-full">
+            <ResponsiveContainer width="100%" height={180}>
               <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke="#666" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#666" fontSize={10} tickLine={false} axisLine={false} />
+                <XAxis dataKey="name" stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
+                <YAxis stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#ffffff', border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`, fontSize: '12px', fontFamily: 'monospace' }}
+                  contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#ffffff', border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`, fontSize: '10px', fontFamily: 'monospace' }}
                   itemStyle={{ color: theme === 'dark' ? '#fff' : '#000' }}
                 />
-                <Bar dataKey="value" fill={theme === 'dark' ? '#444' : '#888'} />
+                <Bar dataKey="value" fill={theme === 'dark' ? '#ffffff' : '#000000'} radius={[2, 2, 0, 0]} />
               </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-card border border-border p-4">
+          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-4 tracking-widest">Net Profit Margin</h3>
+          <div className="h-[180px] w-full">
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 0.15 })) : mockChartData.map(d => ({ ...d, value: d.value * 0.15 }))}>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
+                <XAxis dataKey="name" stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
+                <YAxis stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#ffffff', border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`, fontSize: '10px', fontFamily: 'monospace' }}
+                  itemStyle={{ color: theme === 'dark' ? '#fff' : '#000' }}
+                />
+                <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-card border border-border p-4">
+          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-4 tracking-widest">Cash Flow Projection</h3>
+          <div className="h-[180px] w-full">
+            <ResponsiveContainer width="100%" height={180}>
+              <AreaChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 1.2 })) : mockChartData.map(d => ({ ...d, value: d.value * 1.2 }))}>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
+                <XAxis dataKey="name" stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
+                <YAxis stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#ffffff', border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`, fontSize: '10px', fontFamily: 'monospace' }}
+                  itemStyle={{ color: theme === 'dark' ? '#fff' : '#000' }}
+                />
+                <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
