@@ -34,12 +34,16 @@ import {
   Phone,
   Globe,
   LayoutGrid,
-  ListTree
+  ListTree,
+  Bell,
+  Send,
+  Plus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { AppNotification } from '../types';
 
 interface CompanyStats extends Company {
   userCount: number;
@@ -58,9 +62,19 @@ export default function FounderPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<CompanyStats | null>(null);
   const [isEditingSubscription, setIsEditingSubscription] = useState(false);
-  const [viewMode, setViewMode] = useState<'companies' | 'users'>('companies');
+  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications'>('companies');
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [isCreatingNotification, setIsCreatingNotification] = useState(false);
+  const [newNotification, setNewNotification] = useState<Partial<AppNotification>>({
+    title: '',
+    message: '',
+    type: 'info',
+    targetType: 'all',
+    status: 'sent',
+    scheduledAt: Timestamp.now()
+  });
 
   useEffect(() => {
     fetchData();
@@ -80,12 +94,14 @@ export default function FounderPanel() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [companiesSnap, usersSnap] = await Promise.all([
+      const [companiesSnap, usersSnap, notificationsData] = await Promise.all([
         getDocs(collection(db, 'companies')),
-        erpService.getAllUsers()
+        erpService.getAllUsers(),
+        erpService.getNotifications(currentUser?.uid || '', currentUser?.companyId || '', true)
       ]);
       
       setAllUsers(usersSnap);
+      setNotifications(notificationsData);
       const companyData: CompanyStats[] = [];
 
       for (const companyDoc of companiesSnap.docs) {
@@ -202,6 +218,45 @@ export default function FounderPanel() {
     }
   };
 
+  const handleCreateNotification = async () => {
+    if (!newNotification.title || !newNotification.message) return;
+    
+    try {
+      setLoading(true);
+      const data = {
+        ...newNotification,
+        createdBy: currentUser?.uid,
+        sentAt: newNotification.status === 'sent' ? new Date() : undefined
+      };
+      await erpService.createNotification(data);
+      setIsCreatingNotification(false);
+      setNewNotification({
+        title: '',
+        message: '',
+        type: 'info',
+        targetType: 'all',
+        status: 'sent'
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Error creating notification:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      setLoading(true);
+      await erpService.deleteNotification(id);
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredCompanies = companies.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -267,6 +322,15 @@ export default function FounderPanel() {
             >
               <ListTree className="w-4 h-4" />
               User Tree
+            </button>
+            <button
+              onClick={() => setViewMode('notifications')}
+              className={`p-2 rounded-md transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${
+                viewMode === 'notifications' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Bell className="w-4 h-4" />
+              Notifications
             </button>
           </div>
 
@@ -435,7 +499,7 @@ export default function FounderPanel() {
             </tbody>
           </table>
         </div>
-      ) : (
+      ) : viewMode === 'users' ? (
         <div className="space-y-4">
           {allUsers
             .filter(u => u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || u.email?.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -538,7 +602,218 @@ export default function FounderPanel() {
               );
             })}
         </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-bold text-foreground uppercase tracking-widest">System Notifications</h2>
+            <button
+              onClick={() => setIsCreatingNotification(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              New Notification
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            {notifications.length > 0 ? (
+              notifications.map((n) => (
+                <div key={n.id} className="bg-card border border-border rounded-xl p-4 flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={`p-2 rounded-lg ${
+                      n.type === 'info' ? 'bg-blue-500/10 text-blue-500' :
+                      n.type === 'warning' ? 'bg-amber-500/10 text-amber-500' :
+                      n.type === 'success' ? 'bg-emerald-500/10 text-emerald-500' :
+                      n.type === 'system_update' ? 'bg-purple-500/10 text-purple-500' :
+                      'bg-rose-500/10 text-rose-500'
+                    }`}>
+                      {n.type === 'system_update' ? <Activity className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-foreground">{n.title}</h3>
+                        <span className={`text-[8px] uppercase font-bold px-1.5 py-0.5 rounded ${
+                          n.status === 'sent' ? 'bg-emerald-500/10 text-emerald-500' :
+                          n.status === 'scheduled' ? 'bg-blue-500/10 text-blue-500' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                          {n.status}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{n.message}</p>
+                      <div className="flex items-center gap-4 pt-2">
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          Target: {n.targetType.toUpperCase()} {n.targetId ? `(${n.targetId})` : ''}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {n.status === 'scheduled' ? `Scheduled: ${safeFormat(n.scheduledAt, 'dd MMM, HH:mm')}` : `Sent: ${safeFormat(n.sentAt || n.createdAt, 'dd MMM, HH:mm')}`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteNotification(n.id)}
+                    className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="bg-card border border-border rounded-xl p-12 text-center">
+                <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                <p className="text-sm text-muted-foreground italic">No notifications sent yet.</p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
+
+      {/* Create Notification Modal */}
+      <AnimatePresence>
+        {isCreatingNotification && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+            >
+              <div className="p-6 border-b border-border flex items-center justify-between">
+                <h2 className="text-xl font-bold text-foreground">New System Notification</h2>
+                <button 
+                  onClick={() => setIsCreatingNotification(false)}
+                  className="p-2 hover:bg-foreground/5 rounded-lg transition-colors"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Title</label>
+                  <input
+                    type="text"
+                    value={newNotification.title}
+                    onChange={(e) => setNewNotification({ ...newNotification, title: e.target.value })}
+                    placeholder="Notification Title"
+                    className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Message</label>
+                  <textarea
+                    value={newNotification.message}
+                    onChange={(e) => setNewNotification({ ...newNotification, message: e.target.value })}
+                    placeholder="Enter your message here..."
+                    rows={4}
+                    className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none resize-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground">Type</label>
+                    <select
+                      value={newNotification.type}
+                      onChange={(e) => setNewNotification({ ...newNotification, type: e.target.value as any })}
+                      className="w-full bg-background border border-border rounded-lg p-2 text-sm"
+                    >
+                      <option value="info">Information</option>
+                      <option value="success">Success</option>
+                      <option value="warning">Warning</option>
+                      <option value="error">Error</option>
+                      <option value="system_update">System Update</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground">Status</label>
+                    <select
+                      value={newNotification.status}
+                      onChange={(e) => setNewNotification({ ...newNotification, status: e.target.value as any })}
+                      className="w-full bg-background border border-border rounded-lg p-2 text-sm"
+                    >
+                      <option value="sent">Send Now</option>
+                      <option value="scheduled">Schedule for Later</option>
+                      <option value="draft">Save as Draft</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground">Target Type</label>
+                    <select
+                      value={newNotification.targetType}
+                      onChange={(e) => setNewNotification({ ...newNotification, targetType: e.target.value as any, targetId: '' })}
+                      className="w-full bg-background border border-border rounded-lg p-2 text-sm"
+                    >
+                      <option value="all">All Users</option>
+                      <option value="company">Specific Company</option>
+                      <option value="user">Specific User</option>
+                    </select>
+                  </div>
+                  {newNotification.targetType !== 'all' && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground">Target ID</label>
+                      {newNotification.targetType === 'company' ? (
+                        <select
+                          value={newNotification.targetId}
+                          onChange={(e) => setNewNotification({ ...newNotification, targetId: e.target.value })}
+                          className="w-full bg-background border border-border rounded-lg p-2 text-sm"
+                        >
+                          <option value="">Select Company</option>
+                          {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      ) : (
+                        <select
+                          value={newNotification.targetId}
+                          onChange={(e) => setNewNotification({ ...newNotification, targetId: e.target.value })}
+                          className="w-full bg-background border border-border rounded-lg p-2 text-sm"
+                        >
+                          <option value="">Select User</option>
+                          {allUsers.map(u => <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>)}
+                        </select>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {newNotification.status === 'scheduled' && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground">Schedule Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      onChange={(e) => setNewNotification({ ...newNotification, scheduledAt: Timestamp.fromDate(new Date(e.target.value)) })}
+                      className="w-full bg-background border border-border rounded-lg p-2 text-sm"
+                    />
+                  </div>
+                )}
+
+                <div className="pt-4 flex gap-3">
+                  <button
+                    onClick={() => setIsCreatingNotification(false)}
+                    className="flex-1 py-2 border border-border text-foreground rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-muted transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateNotification}
+                    disabled={!newNotification.title || !newNotification.message}
+                    className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg font-bold uppercase tracking-widest text-[10px] hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    {newNotification.status === 'sent' ? 'Send Now' : 'Save Notification'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Company Details Modal */}
       <AnimatePresence>

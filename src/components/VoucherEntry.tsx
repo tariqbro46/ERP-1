@@ -33,6 +33,42 @@ function Toggle({ enabled, onChange, label }: { enabled: boolean, onChange: () =
   );
 }
 
+const getVoucherColor = (type: string) => {
+  switch (type) {
+    case 'Sales': return 'text-emerald-500';
+    case 'Purchase': return 'text-blue-500';
+    case 'Payment': return 'text-rose-500';
+    case 'Receipt': return 'text-amber-500';
+    case 'Contra': return 'text-indigo-500';
+    case 'Journal': return 'text-purple-500';
+    default: return 'text-emerald-500';
+  }
+};
+
+const getVoucherBgColor = (type: string) => {
+  switch (type) {
+    case 'Sales': return 'bg-emerald-500';
+    case 'Purchase': return 'bg-blue-500';
+    case 'Payment': return 'bg-rose-500';
+    case 'Receipt': return 'bg-amber-500';
+    case 'Contra': return 'bg-indigo-500';
+    case 'Journal': return 'bg-purple-500';
+    default: return 'bg-emerald-500';
+  }
+};
+
+const getVoucherHoverBgColor = (type: string) => {
+  switch (type) {
+    case 'Sales': return 'hover:bg-emerald-600';
+    case 'Purchase': return 'hover:bg-blue-600';
+    case 'Payment': return 'hover:bg-rose-600';
+    case 'Receipt': return 'hover:bg-amber-600';
+    case 'Contra': return 'hover:bg-indigo-600';
+    case 'Journal': return 'hover:bg-purple-600';
+    default: return 'hover:bg-emerald-600';
+  }
+};
+
 export function VoucherEntry() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -633,7 +669,10 @@ export function VoucherEntry() {
                   setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
                 }}
                 tabIndex={5}
-                className="w-full bg-background border border-border text-emerald-500 p-2 text-sm outline-none focus:border-foreground font-bold uppercase"
+                className={cn(
+                  "w-full bg-background border border-border p-2 text-sm outline-none focus:border-foreground font-bold uppercase",
+                  getVoucherColor(vType)
+                )}
               >
                 {['Sales', 'Purchase', 'Payment', 'Receipt', 'Contra', 'Journal']
                   .filter(type => isInventoryEnabled || (type !== 'Sales' && type !== 'Purchase'))
@@ -990,7 +1029,11 @@ export function VoucherEntry() {
                         type="button"
                         onClick={() => setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }])}
                         tabIndex={500}
-                        className="px-4 py-1.5 bg-emerald-500 text-black text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-sm"
+                        className={cn(
+                          "px-4 py-1.5 text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
+                          getVoucherBgColor(vType),
+                          getVoucherHoverBgColor(vType)
+                        )}
                       >
                         <PlusCircle className="w-3 h-3" /> ADD ITEM
                       </button>
@@ -1044,7 +1087,11 @@ export function VoucherEntry() {
                         type="button"
                         onClick={() => setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
                         tabIndex={500}
-                        className="px-4 py-1.5 bg-emerald-500 text-black text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-sm"
+                        className={cn(
+                          "px-4 py-1.5 text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
+                          getVoucherBgColor(vType),
+                          getVoucherHoverBgColor(vType)
+                        )}
                       >
                         <PlusCircle className="w-3 h-3" /> ADD ITEM
                       </button>
@@ -1143,7 +1190,11 @@ export function VoucherEntry() {
                         type="button"
                         onClick={() => setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
                         tabIndex={500}
-                        className="px-4 py-1.5 bg-emerald-500 text-black text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-sm"
+                        className={cn(
+                          "px-4 py-1.5 text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
+                          getVoucherBgColor(vType),
+                          getVoucherHoverBgColor(vType)
+                        )}
                       >
                         <PlusCircle className="w-3 h-3" /> ADD ITEM
                       </button>

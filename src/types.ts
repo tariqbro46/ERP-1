@@ -120,6 +120,20 @@ export interface Employee {
   updatedAt?: any;
 }
 
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error' | 'system_update' | 'announcement';
+  targetType: 'all' | 'company' | 'user';
+  targetId?: string; // companyId or userId
+  scheduledAt?: any; // timestamp
+  sentAt?: any; // timestamp
+  status: 'draft' | 'scheduled' | 'sent';
+  createdBy: string;
+  createdAt: any;
+}
+
 export interface SalarySheet {
   id: string;
   companyId: string;

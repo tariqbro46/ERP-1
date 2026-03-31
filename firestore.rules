@@ -197,5 +197,17 @@ service cloud.firestore {
       allow create: if isAuthenticated() && request.resource.data.companyId == getUserData().companyId;
       allow delete: if isSuperAdmin();
     }
+
+    // Notifications
+    match /notifications/{id} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.targetType == 'all' ||
+        (resource.data.targetType == 'company' && resource.data.targetId == getUserData().companyId) ||
+        (resource.data.targetType == 'user' && resource.data.targetId == request.auth.uid)
+      );
+      allow write: if isFounder();
+      allow delete: if isFounder();
+    }
   }
 }

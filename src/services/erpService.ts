@@ -18,9 +18,19 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
+import { 
+  Company, 
+  Ledger, 
+  Voucher, 
+  Item, 
+  Employee, 
+  SalarySheet, 
+  Advance, 
+  Loan, 
+  AppNotification 
+} from '../types';
 import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { Voucher, Item, Ledger } from '../types';
 
 // Initialize a secondary auth instance for admin tasks (adding users)
 // This avoids signing out the current admin user
@@ -1207,6 +1217,73 @@ export const erpService = {
       await updateDoc(userRef, { target_amount });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
+    }
+  },
+
+  // Notifications
+  async getNotifications(userId: string, companyId: string, isSuperAdmin: boolean): Promise<AppNotification[]> {
+    try {
+      const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      const allNotifications = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          ...data,
+          id: doc.id, 
+          createdAt: data.createdAt?.toDate() || new Date(),
+          scheduledAt: data.scheduledAt?.toDate(),
+          sentAt: data.sentAt?.toDate()
+        } as AppNotification;
+      });
+      
+      if (isSuperAdmin) return allNotifications;
+      
+      const now = new Date();
+      return allNotifications.filter(n => {
+        // Only show sent or scheduled for now
+        if (n.status === 'draft') return false;
+        if (n.status === 'scheduled' && n.scheduledAt && n.scheduledAt > now) return false;
+        
+        if (n.targetType === 'all') return true;
+        if (n.targetType === 'company' && n.targetId === companyId) return true;
+        if (n.targetType === 'user' && n.targetId === userId) return true;
+        return false;
+      });
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return [];
+    }
+  },
+
+  async createNotification(notification: Partial<AppNotification>) {
+    try {
+      const ref = doc(collection(db, 'notifications'));
+      const data = {
+        ...notification,
+        id: ref.id,
+        createdAt: serverTimestamp(),
+        status: notification.status || 'draft'
+      };
+      await setDoc(ref, data);
+      return data;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'notifications');
+    }
+  },
+
+  async updateNotification(id: string, updates: Partial<AppNotification>) {
+    try {
+      await updateDoc(doc(db, 'notifications', id), updates);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `notifications/${id}`);
+    }
+  },
+
+  async deleteNotification(id: string) {
+    try {
+      await deleteDoc(doc(db, 'notifications', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `notifications/${id}`);
     }
   }
 };
