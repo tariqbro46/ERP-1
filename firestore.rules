@@ -11,15 +11,14 @@ service cloud.firestore {
     
     function isFounder() {
       return isAuthenticated() && 
-             (request.auth.token.email == "sapientman46@gmail.com" || 
-              (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Founder'));
+             (request.auth.token.get('email', '') == "sapientman46@gmail.com" || 
+              (userExists() && getUserData().get('role', '') == 'Founder'));
     }
 
     function isMarketingManager() {
       return isAuthenticated() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Marketing Manager';
+             userExists() && 
+             getUserData().get('role', '') == 'Marketing Manager';
     }
 
     function isSuperAdmin() {
@@ -202,12 +201,15 @@ service cloud.firestore {
     match /notifications/{id} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() || 
-        resource.data.targetType == 'all' ||
-        (resource.data.targetType == 'company' && resource.data.targetId == getUserData().companyId) ||
-        (resource.data.targetType == 'user' && resource.data.targetId == request.auth.uid)
+        (resource != null && (
+          resource.data.targetType == 'all' ||
+          (resource.data.targetType == 'company' && resource.data.targetId == getUserData().companyId) ||
+          (resource.data.targetType == 'user' && resource.data.targetId == request.auth.uid)
+        ))
       );
-      allow write: if isFounder();
-      allow delete: if isFounder();
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
   }
 }

@@ -1223,18 +1223,50 @@ export const erpService = {
   // Notifications
   async getNotifications(userId: string, companyId: string, isSuperAdmin: boolean): Promise<AppNotification[]> {
     try {
-      const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      const allNotifications = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return { 
-          ...data,
-          id: doc.id, 
-          createdAt: data.createdAt?.toDate() || new Date(),
-          scheduledAt: data.scheduledAt?.toDate(),
-          sentAt: data.sentAt?.toDate()
-        } as AppNotification;
-      });
+      let allNotifications: AppNotification[] = [];
+
+      if (isSuperAdmin) {
+        const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+        allNotifications = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return { 
+            ...data,
+            id: doc.id, 
+            createdAt: data.createdAt?.toDate() || new Date(),
+            scheduledAt: data.scheduledAt?.toDate(),
+            sentAt: data.sentAt?.toDate()
+          } as AppNotification;
+        });
+      } else {
+        // For non-admins, fetch targeted notifications
+        // We avoid orderBy here to prevent index requirements for non-admin queries
+        const qAll = query(collection(db, 'notifications'), where('targetType', '==', 'all'));
+        const qCompany = query(collection(db, 'notifications'), where('targetType', '==', 'company'), where('targetId', '==', companyId));
+        const qUser = query(collection(db, 'notifications'), where('targetType', '==', 'user'), where('targetId', '==', userId));
+        
+        const [snapAll, snapCompany, snapUser] = await Promise.all([
+          getDocs(qAll),
+          getDocs(qCompany),
+          getDocs(qUser)
+        ]);
+        
+        const uniqueDocs = new Map();
+        [...snapAll.docs, ...snapCompany.docs, ...snapUser.docs].forEach(doc => {
+          uniqueDocs.set(doc.id, doc);
+        });
+
+        allNotifications = Array.from(uniqueDocs.values()).map(doc => {
+          const data = doc.data();
+          return { 
+            ...data,
+            id: doc.id, 
+            createdAt: data.createdAt?.toDate() || new Date(),
+            scheduledAt: data.scheduledAt?.toDate(),
+            sentAt: data.sentAt?.toDate()
+          } as AppNotification;
+        }).sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+      }
       
       if (isSuperAdmin) return allNotifications;
       
@@ -1243,11 +1275,7 @@ export const erpService = {
         // Only show sent or scheduled for now
         if (n.status === 'draft') return false;
         if (n.status === 'scheduled' && n.scheduledAt && n.scheduledAt > now) return false;
-        
-        if (n.targetType === 'all') return true;
-        if (n.targetType === 'company' && n.targetId === companyId) return true;
-        if (n.targetType === 'user' && n.targetId === userId) return true;
-        return false;
+        return true;
       });
     } catch (error) {
       console.error('Error fetching notifications:', error);
