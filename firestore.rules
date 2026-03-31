@@ -208,7 +208,10 @@ service cloud.firestore {
         ))
       );
       allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin();
+      allow update: if isSuperAdmin() || (
+        isAuthenticated() && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+      );
       allow delete: if isSuperAdmin();
     }
   }

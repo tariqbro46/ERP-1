@@ -56,6 +56,7 @@ import FounderPanel from './components/FounderPanel';
 import SubscriptionRequired from './components/SubscriptionRequired';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import NotificationCenter from './components/NotificationCenter';
+import NotificationPage from './components/NotificationPage';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login, Register } from './components/Auth';
@@ -1012,6 +1013,7 @@ function AppContent() {
           <Route path="/companies" element={<CompanyManagement />} />
           <Route path="/users" element={<UserManagement />} />
           <Route path="/founder" element={<FounderPanel />} />
+          <Route path="/notifications" element={<NotificationPage />} />
           <Route path="*" element={<div className="p-10 text-foreground font-mono">404 - Feature Not Implemented</div>} />
         </Routes>
       </ErrorBoundary>

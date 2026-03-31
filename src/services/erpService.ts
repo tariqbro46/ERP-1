@@ -16,7 +16,9 @@ import {
   increment,
   writeBatch,
   Timestamp,
-  onSnapshot
+  onSnapshot,
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -1345,6 +1347,26 @@ export const erpService = {
       await deleteDoc(doc(db, 'notifications', id));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `notifications/${id}`);
+    }
+  },
+
+  async markNotificationAsRead(id: string, userId: string) {
+    try {
+      await updateDoc(doc(db, 'notifications', id), {
+        readBy: arrayUnion(userId)
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `notifications/${id}`);
+    }
+  },
+
+  async markNotificationAsUnread(id: string, userId: string) {
+    try {
+      await updateDoc(doc(db, 'notifications', id), {
+        readBy: arrayRemove(userId)
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `notifications/${id}`);
     }
   }
 };

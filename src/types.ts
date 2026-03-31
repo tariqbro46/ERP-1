@@ -130,6 +130,7 @@ export interface AppNotification {
   scheduledAt?: any; // timestamp
   sentAt?: any; // timestamp
   status: 'draft' | 'scheduled' | 'sent';
+  readBy?: string[]; // Array of user IDs who have read this notification
   createdBy: string;
   createdAt: any;
 }
