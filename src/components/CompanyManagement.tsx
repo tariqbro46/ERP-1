@@ -219,46 +219,56 @@ export function CompanyManagement() {
                       </div>
                       <div>
                         <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">{company.name}</h3>
-                        <p className="text-[9px] text-gray-500 uppercase tracking-widest">{company.address || 'No address set'}</p>
+                        <div className="space-y-0.5">
+                          <p className="text-[9px] text-gray-500 uppercase tracking-widest">{company.address || 'No address set'}</p>
+                          {(company.phone || company.email) && (
+                            <p className="text-[8px] text-gray-400 uppercase tracking-widest">
+                              {company.phone} {company.phone && company.email && '•'} {company.email}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    {user?.companyId === company.id ? (
-                      <div className="flex items-center gap-1 text-emerald-500 text-[8px] font-bold uppercase tracking-widest">
-                        <Check className="w-3 h-3" />
-                        Active
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      {user?.companyId === company.id && (
+                        <div className="flex items-center gap-1 text-emerald-500 text-[8px] font-bold uppercase tracking-widest mr-2">
+                          <Check className="w-3 h-3" />
+                          Active
+                        </div>
+                      )}
                       {!editingId && (
                         <>
                           <button
                             onClick={() => startEditing(company)}
                             disabled={!!switching}
                             className="opacity-0 group-hover:opacity-100 transition-all text-gray-500 hover:text-foreground p-1"
-                            title="Edit Company"
+                            title="Edit Company Details"
                           >
                             <Plus className="w-4 h-4 rotate-45" />
                           </button>
-                          <button
-                            onClick={() => handleDeleteCompany(company.id)}
-                            disabled={!!switching}
-                            className="opacity-0 group-hover:opacity-100 transition-all text-rose-500 hover:text-rose-600 p-1"
-                            title="Delete Company"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleSwitch(company.id)}
-                            disabled={!!switching}
-                            className="opacity-0 group-hover:opacity-100 transition-all text-[9px] uppercase font-bold tracking-widest text-gray-500 hover:text-foreground flex items-center gap-1"
-                          >
-                            {switching === company.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
-                            Switch
-                          </button>
+                          {user?.companyId !== company.id && (
+                            <>
+                              <button
+                                onClick={() => handleDeleteCompany(company.id)}
+                                disabled={!!switching}
+                                className="opacity-0 group-hover:opacity-100 transition-all text-rose-500 hover:text-rose-600 p-1"
+                                title="Delete Company"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleSwitch(company.id)}
+                                disabled={!!switching}
+                                className="opacity-0 group-hover:opacity-100 transition-all text-[9px] uppercase font-bold tracking-widest text-gray-500 hover:text-foreground flex items-center gap-1"
+                              >
+                                {switching === company.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+                                Switch
+                              </button>
+                            </>
+                          )}
                         </>
                       )}
                     </div>
-                  )}
                 </div>
               ))}
 

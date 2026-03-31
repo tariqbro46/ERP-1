@@ -132,6 +132,9 @@ export function Settings() {
       companyName: localCompanyName, 
       companyAddress: localCompanyAddress,
       slogan: localSlogan,
+      printPhone: localPrintPhone,
+      printEmail: localPrintEmail,
+      printWebsite: localPrintWebsite,
       menuBarStyle: localMenuBarStyle,
       layoutWidth: localLayoutWidth,
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
@@ -408,6 +411,33 @@ export function Settings() {
                         onChange={(e) => setLocalCompanyAddress(e.target.value)}
                         rows={2}
                         className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground resize-none" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Phone</label>
+                      <input 
+                        type="text" 
+                        value={localPrintPhone || ''} 
+                        onChange={(e) => setLocalPrintPhone(e.target.value)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Email</label>
+                      <input 
+                        type="email" 
+                        value={localPrintEmail || ''} 
+                        onChange={(e) => setLocalPrintEmail(e.target.value)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Website</label>
+                      <input 
+                        type="text" 
+                        value={localPrintWebsite || ''} 
+                        onChange={(e) => setLocalPrintWebsite(e.target.value)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
                       />
                     </div>
                     <div className="space-y-2">

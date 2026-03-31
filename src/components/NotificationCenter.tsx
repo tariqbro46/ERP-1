@@ -250,9 +250,9 @@ export default function NotificationCenter() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+              className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden"
             >
-              <div className="p-6 border-b border-border flex items-center justify-between bg-muted/30">
+              <div className="p-6 border-b border-border flex items-center justify-between bg-muted/30 flex-shrink-0">
                 <div className="flex items-center gap-3">
                   {getIcon(selectedNotification.type)}
                   <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">
@@ -267,7 +267,7 @@ export default function NotificationCenter() {
                 </button>
               </div>
 
-              <div className="p-8 space-y-6">
+              <div className="flex-1 overflow-y-auto p-8 space-y-6">
                 <div className="space-y-2">
                   <h4 className="text-lg font-bold text-foreground leading-tight">
                     {selectedNotification.title}
@@ -284,47 +284,47 @@ export default function NotificationCenter() {
                     {selectedNotification.message}
                   </p>
                 </div>
+              </div>
 
-                <div className="flex items-center justify-between pt-4">
-                  <div className="flex gap-2">
-                    {selectedNotification.readBy?.includes(user?.uid || '') ? (
-                      <button
-                        onClick={() => {
-                          handleMarkAsUnread(null, selectedNotification.id);
-                          setSelectedNotification({
-                            ...selectedNotification,
-                            readBy: selectedNotification.readBy?.filter(id => id !== user?.uid)
-                          });
-                        }}
-                        className="px-4 py-2 text-xs font-bold text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors"
-                      >
-                        Mark as unread
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          handleMarkAsRead(null, selectedNotification.id);
-                          setSelectedNotification({
-                            ...selectedNotification,
-                            readBy: [...(selectedNotification.readBy || []), user?.uid || '']
-                          });
-                        }}
-                        className="px-4 py-2 text-xs font-bold bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
-                      >
-                        Mark as read
-                      </button>
-                    )}
-                  </div>
-                  
-                  {isSuperAdmin && (
+              <div className="p-6 border-t border-border bg-muted/10 flex items-center justify-between flex-shrink-0">
+                <div className="flex gap-2">
+                  {selectedNotification.readBy?.includes(user?.uid || '') ? (
                     <button
-                      onClick={(e) => handleDelete(e, selectedNotification.id)}
-                      className="px-4 py-2 text-xs font-bold text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                      onClick={() => {
+                        handleMarkAsUnread(null, selectedNotification.id);
+                        setSelectedNotification({
+                          ...selectedNotification,
+                          readBy: selectedNotification.readBy?.filter(id => id !== user?.uid)
+                        });
+                      }}
+                      className="px-4 py-2 text-xs font-bold text-muted-foreground hover:text-foreground border border-border rounded-lg transition-colors"
                     >
-                      Delete
+                      Mark as unread
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        handleMarkAsRead(null, selectedNotification.id);
+                        setSelectedNotification({
+                          ...selectedNotification,
+                          readBy: [...(selectedNotification.readBy || []), user?.uid || '']
+                        });
+                      }}
+                      className="px-4 py-2 text-xs font-bold bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+                    >
+                      Mark as read
                     </button>
                   )}
                 </div>
+                
+                {isSuperAdmin && (
+                  <button
+                    onClick={(e) => handleDelete(e, selectedNotification.id)}
+                    className="px-4 py-2 text-xs font-bold text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </motion.div>
           </div>
