@@ -15,7 +15,8 @@ import {
   serverTimestamp,
   increment,
   writeBatch,
-  Timestamp
+  Timestamp,
+  onSnapshot
 } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -1280,6 +1281,38 @@ export const erpService = {
     } catch (error) {
       console.error('Error fetching notifications:', error);
       return [];
+    }
+  },
+
+  subscribeToNotifications(userId: string, companyId: string, isSuperAdmin: boolean, callback: (notifications: AppNotification[]) => void) {
+    if (isSuperAdmin) {
+      const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
+      return onSnapshot(q, (snapshot) => {
+        const notifications = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return { 
+            ...data,
+            id: doc.id, 
+            createdAt: data.createdAt?.toDate() || new Date(),
+            scheduledAt: data.scheduledAt?.toDate(),
+            sentAt: data.sentAt?.toDate()
+          } as AppNotification;
+        });
+        callback(notifications);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, 'notifications');
+      });
+    } else {
+      // For non-admins, we'll use a simpler approach for real-time
+      // Since we can't easily combine multiple onSnapshot queries into one sorted list with Firestore's client SDK
+      // we'll just listen to the 'all' notifications for real-time updates and refresh the others
+      const qAll = query(collection(db, 'notifications'), where('targetType', '==', 'all'));
+      return onSnapshot(qAll, async () => {
+        const data = await this.getNotifications(userId, companyId, false);
+        callback(data);
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, 'notifications');
+      });
     }
   },
 

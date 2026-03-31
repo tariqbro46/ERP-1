@@ -55,6 +55,7 @@ import { SalespersonReport } from './components/SalespersonReport';
 import FounderPanel from './components/FounderPanel';
 import SubscriptionRequired from './components/SubscriptionRequired';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import NotificationCenter from './components/NotificationCenter';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login, Register } from './components/Auth';
@@ -482,6 +483,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Right side controls for macOS */}
       <div className="flex items-center gap-4">
+        <NotificationCenter />
         <button 
           onClick={toggleTheme}
           className="p-1.5 rounded-full hover:bg-foreground/5 transition-colors text-gray-500 hover:text-foreground"
@@ -635,6 +637,8 @@ function Layout({ children }: { children: React.ReactNode }) {
         )}
         
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-xl border border-border/50 h-14 px-2 rounded-2xl flex items-center gap-1 shadow-2xl z-50 hidden lg:flex">
+          <NotificationCenter />
+          <div className="w-[1px] h-6 bg-border mx-2" />
           <button 
             onClick={() => setIsWinStartOpen(!isWinStartOpen)}
             className={cn(
@@ -754,6 +758,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="ml-auto flex items-center gap-3 lg:gap-6 z-10">
+              <NotificationCenter />
               <button 
                 onClick={toggleTheme}
                 className="p-2 rounded-full hover:bg-card transition-colors text-gray-500 hover:text-foreground"

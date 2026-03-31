@@ -1,28 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, X, Info, AlertTriangle, CheckCircle, AlertCircle, Clock, Trash2 } from 'lucide-react';
+import { Bell, X, Info, AlertTriangle, CheckCircle, AlertCircle, Clock, Trash2, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { AppNotification } from '../types';
 import { format } from 'date-fns';
+import { cn } from '../lib/utils';
 
 export default function NotificationCenter() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [hasNew, setHasNew] = useState(false);
+  const isSuperAdmin = user?.role === 'Founder' || user?.email === 'sapientman46@gmail.com';
 
   useEffect(() => {
-    if (user) {
-      fetchNotifications();
+    if (!user) return;
+    
+    setLoading(true);
+    const unsubscribe = erpService.subscribeToNotifications(
+      user.uid, 
+      user.companyId, 
+      isSuperAdmin,
+      (data) => {
+        if (data.length > notifications.length && notifications.length > 0) {
+          setHasNew(true);
+        }
+        setNotifications(data);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user, notifications.length]);
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!window.confirm('Delete this notification?')) return;
+    try {
+      await erpService.deleteNotification(id);
+    } catch (error) {
+      console.error('Error deleting notification:', error);
     }
-  }, [user]);
+  };
 
   const fetchNotifications = async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const data = await erpService.getNotifications(user.uid, user.companyId, false);
+      const data = await erpService.getNotifications(
+        user.uid, 
+        user.companyId, 
+        isSuperAdmin
+      );
       setNotifications(data);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -36,23 +67,32 @@ export default function NotificationCenter() {
       case 'success': return <CheckCircle className="w-4 h-4 text-emerald-500" />;
       case 'warning': return <AlertTriangle className="w-4 h-4 text-amber-500" />;
       case 'error': return <AlertCircle className="w-4 h-4 text-rose-500" />;
+      case 'system_update': return <Activity className="w-4 h-4 text-indigo-500" />;
       default: return <Info className="w-4 h-4 text-blue-500" />;
     }
   };
 
-  const unreadCount = notifications.length; // For now, we don't have a "read" status, so all are "new"
+  const unreadCount = notifications.length;
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
+      <motion.button
+        onClick={() => {
+          setIsOpen(!isOpen);
+          setHasNew(false);
+        }}
+        animate={hasNew ? { rotate: [0, -10, 10, -10, 10, 0] } : {}}
+        transition={{ duration: 0.5, repeat: hasNew ? Infinity : 0, repeatDelay: 2 }}
         className="relative p-2 text-muted-foreground hover:text-foreground hover:bg-foreground/5 rounded-lg transition-all"
       >
-        <Bell className="w-5 h-5" />
+        <Bell className={cn("w-5 h-5", hasNew && "text-primary")} />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-background" />
+          <span className={cn(
+            "absolute top-1.5 right-1.5 w-2 h-2 rounded-full border-2 border-background",
+            hasNew ? "bg-primary animate-pulse" : "bg-rose-500"
+          )} />
         )}
-      </button>
+      </motion.button>
 
       <AnimatePresence>
         {isOpen && (
@@ -91,7 +131,17 @@ export default function NotificationCenter() {
                           {getIcon(n.type)}
                         </div>
                         <div className="flex-1 space-y-1">
-                          <h4 className="text-xs font-bold text-foreground">{n.title}</h4>
+                          <div className="flex items-start justify-between gap-2">
+                            <h4 className="text-xs font-bold text-foreground">{n.title}</h4>
+                            {isSuperAdmin && (
+                              <button 
+                                onClick={(e) => handleDelete(e, n.id)}
+                                className="p-1 opacity-0 group-hover:opacity-100 text-rose-500 hover:bg-rose-500/10 rounded transition-all"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
                           <p className="text-[11px] text-muted-foreground leading-relaxed">{n.message}</p>
                           <p className="text-[9px] text-muted-foreground pt-1">
                             {n.sentAt ? format(n.sentAt, 'dd MMM, HH:mm') : format(n.createdAt, 'dd MMM, HH:mm')}
