@@ -113,6 +113,7 @@ export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: Q
             <input
               type="number"
               value={formData.opening_balance ?? ''}
+              onFocus={e => e.target.value === '0' && e.target.select()}
               onChange={e => setFormData({ ...formData, opening_balance: Number(e.target.value) })}
               className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
             />

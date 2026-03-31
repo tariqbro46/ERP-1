@@ -209,6 +209,7 @@ export const UserManagement: React.FC = () => {
                     <input
                       type="number"
                       defaultValue={profile.target_amount || 0}
+                      onFocus={e => e.target.value === '0' && e.target.select()}
                       onBlur={async (e) => {
                         const val = Number(e.target.value);
                         if (val !== profile.target_amount) {
@@ -341,6 +342,7 @@ export const UserManagement: React.FC = () => {
                 <input
                   type="number"
                   value={newUser.target_amount}
+                  onFocus={e => e.target.value === '0' && e.target.select()}
                   onChange={(e) => setNewUser({ ...newUser, target_amount: Number(e.target.value) })}
                   className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
                   placeholder="0"

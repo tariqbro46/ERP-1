@@ -165,6 +165,7 @@ export function QuickItemModal({ isOpen, onClose, onSuccess }: QuickItemModalPro
               <input
                 type="number"
                 value={formData.opening_qty || ''}
+                onFocus={e => e.target.value === '0' && e.target.select()}
                 onChange={e => setFormData({ ...formData, opening_qty: Number(e.target.value) })}
                 className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
               />
@@ -174,6 +175,7 @@ export function QuickItemModal({ isOpen, onClose, onSuccess }: QuickItemModalPro
               <input
                 type="number"
                 value={formData.opening_rate || ''}
+                onFocus={e => e.target.value === '0' && e.target.select()}
                 onChange={e => setFormData({ ...formData, opening_rate: Number(e.target.value) })}
                 className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
               />

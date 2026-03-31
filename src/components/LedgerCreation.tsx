@@ -568,6 +568,7 @@ export function LedgerCreation() {
                 <input
                   type="number"
                   value={formData.opening_balance ?? ''}
+                  onFocus={e => e.target.value === '0' && e.target.select()}
                   onChange={e => setFormData({ ...formData, opening_balance: Number(e.target.value) })}
                   className="flex-1 bg-background border border-border text-foreground p-4 text-lg font-bold outline-none focus:border-foreground transition-colors text-right"
                 />

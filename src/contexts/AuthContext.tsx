@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc, getDocs, collection } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
 
 export type UserRole = 'Founder' | 'Marketing Manager' | 'Admin' | 'Manager' | 'Staff';
 
@@ -83,13 +83,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else {
             // FOUNDER RECOVERY: If the user is the Founder but their profile is missing, recreate it.
             if (fUser.email?.toLowerCase() === 'sapientman46@gmail.com') {
-              console.log("Founder profile missing, attempting recovery...");
+              console.log("Founder profile missing, attempting recovery for UID:", fUser.uid);
               try {
-                // Find any existing company or create a placeholder
-                const companiesSnap = await getDocs(collection(db, 'companies'));
+                // 1. Try to find a company where this user is the owner
+                const ownerQuery = query(collection(db, 'companies'), where('ownerId', '==', fUser.uid));
+                const ownerSnap = await getDocs(ownerQuery);
+                
                 let companyId = 'placeholder';
-                if (!companiesSnap.empty) {
-                  companyId = companiesSnap.docs[0].id;
+                if (!ownerSnap.empty) {
+                  companyId = ownerSnap.docs[0].id;
+                  console.log("Found company by ownerId:", companyId);
+                } else {
+                  // 2. Try by createdBy
+                  const creatorQuery = query(collection(db, 'companies'), where('createdBy', '==', fUser.uid));
+                  const creatorSnap = await getDocs(creatorQuery);
+                  if (!creatorSnap.empty) {
+                    companyId = creatorSnap.docs[0].id;
+                    console.log("Found company by createdBy:", companyId);
+                  } else {
+                    // 3. Fallback to ANY company if no direct ownership found
+                    const allCompaniesSnap = await getDocs(collection(db, 'companies'));
+                    if (!allCompaniesSnap.empty) {
+                      companyId = allCompaniesSnap.docs[0].id;
+                      console.log("Found fallback company:", companyId);
+                    } else {
+                      console.log("No companies found at all. Using placeholder.");
+                    }
+                  }
                 }
 
                 const newProfile: Profile = {

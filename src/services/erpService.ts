@@ -1016,11 +1016,13 @@ export const erpService = {
 
   async updateCompany(companyId: string, data: any) {
     try {
+      if (companyId === 'placeholder') return { id: companyId, ...data };
+      
       const ref = doc(db, 'companies', companyId);
-      await updateDoc(ref, {
+      await setDoc(ref, {
         ...data,
         updatedAt: serverTimestamp()
-      });
+      }, { merge: true });
       return { id: companyId, ...data };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `companies/${companyId}`);
@@ -1111,9 +1113,27 @@ export const erpService = {
 
   async getUserCompanies(userId: string) {
     try {
-      const q = query(collection(db, 'companies'), where('createdBy', '==', userId));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Fetch companies where user is owner
+      const qOwner = query(collection(db, 'companies'), where('ownerId', '==', userId));
+      const snapOwner = await getDocs(qOwner);
+      
+      // Fetch companies where user is creator
+      const qCreator = query(collection(db, 'companies'), where('createdBy', '==', userId));
+      const snapCreator = await getDocs(qCreator);
+      
+      const companiesMap = new Map();
+      
+      snapOwner.docs.forEach(doc => {
+        companiesMap.set(doc.id, { id: doc.id, ...doc.data() });
+      });
+      
+      snapCreator.docs.forEach(doc => {
+        if (!companiesMap.has(doc.id)) {
+          companiesMap.set(doc.id, { id: doc.id, ...doc.data() });
+        }
+      });
+      
+      return Array.from(companiesMap.values());
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'companies');
       return [];
@@ -1150,14 +1170,20 @@ export const erpService = {
 
       // If companyName, companyAddress, phone, email, or website is updated, also update the main company document
       if (settings.companyName || settings.companyAddress || settings.printPhone || settings.printEmail || settings.printWebsite) {
-        const companyRef = doc(db, 'companies', companyId);
-        const companyUpdates: any = {};
-        if (settings.companyName) companyUpdates.name = settings.companyName;
-        if (settings.companyAddress) companyUpdates.address = settings.companyAddress;
-        if (settings.printPhone) companyUpdates.phone = settings.printPhone;
-        if (settings.printEmail) companyUpdates.email = settings.printEmail;
-        if (settings.printWebsite) companyUpdates.website = settings.printWebsite;
-        await updateDoc(companyRef, companyUpdates);
+        if (companyId !== 'placeholder') {
+          const companyRef = doc(db, 'companies', companyId);
+          const companyUpdates: any = {
+            updatedAt: serverTimestamp()
+          };
+          if (settings.companyName) companyUpdates.name = settings.companyName;
+          if (settings.companyAddress) companyUpdates.address = settings.companyAddress;
+          if (settings.printPhone) companyUpdates.phone = settings.printPhone;
+          if (settings.printEmail) companyUpdates.email = settings.printEmail;
+          if (settings.printWebsite) companyUpdates.website = settings.printWebsite;
+          
+          // Use setDoc with merge: true to avoid "No document to update" error if company doc is missing
+          await setDoc(companyRef, companyUpdates, { merge: true });
+        }
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `settings/${companyId}`);

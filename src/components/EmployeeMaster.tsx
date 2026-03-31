@@ -567,6 +567,7 @@ export function EmployeeMaster() {
                 <input 
                   type="number" 
                   value={formData.salary}
+                  onFocus={e => e.target.value === '0' && e.target.select()}
                   onChange={e => setFormData({ ...formData, salary: e.target.value })}
                   className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
                   placeholder="0.00"

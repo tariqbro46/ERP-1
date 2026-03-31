@@ -277,6 +277,7 @@ export function ItemCreation() {
                 <input
                   type="number"
                   value={formData.opening_qty ?? ''}
+                  onFocus={e => e.target.value === '0' && e.target.select()}
                   onChange={e => setFormData({ ...formData, opening_qty: Number(e.target.value) })}
                   className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
                 />
@@ -286,6 +287,7 @@ export function ItemCreation() {
                 <input
                   type="number"
                   value={formData.opening_rate ?? ''}
+                  onFocus={e => e.target.value === '0' && e.target.select()}
                   onChange={e => setFormData({ ...formData, opening_rate: Number(e.target.value) })}
                   className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
                 />
@@ -310,6 +312,7 @@ export function ItemCreation() {
                 <input
                   type="number"
                   value={formData.low_stock_threshold ?? ''}
+                  onFocus={e => e.target.value === '0' && e.target.select()}
                   onChange={e => setFormData({ ...formData, low_stock_threshold: Number(e.target.value) })}
                   className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
                   placeholder="0"
@@ -320,6 +323,7 @@ export function ItemCreation() {
                 <input
                   type="number"
                   value={formData.tax_percent ?? ''}
+                  onFocus={e => e.target.value === '0' && e.target.select()}
                   onChange={e => setFormData({ ...formData, tax_percent: Number(e.target.value) })}
                   className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
                   placeholder="0"
@@ -333,6 +337,7 @@ export function ItemCreation() {
                 <input
                   type="number"
                   value={formData.scheme_qty ?? ''}
+                  onFocus={e => e.target.value === '0' && e.target.select()}
                   onChange={e => setFormData({ ...formData, scheme_qty: Number(e.target.value) })}
                   className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
                   placeholder="0"
@@ -343,6 +348,7 @@ export function ItemCreation() {
                 <input
                   type="number"
                   value={formData.scheme_free_qty ?? ''}
+                  onFocus={e => e.target.value === '0' && e.target.select()}
                   onChange={e => setFormData({ ...formData, scheme_free_qty: Number(e.target.value) })}
                   className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
                   placeholder="0"

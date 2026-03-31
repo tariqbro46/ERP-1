@@ -4,9 +4,11 @@ import path from "path";
 import PDFDocument from "pdfkit";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import db from "./db.js";
+import db from "./db.ts";
 import admin from "firebase-admin";
-import firebaseConfig from "./firebase-applet-config.json" assert { type: "json" };
+import fs from "fs";
+
+const firebaseConfig = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "firebase-applet-config.json"), "utf8"));
 
 // Initialize Firebase Admin
 try {

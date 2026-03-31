@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, Printer, Loader2, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Save, Printer, Loader2, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon, AlertCircle, Settings2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +13,26 @@ import { printVoucher } from '../utils/printUtils';
 
 import { pdfService } from '../services/pdfService';
 
+function Toggle({ enabled, onChange, label }: { enabled: boolean, onChange: () => void, label: string }) {
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-border last:border-0">
+      <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500">{label}</span>
+      <button
+        onClick={onChange}
+        className={cn(
+          "w-10 h-5 rounded-full transition-all relative",
+          enabled ? "bg-foreground" : "bg-foreground/10"
+        )}
+      >
+        <div className={cn(
+          "absolute top-1 w-3 h-3 rounded-full transition-all",
+          enabled ? "right-1 bg-background" : "left-1 bg-foreground/50"
+        )} />
+      </button>
+    </div>
+  );
+}
+
 export function VoucherEntry() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -20,8 +40,13 @@ export function VoucherEntry() {
   const isEdit = !!id;
   const { showNotification } = useNotification();
   const settings = useSettings();
-  const { notifications, features = [], companyName, baseCurrencySymbol = '৳', refNoFormat, showFreeQty, showDiscPercent, showTaxPercent } = settings;
+  const { notifications, features = [], companyName, baseCurrencySymbol = '৳', refNoFormat, showFreeQty, showDiscPercent, showTaxPercent, updateSettings, voucherHeaderCompact, voucherTableCompact } = settings;
   const [vType, setVType] = useState('Sales');
+
+  const toggleFeature = (id: string) => {
+    const newFeatures = features.map(f => f.id === id ? { ...f, enabled: !f.enabled } : f);
+    updateSettings({ features: newFeatures });
+  };
 
   const isInventoryEnabled = features.find(f => f.id === 'inv')?.enabled ?? true;
   const isTaxEnabled = features.find(f => f.id === 'tax')?.enabled ?? true;
@@ -46,6 +71,7 @@ export function VoucherEntry() {
   // Quick Create State
   const [isQuickLedgerOpen, setIsQuickLedgerOpen] = useState(false);
   const [isQuickItemOpen, setIsQuickItemOpen] = useState(false);
+  const [isVoucherSettingsOpen, setIsVoucherSettingsOpen] = useState(false);
   const [quickLedgerHint, setQuickLedgerHint] = useState('');
   const [pendingRowIdx, setPendingRowIdx] = useState<number | null>(null);
   const [pendingField, setPendingField] = useState<'party' | 'sales' | 'account' | 'particulars' | null>(null);
@@ -512,151 +538,117 @@ export function VoucherEntry() {
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="bg-card border border-border overflow-hidden">
-        {/* Tally-style Top Bar */}
-        <div className="flex bg-card border-b border-border overflow-x-auto no-scrollbar whitespace-nowrap p-1 gap-1">
-          {['Sales', 'Purchase', 'Payment', 'Receipt', 'Contra', 'Journal']
-            .filter(type => isInventoryEnabled || (type !== 'Sales' && type !== 'Purchase'))
-            .map(type => (
-            <button
-              key={type}
-              onClick={() => {
-                setVType(type);
-                setPartyLedgerId('');
-                setSalesPurchaseLedgerId('');
-                setBankCashLedgerId('');
-                setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }]);
-                setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
-              }}
-              className={cn(
-                "px-4 lg:px-6 py-3 text-[10px] uppercase tracking-widest font-bold transition-all flex-1 min-w-[100px]",
-                vType === type ? "bg-foreground text-background" : "bg-foreground/5 text-gray-500 hover:text-foreground"
-              )}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-
+      <div className="bg-card border border-border overflow-hidden flex flex-col h-[calc(100vh-2rem)] lg:h-[calc(100vh-3rem)]">
         {/* Voucher Header Section */}
-        <div className="p-4 lg:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 border-b border-border bg-foreground/5">
-          <div className="space-y-2">
-            <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Reference No.</label>
-            <input 
-              type="text" 
-              value={refNo || ''}
-              onChange={e => setRefNo(e.target.value)}
-              placeholder="e.g. REF-001"
-              tabIndex={1}
-              className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground" 
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Date</label>
-            <input 
-              type="date" 
-              value={vDate || ''}
-              onChange={e => setVDate(e.target.value)}
-              tabIndex={2}
-              className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground" 
-            />
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Voucher Type</label>
-              <button 
-                onClick={() => {
-                  const shortcuts = [
-                    { key: 'F4', action: 'Contra' },
-                    { key: 'F5', action: 'Payment' },
-                    { key: 'F6', action: 'Receipt' },
-                    { key: 'F7', action: 'Journal' },
-                    { key: 'F8', action: 'Sales' },
-                    { key: 'F9', action: 'Purchase' },
-                    { key: 'Alt + C', action: 'Quick Create' },
-                    { key: 'Alt + S', action: 'Save' },
-                  ];
-                  showNotification(
-                    <div className="space-y-2 p-2">
-                      <p className="font-bold border-b border-border pb-1">SHORTCUTS</p>
-                      {shortcuts.map(s => (
-                        <div key={s.key} className="flex justify-between gap-4 text-[10px]">
-                          <span className="text-emerald-500 font-bold">{s.key}</span>
-                          <span className="uppercase">{s.action}</span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                }}
-                className="text-[9px] text-emerald-500 hover:underline font-bold uppercase"
-              >
-                Shortcuts
-              </button>
+        <div className={cn(
+          "border-b border-border bg-foreground/5 shrink-0",
+          voucherHeaderCompact ? "p-2 lg:p-3 space-y-3" : "p-4 lg:p-6 space-y-6"
+        )}>
+          {/* Row 1: Reference No., Date, Currency, Ex. Rate, Voucher Type */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6">
+            <div className="space-y-2">
+              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Reference No.</label>
+              <input 
+                type="text" 
+                value={refNo || ''}
+                onChange={e => setRefNo(e.target.value)}
+                placeholder="e.g. REF-001"
+                tabIndex={1}
+                className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground" 
+              />
             </div>
-            <div className="p-2 text-sm text-emerald-500 bg-background border border-border uppercase font-bold">
-              {vType}
+            <div className="space-y-2">
+              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Date</label>
+              <input 
+                type="date" 
+                value={vDate || ''}
+                onChange={e => setVDate(e.target.value)}
+                tabIndex={2}
+                className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground" 
+              />
             </div>
-          </div>
 
-          {isMultiCurrencyEnabled && (
-            <>
-              <div className="space-y-2">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Currency</label>
-                <select
-                  value={currency}
-                  onChange={e => setCurrency(e.target.value)}
-                  tabIndex={3}
-                  className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
-                >
-                  <option value="BDT">BDT (৳)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="INR">INR (₹)</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Ex. Rate</label>
-                  <div className="group relative">
-                    <AlertCircle className="w-3 h-3 text-gray-400 cursor-help" />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-foreground text-background text-[8px] uppercase tracking-widest rounded hidden group-hover:block z-50">
-                      Exchange Rate: Multiplier to convert transaction currency to base currency ({baseCurrencySymbol}).
+            {isMultiCurrencyEnabled ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Currency</label>
+                  <select
+                    value={currency}
+                    onChange={e => setCurrency(e.target.value)}
+                    tabIndex={3}
+                    className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
+                  >
+                    <option value="BDT">BDT (৳)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="INR">INR (₹)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Ex. Rate</label>
+                    <div className="group relative">
+                      <AlertCircle className="w-3 h-3 text-gray-400 cursor-help" />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-foreground text-background text-[8px] uppercase tracking-widest rounded hidden group-hover:block z-50">
+                        Exchange Rate: Multiplier to convert transaction currency to base currency ({baseCurrencySymbol}).
+                      </div>
                     </div>
                   </div>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    value={exchangeRate}
+                    onChange={e => setExchangeRate(Number(e.target.value))}
+                    onFocus={e => e.target.value === '0' && e.target.select()}
+                    tabIndex={4}
+                    className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
+                  />
                 </div>
-                <input
-                  type="number"
-                  step="0.0001"
-                  value={exchangeRate}
-                  onChange={e => setExchangeRate(Number(e.target.value))}
-                  tabIndex={4}
-                  className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
-                />
-              </div>
-            </>
-          )}
+              </>
+            ) : (
+              <>
+                <div className="hidden lg:block"></div>
+                <div className="hidden lg:block"></div>
+              </>
+            )}
 
-          {vType === 'Sales' && (
             <div className="space-y-2">
-              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Salesperson</label>
+              <div className="flex justify-between items-center">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Voucher Type</label>
+                <button 
+                  onClick={() => setIsVoucherSettingsOpen(true)}
+                  className="text-[9px] text-blue-500 hover:underline font-bold uppercase"
+                >
+                  Settings
+                </button>
+              </div>
               <select
-                value={salespersonId}
-                onChange={e => setSalespersonId(e.target.value)}
+                value={vType}
+                onChange={e => {
+                  setVType(e.target.value);
+                  setPartyLedgerId('');
+                  setSalesPurchaseLedgerId('');
+                  setBankCashLedgerId('');
+                  setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }]);
+                  setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
+                }}
                 tabIndex={5}
-                className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
+                className="w-full bg-background border border-border text-emerald-500 p-2 text-sm outline-none focus:border-foreground font-bold uppercase"
               >
-                <option value="">Select Salesperson...</option>
-                {users.map(u => (
-                  <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>
-                ))}
+                {['Sales', 'Purchase', 'Payment', 'Receipt', 'Contra', 'Journal']
+                  .filter(type => isInventoryEnabled || (type !== 'Sales' && type !== 'Purchase'))
+                  .map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
               </select>
             </div>
-          )}
+          </div>
 
-          {/* Type Specific Header Fields */}
-          {(isInventory || isJournal) && (
-            <>
-              <div className="space-y-2">
+          {/* Row 2: Party A/c Name, Sales Ledger, Salesperson/Received by/Provided by */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6">
+            {/* Slot 1: Party A/c Name or Account (Bank/Cash) */}
+            {(isInventory || isJournal) ? (
+              <div className="space-y-2 lg:col-span-3">
                 <div className="flex justify-between items-center">
                   <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Party A/c Name</label>
                   <button 
@@ -681,12 +673,39 @@ export function VoucherEntry() {
                   </p>
                 )}
               </div>
-            </>
-          )}
+            ) : isSingleEntry ? (
+              <div className="space-y-2 lg:col-span-3">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Account (Bank/Cash)</label>
+                  <button 
+                    type="button" 
+                    onClick={() => openQuickLedger('Bank', 'account')}
+                    className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
+                  >
+                    <PlusCircle className="w-2 h-2" /> Quick
+                  </button>
+                </div>
+                <SearchableSelect
+                  options={ledgers.filter(l => l.ledger_groups?.name.includes('Bank') || l.ledger_groups?.name.includes('Cash'))}
+                  value={bankCashLedgerId}
+                  onChange={setBankCashLedgerId}
+                  placeholder="Select Account..."
+                  onQuickCreate={() => openQuickLedger('Bank', 'account')}
+                  tabIndex={6}
+                />
+                {bankCashLedgerId && balances[bankCashLedgerId] !== undefined && (
+                  <p className="text-[9px] text-gray-500 uppercase mt-1">
+                    Current Balance: <span className="font-bold text-foreground">{formatBalance(balances[bankCashLedgerId])}</span>
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="hidden lg:block lg:col-span-3"></div>
+            )}
 
-          {isInventory && (
-            <>
-              <div className="space-y-2">
+            {/* Slot 2: Sales/Purchase Ledger */}
+            {isInventory ? (
+              <div className="space-y-2 lg:col-span-1">
                 <div className="flex justify-between items-center">
                   <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{vType} Ledger</label>
                   <button 
@@ -711,45 +730,41 @@ export function VoucherEntry() {
                   </p>
                 )}
               </div>
-            </>
-          )}
+            ) : (vType !== 'Payment' && vType !== 'Receipt') ? (
+              <div className="hidden lg:block lg:col-span-1"></div>
+            ) : null}
 
-          {isSingleEntry && (
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Account (Bank/Cash)</label>
-                <button 
-                  type="button" 
-                  onClick={() => openQuickLedger('Bank', 'account')}
-                  className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
+            {/* Slot 3: Salesperson / Received by / Provided by */}
+            {(vType === 'Sales' || vType === 'Purchase' || vType === 'Payment' || vType === 'Receipt') ? (
+              <div className={cn("space-y-2", (vType === 'Payment' || vType === 'Receipt') ? "lg:col-span-2" : "lg:col-span-1")}>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">
+                  {vType === 'Sales' ? 'Salesperson' : (vType === 'Payment' ? 'Provided by' : 'Received by')}
+                </label>
+                <select
+                  value={salespersonId}
+                  onChange={e => setSalespersonId(e.target.value)}
+                  tabIndex={5}
+                  className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
                 >
-                  <PlusCircle className="w-2 h-2" /> Quick
-                </button>
+                  <option value="">Select {vType === 'Sales' ? 'Salesperson' : (vType === 'Payment' ? 'Provided by' : 'Received by')}...</option>
+                  {users.map(u => (
+                    <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>
+                  ))}
+                </select>
               </div>
-              <SearchableSelect
-                options={ledgers.filter(l => l.ledger_groups?.name.includes('Bank') || l.ledger_groups?.name.includes('Cash'))}
-                value={bankCashLedgerId}
-                onChange={setBankCashLedgerId}
-                placeholder="Select Account..."
-                onQuickCreate={() => openQuickLedger('Bank', 'account')}
-                tabIndex={6}
-              />
-              {bankCashLedgerId && balances[bankCashLedgerId] !== undefined && (
-                <p className="text-[9px] text-gray-500 uppercase mt-1">
-                  Current Balance: <span className="font-bold text-foreground">{formatBalance(balances[bankCashLedgerId])}</span>
-                </p>
-              )}
-            </div>
-          )}
+            ) : (
+              <div className="hidden lg:block lg:col-span-1"></div>
+            )}
+          </div>
         </div>
 
         {/* Main Entry Table */}
-        <div className="min-h-[300px] overflow-x-auto no-scrollbar">
+        <div className={cn("flex-1 overflow-y-auto overflow-x-auto no-scrollbar border-b border-border", voucherTableCompact && "p-0.5")}>
           {isInventory ? (
             <table className="w-full text-left text-xs border-collapse min-w-[800px]">
               <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px]">
                 <tr>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border">
+                  <th className={cn("border-b border-border", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>
                     <div className="flex justify-between items-center">
                       <span>Name of Item</span>
                       <button 
@@ -764,33 +779,33 @@ export function VoucherEntry() {
                       </button>
                     </div>
                   </th>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border">Godown</th>
+                  <th className={cn("border-b border-border w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Godown</th>
                   {isBatchEnabled && (
-                    <th className="px-4 lg:px-6 py-3 border-b border-border text-left w-32">Batch</th>
+                    <th className={cn("border-b border-border text-left w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Batch</th>
                   )}
                   {isExpiryEnabled && (
-                    <th className="px-4 lg:px-6 py-3 border-b border-border text-left w-32">Expiry</th>
+                    <th className={cn("border-b border-border text-left w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Expiry</th>
                   )}
-                  <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Quantity</th>
+                  <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Quantity</th>
                   {showFreeQty && (
-                    <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Free</th>
+                    <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Free</th>
                   )}
-                  <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-32">Rate</th>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border text-center w-20">per</th>
+                  <th className={cn("border-b border-border text-right w-40", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Rate</th>
+                  <th className={cn("border-b border-border text-center w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>per</th>
                   {showDiscPercent && (
-                    <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Disc %</th>
+                    <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Disc %</th>
                   )}
                   {isTaxEnabled && showTaxPercent && (
-                    <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-24">Tax %</th>
+                    <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Tax %</th>
                   )}
-                  <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-40">Amount</th>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border w-10"></th>
+                  <th className={cn("border-b border-border text-right w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Amount</th>
+                  <th className={cn("border-b border-border w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {invEntries.map((entry, idx) => (
                   <tr key={idx} className="group hover:bg-foreground/5">
-                    <td className="px-4 lg:px-6 py-2">
+                    <td className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <div className="flex flex-col gap-1">
                         <SearchableSelect
                           options={items}
@@ -817,7 +832,7 @@ export function VoucherEntry() {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 lg:px-6 py-2">
+                    <td className={cn("w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <SearchableSelect
                         options={godowns}
                         value={entry.godown_id}
@@ -831,7 +846,7 @@ export function VoucherEntry() {
                       />
                     </td>
                     {isBatchEnabled && (
-                      <td className="px-4 lg:px-6 py-2">
+                      <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                         <input 
                           type="text" 
                           className="bg-transparent border border-border text-foreground outline-none w-full text-xs p-1 focus:border-foreground" 
@@ -846,7 +861,7 @@ export function VoucherEntry() {
                       </td>
                     )}
                     {isExpiryEnabled && (
-                      <td className="px-4 lg:px-6 py-2">
+                      <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                         <input 
                           type="date" 
                           className="bg-transparent border border-border text-foreground outline-none w-full text-[10px] p-1 focus:border-foreground" 
@@ -859,12 +874,13 @@ export function VoucherEntry() {
                         />
                       </td>
                     )}
-                    <td className="px-4 lg:px-6 py-2">
+                    <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <input 
                         type="number" 
                         tabIndex={10 + idx * 10}
                         className="bg-transparent border-none text-foreground outline-none w-full text-right" 
                         value={entry.qty ?? ''} 
+                        onFocus={e => e.target.value === '0' && e.target.select()}
                         onChange={e => {
                           const next = [...invEntries];
                           const val = Number(e.target.value);
@@ -883,12 +899,13 @@ export function VoucherEntry() {
                       />
                     </td>
                     {showFreeQty && (
-                      <td className="px-4 lg:px-6 py-2">
+                      <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                         <input 
                           type="number" 
                           tabIndex={11 + idx * 10}
                           className="bg-transparent border-none text-foreground outline-none w-full text-right text-emerald-500 font-bold" 
                           value={entry.free_qty ?? ''} 
+                          onFocus={e => e.target.value === '0' && e.target.select()}
                           onChange={e => {
                             const next = [...invEntries];
                             next[idx].free_qty = Number(e.target.value);
@@ -897,12 +914,13 @@ export function VoucherEntry() {
                         />
                       </td>
                     )}
-                    <td className="px-4 lg:px-6 py-2">
+                    <td className={cn("w-40", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <input 
                         type="number" 
                         tabIndex={12 + idx * 10}
                         className="bg-transparent border-none text-foreground outline-none w-full text-right" 
                         value={entry.rate ?? ''} 
+                        onFocus={e => e.target.value === '0' && e.target.select()}
                         onChange={e => {
                           const next = [...invEntries];
                           next[idx].rate = Number(e.target.value);
@@ -911,7 +929,7 @@ export function VoucherEntry() {
                         }} 
                       />
                     </td>
-                    <td className="px-4 lg:px-6 py-2 text-center text-gray-500 uppercase text-[10px]">
+                    <td className={cn("text-center text-gray-500 uppercase text-[10px] w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <span 
                         tabIndex={13 + idx * 10}
                         className="outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded"
@@ -920,12 +938,13 @@ export function VoucherEntry() {
                       </span>
                     </td>
                     {showDiscPercent && (
-                      <td className="px-4 lg:px-6 py-2">
+                      <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                         <input 
                           type="number" 
                           tabIndex={14 + idx * 10}
                           className="bg-transparent border-none text-foreground outline-none w-full text-right" 
                           value={entry.disc_percent ?? ''} 
+                          onFocus={e => e.target.value === '0' && e.target.select()}
                           onChange={e => {
                             const next = [...invEntries];
                             next[idx].disc_percent = Number(e.target.value);
@@ -936,12 +955,13 @@ export function VoucherEntry() {
                       </td>
                     )}
                     {isTaxEnabled && showTaxPercent && (
-                      <td className="px-4 lg:px-6 py-2">
+                      <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                         <input 
                           type="number" 
                           tabIndex={15 + idx * 10}
                           className="bg-transparent border border-border text-foreground outline-none w-full text-right p-1 focus:border-foreground" 
                           value={entry.tax_percent ?? ''} 
+                          onFocus={e => e.target.value === '0' && e.target.select()}
                           onChange={e => {
                             const next = [...invEntries];
                             next[idx].tax_percent = Number(e.target.value);
@@ -951,7 +971,7 @@ export function VoucherEntry() {
                         />
                       </td>
                     )}
-                    <td className="px-4 lg:px-6 py-2 text-right text-foreground font-bold">
+                    <td className={cn("text-right text-foreground font-bold w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <span 
                         tabIndex={16 + idx * 10}
                         className="outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded block"
@@ -959,24 +979,39 @@ export function VoucherEntry() {
                         {baseCurrencySymbol} {entry.amount.toLocaleString()}
                       </span>
                     </td>
-                    <td className="px-4 lg:px-6 py-2"><button onClick={() => setInvEntries(invEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
+                    <td className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}><button onClick={() => setInvEntries(invEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
                   </tr>
                 ))}
+                {/* ADD ITEM Button Row */}
+                <tr className="border-t border-border/50">
+                  <td colSpan={isTaxEnabled ? 10 : 9} className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <div className="flex justify-end">
+                      <button 
+                        type="button"
+                        onClick={() => setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }])}
+                        tabIndex={500}
+                        className="px-4 py-1.5 bg-emerald-500 text-black text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-sm"
+                      >
+                        <PlusCircle className="w-3 h-3" /> ADD ITEM
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               </tbody>
             </table>
           ) : isSingleEntry ? (
             <table className="w-full text-left text-xs border-collapse min-w-[600px]">
               <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px]">
                 <tr>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border">Particulars</th>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-48">Amount</th>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border w-10"></th>
+                  <th className={cn("border-b border-border font-bold tracking-widest", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Particulars</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Amount</th>
+                  <th className={cn("border-b border-border w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {accEntries.map((entry, idx) => (
                   <tr key={idx} className="group hover:bg-foreground/5">
-                    <td className="px-4 lg:px-6 py-2">
+                    <td className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <div className="flex items-center gap-2">
                         <SearchableSelect
                           options={ledgers}
@@ -991,33 +1026,48 @@ export function VoucherEntry() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 lg:px-6 py-2">
-                      <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.amount ?? ''} onChange={e => {
+                    <td className={cn("w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                      <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.amount ?? ''} onFocus={e => e.target.value === '0' && e.target.select()} onChange={e => {
                         const next = [...accEntries];
                         next[idx].amount = Number(e.target.value);
                         setAccEntries(next);
                       }} />
                     </td>
-                    <td className="px-4 lg:px-6 py-2"><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
+                    <td className={cn("w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
                   </tr>
                 ))}
+                {/* ADD ITEM Button Row */}
+                <tr className="border-t border-border/50">
+                  <td colSpan={3} className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <div className="flex justify-end">
+                      <button 
+                        type="button"
+                        onClick={() => setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
+                        tabIndex={500}
+                        className="px-4 py-1.5 bg-emerald-500 text-black text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-sm"
+                      >
+                        <PlusCircle className="w-3 h-3" /> ADD ITEM
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               </tbody>
             </table>
           ) : (
             <table className="w-full text-left text-xs border-collapse min-w-[800px]">
               <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px]">
                 <tr>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border w-20">Dr/Cr</th>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border">Particulars</th>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-48">Debit</th>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border text-right w-48">Credit</th>
-                  <th className="px-4 lg:px-6 py-3 border-b border-border w-10"></th>
+                  <th className={cn("border-b border-border w-20", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Dr/Cr</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Particulars</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Debit</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Credit</th>
+                  <th className={cn("border-b border-border w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {accEntries.map((entry, idx) => (
                   <tr key={idx} className="group hover:bg-foreground/5">
-                    <td className="px-4 lg:px-6 py-2">
+                    <td className={cn("w-20", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <select 
                         value={entry.type}
                         onChange={e => {
@@ -1033,7 +1083,7 @@ export function VoucherEntry() {
                         <option value="Cr">Cr</option>
                       </select>
                     </td>
-                    <td className="px-4 lg:px-6 py-2">
+                    <td className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <div className="flex items-center gap-2">
                         <SearchableSelect
                           options={ledgers}
@@ -1048,7 +1098,7 @@ export function VoucherEntry() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 lg:px-6 py-2">
+                    <td className={cn("w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <input 
                         type="number" 
                         disabled={entry.type === 'Cr'}
@@ -1057,6 +1107,7 @@ export function VoucherEntry() {
                           entry.type === 'Cr' && "opacity-20"
                         )} 
                         value={entry.debit ?? ''} 
+                        onFocus={e => e.target.value === '0' && e.target.select()}
                         onChange={e => {
                           const next = [...accEntries];
                           next[idx].debit = Number(e.target.value);
@@ -1064,7 +1115,7 @@ export function VoucherEntry() {
                         }} 
                       />
                     </td>
-                    <td className="px-4 lg:px-6 py-2">
+                    <td className={cn("w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <input 
                         type="number" 
                         disabled={entry.type === 'Dr'}
@@ -1073,6 +1124,7 @@ export function VoucherEntry() {
                           entry.type === 'Dr' && "opacity-20"
                         )} 
                         value={entry.credit ?? ''} 
+                        onFocus={e => e.target.value === '0' && e.target.select()}
                         onChange={e => {
                           const next = [...accEntries];
                           next[idx].credit = Number(e.target.value);
@@ -1080,17 +1132,30 @@ export function VoucherEntry() {
                         }} 
                       />
                     </td>
-                    <td className="px-4 lg:px-6 py-2"><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
+                    <td className={cn("w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
                   </tr>
                 ))}
+                {/* ADD ITEM Button Row */}
+                <tr className="border-t border-border/50">
+                  <td colSpan={5} className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <div className="flex justify-end">
+                      <button 
+                        type="button"
+                        onClick={() => setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
+                        tabIndex={500}
+                        className="px-4 py-1.5 bg-emerald-500 text-black text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center gap-2 shadow-sm"
+                      >
+                        <PlusCircle className="w-3 h-3" /> ADD ITEM
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               </tbody>
             </table>
           )}
         </div>
-        <div className="p-4 border-b border-border flex justify-between items-center">
-          <div />
-
-          {isInventory && isBarcodeEnabled && (
+        {isInventory && isBarcodeEnabled && (
+          <div className="p-4 border-b border-border flex justify-end items-center">
             <div className="flex items-center gap-2">
               <label className="text-[9px] text-gray-500 uppercase font-bold">Barcode Scan</label>
               <input
@@ -1107,39 +1172,34 @@ export function VoucherEntry() {
                 className="bg-background border border-border text-foreground p-1 text-[10px] outline-none focus:border-foreground w-40"
               />
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Footer Section */}
-        <div className="p-4 lg:p-6 border-t border-border bg-foreground/5 space-y-6">
-          <div className="flex justify-start mb-4">
-            <button 
-              onClick={() => isInventory ? setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]) : setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
-              tabIndex={500}
-              className="px-6 py-2 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-amber-600 transition-all flex items-center gap-2 shadow-lg"
-            >
-              <PlusCircle className="w-4 h-4" /> Add Line Item
-            </button>
-          </div>
-
-          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-6 lg:gap-8">
-            <div className="space-y-2 order-2 lg:order-1">
-              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Narration</label>
+        <div className={cn(
+          "bg-foreground/5 shrink-0",
+          voucherHeaderCompact ? "p-2 lg:p-3 space-y-3" : "p-4 lg:p-6 space-y-6"
+        )}>
+          <div className="flex flex-col lg:grid lg:grid-cols-5 gap-4 lg:gap-6">
+            <div className="space-y-1 order-2 lg:order-1 lg:col-span-3">
+              <label className="text-[8px] text-gray-500 uppercase font-bold tracking-widest">Narration</label>
               <textarea
                 value={narration || ''}
                 onChange={e => setNarration(e.target.value)}
                 tabIndex={501}
-                className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors h-20 lg:h-24 resize-none"
+                className="w-full bg-background border border-border text-foreground p-2 text-xs outline-none focus:border-foreground transition-colors h-16 lg:h-20 resize-none"
                 placeholder="Enter narration details..."
               />
             </div>
-            <div className="flex flex-col justify-end items-start lg:items-end space-y-4 order-1 lg:order-2">
-              <div className="flex items-center gap-4 bg-background border border-border p-2 rounded mb-2">
-                <label className="text-[9px] text-gray-500 uppercase font-bold">Disc</label>
+            <div className="flex flex-col justify-end items-start lg:items-end space-y-2 order-1 lg:order-2 lg:col-span-2">
+              <div className="flex items-center gap-4 bg-background border border-border p-2 rounded mb-1">
+                <label htmlFor="globalDiscount" className="text-[9px] text-gray-500 uppercase font-bold cursor-pointer">Disc</label>
                 <div className="flex items-center gap-1">
                   <input 
+                    id="globalDiscount"
                     type="number" 
                     value={globalDiscount ?? ''} 
+                    onFocus={e => e.target.value === '0' && e.target.select()}
                     onChange={e => setGlobalDiscount(Number(e.target.value))}
                     tabIndex={502}
                     className="w-20 bg-transparent border-none text-right text-sm outline-none font-bold"
@@ -1156,18 +1216,18 @@ export function VoucherEntry() {
                   </select>
                 </div>
               </div>
-              <div className="text-left lg:text-right space-y-1">
+              <div className="text-left lg:text-right space-y-0.5">
                 {totalTaxAmount > 0 && (
                   <p className="text-[10px] text-emerald-500 font-bold">
                     Tax: {currency} {totalTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                 )}
-                <p className="text-[9px] text-gray-500 uppercase">Total Amount</p>
-                <p className="text-2xl lg:text-3xl text-foreground font-bold tracking-tighter">
+                <p className="text-[8px] text-gray-500 uppercase">Total Amount</p>
+                <p className="text-xl lg:text-2xl text-foreground font-bold tracking-tighter">
                   {currency} {finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </p>
               </div>
-              <div className="flex gap-3 w-full lg:w-auto">
+              <div className="flex gap-2 w-full lg:w-auto">
                 {isEdit && (
                   <button 
                     type="button"
@@ -1252,6 +1312,132 @@ export function VoucherEntry() {
         onClose={() => setIsQuickItemOpen(false)}
         onSuccess={handleQuickItemSuccess}
       />
+
+      {/* Voucher Settings Shortcut Modal */}
+      {isVoucherSettingsOpen && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-border w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border bg-foreground/5">
+              <div className="flex items-center gap-2">
+                <Settings2 className="w-4 h-4 text-gray-500" />
+                <h3 className="text-[10px] uppercase font-bold tracking-widest">Voucher Configuration</h3>
+              </div>
+              <button onClick={() => setIsVoucherSettingsOpen(false)} className="text-gray-500 hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6 overflow-y-auto max-h-[70vh]">
+              <div className="space-y-1">
+                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mb-2">Inventory Settings</p>
+                <Toggle 
+                  label="Maintain Inventory" 
+                  enabled={isInventoryEnabled} 
+                  onChange={() => toggleFeature('inv')} 
+                />
+                <Toggle 
+                  label="Maintain Godowns" 
+                  enabled={features.find(f => f.id === 'godown')?.enabled ?? false} 
+                  onChange={() => toggleFeature('godown')} 
+                />
+                <Toggle 
+                  label="Maintain Batches" 
+                  enabled={isBatchEnabled} 
+                  onChange={() => toggleFeature('batch')} 
+                />
+                <Toggle 
+                  label="Track Expiry Dates" 
+                  enabled={isExpiryEnabled} 
+                  onChange={() => toggleFeature('expiry')} 
+                />
+                <Toggle 
+                  label="Barcode Scanning" 
+                  enabled={isBarcodeEnabled} 
+                  onChange={() => toggleFeature('barcode')} 
+                />
+              </div>
+
+              <div className="space-y-1 pt-4 border-t border-border">
+                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mb-2">Voucher Display Settings</p>
+                <Toggle 
+                  label="Show Free Quantity" 
+                  enabled={showFreeQty} 
+                  onChange={() => updateSettings({ showFreeQty: !showFreeQty })} 
+                />
+                <Toggle 
+                  label="Show Discount %" 
+                  enabled={showDiscPercent} 
+                  onChange={() => updateSettings({ showDiscPercent: !showDiscPercent })} 
+                />
+                <Toggle 
+                  label="Show Tax %" 
+                  enabled={showTaxPercent} 
+                  onChange={() => updateSettings({ showTaxPercent: !showTaxPercent })} 
+                />
+                <Toggle 
+                  label="Enable Multi-Currency" 
+                  enabled={isMultiCurrencyEnabled} 
+                  onChange={() => toggleFeature('curr')} 
+                />
+                <Toggle 
+                  label="Enable Tax Calculation" 
+                  enabled={isTaxEnabled} 
+                  onChange={() => toggleFeature('tax')} 
+                />
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-border">
+                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mb-2">Print Preview (Mock)</p>
+                <div className="bg-background border border-border p-4 rounded space-y-4 scale-90 origin-top">
+                  {/* Mock Header */}
+                  <div className="border-b border-border pb-2 text-center space-y-1">
+                    <div className="h-2 w-24 bg-foreground/20 mx-auto rounded" />
+                    <div className="h-1.5 w-32 bg-foreground/10 mx-auto rounded" />
+                  </div>
+                  
+                  {/* Mock Table */}
+                  <div className="space-y-1">
+                    <div className="flex gap-1 border-b border-border pb-1">
+                      <div className="h-1.5 flex-1 bg-foreground/20 rounded" />
+                      <div className="h-1.5 w-8 bg-foreground/20 rounded" />
+                      <div className="h-1.5 w-8 bg-foreground/20 rounded" />
+                    </div>
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="flex gap-1">
+                        <div className="h-1.5 flex-1 bg-foreground/5 rounded" />
+                        <div className="h-1.5 w-8 bg-foreground/5 rounded" />
+                        <div className="h-1.5 w-8 bg-foreground/5 rounded" />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Mock Footer */}
+                  <div className="flex justify-between pt-2 border-t border-border">
+                    <div className="space-y-1">
+                      <div className="h-1.5 w-16 bg-foreground/10 rounded" />
+                      <div className="h-3 w-24 bg-foreground/5 rounded" />
+                    </div>
+                    <div className="text-right space-y-1">
+                      <div className="h-1.5 w-12 bg-foreground/10 rounded ml-auto" />
+                      <div className="h-3 w-20 bg-foreground/20 rounded ml-auto" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[7px] text-gray-400 uppercase text-center">Visual representation of current layout settings</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-foreground/5 border-t border-border flex justify-end">
+              <button 
+                onClick={() => setIsVoucherSettingsOpen(false)}
+                className="px-6 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

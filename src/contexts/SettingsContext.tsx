@@ -49,6 +49,8 @@ interface SettingsContextType {
   showFreeQty: boolean;
   showDiscPercent: boolean;
   showTaxPercent: boolean;
+  voucherHeaderCompact: boolean;
+  voucherTableCompact: boolean;
   menuBarStyle: MenuBarStyle;
   layoutWidth: 'responsive' | 'constrained';
   sidebarDefaultExpanded: boolean;
@@ -87,6 +89,8 @@ const defaultSettings: SettingsContextType = {
   showFreeQty: true,
   showDiscPercent: true,
   showTaxPercent: true,
+  voucherHeaderCompact: false,
+  voucherTableCompact: false,
   menuBarStyle: 'classic',
   layoutWidth: 'constrained',
   sidebarDefaultExpanded: true,

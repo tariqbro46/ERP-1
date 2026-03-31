@@ -26,7 +26,8 @@ import {
   Shield,
   Award,
   DollarSign,
-  Search
+  Search,
+  AlertCircle
 } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { VoucherEntry } from './components/VoucherEntry';
@@ -687,6 +688,17 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen h-[100dvh] bg-background text-foreground overflow-hidden transition-colors duration-300 relative">
+      {/* Placeholder Warning Banner */}
+      {user?.companyId === 'placeholder' && (
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 text-white text-[10px] font-bold uppercase tracking-widest py-1 px-4 flex justify-between items-center shadow-lg">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-3 h-3" />
+            <span>You are currently in a placeholder company. Your data might be in another company.</span>
+          </div>
+          <Link to="/companies" className="underline hover:text-white/80">Switch Company</Link>
+        </div>
+      )}
+      
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 

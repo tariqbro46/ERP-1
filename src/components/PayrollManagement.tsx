@@ -791,6 +791,7 @@ export function PayrollManagement() {
                       <input 
                         type="number" 
                         value={allowances}
+                        onFocus={e => e.target.value === '0' && e.target.select()}
                         onChange={e => setAllowances(e.target.value)}
                         className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
                         placeholder="0"
@@ -801,6 +802,7 @@ export function PayrollManagement() {
                       <input 
                         type="number" 
                         value={deductions}
+                        onFocus={e => e.target.value === '0' && e.target.select()}
                         onChange={e => setDeductions(e.target.value)}
                         className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
                         placeholder="0"
@@ -849,6 +851,7 @@ export function PayrollManagement() {
                   <input 
                     type="number" 
                     value={amount}
+                    onFocus={e => e.target.value === '0' && e.target.select()}
                     onChange={e => setAmount(e.target.value)}
                     className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
                     placeholder="0.00"
@@ -878,6 +881,7 @@ export function PayrollManagement() {
                     <input 
                       type="number" 
                       value={interestRate}
+                      onFocus={e => e.target.value === '0' && e.target.select()}
                       onChange={e => setInterestRate(e.target.value)}
                       className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
                       placeholder="0"
