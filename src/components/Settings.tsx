@@ -43,6 +43,7 @@ export function Settings() {
     layoutWidth,
     sidebarDefaultExpanded,
     notifications, 
+    whatsappTemplates,
     features = [], 
     updateSettings 
   } = useSettings();
@@ -82,6 +83,7 @@ export function Settings() {
   const [localShowTaxPercent, setLocalShowTaxPercent] = useState(showTaxPercent);
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded);
   const [localNotifications, setLocalNotifications] = useState(notifications);
+  const [localWhatsappTemplates, setLocalWhatsappTemplates] = useState(whatsappTemplates);
 
   // Sync local state when settings change (e.g. after registration or initial load)
   React.useEffect(() => {
@@ -117,6 +119,7 @@ export function Settings() {
     setLocalMenuBarStyle(menuBarStyle);
     setLocalLayoutWidth(layoutWidth);
     setLocalNotifications(notifications);
+    setLocalWhatsappTemplates(whatsappTemplates);
   }, [
     companyName, companyAddress, slogan, printHeader, printFooter, printPhone, 
     printEmail, printWebsite, showPrintHeader, showPrintPhone, showPrintEmail, 
@@ -124,7 +127,7 @@ export function Settings() {
     printSignature3, showSignature1, showSignature2, showSignature3, 
     signatureAlignment, showDeveloperContact, financialYearStart, 
     baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
-    showTaxPercent, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications
+    showTaxPercent, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates
   ]);
 
   const handleSaveGeneral = () => {
@@ -184,6 +187,11 @@ export function Settings() {
     showNotification(notifications.settingsUpdated);
   };
 
+  const handleSaveWhatsApp = () => {
+    updateSettings({ whatsappTemplates: localWhatsappTemplates });
+    showNotification(notifications.settingsUpdated);
+  };
+
   const toggleFeature = (id: string) => {
     const updatedFeatures = features.map(f => f.id === id ? { ...f, enabled: !f.enabled } : f);
     updateSettings({ features: updatedFeatures });
@@ -231,6 +239,7 @@ export function Settings() {
     { id: 'features', label: 'F11 Features', icon: Database },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'whatsapp', label: 'WhatsApp Templates', icon: MessageSquare },
     { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
     { id: 'backup', label: 'Backup & Export', icon: Cloud },
     { id: 'integrations', label: 'Integrations', icon: Share2 },
@@ -1063,6 +1072,47 @@ export function Settings() {
                       )}
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'whatsapp' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center border-b border-border pb-2">
+                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">WhatsApp Message Templates</h3>
+                  <button 
+                    onClick={handleSaveWhatsApp}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+                  >
+                    <Save className="w-3 h-3" /> Save Templates
+                  </button>
+                </div>
+                
+                <div className="p-4 bg-amber-500/10 border border-amber-500/20 flex gap-4 mb-6">
+                  <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-amber-500 uppercase tracking-widest font-bold">Available Shortcodes:</p>
+                    <p className="text-[9px] text-amber-500/80 uppercase tracking-widest leading-relaxed">
+                      {"{{companyName}}, {{voucherNo}}, {{date}}, {{currency}}, {{totalAmount}}, {{narration}}, {{vType}}"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-8">
+                  {Object.entries(localWhatsappTemplates).map(([key, value]) => (
+                    <div key={key} className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase font-bold">{key} Voucher Template</label>
+                      <textarea 
+                        value={value} 
+                        onChange={(e) => setLocalWhatsappTemplates({
+                          ...localWhatsappTemplates,
+                          [key]: e.target.value
+                        })}
+                        rows={4}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground font-sans" 
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

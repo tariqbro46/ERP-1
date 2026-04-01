@@ -3,7 +3,7 @@ import { Plus, Trash2, Save, Printer, Loader2, PlusCircle, Trash, Share2, Messag
 import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { SearchableSelect } from './SearchableSelect';
 import { QuickLedgerModal } from './QuickLedgerModal';
 import { QuickItemModal } from './QuickItemModal';
@@ -71,6 +71,7 @@ const getVoucherHoverBgColor = (type: string) => {
 
 export function VoucherEntry() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const { user } = useAuth();
   const isEdit = !!id;
@@ -187,10 +188,51 @@ export function VoucherEntry() {
     fetchData();
     if (isEdit) {
       fetchVoucher();
+    } else if (location.state?.orderData) {
+      handleOrderConversion(location.state.orderData);
     } else {
       fetchNextNo();
     }
-  }, [id]);
+  }, [id, location.state]);
+
+  const handleOrderConversion = (order: any) => {
+    setVType('Sales');
+    setPartyLedgerId(order.clientId || '');
+    
+    if (order.items && order.items.length > 0) {
+      const newInvEntries = order.items.map((item: any) => ({
+        item_id: item.itemId || '',
+        godown_id: '',
+        qty: item.quantity || 0,
+        free_qty: 0,
+        rate: item.price || 0,
+        disc_percent: 0,
+        tax_percent: 0,
+        amount: (item.quantity || 0) * (item.price || 0),
+        unit: 'pcs',
+        batch_no: '',
+        expiry_date: ''
+      }));
+      setInvEntries(newInvEntries);
+    } else {
+      // Legacy order support
+      setInvEntries([{
+        item_id: order.itemId || '',
+        godown_id: '',
+        qty: order.quantity || 0,
+        free_qty: 0,
+        rate: order.price || 0,
+        disc_percent: 0,
+        tax_percent: 0,
+        amount: (order.quantity || 0) * (order.price || 0),
+        unit: 'pcs',
+        batch_no: '',
+        expiry_date: ''
+      }]);
+    }
+    
+    fetchNextNo();
+  };
 
   async function fetchNextNo() {
     if (!user?.companyId) return;
@@ -803,7 +845,7 @@ export function VoucherEntry() {
             <table className="w-full text-left text-xs border-collapse min-w-[800px]">
               <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px]">
                 <tr>
-                  <th className={cn("border-b border-border", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>
+                  <th className={cn("border-b border-border min-w-[35ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>
                     <div className="flex justify-between items-center">
                       <span>Name of Item</span>
                       <button 
@@ -818,7 +860,7 @@ export function VoucherEntry() {
                       </button>
                     </div>
                   </th>
-                  <th className={cn("border-b border-border w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Godown</th>
+                  <th className={cn("border-b border-border w-[22ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Godown</th>
                   {isBatchEnabled && (
                     <th className={cn("border-b border-border text-left w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Batch</th>
                   )}
@@ -837,14 +879,14 @@ export function VoucherEntry() {
                   {isTaxEnabled && showTaxPercent && (
                     <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Tax %</th>
                   )}
-                  <th className={cn("border-b border-border text-right w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Amount</th>
+                  <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Amount</th>
                   <th className={cn("border-b border-border w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {invEntries.map((entry, idx) => (
                   <tr key={idx} className="group hover:bg-foreground/5">
-                    <td className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <td className={cn("min-w-[35ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <div className="flex flex-col gap-1">
                         <SearchableSelect
                           options={items}
@@ -871,7 +913,7 @@ export function VoucherEntry() {
                         )}
                       </div>
                     </td>
-                    <td className={cn("w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <td className={cn("w-[22ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <SearchableSelect
                         options={godowns}
                         value={entry.godown_id}
@@ -1010,7 +1052,7 @@ export function VoucherEntry() {
                         />
                       </td>
                     )}
-                    <td className={cn("text-right text-foreground font-bold w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <td className={cn("text-right text-foreground font-bold w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <span 
                         tabIndex={16 + idx * 10}
                         className="outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded block"
@@ -1047,7 +1089,7 @@ export function VoucherEntry() {
               <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px]">
                 <tr>
                   <th className={cn("border-b border-border font-bold tracking-widest", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Particulars</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Amount</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Amount</th>
                   <th className={cn("border-b border-border w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}></th>
                 </tr>
               </thead>

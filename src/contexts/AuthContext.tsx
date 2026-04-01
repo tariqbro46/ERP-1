@@ -12,6 +12,7 @@ export interface Profile {
   role: UserRole;
   companyId: string;
   target_amount?: number;
+  permissions?: string[];
 }
 
 export interface CompanyData {

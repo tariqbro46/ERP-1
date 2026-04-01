@@ -262,6 +262,51 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "message", "type", "targetType", "status", "createdBy", "createdAt"]
+    },
+    "PrintingOrder": {
+      "title": "Printing Order",
+      "description": "Represents a production order for packaging printing.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "itemId": { "type": "string" },
+        "itemName": { "type": "string" },
+        "printDesign": { "type": "string" },
+        "quantity": { "type": "number" },
+        "printType": { "type": "string", "enum": ["Analog", "Digital"] },
+        "isDoubleSided": { "type": "boolean" },
+        "deliveryDate": { "type": "string", "format": "date" },
+        "deliveryTime": { "type": "string" },
+        "deliveryLocation": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Printing", "Completed", "Delivered", "Cancelled"] },
+        "price": { "type": "number" },
+        "machineId": { "type": "string" },
+        "machineName": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyId", "clientId", "clientName", "itemName", "quantity", "status"]
+    },
+    "PrintingMachine": {
+      "title": "Printing Machine",
+      "description": "Represents a printing machine in the production facility.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Analog", "Digital", "Both"] },
+        "status": { "type": "string", "enum": ["Idle", "Busy", "Maintenance"] },
+        "currentOrderId": { "type": "string" },
+        "lastMaintenance": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyId", "name", "type", "status"]
     }
   },
   "firestore": {
@@ -332,6 +377,14 @@
     "/notifications/{id}": {
       "schema": "Notification",
       "description": "Global notifications collection."
+    },
+    "/orders/{id}": {
+      "schema": "PrintingOrder",
+      "description": "Collection of production orders."
+    },
+    "/machines/{id}": {
+      "schema": "PrintingMachine",
+      "description": "Collection of printing machines."
     }
   }
 }

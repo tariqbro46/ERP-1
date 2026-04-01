@@ -54,7 +54,19 @@ export const pdfService = {
   },
 
   shareViaWhatsApp: (voucher: any, settings: any) => {
-    const message = `*${settings.companyName}*\n${voucher.v_type} Voucher\nNo: ${voucher.v_no}\nDate: ${voucher.v_date}\nAmount: ${settings.baseCurrencySymbol} ${voucher.total_amount}\n\nShared via TallyFlow ERP`;
+    const vType = voucher.v_type as keyof typeof settings.whatsappTemplates;
+    let message = settings.whatsappTemplates?.[vType] || settings.whatsappTemplates?.Sales || '';
+    
+    // Replace shortcodes
+    message = message
+      .replace(/{{companyName}}/g, settings.companyName)
+      .replace(/{{voucherNo}}/g, voucher.v_no)
+      .replace(/{{date}}/g, voucher.v_date)
+      .replace(/{{currency}}/g, settings.baseCurrencySymbol)
+      .replace(/{{totalAmount}}/g, voucher.total_amount.toLocaleString())
+      .replace(/{{narration}}/g, voucher.narration || '')
+      .replace(/{{vType}}/g, voucher.v_type);
+
     const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   },

@@ -30,7 +30,10 @@ import {
   SalarySheet, 
   Advance, 
   Loan, 
-  AppNotification 
+  AppNotification,
+  PrintingOrder,
+  PrintingMachine,
+  UserProfile
 } from '../types';
 import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -1203,11 +1206,11 @@ export const erpService = {
     }
   },
 
-  async getCompanyUsers(companyId: string) {
+  async getCompanyUsers(companyId: string): Promise<UserProfile[]> {
     try {
       const q = query(collection(db, 'users'), where('companyId', '==', companyId));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'users');
       return [];
@@ -1367,6 +1370,216 @@ export const erpService = {
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `notifications/${id}`);
+    }
+  },
+
+  // Order Management
+  async getOrders(companyId: string): Promise<PrintingOrder[]> {
+    try {
+      const q = query(collection(db, 'orders'), where('companyId', '==', companyId), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        // Migration logic: if items is missing, create it from legacy fields
+        if (!data.items && data.itemName) {
+          data.items = [{
+            itemId: data.itemId || '',
+            itemName: data.itemName,
+            quantity: data.quantity || 0,
+            price: data.price || 0,
+            printDesign: data.printDesign,
+            printType: data.printType,
+            isDoubleSided: data.isDoubleSided,
+            machineId: data.machineId,
+            machineName: data.machineName
+          }];
+        }
+        return { id: doc.id, ...data } as unknown as PrintingOrder;
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'orders');
+      return [];
+    }
+  },
+
+  async createOrder(order: Partial<PrintingOrder>) {
+    try {
+      const ref = doc(collection(db, 'orders'));
+      const data = {
+        ...order,
+        id: ref.id,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        status: order.status || 'Pending',
+        isConvertedToFinishGoods: false,
+        isConvertedToSalesVoucher: false
+      };
+      await setDoc(ref, data);
+      return data;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'orders');
+    }
+  },
+
+  async convertToFinishGoods(companyId: string, orderId: string) {
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      const orderSnap = await getDoc(orderRef);
+      if (!orderSnap.exists()) throw new Error('Order not found');
+      const order = orderSnap.data() as PrintingOrder;
+      if (order.isConvertedToFinishGoods) return;
+
+      const items = order.items || [{
+        itemId: order.itemId!,
+        itemName: order.itemName!,
+        quantity: order.quantity!,
+        printDesign: order.printDesign
+      }];
+
+      const batch = writeBatch(db);
+
+      for (const item of items) {
+        if (!item.itemId) continue;
+
+        // Reduce raw stock
+        batch.update(doc(db, 'items', item.itemId), { current_stock: increment(-item.quantity) });
+
+        const finishGoodName = item.printDesign 
+          ? `${item.itemName} - ${item.printDesign}`
+          : item.itemName;
+
+        // Check if exists
+        const q = query(collection(db, 'items'), where('companyId', '==', companyId), where('name', '==', finishGoodName));
+        const qSnap = await getDocs(q);
+
+        if (!qSnap.empty) {
+          batch.update(qSnap.docs[0].ref, { current_stock: increment(item.quantity) });
+        } else {
+          // Create new
+          const newRef = doc(collection(db, 'items'));
+          const rawItemSnap = await getDoc(doc(db, 'items', item.itemId));
+          const rawItemData = rawItemSnap.data() as Item;
+          
+          batch.set(newRef, {
+            id: newRef.id,
+            companyId,
+            name: finishGoodName,
+            unit_name: rawItemData?.unit_name || 'Pcs',
+            unit_id: rawItemData?.unit_id || '',
+            current_stock: item.quantity,
+            avg_cost: rawItemData?.avg_cost || 0,
+            category: 'Finish Goods',
+            createdAt: serverTimestamp()
+          });
+        }
+      }
+
+      batch.update(orderRef, { isConvertedToFinishGoods: true, updatedAt: serverTimestamp() });
+      await batch.commit();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `orders/${orderId}/conversion`);
+    }
+  },
+
+  async updateOrder(id: string, updates: Partial<PrintingOrder>) {
+    try {
+      await updateDoc(doc(db, 'orders', id), {
+        ...updates,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `orders/${id}`);
+    }
+  },
+
+  async deleteOrder(id: string) {
+    try {
+      await deleteDoc(doc(db, 'orders', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `orders/${id}`);
+    }
+  },
+
+  // Machine Management
+  async getMachines(companyId: string): Promise<PrintingMachine[]> {
+    try {
+      const q = query(collection(db, 'machines'), where('companyId', '==', companyId));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as PrintingMachine));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'machines');
+      return [];
+    }
+  },
+
+  async getUniquePrintDesigns(companyId: string): Promise<string[]> {
+    try {
+      const q = query(collection(db, 'orders'), where('companyId', '==', companyId));
+      const snapshot = await getDocs(q);
+      const designs = new Set<string>();
+      snapshot.docs.forEach(doc => {
+        const design = doc.data().printDesign;
+        if (design) designs.add(design);
+      });
+      return Array.from(designs).sort();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'orders');
+      return [];
+    }
+  },
+
+  async getClientOrderHistory(companyId: string, clientId: string): Promise<PrintingOrder[]> {
+    try {
+      const q = query(
+        collection(db, 'orders'), 
+        where('companyId', '==', companyId),
+        where('clientId', '==', clientId)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as PrintingOrder));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'orders');
+      return [];
+    }
+  },
+
+  async createMachine(machine: Partial<PrintingMachine>) {
+    try {
+      const ref = doc(collection(db, 'machines'));
+      const data = {
+        ...machine,
+        id: ref.id,
+        createdAt: serverTimestamp(),
+        status: machine.status || 'Idle'
+      };
+      await setDoc(ref, data);
+      return data;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'machines');
+    }
+  },
+
+  async updateMachine(id: string, updates: Partial<PrintingMachine>) {
+    try {
+      await updateDoc(doc(db, 'machines', id), updates);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `machines/${id}`);
+    }
+  },
+
+  async deleteMachine(id: string) {
+    try {
+      await deleteDoc(doc(db, 'machines', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `machines/${id}`);
+    }
+  },
+
+  async updateUserPermissions(userId: string, permissions: string[]) {
+    try {
+      await updateDoc(doc(db, 'users', userId), { permissions });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
     }
   }
 };

@@ -63,6 +63,13 @@ service cloud.firestore {
       );
     }
 
+    function hasPermission(permission) {
+      return isAuthenticated() && (
+        isSuperAdmin() || 
+        (userExists() && getUserData().get('permissions', []).contains(permission))
+      );
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
@@ -188,6 +195,20 @@ service cloud.firestore {
       allow read: if isCompanyMember(resource.data.companyId);
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
+      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+    }
+    
+    match /orders/{id} {
+      allow read: if isCompanyMember(resource.data.companyId) && (hasPermission('orders') || isCompanyAdmin(resource.data.companyId));
+      allow create: if isCompanyMember(request.resource.data.companyId) && (hasPermission('orders') || isCompanyAdmin(request.resource.data.companyId));
+      allow update: if isCompanyMember(request.resource.data.companyId) && (hasPermission('orders') || isCompanyAdmin(request.resource.data.companyId));
+      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+    }
+
+    match /machines/{id} {
+      allow read: if isCompanyMember(resource.data.companyId) && (hasPermission('machines') || isCompanyAdmin(resource.data.companyId));
+      allow create: if isCompanyMember(request.resource.data.companyId) && (hasPermission('machines') || isCompanyAdmin(request.resource.data.companyId));
+      allow update: if isCompanyMember(request.resource.data.companyId) && (hasPermission('machines') || isCompanyAdmin(request.resource.data.companyId));
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 

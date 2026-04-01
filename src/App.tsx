@@ -27,7 +27,10 @@ import {
   Award,
   DollarSign,
   Search,
-  AlertCircle
+  AlertCircle,
+  Printer,
+  Cpu,
+  BarChart3
 } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { VoucherEntry } from './components/VoucherEntry';
@@ -52,6 +55,10 @@ import { PayrollManagement } from './components/PayrollManagement';
 import { UserManagement } from './components/UserManagement';
 import { CompanyManagement } from './components/CompanyManagement';
 import { SalespersonReport } from './components/SalespersonReport';
+import { OrderManagement } from './components/OrderManagement';
+import OrderEntry from './components/OrderEntry';
+import { MachineManagement } from './components/MachineManagement';
+import OrderReports from './components/OrderReports';
 import FounderPanel from './components/FounderPanel';
 import SubscriptionRequired from './components/SubscriptionRequired';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -114,42 +121,65 @@ const SidebarGroup = ({ title, children, isOpen, onToggle }: { title: string, ch
 import { useTheme } from './contexts/ThemeContext';
 import { useSettings } from './contexts/SettingsContext';
 
-const NAV_ITEMS = [
+interface NavItem {
+  to: string;
+  icon: any;
+  label: string;
+  feature?: string;
+  adminOnly?: boolean;
+  superAdminOnly?: boolean;
+  permission?: string;
+}
+
+interface NavGroup {
+  group: string;
+  items: NavItem[];
+}
+
+const NAV_ITEMS: NavGroup[] = [
   {
     group: 'Masters',
     items: [
-      { to: '/accounts/ledgers/new', icon: UserPlus, label: 'Create Ledger' },
-      { to: '/inventory/items/new', icon: Plus, label: 'Create Item', feature: 'inv' },
-      { to: '/inventory/godowns', icon: MapPin, label: 'Godowns', feature: 'inv' },
-      { to: '/employees', icon: Users, label: 'Employee Master' },
-      { to: '/accounts', icon: Database, label: 'Chart of Accounts' },
-      { to: '/inventory/items', icon: Package, label: 'Item Master', feature: 'inv' },
+      { to: '/accounts/ledgers/new', icon: UserPlus, label: 'Create Ledger', permission: 'Ledgers' },
+      { to: '/inventory/items/new', icon: Plus, label: 'Create Item', feature: 'inv', permission: 'Items' },
+      { to: '/inventory/godowns', icon: MapPin, label: 'Godowns', feature: 'inv', permission: 'Items' },
+      { to: '/employees', icon: Users, label: 'Employee Master', permission: 'Employees' },
+      { to: '/accounts', icon: Database, label: 'Chart of Accounts', permission: 'Ledgers' },
+      { to: '/inventory/items', icon: Package, label: 'Item Master', feature: 'inv', permission: 'Items' },
     ]
   },
   {
     group: 'Transactions',
     items: [
-      { to: '/vouchers/new', icon: FileText, label: 'Voucher Entry' },
+      { to: '/vouchers/new', icon: FileText, label: 'Voucher Entry', permission: 'Vouchers' },
     ]
   },
   {
     group: 'Payroll',
     items: [
-      { to: '/payroll', icon: DollarSign, label: 'Payroll Management' },
+      { to: '/payroll', icon: DollarSign, label: 'Payroll Management', permission: 'Salary Sheets' },
+    ]
+  },
+  {
+    group: 'Production',
+    items: [
+      { to: '/production/orders', icon: Printer, label: 'Order Management', permission: 'orders' },
+      { to: '/production/machines', icon: Cpu, label: 'Machine Management', permission: 'machines' },
+      { to: '/production/reports', icon: BarChart3, label: 'Production Reports', permission: 'orders' },
     ]
   },
   {
     group: 'Reports',
     items: [
-      { to: '/reports/daybook', icon: BookOpen, label: 'Daybook' },
-      { to: '/reports/balance-sheet', icon: Scale, label: 'Balance Sheet' },
-      { to: '/reports/trial-balance', icon: ClipboardList, label: 'Trial Balance' },
-      { to: '/reports/pl', icon: TrendingUp, label: 'Profit & Loss' },
-      { to: '/reports/ratios', icon: Activity, label: 'Ratio Analysis' },
-      { to: '/reports/financial-insights', icon: TrendingUp, label: 'Financial Insights' },
-      { to: '/reports/stock', icon: Package, label: 'Stock Summary', feature: 'inv' },
-      { to: '/reports/ledger', icon: ClipboardList, label: 'Ledger Statement' },
-      { to: '/reports/sales-performance', icon: Award, label: 'Sales Performance' },
+      { to: '/reports/daybook', icon: BookOpen, label: 'Daybook', permission: 'Vouchers' },
+      { to: '/reports/balance-sheet', icon: Scale, label: 'Balance Sheet', permission: 'Ledgers' },
+      { to: '/reports/trial-balance', icon: ClipboardList, label: 'Trial Balance', permission: 'Ledgers' },
+      { to: '/reports/pl', icon: TrendingUp, label: 'Profit & Loss', permission: 'Ledgers' },
+      { to: '/reports/ratios', icon: Activity, label: 'Ratio Analysis', permission: 'Dashboard' },
+      { to: '/reports/financial-insights', icon: TrendingUp, label: 'Financial Insights', permission: 'Dashboard' },
+      { to: '/reports/stock', icon: Package, label: 'Stock Summary', feature: 'inv', permission: 'Items' },
+      { to: '/reports/ledger', icon: ClipboardList, label: 'Ledger Statement', permission: 'Ledgers' },
+      { to: '/reports/sales-performance', icon: Award, label: 'Sales Performance', permission: 'Employees' },
     ]
   },
   {
@@ -183,6 +213,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/reports/stock': 'Stock Summary',
   '/reports/ledger': 'Ledger Statement',
   '/reports/sales-performance': 'Sales Performance',
+  '/production/orders': 'Order Management',
+  '/production/machines': 'Machine Management',
+  '/production/reports': 'Production Reports',
   '/notes': 'Notes / Memo',
   '/companies': 'Company Management',
   '/users': 'User Management',
@@ -327,10 +360,11 @@ function Layout({ children }: { children: React.ReactNode }) {
               isOpen={expandedGroups.has(group.group)} 
               onToggle={() => toggleGroup(group.group)}
             >
-              {group.items.map((item) => {
+              {group.items.map((item: any) => {
                 if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
                 if (item.adminOnly && !isAdmin) return null;
                 if (item.superAdminOnly && !isSuperAdmin) return null;
+                if (item.permission && (!user?.permissions || !user.permissions.includes(item.permission)) && !isAdmin && !isSuperAdmin) return null;
                 return (
                   <SidebarItem 
                     key={item.to}
@@ -376,6 +410,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
             if (item.adminOnly && !isAdmin) return null;
             if (item.superAdminOnly && !isSuperAdmin) return null;
+            if (item.permission && (!user?.permissions || !user.permissions.includes(item.permission)) && !isAdmin && !isSuperAdmin) return null;
             
             return (
               <Link
@@ -1008,6 +1043,11 @@ function AppContent() {
           <Route path="/reports/financial-insights" element={<FinancialInsights />} />
           <Route path="/reports/ledger" element={<LedgerStatement />} />
           <Route path="/reports/sales-performance" element={<SalespersonReport />} />
+          <Route path="/production/orders" element={<OrderManagement />} />
+          <Route path="/production/orders/new" element={<OrderEntry />} />
+          <Route path="/production/orders/edit/:id" element={<OrderEntry />} />
+          <Route path="/production/machines" element={<MachineManagement />} />
+          <Route path="/production/reports" element={<OrderReports />} />
           <Route path="/accounts" element={<ChartOfAccounts />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/companies" element={<CompanyManagement />} />

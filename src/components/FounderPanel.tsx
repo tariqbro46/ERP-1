@@ -12,7 +12,7 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Company, UserRole } from '../types';
+import { Company, UserRole, UserProfile, AppNotification } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
@@ -37,23 +37,35 @@ import {
   ListTree,
   Bell,
   Send,
-  Plus
+  Plus,
+  ArrowRight,
+  FileText,
+  BookOpen,
+  Package,
+  ClipboardList,
+  Printer,
+  Cpu,
+  Settings
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { AppNotification } from '../types';
+import { cn } from '../lib/utils';
 
 interface CompanyStats extends Company {
   userCount: number;
   lastActivity?: any;
   voucherCount: number;
+  ledgerCount: number;
+  itemCount: number;
   creatorEmail?: string;
 }
 
 export default function FounderPanel() {
   const { user: currentUser } = useAuth();
+  const { showNotification } = useNotification();
   const navigate = useNavigate();
   const isSuperAdmin = currentUser?.role === 'Founder' || currentUser?.role === 'Marketing Manager' || currentUser?.email === 'sapientman46@gmail.com';
   const [companies, setCompanies] = useState<CompanyStats[]>([]);
@@ -62,7 +74,8 @@ export default function FounderPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<CompanyStats | null>(null);
   const [isEditingSubscription, setIsEditingSubscription] = useState(false);
-  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications'>('companies');
+  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity'>('companies');
+  const [globalActivity, setGlobalActivity] = useState<any[]>([]);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -75,6 +88,21 @@ export default function FounderPanel() {
     status: 'sent',
     scheduledAt: Timestamp.now()
   });
+
+  const [editingPermissionsUser, setEditingPermissionsUser] = useState<UserProfile | null>(null);
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+
+  const AVAILABLE_PERMISSIONS = [
+    { id: 'Dashboard', label: 'Dashboard', icon: Activity },
+    { id: 'Ledgers', label: 'Ledgers', icon: BookOpen },
+    { id: 'Vouchers', label: 'Vouchers', icon: FileText },
+    { id: 'Items', label: 'Items', icon: Package },
+    { id: 'Employees', label: 'Employees', icon: Users },
+    { id: 'Salary Sheets', label: 'Salary Sheets', icon: ClipboardList },
+    { id: 'Order Management', label: 'Order Management', icon: Printer },
+    { id: 'Machine Management', label: 'Machine Management', icon: Cpu },
+    { id: 'Settings', label: 'Settings', icon: Settings }
+  ];
 
   useEffect(() => {
     fetchData();
@@ -94,14 +122,16 @@ export default function FounderPanel() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [companiesSnap, usersSnap, notificationsData] = await Promise.all([
+      const [companiesSnap, usersSnap, notificationsData, activitySnap] = await Promise.all([
         getDocs(collection(db, 'companies')),
         erpService.getAllUsers(),
-        erpService.getNotifications(currentUser?.uid || '', currentUser?.companyId || '', true)
+        erpService.getNotifications(currentUser?.uid || '', currentUser?.companyId || '', true),
+        getDocs(query(collection(db, 'activity_log'), orderBy('createdAt', 'desc'), limit(50)))
       ]);
       
       setAllUsers(usersSnap);
       setNotifications(notificationsData);
+      setGlobalActivity(activitySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       const companyData: CompanyStats[] = [];
 
       for (const companyDoc of companiesSnap.docs) {
@@ -121,20 +151,24 @@ export default function FounderPanel() {
         const userCount = usersSnap.filter(u => u.companyId === companyDoc.id).length;
         
         // Fetch Voucher Count (as a proxy for DB size/usage)
-        const vouchersSnap = await getDocs(query(collection(db, 'vouchers'), where('companyId', '==', companyDoc.id)));
+        const [vouchersSnap, ledgersSnap, itemsSnap, activitySnap] = await Promise.all([
+          getDocs(query(collection(db, 'vouchers'), where('companyId', '==', companyDoc.id))),
+          getDocs(query(collection(db, 'ledgers'), where('companyId', '==', companyDoc.id))),
+          getDocs(query(collection(db, 'items'), where('companyId', '==', companyDoc.id))),
+          getDocs(query(
+            collection(db, 'activity_log'), 
+            where('companyId', '==', companyDoc.id),
+            orderBy('createdAt', 'desc'),
+            limit(1)
+          ))
+        ]);
         
-        // Fetch Last Activity
-        const activitySnap = await getDocs(query(
-          collection(db, 'activity_log'), 
-          where('companyId', '==', companyDoc.id),
-          orderBy('createdAt', 'desc'),
-          limit(1)
-        ));
-
         companyData.push({
           ...data,
           userCount,
           voucherCount: vouchersSnap.size,
+          ledgerCount: ledgersSnap.size,
+          itemCount: itemsSnap.size,
           lastActivity: activitySnap.docs[0]?.data(),
           creatorEmail
         });
@@ -257,6 +291,20 @@ export default function FounderPanel() {
     }
   };
 
+  const handleSwitchCompany = async (companyId: string) => {
+    if (!currentUser?.uid) return;
+    try {
+      setLoading(true);
+      await erpService.switchCompany(currentUser.uid, companyId);
+      // The AuthContext will handle the state update and the UI will reflect the new company
+      // We don't need to navigate away, but we should show a success indicator
+    } catch (error) {
+      console.error('Error switching company:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredCompanies = companies.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -331,6 +379,15 @@ export default function FounderPanel() {
             >
               <Bell className="w-4 h-4" />
               Notifications
+            </button>
+            <button
+              onClick={() => setViewMode('activity')}
+              className={`p-2 rounded-md transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${
+                viewMode === 'activity' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Activity className="w-4 h-4" />
+              Activity
             </button>
           </div>
 
@@ -439,7 +496,13 @@ export default function FounderPanel() {
                         <Users className="w-3 h-3" /> {company.userCount} Users
                       </span>
                       <span className="text-xs flex items-center gap-1">
-                        <Database className="w-3 h-3" /> {company.voucherCount} Vouchers
+                        <FileText className="w-3 h-3" /> {company.voucherCount} Vouchers
+                      </span>
+                      <span className="text-xs flex items-center gap-1">
+                        <BookOpen className="w-3 h-3" /> {company.ledgerCount} Ledgers
+                      </span>
+                      <span className="text-xs flex items-center gap-1">
+                        <Package className="w-3 h-3" /> {company.itemCount} Items
                       </span>
                     </div>
                   </td>
@@ -468,6 +531,19 @@ export default function FounderPanel() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      {currentUser?.companyId !== company.id ? (
+                        <button 
+                          onClick={() => handleSwitchCompany(company.id)}
+                          className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                          title="Switch to this Company"
+                        >
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <div className="p-2 text-emerald-500" title="Currently Active">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </div>
+                      )}
                       <button 
                         onClick={() => toggleAccess(company)}
                         className={`p-2 rounded-lg transition-colors ${
@@ -527,6 +603,18 @@ export default function FounderPanel() {
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPermissionsUser(user);
+                          setSelectedPermissions(user.permissions || []);
+                        }}
+                        className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest"
+                        title="Manage Permissions"
+                      >
+                        <Shield className="w-4 h-4" />
+                        Permissions
+                      </button>
                       <span className="text-[10px] uppercase font-bold text-gray-500 bg-muted px-2 py-1 rounded">
                         {userCompanies.length} Companies
                       </span>
@@ -573,6 +661,20 @@ export default function FounderPanel() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                  {currentUser?.companyId !== company.id ? (
+                                    <button 
+                                      onClick={() => handleSwitchCompany(company.id)}
+                                      className="px-3 py-1.5 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest rounded hover:opacity-90 transition-all flex items-center gap-1"
+                                    >
+                                      <ArrowRight className="w-3 h-3" />
+                                      Switch
+                                    </button>
+                                  ) : (
+                                    <div className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase tracking-widest rounded flex items-center gap-1">
+                                      <CheckCircle2 className="w-3 h-3" />
+                                      Active
+                                    </div>
+                                  )}
                                   <button 
                                     onClick={() => setSelectedCompany(company)}
                                     className="px-3 py-1.5 bg-muted text-foreground text-[10px] font-bold uppercase tracking-widest rounded hover:bg-muted/80 transition-all"
@@ -601,6 +703,54 @@ export default function FounderPanel() {
                 </div>
               );
             })}
+        </div>
+      ) : viewMode === 'activity' ? (
+        <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-border bg-muted/30">
+            <h2 className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+              <Activity className="w-4 h-4 text-primary" />
+              Global Activity Log (Last 50 Actions)
+            </h2>
+          </div>
+          <div className="divide-y divide-border">
+            {globalActivity.length > 0 ? (
+              globalActivity.map((log) => {
+                const company = companies.find(c => c.id === log.companyId);
+                const user = allUsers.find(u => u.uid === log.userId);
+                return (
+                  <div key={log.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                        <Activity className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-foreground">{log.action}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                            {company?.name || 'Unknown Company'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          by <span className="font-medium text-foreground">{user?.displayName || log.userName || 'Unknown User'}</span>
+                          {log.details && ` • ${log.details}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                        {log.createdAt?.toDate ? safeFormat(log.createdAt.toDate(), 'dd MMM, HH:mm:ss') : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-12 text-center">
+                <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                <p className="text-sm text-muted-foreground italic">No activity recorded yet.</p>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="space-y-6">
@@ -807,6 +957,98 @@ export default function FounderPanel() {
                   >
                     <Send className="w-4 h-4" />
                     {newNotification.status === 'sent' ? 'Send Now' : 'Save Notification'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Permissions Modal */}
+      <AnimatePresence>
+        {editingPermissionsUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-card border border-border w-full max-w-lg shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-border flex items-center justify-between bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-primary" />
+                  <div>
+                    <h2 className="text-sm font-bold uppercase tracking-widest">User Permissions</h2>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-tighter">
+                      Managing access for {editingPermissionsUser.displayName}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setEditingPermissionsUser(null)} className="p-2 hover:bg-foreground/5 rounded-full transition-colors">
+                  <Plus className="w-5 h-5 rotate-45" />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-6">
+                <p className="text-xs text-muted-foreground italic">
+                  Select the features this user should be able to access. If no permissions are selected, the user will have default access based on their role.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {AVAILABLE_PERMISSIONS.map((permission) => {
+                    const Icon = permission.icon;
+                    const isSelected = selectedPermissions.includes(permission.id);
+                    return (
+                      <button
+                        key={permission.id}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedPermissions(prev => prev.filter(p => p !== permission.id));
+                          } else {
+                            setSelectedPermissions(prev => [...prev, permission.id]);
+                          }
+                        }}
+                        className={cn(
+                          "flex items-center gap-3 p-3 border transition-all text-left",
+                          isSelected 
+                            ? "bg-primary/10 border-primary text-primary" 
+                            : "bg-background border-border text-muted-foreground hover:border-foreground"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center",
+                          isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        )}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest">{permission.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button 
+                    onClick={() => setEditingPermissionsUser(null)}
+                    className="flex-1 py-3 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/5 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        await erpService.updateUserPermissions(editingPermissionsUser.uid, selectedPermissions);
+                        showNotification('Permissions updated successfully');
+                        setEditingPermissionsUser(null);
+                        fetchData();
+                      } catch (err) {
+                        showNotification('Failed to update permissions', 'error');
+                      }
+                    }}
+                    className="flex-1 py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+                  >
+                    Save Permissions
                   </button>
                 </div>
               </div>

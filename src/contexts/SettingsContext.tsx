@@ -19,6 +19,13 @@ interface FeatureSettings {
 
 export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11';
 
+interface WhatsAppTemplates {
+  Sales: string;
+  Purchase: string;
+  Payment: string;
+  Receipt: string;
+}
+
 interface SettingsContextType {
   companyName: string;
   companyAddress: string;
@@ -54,6 +61,7 @@ interface SettingsContextType {
   menuBarStyle: MenuBarStyle;
   layoutWidth: 'responsive' | 'constrained';
   sidebarDefaultExpanded: boolean;
+  whatsappTemplates: WhatsAppTemplates;
   notifications: NotificationSettings;
   features: FeatureSettings[];
   updateSettings: (newSettings: Partial<SettingsContextType>) => void;
@@ -94,6 +102,12 @@ const defaultSettings: SettingsContextType = {
   menuBarStyle: 'classic',
   layoutWidth: 'constrained',
   sidebarDefaultExpanded: true,
+  whatsappTemplates: {
+    Sales: "*{{companyName}}*\nSales Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
+    Purchase: "*{{companyName}}*\nPurchase Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
+    Payment: "*{{companyName}}*\nPayment Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
+    Receipt: "*{{companyName}}*\nReceipt Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP"
+  },
   notifications: {
     voucherSaved: 'Voucher has been saved successfully!',
     ledgerCreated: 'New ledger account created.',
