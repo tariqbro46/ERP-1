@@ -1,0 +1,23 @@
+{
+  "name": "TallyFlow ERP",
+  "short_name": "TallyFlow",
+  "description": "A comprehensive ERP system for business management.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/pixel-art/svg?seed=erp-icon&size=192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/pixel-art/svg?seed=erp-icon&size=512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
