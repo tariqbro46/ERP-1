@@ -50,10 +50,10 @@ export function ItemMaster() {
     <div className="p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-6">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-mono text-foreground uppercase tracking-tighter">Item Master</h1>
-            <div className="flex gap-4 mt-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+          <h1 className="text-2xl font-mono text-foreground uppercase tracking-tighter">Item Master</h1>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex gap-4">
               <button 
                 onClick={() => setViewMode('master')}
                 className={`text-[10px] uppercase tracking-widest pb-1 border-b-2 transition-all ${viewMode === 'master' ? 'border-foreground text-foreground font-bold' : 'border-transparent text-gray-500'}`}
@@ -67,14 +67,14 @@ export function ItemMaster() {
                 Price List
               </button>
             </div>
+            <button 
+              onClick={() => navigate('/inventory/items/new')}
+              className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
+            >
+              <Plus className="w-3 h-3" />
+              Create New Item
+            </button>
           </div>
-          <button 
-            onClick={() => navigate('/inventory/items/new')}
-            className="flex items-center gap-2 px-6 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
-          >
-            <Plus className="w-3 h-3" />
-            Create New Item
-          </button>
         </div>
 
         {/* Filters Section */}

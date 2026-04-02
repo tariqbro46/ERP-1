@@ -132,19 +132,28 @@ export default function OrderReports() {
   };
 
   return (
-    <div className="p-4 lg:p-8 bg-background min-h-screen font-mono">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-border pb-8">
+    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2 border-b border-border pb-2">
         <div className="space-y-1">
           <div className="flex items-center gap-3 text-primary mb-1">
             <BarChart3 className="w-5 h-5" />
-            <span className="text-[10px] uppercase tracking-[0.3em] font-bold">Analytics</span>
+            <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-foreground">Analytics</span>
           </div>
-          <h1 className="text-2xl md:text-4xl font-bold tracking-tighter text-foreground uppercase">Production Reports</h1>
+          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Production Reports</h1>
+        </div>
+        <div className="flex w-full md:w-auto justify-end">
+          <button 
+            onClick={() => window.print()}
+            className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
+          >
+            <FileText className="w-3 h-3" />
+            Full Page View
+          </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-8 bg-muted/30 p-4 border border-border">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4 bg-muted/30 p-4 border border-border">
         <div className="relative lg:col-span-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input 

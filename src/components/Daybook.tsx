@@ -63,26 +63,58 @@ export function Daybook() {
   }, [startDate, endDate, isDetailed]);
 
   const handlePrint = () => {
-    const printData = vouchers.map(v => ({
-      date: v.v_date,
-      particulars: v.particulars,
-      vch_type: v.v_type,
-      vch_no: v.v_no,
-      amount: v.total_amount
-    }));
+    const printData = vouchers.map(v => {
+      const rows = [{
+        date: v.v_date,
+        particulars: v.particulars,
+        vch_type: v.v_type,
+        vch_no: v.v_no,
+        amount: v.total_amount
+      }];
+
+      if (isDetailed && v.inventory && v.inventory.length > 0) {
+        v.inventory.forEach((item: any) => {
+          const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+          rows.push({
+            date: '',
+            particulars: `  > ${itemName} (${item.qty} @ ${item.rate})`,
+            vch_type: '',
+            vch_no: '',
+            amount: 0
+          });
+        });
+      }
+      return rows;
+    }).flat();
 
     printReport('Daybook', printData, ['Date', 'Particulars', 'Vch Type', 'Vch No', 'Amount'], settings);
   };
 
   const handleDownloadExcel = () => {
     const period = `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
-    const exportData = vouchers.map(v => ({
-      'Date': v.v_date,
-      'Particulars': v.particulars,
-      'Voucher Type': v.v_type,
-      'Voucher No': v.v_no,
-      'Amount': v.total_amount
-    }));
+    const exportData = vouchers.map(v => {
+      const rows = [{
+        'Date': v.v_date,
+        'Particulars': v.particulars,
+        'Voucher Type': v.v_type,
+        'Voucher No': v.v_no,
+        'Amount': v.total_amount
+      }];
+
+      if (isDetailed && v.inventory && v.inventory.length > 0) {
+        v.inventory.forEach((item: any) => {
+          const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+          rows.push({
+            'Date': '',
+            'Particulars': `  > ${itemName} (${item.qty} @ ${item.rate})`,
+            'Voucher Type': '',
+            'Voucher No': '',
+            'Amount': 0
+          });
+        });
+      }
+      return rows;
+    }).flat();
 
     exportService.exportToExcel(exportData, `Daybook_${period.replace(/ /g, '_')}`, 'Daybook');
   };
@@ -90,15 +122,31 @@ export function Daybook() {
   const handleDownloadPDF = () => {
     const period = `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
     const headers = [['Date', 'Particulars', 'Vch Type', 'Vch No', 'Amount']];
-    const body = vouchers.map(v => [
-      v.v_date,
-      v.particulars,
-      v.v_type,
-      v.v_no,
-      v.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })
-    ]);
+    const body = vouchers.map(v => {
+      const rows = [[
+        v.v_date,
+        v.particulars,
+        v.v_type,
+        v.v_no,
+        v.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })
+      ]];
 
-    exportService.exportToPDF(headers, body, `Daybook_${period.replace(/ /g, '_')}`, `Daybook Report (${period})`);
+      if (isDetailed && v.inventory && v.inventory.length > 0) {
+        v.inventory.forEach((item: any) => {
+          const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+          rows.push([
+            '',
+            `  > ${itemName} (${item.qty} @ ${item.rate})`,
+            '',
+            '',
+            ''
+          ]);
+        });
+      }
+      return rows;
+    }).flat();
+
+    exportService.exportToPDF(headers, body, `Daybook_${period.replace(/ /g, '_')}`, `Daybook Report (${period})`, settings);
   };
 
   const handleShareWhatsApp = (v: any) => {

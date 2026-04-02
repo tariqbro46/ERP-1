@@ -25,6 +25,46 @@
   color-scheme: dark;
 }
 
+.emerald {
+  --background: #f0fdf4;
+  --foreground: #064e3b;
+  --card: #ffffff;
+  --border: #dcfce7;
+  --primary: #10b981;
+}
+
+.amber {
+  --background: #fffbeb;
+  --foreground: #78350f;
+  --card: #ffffff;
+  --border: #fef3c7;
+  --primary: #f59e0b;
+}
+
+.rose {
+  --background: #fff1f2;
+  --foreground: #881337;
+  --card: #ffffff;
+  --border: #ffe4e6;
+  --primary: #f43f5e;
+}
+
+.slate {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --border: #f1f5f9;
+  --primary: #64748b;
+}
+
+.classic {
+  --background: #f1f5f9;
+  --foreground: #1e293b;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --primary: #0f172a;
+}
+
 .dark select option {
   background-color: #141414;
   color: #ffffff;

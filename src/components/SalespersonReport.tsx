@@ -5,6 +5,8 @@ import { Users, TrendingUp, Target, Award, Calendar, Search, Loader2, ArrowUpRig
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
 
+import { SearchableSelect } from './SearchableSelect';
+
 interface SalespersonStat {
   uid: string;
   name: string;
@@ -77,88 +79,93 @@ export function SalespersonReport() {
   const topPerformer = stats.length > 0 ? stats[0] : null;
 
   return (
-    <div className="p-4 lg:p-8 space-y-8 font-mono transition-colors">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-baseline gap-4">
-          <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-3">
+    <div className="p-4 lg:p-6 space-y-6 font-mono transition-colors">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-4">
+        <div className="flex flex-col">
+          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter flex items-center gap-3">
             <Award className="w-6 h-6 text-amber-500" />
             Sales Performance
           </h1>
-          <p className="text-gray-500 text-[10px] uppercase tracking-widest">Track salesperson targets and achievements</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-1.5">
-            <Calendar className="w-3.5 h-3.5 text-gray-500" />
-            <input 
-              type="date" 
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-transparent border-none text-[10px] text-foreground outline-none uppercase font-bold"
-            />
-            <span className="text-gray-500 text-[10px] font-bold">TO</span>
-            <input 
-              type="date" 
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="bg-transparent border-none text-[10px] text-foreground outline-none uppercase font-bold"
-            />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-4 w-full md:w-auto">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">From</label>
+              <input 
+                type="date" 
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground uppercase font-bold"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">To</label>
+              <input 
+                type="date" 
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground uppercase font-bold"
+              />
+            </div>
           </div>
           
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search salesperson..."
+          <div className="w-full sm:w-64">
+            <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">Salesperson</label>
+            <SearchableSelect
+              options={stats.map(s => ({ id: s.uid, name: s.name }))}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-card border border-border rounded-lg py-1.5 pl-9 pr-4 text-foreground text-[10px] focus:outline-none focus:border-foreground/20 transition-colors w-48"
+              onChange={setSearchTerm}
+              placeholder="Select Salesperson..."
             />
           </div>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-card border border-border p-6 rounded-xl shadow-sm space-y-4">
+      <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-card border border-border p-3 lg:p-6 rounded-xl shadow-sm space-y-2 lg:space-y-4">
           <div className="flex items-center justify-between">
-            <div className="p-2 bg-indigo-500/10 rounded-lg">
-              <TrendingUp className="w-5 h-5 text-indigo-500" />
+            <div className="p-1.5 bg-indigo-500/10 rounded-lg">
+              <TrendingUp className="w-4 h-4 lg:w-5 lg:h-5 text-indigo-500" />
             </div>
-            <span className="text-[10px] text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">LIVE</span>
+            <span className="text-[8px] lg:text-[10px] text-emerald-500 font-bold bg-emerald-500/10 px-1.5 lg:px-2 py-0.5 rounded-full">LIVE</span>
           </div>
           <div>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Total Sales (Period)</p>
-            <h3 className="text-2xl font-bold text-foreground mt-1">৳ {totalCompanySales.toLocaleString()}</h3>
+            <p className="text-[8px] lg:text-[10px] text-gray-500 uppercase tracking-widest font-bold">Total Sales</p>
+            <h3 className="text-sm lg:text-2xl font-bold text-foreground mt-1 truncate">৳ {totalCompanySales.toLocaleString()}</h3>
           </div>
         </div>
 
-        <div className="bg-card border border-border p-6 rounded-xl shadow-sm space-y-4">
+        <div className="bg-card border border-border p-3 lg:p-6 rounded-xl shadow-sm space-y-2 lg:space-y-4">
           <div className="flex items-center justify-between">
-            <div className="p-2 bg-amber-500/10 rounded-lg">
-              <Target className="w-5 h-5 text-amber-500" />
+            <div className="p-1.5 bg-amber-500/10 rounded-lg">
+              <Target className="w-4 h-4 lg:w-5 lg:h-5 text-amber-500" />
             </div>
           </div>
           <div>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Top Performer</p>
-            <h3 className="text-2xl font-bold text-foreground mt-1">{topPerformer?.name || 'N/A'}</h3>
+            <p className="text-[8px] lg:text-[10px] text-gray-500 uppercase tracking-widest font-bold">Top Performer</p>
+            <h3 className="text-sm lg:text-2xl font-bold text-foreground mt-1 truncate">{topPerformer?.name || 'N/A'}</h3>
             {topPerformer && (
-              <p className="text-[10px] text-emerald-500 font-bold mt-1">
-                {topPerformer.achievement.toFixed(1)}% of Target
+              <p className="text-[8px] lg:text-[10px] text-emerald-500 font-bold mt-1">
+                {topPerformer.achievement.toFixed(1)}%
               </p>
             )}
           </div>
         </div>
 
-        <div className="bg-card border border-border p-6 rounded-xl shadow-sm space-y-4">
+        <div className="bg-card border border-border p-3 lg:p-6 rounded-xl shadow-sm space-y-2 lg:space-y-4">
           <div className="flex items-center justify-between">
-            <div className="p-2 bg-emerald-500/10 rounded-lg">
-              <Users className="w-5 h-5 text-emerald-500" />
+            <div className="p-1.5 bg-emerald-500/10 rounded-lg">
+              <Users className="w-4 h-4 lg:w-5 lg:h-5 text-emerald-500" />
             </div>
           </div>
           <div>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Active Salespeople</p>
-            <h3 className="text-2xl font-bold text-foreground mt-1">{stats.filter(s => s.voucherCount > 0).length}</h3>
+            <p className="text-[8px] lg:text-[10px] text-gray-500 uppercase tracking-widest font-bold">Active Staff</p>
+            <h3 className="text-sm lg:text-2xl font-bold text-foreground mt-1 truncate">{stats.filter(s => s.voucherCount > 0).length}</h3>
+            <p className="text-[8px] lg:text-[10px] text-gray-500 font-bold mt-1">
+              Out of {stats.length}
+            </p>
           </div>
         </div>
       </div>

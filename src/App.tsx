@@ -118,7 +118,7 @@ const SidebarGroup = ({ title, children, isOpen, onToggle }: { title: string, ch
   </div>
 );
 
-import { useTheme } from './contexts/ThemeContext';
+import { useTheme, Theme } from './contexts/ThemeContext';
 import { useSettings } from './contexts/SettingsContext';
 
 interface NavItem {
@@ -225,7 +225,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { user, company, logout, isAdmin, isSuperAdmin } = useAuth();
   const { companyName, slogan, features = [], menuBarStyle = 'classic', layoutWidth = 'constrained', sidebarDefaultExpanded = true } = useSettings();
 
@@ -520,13 +520,6 @@ function Layout({ children }: { children: React.ReactNode }) {
       {/* Right side controls for macOS */}
       <div className="flex items-center gap-4">
         <NotificationCenter />
-        <button 
-          onClick={toggleTheme}
-          className="p-1.5 rounded-full hover:bg-foreground/5 transition-colors text-gray-500 hover:text-foreground"
-          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        >
-          {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-        </button>
         
         <div className="relative" ref={dropdownRef}>
           <button 
@@ -566,6 +559,36 @@ function Layout({ children }: { children: React.ReactNode }) {
               <Link to="/companies" className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors">
                 <Building2 className="w-3.5 h-3.5" /> Company Info
               </Link>
+
+              <div className="h-[1px] bg-border my-2" />
+
+              <div className="px-4 py-2">
+                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">Select Theme</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {(['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'] as Theme[]).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setTheme(t)}
+                      className={cn(
+                        "w-full aspect-square rounded-md border-2 transition-all flex items-center justify-center",
+                        theme === t ? "border-primary scale-110 shadow-lg" : "border-transparent hover:border-border"
+                      )}
+                      title={t.charAt(0).toUpperCase() + t.slice(1)}
+                    >
+                      <div className={cn(
+                        "w-full h-full rounded-sm",
+                        t === 'light' ? "bg-white border border-gray-200" : 
+                        t === 'dark' ? "bg-zinc-900" : 
+                        t === 'emerald' ? "bg-emerald-500" : 
+                        t === 'amber' ? "bg-amber-500" : 
+                        t === 'rose' ? "bg-rose-500" : 
+                        t === 'slate' ? "bg-slate-500" : 
+                        "bg-zinc-800"
+                      )} />
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div className="h-[1px] bg-border my-2" />
 
@@ -649,24 +672,54 @@ function Layout({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
               
-              <div className="pt-6 border-t border-border flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full border border-border overflow-hidden bg-card">
-                    <img 
-                      src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
+              <div className="pt-6 border-t border-border flex flex-col gap-4">
+                <div className="px-2">
+                  <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">Select Theme</p>
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    {(['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'] as Theme[]).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setTheme(t)}
+                        className={cn(
+                          "min-w-[32px] h-8 rounded-md border-2 transition-all flex items-center justify-center",
+                          theme === t ? "border-primary scale-110 shadow-lg" : "border-transparent hover:border-border"
+                        )}
+                        title={t.charAt(0).toUpperCase() + t.slice(1)}
+                      >
+                        <div className={cn(
+                          "w-full h-full rounded-sm",
+                          t === 'light' ? "bg-white border border-gray-200" : 
+                          t === 'dark' ? "bg-zinc-900" : 
+                          t === 'emerald' ? "bg-emerald-500" : 
+                          t === 'amber' ? "bg-amber-500" : 
+                          t === 'rose' ? "bg-rose-500" : 
+                          t === 'slate' ? "bg-slate-500" : 
+                          "bg-zinc-800"
+                        )} />
+                      </button>
+                    ))}
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest">{user?.displayName || 'User'}</span>
                 </div>
-                <button 
-                  onClick={logout}
-                  className="p-2 hover:bg-rose-500/10 rounded-lg text-rose-500 transition-colors"
-                  title="Sign out"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full border border-border overflow-hidden bg-card">
+                      <img 
+                        src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">{user?.displayName || 'User'}</span>
+                  </div>
+                  <button 
+                    onClick={logout}
+                    className="p-2 hover:bg-rose-500/10 rounded-lg text-rose-500 transition-colors"
+                    title="Sign out"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -795,13 +848,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 
             <div className="ml-auto flex items-center gap-3 lg:gap-6 z-10">
               <NotificationCenter />
-              <button 
-                onClick={toggleTheme}
-                className="p-2 rounded-full hover:bg-card transition-colors text-gray-500 hover:text-foreground"
-                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              >
-                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
+              
               <div className="hidden md:flex items-center gap-2 text-[10px] text-gray-500 font-mono">
                 <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-gray-400">Alt</kbd>
                 <span>+</span>
@@ -869,13 +916,35 @@ function Layout({ children }: { children: React.ReactNode }) {
 
                     <div className="h-[1px] bg-border my-2" />
 
-                    <button 
-                      onClick={toggleTheme}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
-                    >
-                      {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-                      {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-                    </button>
+                    <div className="px-4 py-2">
+                      <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">Select Theme</p>
+                      <div className="grid grid-cols-4 gap-2">
+                        {(['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'] as Theme[]).map((t) => (
+                          <button
+                            key={t}
+                            onClick={() => setTheme(t)}
+                            className={cn(
+                              "w-full aspect-square rounded-md border-2 transition-all flex items-center justify-center",
+                              theme === t ? "border-primary scale-110 shadow-lg" : "border-transparent hover:border-border"
+                            )}
+                            title={t.charAt(0).toUpperCase() + t.slice(1)}
+                          >
+                            <div className={cn(
+                              "w-full h-full rounded-sm",
+                              t === 'light' ? "bg-white border border-gray-200" : 
+                              t === 'dark' ? "bg-zinc-900" : 
+                              t === 'emerald' ? "bg-emerald-500" : 
+                              t === 'amber' ? "bg-amber-500" : 
+                              t === 'rose' ? "bg-rose-500" : 
+                              t === 'slate' ? "bg-slate-500" : 
+                              "bg-zinc-800"
+                            )} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="h-[1px] bg-border my-2" />
 
                     <button 
                       onClick={logout}

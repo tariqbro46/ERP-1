@@ -102,8 +102,8 @@ export function FinancialInsights() {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div>
-            <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Financial Insights</h1>
+          <div className="space-y-1">
+            <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Financial Insights</h1>
             <div className="flex gap-4 mt-2">
               <button 
                 onClick={() => setActiveInsightTab('forecast')}
@@ -119,12 +119,31 @@ export function FinancialInsights() {
               </button>
             </div>
           </div>
-          <div className="flex gap-3">
-            <button className="p-2 border border-border text-gray-500 hover:text-foreground transition-colors">
+          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto justify-end items-end">
+            <button 
+              onClick={() => window.print()}
+              className="w-full sm:w-auto px-4 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest"
+            >
               <Printer className="w-4 h-4" />
+              Print
             </button>
-            <button className="p-2 border border-border text-gray-500 hover:text-foreground transition-colors">
+            <button 
+              onClick={() => {
+                const csvContent = "data:text/csv;charset=utf-8," + 
+                  "Month,Inflow,Outflow\n" + 
+                  cashFlowData.map(d => `${d.month},${d.inflow},${d.outflow}`).join("\n");
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "financial_insights.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              className="w-full sm:w-auto px-4 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest"
+            >
               <Download className="w-4 h-4" />
+              Download
             </button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Printer, Download, ArrowLeft, Calculator } from 'lucide-react';
+import { Search, Printer, Download, ArrowLeft, Calculator, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
@@ -125,15 +125,30 @@ export function LedgerStatement() {
       },
       ...entries.map(e => {
         rb += (e.debit || 0) - (e.credit || 0);
-        return {
+        const rows = [{
           date: e.vouchers?.v_date,
           vch_no: e.vouchers?.v_no,
-          vch_type: e.vouchers?.v_type,
+          vch_type: `${e.vouchers?.v_type} - ${e.particulars}`,
           debit: e.debit || 0,
           credit: e.credit || 0,
           balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`
-        };
-      })
+        }];
+
+        if (isDetailed && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
+          e.vouchers.inventory.forEach((item: any) => {
+            const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+            rows.push({
+              date: '',
+              vch_no: '',
+              vch_type: `  > ${itemName} (${item.qty} @ ${item.rate})`,
+              debit: 0,
+              credit: 0,
+              balance: ''
+            });
+          });
+        }
+        return rows;
+      }).flat()
     ];
 
     const period = `Period: ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
@@ -157,7 +172,7 @@ export function LedgerStatement() {
       },
       ...entries.map(e => {
         rb += (e.debit || 0) - (e.credit || 0);
-        return {
+        const rows = [{
           date: e.vouchers?.v_date,
           particulars: e.particulars,
           vch_no: e.vouchers?.v_no,
@@ -165,8 +180,24 @@ export function LedgerStatement() {
           debit: e.debit || 0,
           credit: e.credit || 0,
           balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`
-        };
-      })
+        }];
+
+        if (isDetailed && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
+          e.vouchers.inventory.forEach((item: any) => {
+            const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+            rows.push({
+              date: '',
+              particulars: `  - ${itemName} (${item.qty} @ ${item.rate})`,
+              vch_no: '',
+              vch_type: '',
+              debit: 0,
+              credit: 0,
+              balance: ''
+            });
+          });
+        }
+        return rows;
+      }).flat()
     ];
 
     const period = `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
@@ -190,7 +221,7 @@ export function LedgerStatement() {
       },
       ...entries.map(e => {
         rb += (e.debit || 0) - (e.credit || 0);
-        return {
+        const rows = [{
           date: e.vouchers?.v_date,
           particulars: e.particulars,
           vch_no: e.vouchers?.v_no,
@@ -198,21 +229,150 @@ export function LedgerStatement() {
           debit: e.debit || 0,
           credit: e.credit || 0,
           balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`
-        };
-      })
+        }];
+
+        if (isDetailed && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
+          e.vouchers.inventory.forEach((item: any) => {
+            const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+            rows.push({
+              date: '',
+              particulars: `  - ${itemName} (${item.qty} @ ${item.rate})`,
+              vch_no: '',
+              vch_type: '',
+              debit: 0,
+              credit: 0,
+              balance: ''
+            });
+          });
+        }
+        return rows;
+      }).flat()
     ];
 
     const period = `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
     exportToPDF(`Ledger_Statement_${ledgerName.replace(/ /g, '_')}`, `Ledger Statement: ${ledgerName} (${period})`, exportData, ['Date', 'Particulars', 'Vch No', 'Vch Type', 'Debit', 'Credit', 'Balance'], settings);
   };
 
+  const handleFullPageView = () => {
+    if (!selectedLedger) return;
+    const ledgerName = currentLedger?.name || 'Ledger';
+    const period = `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
+    
+    let rb = currentLedger?.opening_balance || 0;
+    const reportRows = [
+      `<tr>
+        <td>-</td>
+        <td>-</td>
+        <td>Opening Balance</td>
+        <td style="text-align: right;">${rb > 0 ? rb.toFixed(2) : '0.00'}</td>
+        <td style="text-align: right;">${rb < 0 ? Math.abs(rb).toFixed(2) : '0.00'}</td>
+        <td style="text-align: right;">${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}</td>
+      </tr>`,
+      ...entries.map(e => {
+        rb += (e.debit || 0) - (e.credit || 0);
+        let row = `<tr>
+          <td>${e.vouchers?.v_date}</td>
+          <td>${e.vouchers?.v_no}</td>
+          <td>${e.vouchers?.v_type} - ${e.particulars}</td>
+          <td style="text-align: right;">${(e.debit || 0).toFixed(2)}</td>
+          <td style="text-align: right;">${(e.credit || 0).toFixed(2)}</td>
+          <td style="text-align: right;">${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}</td>
+        </tr>`;
+
+        if (isDetailed && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
+          row += `<tr>
+            <td colspan="6" style="padding: 0;">
+              <table style="width: 100%; margin: 0; border: none; background-color: #fafafa;">
+                <thead>
+                  <tr style="background-color: #eee;">
+                    <th style="font-size: 10px; border: none; padding: 4px; text-align: left;">Item Name</th>
+                    <th style="font-size: 10px; border: none; padding: 4px; text-align: left;">Godown</th>
+                    <th style="font-size: 10px; border: none; padding: 4px; text-align: right;">Qty</th>
+                    <th style="font-size: 10px; border: none; padding: 4px; text-align: right;">Rate</th>
+                    <th style="font-size: 10px; border: none; padding: 4px; text-align: right;">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${e.vouchers.inventory.map((item: any) => `
+                    <tr>
+                      <td style="font-size: 10px; border: none; padding: 4px;">${items.find(i => i.id === item.item_id)?.name || 'Unknown'}</td>
+                      <td style="font-size: 10px; border: none; padding: 4px;">${godowns.find(g => g.id === item.godown_id)?.name || '-'}</td>
+                      <td style="font-size: 10px; border: none; padding: 4px; text-align: right;">${item.qty} ${item.unit || ''}</td>
+                      <td style="font-size: 10px; border: none; padding: 4px; text-align: right;">${item.rate.toFixed(2)}</td>
+                      <td style="font-size: 10px; border: none; padding: 4px; text-align: right;">${item.amount.toFixed(2)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </td>
+          </tr>`;
+        }
+        return row;
+      })
+    ].join('');
+
+    const html = `
+      <html>
+        <head>
+          <title>Ledger Statement - ${ledgerName}</title>
+          <style>
+            body { font-family: monospace; padding: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+            th { background-color: #f4f4f4; text-transform: uppercase; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .company-name { font-size: 20px; font-weight: bold; text-transform: uppercase; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="company-name">${settings?.companyName || 'COMPANY NAME'}</div>
+            <div>Ledger Statement: ${ledgerName}</div>
+            <div>Period: ${period}</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Vch No</th>
+                <th>Particulars</th>
+                <th style="text-align: right;">Debit</th>
+                <th style="text-align: right;">Credit</th>
+                <th style="text-align: right;">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${reportRows}
+            </tbody>
+          </table>
+          <script>window.print();</script>
+        </body>
+      </html>
+    `;
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    }
+  };
+
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-4 gap-4">
+          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Ledger Statement</h1>
+          <button 
+            onClick={() => setShowAdjustmentModal(true)}
+            disabled={!selectedLedger}
+            className="px-3 py-1.5 bg-emerald-600/10 border border-emerald-600/20 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-[9px] font-bold uppercase tracking-widest"
+            title="Quick Adjustment"
+          >
+            <Calculator className="w-3 h-3" /> Adjust
+          </button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div className="flex-1 w-full sm:max-w-2xl space-y-4">
-            <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Ledger Statement</h1>
-            
             <div className="relative">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -275,54 +435,56 @@ export function LedgerStatement() {
               </div>
             </div>
           </div>
-          <div className="flex gap-3 w-full sm:w-auto">
+          <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button 
+                onClick={() => setIsDetailed(!isDetailed)}
+                className={cn(
+                  "px-3 py-2 border border-border transition-colors flex items-center gap-2 text-[10px] font-bold uppercase",
+                  isDetailed ? "bg-foreground text-background" : "text-gray-500 hover:text-foreground"
+                )}
+              >
+                {isDetailed ? 'Condensed' : 'Detailed'}
+              </button>
+              <button 
+                onClick={fetchEntries}
+                disabled={loading || !selectedLedger}
+                className="p-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center disabled:opacity-50"
+                title="Refresh Data"
+              >
+                <Search className={cn("w-4 h-4", loading && "animate-spin")} />
+              </button>
+              <button 
+                onClick={handlePrint}
+                disabled={!selectedLedger}
+                className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+              >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
+              <button 
+                onClick={handleDownload}
+                disabled={!selectedLedger || entries.length === 0}
+                className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+                title="Download CSV"
+              >
+                <Download className="w-3 h-3" /> CSV
+              </button>
+              <button 
+                onClick={handleDownloadPDF}
+                disabled={!selectedLedger || entries.length === 0}
+                className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+                title="Download PDF"
+              >
+                <Download className="w-3 h-3" /> PDF
+              </button>
+            </div>
             <button 
-              onClick={() => setIsDetailed(!isDetailed)}
-              className={cn(
-                "flex-1 sm:flex-none px-3 py-2 border border-border transition-colors flex items-center gap-2 text-[10px] font-bold uppercase",
-                isDetailed ? "bg-foreground text-background" : "text-gray-500 hover:text-foreground"
-              )}
-            >
-              {isDetailed ? 'Condensed' : 'Detailed'}
-            </button>
-            <button 
-              onClick={fetchEntries}
-              disabled={loading || !selectedLedger}
-              className="flex-1 sm:flex-none p-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center disabled:opacity-50"
-              title="Refresh Data"
-            >
-              <Search className={cn("w-4 h-4", loading && "animate-spin")} />
-            </button>
-            <button 
-              onClick={handlePrint}
+              onClick={handleFullPageView}
               disabled={!selectedLedger}
-              className="flex-1 sm:flex-none p-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Printer className="w-4 h-4" />
-            </button>
-            <button 
-              onClick={handleDownload}
-              disabled={!selectedLedger || entries.length === 0}
-              className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-              title="Download CSV"
-            >
-              <Download className="w-3 h-3" /> CSV
-            </button>
-            <button 
-              onClick={handleDownloadPDF}
-              disabled={!selectedLedger || entries.length === 0}
-              className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-              title="Download PDF"
-            >
-              <Download className="w-3 h-3" /> PDF
-            </button>
-            <button 
-              onClick={() => setShowAdjustmentModal(true)}
-              disabled={!selectedLedger}
-              className="flex-1 sm:flex-none px-3 py-2 bg-emerald-600/10 border border-emerald-600/20 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-              title="Quick Adjustment"
-            >
-              <Calculator className="w-3 h-3" /> Adjust
+              <FileText className="w-3 h-3" /> Full Page View
             </button>
           </div>
         </div>

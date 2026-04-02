@@ -32,6 +32,7 @@ export function PayrollManagement() {
   const { user } = useAuth();
   const { showNotification } = useNotification();
   const settings = useSettings();
+  const { baseCurrencySymbol = '৳' } = settings;
   const [activeTab, setActiveTab] = useState<Tab>('salary');
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -356,57 +357,42 @@ export function PayrollManagement() {
   };
 
   const handleWhatsApp = (s: any) => {
-    const text = `Salary Slip for ${s.month}\nEmployee: ${s.employeeName}\nNet Payable: ৳${s.netSalary}\nStatus: ${s.paymentStatus}`;
+    const text = `Salary Slip for ${s.month}\nEmployee: ${s.employeeName}\nNet Payable: ${baseCurrencySymbol}${s.netSalary}\nStatus: ${s.paymentStatus}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const handleEmail = (s: any) => {
     const subject = `Salary Slip - ${s.month}`;
-    const body = `Employee: ${s.employeeName}\nNet Payable: ৳${s.netSalary}\nStatus: ${s.paymentStatus}`;
+    const body = `Employee: ${s.employeeName}\nNet Payable: ${baseCurrencySymbol}${s.netSalary}\nStatus: ${s.paymentStatus}`;
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
   };
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
-          <div className="flex items-baseline gap-4">
-            <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Payroll Management</h1>
-            <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Manage Salaries, Advances, and Loans</p>
-          </div>
-          <div className="flex gap-2">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-4 gap-4">
+          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Payroll Management</h1>
+          {activeTab !== 'bulk' && (
             <button 
-              onClick={() => setActiveTab(activeTab === 'bulk' ? 'salary' : 'bulk')}
-              className={cn(
-                "px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 border border-border",
-                activeTab === 'bulk' ? "bg-foreground text-background" : "bg-card text-foreground hover:bg-foreground/5"
-              )}
+              onClick={() => {
+                setEditingItem(null);
+                setSelectedEmployeeId('');
+                setAmount('');
+                setReason('');
+                setMonthlyEMI('');
+                setInterestRate('0');
+                setEmiDuration('12');
+                setApplicationDate(format(new Date(), 'yyyy-MM-dd'));
+                setApprovalDate(format(new Date(), 'yyyy-MM-dd'));
+                setStatus('Pending');
+                setIsModalOpen(true);
+              }}
+              className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2"
             >
-              {activeTab === 'bulk' ? <LayoutGrid className="w-3 h-3" /> : <TableIcon className="w-3 h-3" />}
-              {activeTab === 'bulk' ? 'Card View' : 'Bulk View'}
+              <Plus className="w-3 h-3" />
+              Add {activeTab === 'salary' ? 'Salary Sheet' : activeTab === 'advance' ? 'Advance' : 'Loan'}
             </button>
-            {activeTab !== 'bulk' && (
-              <button 
-                onClick={() => {
-                  setEditingItem(null);
-                  setSelectedEmployeeId('');
-                  setAmount('');
-                  setReason('');
-                  setMonthlyEMI('');
-                  setInterestRate('0');
-                  setEmiDuration('12');
-                  setApplicationDate(format(new Date(), 'yyyy-MM-dd'));
-                  setApprovalDate(format(new Date(), 'yyyy-MM-dd'));
-                  setStatus('Pending');
-                  setIsModalOpen(true);
-                }}
-                className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
-              >
-                <Plus className="w-3 h-3" />
-                Add {activeTab === 'salary' ? 'Salary Sheet' : activeTab === 'advance' ? 'Advance' : 'Loan'}
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -441,14 +427,26 @@ export function PayrollManagement() {
             </button>
           </div>
           
-          <div className="flex items-center gap-2 pb-2 md:pb-0">
-            <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Select Month</label>
-            <input 
-              type="month" 
-              value={month}
-              onChange={e => setMonth(e.target.value)}
-              className="bg-background border border-border text-foreground p-1.5 text-xs outline-none focus:border-foreground"
-            />
+          <div className="flex flex-col items-end gap-2 pb-2 md:pb-0">
+            <div className="flex items-center gap-2">
+              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Select Month</label>
+              <input 
+                type="month" 
+                value={month}
+                onChange={e => setMonth(e.target.value)}
+                className="bg-background border border-border text-foreground p-1.5 text-xs outline-none focus:border-foreground"
+              />
+            </div>
+            <button 
+              onClick={() => setActiveTab(activeTab === 'bulk' ? 'salary' : 'bulk')}
+              className={cn(
+                "w-full sm:w-auto px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-border",
+                activeTab === 'bulk' ? "bg-foreground text-background" : "bg-card text-foreground hover:bg-foreground/5"
+              )}
+            >
+              {activeTab === 'bulk' ? <LayoutGrid className="w-3 h-3" /> : <TableIcon className="w-3 h-3" />}
+              {activeTab === 'bulk' ? 'Card View' : 'Bulk View'}
+            </button>
           </div>
         </div>
 
@@ -580,7 +578,7 @@ export function PayrollManagement() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {activeTab === 'salary' && salarySheets.map((s) => {
               // Recalculate if pending to show "realtime" data as requested
               let currentAdvance = s.advanceDeduction || 0;

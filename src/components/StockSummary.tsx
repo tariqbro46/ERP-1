@@ -161,24 +161,28 @@ export function StockSummary() {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div className="flex items-baseline gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
+          <div className="flex flex-col">
             <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Stock Summary</h1>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest">Inventory Valuation • Dutch Bangla Bank (Sample) • as on {asOnDate}</p>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest">{settings.companyName || 'ERP System'} • as on {asOnDate}</p>
           </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 w-full sm:w-auto">
-            <div className="text-left sm:text-right sm:mr-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 w-full sm:w-auto">
+            <div className="text-left sm:text-right">
               <p className="text-[9px] text-gray-500 uppercase tracking-widest">Total Value</p>
               <p className="text-lg lg:text-xl text-foreground font-bold">৳ {totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
             </div>
-            <div className="flex gap-3 w-full sm:w-auto">
-              <button className="flex-1 sm:flex-none p-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center">
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+              <button 
+                onClick={() => window.print()}
+                className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
+              >
                 <Printer className="w-4 h-4" />
+                Print
               </button>
               <button 
                 onClick={handleDownload}
                 disabled={processedItems.length === 0}
-                className="flex-1 sm:flex-none px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+                className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
                 title="Download CSV"
               >
                 <Download className="w-3 h-3" /> CSV
@@ -186,14 +190,14 @@ export function StockSummary() {
               <button 
                 onClick={handleDownloadPDF}
                 disabled={processedItems.length === 0}
-                className="flex-1 sm:flex-none px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+                className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
                 title="Download PDF"
               >
                 <Download className="w-3 h-3" /> PDF
               </button>
               <button 
                 onClick={() => setIsQuickItemOpen(true)}
-                className="flex-1 sm:flex-none px-3 py-2 bg-amber-600/10 border border-amber-600/20 text-amber-600 hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 text-[10px] font-bold uppercase"
+                className="px-3 py-2 bg-amber-600/10 border border-amber-600/20 text-amber-600 hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 text-[10px] font-bold uppercase"
                 title="Quick Create Item"
               >
                 <Package className="w-3 h-3" /> New Item
@@ -203,10 +207,10 @@ export function StockSummary() {
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center bg-card border border-border px-4 py-2 gap-4">
+        <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center bg-card border border-border px-4 py-2 gap-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 z-10" />
               <input
                 type="text"
                 placeholder="Search items or categories..."
@@ -215,28 +219,29 @@ export function StockSummary() {
                 className="w-full bg-background border border-border text-foreground pl-10 pr-4 py-2 text-xs outline-none focus:border-foreground transition-colors"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="w-3.5 h-3.5 text-gray-500" />
-              <select
-                value={selectedGodown}
-                onChange={(e) => setSelectedGodown(e.target.value)}
-                className="bg-background border border-border text-foreground px-3 py-1.5 text-[10px] uppercase tracking-widest outline-none focus:border-foreground transition-colors"
-              >
-                <option value="">All Godowns</option>
-                {godowns.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-              </select>
-            </div>
-            <div className="flex items-center gap-2 ml-2">
-              <input
-                type="checkbox"
-                id="lowStockOnly"
-                checked={showLowStockOnly}
-                onChange={e => setShowLowStockOnly(e.target.checked)}
-                className="w-3.5 h-3.5 accent-foreground"
-              />
-              <label htmlFor="lowStockOnly" className="text-[10px] text-gray-500 uppercase tracking-widest cursor-pointer">
-                Low Stock Only
-              </label>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedGodown}
+                  onChange={(e) => setSelectedGodown(e.target.value)}
+                  className="bg-background border border-border text-foreground px-3 py-1.5 text-[10px] uppercase tracking-widest outline-none focus:border-foreground transition-colors"
+                >
+                  <option value="">All Godowns</option>
+                  {godowns.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="lowStockOnly"
+                  checked={showLowStockOnly}
+                  onChange={e => setShowLowStockOnly(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-foreground"
+                />
+                <label htmlFor="lowStockOnly" className="text-[10px] text-gray-500 uppercase tracking-widest cursor-pointer whitespace-nowrap">
+                  Low Stock Only
+                </label>
+              </div>
             </div>
           </div>
           <div className="flex gap-4 justify-end">
