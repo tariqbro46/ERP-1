@@ -1,9 +1,12 @@
 {
   "name": "TallyFlow ERP",
   "short_name": "TallyFlow",
+  "lang": "en-US",
+  "dir": "ltr",
   "description": "A comprehensive ERP system for business management.",
   "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#ffffff",
