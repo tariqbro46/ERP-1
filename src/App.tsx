@@ -67,6 +67,7 @@ import NotificationPage from './components/NotificationPage';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login, Register } from './components/Auth';
+import { MobileNav } from './components/MobileNav';
 
 const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => (
   <Link
@@ -227,7 +228,15 @@ function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { user, company, logout, isAdmin, isSuperAdmin } = useAuth();
-  const { companyName, slogan, features = [], menuBarStyle = 'classic', layoutWidth = 'constrained', sidebarDefaultExpanded = true } = useSettings();
+  const { 
+    companyName, 
+    slogan, 
+    features = [], 
+    menuBarStyle = 'classic', 
+    layoutWidth = 'constrained', 
+    sidebarDefaultExpanded = true,
+    showMobileNav = false 
+  } = useSettings();
 
   const currentPageTitle = PAGE_TITLES[location.pathname] || (location.pathname.includes('/edit/') ? 'Edit Record' : 'ERP System');
 
@@ -964,6 +973,8 @@ function Layout({ children }: { children: React.ReactNode }) {
         {menuBarStyle === 'ribbon' && renderRibbonMenu()}
         {menuBarStyle === 'macos' && renderMacOSMenu()}
 
+        <MobileNav />
+
         <div ref={scrollRef} className={cn(
           "flex-1 overflow-y-auto no-scrollbar pb-16 lg:pb-0",
           menuBarStyle === 'macos' && "pt-10"
@@ -1037,13 +1048,42 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function AppContent() {
-  const { user, loading, isSuperAdmin, logout } = useAuth();
+  const { user, loading, isSuperAdmin, logout, firebaseUser } = useAuth();
   const [isRegister, setIsRegister] = React.useState(false);
 
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+      </div>
+    );
+  }
+
+  // Handle case where user is logged into Firebase but has no ERP profile
+  if (firebaseUser && !user) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-gray-100 text-center">
+          <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Profile Not Found</h2>
+          <p className="text-gray-600 mb-8">
+            Your account exists, but we couldn't find your ERP profile. 
+            This might happen if your account was created manually or if there was an error during registration.
+          </p>
+          <div className="space-y-4">
+            <button 
+              onClick={() => logout()}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
+            >
+              Sign Out & Try Again
+            </button>
+            <p className="text-sm text-gray-500">
+              Logged in as: <span className="font-medium text-gray-700">{firebaseUser.email}</span>
+            </p>
+          </div>
+        </div>
       </div>
     );
   }

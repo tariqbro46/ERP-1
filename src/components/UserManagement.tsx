@@ -22,6 +22,7 @@ export const UserManagement: React.FC = () => {
   });
   const [addLoading, setAddLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.companyId) {
@@ -59,6 +60,11 @@ export const UserManagement: React.FC = () => {
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAddError(null);
+    if (newUser.password.length < 6) {
+      setAddError('Password must be at least 6 characters long.');
+      return;
+    }
     setAddLoading(true);
     try {
       await erpService.adminAddUser({
@@ -69,7 +75,7 @@ export const UserManagement: React.FC = () => {
       setNewUser({ email: '', password: '', displayName: '', role: 'Staff', target_amount: 0 });
       fetchProfiles();
     } catch (err: any) {
-      alert(err.message || 'Failed to add user');
+      setAddError(err.message || 'Failed to add user');
     } finally {
       setAddLoading(false);
     }
@@ -286,6 +292,12 @@ export const UserManagement: React.FC = () => {
               </button>
             </div>
             <form onSubmit={handleAddUser} className="p-6 space-y-4">
+              {addError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-[11px] font-medium flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4" />
+                  {addError}
+                </div>
+              )}
               <div>
                 <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Full Name</label>
                 <input
@@ -313,11 +325,18 @@ export const UserManagement: React.FC = () => {
                 <input
                   type="password"
                   required
+                  minLength={6}
                   value={newUser.password}
                   onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
+                  className={cn(
+                    "w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500",
+                    newUser.password.length > 0 && newUser.password.length < 6 && "border-red-500/50 focus:border-red-500"
+                  )}
                   placeholder="••••••••"
                 />
+                {newUser.password.length > 0 && newUser.password.length < 6 && (
+                  <p className="text-[10px] text-red-500 mt-1">Password must be at least 6 characters</p>
+                )}
               </div>
               <div>
                 <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Initial Role</label>

@@ -56,6 +56,7 @@ interface SettingsContextType {
   showFreeQty: boolean;
   showDiscPercent: boolean;
   showTaxPercent: boolean;
+  showMobileNav: boolean;
   voucherHeaderCompact: boolean;
   voucherTableCompact: boolean;
   menuBarStyle: MenuBarStyle;
@@ -97,6 +98,7 @@ const defaultSettings: SettingsContextType = {
   showFreeQty: true,
   showDiscPercent: true,
   showTaxPercent: true,
+  showMobileNav: false,
   voucherHeaderCompact: false,
   voucherTableCompact: false,
   menuBarStyle: 'classic',

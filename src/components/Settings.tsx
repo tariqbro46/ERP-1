@@ -39,6 +39,7 @@ export function Settings() {
     showFreeQty,
     showDiscPercent,
     showTaxPercent,
+    showMobileNav,
     menuBarStyle,
     layoutWidth,
     sidebarDefaultExpanded,
@@ -81,6 +82,7 @@ export function Settings() {
   const [localShowFreeQty, setLocalShowFreeQty] = useState(showFreeQty);
   const [localShowDiscPercent, setLocalShowDiscPercent] = useState(showDiscPercent);
   const [localShowTaxPercent, setLocalShowTaxPercent] = useState(showTaxPercent);
+  const [localShowMobileNav, setLocalShowMobileNav] = useState(showMobileNav);
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded);
   const [localNotifications, setLocalNotifications] = useState(notifications);
   const [localWhatsappTemplates, setLocalWhatsappTemplates] = useState(whatsappTemplates);
@@ -115,6 +117,7 @@ export function Settings() {
     setLocalShowFreeQty(showFreeQty);
     setLocalShowDiscPercent(showDiscPercent);
     setLocalShowTaxPercent(showTaxPercent);
+    setLocalShowMobileNav(showMobileNav);
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded);
     setLocalMenuBarStyle(menuBarStyle);
     setLocalLayoutWidth(layoutWidth);
@@ -127,7 +130,7 @@ export function Settings() {
     printSignature3, showSignature1, showSignature2, showSignature3, 
     signatureAlignment, showDeveloperContact, financialYearStart, 
     baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
-    showTaxPercent, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates
+    showTaxPercent, showMobileNav, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates
   ]);
 
   const handleSaveGeneral = () => {
@@ -140,6 +143,7 @@ export function Settings() {
       printWebsite: localPrintWebsite,
       menuBarStyle: localMenuBarStyle,
       layoutWidth: localLayoutWidth,
+      showMobileNav: localShowMobileNav,
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
       financialYearStart: localFinancialYearStart,
       baseCurrencySymbol: localBaseCurrencySymbol,
@@ -490,6 +494,27 @@ export function Settings() {
                         <option value="constrained">Founder Panel Style (Max 7xl)</option>
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">Choose how wide the application content should be.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground uppercase">Show Mobile Navigation Bar</h4>
+                          <p className="text-[10px] text-gray-500">Enable top navigation bar with Back/Forward buttons for mobile apps.</p>
+                        </div>
+                        <button 
+                          onClick={() => setLocalShowMobileNav(!localShowMobileNav)}
+                          className={cn(
+                            "w-10 h-5 rounded-full transition-colors relative",
+                            localShowMobileNav ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowMobileNav ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="space-y-2">

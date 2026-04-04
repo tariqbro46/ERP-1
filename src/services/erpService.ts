@@ -893,6 +893,9 @@ export const erpService = {
   },
 
   async adminAddUser(data: { email: string; password: string; displayName: string; role: string; companyId: string; target_amount?: number }) {
+    if (!data.password || data.password.length < 6) {
+      throw new Error('Password must be at least 6 characters long');
+    }
     try {
       // Create user in Firebase Auth using the secondary instance
       const userCredential = await createUserWithEmailAndPassword(secondaryAuth, data.email, data.password);
@@ -915,6 +918,9 @@ export const erpService = {
       return { uid };
     } catch (error: any) {
       console.error('Error in adminAddUser:', error);
+      if (error.code === 'auth/email-already-in-use') {
+        throw new Error('This email address is already in use by another account.');
+      }
       throw new Error(error.message || 'Failed to add user');
     }
   },
