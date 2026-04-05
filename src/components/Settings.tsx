@@ -40,8 +40,10 @@ export function Settings() {
     showFreeQty,
     showDiscPercent,
     showTaxPercent,
+    showRunningBalance,
     showMobileNav,
     mobileBottomNavItems = [],
+    reportLayout,
     menuBarStyle,
     layoutWidth,
     sidebarDefaultExpanded,
@@ -84,8 +86,10 @@ export function Settings() {
   const [localShowFreeQty, setLocalShowFreeQty] = useState(showFreeQty);
   const [localShowDiscPercent, setLocalShowDiscPercent] = useState(showDiscPercent);
   const [localShowTaxPercent, setLocalShowTaxPercent] = useState(showTaxPercent);
+  const [localShowRunningBalance, setLocalShowRunningBalance] = useState(showRunningBalance);
   const [localShowMobileNav, setLocalShowMobileNav] = useState(showMobileNav);
   const [localMobileBottomNavItems, setLocalMobileBottomNavItems] = useState<string[]>(mobileBottomNavItems);
+  const [localReportLayout, setLocalReportLayout] = useState(reportLayout);
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded);
   const [localNotifications, setLocalNotifications] = useState(notifications);
   const [localWhatsappTemplates, setLocalWhatsappTemplates] = useState(whatsappTemplates);
@@ -120,8 +124,10 @@ export function Settings() {
     setLocalShowFreeQty(showFreeQty);
     setLocalShowDiscPercent(showDiscPercent);
     setLocalShowTaxPercent(showTaxPercent);
+    setLocalShowRunningBalance(showRunningBalance);
     setLocalShowMobileNav(showMobileNav);
     setLocalMobileBottomNavItems(mobileBottomNavItems);
+    setLocalReportLayout(reportLayout);
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded);
     setLocalMenuBarStyle(menuBarStyle);
     setLocalLayoutWidth(layoutWidth);
@@ -134,7 +140,7 @@ export function Settings() {
     printSignature3, showSignature1, showSignature2, showSignature3, 
     signatureAlignment, showDeveloperContact, financialYearStart, 
     baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
-    showTaxPercent, showMobileNav, mobileBottomNavItems, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates
+    showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates
   ]);
 
   const handleSaveGeneral = () => {
@@ -147,8 +153,10 @@ export function Settings() {
       printWebsite: localPrintWebsite,
       menuBarStyle: localMenuBarStyle,
       layoutWidth: localLayoutWidth,
+      showRunningBalance: localShowRunningBalance,
       showMobileNav: localShowMobileNav,
       mobileBottomNavItems: localMobileBottomNavItems,
+      reportLayout: localReportLayout,
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
       financialYearStart: localFinancialYearStart,
       baseCurrencySymbol: localBaseCurrencySymbol,
@@ -499,6 +507,40 @@ export function Settings() {
                         <option value="constrained">Founder Panel Style (Max 7xl)</option>
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">Choose how wide the application content should be.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Report Layout Style</label>
+                      <select 
+                        value={localReportLayout}
+                        onChange={(e) => setLocalReportLayout(e.target.value as any)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        <option value="Layout 1">Layout 1 (Standard)</option>
+                        <option value="Layout 2">Layout 2 (Tally Style - Default)</option>
+                      </select>
+                      <p className="text-[9px] text-gray-500 uppercase">Choose the visual style for generated reports and PDFs.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground uppercase">Show Running Balance in Reports</h4>
+                          <p className="text-[10px] text-gray-500">Enable running balance column in ledger statements by default.</p>
+                        </div>
+                        <button 
+                          onClick={() => setLocalShowRunningBalance(!localShowRunningBalance)}
+                          className={cn(
+                            "w-10 h-5 rounded-full transition-colors relative",
+                            localShowRunningBalance ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowRunningBalance ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="space-y-2">

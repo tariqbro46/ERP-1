@@ -18,6 +18,7 @@ interface FeatureSettings {
 }
 
 export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11';
+export type ReportLayout = 'Layout 1' | 'Layout 2';
 
 interface WhatsAppTemplates {
   Sales: string;
@@ -56,10 +57,12 @@ interface SettingsContextType {
   showFreeQty: boolean;
   showDiscPercent: boolean;
   showTaxPercent: boolean;
+  showRunningBalance: boolean;
   showMobileNav: boolean;
   mobileBottomNavItems: string[];
   voucherHeaderCompact: boolean;
   voucherTableCompact: boolean;
+  reportLayout: ReportLayout;
   menuBarStyle: MenuBarStyle;
   layoutWidth: 'responsive' | 'constrained';
   sidebarDefaultExpanded: boolean;
@@ -99,10 +102,12 @@ const defaultSettings: SettingsContextType = {
   showFreeQty: true,
   showDiscPercent: true,
   showTaxPercent: true,
+  showRunningBalance: true,
   showMobileNav: false,
-  mobileBottomNavItems: ['Voucher Entry', 'Daybook', 'Settings (F11)'],
+  mobileBottomNavItems: ['Dashboard', 'Voucher Entry', 'Daybook', 'Settings (F11)'],
   voucherHeaderCompact: false,
   voucherTableCompact: false,
+  reportLayout: 'Layout 2',
   menuBarStyle: 'classic',
   layoutWidth: 'constrained',
   sidebarDefaultExpanded: true,

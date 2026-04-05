@@ -65,7 +65,11 @@ export function LedgerStatement() {
       setItems(iData);
       setGodowns(gData);
       setUsers(uData);
-      if (sData?.ledgerConfig) setConfig(sData.ledgerConfig);
+      if (sData?.ledgerConfig) {
+        setConfig(sData.ledgerConfig);
+      } else {
+        setConfig({ ...DEFAULT_CONFIG, showRunningBalance: settings.showRunningBalance });
+      }
     }
     fetchData();
   }, [user?.companyId]);
@@ -161,6 +165,10 @@ export function LedgerStatement() {
 
   const handlePrint = () => {
     if (!selectedLedger) return;
+    if (settings.reportLayout === 'Layout 2') {
+      handleFullPageView();
+      return;
+    }
     const ledgerName = currentLedger?.name || 'Ledger';
     
     let rb = currentLedger?.opening_balance || 0;
@@ -273,6 +281,10 @@ export function LedgerStatement() {
 
   const handleDownloadPDF = () => {
     if (!selectedLedger) return;
+    if (settings.reportLayout === 'Layout 2') {
+      handleFullPageView();
+      return;
+    }
     const ledgerName = currentLedger?.name || 'Ledger';
     
     let rb = currentLedger?.opening_balance || 0;
@@ -327,6 +339,7 @@ export function LedgerStatement() {
   const handleFullPageView = () => {
     if (!selectedLedger) return;
     const ledgerName = currentLedger?.name || 'Ledger';
+    const layout = settings.reportLayout || 'Layout 2';
     
     const formatDate = (dateStr: string) => {
       const date = new Date(dateStr);
@@ -342,162 +355,353 @@ export function LedgerStatement() {
     let totalDebit = (rb > 0 ? rb : 0);
     let totalCredit = (rb < 0 ? Math.abs(rb) : 0);
 
-    const reportRows = [
-      `<tr>
-        <td>${formatDate(startDate)}</td>
-        <td>Dr <b>Opening Balance</b></td>
-        <td></td>
-        <td></td>
-        <td style="text-align: right;"><b>${rb > 0 ? rb.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
-        <td style="text-align: right;">${rb < 0 ? Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
-        <td style="text-align: right;">${Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${rb >= 0 ? 'Dr' : 'Cr'}</td>
-      </tr>`,
-      ...entries.map(e => {
+    const generateLayout1 = () => {
+      const reportRows = [
+        `<tr>
+          <td>${formatDate(startDate)}</td>
+          <td>Dr <b>Opening Balance</b></td>
+          <td></td>
+          <td></td>
+          <td style="text-align: right;"><b>${rb > 0 ? rb.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+          <td style="text-align: right;">${rb < 0 ? Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+          <td style="text-align: right;">${Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${rb >= 0 ? 'Dr' : 'Cr'}</td>
+        </tr>`,
+        ...entries.map(e => {
+          rb += (e.debit || 0) - (e.credit || 0);
+          totalDebit += (e.debit || 0);
+          totalCredit += (e.credit || 0);
+          const creator = users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System';
+          
+          let row = `<tr>
+            <td>${formatDate(e.vouchers?.v_date)}</td>
+            <td>
+              <div>Dr <b>${e.particulars}</b></div>
+              ${config.showNarration && e.vouchers?.narration ? `<div style="font-size: 10px; font-style: italic; margin-left: 10px;">(${e.vouchers.narration})</div>` : ''}
+            </td>
+            <td>${e.vouchers?.v_type}</td>
+            <td>${e.vouchers?.v_no}</td>
+            <td style="text-align: right;">${e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+            <td style="text-align: right;">${e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+            <td style="text-align: right;">${config.showRunningBalance ? `${Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
+          </tr>`;
+
+          if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
+            const inventoryRows = e.vouchers.inventory.map((item: any) => {
+              const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+              return `
+                <div style="display: flex; font-size: 11px; margin-left: 40px; color: #000;">
+                  <div style="width: 150px; text-align: right; padding-right: 20px;">${itemName}</div>
+                  <div style="width: 80px; text-align: right;">${item.qty.toLocaleString()} ${item.unit || 'Pcs'}</div>
+                  <div style="width: 100px; text-align: right;">${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}/Pcs</div>
+                  <div style="width: 100px; text-align: right;">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                </div>
+              `;
+            }).join('');
+            
+            row += `<tr>
+              <td></td>
+              <td colspan="6">
+                <div style="border: 1px solid #eee; padding: 5px; margin: 2px 0 2px 20px;">
+                  ${inventoryRows}
+                  ${config.showEnteredBy ? `<div style="font-size: 10px; margin-top: 5px; border-top: 1px dashed #ccc; padding-top: 2px;"><i>Entered By : <b>${creator}</b></i></div>` : ''}
+                </div>
+              </td>
+            </tr>`;
+          } else if (config.showEnteredBy) {
+            row += `<tr>
+              <td></td>
+              <td colspan="6">
+                <div style="font-size: 10px; margin-left: 40px;"><i>Entered By : <b>${creator}</b></i></div>
+              </td>
+            </tr>`;
+          }
+          
+          return row;
+        })
+      ].join('');
+
+      const finalBalance = rb;
+      const closingBalanceRow = `
+        <tr class="closing-balance">
+          <td></td>
+          <td><b>${finalBalance >= 0 ? 'Cr' : 'Dr'} Closing Balance</b></td>
+          <td></td>
+          <td></td>
+          <td style="text-align: right;"><b>${finalBalance < 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+          <td style="text-align: right;"><b>${finalBalance >= 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+          <td style="text-align: right;"></td>
+        </tr>
+        <tr class="total-row">
+          <td></td>
+          <td></td>
+          <td></td>
+          <td></td>
+          <td style="text-align: right; border-top: 1px solid #000; border-bottom: 3px double #000;"><b>${(totalDebit + (finalBalance < 0 ? Math.abs(finalBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
+          <td style="text-align: right; border-top: 1px solid #000; border-bottom: 3px double #000;"><b>${(totalCredit + (finalBalance >= 0 ? Math.abs(finalBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
+          <td></td>
+        </tr>
+      `;
+
+      return `
+        <html>
+          <head>
+            <title>Ledger Statement - ${ledgerName}</title>
+            <style>
+              @page { size: A4; margin: 1cm; }
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; color: #000; }
+              .container { max-width: 100%; }
+              .header-box { border: 1px solid #000; padding: 10px; margin-bottom: 5px; text-align: center; }
+              .company-name { font-size: 18px; font-weight: bold; text-transform: uppercase; }
+              .ledger-box { border: 1px solid #000; padding: 10px; margin-bottom: 10px; text-align: center; }
+              .ledger-name { font-size: 16px; font-weight: bold; text-transform: uppercase; }
+              .period-box { text-align: center; margin-bottom: 10px; }
+              .period-label { border: 1px solid #000; padding: 2px 15px; font-size: 12px; font-weight: bold; }
+              .page-num { text-align: right; font-size: 11px; margin-bottom: 5px; }
+              .page-num span { border: 1px solid #000; padding: 2px 10px; }
+              
+              table { width: 100%; border-collapse: collapse; margin-top: 5px; border-top: 2px solid #000; border-bottom: 2px solid #000; }
+              th { border-bottom: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; text-transform: capitalize; }
+              td { padding: 5px; text-align: left; font-size: 12px; vertical-align: top; }
+              .text-right { text-align: right; }
+              .closing-balance { border-top: 1px solid #000; font-weight: bold; }
+              .total-row td { padding-top: 10px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="page-num"><span>Page 1</span></div>
+              
+              <div class="header-box">
+                <div class="company-name">${settings?.companyName || 'COMPANY NAME'}</div>
+                <div style="font-size: 12px;">${settings?.companyAddress || ''}</div>
+                <div style="font-size: 12px;">
+                  ${settings?.printEmail ? `E-Mail : ${settings.printEmail}` : ''}
+                  ${settings?.printPhone ? ` | Phone: ${settings.printPhone}` : ''}
+                  ${settings?.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
+                </div>
+              </div>
+              
+              <div class="ledger-box">
+                <div class="ledger-name">${ledgerName}</div>
+                <div style="font-size: 12px;">${currentLedger?.address || ''}</div>
+              </div>
+              
+              <div class="period-box">
+                <span class="period-label">${period}</span>
+              </div>
+              
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 10%;">Date</th>
+                    <th style="width: 40%;">Particulars</th>
+                    <th style="width: 10%;">Vch Type</th>
+                    <th style="width: 10%;">Vch No.</th>
+                    <th style="width: 10%; text-align: right;">Debit</th>
+                    <th style="width: 10%; text-align: right;">Credit</th>
+                    <th style="width: 10%; text-align: right;">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${reportRows}
+                  ${closingBalanceRow}
+                </tbody>
+              </table>
+            </div>
+            <script>window.print();</script>
+          </body>
+        </html>
+      `;
+    };
+
+    const generateLayout2 = () => {
+      const reportRows = entries.map((e, idx) => {
         rb += (e.debit || 0) - (e.credit || 0);
         totalDebit += (e.debit || 0);
         totalCredit += (e.credit || 0);
         const creator = users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System';
         
-        let row = `<tr>
-          <td>${formatDate(e.vouchers?.v_date)}</td>
-          <td>
-            <div>Dr <b>${e.particulars}</b></div>
-            ${config.showNarration && e.vouchers?.narration ? `<div style="font-size: 10px; font-style: italic; margin-left: 10px;">(${e.vouchers.narration})</div>` : ''}
-          </td>
-          <td>${e.vouchers?.v_type}</td>
-          <td>${e.vouchers?.v_no}</td>
-          <td style="text-align: right;">${e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
-          <td style="text-align: right;">${e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
-          <td style="text-align: right;">${config.showRunningBalance ? `${Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
-        </tr>`;
-
+        let inventoryHtml = '';
         if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
-          const inventoryRows = e.vouchers.inventory.map((item: any) => {
+          inventoryHtml = e.vouchers.inventory.map((item: any) => {
             const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
             return `
-              <div style="display: flex; font-size: 11px; margin-left: 40px; color: #000;">
-                <div style="width: 150px; text-align: right; padding-right: 20px;">${itemName}</div>
+              <div style="display: flex; font-size: 11px; margin-top: 1px; color: #333;">
+                <div style="width: 180px; text-align: left; padding-left: 40px;">
+                  <div>${itemName}</div>
+                  ${config.showStockDescriptions && item.description ? `<div style="font-size: 9px; font-style: italic; color: #666;">${item.description}</div>` : ''}
+                </div>
                 <div style="width: 80px; text-align: right;">${item.qty.toLocaleString()} ${item.unit || 'Pcs'}</div>
                 <div style="width: 100px; text-align: right;">${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}/Pcs</div>
                 <div style="width: 100px; text-align: right;">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
               </div>
             `;
           }).join('');
-          
-          row += `<tr>
-            <td></td>
-            <td colspan="6">
-              <div style="border: 1px solid #eee; padding: 5px; margin: 2px 0 2px 20px;">
-                ${inventoryRows}
-                ${config.showEnteredBy ? `<div style="font-size: 10px; margin-top: 5px; border-top: 1px dashed #ccc; padding-top: 2px;"><i>Entered By : <b>${creator}</b></i></div>` : ''}
-              </div>
-            </td>
-          </tr>`;
-        } else if (config.showEnteredBy) {
-          row += `<tr>
-            <td></td>
-            <td colspan="6">
-              <div style="font-size: 10px; margin-left: 40px;"><i>Entered By : <b>${creator}</b></i></div>
-            </td>
-          </tr>`;
         }
+
+        const isStripe = config.enableStripeView && idx % 2 !== 0;
         
-        return row;
-      })
-    ].join('');
+        return `
+          <tr class="${isStripe ? 'stripe-row' : ''}">
+            <td style="padding: 2px 5px; white-space: nowrap;">${formatDate(e.vouchers?.v_date)}</td>
+            <td style="padding: 2px 5px;">
+              <div>Dr <b>${e.particulars}</b></div>
+            </td>
+            <td style="padding: 2px 5px;">${e.vouchers?.v_type}</td>
+            <td style="padding: 2px 5px;">${e.vouchers?.v_no}</td>
+            <td style="padding: 2px 5px; text-align: right;">${e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+            <td style="padding: 2px 5px; text-align: right;">${e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+            <td style="padding: 2px 5px; text-align: right;">${config.showRunningBalance ? `${Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
+          </tr>
+          ${(inventoryHtml || (config.showEnteredBy && creator) || (config.showNarration && e.vouchers?.narration)) ? `
+          <tr class="${isStripe ? 'stripe-row' : ''}">
+            <td></td>
+            <td colspan="6" style="padding: 0 5px 5px 5px;">
+              ${inventoryHtml}
+              ${config.showEnteredBy ? `<div style="font-size: 10px; margin-left: 40px; margin-top: 2px; color: #666;"><i>Entered By : <b>${creator}</b></i></div>` : ''}
+              ${config.showNarration && e.vouchers?.narration ? `<div style="font-size: 10px; font-style: italic; margin-left: 20px; margin-top: 1px; color: #666;">(${e.vouchers.narration})</div>` : ''}
+            </td>
+          </tr>
+          ` : ''}
+        `;
+      }).join('');
 
-    const finalBalance = rb;
-    const closingBalanceRow = `
-      <tr class="closing-balance">
-        <td></td>
-        <td><b>${finalBalance >= 0 ? 'Cr' : 'Dr'} Closing Balance</b></td>
-        <td></td>
-        <td></td>
-        <td style="text-align: right;"><b>${finalBalance < 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
-        <td style="text-align: right;"><b>${finalBalance >= 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
-        <td style="text-align: right;"></td>
-      </tr>
-      <tr class="total-row">
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td style="text-align: right; border-top: 1px solid #000; border-bottom: 3px double #000;"><b>${(totalDebit + (finalBalance < 0 ? Math.abs(finalBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
-        <td style="text-align: right; border-top: 1px solid #000; border-bottom: 3px double #000;"><b>${(totalCredit + (finalBalance >= 0 ? Math.abs(finalBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
-        <td></td>
-      </tr>
-    `;
+      const finalBalance = rb;
+      const closingBalanceRow = `
+        <tr>
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px; text-align: right; border-top: 1px solid #000;">${totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+          <td style="padding: 2px 5px; text-align: right;"></td>
+          <td style="padding: 2px 5px; text-align: right;"></td>
+        </tr>
+        <tr>
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px;"><b>${finalBalance >= 0 ? 'Cr' : 'Dr'} Closing Balance</b></td>
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px; text-align: right; border-top: 1px solid #000;"><b>${finalBalance < 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+          <td style="padding: 2px 5px; text-align: right; border-top: 1px solid #000;"><b>${finalBalance >= 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+          <td style="padding: 2px 5px; text-align: right;"><b>${Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
+        </tr>
+        <tr style="border-top: 1px solid #000; border-bottom: 2px solid #000;">
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px; text-align: right;"><b>${(totalDebit + (finalBalance < 0 ? Math.abs(finalBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
+          <td style="padding: 2px 5px; text-align: right;"><b>${(totalCredit + (finalBalance >= 0 ? Math.abs(finalBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
+          <td style="padding: 2px 5px; text-align: right;"></td>
+        </tr>
+      `;
 
-    const html = `
-      <html>
-        <head>
-          <title>Ledger Statement - ${ledgerName}</title>
-          <style>
-            @page { size: A4; margin: 1cm; }
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; color: #000; }
-            .container { max-width: 100%; }
-            .header-box { border: 1px solid #000; padding: 10px; margin-bottom: 5px; text-align: center; }
-            .company-name { font-size: 18px; font-weight: bold; text-transform: uppercase; }
-            .ledger-box { border: 1px solid #000; padding: 10px; margin-bottom: 10px; text-align: center; }
-            .ledger-name { font-size: 16px; font-weight: bold; text-transform: uppercase; }
-            .period-box { text-align: center; margin-bottom: 10px; }
-            .period-label { border: 1px solid #000; padding: 2px 15px; font-size: 12px; font-weight: bold; }
-            .page-num { text-align: right; font-size: 11px; margin-bottom: 5px; }
-            .page-num span { border: 1px solid #000; padding: 2px 10px; }
-            
-            table { width: 100%; border-collapse: collapse; margin-top: 5px; border-top: 2px solid #000; border-bottom: 2px solid #000; }
-            th { border-bottom: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; text-transform: capitalize; }
-            td { padding: 5px; text-align: left; font-size: 12px; vertical-align: top; }
-            .text-right { text-align: right; }
-            .closing-balance { border-top: 1px solid #000; font-weight: bold; }
-            .total-row td { padding-top: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="page-num"><span>Page 1</span></div>
-            
-            <div class="header-box">
-              <div class="company-name">${settings?.companyName || 'COMPANY NAME'}</div>
-              <div style="font-size: 12px;">${settings?.companyAddress || ''}</div>
-              <div style="font-size: 12px;">
-                ${settings?.printEmail ? `E-Mail : ${settings.printEmail}` : ''}
-                ${settings?.printPhone ? ` | Phone: ${settings.printPhone}` : ''}
-                ${settings?.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
+      const footerHtml = `
+        <div class="footer">
+          ${settings.showPrintFooter ? `<div style="font-size: 10px; color: #666;">${settings.printFooter}</div>` : ''}
+          ${settings.showDeveloperContact ? `<div style="font-size: 8px; color: #999; margin-top: 2px;">Powered by TallyFlow ERP | Developer Contact: +880 1700 000000</div>` : ''}
+        </div>
+      `;
+
+      return `
+        <html>
+          <head>
+            <title>Ledger Statement - ${ledgerName}</title>
+            <style>
+              @page { size: A4; margin: 1.5cm 1cm; }
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; color: #000; min-height: 100vh; position: relative; }
+              .container { max-width: 100%; position: relative; padding-bottom: 60px; }
+              
+              .header-section { text-align: center; margin-bottom: 20px; }
+              .company-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
+              .company-details { font-size: 12px; margin-bottom: 2px; }
+              .email-line { border-bottom: 1px solid #000; display: inline-block; padding-bottom: 2px; margin-bottom: 15px; }
+              
+              .ledger-name { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
+              .ledger-label { font-size: 12px; margin-bottom: 2px; }
+              .ledger-address { font-size: 12px; margin-bottom: 15px; }
+              
+              .period-text { font-size: 12px; margin-bottom: 10px; }
+              
+              .page-num { text-align: right; font-size: 11px; margin-bottom: 2px; }
+              
+              table { width: 100%; border-collapse: collapse; border-top: 1px solid #000; border-bottom: 1px solid #000; }
+              th { border-bottom: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; }
+              td { padding: 2px 5px; text-align: left; font-size: 12px; vertical-align: top; }
+              
+              .stripe-row { background-color: #f9f9f9; }
+              
+              .footer { 
+                position: fixed; 
+                bottom: 0; 
+                left: 0; 
+                right: 0; 
+                text-align: center; 
+                padding: 10px 0;
+                border-top: 1px solid #eee;
+                background: white;
+              }
+              
+              @media print {
+                .footer { position: fixed; bottom: 0; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header-section">
+                <div class="company-name">${settings?.companyName || 'COMPANY NAME'}</div>
+                <div class="company-details">${settings?.companyAddress || ''}</div>
+                <div class="company-details">
+                  <span class="email-line">E-Mail : ${settings?.printEmail || ''}</span>
+                </div>
+                
+                <div class="ledger-name">${ledgerName}</div>
+                <div class="ledger-label">Ledger Account</div>
+                <div class="ledger-address">${currentLedger?.address || ''}</div>
+                
+                <div class="period-text">${period}</div>
               </div>
+              
+              <div class="page-num">Page 1</div>
+              
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 15%;">Date</th>
+                    <th style="width: 30%;">Particulars</th>
+                    <th style="width: 10%;">Vch Type</th>
+                    <th style="width: 10%;">Vch No.</th>
+                    <th style="width: 10%; text-align: right;">Debit</th>
+                    <th style="width: 10%; text-align: right;">Credit</th>
+                    <th style="width: 15%; text-align: right;">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding: 2px 5px;">${formatDate(startDate)}</td>
+                    <td style="padding: 2px 5px;">Dr <b>Opening Balance</b></td>
+                    <td style="padding: 2px 5px;"></td>
+                    <td style="padding: 2px 5px;"></td>
+                    <td style="padding: 2px 5px; text-align: right;"></td>
+                    <td style="padding: 2px 5px; text-align: right;"></td>
+                    <td style="padding: 2px 5px; text-align: right;"><b>${Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${ (currentLedger?.opening_balance || 0) >= 0 ? 'Dr' : 'Cr'}</b></td>
+                  </tr>
+                  ${reportRows}
+                  ${closingBalanceRow}
+                </tbody>
+              </table>
             </div>
-            
-            <div class="ledger-box">
-              <div class="ledger-name">${ledgerName}</div>
-              <div style="font-size: 12px;">${currentLedger?.address || ''}</div>
-            </div>
-            
-            <div class="period-box">
-              <span class="period-label">${period}</span>
-            </div>
-            
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 10%;">Date</th>
-                  <th style="width: 40%;">Particulars</th>
-                  <th style="width: 10%;">Vch Type</th>
-                  <th style="width: 10%;">Vch No.</th>
-                  <th style="width: 10%; text-align: right;">Debit</th>
-                  <th style="width: 10%; text-align: right;">Credit</th>
-                  <th style="width: 10%; text-align: right;">Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${reportRows}
-                ${closingBalanceRow}
-              </tbody>
-            </table>
-          </div>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `;
+            ${footerHtml}
+            <script>window.print();</script>
+          </body>
+        </html>
+      `;
+    };
+
+    const html = layout === 'Layout 1' ? generateLayout1() : generateLayout2();
+    
     const win = window.open('', '_blank');
     if (win) {
       win.document.write(html);
@@ -644,43 +848,76 @@ export function LedgerStatement() {
           title="Ledger Statement"
         />
 
-        <div className="bg-card border border-border overflow-x-auto no-scrollbar">
-          <table className="w-full text-left text-xs min-w-[700px]">
+        <div className={cn(
+          "bg-card border border-border overflow-x-auto no-scrollbar relative",
+          settings.reportLayout === 'Layout 2' && "bg-white text-black font-serif p-8 min-h-[800px] pb-32"
+        )}>
+          {settings.reportLayout === 'Layout 2' && (
+            <>
+              <div className="text-center mb-8 border-b border-black pb-4">
+                <h2 className="text-xl font-bold uppercase">{settings.companyName}</h2>
+                <p className="text-xs">{settings.companyAddress}</p>
+                <p className="text-[10px] underline decoration-black">E-Mail : {settings.printEmail}</p>
+                
+                <div className="mt-6">
+                  <h3 className="text-lg font-bold">{currentLedger?.name}</h3>
+                  <p className="text-xs">Ledger Account</p>
+                  <p className="text-xs">{currentLedger?.address}</p>
+                </div>
+                
+                <div className="mt-4 text-xs font-bold">
+                  {new Date(startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')} to {new Date(endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')}
+                </div>
+              </div>
+              <div className="absolute top-8 right-8 border border-black px-2 py-1 text-[10px]">Page 1</div>
+            </>
+          )}
+          <table className={cn(
+            "w-full text-left text-xs min-w-[700px]",
+            settings.reportLayout === 'Layout 2' ? "border-y border-black" : ""
+          )}>
             <thead>
-              <tr className="border-b border-border text-gray-500 uppercase">
-                <th className="px-6 py-4 font-medium">Date</th>
-                <th className="px-6 py-4 font-medium">Vch No.</th>
+              <tr className={cn(
+                "border-b border-border text-gray-500 uppercase",
+                settings.reportLayout === 'Layout 2' && "border-black text-black font-bold"
+              )}>
+                <th className="px-6 py-4 font-medium w-[120px]">Date</th>
+                <th className="px-6 py-4 font-medium">Particulars</th>
                 <th className="px-6 py-4 font-medium">Vch Type</th>
+                <th className="px-6 py-4 font-medium">Vch No.</th>
                 <th className="px-6 py-4 font-medium text-right">Debit</th>
                 <th className="px-6 py-4 font-medium text-right">Credit</th>
                 <th className="px-6 py-4 font-medium text-right">Balance</th>
               </tr>
             </thead>
-            <tbody className="text-foreground/80">
+            <tbody className={cn(
+              "text-foreground/80",
+              settings.reportLayout === 'Layout 2' && "text-black"
+            )}>
               {!selectedLedger ? (
-                <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-600">Please select a ledger to view statement</td></tr>
+                <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-600">Please select a ledger to view statement</td></tr>
               ) : loading ? (
-                <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-600">Loading entries...</td></tr>
+                <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-600">Loading entries...</td></tr>
               ) : (
                 <>
                   {/* Opening Balance Row */}
-                  <tr className="border-b border-border/50 bg-foreground/5 font-bold italic">
+                  <tr className={cn(
+                    "border-b border-border/50 bg-foreground/5 font-bold italic",
+                    settings.reportLayout === 'Layout 2' && "bg-white border-black text-black"
+                  )}>
+                    <td className="px-6 py-4">{new Date(startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')}</td>
+                    <td className="px-6 py-4">Dr Opening Balance</td>
                     <td className="px-6 py-4">-</td>
-                    <td className="px-6 py-4">Opening Balance</td>
                     <td className="px-6 py-4">-</td>
-                    <td className="px-6 py-4 text-right">
-                      {(currentLedger?.opening_balance || 0) > 0 ? `৳ ${currentLedger.opening_balance.toLocaleString()}` : '-'}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {(currentLedger?.opening_balance || 0) < 0 ? `৳ ${Math.abs(currentLedger.opening_balance).toLocaleString()}` : '-'}
-                    </td>
+                    <td className="px-6 py-4 text-right">-</td>
+                    <td className="px-6 py-4 text-right">-</td>
                     <td className="px-6 py-4 text-right text-foreground">
-                      ৳ {Math.abs(currentLedger?.opening_balance || 0).toLocaleString()} {(currentLedger?.opening_balance || 0) >= 0 ? 'Dr' : 'Cr'}
+                      {Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} {(currentLedger?.opening_balance || 0) >= 0 ? 'Dr' : 'Cr'}
                     </td>
                   </tr>
 
                   {entries.length === 0 ? (
-                    <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-600 italic">No transactions found for this period</td></tr>
+                    <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-600 italic">No transactions found for this period</td></tr>
                   ) : entries.map((e, idx) => {
                     runningBalance += (e.debit || 0) - (e.credit || 0);
                     const currentBalance = runningBalance;
@@ -689,23 +926,19 @@ export function LedgerStatement() {
                         <tr 
                           className={cn(
                             "border-b border-border/50 hover:bg-foreground/5 transition-colors cursor-pointer group",
-                            config.enableStripeView && idx % 2 !== 0 && "bg-muted/30"
+                            config.enableStripeView && idx % 2 !== 0 && "bg-muted/30",
+                            settings.reportLayout === 'Layout 2' && "bg-white border-black text-black hover:bg-gray-50",
+                            settings.reportLayout === 'Layout 2' && config.enableStripeView && idx % 2 !== 0 && "bg-gray-50"
                           )}
                           onClick={() => navigate(`/vouchers/edit/${e.id}`)}
                         >
-                          <td className="px-6 py-4">{e.vouchers?.v_date}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{e.vouchers?.v_date}</td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
-                              <span className="text-foreground font-bold uppercase text-[10px] text-gray-500">{e.vouchers?.v_type}</span>
-                              <span className="text-foreground">{e.particulars}</span>
-                              {config.showNarration && e.vouchers?.narration && (
-                                <span className="text-[10px] text-gray-500 italic">({e.vouchers.narration})</span>
-                              )}
-                              {config.showEnteredBy && (
-                                <span className="text-[8px] text-gray-400 uppercase">By: {users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System'}</span>
-                              )}
+                              <span className="text-foreground font-bold">{e.particulars}</span>
                             </div>
                           </td>
+                          <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_type}</td>
                           <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_no}</td>
                           <td className="px-6 py-4 text-right font-mono">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
                           <td className="px-6 py-4 text-right font-mono">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
@@ -717,49 +950,38 @@ export function LedgerStatement() {
                             ) : '-'}
                           </td>
                         </tr>
-                        {config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0 && (
-                          <tr className="bg-foreground/[0.02] border-b border-border/30">
+                        {(config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) || (config.showNarration && e.vouchers?.narration) || config.showEnteredBy ? (
+                          <tr className={cn(
+                            "border-b border-border/50",
+                            settings.reportLayout === 'Layout 2' && "bg-white border-black text-black",
+                            settings.reportLayout === 'Layout 2' && config.enableStripeView && idx % 2 !== 0 && "bg-gray-50"
+                          )}>
+                            <td></td>
                             <td colSpan={6} className="px-6 py-2">
-                              <table className="w-full text-[10px] text-gray-500">
-                                <thead>
-                                  <tr className="border-b border-border/20 uppercase text-[8px]">
-                                    <th className="py-1 text-left">Name of Item</th>
-                                    <th className="py-1 text-left">Godown</th>
-                                    <th className="py-1 text-right">Quantity</th>
-                                    <th className="py-1 text-right">Free</th>
-                                    <th className="py-1 text-right">Rate</th>
-                                    <th className="py-1 text-center">per</th>
-                                    <th className="py-1 text-right">Disc %</th>
-                                    <th className="py-1 text-right">Tax %</th>
-                                    <th className="py-1 text-right">Amount</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {e.vouchers.inventory.map((item: any, iIdx: number) => (
-                                    <tr key={iIdx} className="border-b border-border/10 last:border-0">
-                                      <td className="py-1">
-                                        <div className="flex flex-col">
-                                          <span>{items.find(i => i.id === item.item_id)?.name || 'Unknown Item'}</span>
-                                          {config.showStockDescriptions && item.description && (
-                                            <span className="text-[9px] italic">{item.description}</span>
-                                          )}
-                                        </div>
-                                      </td>
-                                      <td className="py-1">{godowns.find(g => g.id === item.godown_id)?.name || '-'}</td>
-                                      <td className="py-1 text-right">{item.qty}</td>
-                                      <td className="py-1 text-right">{item.free_qty || 0}</td>
-                                      <td className="py-1 text-right">{item.rate.toLocaleString()}</td>
-                                      <td className="py-1 text-center">{item.unit || 'pcs'}</td>
-                                      <td className="py-1 text-right">{item.disc_percent || 0}%</td>
-                                      <td className="py-1 text-right">{item.tax_percent || 0}%</td>
-                                      <td className="py-1 text-right font-bold text-foreground/70">{item.amount.toLocaleString()}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
+                              <div className="flex flex-col">
+                                {config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.map((item: any, iIdx: number) => (
+                                  <div key={iIdx} className="flex text-[10px] text-gray-600 ml-10 mt-1">
+                                    <div className="w-32 flex flex-col">
+                                      <span>{items.find(i => i.id === item.item_id)?.name}</span>
+                                      {config.showStockDescriptions && item.description && (
+                                        <span className="text-[9px] italic text-gray-400">{item.description}</span>
+                                      )}
+                                    </div>
+                                    <span className="w-20 text-right">{item.qty} {item.unit}</span>
+                                    <span className="w-24 text-right">{item.rate.toLocaleString()}/Pcs</span>
+                                    <span className="w-24 text-right font-bold">{item.amount.toLocaleString()}</span>
+                                  </div>
+                                ))}
+                                {config.showNarration && e.vouchers?.narration && (
+                                  <span className="text-[10px] text-gray-500 italic ml-4">({e.vouchers.narration})</span>
+                                )}
+                                {config.showEnteredBy && (
+                                  <span className="text-[8px] text-gray-400 uppercase ml-10 mt-1">By: {users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System'}</span>
+                                )}
+                              </div>
                             </td>
                           </tr>
-                        )}
+                        ) : null}
                       </React.Fragment>
                     );
                   })}
@@ -767,6 +989,12 @@ export function LedgerStatement() {
               )}
             </tbody>
           </table>
+          {settings.reportLayout === 'Layout 2' && (
+            <div className="absolute bottom-4 left-8 right-8 text-center border-t border-gray-100 pt-4">
+              {settings.showPrintFooter && <p className="text-[10px] text-gray-600">{settings.printFooter}</p>}
+              {settings.showDeveloperContact && <p className="text-[8px] text-gray-400 mt-1">Powered by TallyFlow ERP | Developer Contact: +880 1700 000000</p>}
+            </div>
+          )}
         </div>
       </div>
 

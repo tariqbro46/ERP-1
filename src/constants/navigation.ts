@@ -43,6 +43,12 @@ export interface NavGroup {
 
 export const NAV_ITEMS: NavGroup[] = [
   {
+    group: 'General',
+    items: [
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    ]
+  },
+  {
     group: 'Masters',
     items: [
       { to: '/accounts/ledgers/new', icon: UserPlus, label: 'Create Ledger', permission: 'Ledgers' },
