@@ -105,6 +105,12 @@ export function ReportConfigModal({ isOpen, onClose, config, onSave, title }: Re
             onChange={(v) => handleChange('showEnteredBy', v)}
           />
 
+          <Toggle 
+            label="Show Running Balance" 
+            value={localConfig.showRunningBalance} 
+            onChange={(v) => handleChange('showRunningBalance', v)} 
+          />
+
           <div className="flex flex-col py-2 space-y-1">
             <span className="text-sm text-foreground">Display Name of Ledger</span>
             <select

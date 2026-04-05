@@ -100,7 +100,7 @@ const defaultSettings: SettingsContextType = {
   showDiscPercent: true,
   showTaxPercent: true,
   showMobileNav: false,
-  mobileBottomNavItems: ['Voucher Entry', 'Daybook', 'Balance Sheet', 'Settings (F11)'],
+  mobileBottomNavItems: ['Voucher Entry', 'Daybook', 'Settings (F11)'],
   voucherHeaderCompact: false,
   voucherTableCompact: false,
   menuBarStyle: 'classic',

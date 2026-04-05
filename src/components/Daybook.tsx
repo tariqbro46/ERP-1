@@ -22,6 +22,7 @@ const DEFAULT_CONFIG: ReportConfig = {
   showBankDetails: false,
   showCostCentre: false,
   showEnteredBy: false,
+  showRunningBalance: true,
   ledgerDisplayName: 'Name Only',
   sortingMethod: 'Default',
   enableStripeView: false,

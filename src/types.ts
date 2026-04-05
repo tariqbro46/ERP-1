@@ -36,6 +36,7 @@ export interface Ledger {
   contact_email?: string;
   bank_account_no?: string;
   bank_name?: string;
+  address?: string;
 }
 
 export interface Voucher {
@@ -243,6 +244,7 @@ export interface ReportConfig {
   showBankDetails: boolean;
   showCostCentre: boolean;
   showEnteredBy: boolean;
+  showRunningBalance: boolean;
   ledgerDisplayName: 'Alias (Name)' | 'Alias Only' | 'Name (Alias)' | 'Name Only';
   sortingMethod: 'Alphabetical (A to Z)' | 'Alphabetical (Z to A)' | 'Amount (Decreasing)' | 'Amount (Increasing)' | 'Default' | 'In Sequence of entry' | 'Voucher Number (Ascending)' | 'Voucher Number (Descending)' | 'Voucher Number (Sequence of A - Z)' | 'Voucher Number (Sequence of Z - A)';
   enableStripeView: boolean;

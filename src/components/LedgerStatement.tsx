@@ -20,6 +20,7 @@ const DEFAULT_CONFIG: ReportConfig = {
   showBankDetails: false,
   showCostCentre: false,
   showEnteredBy: false,
+  showRunningBalance: true,
   ledgerDisplayName: 'Name Only',
   sortingMethod: 'Default',
   enableStripeView: false,
@@ -326,95 +327,173 @@ export function LedgerStatement() {
   const handleFullPageView = () => {
     if (!selectedLedger) return;
     const ledgerName = currentLedger?.name || 'Ledger';
-    const period = `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
+    
+    const formatDate = (dateStr: string) => {
+      const date = new Date(dateStr);
+      const day = date.getDate();
+      const month = date.toLocaleString('en-GB', { month: 'short' });
+      const year = date.getFullYear().toString().slice(-2);
+      return `${day}-${month}-${year}`;
+    };
+
+    const period = `${formatDate(startDate)} to ${formatDate(endDate)}`;
     
     let rb = currentLedger?.opening_balance || 0;
+    let totalDebit = (rb > 0 ? rb : 0);
+    let totalCredit = (rb < 0 ? Math.abs(rb) : 0);
+
     const reportRows = [
       `<tr>
-        <td>-</td>
-        <td>-</td>
-        <td>Opening Balance</td>
-        <td style="text-align: right;">${rb > 0 ? rb.toFixed(2) : '0.00'}</td>
-        <td style="text-align: right;">${rb < 0 ? Math.abs(rb).toFixed(2) : '0.00'}</td>
-        <td style="text-align: right;">${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}</td>
+        <td>${formatDate(startDate)}</td>
+        <td>Dr <b>Opening Balance</b></td>
+        <td></td>
+        <td></td>
+        <td style="text-align: right;"><b>${rb > 0 ? rb.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+        <td style="text-align: right;">${rb < 0 ? Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+        <td style="text-align: right;">${Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${rb >= 0 ? 'Dr' : 'Cr'}</td>
       </tr>`,
       ...entries.map(e => {
         rb += (e.debit || 0) - (e.credit || 0);
+        totalDebit += (e.debit || 0);
+        totalCredit += (e.credit || 0);
+        const creator = users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System';
+        
         let row = `<tr>
-          <td>${e.vouchers?.v_date}</td>
+          <td>${formatDate(e.vouchers?.v_date)}</td>
+          <td>
+            <div>Dr <b>${e.particulars}</b></div>
+            ${config.showNarration && e.vouchers?.narration ? `<div style="font-size: 10px; font-style: italic; margin-left: 10px;">(${e.vouchers.narration})</div>` : ''}
+          </td>
+          <td>${e.vouchers?.v_type}</td>
           <td>${e.vouchers?.v_no}</td>
-          <td>${e.vouchers?.v_type} - ${e.particulars}</td>
-          <td style="text-align: right;">${(e.debit || 0).toFixed(2)}</td>
-          <td style="text-align: right;">${(e.credit || 0).toFixed(2)}</td>
-          <td style="text-align: right;">${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}</td>
+          <td style="text-align: right;">${e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+          <td style="text-align: right;">${e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+          <td style="text-align: right;">${config.showRunningBalance ? `${Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
         </tr>`;
 
         if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
+          const inventoryRows = e.vouchers.inventory.map((item: any) => {
+            const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+            return `
+              <div style="display: flex; font-size: 11px; margin-left: 40px; color: #000;">
+                <div style="width: 150px; text-align: right; padding-right: 20px;">${itemName}</div>
+                <div style="width: 80px; text-align: right;">${item.qty.toLocaleString()} ${item.unit || 'Pcs'}</div>
+                <div style="width: 100px; text-align: right;">${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}/Pcs</div>
+                <div style="width: 100px; text-align: right;">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+              </div>
+            `;
+          }).join('');
+          
           row += `<tr>
-            <td colspan="6" style="padding: 0;">
-              <table style="width: 100%; margin: 0; border: none; background-color: #fafafa;">
-                <thead>
-                  <tr style="background-color: #eee;">
-                    <th style="font-size: 10px; border: none; padding: 4px; text-align: left;">Item Name</th>
-                    <th style="font-size: 10px; border: none; padding: 4px; text-align: left;">Godown</th>
-                    <th style="font-size: 10px; border: none; padding: 4px; text-align: right;">Qty</th>
-                    <th style="font-size: 10px; border: none; padding: 4px; text-align: right;">Rate</th>
-                    <th style="font-size: 10px; border: none; padding: 4px; text-align: right;">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${e.vouchers.inventory.map((item: any) => `
-                    <tr>
-                      <td style="font-size: 10px; border: none; padding: 4px;">${items.find(i => i.id === item.item_id)?.name || 'Unknown'}</td>
-                      <td style="font-size: 10px; border: none; padding: 4px;">${godowns.find(g => g.id === item.godown_id)?.name || '-'}</td>
-                      <td style="font-size: 10px; border: none; padding: 4px; text-align: right;">${item.qty} ${item.unit || ''}</td>
-                      <td style="font-size: 10px; border: none; padding: 4px; text-align: right;">${item.rate.toFixed(2)}</td>
-                      <td style="font-size: 10px; border: none; padding: 4px; text-align: right;">${item.amount.toFixed(2)}</td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-              </table>
+            <td></td>
+            <td colspan="6">
+              <div style="border: 1px solid #eee; padding: 5px; margin: 2px 0 2px 20px;">
+                ${inventoryRows}
+                ${config.showEnteredBy ? `<div style="font-size: 10px; margin-top: 5px; border-top: 1px dashed #ccc; padding-top: 2px;"><i>Entered By : <b>${creator}</b></i></div>` : ''}
+              </div>
+            </td>
+          </tr>`;
+        } else if (config.showEnteredBy) {
+          row += `<tr>
+            <td></td>
+            <td colspan="6">
+              <div style="font-size: 10px; margin-left: 40px;"><i>Entered By : <b>${creator}</b></i></div>
             </td>
           </tr>`;
         }
+        
         return row;
       })
     ].join('');
+
+    const finalBalance = rb;
+    const closingBalanceRow = `
+      <tr class="closing-balance">
+        <td></td>
+        <td><b>${finalBalance >= 0 ? 'Cr' : 'Dr'} Closing Balance</b></td>
+        <td></td>
+        <td></td>
+        <td style="text-align: right;"><b>${finalBalance < 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+        <td style="text-align: right;"><b>${finalBalance >= 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+        <td style="text-align: right;"></td>
+      </tr>
+      <tr class="total-row">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td style="text-align: right; border-top: 1px solid #000; border-bottom: 3px double #000;"><b>${(totalDebit + (finalBalance < 0 ? Math.abs(finalBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
+        <td style="text-align: right; border-top: 1px solid #000; border-bottom: 3px double #000;"><b>${(totalCredit + (finalBalance >= 0 ? Math.abs(finalBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
+        <td></td>
+      </tr>
+    `;
 
     const html = `
       <html>
         <head>
           <title>Ledger Statement - ${ledgerName}</title>
           <style>
-            body { font-family: monospace; padding: 20px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-            th { background-color: #f4f4f4; text-transform: uppercase; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .company-name { font-size: 20px; font-weight: bold; text-transform: uppercase; }
+            @page { size: A4; margin: 1cm; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; color: #000; }
+            .container { max-width: 100%; }
+            .header-box { border: 1px solid #000; padding: 10px; margin-bottom: 5px; text-align: center; }
+            .company-name { font-size: 18px; font-weight: bold; text-transform: uppercase; }
+            .ledger-box { border: 1px solid #000; padding: 10px; margin-bottom: 10px; text-align: center; }
+            .ledger-name { font-size: 16px; font-weight: bold; text-transform: uppercase; }
+            .period-box { text-align: center; margin-bottom: 10px; }
+            .period-label { border: 1px solid #000; padding: 2px 15px; font-size: 12px; font-weight: bold; }
+            .page-num { text-align: right; font-size: 11px; margin-bottom: 5px; }
+            .page-num span { border: 1px solid #000; padding: 2px 10px; }
+            
+            table { width: 100%; border-collapse: collapse; margin-top: 5px; border-top: 2px solid #000; border-bottom: 2px solid #000; }
+            th { border-bottom: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; text-transform: capitalize; }
+            td { padding: 5px; text-align: left; font-size: 12px; vertical-align: top; }
+            .text-right { text-align: right; }
+            .closing-balance { border-top: 1px solid #000; font-weight: bold; }
+            .total-row td { padding-top: 10px; }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="company-name">${settings?.companyName || 'COMPANY NAME'}</div>
-            <div>Ledger Statement: ${ledgerName}</div>
-            <div>Period: ${period}</div>
+          <div class="container">
+            <div class="page-num"><span>Page 1</span></div>
+            
+            <div class="header-box">
+              <div class="company-name">${settings?.companyName || 'COMPANY NAME'}</div>
+              <div style="font-size: 12px;">${settings?.companyAddress || ''}</div>
+              <div style="font-size: 12px;">
+                ${settings?.printEmail ? `E-Mail : ${settings.printEmail}` : ''}
+                ${settings?.printPhone ? ` | Phone: ${settings.printPhone}` : ''}
+                ${settings?.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
+              </div>
+            </div>
+            
+            <div class="ledger-box">
+              <div class="ledger-name">${ledgerName}</div>
+              <div style="font-size: 12px;">${currentLedger?.address || ''}</div>
+            </div>
+            
+            <div class="period-box">
+              <span class="period-label">${period}</span>
+            </div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 10%;">Date</th>
+                  <th style="width: 40%;">Particulars</th>
+                  <th style="width: 10%;">Vch Type</th>
+                  <th style="width: 10%;">Vch No.</th>
+                  <th style="width: 10%; text-align: right;">Debit</th>
+                  <th style="width: 10%; text-align: right;">Credit</th>
+                  <th style="width: 10%; text-align: right;">Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${reportRows}
+                ${closingBalanceRow}
+              </tbody>
+            </table>
           </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Vch No</th>
-                <th>Particulars</th>
-                <th style="text-align: right;">Debit</th>
-                <th style="text-align: right;">Credit</th>
-                <th style="text-align: right;">Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${reportRows}
-            </tbody>
-          </table>
           <script>window.print();</script>
         </body>
       </html>
@@ -631,7 +710,11 @@ export function LedgerStatement() {
                           <td className="px-6 py-4 text-right font-mono">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
                           <td className="px-6 py-4 text-right font-mono">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
                           <td className="px-6 py-4 text-right text-foreground font-bold font-mono">
-                            {Math.abs(currentBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currentBalance >= 0 ? 'Dr' : 'Cr'}
+                            {config.showRunningBalance ? (
+                              <>
+                                {Math.abs(currentBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currentBalance >= 0 ? 'Dr' : 'Cr'}
+                              </>
+                            ) : '-'}
                           </td>
                         </tr>
                         {config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0 && (

@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { erpService } from '../services/erpService';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
+import { NAV_ITEMS } from '../constants/navigation';
 
 export function Settings() {
   const { user, logout } = useAuth();
@@ -40,6 +41,7 @@ export function Settings() {
     showDiscPercent,
     showTaxPercent,
     showMobileNav,
+    mobileBottomNavItems = [],
     menuBarStyle,
     layoutWidth,
     sidebarDefaultExpanded,
@@ -83,6 +85,7 @@ export function Settings() {
   const [localShowDiscPercent, setLocalShowDiscPercent] = useState(showDiscPercent);
   const [localShowTaxPercent, setLocalShowTaxPercent] = useState(showTaxPercent);
   const [localShowMobileNav, setLocalShowMobileNav] = useState(showMobileNav);
+  const [localMobileBottomNavItems, setLocalMobileBottomNavItems] = useState<string[]>(mobileBottomNavItems);
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded);
   const [localNotifications, setLocalNotifications] = useState(notifications);
   const [localWhatsappTemplates, setLocalWhatsappTemplates] = useState(whatsappTemplates);
@@ -118,6 +121,7 @@ export function Settings() {
     setLocalShowDiscPercent(showDiscPercent);
     setLocalShowTaxPercent(showTaxPercent);
     setLocalShowMobileNav(showMobileNav);
+    setLocalMobileBottomNavItems(mobileBottomNavItems);
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded);
     setLocalMenuBarStyle(menuBarStyle);
     setLocalLayoutWidth(layoutWidth);
@@ -130,7 +134,7 @@ export function Settings() {
     printSignature3, showSignature1, showSignature2, showSignature3, 
     signatureAlignment, showDeveloperContact, financialYearStart, 
     baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
-    showTaxPercent, showMobileNav, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates
+    showTaxPercent, showMobileNav, mobileBottomNavItems, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates
   ]);
 
   const handleSaveGeneral = () => {
@@ -144,6 +148,7 @@ export function Settings() {
       menuBarStyle: localMenuBarStyle,
       layoutWidth: localLayoutWidth,
       showMobileNav: localShowMobileNav,
+      mobileBottomNavItems: localMobileBottomNavItems,
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
       financialYearStart: localFinancialYearStart,
       baseCurrencySymbol: localBaseCurrencySymbol,
@@ -515,6 +520,45 @@ export function Settings() {
                           )} />
                         </button>
                       </div>
+
+                      {localShowMobileNav && (
+                        <div className="p-4 bg-foreground/5 border-x border-b border-border space-y-3">
+                          <h5 className="text-[10px] font-bold text-foreground uppercase">Bottom Navigation Items (Mobile)</h5>
+                          <p className="text-[9px] text-gray-500 uppercase mb-2">Select up to 4 items to show in the bottom bar.</p>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {NAV_ITEMS.flatMap(g => g.items).map(item => (
+                              <label 
+                                key={item.label}
+                                className={cn(
+                                  "flex items-center gap-2 p-2 border cursor-pointer transition-all",
+                                  localMobileBottomNavItems.includes(item.label)
+                                    ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-500"
+                                    : "bg-background border-border text-gray-500 hover:border-gray-400"
+                                )}
+                              >
+                                <input 
+                                  type="checkbox"
+                                  className="hidden"
+                                  checked={localMobileBottomNavItems.includes(item.label)}
+                                  onChange={() => {
+                                    if (localMobileBottomNavItems.includes(item.label)) {
+                                      setLocalMobileBottomNavItems(localMobileBottomNavItems.filter(i => i !== item.label));
+                                    } else {
+                                      if (localMobileBottomNavItems.length < 4) {
+                                        setLocalMobileBottomNavItems([...localMobileBottomNavItems, item.label]);
+                                      } else {
+                                        showNotification('You can only select up to 4 items.', 'info');
+                                      }
+                                    }
+                                  }}
+                                />
+                                <item.icon className="w-3 h-3" />
+                                <span className="text-[10px] font-medium truncate">{item.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-2">
