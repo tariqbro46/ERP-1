@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Printer, ArrowRight, Share2, MessageCircle, Mail } from 'lucide-react';
+import { Search, Filter, Download, Printer, ArrowRight, Share2, MessageCircle, Mail, Settings as SettingsIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
@@ -9,8 +9,23 @@ import { useSettings } from '../contexts/SettingsContext';
 import { printReport } from '../utils/printUtils';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { pdfService } from '../services/pdfService';
-
 import { exportService } from '../services/exportService';
+import { ReportConfigModal } from './ReportConfigModal';
+import { ReportConfig } from '../types';
+
+const DEFAULT_CONFIG: ReportConfig = {
+  showNarration: false,
+  format: 'Condensed',
+  showInventoryDetails: false,
+  showStockDescriptions: false,
+  showPaymentMode: false,
+  showBankDetails: false,
+  showCostCentre: false,
+  showEnteredBy: false,
+  ledgerDisplayName: 'Name Only',
+  sortingMethod: 'Default',
+  enableStripeView: false,
+};
 
 export function Daybook() {
   const navigate = useNavigate();
@@ -19,9 +34,11 @@ export function Daybook() {
   const { showNotification } = useNotification();
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDetailed, setIsDetailed] = useState(false);
   const [items, setItems] = useState<any[]>([]);
   const [godowns, setGodowns] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [config, setConfig] = useState<ReportConfig>(DEFAULT_CONFIG);
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [startDate, setStartDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-CA');
@@ -35,22 +52,29 @@ export function Daybook() {
     if (!user?.companyId) return;
     setLoading(true);
     try {
-      const [vData, iData, gData] = await Promise.all([
-        isDetailed 
+      const [vData, iData, gData, uData, sData] = await Promise.all([
+        config.format === 'Detailed'
           ? erpService.getVouchersDetailedByDateRange(user.companyId, startDate, endDate)
           : erpService.getVouchersByDateRange(user.companyId, startDate, endDate),
         erpService.getItems(user.companyId),
-        erpService.getGodowns(user.companyId)
+        erpService.getGodowns(user.companyId),
+        erpService.getUsersByCompany(user.companyId),
+        erpService.getSettings(user.companyId)
       ]);
 
       setItems(iData);
       setGodowns(gData);
+      setUsers(uData);
+      if (sData?.daybookConfig) setConfig(sData.daybookConfig);
 
       const processed = (vData || []).map(v => ({
         ...v,
-        particulars: v.particulars || 'Transaction'
+        particulars: v.party_ledger_name || v.ledger_name || v.ledgers || v.particulars || v.v_type || 'Voucher'
       }));
-      setVouchers(processed);
+
+      // Apply sorting
+      const sorted = sortVouchers(processed);
+      setVouchers(sorted);
     } catch (err) {
       console.error('Error fetching vouchers:', err);
     } finally {
@@ -58,26 +82,101 @@ export function Daybook() {
     }
   };
 
+  const sortVouchers = (data: any[]) => {
+    const sorted = [...data];
+    switch (config.sortingMethod) {
+      case 'Alphabetical (A to Z)':
+        sorted.sort((a, b) => (a.particulars || '').localeCompare(b.particulars || ''));
+        break;
+      case 'Alphabetical (Z to A)':
+        sorted.sort((a, b) => (b.particulars || '').localeCompare(a.particulars || ''));
+        break;
+      case 'Amount (Decreasing)':
+        sorted.sort((a, b) => b.total_amount - a.total_amount);
+        break;
+      case 'Amount (Increasing)':
+        sorted.sort((a, b) => a.total_amount - b.total_amount);
+        break;
+      case 'Voucher Number (Ascending)':
+        sorted.sort((a, b) => (a.v_no || '').localeCompare(b.v_no || '', undefined, { numeric: true }));
+        break;
+      case 'Voucher Number (Descending)':
+        sorted.sort((a, b) => (b.v_no || '').localeCompare(a.v_no || '', undefined, { numeric: true }));
+        break;
+      case 'In Sequence of entry':
+        sorted.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          return timeA - timeB;
+        });
+        break;
+      default:
+        sorted.sort((a, b) => new Date(a.v_date).getTime() - new Date(b.v_date).getTime());
+    }
+    return sorted;
+  };
+
   useEffect(() => {
     fetchVouchers();
-  }, [startDate, endDate, isDetailed]);
+  }, [startDate, endDate, config.format, config.sortingMethod]);
+
+  const handleSaveConfig = async (newConfig: ReportConfig) => {
+    if (!user?.companyId) return;
+    try {
+      await erpService.updateSettings(user.companyId, { daybookConfig: newConfig });
+      setConfig(newConfig);
+      setIsConfigOpen(false);
+      showNotification('Configuration saved', 'success');
+    } catch (err) {
+      showNotification('Failed to save configuration', 'error');
+    }
+  };
+
+  const getLedgerName = (v: any) => {
+    const name = v.party_ledger_name || v.ledger_name || v.ledgers || (['Sales', 'Purchase'].includes(v.particulars) ? '' : v.particulars) || v.v_type || 'Voucher';
+    const alias = v.alias || ''; 
+    
+    switch (config.ledgerDisplayName) {
+      case 'Alias (Name)':
+        return alias ? `${alias} (${name})` : name;
+      case 'Alias Only':
+        return alias || name;
+      case 'Name (Alias)':
+        return alias ? `${name} (${alias})` : name;
+      default:
+        return name;
+    }
+  };
 
   const handlePrint = () => {
     const printData = vouchers.map(v => {
       const rows = [{
         date: v.v_date,
-        particulars: v.particulars,
+        particulars: getLedgerName(v) + (config.format !== 'Detailed' && config.showInventoryDetails && v.item_names ? `\n(${v.item_names})` : ''),
         vch_type: v.v_type,
         vch_no: v.v_no,
         amount: v.total_amount
       }];
 
-      if (isDetailed && v.inventory && v.inventory.length > 0) {
+      if (config.showNarration && v.narration) {
+        rows.push({ date: '', particulars: `(${v.narration})`, vch_type: '', vch_no: '', amount: 0 });
+      }
+
+      if (config.showEnteredBy) {
+        const creator = users.find(u => u.uid === v.createdBy)?.displayName || 'System';
+        rows.push({ date: '', particulars: `Entered by: ${creator}`, vch_type: '', vch_no: '', amount: 0 });
+      }
+
+      if (config.format === 'Detailed' && v.inventory && v.inventory.length > 0) {
         v.inventory.forEach((item: any) => {
           const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+          let itemDetail = `  > ${itemName} (${item.qty} ${item.unit_name || 'pcs'} @ ৳${item.rate.toLocaleString()})`;
+          if (config.showStockDescriptions && item.description) {
+            itemDetail += `\n    Desc: ${item.description}`;
+          }
           rows.push({
             date: '',
-            particulars: `  > ${itemName} (${item.qty} @ ${item.rate})`,
+            particulars: itemDetail,
             vch_type: '',
             vch_no: '',
             amount: 0
@@ -95,13 +194,17 @@ export function Daybook() {
     const exportData = vouchers.map(v => {
       const rows = [{
         'Date': v.v_date,
-        'Particulars': v.particulars,
+        'Particulars': getLedgerName(v) + (config.format !== 'Detailed' && config.showInventoryDetails && v.item_names ? ` (${v.item_names})` : ''),
         'Voucher Type': v.v_type,
         'Voucher No': v.v_no,
         'Amount': v.total_amount
       }];
 
-      if (isDetailed && v.inventory && v.inventory.length > 0) {
+      if (config.showNarration && v.narration) {
+        rows.push({ 'Date': '', 'Particulars': `(${v.narration})`, 'Voucher Type': '', 'Voucher No': '', 'Amount': 0 });
+      }
+
+      if (config.format === 'Detailed' && v.inventory && v.inventory.length > 0) {
         v.inventory.forEach((item: any) => {
           const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
           rows.push({
@@ -125,13 +228,17 @@ export function Daybook() {
     const body = vouchers.map(v => {
       const rows = [[
         v.v_date,
-        v.particulars,
+        getLedgerName(v) + (config.format !== 'Detailed' && config.showInventoryDetails && v.item_names ? `\n(${v.item_names})` : ''),
         v.v_type,
         v.v_no,
         v.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })
       ]];
 
-      if (isDetailed && v.inventory && v.inventory.length > 0) {
+      if (config.showNarration && v.narration) {
+        rows.push(['', `(${v.narration})`, '', '', '']);
+      }
+
+      if (config.format === 'Detailed' && v.inventory && v.inventory.length > 0) {
         v.inventory.forEach((item: any) => {
           const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
           rows.push([
@@ -188,13 +295,11 @@ export function Daybook() {
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
             <button 
-              onClick={() => setIsDetailed(!isDetailed)}
-              className={cn(
-                "flex-1 sm:flex-none px-3 py-2 border border-border transition-colors flex items-center gap-2 text-[10px] font-bold uppercase",
-                isDetailed ? "bg-foreground text-background" : "text-gray-500 hover:text-foreground"
-              )}
+              onClick={() => setIsConfigOpen(true)}
+              className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
+              title="Configure Report"
             >
-              {isDetailed ? 'Condensed' : 'Detailed'}
+              <SettingsIcon className="w-3 h-3" /> F12: CONFIGURE
             </button>
             <button 
               onClick={handlePrint}
@@ -221,6 +326,14 @@ export function Daybook() {
           </div>
         </div>
 
+        <ReportConfigModal 
+          isOpen={isConfigOpen}
+          onClose={() => setIsConfigOpen(false)}
+          config={config}
+          onSave={handleSaveConfig}
+          title="Daybook"
+        />
+
         <div className="bg-card border border-border overflow-hidden">
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
@@ -228,10 +341,13 @@ export function Daybook() {
               <div className="p-10 text-center text-gray-500">Loading transactions...</div>
             ) : vouchers.length === 0 ? (
               <div className="p-10 text-center text-gray-500">No transactions recorded</div>
-            ) : vouchers.map((v) => (
+            ) : vouchers.map((v, idx) => (
               <div 
                 key={v.id} 
-                className="p-4 space-y-3 hover:bg-foreground/5 transition-colors cursor-pointer group"
+                className={cn(
+                  "p-4 space-y-3 hover:bg-foreground/5 transition-colors cursor-pointer group",
+                  config.enableStripeView && idx % 2 !== 0 && "bg-muted/30"
+                )}
                 onClick={() => navigate(`/vouchers/edit/${v.id}`)}
               >
                 <div className="flex justify-between items-start">
@@ -240,7 +356,18 @@ export function Daybook() {
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-foreground">{v.particulars}</span>
+                    <span className="text-xs font-bold text-foreground">
+                      {v.party_ledger_name || v.ledger_name || v.ledgers || (['Sales', 'Purchase'].includes(v.particulars) ? '' : v.particulars) || v.v_type}
+                    </span>
+                    {config.showInventoryDetails && v.item_names && (
+                      <span className="text-[9px] text-muted-foreground uppercase tracking-widest">{v.item_names}</span>
+                    )}
+                    {config.showNarration && v.narration && (
+                      <span className="text-[9px] text-gray-500 italic">({v.narration})</span>
+                    )}
+                    {config.showEnteredBy && (
+                      <span className="text-[8px] text-gray-400 uppercase">By: {users.find(u => u.uid === v.createdBy)?.displayName || 'System'}</span>
+                    )}
                     <span className="text-[10px] text-gray-500 font-mono">{v.v_no}</span>
                   </div>
                   <span className="text-sm font-bold text-foreground font-mono">৳ {v.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
@@ -281,22 +408,40 @@ export function Daybook() {
                   <tr><td colSpan={5} className="px-6 py-10 text-center text-gray-500">Loading transactions...</td></tr>
                 ) : vouchers.length === 0 ? (
                   <tr><td colSpan={5} className="px-6 py-10 text-center text-gray-500">No transactions recorded for this period</td></tr>
-                ) : vouchers.map((v) => (
+                ) : vouchers.map((v, idx) => (
                   <React.Fragment key={v.id}>
                     <tr 
-                      className="border-b border-border/50 hover:bg-foreground/5 cursor-pointer group transition-colors"
+                      className={cn(
+                        "border-b border-border/50 hover:bg-foreground/5 cursor-pointer group transition-colors",
+                        config.enableStripeView && idx % 2 !== 0 && "bg-muted/30"
+                      )}
                       onClick={() => navigate(`/vouchers/edit/${v.id}`)}
                     >
                       <td className="px-4 lg:px-6 py-4 whitespace-nowrap">{v.v_date}</td>
                       <td className="px-4 lg:px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-foreground">{v.particulars}</span>
-                          <ArrowRight className="w-3 h-3 text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span className="text-foreground font-bold">
+                              {getLedgerName(v)}
+                            </span>
+                            <ArrowRight className="w-3 h-3 text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          {config.showInventoryDetails && v.item_names && (
+                            <span className="text-[9px] text-muted-foreground uppercase tracking-widest">
+                              {v.item_names}
+                            </span>
+                          )}
+                          {config.showNarration && v.narration && (
+                            <span className="text-[9px] text-gray-500 italic">({v.narration})</span>
+                          )}
+                          {config.showEnteredBy && (
+                            <span className="text-[8px] text-gray-400 uppercase">By: {users.find(u => u.uid === v.createdBy)?.displayName || 'System'}</span>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 lg:px-6 py-4 uppercase text-[10px] text-gray-500">{v.v_type}</td>
                       <td className="px-4 lg:px-6 py-4">{v.v_no}</td>
-                      <td className="px-4 lg:px-6 py-4 text-right text-foreground font-mono">৳ {v.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                      <td className="px-4 lg:px-6 py-4 text-right text-foreground font-mono font-bold">৳ {v.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                       <td className="px-4 lg:px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <button 
@@ -316,9 +461,9 @@ export function Daybook() {
                         </div>
                       </td>
                     </tr>
-                    {isDetailed && v.inventory && v.inventory.length > 0 && (
+                    {config.format === 'Detailed' && v.inventory && v.inventory.length > 0 && (
                       <tr className="bg-foreground/[0.02] border-b border-border/30">
-                        <td colSpan={5} className="px-4 lg:px-12 py-2">
+                        <td colSpan={6} className="px-4 lg:px-12 py-2">
                           <table className="w-full text-[10px] text-gray-500">
                             <thead>
                               <tr className="border-b border-border/20 uppercase text-[8px]">
@@ -334,9 +479,16 @@ export function Daybook() {
                               </tr>
                             </thead>
                             <tbody>
-                              {v.inventory.map((item: any, idx: number) => (
-                                <tr key={idx} className="border-b border-border/10 last:border-0">
-                                  <td className="py-1">{items.find(i => i.id === item.item_id)?.name || 'Unknown Item'}</td>
+                              {v.inventory.map((item: any, iIdx: number) => (
+                                <tr key={iIdx} className="border-b border-border/10 last:border-0">
+                                  <td className="py-1">
+                                    <div className="flex flex-col">
+                                      <span>{items.find(i => i.id === item.item_id)?.name || 'Unknown Item'}</span>
+                                      {config.showStockDescriptions && item.description && (
+                                        <span className="text-[9px] italic text-gray-400">{item.description}</span>
+                                      )}
+                                    </div>
+                                  </td>
                                   <td className="py-1">{godowns.find(g => g.id === item.godown_id)?.name || '-'}</td>
                                   <td className="py-1 text-right">{item.qty}</td>
                                   <td className="py-1 text-right">{item.free_qty || 0}</td>

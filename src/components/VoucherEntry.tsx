@@ -489,11 +489,30 @@ export function VoucherEntry() {
     if (!isBalanced() || !user?.companyId) return;
     setLoading(true);
     try {
+      // Find a ledger that belongs to Sundry Debtors or Sundry Creditors
+      const isDebtorOrCreditor = (l: any) => 
+        ['Sundry Debtors', 'Sundry Creditors', 'Sundry Debtor', 'Sundry Creditor', 'Debtors', 'Creditors'].includes(l.group_name);
+
+      const partyLedger = ledgers.find(l => 
+        (l.id === partyLedgerId || l.id === bankCashLedgerId || accEntries.some(e => e.ledger_id === l.id)) &&
+        isDebtorOrCreditor(l)
+      );
+
+      const partyLedgerName = partyLedger?.name || 
+                             (isInventory ? '' : (ledgers.find(l => l.id === partyLedgerId)?.name || ledgers.find(l => l.id === bankCashLedgerId)?.name)) ||
+                             (accEntries[0]?.ledger_id ? ledgers.find(l => l.id === accEntries[0].ledger_id)?.name : '');
+
+      const itemNames = isInventory ? invEntries.map(i => items.find(item => item.id === i.item_id)?.name).filter(Boolean).join(', ') : '';
+
       const voucher = {
         v_no: refNo,
         v_type: vType,
         v_date: vDate,
         narration,
+        particulars: partyLedgerName || vType,
+        party_ledger_name: partyLedgerName,
+        ledger_name: partyLedgerName,
+        item_names: itemNames,
         total_amount: finalTotal,
         tax_amount: totalTaxAmount,
         discount_amount: globalDiscount,
@@ -545,7 +564,11 @@ export function VoucherEntry() {
           id!, 
           voucher, 
           finalAccEntries, 
-          isInventory ? invEntries.map(i => ({ ...i, m_type: vType === 'Sales' ? 'Outward' : 'Inward' })) : []
+          isInventory ? invEntries.map(i => ({ 
+            ...i, 
+            item_name: items.find(item => item.id === i.item_id)?.name,
+            m_type: vType === 'Sales' ? 'Outward' : 'Inward' 
+          })) : []
         );
         showNotification('Voucher updated successfully');
       } else {
@@ -554,7 +577,11 @@ export function VoucherEntry() {
           user.uid,
           voucher, 
           finalAccEntries, 
-          isInventory ? invEntries.map(i => ({ ...i, m_type: vType === 'Sales' ? 'Outward' : 'Inward' })) : []
+          isInventory ? invEntries.map(i => ({ 
+            ...i, 
+            item_name: items.find(item => item.id === i.item_id)?.name,
+            m_type: vType === 'Sales' ? 'Outward' : 'Inward' 
+          })) : []
         );
         showNotification(notifications.voucherSaved);
       }

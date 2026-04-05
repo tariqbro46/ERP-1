@@ -234,6 +234,31 @@ export interface PrintingOrder {
   updatedAt?: any;
 }
 
+export interface ReportConfig {
+  showNarration: boolean;
+  format: 'Condensed' | 'Detailed';
+  showInventoryDetails: boolean;
+  showStockDescriptions: boolean;
+  showPaymentMode: boolean;
+  showBankDetails: boolean;
+  showCostCentre: boolean;
+  showEnteredBy: boolean;
+  ledgerDisplayName: 'Alias (Name)' | 'Alias Only' | 'Name (Alias)' | 'Name Only';
+  sortingMethod: 'Alphabetical (A to Z)' | 'Alphabetical (Z to A)' | 'Amount (Decreasing)' | 'Amount (Increasing)' | 'Default' | 'In Sequence of entry' | 'Voucher Number (Ascending)' | 'Voucher Number (Descending)' | 'Voucher Number (Sequence of A - Z)' | 'Voucher Number (Sequence of Z - A)';
+  enableStripeView: boolean;
+}
+
+export interface CompanySettings {
+  companyId: string;
+  companyName?: string;
+  companyAddress?: string;
+  printPhone?: string;
+  printEmail?: string;
+  printWebsite?: string;
+  daybookConfig?: ReportConfig;
+  ledgerConfig?: ReportConfig;
+}
+
 export interface PrintingMachine {
   id: string;
   companyId: string;

@@ -8,6 +8,7 @@ import {
   StickyNote, 
   Database,
   ChevronRight,
+  ChevronLeft,
   LogOut,
   Scale,
   TrendingUp,
@@ -67,7 +68,7 @@ import NotificationPage from './components/NotificationPage';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login, Register } from './components/Auth';
-import { MobileNav } from './components/MobileNav';
+import { useNavigate } from 'react-router-dom';
 
 const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => (
   <Link
@@ -235,8 +236,11 @@ function Layout({ children }: { children: React.ReactNode }) {
     menuBarStyle = 'classic', 
     layoutWidth = 'constrained', 
     sidebarDefaultExpanded = true,
-    showMobileNav = false 
+    showMobileNav = false,
+    mobileBottomNavItems = []
   } = useSettings();
+
+  const navigate = useNavigate();
 
   const currentPageTitle = PAGE_TITLES[location.pathname] || (location.pathname.includes('/edit/') ? 'Edit Record' : 'ERP System');
 
@@ -766,9 +770,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           </Link>
           
           {NAV_ITEMS.flatMap(g => g.items).filter(item => {
-            // Show only a few key items in the taskbar style
-            const taskbarItems = ['Voucher Entry', 'Daybook', 'Balance Sheet', 'Settings (F11)'];
-            return taskbarItems.includes(item.label);
+            return mobileBottomNavItems.includes(item.label);
           }).map(item => (
             <Link 
               key={item.to}
@@ -817,29 +819,42 @@ function Layout({ children }: { children: React.ReactNode }) {
         {menuBarStyle !== 'macos' && (
           <header className="h-14 border-b border-border bg-background flex items-center px-4 lg:px-6 relative">
             <div className="flex items-center gap-3 lg:gap-4 z-10">
+              {/* Desktop/Classic Menu Bar Style */}
               {menuBarStyle !== 'classic' && (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 hidden lg:flex">
                   <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
                     <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
                   </div>
-                  <h1 className="text-sm font-bold text-foreground tracking-tighter truncate hidden sm:block">
+                  <h1 className="text-sm font-bold text-foreground tracking-tighter truncate">
                     {companyName}
                   </h1>
                 </div>
               )}
 
-              <button 
-                onClick={() => setIsSidebarOpen(true)}
-                className={cn(
-                  "p-1.5 hover:bg-foreground/5 rounded",
-                  menuBarStyle === 'classic' ? "lg:hidden" : "",
-                  menuBarStyle === 'ribbon' ? "lg:hidden" : "",
-                  menuBarStyle === 'windows11' ? "lg:hidden" : ""
-                )}
-              >
-                <Menu className="w-5 h-5 text-foreground" />
-              </button>
+              {/* Mobile Navigation / Menu Toggle */}
+              {location.pathname !== '/' ? (
+                <div className="flex items-center gap-1 lg:hidden">
+                  <button 
+                    onClick={() => navigate(-1)}
+                    className="p-2 hover:bg-foreground/5 rounded-full transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-foreground" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 lg:hidden">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-foreground rounded-sm flex items-center justify-center">
+                      <span className="text-background font-bold text-xs">{companyName.charAt(0)}</span>
+                    </div>
+                    <h1 className="text-[10px] font-bold text-foreground tracking-tighter truncate max-w-[80px]">
+                      {companyName}
+                    </h1>
+                  </div>
+                </div>
+              )}
               
+              {/* Status Indicator (Desktop) */}
               <div className="hidden sm:flex items-center gap-4 border-l border-border pl-4">
                 <span className="text-[10px] text-gray-600 font-mono uppercase">
                   Status: Online
@@ -849,8 +864,8 @@ function Layout({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Center Title */}
-            <div className="absolute left-1/2 -translate-x-1/2 hidden md:block pointer-events-none">
-              <h2 className="text-sm font-bold text-primary uppercase tracking-widest">
+            <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none">
+              <h2 className="text-[10px] sm:text-sm font-bold text-primary uppercase tracking-widest text-center truncate max-w-[120px] sm:max-w-none">
                 {currentPageTitle}
               </h2>
             </div>
@@ -973,8 +988,6 @@ function Layout({ children }: { children: React.ReactNode }) {
         {menuBarStyle === 'ribbon' && renderRibbonMenu()}
         {menuBarStyle === 'macos' && renderMacOSMenu()}
 
-        <MobileNav />
-
         <div ref={scrollRef} className={cn(
           "flex-1 overflow-y-auto no-scrollbar pb-16 lg:pb-0",
           menuBarStyle === 'macos' && "pt-10"
@@ -1000,45 +1013,26 @@ function Layout({ children }: { children: React.ReactNode }) {
             )}
           >
             <LayoutDashboard className="w-5 h-5" />
-            <span className="text-[9px] font-bold uppercase tracking-tighter">Home</span>
+            <span className="text-[9px] font-bold uppercase tracking-tighter">Dashboard</span>
           </Link>
-          <Link 
-            to="/vouchers/new" 
-            className={cn(
-              "flex flex-col items-center gap-1 px-3 py-1 transition-colors",
-              location.pathname === '/vouchers/new' ? "text-foreground" : "text-gray-500"
-            )}
-          >
-            <FileText className="w-5 h-5" />
-            <span className="text-[9px] font-bold uppercase tracking-tighter">Voucher</span>
-          </Link>
-          <Link 
-            to="/reports/daybook" 
-            className={cn(
-              "flex flex-col items-center gap-1 px-3 py-1 transition-colors",
-              location.pathname === '/reports/daybook' ? "text-foreground" : "text-gray-500"
-            )}
-          >
-            <BookOpen className="w-5 h-5" />
-            <span className="text-[9px] font-bold uppercase tracking-tighter">Daybook</span>
-          </Link>
-          <Link 
-            to="/reports/stock" 
-            className={cn(
-              "flex flex-col items-center gap-1 px-3 py-1 transition-colors",
-              location.pathname === '/reports/stock' ? "text-foreground" : "text-gray-500"
-            )}
-          >
-            <Package className="w-5 h-5" />
-            <span className="text-[9px] font-bold uppercase tracking-tighter">Stock</span>
-          </Link>
-          <button 
-            onClick={() => setIsSidebarOpen(true)}
-            className="flex flex-col items-center gap-1 px-3 py-1 text-gray-500"
-          >
-            <Menu className="w-5 h-5" />
-            <span className="text-[9px] font-bold uppercase tracking-tighter">Menu</span>
-          </button>
+          
+          {NAV_ITEMS.flatMap(g => g.items).filter(item => {
+            return mobileBottomNavItems.includes(item.label);
+          }).map(item => (
+            <Link 
+              key={item.to}
+              to={item.to} 
+              className={cn(
+                "flex flex-col items-center gap-1 px-3 py-1 transition-colors",
+                location.pathname === item.to ? "text-foreground" : "text-gray-500"
+              )}
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="text-[9px] font-bold uppercase tracking-tighter truncate max-w-[60px]">
+                {item.label.split(' ')[0]}
+              </span>
+            </Link>
+          ))}
         </nav>
       </main>
       

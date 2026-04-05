@@ -96,7 +96,11 @@ export function Dashboard() {
           erpService.getRecentVouchers(user.companyId, 5)
         ]);
         setStats(s);
-        setRecentVouchers(v);
+        const processed = (v || []).map(vch => ({
+          ...vch,
+          particulars: vch.party_ledger_name || vch.ledger_name || vch.ledgers || vch.particulars || vch.v_type || 'Voucher'
+        }));
+        setRecentVouchers(processed);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
       } finally {
@@ -127,25 +131,32 @@ export function Dashboard() {
     <div className="p-4 lg:p-6 space-y-6 bg-background min-h-screen transition-colors">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
         <div className="flex items-baseline gap-4">
-          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Gateway of {companyName}</h1>
+          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">
+            <span className="lg:hidden">Dashboard</span>
+            <span className="hidden lg:inline">Gateway of {companyName}</span>
+          </h1>
           <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Technical Overview • Financial Year {formatFY(periodStart, periodEnd)}</p>
         </div>
         <div className="flex flex-col items-end sm:items-end gap-2 w-full sm:w-auto">
-          <p className="text-[10px] text-gray-500 font-mono uppercase w-full text-right">Current Period</p>
-          <div className="flex items-center gap-2 bg-card border border-border p-1 rounded w-full sm:w-auto justify-end">
-            <input 
-              type="date" 
-              value={periodStart || ''} 
-              onChange={(e) => setPeriodStart(e.target.value)}
-              className="bg-transparent text-[10px] font-mono text-foreground outline-none border-none p-1"
-            />
-            <span className="text-gray-500 text-[10px]">to</span>
-            <input 
-              type="date" 
-              value={periodEnd || ''} 
-              onChange={(e) => setPeriodEnd(e.target.value)}
-              className="bg-transparent text-[10px] font-mono text-foreground outline-none border-none p-1"
-            />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex-1">
+              <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">From</label>
+              <input 
+                type="date" 
+                value={periodStart || ''} 
+                onChange={(e) => setPeriodStart(e.target.value)}
+                className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">To</label>
+              <input 
+                type="date" 
+                value={periodEnd || ''} 
+                onChange={(e) => setPeriodEnd(e.target.value)}
+                className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -185,8 +196,8 @@ export function Dashboard() {
         />
       </div>
 
-      {/* Subscription Status Widget */}
-      {company && (
+      {/* Subscription Status Widget - Only show if access is disabled */}
+      {company && company.isAccessEnabled === false && (
         <div className={`bg-card border p-4 flex flex-col sm:flex-row items-center justify-between gap-4 ${
           company.subscriptionStatus === 'trial' ? 'border-amber-500/20 bg-amber-500/5' :
           company.subscriptionStatus === 'active' ? 'border-emerald-500/20 bg-emerald-500/5' :
@@ -239,48 +250,48 @@ export function Dashboard() {
       {/* Quick Actions */}
       <div className="bg-card border border-border p-4">
         <h3 className="text-[11px] font-mono text-gray-500 uppercase mb-4 tracking-widest">Quick Actions</h3>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-3 sm:flex flex-wrap gap-2 lg:gap-3">
           <button 
             onClick={() => navigate('/vouchers/new')}
-            className="px-4 py-2 bg-foreground/5 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all flex items-center gap-2"
+            className="px-2 py-1.5 lg:px-4 lg:py-2 bg-foreground/5 border border-border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all flex items-center justify-center gap-2"
           >
-            <Plus className="w-3 h-3" /> New Voucher
+            <Plus className="w-3 h-3" /> <span className="text-center">Voucher</span>
           </button>
           <button 
             onClick={() => navigate('/inventory/items/new')}
-            className="px-4 py-2 bg-foreground/5 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all flex items-center gap-2"
+            className="px-2 py-1.5 lg:px-4 lg:py-2 bg-foreground/5 border border-border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all flex items-center justify-center gap-2"
           >
-            <Plus className="w-3 h-3" /> New Item
+            <Plus className="w-3 h-3" /> <span className="text-center">Item</span>
           </button>
           <button 
             onClick={() => navigate('/accounts/ledgers/new')}
-            className="px-4 py-2 bg-foreground/5 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all flex items-center gap-2"
+            className="px-2 py-1.5 lg:px-4 lg:py-2 bg-foreground/5 border border-border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all flex items-center justify-center gap-2"
           >
-            <Plus className="w-3 h-3" /> New Ledger
+            <Plus className="w-3 h-3" /> <span className="text-center">Ledger</span>
           </button>
           <button 
             onClick={() => navigate('/inventory/godowns')}
-            className="px-4 py-2 bg-foreground/5 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all flex items-center gap-2"
+            className="px-2 py-1.5 lg:px-4 lg:py-2 bg-foreground/5 border border-border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all flex items-center justify-center gap-2"
           >
-            <Plus className="w-3 h-3" /> New Godown
+            <Plus className="w-3 h-3" /> <span className="text-center">Godown</span>
           </button>
           {isAdmin && (
             <button 
               onClick={() => navigate('/users')}
-              className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center gap-2"
+              className="px-2 py-1.5 lg:px-4 lg:py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[8px] lg:text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-2"
             >
-              <Users className="w-3 h-3" /> User Management
+              <Users className="w-3 h-3" /> <span className="text-center">Users</span>
             </button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-card border border-border p-4">
-          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-4 tracking-widest">Revenue Trajectory</h3>
-          <div className="h-[180px] w-full">
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData}>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-card border border-border p-2">
+          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-1 tracking-widest px-1">Revenue Trajectory</h3>
+          <div className="h-[300px] lg:h-[180px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 5, left: -35, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0.1}/>
@@ -300,11 +311,11 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-card border border-border p-4">
-          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-4 tracking-widest">Expense Distribution</h3>
-          <div className="h-[180px] w-full">
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData}>
+        <div className="bg-card border border-border p-2">
+          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-1 tracking-widest px-1">Expense Distribution</h3>
+          <div className="h-[300px] lg:h-[180px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 5, left: -35, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
                 <XAxis dataKey="name" stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
                 <YAxis stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
@@ -318,11 +329,11 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-card border border-border p-4">
-          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-4 tracking-widest">Net Profit Margin</h3>
-          <div className="h-[180px] w-full">
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 0.15 })) : mockChartData.map(d => ({ ...d, value: d.value * 0.15 }))}>
+        <div className="bg-card border border-border p-2">
+          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-1 tracking-widest px-1">Net Profit Margin</h3>
+          <div className="h-[300px] lg:h-[180px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 0.15 })) : mockChartData.map(d => ({ ...d, value: d.value * 0.15 }))} margin={{ top: 5, right: 5, left: -35, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
                 <XAxis dataKey="name" stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
                 <YAxis stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
@@ -336,11 +347,11 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-card border border-border p-4">
-          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-4 tracking-widest">Cash Flow Projection</h3>
-          <div className="h-[180px] w-full">
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 1.2 })) : mockChartData.map(d => ({ ...d, value: d.value * 1.2 }))}>
+        <div className="bg-card border border-border p-2">
+          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-1 tracking-widest px-1">Cash Flow Projection</h3>
+          <div className="h-[300px] lg:h-[180px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 1.2 })) : mockChartData.map(d => ({ ...d, value: d.value * 1.2 }))} margin={{ top: 5, right: 5, left: -35, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
                 <XAxis dataKey="name" stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
                 <YAxis stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
@@ -377,7 +388,14 @@ export function Dashboard() {
                 <span className="text-[10px] font-bold text-emerald-500 uppercase">{v.v_type}</span>
               </div>
               <div className="flex justify-between items-end">
-                <span className="text-xs font-bold text-foreground">{v.particulars}</span>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-foreground">
+                    {v.party_ledger_name || v.ledger_name || v.ledgers || (['Sales', 'Purchase'].includes(v.particulars) ? '' : v.particulars) || v.v_type}
+                  </span>
+                  {v.item_names && (
+                    <span className="text-[9px] text-muted-foreground uppercase tracking-widest">{v.item_names}</span>
+                  )}
+                </div>
                 <span className="text-sm font-bold text-foreground">৳ {v.total_amount.toLocaleString()}</span>
               </div>
             </div>
@@ -405,7 +423,16 @@ export function Dashboard() {
                   onClick={() => navigate(`/reports/daybook`)}
                 >
                   <td className="px-4 py-3">{formatDate(v.v_date)}</td>
-                  <td className="px-4 py-3">{v.particulars}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col">
+                      <span className="text-foreground font-bold">
+                        {v.party_ledger_name || v.ledger_name || v.ledgers || (['Sales', 'Purchase'].includes(v.particulars) ? '' : v.particulars) || v.v_type}
+                      </span>
+                      {v.item_names && (
+                        <span className="text-[9px] text-muted-foreground uppercase tracking-widest">{v.item_names}</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3">{v.v_type}</td>
                   <td className="px-4 py-3 text-right">৳ {v.total_amount.toLocaleString()}</td>
                 </tr>

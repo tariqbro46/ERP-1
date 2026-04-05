@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Printer, Download, ArrowLeft, Calculator, FileText } from 'lucide-react';
+import { Search, Printer, Download, ArrowLeft, Calculator, FileText, Settings as SettingsIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
@@ -8,6 +8,22 @@ import { useSettings } from '../contexts/SettingsContext';
 import { printReport } from '../utils/printUtils';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { QuickAdjustmentModal } from './QuickAdjustmentModal';
+import { ReportConfigModal } from './ReportConfigModal';
+import { ReportConfig } from '../types';
+
+const DEFAULT_CONFIG: ReportConfig = {
+  showNarration: false,
+  format: 'Condensed',
+  showInventoryDetails: false,
+  showStockDescriptions: false,
+  showPaymentMode: false,
+  showBankDetails: false,
+  showCostCentre: false,
+  showEnteredBy: false,
+  ledgerDisplayName: 'Name Only',
+  sortingMethod: 'Default',
+  enableStripeView: false,
+};
 
 export function LedgerStatement() {
   const { user } = useAuth();
@@ -27,25 +43,42 @@ export function LedgerStatement() {
   });
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isDetailed, setIsDetailed] = useState(false);
   const [items, setItems] = useState<any[]>([]);
   const [godowns, setGodowns] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
+  const [config, setConfig] = useState<ReportConfig>(DEFAULT_CONFIG);
+  const [isConfigOpen, setIsConfigOpen] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
       if (!user?.companyId) return;
-      const [lData, iData, gData] = await Promise.all([
+      const [lData, iData, gData, uData, sData] = await Promise.all([
         erpService.getLedgers(user.companyId),
         erpService.getItems(user.companyId),
-        erpService.getGodowns(user.companyId)
+        erpService.getGodowns(user.companyId),
+        erpService.getUsersByCompany(user.companyId),
+        erpService.getSettings(user.companyId)
       ]);
       if (lData) setLedgers(lData);
       setItems(iData);
       setGodowns(gData);
+      setUsers(uData);
+      if (sData?.ledgerConfig) setConfig(sData.ledgerConfig);
     }
     fetchData();
   }, [user?.companyId]);
+
+  const handleSaveConfig = async (newConfig: ReportConfig) => {
+    if (!user?.companyId) return;
+    try {
+      await erpService.updateSettings(user.companyId, { ledgerConfig: newConfig });
+      setConfig(newConfig);
+      setIsConfigOpen(false);
+    } catch (err) {
+      console.error('Failed to save config:', err);
+    }
+  };
 
   const fetchEntries = async () => {
     if (!selectedLedger || !user?.companyId) {
@@ -109,6 +142,22 @@ export function LedgerStatement() {
   const currentLedger = ledgers.find(l => l.id === selectedLedger);
   let runningBalance = currentLedger?.opening_balance || 0;
 
+  const getLedgerName = (v: any) => {
+    const name = v.party_ledger_name || v.ledger_name || v.ledgers || v.particulars || v.v_type || 'Voucher';
+    const alias = v.alias || ''; 
+    
+    switch (config.ledgerDisplayName) {
+      case 'Alias (Name)':
+        return alias ? `${alias} (${name})` : name;
+      case 'Alias Only':
+        return alias || name;
+      case 'Name (Alias)':
+        return alias ? `${name} (${alias})` : name;
+      default:
+        return name;
+    }
+  };
+
   const handlePrint = () => {
     if (!selectedLedger) return;
     const ledgerName = currentLedger?.name || 'Ledger';
@@ -134,13 +183,26 @@ export function LedgerStatement() {
           balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`
         }];
 
-        if (isDetailed && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
+        if (config.showNarration && e.vouchers?.narration) {
+          rows.push({ date: '', vch_no: '', vch_type: `(${e.vouchers.narration})`, debit: 0, credit: 0, balance: '' });
+        }
+
+        if (config.showEnteredBy) {
+          const creator = users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System';
+          rows.push({ date: '', vch_no: '', vch_type: `Entered by: ${creator}`, debit: 0, credit: 0, balance: '' });
+        }
+
+        if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
           e.vouchers.inventory.forEach((item: any) => {
             const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+            let itemDetail = `  > ${itemName} (${item.qty} ${item.unit || ''} @ ${item.rate})`;
+            if (config.showStockDescriptions && item.description) {
+              itemDetail += `\n    Desc: ${item.description}`;
+            }
             rows.push({
               date: '',
               vch_no: '',
-              vch_type: `  > ${itemName} (${item.qty} @ ${item.rate})`,
+              vch_type: itemDetail,
               debit: 0,
               credit: 0,
               balance: ''
@@ -182,7 +244,11 @@ export function LedgerStatement() {
           balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`
         }];
 
-        if (isDetailed && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
+        if (config.showNarration && e.vouchers?.narration) {
+          rows.push({ date: '', particulars: `(${e.vouchers.narration})`, vch_no: '', vch_type: '', debit: 0, credit: 0, balance: '' });
+        }
+
+        if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
           e.vouchers.inventory.forEach((item: any) => {
             const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
             rows.push({
@@ -231,7 +297,11 @@ export function LedgerStatement() {
           balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`
         }];
 
-        if (isDetailed && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
+        if (config.showNarration && e.vouchers?.narration) {
+          rows.push({ date: '', particulars: `(${e.vouchers.narration})`, vch_no: '', vch_type: '', debit: 0, credit: 0, balance: '' });
+        }
+
+        if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
           e.vouchers.inventory.forEach((item: any) => {
             const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
             rows.push({
@@ -279,7 +349,7 @@ export function LedgerStatement() {
           <td style="text-align: right;">${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}</td>
         </tr>`;
 
-        if (isDetailed && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
+        if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
           row += `<tr>
             <td colspan="6" style="padding: 0;">
               <table style="width: 100%; margin: 0; border: none; background-color: #fafafa;">
@@ -438,13 +508,11 @@ export function LedgerStatement() {
           <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
             <div className="flex flex-wrap gap-2 justify-end">
               <button 
-                onClick={() => setIsDetailed(!isDetailed)}
-                className={cn(
-                  "px-3 py-2 border border-border transition-colors flex items-center gap-2 text-[10px] font-bold uppercase",
-                  isDetailed ? "bg-foreground text-background" : "text-gray-500 hover:text-foreground"
-                )}
+                onClick={() => setIsConfigOpen(true)}
+                className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
+                title="Configure Report"
               >
-                {isDetailed ? 'Condensed' : 'Detailed'}
+                <SettingsIcon className="w-3 h-3" /> F12: CONFIGURE
               </button>
               <button 
                 onClick={fetchEntries}
@@ -489,6 +557,14 @@ export function LedgerStatement() {
           </div>
         </div>
 
+        <ReportConfigModal 
+          isOpen={isConfigOpen}
+          onClose={() => setIsConfigOpen(false)}
+          config={config}
+          onSave={handleSaveConfig}
+          title="Ledger Statement"
+        />
+
         <div className="bg-card border border-border overflow-x-auto no-scrollbar">
           <table className="w-full text-left text-xs min-w-[700px]">
             <thead>
@@ -526,30 +602,39 @@ export function LedgerStatement() {
 
                   {entries.length === 0 ? (
                     <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-600 italic">No transactions found for this period</td></tr>
-                  ) : entries.map((e) => {
+                  ) : entries.map((e, idx) => {
                     runningBalance += (e.debit || 0) - (e.credit || 0);
                     const currentBalance = runningBalance;
                     return (
                       <React.Fragment key={e.id}>
                         <tr 
-                          className="border-b border-border/50 hover:bg-foreground/5 transition-colors cursor-pointer group"
+                          className={cn(
+                            "border-b border-border/50 hover:bg-foreground/5 transition-colors cursor-pointer group",
+                            config.enableStripeView && idx % 2 !== 0 && "bg-muted/30"
+                          )}
                           onClick={() => navigate(`/vouchers/edit/${e.id}`)}
                         >
                           <td className="px-6 py-4">{e.vouchers?.v_date}</td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col">
+                              <span className="text-foreground font-bold uppercase text-[10px] text-gray-500">{e.vouchers?.v_type}</span>
                               <span className="text-foreground">{e.particulars}</span>
-                              <span className="text-[10px] text-gray-500">{e.vouchers?.v_no}</span>
+                              {config.showNarration && e.vouchers?.narration && (
+                                <span className="text-[10px] text-gray-500 italic">({e.vouchers.narration})</span>
+                              )}
+                              {config.showEnteredBy && (
+                                <span className="text-[8px] text-gray-400 uppercase">By: {users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System'}</span>
+                              )}
                             </div>
                           </td>
-                          <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_type}</td>
-                          <td className="px-6 py-4 text-right">{e.debit > 0 ? `৳ ${e.debit.toLocaleString()}` : '-'}</td>
-                          <td className="px-6 py-4 text-right">{e.credit > 0 ? `৳ ${e.credit.toLocaleString()}` : '-'}</td>
-                          <td className="px-6 py-4 text-right text-foreground font-bold">
-                            ৳ {Math.abs(currentBalance).toLocaleString()} {currentBalance >= 0 ? 'Dr' : 'Cr'}
+                          <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_no}</td>
+                          <td className="px-6 py-4 text-right font-mono">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                          <td className="px-6 py-4 text-right font-mono">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                          <td className="px-6 py-4 text-right text-foreground font-bold font-mono">
+                            {Math.abs(currentBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currentBalance >= 0 ? 'Dr' : 'Cr'}
                           </td>
                         </tr>
-                        {isDetailed && e.vouchers?.inventory && e.vouchers.inventory.length > 0 && (
+                        {config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0 && (
                           <tr className="bg-foreground/[0.02] border-b border-border/30">
                             <td colSpan={6} className="px-6 py-2">
                               <table className="w-full text-[10px] text-gray-500">
@@ -567,9 +652,16 @@ export function LedgerStatement() {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {e.vouchers.inventory.map((item: any, idx: number) => (
-                                    <tr key={idx} className="border-b border-border/10 last:border-0">
-                                      <td className="py-1">{items.find(i => i.id === item.item_id)?.name || 'Unknown Item'}</td>
+                                  {e.vouchers.inventory.map((item: any, iIdx: number) => (
+                                    <tr key={iIdx} className="border-b border-border/10 last:border-0">
+                                      <td className="py-1">
+                                        <div className="flex flex-col">
+                                          <span>{items.find(i => i.id === item.item_id)?.name || 'Unknown Item'}</span>
+                                          {config.showStockDescriptions && item.description && (
+                                            <span className="text-[9px] italic">{item.description}</span>
+                                          )}
+                                        </div>
+                                      </td>
                                       <td className="py-1">{godowns.find(g => g.id === item.godown_id)?.name || '-'}</td>
                                       <td className="py-1 text-right">{item.qty}</td>
                                       <td className="py-1 text-right">{item.free_qty || 0}</td>

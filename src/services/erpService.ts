@@ -809,7 +809,19 @@ export const erpService = {
       limit(limitCount)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), particulars: 'Transaction' }));
+    const vouchers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    if (vouchers.length === 0) return [];
+
+    // Fetch inventory for these vouchers to show item names
+    const invSnap = await getDocs(query(collection(db, 'inventory_entries'), where('companyId', '==', companyId)));
+    const allInv = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    return vouchers.map(v => ({
+      ...v,
+      inventory: allInv.filter((i: any) => i.voucher_id === v.id),
+      item_names: (v as any).item_names || allInv.filter((i: any) => i.voucher_id === v.id).map((i: any) => i.item_name).filter(Boolean).join(', ')
+    }));
   },
 
   async getVouchersByDateRange(companyId: string, startDate: string, endDate: string): Promise<any[]> {
@@ -821,8 +833,18 @@ export const erpService = {
       orderBy('v_date', 'desc')
     );
     const snapshot = await getDocs(q);
+    const vouchers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    if (vouchers.length === 0) return [];
+
+    // Fetch inventory for these vouchers to show item names
+    const invSnap = await getDocs(query(collection(db, 'inventory_entries'), where('companyId', '==', companyId)));
+    const allInv = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    return vouchers.map(v => ({
+      ...v,
+      item_names: (v as any).item_names || allInv.filter((i: any) => i.voucher_id === v.id).map((i: any) => i.item_name).filter(Boolean).join(', ')
+    }));
   },
 
   async getVouchersDetailedByDateRange(companyId: string, startDate: string, endDate: string): Promise<any[]> {
@@ -1586,6 +1608,17 @@ export const erpService = {
       await updateDoc(doc(db, 'users', userId), { permissions });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
+    }
+  },
+
+  async getUsersByCompany(companyId: string): Promise<any[]> {
+    try {
+      const q = query(collection(db, 'users'), where('companyId', '==', companyId));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'users');
+      return [];
     }
   }
 };
