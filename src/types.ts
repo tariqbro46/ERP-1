@@ -39,6 +39,13 @@ export interface Ledger {
   address?: string;
 }
 
+export interface BankDetails {
+  transaction_type: 'Cheque' | 'e-Fund Transfer' | 'Others';
+  instrument_no?: string;
+  instrument_date?: string;
+  bank_name?: string;
+}
+
 export interface Voucher {
   id: string;
   v_type: VoucherType;
@@ -53,6 +60,7 @@ export interface Voucher {
   salesperson_id?: string;
   entries: VoucherEntry[];
   inventory?: InventoryEntry[];
+  bank_details?: BankDetails;
 }
 
 export interface UserProfile {

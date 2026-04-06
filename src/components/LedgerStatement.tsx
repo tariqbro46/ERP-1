@@ -51,6 +51,15 @@ export function LedgerStatement() {
   const [config, setConfig] = useState<ReportConfig>(DEFAULT_CONFIG);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
 
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const day = date.getDate();
+    const month = date.toLocaleString('en-GB', { month: 'short' });
+    const year = date.getFullYear().toString().slice(-2);
+    return `${day}-${month}-${year}`;
+  };
+
   useEffect(() => {
     async function fetchData() {
       if (!user?.companyId) return;
@@ -145,7 +154,10 @@ export function LedgerStatement() {
   };
 
   const currentLedger = ledgers.find(l => l.id === selectedLedger);
-  let runningBalance = currentLedger?.opening_balance || 0;
+  const openingBalance = currentLedger?.opening_balance || 0;
+  const totalDebit = entries.reduce((sum, e) => sum + (e.debit || 0), 0);
+  const totalCredit = entries.reduce((sum, e) => sum + (e.credit || 0), 0);
+  let runningBalance = openingBalance;
 
   const getLedgerName = (v: any) => {
     const name = v.party_ledger_name || v.ledger_name || v.ledgers || v.particulars || v.v_type || 'Voucher';
@@ -281,59 +293,109 @@ export function LedgerStatement() {
 
   const handleDownloadPDF = () => {
     if (!selectedLedger) return;
-    if (settings.reportLayout === 'Layout 2') {
-      handleFullPageView();
-      return;
-    }
     const ledgerName = currentLedger?.name || 'Ledger';
     
     let rb = currentLedger?.opening_balance || 0;
-    const exportData = [
-      {
-        date: '-',
-        particulars: 'Opening Balance',
-        vch_no: '-',
-        vch_type: '-',
-        debit: rb > 0 ? rb : 0,
-        credit: rb < 0 ? Math.abs(rb) : 0,
-        balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`
-      },
-      ...entries.map(e => {
-        rb += (e.debit || 0) - (e.credit || 0);
-        const rows = [{
-          date: e.vouchers?.v_date,
-          particulars: e.particulars,
-          vch_no: e.vouchers?.v_no,
-          vch_type: e.vouchers?.v_type,
-          debit: e.debit || 0,
-          credit: e.credit || 0,
-          balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`
-        }];
+    const exportData: any[] = [];
+    let rowCounter = 1;
+    
+    // Opening Balance
+    exportData.push({
+      date: formatDate(startDate),
+      particulars: 'Opening Balance',
+      vch_no: '-',
+      vch_type: '-',
+      debit: rb > 0 ? rb : 0,
+      credit: rb < 0 ? Math.abs(rb) : 0,
+      balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`,
+      isShaded: config.enableStripeView && rowCounter % 2 !== 0
+    });
+    rowCounter++;
 
-        if (config.showNarration && e.vouchers?.narration) {
-          rows.push({ date: '', particulars: `(${e.vouchers.narration})`, vch_no: '', vch_type: '', debit: 0, credit: 0, balance: '' });
-        }
+    entries.forEach(e => {
+      rb += (e.debit || 0) - (e.credit || 0);
+      
+      // Main row
+      exportData.push({
+        date: formatDate(e.vouchers?.v_date),
+        particulars: e.particulars,
+        vch_no: e.vouchers?.v_no || '-',
+        vch_type: e.vouchers?.v_type || '-',
+        debit: e.debit || 0,
+        credit: e.credit || 0,
+        balance: config.showRunningBalance ? `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}` : '',
+        isShaded: config.enableStripeView && rowCounter % 2 !== 0
+      });
+      rowCounter++;
 
-        if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
-          e.vouchers.inventory.forEach((item: any) => {
-            const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
-            rows.push({
-              date: '',
-              particulars: `  - ${itemName} (${item.qty} @ ${item.rate})`,
-              vch_no: '',
-              vch_type: '',
-              debit: 0,
-              credit: 0,
-              balance: ''
-            });
+      // Inventory rows
+      if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
+        e.vouchers.inventory.forEach((item: any) => {
+          const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+          exportData.push({
+            date: '',
+            particulars: `  ${itemName} (${item.qty} ${item.unit || 'pcs'} @ ${item.rate})`,
+            vch_no: '',
+            vch_type: '',
+            debit: 0,
+            credit: 0,
+            balance: '',
+            isShaded: config.enableStripeView && rowCounter % 2 !== 0
           });
-        }
-        return rows;
-      }).flat()
-    ];
+          rowCounter++;
+        });
+      }
 
-    const period = `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
-    exportToPDF(`Ledger_Statement_${ledgerName.replace(/ /g, '_')}`, `Ledger Statement: ${ledgerName} (${period})`, exportData, ['Date', 'Particulars', 'Vch No', 'Vch Type', 'Debit', 'Credit', 'Balance'], settings);
+      // Narration
+      if (config.showNarration && e.vouchers?.narration) {
+        exportData.push({
+          date: '',
+          particulars: `  (${e.vouchers.narration})`,
+          vch_no: '',
+          vch_type: '',
+          debit: 0,
+          credit: 0,
+          balance: '',
+          isShaded: config.enableStripeView && rowCounter % 2 !== 0
+        });
+        rowCounter++;
+      }
+
+      // Entered By
+      if (config.showEnteredBy) {
+        const creator = users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System';
+        exportData.push({
+          date: '',
+          particulars: `  Entered By: ${creator}`,
+          vch_no: '',
+          vch_type: '',
+          debit: 0,
+          credit: 0,
+          balance: '',
+          isShaded: config.enableStripeView && rowCounter % 2 !== 0
+        });
+        rowCounter++;
+      }
+    });
+
+    // Closing Balance
+    const finalBalance = rb;
+    exportData.push({
+      date: '',
+      particulars: 'Closing Balance',
+      vch_no: '',
+      vch_type: '',
+      debit: finalBalance < 0 ? Math.abs(finalBalance) : 0,
+      credit: finalBalance >= 0 ? Math.abs(finalBalance) : 0,
+      balance: Math.abs(finalBalance).toFixed(2),
+      isShaded: false // Closing balance usually not shaded or special
+    });
+
+    const period = `${formatDate(startDate)} to ${formatDate(endDate)}`;
+    const headers = ['Date', 'Particulars', 'Vch Type', 'Vch No', 'Debit', 'Credit'];
+    if (config.showRunningBalance) headers.push('Balance');
+    
+    exportToPDF(`Ledger_Statement_${ledgerName.replace(/ /g, '_')}`, `Ledger Statement: ${ledgerName} (${period})`, exportData, headers, settings);
   };
 
   const handleFullPageView = () => {
@@ -341,14 +403,6 @@ export function LedgerStatement() {
     const ledgerName = currentLedger?.name || 'Ledger';
     const layout = settings.reportLayout || 'Layout 2';
     
-    const formatDate = (dateStr: string) => {
-      const date = new Date(dateStr);
-      const day = date.getDate();
-      const month = date.toLocaleString('en-GB', { month: 'short' });
-      const year = date.getFullYear().toString().slice(-2);
-      return `${day}-${month}-${year}`;
-    };
-
     const period = `${formatDate(startDate)} to ${formatDate(endDate)}`;
     
     let rb = currentLedger?.opening_balance || 0;
@@ -459,9 +513,11 @@ export function LedgerStatement() {
               .page-num { text-align: right; font-size: 11px; margin-bottom: 5px; }
               .page-num span { border: 1px solid #000; padding: 2px 10px; }
               
-              table { width: 100%; border-collapse: collapse; margin-top: 5px; border-top: 2px solid #000; border-bottom: 2px solid #000; }
-              th { border-bottom: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; text-transform: capitalize; }
+              table { width: 100%; border-collapse: collapse; margin-top: 5px; border-top: 2px solid #000; border-bottom: 2px solid #000; table-layout: fixed; }
+              th { border: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; text-transform: capitalize; }
               td { padding: 5px; text-align: left; font-size: 12px; vertical-align: top; }
+              .stripe-row { background-color: #F3F4F6 !important; -webkit-print-color-adjust: exact; }
+              .border-all td { border: 1px solid #000; }
               .text-right { text-align: right; }
               .closing-balance { border-top: 1px solid #000; font-weight: bold; }
               .total-row td { padding-top: 10px; }
@@ -515,34 +571,87 @@ export function LedgerStatement() {
     };
 
     const generateLayout2 = () => {
-      const reportRows = entries.map((e, idx) => {
+      let rowCounter = 1;
+      
+      const openingBalanceRowIsStripe = config.enableStripeView && rowCounter % 2 !== 0;
+      rowCounter++;
+
+      const openingBalanceRow = `
+        <tr class="border-all ${openingBalanceRowIsStripe ? 'stripe-row' : ''}">
+          <td style="padding: 2px 5px;">${formatDate(startDate)}</td>
+          <td style="padding: 2px 5px;"><b>Dr Opening Balance</b></td>
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px; text-align: right;">${(currentLedger?.opening_balance || 0) > 0 ? Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+          <td style="padding: 2px 5px; text-align: right;">${(currentLedger?.opening_balance || 0) < 0 ? Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+          ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right;">${Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${(currentLedger?.opening_balance || 0) >= 0 ? 'Dr' : 'Cr'}</td>` : ''}
+        </tr>
+      `;
+
+      const reportRows = entries.map((e) => {
         rb += (e.debit || 0) - (e.credit || 0);
         totalDebit += (e.debit || 0);
         totalCredit += (e.credit || 0);
         const creator = users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System';
         
-        let inventoryHtml = '';
+        const mainRowIsStripe = config.enableStripeView && rowCounter % 2 !== 0;
+        rowCounter++;
+
+        let inventoryRows = '';
         if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
-          inventoryHtml = e.vouchers.inventory.map((item: any) => {
+          inventoryRows = e.vouchers.inventory.map((item: any) => {
             const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+            const invRowIsStripe = config.enableStripeView && rowCounter % 2 !== 0;
+            rowCounter++;
+            
             return `
-              <div style="display: flex; font-size: 11px; margin-top: 1px; color: #333;">
-                <div style="width: 180px; text-align: left; padding-left: 40px;">
-                  <div>${itemName}</div>
+              <tr class="${invRowIsStripe ? 'stripe-row' : ''}">
+                <td></td>
+                <td style="padding: 1px 5px 1px 20px; font-size: 11px; color: #333;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                    <span style="font-weight: 500;">${itemName}</span>
+                    <span style="font-size: 10px; color: #666; white-space: nowrap;">${item.qty.toLocaleString()} ${item.unit || 'pcs'}</span>
+                  </div>
                   ${config.showStockDescriptions && item.description ? `<div style="font-size: 9px; font-style: italic; color: #666;">${item.description}</div>` : ''}
-                </div>
-                <div style="width: 80px; text-align: right;">${item.qty.toLocaleString()} ${item.unit || 'Pcs'}</div>
-                <div style="width: 100px; text-align: right;">${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}/Pcs</div>
-                <div style="width: 100px; text-align: right;">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-              </div>
+                </td>
+                <td style="padding: 1px 5px; font-size: 11px; text-align: right;">${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td style="padding: 1px 5px; font-size: 11px; text-align: right;">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td></td>
+                <td></td>
+                ${config.showRunningBalance ? '<td></td>' : ''}
+              </tr>
             `;
           }).join('');
         }
 
-        const isStripe = config.enableStripeView && idx % 2 !== 0;
+        let extraRows = '';
+        if (config.showNarration && e.vouchers?.narration) {
+          const narrationRowIsStripe = config.enableStripeView && rowCounter % 2 !== 0;
+          rowCounter++;
+          extraRows += `
+            <tr class="${narrationRowIsStripe ? 'stripe-row' : ''}">
+              <td></td>
+              <td colspan="${config.showRunningBalance ? '6' : '5'}" style="padding: 1px 5px 1px 20px; font-size: 10px; font-style: italic; color: #666;">
+                (${e.vouchers.narration})
+              </td>
+            </tr>
+          `;
+        }
+        if (config.showEnteredBy) {
+          const enteredByRowIsStripe = config.enableStripeView && rowCounter % 2 !== 0;
+          rowCounter++;
+          extraRows += `
+            <tr class="${enteredByRowIsStripe ? 'stripe-row' : ''}">
+              <td></td>
+              <td colspan="${config.showRunningBalance ? '6' : '5'}" style="padding: 1px 5px 1px 40px; font-size: 10px; color: #666;">
+                <i>Entered By : <b>${creator}</b></i>
+              </td>
+            </tr>
+          `;
+        }
         
         return `
-          <tr class="${isStripe ? 'stripe-row' : ''}">
+          <tr class="${mainRowIsStripe ? 'stripe-row' : ''}">
             <td style="padding: 2px 5px; white-space: nowrap;">${formatDate(e.vouchers?.v_date)}</td>
             <td style="padding: 2px 5px;">
               <div>Dr <b>${e.particulars}</b></div>
@@ -551,49 +660,32 @@ export function LedgerStatement() {
             <td style="padding: 2px 5px;">${e.vouchers?.v_no}</td>
             <td style="padding: 2px 5px; text-align: right;">${e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
             <td style="padding: 2px 5px; text-align: right;">${e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
-            <td style="padding: 2px 5px; text-align: right;">${config.showRunningBalance ? `${Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
+            ${config.showRunningBalance ? '<td style="padding: 2px 5px; text-align: right;"></td>' : ''}
           </tr>
-          ${(inventoryHtml || (config.showEnteredBy && creator) || (config.showNarration && e.vouchers?.narration)) ? `
-          <tr class="${isStripe ? 'stripe-row' : ''}">
-            <td></td>
-            <td colspan="6" style="padding: 0 5px 5px 5px;">
-              ${inventoryHtml}
-              ${config.showEnteredBy ? `<div style="font-size: 10px; margin-left: 40px; margin-top: 2px; color: #666;"><i>Entered By : <b>${creator}</b></i></div>` : ''}
-              ${config.showNarration && e.vouchers?.narration ? `<div style="font-size: 10px; font-style: italic; margin-left: 20px; margin-top: 1px; color: #666;">(${e.vouchers.narration})</div>` : ''}
-            </td>
-          </tr>
-          ` : ''}
+          ${inventoryRows}
+          ${extraRows}
         `;
       }).join('');
 
       const finalBalance = rb;
+      const displayTotalDebit = totalDebit + (openingBalance > 0 ? openingBalance : 0) + (finalBalance < 0 ? Math.abs(finalBalance) : 0);
+      const displayTotalCredit = totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0) + (finalBalance >= 0 ? finalBalance : 0);
+      
       const closingBalanceRow = `
-        <tr>
+        <tr class="border-all">
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px;"><b>Dr Closing Balance</b></td>
           <td style="padding: 2px 5px;"></td>
           <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px; text-align: right; border-top: 1px solid #000;">${totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-          <td style="padding: 2px 5px; text-align: right;"></td>
-          <td style="padding: 2px 5px; text-align: right;"></td>
+          <td style="padding: 2px 5px; text-align: right;"><b>${finalBalance < 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+          <td style="padding: 2px 5px; text-align: right;"><b>${finalBalance >= 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+          ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right;"><b>${Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>` : ''}
         </tr>
-        <tr>
-          <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px;"><b>${finalBalance >= 0 ? 'Cr' : 'Dr'} Closing Balance</b></td>
-          <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px; text-align: right; border-top: 1px solid #000;"><b>${finalBalance < 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
-          <td style="padding: 2px 5px; text-align: right; border-top: 1px solid #000;"><b>${finalBalance >= 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
-          <td style="padding: 2px 5px; text-align: right;"><b>${Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
-        </tr>
-        <tr style="border-top: 1px solid #000; border-bottom: 2px solid #000;">
-          <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px; text-align: right;"><b>${(totalDebit + (finalBalance < 0 ? Math.abs(finalBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
-          <td style="padding: 2px 5px; text-align: right;"><b>${(totalCredit + (finalBalance >= 0 ? Math.abs(finalBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
-          <td style="padding: 2px 5px; text-align: right;"></td>
+        <tr class="border-all" style="border-top: 1px solid #000; border-bottom: 2px solid #000;">
+          <td style="padding: 2px 5px; text-align: right;" colspan="4"><b>Total</b></td>
+          <td style="padding: 2px 5px; text-align: right;"><b>${displayTotalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
+          <td style="padding: 2px 5px; text-align: right;"><b>${displayTotalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
+          ${config.showRunningBalance ? '<td style="padding: 2px 5px; text-align: right;"></td>' : ''}
         </tr>
       `;
 
@@ -630,7 +722,7 @@ export function LedgerStatement() {
               th { border-bottom: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; }
               td { padding: 2px 5px; text-align: left; font-size: 12px; vertical-align: top; }
               
-              .stripe-row { background-color: #f9f9f9; }
+              .stripe-row { background-color: #F3F4F6 !important; -webkit-print-color-adjust: exact; }
               
               .footer { 
                 position: fixed; 
@@ -669,25 +761,17 @@ export function LedgerStatement() {
               <table>
                 <thead>
                   <tr>
-                    <th style="width: 15%;">Date</th>
-                    <th style="width: 30%;">Particulars</th>
+                    <th style="width: 12%;">Date</th>
+                    <th style="width: 38%;">Particulars</th>
                     <th style="width: 10%;">Vch Type</th>
                     <th style="width: 10%;">Vch No.</th>
                     <th style="width: 10%; text-align: right;">Debit</th>
                     <th style="width: 10%; text-align: right;">Credit</th>
-                    <th style="width: 15%; text-align: right;">Balance</th>
+                    ${config.showRunningBalance ? '<th style="width: 10%; text-align: right;">Balance</th>' : ''}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td style="padding: 2px 5px;">${formatDate(startDate)}</td>
-                    <td style="padding: 2px 5px;">Dr <b>Opening Balance</b></td>
-                    <td style="padding: 2px 5px;"></td>
-                    <td style="padding: 2px 5px;"></td>
-                    <td style="padding: 2px 5px; text-align: right;"></td>
-                    <td style="padding: 2px 5px; text-align: right;"></td>
-                    <td style="padding: 2px 5px; text-align: right;"><b>${Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${ (currentLedger?.opening_balance || 0) >= 0 ? 'Dr' : 'Cr'}</b></td>
-                  </tr>
+                  ${openingBalanceRow}
                   ${reportRows}
                   ${closingBalanceRow}
                 </tbody>
@@ -874,20 +958,22 @@ export function LedgerStatement() {
           )}
           <table className={cn(
             "w-full text-left text-xs min-w-[700px]",
-            settings.reportLayout === 'Layout 2' ? "border-y border-black" : ""
+            settings.reportLayout === 'Layout 2' ? "border-y border-black table-fixed" : ""
           )}>
             <thead>
               <tr className={cn(
                 "border-b border-border text-gray-500 uppercase",
                 settings.reportLayout === 'Layout 2' && "border-black text-black font-bold"
               )}>
-                <th className="px-6 py-4 font-medium w-[120px]">Date</th>
-                <th className="px-6 py-4 font-medium">Particulars</th>
-                <th className="px-6 py-4 font-medium">Vch Type</th>
-                <th className="px-6 py-4 font-medium">Vch No.</th>
-                <th className="px-6 py-4 font-medium text-right">Debit</th>
-                <th className="px-6 py-4 font-medium text-right">Credit</th>
-                <th className="px-6 py-4 font-medium text-right">Balance</th>
+                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[12%]" : "w-[120px]")}>Date</th>
+                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[38%]" : "")}>Particulars</th>
+                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>Vch Type</th>
+                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>Vch No.</th>
+                <th className={cn("px-6 py-4 font-medium text-right", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>Debit</th>
+                <th className={cn("px-6 py-4 font-medium text-right", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>Credit</th>
+                {config.showRunningBalance && (
+                  <th className={cn("px-6 py-4 font-medium text-right", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>Balance</th>
+                )}
               </tr>
             </thead>
             <tbody className={cn(
@@ -901,93 +987,187 @@ export function LedgerStatement() {
               ) : (
                 <>
                   {/* Opening Balance Row */}
+                  {(() => {
+                    let rowCounter = 1;
+                    const openingBalanceRowIsStripe = config.enableStripeView && rowCounter % 2 !== 0;
+                    rowCounter++;
+                    
+                    return (
+                      <>
+                        <tr className={cn(
+                          "border-b border-border/50 bg-foreground/5 font-bold italic",
+                          settings.reportLayout === 'Layout 2' && "bg-white border-black text-black border",
+                          settings.reportLayout === 'Layout 2' && openingBalanceRowIsStripe && "bg-[#F3F4F6]"
+                        )}>
+                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{new Date(startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')}</td>
+                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>Dr Opening Balance</td>
+                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>-</td>
+                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>-</td>
+                          <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                            {(currentLedger?.opening_balance || 0) > 0 ? Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                          </td>
+                          <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                            {(currentLedger?.opening_balance || 0) < 0 ? Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                          </td>
+                          {config.showRunningBalance && (
+                            <td className={cn("px-6 py-4 text-right text-foreground", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                              {Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} {(currentLedger?.opening_balance || 0) >= 0 ? 'Dr' : 'Cr'}
+                            </td>
+                          )}
+                        </tr>
+
+                        {entries.length === 0 ? (
+                          <tr><td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-10 text-center text-gray-600 italic">No transactions found for this period</td></tr>
+                        ) : entries.map((e, idx) => {
+                          runningBalance += (e.debit || 0) - (e.credit || 0);
+                          const currentBalance = runningBalance;
+                          
+                          const mainRowIsStripe = config.enableStripeView && rowCounter % 2 !== 0;
+                          rowCounter++;
+
+                          return (
+                            <React.Fragment key={e.id}>
+                              <tr 
+                                className={cn(
+                                  "border-b border-border/50 hover:bg-foreground/5 transition-colors cursor-pointer group",
+                                  config.enableStripeView && !settings.reportLayout && idx % 2 !== 0 && "bg-muted/30",
+                                  settings.reportLayout === 'Layout 2' && "bg-white text-black hover:bg-gray-50",
+                                  settings.reportLayout === 'Layout 2' && mainRowIsStripe && "bg-[#F3F4F6]"
+                                )}
+                                onClick={() => navigate(`/vouchers/edit/${e.id}`)}
+                              >
+                                <td className="px-6 py-4 whitespace-nowrap">{e.vouchers?.v_date}</td>
+                                <td className="px-6 py-4">
+                                  <div className="flex flex-col">
+                                    <span className="text-foreground font-bold">
+                                      {settings.reportLayout === 'Layout 2' ? 'Dr ' : ''}{e.particulars}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_type}</td>
+                                <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_no}</td>
+                                <td className="px-6 py-4 text-right font-mono">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                <td className="px-6 py-4 text-right font-mono">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                {config.showRunningBalance && (
+                                  <td className="px-6 py-4 text-right text-foreground font-bold font-mono">
+                                    {settings.reportLayout !== 'Layout 2' ? (
+                                      <>
+                                        {Math.abs(currentBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currentBalance >= 0 ? 'Dr' : 'Cr'}
+                                      </>
+                                    ) : '-'}
+                                  </td>
+                                )}
+                              </tr>
+                              {config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.map((item: any, iIdx: number) => {
+                                const invRowIsStripe = config.enableStripeView && rowCounter % 2 !== 0;
+                                rowCounter++;
+                                return (
+                                  <tr key={`inv-${idx}-${iIdx}`} className={cn(
+                                    "border-b border-border/50",
+                                    settings.reportLayout === 'Layout 2' && "bg-white text-black",
+                                    settings.reportLayout === 'Layout 2' && invRowIsStripe && "bg-[#F3F4F6]"
+                                  )}>
+                                    <td></td>
+                                    <td className="px-6 py-1 pl-10">
+                                      <div className="flex flex-col">
+                                        <div className="flex justify-between items-start gap-4">
+                                          <span className="text-[11px] font-medium">{items.find(i => i.id === item.item_id)?.name}</span>
+                                          <span className="text-[10px] text-gray-600 whitespace-nowrap">{item.qty.toLocaleString()} {item.unit || 'pcs'}</span>
+                                        </div>
+                                        {config.showStockDescriptions && item.description && (
+                                          <span className="text-[9px] italic text-gray-400">{item.description}</span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-1 text-right text-[11px]">
+                                      {item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </td>
+                                    <td className="px-6 py-1 text-right text-[11px]">
+                                      {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    </td>
+                                    <td></td>
+                                    <td></td>
+                                    {config.showRunningBalance && <td></td>}
+                                  </tr>
+                                );
+                              })}
+                              {config.showNarration && e.vouchers?.narration && (() => {
+                                const narrationRowIsStripe = config.enableStripeView && rowCounter % 2 !== 0;
+                                rowCounter++;
+                                return (
+                                  <tr className={cn(
+                                    "border-b border-border/50",
+                                    settings.reportLayout === 'Layout 2' && "bg-white text-black",
+                                    settings.reportLayout === 'Layout 2' && narrationRowIsStripe && "bg-[#F3F4F6]"
+                                  )}>
+                                    <td></td>
+                                    <td colSpan={config.showRunningBalance ? 6 : 5} className="px-6 py-1 pl-10 italic text-[10px] text-gray-500">
+                                      ({e.vouchers.narration})
+                                    </td>
+                                  </tr>
+                                );
+                              })()}
+                              {config.showEnteredBy && (() => {
+                                const enteredByRowIsStripe = config.enableStripeView && rowCounter % 2 !== 0;
+                                rowCounter++;
+                                return (
+                                  <tr className={cn(
+                                    "border-b border-border/50",
+                                    settings.reportLayout === 'Layout 2' && "bg-white text-black",
+                                    settings.reportLayout === 'Layout 2' && enteredByRowIsStripe && "bg-[#F3F4F6]"
+                                  )}>
+                                    <td></td>
+                                    <td colSpan={config.showRunningBalance ? 6 : 5} className="px-6 py-1 pl-16 uppercase text-[8px] text-gray-400">
+                                      By: {users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System'}
+                                    </td>
+                                  </tr>
+                                );
+                              })()}
+                            </React.Fragment>
+                          );
+                        })}
+                  
+                  {/* Closing Balance Row */}
                   <tr className={cn(
-                    "border-b border-border/50 bg-foreground/5 font-bold italic",
-                    settings.reportLayout === 'Layout 2' && "bg-white border-black text-black"
+                    "border-t-2 border-black font-bold",
+                    settings.reportLayout === 'Layout 2' ? "bg-white text-black border border-black" : "bg-foreground/5"
                   )}>
-                    <td className="px-6 py-4">{new Date(startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')}</td>
-                    <td className="px-6 py-4">Dr Opening Balance</td>
-                    <td className="px-6 py-4">-</td>
-                    <td className="px-6 py-4">-</td>
-                    <td className="px-6 py-4 text-right">-</td>
-                    <td className="px-6 py-4 text-right">-</td>
-                    <td className="px-6 py-4 text-right text-foreground">
-                      {Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} {(currentLedger?.opening_balance || 0) >= 0 ? 'Dr' : 'Cr'}
+                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>Dr Closing Balance</td>
+                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                    <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                      {runningBalance < 0 ? Math.abs(runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
                     </td>
+                    <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                      {runningBalance >= 0 ? Math.abs(runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                    </td>
+                    {config.showRunningBalance && (
+                      <td className={cn("px-6 py-4 text-right text-foreground", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                        {Math.abs(runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                    )}
                   </tr>
 
-                  {entries.length === 0 ? (
-                    <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-600 italic">No transactions found for this period</td></tr>
-                  ) : entries.map((e, idx) => {
-                    runningBalance += (e.debit || 0) - (e.credit || 0);
-                    const currentBalance = runningBalance;
-                    return (
-                      <React.Fragment key={e.id}>
-                        <tr 
-                          className={cn(
-                            "border-b border-border/50 hover:bg-foreground/5 transition-colors cursor-pointer group",
-                            config.enableStripeView && idx % 2 !== 0 && "bg-muted/30",
-                            settings.reportLayout === 'Layout 2' && "bg-white border-black text-black hover:bg-gray-50",
-                            settings.reportLayout === 'Layout 2' && config.enableStripeView && idx % 2 !== 0 && "bg-gray-50"
-                          )}
-                          onClick={() => navigate(`/vouchers/edit/${e.id}`)}
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap">{e.vouchers?.v_date}</td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="text-foreground font-bold">{e.particulars}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_type}</td>
-                          <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_no}</td>
-                          <td className="px-6 py-4 text-right font-mono">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                          <td className="px-6 py-4 text-right font-mono">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                          <td className="px-6 py-4 text-right text-foreground font-bold font-mono">
-                            {config.showRunningBalance ? (
-                              <>
-                                {Math.abs(currentBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currentBalance >= 0 ? 'Dr' : 'Cr'}
-                              </>
-                            ) : '-'}
-                          </td>
-                        </tr>
-                        {(config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) || (config.showNarration && e.vouchers?.narration) || config.showEnteredBy ? (
-                          <tr className={cn(
-                            "border-b border-border/50",
-                            settings.reportLayout === 'Layout 2' && "bg-white border-black text-black",
-                            settings.reportLayout === 'Layout 2' && config.enableStripeView && idx % 2 !== 0 && "bg-gray-50"
-                          )}>
-                            <td></td>
-                            <td colSpan={6} className="px-6 py-2">
-                              <div className="flex flex-col">
-                                {config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.map((item: any, iIdx: number) => (
-                                  <div key={iIdx} className="flex text-[10px] text-gray-600 ml-10 mt-1">
-                                    <div className="w-32 flex flex-col">
-                                      <span>{items.find(i => i.id === item.item_id)?.name}</span>
-                                      {config.showStockDescriptions && item.description && (
-                                        <span className="text-[9px] italic text-gray-400">{item.description}</span>
-                                      )}
-                                    </div>
-                                    <span className="w-20 text-right">{item.qty} {item.unit}</span>
-                                    <span className="w-24 text-right">{item.rate.toLocaleString()}/Pcs</span>
-                                    <span className="w-24 text-right font-bold">{item.amount.toLocaleString()}</span>
-                                  </div>
-                                ))}
-                                {config.showNarration && e.vouchers?.narration && (
-                                  <span className="text-[10px] text-gray-500 italic ml-4">({e.vouchers.narration})</span>
-                                )}
-                                {config.showEnteredBy && (
-                                  <span className="text-[8px] text-gray-400 uppercase ml-10 mt-1">By: {users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System'}</span>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ) : null}
-                      </React.Fragment>
-                    );
-                  })}
+                  {/* Totals Row for Layout 2 */}
+                  {settings.reportLayout === 'Layout 2' && (
+                    <tr className="border-t-2 border-black font-bold bg-white text-black">
+                      <td colSpan={4} className="px-6 py-4 text-right border border-black">Total</td>
+                      <td className="px-6 py-4 text-right border border-black">
+                        {(totalDebit + (openingBalance > 0 ? openingBalance : 0) + (runningBalance < 0 ? Math.abs(runningBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-6 py-4 text-right border border-black">
+                        {(totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0) + (runningBalance >= 0 ? Math.abs(runningBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      {config.showRunningBalance && <td className="px-6 py-4 border border-black"></td>}
+                    </tr>
+                  )}
                 </>
-              )}
-            </tbody>
+              );
+            })()}
+          </>
+        )}
+      </tbody>
           </table>
           {settings.reportLayout === 'Layout 2' && (
             <div className="absolute bottom-4 left-8 right-8 text-center border-t border-gray-100 pt-4">

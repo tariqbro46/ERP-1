@@ -10,8 +10,8 @@ import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { printVoucher } from '../utils/printUtils';
-
 import { pdfService } from '../services/pdfService';
+import { BankDetails, VoucherType, UserRole, Company, Ledger, Voucher, UserProfile, VoucherEntry as VoucherEntryType, InventoryEntry, Item } from '../types';
 
 function Toggle({ enabled, onChange, label }: { enabled: boolean, onChange: () => void, label: string }) {
   return (
@@ -120,6 +120,12 @@ export function VoucherEntry() {
   const [partyLedgerId, setPartyLedgerId] = useState('');
   const [salesPurchaseLedgerId, setSalesPurchaseLedgerId] = useState('');
   const [bankCashLedgerId, setBankCashLedgerId] = useState('');
+  const [bankDetails, setBankDetails] = useState<BankDetails>({
+    transaction_type: 'Cheque',
+    instrument_no: '',
+    instrument_date: new Date().toISOString().split('T')[0],
+    bank_name: ''
+  });
   const [narration, setNarration] = useState('');
   const [globalDiscount, setGlobalDiscount] = useState(0);
   const [globalDiscountType, setGlobalDiscountType] = useState<'fixed' | 'percent'>('fixed');
@@ -284,6 +290,9 @@ export function VoucherEntry() {
       setCurrency(v.currency || baseCurrencySymbol);
       setExchangeRate(v.exchange_rate || 1);
       setSalespersonId(v.salesperson_id || '');
+      if (v.bank_details) {
+        setBankDetails(v.bank_details);
+      }
 
       if (v.v_type === 'Sales' || v.v_type === 'Purchase') {
         // Identify party and sales/purchase ledger based on debit/credit
@@ -485,6 +494,16 @@ export function VoucherEntry() {
     return false;
   };
 
+  const isBankLedger = (ledgerId: string) => {
+    const ledger = ledgers.find(l => l.id === ledgerId);
+    return ledger?.group_name?.toLowerCase().includes('bank') || 
+           ledger?.ledger_groups?.name?.toLowerCase().includes('bank');
+  };
+
+  const showBankDetails = (isSingleEntry && isBankLedger(bankCashLedgerId)) || 
+                         (isJournal && accEntries.some(e => isBankLedger(e.ledger_id))) ||
+                         (vType === 'Contra' && (isBankLedger(bankCashLedgerId) || accEntries.some(e => isBankLedger(e.ledger_id))));
+
   const handleSave = async () => {
     if (!isBalanced() || !user?.companyId) return;
     setLoading(true);
@@ -519,7 +538,8 @@ export function VoucherEntry() {
         discount_type: globalDiscountType,
         currency,
         exchange_rate: exchangeRate,
-        salesperson_id: salespersonId
+        salesperson_id: salespersonId,
+        bank_details: showBankDetails ? bankDetails : undefined
       };
       
       let finalAccEntries = [];
@@ -1527,6 +1547,58 @@ export function VoucherEntry() {
                 placeholder="Scan barcode..."
                 className="bg-background border border-border text-foreground p-1 text-[10px] outline-none focus:border-foreground w-40"
               />
+            </div>
+          </div>
+        )}
+        {/* Bank Transaction Details */}
+        {showBankDetails && (
+          <div className="bg-foreground/5 p-4 border-b border-border">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1 h-3 bg-indigo-500 rounded-full" />
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Bank Transaction Details</h4>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+              <div className="space-y-1">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Transaction Type</label>
+                <select
+                  value={bankDetails.transaction_type}
+                  onChange={(e) => setBankDetails({ ...bankDetails, transaction_type: e.target.value as any })}
+                  className="w-full bg-background border border-border p-1.5 lg:p-2 text-xs outline-none focus:border-foreground font-medium"
+                >
+                  <option value="Cheque">Cheque</option>
+                  <option value="e-Fund Transfer">e-Fund Transfer</option>
+                  <option value="Others">Others</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Inst. No.</label>
+                <input
+                  type="text"
+                  value={bankDetails.instrument_no}
+                  onChange={(e) => setBankDetails({ ...bankDetails, instrument_no: e.target.value })}
+                  placeholder="Cheque/Ref No"
+                  className="w-full bg-background border border-border p-1.5 lg:p-2 text-xs outline-none focus:border-foreground font-medium"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Inst. Date</label>
+                <input
+                  type="date"
+                  value={bankDetails.instrument_date}
+                  onChange={(e) => setBankDetails({ ...bankDetails, instrument_date: e.target.value })}
+                  className="w-full bg-background border border-border p-1.5 lg:p-2 text-xs outline-none focus:border-foreground font-medium"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Bank Name</label>
+                <input
+                  type="text"
+                  value={bankDetails.bank_name}
+                  onChange={(e) => setBankDetails({ ...bankDetails, bank_name: e.target.value })}
+                  placeholder="Bank Name"
+                  className="w-full bg-background border border-border p-1.5 lg:p-2 text-xs outline-none focus:border-foreground font-medium"
+                />
+              </div>
             </div>
           </div>
         )}
