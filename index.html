@@ -17,12 +17,45 @@
           navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
               console.log('Service Worker registered with scope:', registration.scope);
+              
+              // Check for updates
+              registration.onupdatefound = () => {
+                const installingWorker = registration.installing;
+                if (installingWorker) {
+                  installingWorker.onstatechange = () => {
+                    if (installingWorker.state === 'installed') {
+                      if (navigator.serviceWorker.controller) {
+                        // New content is available; please refresh.
+                        console.log('New content available, refreshing...');
+                        window.location.reload();
+                      }
+                    }
+                  };
+                }
+              };
             })
             .catch((error) => {
               console.error('Service Worker registration failed:', error);
             });
         });
+
+        // Ensure the page reloads when the service worker changes
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            window.location.reload();
+            refreshing = true;
+          }
+        });
       }
+
+      // Global error handler to catch chunk load errors and force refresh
+      window.addEventListener('error', (event) => {
+        if (event.message && (event.message.includes('ChunkLoadError') || event.message.includes('Loading chunk'))) {
+          console.warn('Chunk load error detected, forcing reload...');
+          window.location.reload();
+        }
+      }, true);
     </script>
   </body>
 </html>
