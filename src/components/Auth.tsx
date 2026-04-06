@@ -8,7 +8,7 @@ import {
 import { erpService } from '../services/erpService';
 import { doc, setDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, UserPlus, Loader2, KeyRound, Building2 } from 'lucide-react';
+import { LogIn, UserPlus, Loader2, KeyRound, Building2, AlertCircle, Users, ChevronLeft } from 'lucide-react';
 
 export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   const [email, setEmail] = useState('');
@@ -18,6 +18,14 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
+  const [step, setStep] = useState<'email' | 'password'>('email');
+
+  const handleNext = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email.trim()) {
+      setStep('password');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +37,11 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
     } catch (err: any) {
       console.error(err);
       if (err.code === 'auth/operation-not-allowed') {
-        setError('Email/Password authentication is not enabled in Firebase Console. Please enable it in Authentication > Sign-in method.');
+        setError('Email/Password authentication is not enabled in Firebase Console.');
+      } else if (err.code === 'auth/wrong-password') {
+        setError('Wrong password. Try again or click Forgot password to reset it.');
+      } else if (err.code === 'auth/user-not-found') {
+        setError('Could not find your Account');
       } else {
         setError(err.message || 'Login failed');
       }
@@ -54,132 +66,219 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
 
   if (showReset) {
     return (
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="max-w-md w-full mx-auto p-8 bg-white rounded-2xl shadow-xl border border-gray-100"
-      >
-        <div className="flex justify-center mb-6">
-          <div className="p-3 bg-amber-50 rounded-full">
-            <KeyRound className="w-8 h-8 text-amber-600" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white sm:bg-gray-50 p-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-[450px] bg-white sm:border border-gray-200 rounded-lg p-6 sm:p-10 sm:shadow-sm"
+        >
+          <div className="flex flex-col items-center mb-8">
+            <div className="flex items-center gap-1 mb-3">
+              <span className="text-2xl font-medium tracking-tight text-[#4285F4]">G</span>
+              <span className="text-2xl font-medium tracking-tight text-[#EA4335]">o</span>
+              <span className="text-2xl font-medium tracking-tight text-[#FBBC05]">o</span>
+              <span className="text-2xl font-medium tracking-tight text-[#4285F4]">g</span>
+              <span className="text-2xl font-medium tracking-tight text-[#34A853]">l</span>
+              <span className="text-2xl font-medium tracking-tight text-[#EA4335]">e</span>
+            </div>
+            <h1 className="text-2xl font-normal text-gray-900 mb-2">Account recovery</h1>
+            <p className="text-base text-gray-700 text-center">To help keep your account safe, Google wants to make sure it’s really you</p>
+          </div>
+
+          {resetSent ? (
+            <div className="text-center">
+              <div className="p-4 bg-blue-50 text-blue-700 rounded-lg mb-6 text-sm">
+                A password reset link has been sent to your email address.
+              </div>
+              <button 
+                onClick={() => { setShowReset(false); setResetSent(false); }}
+                className="text-[#1a73e8] font-medium hover:bg-blue-50 px-4 py-2 rounded transition-colors"
+              >
+                Back to sign in
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleReset} className="space-y-6">
+              <div className="relative">
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                  placeholder="Email"
+                  id="reset-email"
+                  required
+                />
+                <label 
+                  htmlFor="reset-email"
+                  className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]"
+                >
+                  Email
+                </label>
+              </div>
+              {error && <p className="text-sm text-[#d93025] flex items-center gap-2"><AlertCircle className="w-4 h-4" /> {error}</p>}
+              
+              <div className="flex justify-end pt-4">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-6 py-2 rounded font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Next"}
+                </button>
+              </div>
+            </form>
+          )}
+        </motion.div>
+        
+        <div className="mt-6 flex gap-6 text-xs text-gray-500">
+          <button className="hover:underline">English (United States)</button>
+          <div className="flex gap-4">
+            <button className="hover:underline">Help</button>
+            <button className="hover:underline">Privacy</button>
+            <button className="hover:underline">Terms</button>
           </div>
         </div>
-        <h2 className="text-2xl font-bold text-center text-gray-900 mb-4">Reset Password</h2>
-        <p className="text-gray-600 text-center mb-8">Enter your email to receive a password reset link.</p>
-        
-        {resetSent ? (
-          <div className="p-4 bg-emerald-50 text-emerald-700 text-center rounded-xl border border-emerald-100 mb-6">
-            Reset link sent! Please check your inbox.
-          </div>
-        ) : (
-          <form onSubmit={handleReset} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-              <input
-                type="email"
-                value={resetEmail}
-                onChange={(e) => setResetEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
-                placeholder="your@email.com"
-                required
-              />
-            </div>
-            {error && <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">{error}</div>}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send Reset Link"}
-            </button>
-          </form>
-        )}
-        
-        <button 
-          onClick={() => setShowReset(false)}
-          className="w-full mt-4 text-sm text-gray-500 hover:text-indigo-600 transition-colors"
-        >
-          Back to Login
-        </button>
-      </motion.div>
+      </div>
     );
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-md w-full mx-auto p-8 bg-white rounded-2xl shadow-xl border border-gray-100"
-    >
-      <div className="flex justify-center mb-6">
-        <div className="p-3 bg-indigo-50 rounded-full">
-          <LogIn className="w-8 h-8 text-indigo-600" />
-        </div>
-      </div>
-      <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">Welcome Back</h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
-            placeholder="your@email.com"
-            required
-          />
-        </div>
-        <div>
-          <div className="flex justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700">Password</label>
-            <button 
-              type="button"
-              onClick={() => setShowReset(true)}
-              className="text-xs text-indigo-600 hover:underline"
-            >
-              Forgot Password?
-            </button>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white sm:bg-gray-50 p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-[450px] bg-white sm:border border-gray-200 rounded-lg p-6 sm:p-10 sm:shadow-sm"
+      >
+        <div className="flex flex-col items-center mb-8">
+          <div className="flex items-center gap-1 mb-3">
+            <span className="text-2xl font-medium tracking-tight text-[#4285F4]">G</span>
+            <span className="text-2xl font-medium tracking-tight text-[#EA4335]">o</span>
+            <span className="text-2xl font-medium tracking-tight text-[#FBBC05]">o</span>
+            <span className="text-2xl font-medium tracking-tight text-[#4285F4]">g</span>
+            <span className="text-2xl font-medium tracking-tight text-[#34A853]">l</span>
+            <span className="text-2xl font-medium tracking-tight text-[#EA4335]">e</span>
           </div>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
-            placeholder="••••••••"
-            required
-          />
+          <h1 className="text-2xl font-normal text-gray-900 mb-2">Sign in</h1>
+          <p className="text-base text-gray-700">Use your Google Account</p>
         </div>
 
-        {error && (
-          <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-            {error}
-          </div>
+        {step === 'email' ? (
+          <form onSubmit={handleNext} className="space-y-6">
+            <div className="relative">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                placeholder="Email or phone"
+                id="email"
+                required
+              />
+              <label 
+                htmlFor="email"
+                className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]"
+              >
+                Email or phone
+              </label>
+            </div>
+            
+            <button type="button" className="text-[#1a73e8] text-sm font-medium hover:underline">Forgot email?</button>
+            
+            <div className="text-sm text-gray-600 leading-relaxed">
+              Not your computer? Use Guest mode to sign in privately.{' '}
+              <button type="button" className="text-[#1a73e8] font-medium hover:underline">Learn more</button>
+            </div>
+
+            <div className="flex justify-between items-center pt-4">
+              <button 
+                type="button"
+                onClick={onToggle}
+                className="text-[#1a73e8] font-medium hover:bg-blue-50 px-4 py-2 rounded transition-colors"
+              >
+                Create account
+              </button>
+              <button
+                type="submit"
+                className="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-6 py-2 rounded font-medium transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex items-center gap-2 p-1.5 border border-gray-200 rounded-full w-fit mb-6">
+              <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center">
+                <Users className="w-3 h-3 text-gray-500" />
+              </div>
+              <span className="text-sm text-gray-700 pr-2">{email}</span>
+              <button 
+                type="button" 
+                onClick={() => setStep('email')}
+                className="p-1 hover:bg-gray-100 rounded-full"
+              >
+                <ChevronLeft className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="relative">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                placeholder="Enter your password"
+                id="password"
+                autoFocus
+                required
+              />
+              <label 
+                htmlFor="password"
+                className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]"
+              >
+                Enter your password
+              </label>
+            </div>
+
+            {error && <p className="text-sm text-[#d93025] flex items-center gap-2"><AlertCircle className="w-4 h-4" /> {error}</p>}
+
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="show-password" title="Show password" />
+              <label htmlFor="show-password" className="text-sm text-gray-700">Show password</label>
+            </div>
+
+            <div className="flex justify-between items-center pt-4">
+              <button 
+                type="button"
+                onClick={() => setShowReset(true)}
+                className="text-[#1a73e8] font-medium hover:bg-blue-50 px-4 py-2 rounded transition-colors"
+              >
+                Forgot password?
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-6 py-2 rounded font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Next"}
+              </button>
+            </div>
+          </form>
         )}
+      </motion.div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Sign In"}
-        </button>
-      </form>
-
-      <div className="mt-8 text-center text-sm text-gray-600">
-        Don't have an account?{' '}
-        <button 
-          onClick={onToggle}
-          className="text-indigo-600 font-semibold hover:underline"
-        >
-          Create one
-        </button>
+      <div className="mt-6 flex gap-6 text-xs text-gray-500">
+        <button className="hover:underline">English (United States)</button>
+        <div className="flex gap-4">
+          <button className="hover:underline">Help</button>
+          <button className="hover:underline">Privacy</button>
+          <button className="hover:underline">Terms</button>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
-};
-
-export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
+};export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -295,7 +394,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
     } catch (err: any) {
       console.error(err);
       if (err.code === 'auth/operation-not-allowed') {
-        setError('Email/Password authentication is not enabled in Firebase Console. Please enable it in Authentication > Sign-in method.');
+        setError('Email/Password authentication is not enabled in Firebase Console.');
       } else {
         setError(err.message || 'Registration failed');
       }
@@ -305,218 +404,264 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-xl w-full mx-auto p-8 bg-white rounded-2xl shadow-xl border border-gray-100"
-    >
-      <div className="flex justify-center mb-6">
-        <div className="p-3 bg-emerald-50 rounded-full">
-          <UserPlus className="w-8 h-8 text-emerald-600" />
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white sm:bg-gray-50 p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-[600px] bg-white sm:border border-gray-200 rounded-lg p-6 sm:p-10 sm:shadow-sm"
+      >
+        <div className="flex flex-col items-center mb-8">
+          <div className="flex items-center gap-1 mb-3">
+            <span className="text-2xl font-medium tracking-tight text-[#4285F4]">G</span>
+            <span className="text-2xl font-medium tracking-tight text-[#EA4335]">o</span>
+            <span className="text-2xl font-medium tracking-tight text-[#FBBC05]">o</span>
+            <span className="text-2xl font-medium tracking-tight text-[#4285F4]">g</span>
+            <span className="text-2xl font-medium tracking-tight text-[#34A853]">l</span>
+            <span className="text-2xl font-medium tracking-tight text-[#EA4335]">e</span>
+          </div>
+          <h1 className="text-2xl font-normal text-gray-900 mb-2">Create your Account</h1>
+          <p className="text-base text-gray-700">Step {step} of 3</p>
         </div>
-      </div>
-      <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">Create Account</h2>
-      <p className="text-center text-gray-500 mb-8 text-sm">Step {step} of 3</p>
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {step === 1 && (
-          <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="space-y-4">
-            <h3 className="font-semibold text-gray-800 border-b pb-2">Account Details</h3>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
-                placeholder="Full Name"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
-                placeholder="your@email.com"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-          </motion.div>
-        )}
 
-        {step === 2 && (
-          <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="space-y-4">
-            <h3 className="font-semibold text-gray-800 border-b pb-2">Company Information</h3>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {step === 1 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                    placeholder="First name"
+                    id="first-name"
+                    required
+                  />
+                  <label htmlFor="first-name" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">First name</label>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                    placeholder="Last name (optional)"
+                    id="last-name"
+                  />
+                  <label htmlFor="last-name" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Last name (optional)</label>
+                </div>
+              </div>
+
               <div className="relative">
-                <Building2 className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                  placeholder="Username"
+                  id="reg-email"
+                  required
+                />
+                <label htmlFor="reg-email" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Username</label>
+                <span className="absolute right-4 top-3.5 text-sm text-gray-500">@gmail.com</span>
+              </div>
+              <p className="text-xs text-gray-600">You can use letters, numbers & periods</p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="relative">
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                    placeholder="Password"
+                    id="reg-password"
+                    required
+                  />
+                  <label htmlFor="reg-password" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Password</label>
+                </div>
+                <div className="relative">
+                  <input
+                    type="password"
+                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                    placeholder="Confirm"
+                    id="confirm-password"
+                    required
+                  />
+                  <label htmlFor="confirm-password" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Confirm</label>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600">Use 8 or more characters with a mix of letters, numbers & symbols</p>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-6">
+              <div className="relative">
                 <input
                   type="text"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
-                  placeholder="Your Business Name"
+                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                  placeholder="Company Name"
+                  id="company-name"
                   required
                 />
+                <label htmlFor="company-name" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Company Name</label>
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Company Slogan</label>
-              <input
-                type="text"
-                value={slogan}
-                onChange={(e) => setSlogan(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
-                placeholder="e.g. Quality first"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Company Address</label>
-              <textarea
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none resize-none"
-                placeholder="Full business address"
-                rows={2}
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Financial Year Start</label>
+              <div className="relative">
                 <input
-                  type="date"
-                  value={financialYearStart}
-                  onChange={(e) => setFinancialYearStart(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
+                  type="text"
+                  value={slogan}
+                  onChange={(e) => setSlogan(e.target.value)}
+                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                  placeholder="Company Slogan"
+                  id="slogan"
+                />
+                <label htmlFor="slogan" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Company Slogan</label>
+              </div>
+              <div className="relative">
+                <textarea
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent resize-none"
+                  placeholder="Company Address"
+                  id="address"
+                  rows={2}
                   required
                 />
+                <label htmlFor="address" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Company Address</label>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Currency Symbol</label>
-                <input
-                  type="text"
-                  value={currencySymbol}
-                  onChange={(e) => setCurrencySymbol(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
-                  placeholder="৳"
-                  required
-                />
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {step === 3 && (
-          <motion.div initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="space-y-4">
-            <h3 className="font-semibold text-gray-800 border-b pb-2">Print & Regional Settings</h3>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
-              <select
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
-              >
-                <option value="Asia/Dhaka">Asia/Dhaka (GMT+6)</option>
-                <option value="UTC">UTC</option>
-                <option value="Asia/Kolkata">Asia/Kolkata (GMT+5:30)</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
-                <input
-                  type="text"
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
-                  placeholder="+880..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Website URL (Optional)</label>
-                <input
-                  type="text"
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
-                  placeholder="www.example.com"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={financialYearStart}
+                    onChange={(e) => setFinancialYearStart(e.target.value)}
+                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer"
+                    id="fy-start"
+                    required
+                  />
+                  <label htmlFor="fy-start" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8]">Financial Year Start</label>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={currencySymbol}
+                    onChange={(e) => setCurrencySymbol(e.target.value)}
+                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                    placeholder="Currency Symbol"
+                    id="currency"
+                    required
+                  />
+                  <label htmlFor="currency" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Currency Symbol</label>
+                </div>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Default Print Header</label>
-              <input
-                type="text"
-                value={printHeader}
-                onChange={(e) => setPrintHeader(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
-                placeholder="Header text for invoices"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Default Print Footer</label>
-              <input
-                type="text"
-                value={printFooter}
-                onChange={(e) => setPrintFooter(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all outline-none"
-                placeholder="Footer text for invoices"
-              />
-            </div>
-          </motion.div>
-        )}
-
-        {error && (
-          <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-            {error}
-          </div>
-        )}
-
-        <div className="flex gap-3 pt-4">
-          {step > 1 && (
-            <button
-              type="button"
-              onClick={() => setStep(step - 1)}
-              className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors"
-            >
-              Back
-            </button>
           )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-[2] py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (step === 3 ? "Complete Registration" : "Next Step")}
-          </button>
-        </div>
-      </form>
 
-      <div className="mt-8 text-center text-sm text-gray-600">
-        Already have an account?{' '}
-        <button 
-          onClick={onToggle}
-          className="text-emerald-600 font-semibold hover:underline"
-        >
-          Sign in
-        </button>
+          {step === 3 && (
+            <div className="space-y-6">
+              <div className="relative">
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all"
+                  id="timezone"
+                >
+                  <option value="Asia/Dhaka">Asia/Dhaka (GMT+6)</option>
+                  <option value="UTC">UTC</option>
+                  <option value="Asia/Kolkata">Asia/Kolkata (GMT+5:30)</option>
+                </select>
+                <label htmlFor="timezone" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8]">Timezone</label>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                    placeholder="Contact Phone"
+                    id="phone"
+                  />
+                  <label htmlFor="phone" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Contact Phone</label>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                    placeholder="Website URL"
+                    id="website"
+                  />
+                  <label htmlFor="website" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Website URL</label>
+                </div>
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={printHeader}
+                  onChange={(e) => setPrintHeader(e.target.value)}
+                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                  placeholder="Print Header"
+                  id="header"
+                />
+                <label htmlFor="header" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Print Header</label>
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={printFooter}
+                  onChange={(e) => setPrintFooter(e.target.value)}
+                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
+                  placeholder="Print Footer"
+                  id="footer"
+                />
+                <label htmlFor="footer" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Print Footer</label>
+              </div>
+            </div>
+          )}
+
+          {error && <p className="text-sm text-[#d93025] flex items-center gap-2"><AlertCircle className="w-4 h-4" /> {error}</p>}
+
+          <div className="flex justify-between items-center pt-4">
+            <button 
+              type="button"
+              onClick={onToggle}
+              className="text-[#1a73e8] font-medium hover:bg-blue-50 px-4 py-2 rounded transition-colors"
+            >
+              Sign in instead
+            </button>
+            <div className="flex gap-2">
+              {step > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setStep(step - 1)}
+                  className="text-[#1a73e8] font-medium hover:bg-blue-50 px-4 py-2 rounded transition-colors"
+                >
+                  Back
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-6 py-2 rounded font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (step === 3 ? "Complete" : "Next")}
+              </button>
+            </div>
+          </div>
+        </form>
+      </motion.div>
+
+      <div className="mt-6 flex gap-6 text-xs text-gray-500">
+        <button className="hover:underline">English (United States)</button>
+        <div className="flex gap-4">
+          <button className="hover:underline">Help</button>
+          <button className="hover:underline">Privacy</button>
+          <button className="hover:underline">Terms</button>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
