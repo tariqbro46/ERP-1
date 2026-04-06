@@ -19,6 +19,7 @@ interface FeatureSettings {
 
 export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11';
 export type ReportLayout = 'Layout 1' | 'Layout 2';
+export type DashboardDesign = 'Design 1' | 'Design 2';
 
 interface WhatsAppTemplates {
   Sales: string;
@@ -63,6 +64,7 @@ interface SettingsContextType {
   voucherHeaderCompact: boolean;
   voucherTableCompact: boolean;
   reportLayout: ReportLayout;
+  dashboardDesign: DashboardDesign;
   menuBarStyle: MenuBarStyle;
   layoutWidth: 'responsive' | 'constrained';
   sidebarDefaultExpanded: boolean;
@@ -108,6 +110,7 @@ const defaultSettings: SettingsContextType = {
   voucherHeaderCompact: false,
   voucherTableCompact: false,
   reportLayout: 'Layout 2',
+  dashboardDesign: 'Design 1',
   menuBarStyle: 'classic',
   layoutWidth: 'constrained',
   sidebarDefaultExpanded: true,

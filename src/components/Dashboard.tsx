@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, LineChart, Line
+  AreaChart, Area, LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, Clock, Hammer, CheckCircle2, ListTodo } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
+import { cn } from '../lib/utils';
 import { format, differenceInDays } from 'date-fns';
 
 const mockChartData = [
@@ -47,7 +48,7 @@ const StatCard = ({ title, value, change, icon: Icon, trend, loading }: any) => 
 export function Dashboard() {
   const navigate = useNavigate();
   const { theme } = useTheme();
-  const { companyName, financialYearStart, financialYearEnd } = useSettings();
+  const { companyName, financialYearStart, financialYearEnd, dashboardDesign } = useSettings();
   const { isAdmin, user } = useAuth();
   const [loading, setLoading] = useState(true);
   
@@ -83,6 +84,7 @@ export function Dashboard() {
     chartData: [] as any[]
   });
   const [recentVouchers, setRecentVouchers] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [periodStart, setPeriodStart] = useState(defaultPeriod.start);
   const [periodEnd, setPeriodEnd] = useState(defaultPeriod.end);
 
@@ -91,9 +93,10 @@ export function Dashboard() {
       if (!user?.companyId) return;
       setLoading(true);
       try {
-        const [s, v] = await Promise.all([
+        const [s, v, o] = await Promise.all([
           erpService.getDashboardStats(user.companyId),
-          erpService.getRecentVouchers(user.companyId, 5)
+          erpService.getRecentVouchers(user.companyId, 5),
+          erpService.getOrders(user.companyId)
         ]);
         setStats(s);
         const processed = (v || []).map(vch => ({
@@ -101,6 +104,7 @@ export function Dashboard() {
           particulars: vch.party_ledger_name || vch.ledger_name || vch.ledgers || vch.particulars || vch.v_type || 'Voucher'
         }));
         setRecentVouchers(processed);
+        setOrders(o || []);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
       } finally {
@@ -126,6 +130,183 @@ export function Dashboard() {
       return 'N/A';
     }
   };
+
+  if (dashboardDesign === 'Design 2') {
+    const { revenue, profit, activeLedgers, stockValue, chartData } = stats;
+
+    return (
+      <div className="p-4 lg:p-6 space-y-6 bg-[#f8f9fa] min-h-screen transition-colors font-sans">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-800">Dashboard Overview</h1>
+            <p className="text-sm text-gray-500 uppercase tracking-wider font-medium">Financial Summary • {companyName}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => window.location.reload()}
+              className="text-[11px] font-bold text-gray-500 uppercase hover:text-gray-800 transition-colors"
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* Metric Cards Section */}
+        <div className="space-y-4">
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Key Performance Indicators</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-[#ffbf00] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
+              <div className="space-y-4">
+                <CreditCard className="w-6 h-6 text-black/60" />
+                <p className="text-[10px] font-bold text-black/60 uppercase leading-tight">Total Revenue</p>
+              </div>
+              <span className="text-2xl font-light text-black/80">₹{revenue.toLocaleString()}</span>
+            </div>
+            <div className="bg-[#34a853] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
+              <div className="space-y-4">
+                <Activity className="w-6 h-6 text-white/60" />
+                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">Net Profit</p>
+              </div>
+              <span className="text-2xl font-light text-white/90">₹{profit.toLocaleString()}</span>
+            </div>
+            <div className="bg-[#ea4335] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
+              <div className="space-y-4">
+                <Users className="w-6 h-6 text-white/60" />
+                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">Active Ledgers</p>
+              </div>
+              <span className="text-3xl font-light text-white/90">{activeLedgers}</span>
+            </div>
+            <div className="bg-[#e91e63] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
+              <div className="space-y-4">
+                <Package className="w-6 h-6 text-white/60" />
+                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">Stock Value</p>
+              </div>
+              <span className="text-2xl font-light text-white/90">₹{stockValue.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Sales Trend */}
+          <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-100 lg:col-span-2">
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Monthly Sales Trend</h3>
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#4285f4" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#4285f4" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
+                  <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
+                  <YAxis fontSize={10} axisLine={false} tickLine={false} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '4px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#4285f4" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Performance Breakdown */}
+          <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-100">
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Performance Metrics</h3>
+            <div className="space-y-6">
+              {[
+                { label: 'Revenue Target', value: 75, color: '#4285f4' },
+                { label: 'Profit Margin', value: 45, color: '#673ab7' },
+                { label: 'Stock Turnover', value: 60, color: '#00bcd4' },
+                { label: 'Collection Efficiency', value: 90, color: '#34a853' },
+              ].map((item) => (
+                <div key={item.label} className="space-y-2">
+                  <div className="flex justify-between text-[10px] font-bold text-gray-500 uppercase">
+                    <span>{item.label}</span>
+                    <span>{item.value}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full transition-all duration-1000" 
+                      style={{ width: `${item.value}%`, backgroundColor: item.color }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Table Section */}
+        <div className="bg-white rounded-sm shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Recent Transactions</h3>
+            <button 
+              onClick={() => navigate('/vouchers')}
+              className="text-[10px] font-bold text-blue-600 uppercase hover:underline"
+            >
+              View All
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left font-sans text-xs">
+              <thead>
+                <tr className="bg-gray-50 text-gray-500 uppercase font-bold border-b border-gray-100">
+                  <th className="px-6 py-3">Date</th>
+                  <th className="px-6 py-3">Voucher No.</th>
+                  <th className="px-6 py-3">Particulars</th>
+                  <th className="px-6 py-3">Type</th>
+                  <th className="px-6 py-3 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {recentVouchers.map((v, i) => (
+                  <tr key={i} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-gray-600">{v.v_date}</td>
+                    <td className="px-6 py-4 text-blue-600 font-medium hover:underline cursor-pointer" onClick={() => navigate(`/vouchers/${v.id}`)}>
+                      {v.v_no}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600 truncate max-w-[200px]">{v.particulars}</td>
+                    <td className="px-6 py-4">
+                      <span className={cn(
+                        "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
+                        v.v_type === 'Sales' ? "bg-green-100 text-green-700" :
+                        v.v_type === 'Payment' ? "bg-red-100 text-red-700" :
+                        "bg-blue-100 text-blue-700"
+                      )}>
+                        {v.v_type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium text-gray-900">₹{v.total_amount?.toLocaleString()}</td>
+                  </tr>
+                ))}
+                {recentVouchers.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-10 text-center text-gray-400 uppercase font-bold tracking-widest">No recent transactions</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Footer Info */}
+        <div className="bg-[#0078d4] p-2 text-white text-[10px] font-medium flex justify-between items-center px-4">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-3 h-3" />
+            <span>Financial Year: {formatFY(financialYearStart, financialYearEnd)} • System Status: Online</span>
+          </div>
+          <div className="flex gap-4">
+            <span className="uppercase font-bold">Support</span>
+            <span className="uppercase font-bold">Documentation</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-6 space-y-6 bg-background min-h-screen transition-colors">

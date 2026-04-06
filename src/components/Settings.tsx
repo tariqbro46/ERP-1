@@ -44,6 +44,7 @@ export function Settings() {
     showMobileNav,
     mobileBottomNavItems = [],
     reportLayout,
+    dashboardDesign,
     menuBarStyle,
     layoutWidth,
     sidebarDefaultExpanded,
@@ -90,6 +91,7 @@ export function Settings() {
   const [localShowMobileNav, setLocalShowMobileNav] = useState(showMobileNav);
   const [localMobileBottomNavItems, setLocalMobileBottomNavItems] = useState<string[]>(mobileBottomNavItems);
   const [localReportLayout, setLocalReportLayout] = useState(reportLayout);
+  const [localDashboardDesign, setLocalDashboardDesign] = useState(dashboardDesign);
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded);
   const [localNotifications, setLocalNotifications] = useState(notifications);
   const [localWhatsappTemplates, setLocalWhatsappTemplates] = useState(whatsappTemplates);
@@ -128,6 +130,7 @@ export function Settings() {
     setLocalShowMobileNav(showMobileNav);
     setLocalMobileBottomNavItems(mobileBottomNavItems);
     setLocalReportLayout(reportLayout);
+    setLocalDashboardDesign(dashboardDesign);
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded);
     setLocalMenuBarStyle(menuBarStyle);
     setLocalLayoutWidth(layoutWidth);
@@ -140,7 +143,7 @@ export function Settings() {
     printSignature3, showSignature1, showSignature2, showSignature3, 
     signatureAlignment, showDeveloperContact, financialYearStart, 
     baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
-    showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates
+    showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, dashboardDesign, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates
   ]);
 
   const handleSaveGeneral = () => {
@@ -157,6 +160,7 @@ export function Settings() {
       showMobileNav: localShowMobileNav,
       mobileBottomNavItems: localMobileBottomNavItems,
       reportLayout: localReportLayout,
+      dashboardDesign: localDashboardDesign,
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
       financialYearStart: localFinancialYearStart,
       baseCurrencySymbol: localBaseCurrencySymbol,
@@ -507,6 +511,19 @@ export function Settings() {
                         <option value="constrained">Founder Panel Style (Max 7xl)</option>
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">Choose how wide the application content should be.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Dashboard Design Style</label>
+                      <select 
+                        value={localDashboardDesign}
+                        onChange={(e) => setLocalDashboardDesign(e.target.value as any)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        <option value="Design 1">Design 1 (Classic Tally Style)</option>
+                        <option value="Design 2">Design 2 (Modern Colorful Dashboard)</option>
+                      </select>
+                      <p className="text-[9px] text-gray-500 uppercase">Choose the visual style for your main dashboard.</p>
                     </div>
 
                     <div className="space-y-2">
