@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2 } from 'lucide-react';
+import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2 } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { NAV_ITEMS } from '../constants/navigation';
 
-export function Settings() {
+export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { 
@@ -45,6 +45,8 @@ export function Settings() {
     mobileBottomNavItems = [],
     reportLayout,
     dashboardDesign,
+    uiStyle,
+    appVersion,
     menuBarStyle,
     layoutWidth,
     sidebarDefaultExpanded,
@@ -54,7 +56,12 @@ export function Settings() {
     updateSettings 
   } = useSettings();
   const { showNotification } = useNotification();
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState(initialTab || 'company');
+
+  // Update activeTab if initialTab changes (from route)
+  React.useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
   
   // Local state for form fields
   const [localCompanyName, setLocalCompanyName] = useState(companyName);
@@ -92,6 +99,7 @@ export function Settings() {
   const [localMobileBottomNavItems, setLocalMobileBottomNavItems] = useState<string[]>(mobileBottomNavItems);
   const [localReportLayout, setLocalReportLayout] = useState(reportLayout);
   const [localDashboardDesign, setLocalDashboardDesign] = useState(dashboardDesign);
+  const [localUIStyle, setLocalUIStyle] = useState(uiStyle);
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded);
   const [localNotifications, setLocalNotifications] = useState(notifications);
   const [localWhatsappTemplates, setLocalWhatsappTemplates] = useState(whatsappTemplates);
@@ -131,6 +139,7 @@ export function Settings() {
     setLocalMobileBottomNavItems(mobileBottomNavItems);
     setLocalReportLayout(reportLayout);
     setLocalDashboardDesign(dashboardDesign);
+    setLocalUIStyle(uiStyle);
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded);
     setLocalMenuBarStyle(menuBarStyle);
     setLocalLayoutWidth(layoutWidth);
@@ -143,7 +152,7 @@ export function Settings() {
     printSignature3, showSignature1, showSignature2, showSignature3, 
     signatureAlignment, showDeveloperContact, financialYearStart, 
     baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
-    showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, dashboardDesign, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates
+    showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, dashboardDesign, uiStyle, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates
   ]);
 
   const handleSaveGeneral = () => {
@@ -161,6 +170,7 @@ export function Settings() {
       mobileBottomNavItems: localMobileBottomNavItems,
       reportLayout: localReportLayout,
       dashboardDesign: localDashboardDesign,
+      uiStyle: localUIStyle,
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
       financialYearStart: localFinancialYearStart,
       baseCurrencySymbol: localBaseCurrencySymbol,
@@ -254,7 +264,8 @@ export function Settings() {
   };
 
   const tabs = [
-    { id: 'general', label: 'General', icon: SettingsIcon },
+    { id: 'company', label: 'Company Information', icon: Building2 },
+    { id: 'ui', label: 'UI Customization', icon: SettingsIcon },
     { id: 'voucher', label: 'Voucher Settings', icon: Database },
     { id: 'print', label: 'Print Settings', icon: Printer },
     { id: 'features', label: 'F11 Features', icon: Database },
@@ -262,8 +273,8 @@ export function Settings() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'whatsapp', label: 'WhatsApp Templates', icon: MessageSquare },
     { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
-    { id: 'backup', label: 'Backup & Export', icon: Cloud },
-    { id: 'integrations', label: 'Integrations', icon: Share2 },
+    { id: 'backup', label: 'Backup & Export', icon: Download },
+    { id: 'integrations', label: 'Integrations', icon: Globe },
   ];
 
   const shortcuts = [
@@ -402,7 +413,7 @@ export function Settings() {
               </div>
             )}
 
-            {activeTab === 'general' && (
+            {activeTab === 'company' && (
               <div className="space-y-8">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center border-b border-border pb-2">
@@ -481,9 +492,21 @@ export function Settings() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
 
+            {activeTab === 'ui' && (
+              <div className="space-y-8">
                 <div className="space-y-4">
-                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">UI Customization</h3>
+                  <div className="flex justify-between items-center border-b border-border pb-2">
+                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">UI Customization</h3>
+                    <button 
+                      onClick={handleSaveGeneral}
+                      className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+                    >
+                      <Save className="w-3 h-3" /> Save Changes
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] text-gray-500 uppercase">Menu Bar Style</label>
@@ -511,6 +534,19 @@ export function Settings() {
                         <option value="constrained">Founder Panel Style (Max 7xl)</option>
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">Choose how wide the application content should be.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">UI/UX Style Style</label>
+                      <select 
+                        value={localUIStyle}
+                        onChange={(e) => setLocalUIStyle(e.target.value as any)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        <option value="UI/UX 1">UI/UX 1 (Classic)</option>
+                        <option value="UI/UX 2">UI/UX 2 (Modern Colorized)</option>
+                      </select>
+                      <p className="text-[9px] text-gray-500 uppercase">Choose the overall UI/UX style for the application.</p>
                     </div>
 
                     <div className="space-y-2">

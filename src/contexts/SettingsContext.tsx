@@ -20,6 +20,7 @@ interface FeatureSettings {
 export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11';
 export type ReportLayout = 'Layout 1' | 'Layout 2';
 export type DashboardDesign = 'Design 1' | 'Design 2';
+export type UIStyle = 'UI/UX 1' | 'UI/UX 2';
 
 interface WhatsAppTemplates {
   Sales: string;
@@ -68,10 +69,16 @@ interface SettingsContextType {
   menuBarStyle: MenuBarStyle;
   layoutWidth: 'responsive' | 'constrained';
   sidebarDefaultExpanded: boolean;
+  uiStyle: UIStyle;
+  appVersion: string;
+  statusOnlineText: string;
+  statusOfflineText: string;
+  statusErrorText: string;
   whatsappTemplates: WhatsAppTemplates;
   notifications: NotificationSettings;
   features: FeatureSettings[];
   updateSettings: (newSettings: Partial<SettingsContextType>) => void;
+  updateSystemSettings: (newSettings: any) => Promise<void>;
 }
 
 const defaultSettings: SettingsContextType = {
@@ -114,6 +121,11 @@ const defaultSettings: SettingsContextType = {
   menuBarStyle: 'classic',
   layoutWidth: 'constrained',
   sidebarDefaultExpanded: true,
+  uiStyle: 'UI/UX 1',
+  appVersion: 'v1.0.1',
+  statusOnlineText: 'Status: Online',
+  statusOfflineText: 'Status: Offline',
+  statusErrorText: 'Database Error',
   whatsappTemplates: {
     Sales: "*{{companyName}}*\nSales Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
     Purchase: "*{{companyName}}*\nPurchase Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
@@ -138,7 +150,8 @@ const defaultSettings: SettingsContextType = {
     { id: 'tax', label: 'Enable Tax % in Vouchers', enabled: true },
     { id: 'barcode', label: 'Enable Barcode Scanning', enabled: false },
   ],
-  updateSettings: () => {}
+  updateSettings: () => {},
+  updateSystemSettings: async () => {}
 };
 
 const SettingsContext = createContext<SettingsContextType>(defaultSettings);
@@ -148,40 +161,88 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<SettingsContextType>(defaultSettings);
 
   useEffect(() => {
+    // Listen to global system config
+    const systemRef = doc(db, 'system', 'config');
+    const unsubscribeSystem = onSnapshot(systemRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setSettings(prev => ({
+          ...prev,
+          statusOnlineText: data.statusOnlineText || prev.statusOnlineText,
+          statusOfflineText: data.statusOfflineText || prev.statusOfflineText,
+          statusErrorText: data.statusErrorText || prev.statusErrorText,
+          appVersion: data.appVersion || prev.appVersion
+        }));
+      }
+    });
+
     if (!user?.companyId) {
-      setSettings(defaultSettings);
-      return;
+      // Keep system settings but reset company settings
+      setSettings(prev => ({ 
+        ...defaultSettings, 
+        statusOnlineText: prev.statusOnlineText,
+        statusOfflineText: prev.statusOfflineText,
+        statusErrorText: prev.statusErrorText,
+        appVersion: prev.appVersion,
+        updateSettings: prev.updateSettings,
+        updateSystemSettings: prev.updateSystemSettings
+      }));
+      return () => unsubscribeSystem();
     }
 
     const ref = doc(db, 'settings', user.companyId);
     const unsubscribe = onSnapshot(ref, (snap) => {
       if (snap.exists()) {
-        setSettings(prev => ({ ...defaultSettings, ...snap.data(), updateSettings: prev.updateSettings }));
+        setSettings(prev => ({ 
+          ...prev, 
+          ...snap.data(), 
+          updateSettings: prev.updateSettings,
+          updateSystemSettings: prev.updateSystemSettings
+        }));
       } else {
-        // If no settings exist for this company, use defaults
-        setSettings(prev => ({ ...defaultSettings, updateSettings: prev.updateSettings }));
+        // If no settings exist for this company, use defaults (but keep system settings)
+        setSettings(prev => ({ 
+          ...defaultSettings, 
+          statusOnlineText: prev.statusOnlineText,
+          statusOfflineText: prev.statusOfflineText,
+          statusErrorText: prev.statusErrorText,
+          appVersion: prev.appVersion,
+          updateSettings: prev.updateSettings,
+          updateSystemSettings: prev.updateSystemSettings
+        }));
       }
     }, (error) => {
       console.error("Settings snapshot error:", error);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      unsubscribeSystem();
+    };
   }, [user?.companyId]);
 
   const updateSettings = async (newSettings: Partial<SettingsContextType>) => {
     if (!user?.companyId) return;
     
     try {
-      // Remove updateSettings function before saving
-      const { updateSettings: _, ...dataToSave } = newSettings as any;
+      // Remove functions before saving
+      const { updateSettings: _, updateSystemSettings: __, ...dataToSave } = newSettings as any;
       await erpService.updateSettings(user.companyId, dataToSave);
     } catch (err) {
       console.error('Error updating settings:', err);
     }
   };
 
+  const updateSystemSettings = async (newSettings: any) => {
+    try {
+      await erpService.updateSystemConfig(newSettings);
+    } catch (err) {
+      console.error('Error updating system settings:', err);
+    }
+  };
+
   return (
-    <SettingsContext.Provider value={{ ...settings, updateSettings }}>
+    <SettingsContext.Provider value={{ ...settings, updateSettings, updateSystemSettings }}>
       {children}
     </SettingsContext.Provider>
   );

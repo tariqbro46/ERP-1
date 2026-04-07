@@ -310,7 +310,7 @@ export default function NotificationCenter() {
                           readBy: [...(selectedNotification.readBy || []), user?.uid || '']
                         });
                       }}
-                      className="px-4 py-2 text-xs font-bold bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity"
+                      className="px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:opacity-90 transition-opacity"
                     >
                       Mark as read
                     </button>

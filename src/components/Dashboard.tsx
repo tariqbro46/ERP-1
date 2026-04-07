@@ -21,20 +21,32 @@ const mockChartData = [
   { name: 'Jun', value: 2390 },
 ];
 
-const StatCard = ({ title, value, change, icon: Icon, trend, loading }: any) => (
-  <div className="bg-card border border-border p-4 flex flex-col gap-2 transition-colors">
+const StatCard = ({ title, value, change, icon: Icon, trend, loading, color, uiStyle }: any) => (
+  <div className={cn(
+    "bg-card border border-border p-4 flex flex-col gap-2 transition-all",
+    uiStyle === 'UI/UX 2' && color ? `${color} border-transparent shadow-md hover:brightness-95` : ""
+  )}>
     <div className="flex justify-between items-start">
-      <span className="text-[10px] uppercase tracking-wider text-gray-500 font-mono">{title}</span>
-      <Icon className="w-4 h-4 text-gray-600" />
+      <span className={cn(
+        "text-[10px] uppercase tracking-wider font-mono",
+        uiStyle === 'UI/UX 2' ? "text-white/70" : "text-gray-500"
+      )}>{title}</span>
+      <Icon className={cn("w-4 h-4", uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-600")} />
     </div>
     <div className="flex items-baseline gap-2">
       {loading ? (
         <div className="h-8 w-24 bg-foreground/5 animate-pulse rounded" />
       ) : (
         <>
-          <span className="text-2xl font-mono text-foreground">{value}</span>
+          <span className={cn(
+            "text-2xl font-mono",
+            uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground"
+          )}>{value}</span>
           {change && (
-            <span className={`text-[10px] font-mono flex items-center ${trend === 'up' ? 'text-emerald-500' : 'text-rose-500'}`}>
+            <span className={cn(
+              "text-[10px] font-mono flex items-center",
+              uiStyle === 'UI/UX 2' ? "text-white/90" : trend === 'up' ? 'text-emerald-500' : 'text-rose-500'
+            )}>
               {trend === 'up' ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
               {change}
             </span>
@@ -48,7 +60,7 @@ const StatCard = ({ title, value, change, icon: Icon, trend, loading }: any) => 
 export function Dashboard() {
   const navigate = useNavigate();
   const { theme } = useTheme();
-  const { companyName, financialYearStart, financialYearEnd, dashboardDesign } = useSettings();
+  const { companyName, financialYearStart, financialYearEnd, dashboardDesign, uiStyle } = useSettings();
   const { isAdmin, user } = useAuth();
   const [loading, setLoading] = useState(true);
   
@@ -350,6 +362,8 @@ export function Dashboard() {
           icon={Activity} 
           trend="up" 
           loading={loading}
+          color="bg-blue-600"
+          uiStyle={uiStyle}
         />
         <StatCard 
           title="Net Profit" 
@@ -358,6 +372,8 @@ export function Dashboard() {
           icon={CreditCard} 
           trend="up" 
           loading={loading}
+          color="bg-emerald-600"
+          uiStyle={uiStyle}
         />
         <StatCard 
           title="Active Ledgers" 
@@ -366,6 +382,8 @@ export function Dashboard() {
           icon={Users} 
           trend="up" 
           loading={loading}
+          color="bg-amber-600"
+          uiStyle={uiStyle}
         />
         <StatCard 
           title="Stock Value" 
@@ -374,6 +392,8 @@ export function Dashboard() {
           icon={Package} 
           trend="down" 
           loading={loading}
+          color="bg-rose-600"
+          uiStyle={uiStyle}
         />
       </div>
 
@@ -430,117 +450,192 @@ export function Dashboard() {
 
       {/* Quick Actions */}
       <div className="bg-card border border-border p-4">
-        <h3 className="text-[11px] font-mono text-gray-500 uppercase mb-4 tracking-widest">Quick Actions</h3>
-        <div className="grid grid-cols-3 sm:flex flex-wrap gap-2 lg:gap-3">
-          <button 
-            onClick={() => navigate('/vouchers/new')}
-            className="px-2 py-1.5 lg:px-4 lg:py-2 bg-foreground/5 border border-border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all flex items-center justify-center gap-2"
-          >
-            <Plus className="w-3 h-3" /> <span className="text-center">Voucher</span>
-          </button>
-          <button 
-            onClick={() => navigate('/inventory/items/new')}
-            className="px-2 py-1.5 lg:px-4 lg:py-2 bg-foreground/5 border border-border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all flex items-center justify-center gap-2"
-          >
-            <Plus className="w-3 h-3" /> <span className="text-center">Item</span>
-          </button>
-          <button 
-            onClick={() => navigate('/accounts/ledgers/new')}
-            className="px-2 py-1.5 lg:px-4 lg:py-2 bg-foreground/5 border border-border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all flex items-center justify-center gap-2"
-          >
-            <Plus className="w-3 h-3" /> <span className="text-center">Ledger</span>
-          </button>
-          <button 
-            onClick={() => navigate('/inventory/godowns')}
-            className="px-2 py-1.5 lg:px-4 lg:py-2 bg-foreground/5 border border-border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all flex items-center justify-center gap-2"
-          >
-            <Plus className="w-3 h-3" /> <span className="text-center">Godown</span>
-          </button>
-          {isAdmin && (
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <h3 className="text-[11px] font-mono text-gray-500 uppercase tracking-widest hidden sm:block">Quick Actions</h3>
+          <div className="grid grid-cols-3 sm:flex flex-wrap gap-2 lg:gap-3 flex-1">
             <button 
-              onClick={() => navigate('/users')}
-              className="px-2 py-1.5 lg:px-4 lg:py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[8px] lg:text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-2"
+              onClick={() => navigate('/vouchers/new')}
+              className={cn(
+                "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                uiStyle === 'UI/UX 2' 
+                  ? "bg-blue-600 border-blue-500 text-white hover:bg-blue-700" 
+                  : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
+              )}
             >
-              <Users className="w-3 h-3" /> <span className="text-center">Users</span>
+              <Plus className="w-3 h-3" /> <span className="text-center">Voucher</span>
             </button>
-          )}
+            <button 
+              onClick={() => navigate('/inventory/items/new')}
+              className={cn(
+                "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                uiStyle === 'UI/UX 2' 
+                  ? "bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-700" 
+                  : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
+              )}
+            >
+              <Plus className="w-3 h-3" /> <span className="text-center">Item</span>
+            </button>
+            <button 
+              onClick={() => navigate('/accounts/ledgers/new')}
+              className={cn(
+                "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                uiStyle === 'UI/UX 2' 
+                  ? "bg-amber-600 border-amber-500 text-white hover:bg-amber-700" 
+                  : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
+              )}
+            >
+              <Plus className="w-3 h-3" /> <span className="text-center">Ledger</span>
+            </button>
+            <button 
+              onClick={() => navigate('/inventory/godowns')}
+              className={cn(
+                "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                uiStyle === 'UI/UX 2' 
+                  ? "bg-rose-600 border-rose-500 text-white hover:bg-rose-700" 
+                  : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
+              )}
+            >
+              <Plus className="w-3 h-3" /> <span className="text-center">Godown</span>
+            </button>
+            {isAdmin && (
+              <button 
+                onClick={() => navigate('/users')}
+                className={cn(
+                  "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                  uiStyle === 'UI/UX 2' 
+                    ? "bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-700" 
+                    : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white"
+                )}
+              >
+                <Users className="w-3 h-3" /> <span className="text-center">Users</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-card border border-border p-2">
-          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-1 tracking-widest px-1">Revenue Trajectory</h3>
-          <div className="h-[300px] lg:h-[180px] w-full">
+        <div className={cn(
+          "bg-card border border-border p-2 transition-all",
+          uiStyle === 'UI/UX 2' && "bg-blue-600 border-blue-700 text-white shadow-lg scale-[1.02] z-10"
+        )}>
+          <h3 className={cn(
+            "text-[10px] font-mono uppercase mb-1 tracking-widest px-1",
+            uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
+          )}>Revenue Trajectory</h3>
+          <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 5, left: -35, bottom: 0 }}>
+              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor={theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0}/>
+                    <stop offset="5%" stopColor={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
+                <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
+                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#ffffff', border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`, fontSize: '10px', fontFamily: 'monospace' }}
-                  itemStyle={{ color: theme === 'dark' ? '#fff' : '#000' }}
+                  contentStyle={{ 
+                    backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
+                    border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
+                    fontSize: '10px', 
+                    fontFamily: 'monospace',
+                    color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
+                  }}
+                  itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#2563eb' : theme === 'dark' ? '#fff' : '#000' }}
                 />
-                <Area type="monotone" dataKey="value" stroke={theme === 'dark' ? '#fff' : '#000'} fillOpacity={1} fill="url(#colorValue)" />
+                <Area type="monotone" dataKey="value" stroke={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#fff' : '#000'} fillOpacity={1} fill="url(#colorValue)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-card border border-border p-2">
-          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-1 tracking-widest px-1">Expense Distribution</h3>
-          <div className="h-[300px] lg:h-[180px] w-full">
+        <div className={cn(
+          "bg-card border border-border p-2 transition-all",
+          uiStyle === 'UI/UX 2' && "bg-emerald-600 border-emerald-700 text-white shadow-lg scale-[1.02] z-10"
+        )}>
+          <h3 className={cn(
+            "text-[10px] font-mono uppercase mb-1 tracking-widest px-1",
+            uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
+          )}>Expense Distribution</h3>
+          <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 5, left: -35, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
+              <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
+                <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
+                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#ffffff', border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`, fontSize: '10px', fontFamily: 'monospace' }}
-                  itemStyle={{ color: theme === 'dark' ? '#fff' : '#000' }}
+                  contentStyle={{ 
+                    backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
+                    border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
+                    fontSize: '10px', 
+                    fontFamily: 'monospace',
+                    color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
+                  }}
+                  itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#059669' : theme === 'dark' ? '#fff' : '#000' }}
                 />
-                <Bar dataKey="value" fill={theme === 'dark' ? '#ffffff' : '#000000'} radius={[2, 2, 0, 0]} />
+                <Bar dataKey="value" fill={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-card border border-border p-2">
-          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-1 tracking-widest px-1">Net Profit Margin</h3>
-          <div className="h-[300px] lg:h-[180px] w-full">
+        <div className={cn(
+          "bg-card border border-border p-2 transition-all",
+          uiStyle === 'UI/UX 2' && "bg-amber-600 border-amber-700 text-white shadow-lg scale-[1.02] z-10"
+        )}>
+          <h3 className={cn(
+            "text-[10px] font-mono uppercase mb-1 tracking-widest px-1",
+            uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
+          )}>Net Profit Margin</h3>
+          <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 0.15 })) : mockChartData.map(d => ({ ...d, value: d.value * 0.15 }))} margin={{ top: 5, right: 5, left: -35, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
+              <LineChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 0.15 })) : mockChartData.map(d => ({ ...d, value: d.value * 0.15 }))} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
+                <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
+                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#ffffff', border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`, fontSize: '10px', fontFamily: 'monospace' }}
-                  itemStyle={{ color: theme === 'dark' ? '#fff' : '#000' }}
+                  contentStyle={{ 
+                    backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
+                    border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
+                    fontSize: '10px', 
+                    fontFamily: 'monospace',
+                    color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
+                  }}
+                  itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#d97706' : theme === 'dark' ? '#fff' : '#000' }}
                 />
-                <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="value" stroke={uiStyle === 'UI/UX 2' ? '#fff' : "#10b981"} strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-card border border-border p-2">
-          <h3 className="text-[10px] font-mono text-gray-500 uppercase mb-1 tracking-widest px-1">Cash Flow Projection</h3>
-          <div className="h-[300px] lg:h-[180px] w-full">
+        <div className={cn(
+          "bg-card border border-border p-2 transition-all",
+          uiStyle === 'UI/UX 2' && "bg-rose-600 border-rose-700 text-white shadow-lg scale-[1.02] z-10"
+        )}>
+          <h3 className={cn(
+            "text-[10px] font-mono uppercase mb-1 tracking-widest px-1",
+            uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
+          )}>Cash Flow Projection</h3>
+          <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 1.2 })) : mockChartData.map(d => ({ ...d, value: d.value * 1.2 }))} margin={{ top: 5, right: 5, left: -35, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke="#666" fontSize={8} tickLine={false} axisLine={false} />
+              <AreaChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 1.2 })) : mockChartData.map(d => ({ ...d, value: d.value * 1.2 }))} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
+                <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
+                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#ffffff', border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`, fontSize: '10px', fontFamily: 'monospace' }}
-                  itemStyle={{ color: theme === 'dark' ? '#fff' : '#000' }}
+                  contentStyle={{ 
+                    backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
+                    border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
+                    fontSize: '10px', 
+                    fontFamily: 'monospace',
+                    color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
+                  }}
+                  itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#e11d48' : theme === 'dark' ? '#fff' : '#000' }}
                 />
-                <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} />
+                <Area type="monotone" dataKey="value" stroke={uiStyle === 'UI/UX 2' ? '#fff' : "#3b82f6"} fill={uiStyle === 'UI/UX 2' ? '#fff' : "#3b82f6"} fillOpacity={0.1} />
               </AreaChart>
             </ResponsiveContainer>
           </div>

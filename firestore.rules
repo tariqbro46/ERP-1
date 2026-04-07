@@ -74,6 +74,12 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
+    // System Configuration
+    match /system/{document} {
+      allow read: if isAuthenticated();
+      allow write: if isFounder();
+    }
+
     // Settings
     match /settings/{companyId} {
       allow read: if isCompanyMember(companyId);

@@ -1234,6 +1234,36 @@ export const erpService = {
     }
   },
 
+  // System Configuration
+  async getSystemConfig() {
+    try {
+      const snap = await getDoc(doc(db, 'system', 'config'));
+      if (snap.exists()) return snap.data();
+      return {
+        statusOnlineText: 'Status: Online',
+        statusOfflineText: 'Status: Offline',
+        statusErrorText: 'Database Error',
+        appVersion: 'v1.0.1'
+      };
+    } catch (error) {
+      console.error('Error getting system config:', error);
+      return {
+        statusOnlineText: 'Status: Online',
+        statusOfflineText: 'Status: Offline',
+        statusErrorText: 'Database Error',
+        appVersion: 'v1.0.1'
+      };
+    }
+  },
+
+  async updateSystemConfig(config: any) {
+    try {
+      await setDoc(doc(db, 'system', 'config'), config, { merge: true });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'system/config');
+    }
+  },
+
   async getCompanyUsers(companyId: string): Promise<UserProfile[]> {
     try {
       const q = query(collection(db, 'users'), where('companyId', '==', companyId));

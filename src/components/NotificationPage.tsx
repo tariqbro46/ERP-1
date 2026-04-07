@@ -246,7 +246,7 @@ export default function NotificationPage() {
                           readBy: [...(selectedNotification.readBy || []), user?.uid || '']
                         });
                       }}
-                      className="px-6 py-3 text-xs font-bold bg-primary text-primary-foreground rounded-xl hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
+                      className="px-6 py-3 text-xs font-bold bg-primary text-white rounded-xl hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
                     >
                       Mark as read
                     </button>

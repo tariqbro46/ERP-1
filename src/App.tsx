@@ -136,7 +136,10 @@ function Layout({ children }: { children: React.ReactNode }) {
     layoutWidth = 'constrained', 
     sidebarDefaultExpanded = true,
     showMobileNav = false,
-    mobileBottomNavItems = []
+    mobileBottomNavItems = [],
+    uiStyle = 'UI/UX 1',
+    appVersion = 'v1.0.1',
+    statusOnlineText = 'Status: Online'
   } = useSettings();
 
   const navigate = useNavigate();
@@ -292,8 +295,14 @@ function Layout({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      <div className={cn("p-4 border-t border-border flex flex-col items-center", isSidebarCollapsed && "p-2")}>
-        <span className="text-[9px] text-gray-400 font-mono uppercase tracking-widest">v1.0.1</span>
+      <div className={cn("p-4 border-t border-border flex flex-col gap-2", isSidebarCollapsed && "p-2")}>
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <div className={cn("h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse")} />
+            <span className="text-[9px] text-gray-400 font-mono uppercase tracking-widest">{statusOnlineText}</span>
+          </div>
+          <span className="text-[9px] text-gray-400 font-mono uppercase tracking-widest">{appVersion}</span>
+        </div>
       </div>
     </aside>
   );
@@ -716,15 +725,27 @@ function Layout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden w-full">
         {menuBarStyle !== 'macos' && (
-          <header className="h-14 border-b border-border bg-background flex items-center px-4 lg:px-6 relative">
+          <header className={cn(
+            "h-14 border-b border-border bg-background flex items-center px-4 lg:px-6 relative transition-colors",
+            uiStyle === 'UI/UX 2' && "bg-blue-600 border-blue-700 text-white"
+          )}>
             <div className="flex items-center gap-3 lg:gap-4 z-10">
               {/* Desktop/Classic Menu Bar Style */}
               {menuBarStyle !== 'classic' && (
                 <div className="flex items-center gap-3 hidden lg:flex">
-                  <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
-                    <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
+                  <div className={cn(
+                    "w-8 h-8 rounded-sm flex items-center justify-center",
+                    uiStyle === 'UI/UX 2' ? "bg-white" : "bg-foreground"
+                  )}>
+                    <span className={cn(
+                      "font-bold text-lg",
+                      uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-background"
+                    )}>{companyName.charAt(0)}</span>
                   </div>
-                  <h1 className="text-sm font-bold text-foreground tracking-tighter truncate">
+                  <h1 className={cn(
+                    "text-sm font-bold tracking-tighter truncate",
+                    uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground"
+                  )}>
                     {companyName}
                   </h1>
                 </div>
@@ -737,34 +758,38 @@ function Layout({ children }: { children: React.ReactNode }) {
                     onClick={() => navigate(-1)}
                     className="p-2 hover:bg-foreground/5 rounded-full transition-colors"
                   >
-                    <ChevronLeft className="w-5 h-5 text-foreground" />
+                    <ChevronLeft className={cn("w-5 h-5", uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground")} />
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3 lg:hidden">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-foreground rounded-sm flex items-center justify-center">
-                      <span className="text-background font-bold text-xs">{companyName.charAt(0)}</span>
+                    <div className={cn(
+                      "w-6 h-6 rounded-sm flex items-center justify-center",
+                      uiStyle === 'UI/UX 2' ? "bg-white" : "bg-foreground"
+                    )}>
+                      <span className={cn(
+                        "font-bold text-xs",
+                        uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-background"
+                      )}>{companyName.charAt(0)}</span>
                     </div>
-                    <h1 className="text-[10px] font-bold text-foreground tracking-tighter truncate max-w-[80px]">
+                    <h1 className={cn(
+                      "text-[10px] font-bold tracking-tighter truncate max-w-[80px]",
+                      uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground"
+                    )}>
                       {companyName}
                     </h1>
                   </div>
                 </div>
               )}
-              
-              {/* Status Indicator (Desktop) */}
-              <div className="hidden sm:flex items-center gap-4 border-l border-border pl-4">
-                <span className="text-[10px] text-gray-600 font-mono uppercase">
-                  Status: Online
-                </span>
-                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              </div>
             </div>
 
             {/* Center Title */}
             <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none">
-              <h2 className="text-[10px] sm:text-sm font-bold text-primary uppercase tracking-widest text-center truncate max-w-[120px] sm:max-w-none">
+              <h2 className={cn(
+                "text-[10px] sm:text-sm font-bold uppercase tracking-widest text-center truncate max-w-[120px] sm:max-w-none",
+                uiStyle === 'UI/UX 2' ? "text-white" : "text-primary"
+              )}>
                 {currentPageTitle}
               </h2>
             </div>
@@ -772,22 +797,43 @@ function Layout({ children }: { children: React.ReactNode }) {
             <div className="ml-auto flex items-center gap-3 lg:gap-6 z-10">
               <NotificationCenter />
               
-              <div className="hidden md:flex items-center gap-2 text-[10px] text-gray-500 font-mono">
-                <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-gray-400">Alt</kbd>
+              <div className={cn(
+                "hidden md:flex items-center gap-2 text-[10px] font-mono",
+                uiStyle === 'UI/UX 2' ? "text-blue-100" : "text-gray-500"
+              )}>
+                <kbd className={cn(
+                  "px-1.5 py-0.5 border rounded",
+                  uiStyle === 'UI/UX 2' ? "bg-white/10 border-white/20 text-white" : "bg-card border-border text-gray-400"
+                )}>Alt</kbd>
                 <span>+</span>
-                <kbd className="px-1.5 py-0.5 bg-card border border-border rounded text-gray-400">G</kbd>
+                <kbd className={cn(
+                  "px-1.5 py-0.5 border rounded",
+                  uiStyle === 'UI/UX 2' ? "bg-white/10 border-white/20 text-white" : "bg-card border-border text-gray-400"
+                )}>G</kbd>
                 <span className="ml-1 uppercase tracking-widest">Go To</span>
               </div>
-              <div className="flex items-center gap-3 border-l border-border pl-4 lg:pl-6 relative" ref={dropdownRef}>
+              <div className={cn(
+                "flex items-center gap-3 border-l pl-4 lg:pl-6 relative",
+                uiStyle === 'UI/UX 2' ? "border-white/20" : "border-border"
+              )} ref={dropdownRef}>
                 <div className="text-right hidden sm:block">
-                  <p className="text-[10px] text-foreground font-mono">{user?.displayName || user?.email || 'User'}</p>
-                  <p className="text-[9px] text-gray-500 uppercase font-mono">{user?.role || 'Staff'}</p>
+                  <p className={cn(
+                    "text-[10px] font-mono",
+                    uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground"
+                  )}>{user?.displayName || user?.email || 'User'}</p>
+                  <p className={cn(
+                    "text-[9px] uppercase font-mono",
+                    uiStyle === 'UI/UX 2' ? "text-blue-100" : "text-gray-500"
+                  )}>{user?.role || 'Staff'}</p>
                 </div>
                 <button 
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className="relative group"
                 >
-                  <div className="w-8 h-8 rounded-full border border-border overflow-hidden bg-card hover:border-foreground transition-all">
+                  <div className={cn(
+                    "w-8 h-8 rounded-full border overflow-hidden bg-card transition-all",
+                    uiStyle === 'UI/UX 2' ? "border-white/40 hover:border-white" : "border-border hover:border-foreground"
+                  )}>
                     <img 
                       src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
                       alt="Profile"
@@ -1052,6 +1098,14 @@ function AppContent() {
           <Route path="/production/reports" element={<OrderReports />} />
           <Route path="/accounts" element={<ChartOfAccounts />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/settings/company" element={<Settings activeTab="company" />} />
+          <Route path="/settings/ui" element={<Settings activeTab="ui" />} />
+          <Route path="/settings/vouchers" element={<Settings activeTab="voucher" />} />
+          <Route path="/settings/print" element={<Settings activeTab="print" />} />
+          <Route path="/settings/features" element={<Settings activeTab="features" />} />
+          <Route path="/settings/security" element={<Settings activeTab="security" />} />
+          <Route path="/settings/notifications" element={<Settings activeTab="notifications" />} />
+          <Route path="/settings/whatsapp" element={<Settings activeTab="whatsapp" />} />
           <Route path="/companies" element={<CompanyManagement />} />
           <Route path="/users" element={<UserManagement />} />
           <Route path="/founder" element={<FounderPanel />} />

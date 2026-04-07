@@ -307,9 +307,24 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["companyId", "name", "type", "status"]
+    },
+    "SystemConfig": {
+      "title": "System Configuration",
+      "description": "Global application-wide settings controlled by the Founder.",
+      "type": "object",
+      "properties": {
+        "statusOnlineText": { "type": "string" },
+        "statusOfflineText": { "type": "string" },
+        "statusErrorText": { "type": "string" },
+        "appVersion": { "type": "string" }
+      }
     }
   },
   "firestore": {
+    "/system/config": {
+      "schema": "SystemConfig",
+      "description": "Global application configuration."
+    },
     "/companies/{companyId}": {
       "schema": "Company",
       "description": "Collection of companies."

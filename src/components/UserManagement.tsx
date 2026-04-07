@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth, Profile, UserRole } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { Users, Shield, ShieldCheck, ShieldAlert, Mail, Calendar, Loader2, Search, UserPlus, Trash2, Key, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
 
 export const UserManagement: React.FC = () => {
   const { isAdmin, isSuperAdmin, user } = useAuth();
+  const { uiStyle } = useSettings();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -127,30 +129,56 @@ export const UserManagement: React.FC = () => {
   }
 
   return (
-    <div className="p-8 transition-colors">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-baseline gap-4">
-          <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-3">
-            <Users className="w-6 h-6 text-amber-500" />
+    <div className={cn("p-4 lg:p-8 transition-colors", uiStyle === 'UI/UX 2' && "bg-slate-50 min-h-screen")}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center justify-between w-full md:w-auto gap-4">
+          <h1 className={cn(
+            "text-2xl font-bold tracking-tight flex items-center gap-3",
+            uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+          )}>
+            <Users className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-amber-500")} />
             User Management
           </h1>
-          <p className="text-gray-500 text-xs uppercase tracking-widest">Manage system access and roles</p>
+          
+          <button
+            onClick={() => setShowAddModal(true)}
+            className={cn(
+              "md:hidden flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-semibold transition-all shadow-md whitespace-nowrap",
+              uiStyle === 'UI/UX 2' 
+                ? "bg-blue-600 text-white hover:bg-blue-700" 
+                : "bg-indigo-600 hover:bg-indigo-700 text-white"
+            )}
+          >
+            <UserPlus className="w-4 h-4" />
+            Add User
+          </button>
         </div>
         
-        <div className="flex items-center gap-4">
-          <div className="relative w-64">
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className={cn(
+            "relative w-full md:w-64",
+            uiStyle === 'UI/UX 2' ? "bg-white shadow-sm border-blue-100" : ""
+          )}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               type="text"
               placeholder="Search users..."
               value={searchTerm || ''}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-card border border-border rounded-lg py-2 pl-10 pr-4 text-foreground text-xs focus:outline-none focus:border-foreground/20 transition-colors"
+              className={cn(
+                "w-full bg-card border border-border rounded-lg py-2 pl-10 pr-4 text-foreground text-xs focus:outline-none transition-colors",
+                uiStyle === 'UI/UX 2' ? "focus:border-blue-600" : "focus:border-foreground/20"
+              )}
             />
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors"
+            className={cn(
+              "hidden md:flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all shadow-md",
+              uiStyle === 'UI/UX 2' 
+                ? "bg-blue-600 text-white hover:bg-blue-700" 
+                : "bg-indigo-600 hover:bg-indigo-700 text-white"
+            )}
           >
             <UserPlus className="w-4 h-4" />
             Add New User
@@ -158,14 +186,32 @@ export const UserManagement: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+      <div className={cn(
+        "bg-card border border-border rounded-xl overflow-hidden shadow-sm",
+        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+      )}>
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-border bg-foreground/5">
-              <th className="px-6 py-4 text-[10px] text-gray-500 uppercase tracking-widest font-mono">User / Email</th>
-              <th className="px-6 py-4 text-[10px] text-gray-500 uppercase tracking-widest font-mono">Current Role</th>
-              <th className="px-6 py-4 text-[10px] text-gray-500 uppercase tracking-widest font-mono text-right">Sales Target</th>
-              <th className="px-6 py-4 text-[10px] text-gray-500 uppercase tracking-widest font-mono text-right">Actions</th>
+            <tr className={cn(
+              "border-b border-border",
+              uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-foreground/5"
+            )}>
+              <th className={cn(
+                "px-6 py-4 text-[10px] uppercase tracking-widest font-mono",
+                uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+              )}>User / Email</th>
+              <th className={cn(
+                "px-6 py-4 text-[10px] uppercase tracking-widest font-mono",
+                uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+              )}>Current Role</th>
+              <th className={cn(
+                "px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-right",
+                uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+              )}>Sales Target</th>
+              <th className={cn(
+                "px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-right",
+                uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+              )}>Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

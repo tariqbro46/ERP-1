@@ -43,12 +43,6 @@ export interface NavGroup {
 
 export const NAV_ITEMS: NavGroup[] = [
   {
-    group: 'General',
-    items: [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    ]
-  },
-  {
     group: 'Masters',
     items: [
       { to: '/accounts/ledgers/new', icon: UserPlus, label: 'Create Ledger', permission: 'Ledgers' },
@@ -94,13 +88,24 @@ export const NAV_ITEMS: NavGroup[] = [
     ]
   },
   {
+    group: 'Settings',
+    items: [
+      { to: '/settings/company', icon: Building2, label: 'Company Info' },
+      { to: '/settings/ui', icon: Database, label: 'UI Customization' },
+      { to: '/settings/vouchers', icon: FileText, label: 'Voucher Settings' },
+      { to: '/settings/print', icon: Printer, label: 'Print Settings' },
+      { to: '/settings/features', icon: Database, label: 'F11 Features' },
+      { to: '/settings/security', icon: Shield, label: 'Security' },
+      { to: '/settings/notifications', icon: BookOpen, label: 'Notifications' },
+      { to: '/settings/whatsapp', icon: BookOpen, label: 'WhatsApp Templates' },
+    ]
+  },
+  {
     group: 'Utilities',
     items: [
       { to: '/notes', icon: StickyNote, label: 'Notes / Memo' },
-      { to: '/companies', icon: Building2, label: 'Companies' },
       { to: '/users', icon: Users, label: 'User Management', adminOnly: true },
       { to: '/founder', icon: Shield, label: 'Founder Panel', superAdminOnly: true },
-      { to: '/settings', icon: SettingsIcon, label: 'Settings (F11)' },
     ]
   }
 ];
@@ -132,4 +137,12 @@ export const PAGE_TITLES: Record<string, string> = {
   '/users': 'User Management',
   '/founder': 'Founder Panel',
   '/settings': 'Settings',
+  '/settings/company': 'Company Information',
+  '/settings/ui': 'UI Customization',
+  '/settings/vouchers': 'Voucher Settings',
+  '/settings/print': 'Print Settings',
+  '/settings/features': 'F11 Features',
+  '/settings/security': 'Security Settings',
+  '/settings/notifications': 'Notification Settings',
+  '/settings/whatsapp': 'WhatsApp Templates',
 };

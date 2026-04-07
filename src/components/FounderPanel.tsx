@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { erpService } from '../services/erpService';
+import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
@@ -74,7 +75,7 @@ export default function FounderPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<CompanyStats | null>(null);
   const [isEditingSubscription, setIsEditingSubscription] = useState(false);
-  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity'>('companies');
+  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings'>('companies');
   const [globalActivity, setGlobalActivity] = useState<any[]>([]);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
@@ -104,9 +105,31 @@ export default function FounderPanel() {
     { id: 'Settings', label: 'Settings', icon: Settings }
   ];
 
+  const { appVersion, updateSettings, updateSystemSettings, uiStyle, statusOnlineText, statusOfflineText, statusErrorText } = useSettings();
+  const [localAppVersion, setLocalAppVersion] = useState(appVersion);
+  const [localStatusOnline, setLocalStatusOnline] = useState(statusOnlineText);
+  const [localStatusOffline, setLocalStatusOffline] = useState(statusOfflineText);
+  const [localStatusError, setLocalStatusError] = useState(statusErrorText);
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    setLocalAppVersion(appVersion);
+  }, [appVersion]);
+
+  useEffect(() => {
+    setLocalStatusOnline(statusOnlineText);
+  }, [statusOnlineText]);
+
+  useEffect(() => {
+    setLocalStatusOffline(statusOfflineText);
+  }, [statusOfflineText]);
+
+  useEffect(() => {
+    setLocalStatusError(statusErrorText);
+  }, [statusErrorText]);
 
   const safeFormat = (date: any, formatStr: string) => {
     try {
@@ -341,53 +364,115 @@ export default function FounderPanel() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className={cn("p-6 space-y-6", uiStyle === 'UI/UX 2' && "bg-slate-50 min-h-screen")}>
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Shield className="w-6 h-6 text-primary" />
+          <h1 className={cn(
+            "text-2xl font-bold flex items-center gap-2",
+            uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+          )}>
+            <Shield className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-primary")} />
             Founder Dashboard
           </h1>
-          <p className="text-sm text-muted-foreground">Manage platform users, subscriptions, and system health.</p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex bg-muted rounded-lg p-1">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          <div className={cn(
+            "flex items-center gap-2 border p-1.5 rounded-lg w-full sm:w-auto",
+            uiStyle === 'UI/UX 2' ? "bg-white border-blue-100 shadow-sm" : "bg-card border-border"
+          )}>
+            <span className={cn(
+              "text-[10px] font-bold uppercase px-2",
+              uiStyle === 'UI/UX 2' ? "text-blue-400" : "text-gray-500"
+            )}>v</span>
+            <input 
+              type="text" 
+              value={localAppVersion} 
+              onChange={(e) => setLocalAppVersion(e.target.value)}
+              className={cn(
+                "bg-transparent border-none text-[10px] font-mono focus:ring-0 w-16 p-0",
+                uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+              )}
+            />
+            <button 
+              onClick={() => {
+                updateSystemSettings({ appVersion: localAppVersion });
+                showNotification('App version updated');
+              }}
+              className={cn(
+                "px-3 py-1 rounded text-[9px] font-bold uppercase transition-colors",
+                uiStyle === 'UI/UX 2' 
+                  ? "bg-blue-600 text-white hover:bg-blue-700" 
+                  : "bg-primary/10 text-primary hover:bg-primary/20"
+              )}
+            >
+              Update
+            </button>
+          </div>
+
+          <div className={cn(
+            "grid grid-cols-2 sm:flex sm:flex-row rounded-lg p-1 w-full sm:w-auto gap-1",
+            uiStyle === 'UI/UX 2' ? "bg-blue-50" : "bg-muted"
+          )}>
             <button
               onClick={() => setViewMode('companies')}
-              className={`p-2 rounded-md transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${
-                viewMode === 'companies' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={cn(
+                "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
+                viewMode === 'companies' 
+                  ? uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white shadow-md" : "bg-background text-foreground shadow-sm"
+                  : uiStyle === 'UI/UX 2' ? "text-blue-400 hover:text-blue-600" : "text-muted-foreground hover:text-foreground"
+              )}
             >
               <LayoutGrid className="w-4 h-4" />
               Companies
             </button>
             <button
               onClick={() => setViewMode('users')}
-              className={`p-2 rounded-md transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${
-                viewMode === 'users' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={cn(
+                "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
+                viewMode === 'users' 
+                  ? uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white shadow-md" : "bg-background text-foreground shadow-sm"
+                  : uiStyle === 'UI/UX 2' ? "text-blue-400 hover:text-blue-600" : "text-muted-foreground hover:text-foreground"
+              )}
             >
               <ListTree className="w-4 h-4" />
               User Tree
             </button>
             <button
               onClick={() => setViewMode('notifications')}
-              className={`p-2 rounded-md transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${
-                viewMode === 'notifications' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={cn(
+                "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
+                viewMode === 'notifications' 
+                  ? uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white shadow-md" : "bg-background text-foreground shadow-sm"
+                  : uiStyle === 'UI/UX 2' ? "text-blue-400 hover:text-blue-600" : "text-muted-foreground hover:text-foreground"
+              )}
             >
               <Bell className="w-4 h-4" />
               Notifications
             </button>
             <button
               onClick={() => setViewMode('activity')}
-              className={`p-2 rounded-md transition-all flex items-center gap-2 text-xs font-bold uppercase tracking-widest ${
-                viewMode === 'activity' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={cn(
+                "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
+                viewMode === 'activity' 
+                  ? uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white shadow-md" : "bg-background text-foreground shadow-sm"
+                  : uiStyle === 'UI/UX 2' ? "text-blue-400 hover:text-blue-600" : "text-muted-foreground hover:text-foreground"
+              )}
             >
               <Activity className="w-4 h-4" />
               Activity
+            </button>
+            <button
+              onClick={() => setViewMode('settings')}
+              className={cn(
+                "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
+                viewMode === 'settings' 
+                  ? uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white shadow-md" : "bg-background text-foreground shadow-sm"
+                  : uiStyle === 'UI/UX 2' ? "text-blue-400 hover:text-blue-600" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Settings className="w-4 h-4" />
+              System
             </button>
           </div>
 
@@ -412,25 +497,43 @@ export default function FounderPanel() {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+        <div className={cn(
+          "bg-card border border-border rounded-xl p-6 shadow-sm transition-all",
+          uiStyle === 'UI/UX 2' ? "bg-blue-600 border-blue-700 text-white shadow-blue-200" : ""
+        )}>
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <Users className="w-6 h-6 text-primary" />
+            <div className={cn(
+              "p-3 rounded-lg",
+              uiStyle === 'UI/UX 2' ? "bg-white/20" : "bg-primary/10"
+            )}>
+              <Users className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-white" : "text-primary")} />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total Users</p>
+              <p className={cn(
+                "text-sm",
+                uiStyle === 'UI/UX 2' ? "text-blue-100" : "text-muted-foreground"
+              )}>Total Users</p>
               <p className="text-2xl font-bold">{allUsers.length}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+        <div className={cn(
+          "bg-card border border-border rounded-xl p-6 shadow-sm transition-all",
+          uiStyle === 'UI/UX 2' ? "bg-emerald-600 border-emerald-700 text-white shadow-emerald-200" : ""
+        )}>
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-emerald-500/10 rounded-lg">
-              <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+            <div className={cn(
+              "p-3 rounded-lg",
+              uiStyle === 'UI/UX 2' ? "bg-white/20" : "bg-emerald-500/10"
+            )}>
+              <CheckCircle2 className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-white" : "text-emerald-500")} />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Active Subscriptions</p>
+              <p className={cn(
+                "text-sm",
+                uiStyle === 'UI/UX 2' ? "text-emerald-100" : "text-muted-foreground"
+              )}>Active Subscriptions</p>
               <p className="text-2xl font-bold">
                 {companies.filter(c => c.subscriptionStatus?.toLowerCase() === 'active').length}
               </p>
@@ -438,13 +541,22 @@ export default function FounderPanel() {
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+        <div className={cn(
+          "bg-card border border-border rounded-xl p-6 shadow-sm transition-all",
+          uiStyle === 'UI/UX 2' ? "bg-amber-500 border-amber-600 text-white shadow-amber-200" : ""
+        )}>
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-amber-500/10 rounded-lg">
-              <AlertCircle className="w-6 h-6 text-amber-500" />
+            <div className={cn(
+              "p-3 rounded-lg",
+              uiStyle === 'UI/UX 2' ? "bg-white/20" : "bg-amber-500/10"
+            )}>
+              <AlertCircle className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-white" : "text-amber-500")} />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Trial Users</p>
+              <p className={cn(
+                "text-sm",
+                uiStyle === 'UI/UX 2' ? "text-amber-100" : "text-muted-foreground"
+              )}>Trial Users</p>
               <p className="text-2xl font-bold">
                 {companies.filter(c => c.subscriptionStatus?.toLowerCase() === 'trial').length}
               </p>
@@ -454,9 +566,15 @@ export default function FounderPanel() {
       </div>
 
       {viewMode === 'companies' ? (
-        <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+        <div className={cn(
+          "bg-card border border-border rounded-xl shadow-sm overflow-hidden",
+          uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+        )}>
           <table className="w-full text-left text-sm">
-            <thead className="bg-muted/50 text-muted-foreground font-medium border-b border-border">
+            <thead className={cn(
+              "font-medium border-b border-border",
+              uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-muted/50 text-muted-foreground"
+            )}>
               <tr>
                 <th className="px-6 py-4">Company</th>
                 <th className="px-6 py-4">Subscription</th>
@@ -468,7 +586,10 @@ export default function FounderPanel() {
             </thead>
             <tbody className="divide-y divide-border">
               {filteredCompanies.map((company) => (
-                <tr key={company.id} className="hover:bg-muted/30 transition-colors group">
+                <tr key={company.id} className={cn(
+                  "transition-colors group",
+                  uiStyle === 'UI/UX 2' ? "hover:bg-blue-50/50" : "hover:bg-muted/30"
+                )}>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
                       <span className="font-medium text-foreground">{company.name}</span>
@@ -588,17 +709,29 @@ export default function FounderPanel() {
               const isExpanded = expandedUsers.has(user.uid);
 
               return (
-                <div key={user.uid} className="bg-card border border-border rounded-xl overflow-hidden">
+                <div key={user.uid} className={cn(
+                  "bg-card border border-border rounded-xl overflow-hidden transition-all",
+                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                )}>
                   <div 
                     onClick={() => toggleUserExpansion(user.uid)}
-                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-muted/30 transition-colors"
+                    className={cn(
+                      "p-4 flex items-center justify-between cursor-pointer transition-colors",
+                      uiStyle === 'UI/UX 2' ? "hover:bg-blue-50/50" : "hover:bg-muted/30"
+                    )}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Users className="w-5 h-5 text-primary" />
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center",
+                        uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-primary/10 text-primary"
+                      )}>
+                        <Users className="w-5 h-5" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-bold text-foreground">{user.displayName || 'Unnamed User'}</h3>
+                        <h3 className={cn(
+                          "text-sm font-bold",
+                          uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+                        )}>{user.displayName || 'Unnamed User'}</h3>
                         <p className="text-xs text-muted-foreground">{user.email}</p>
                       </div>
                     </div>
@@ -609,13 +742,19 @@ export default function FounderPanel() {
                           setEditingPermissionsUser(user);
                           setSelectedPermissions(user.permissions || []);
                         }}
-                        className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest"
+                        className={cn(
+                          "p-2 rounded-lg transition-colors flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest",
+                          uiStyle === 'UI/UX 2' ? "text-blue-600 hover:bg-blue-50" : "text-primary hover:bg-primary/10"
+                        )}
                         title="Manage Permissions"
                       >
                         <Shield className="w-4 h-4" />
                         Permissions
                       </button>
-                      <span className="text-[10px] uppercase font-bold text-gray-500 bg-muted px-2 py-1 rounded">
+                      <span className={cn(
+                        "text-[10px] uppercase font-bold px-2 py-1 rounded",
+                        uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "text-gray-500 bg-muted"
+                      )}>
                         {userCompanies.length} Companies
                       </span>
                       {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -664,7 +803,7 @@ export default function FounderPanel() {
                                   {currentUser?.companyId !== company.id ? (
                                     <button 
                                       onClick={() => handleSwitchCompany(company.id)}
-                                      className="px-3 py-1.5 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest rounded hover:opacity-90 transition-all flex items-center gap-1"
+                                      className="px-3 py-1.5 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded hover:opacity-90 transition-all flex items-center gap-1"
                                     >
                                       <ArrowRight className="w-3 h-3" />
                                       Switch
@@ -705,10 +844,16 @@ export default function FounderPanel() {
             })}
         </div>
       ) : viewMode === 'activity' ? (
-        <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-border bg-muted/30">
+        <div className={cn(
+          "bg-card border border-border rounded-xl shadow-sm overflow-hidden",
+          uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+        )}>
+          <div className={cn(
+            "p-4 border-b border-border",
+            uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-muted/30"
+          )}>
             <h2 className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-              <Activity className="w-4 h-4 text-primary" />
+              <Activity className={cn("w-4 h-4", uiStyle === 'UI/UX 2' ? "text-white" : "text-primary")} />
               Global Activity Log (Last 50 Actions)
             </h2>
           </div>
@@ -718,20 +863,32 @@ export default function FounderPanel() {
                 const company = companies.find(c => c.id === log.companyId);
                 const user = allUsers.find(u => u.uid === log.userId);
                 return (
-                  <div key={log.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between gap-4">
+                  <div key={log.id} className={cn(
+                    "p-4 transition-colors flex items-center justify-between gap-4",
+                    uiStyle === 'UI/UX 2' ? "hover:bg-blue-50/50" : "hover:bg-muted/30"
+                  )}>
                     <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
-                        <Activity className="w-4 h-4 text-muted-foreground" />
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center",
+                        uiStyle === 'UI/UX 2' ? "bg-blue-100 text-blue-600" : "bg-muted text-muted-foreground"
+                      )}>
+                        <Activity className="w-4 h-4" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-foreground">{log.action}</span>
+                          <span className={cn(
+                            "text-sm font-bold",
+                            uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+                          )}>{log.action}</span>
                           <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
                             {company?.name || 'Unknown Company'}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          by <span className="font-medium text-foreground">{user?.displayName || log.userName || 'Unknown User'}</span>
+                          by <span className={cn(
+                            "font-medium",
+                            uiStyle === 'UI/UX 2' ? "text-blue-500" : "text-foreground"
+                          )}>{user?.displayName || log.userName || 'Unknown User'}</span>
                           {log.details && ` • ${log.details}`}
                         </p>
                       </div>
@@ -752,13 +909,21 @@ export default function FounderPanel() {
             )}
           </div>
         </div>
-      ) : (
+      ) : viewMode === 'notifications' ? (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold text-foreground uppercase tracking-widest">System Notifications</h2>
+            <h2 className={cn(
+              "text-lg font-bold uppercase tracking-widest",
+              uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+            )}>System Notifications</h2>
             <button
               onClick={() => setIsCreatingNotification(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-xs font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition-all"
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all shadow-md",
+                uiStyle === 'UI/UX 2' 
+                  ? "bg-blue-600 text-white hover:bg-blue-700" 
+                  : "bg-primary text-white hover:opacity-90"
+              )}
             >
               <Plus className="w-4 h-4" />
               New Notification
@@ -768,20 +933,27 @@ export default function FounderPanel() {
           <div className="grid grid-cols-1 gap-4">
             {notifications.length > 0 ? (
               notifications.map((n) => (
-                <div key={n.id} className="bg-card border border-border rounded-xl p-4 flex items-start justify-between gap-4">
+                <div key={n.id} className={cn(
+                  "bg-card border border-border rounded-xl p-4 flex items-start justify-between gap-4 transition-all",
+                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                )}>
                   <div className="flex items-start gap-4">
-                    <div className={`p-2 rounded-lg ${
+                    <div className={cn(
+                      "p-2 rounded-lg",
                       n.type === 'info' ? 'bg-blue-500/10 text-blue-500' :
                       n.type === 'warning' ? 'bg-amber-500/10 text-amber-500' :
                       n.type === 'success' ? 'bg-emerald-500/10 text-emerald-500' :
                       n.type === 'system_update' ? 'bg-purple-500/10 text-purple-500' :
                       'bg-rose-500/10 text-rose-500'
-                    }`}>
+                    )}>
                       {n.type === 'system_update' ? <Activity className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-foreground">{n.title}</h3>
+                        <h3 className={cn(
+                          "font-bold",
+                          uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+                        )}>{n.title}</h3>
                         <span className={`text-[8px] uppercase font-bold px-1.5 py-0.5 rounded ${
                           n.status === 'sent' ? 'bg-emerald-500/10 text-emerald-500' :
                           n.status === 'scheduled' ? 'bg-blue-500/10 text-blue-500' :
@@ -817,6 +989,83 @@ export default function FounderPanel() {
                 <p className="text-sm text-muted-foreground italic">No notifications sent yet.</p>
               </div>
             )}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className={cn(
+              "text-lg font-bold uppercase tracking-widest",
+              uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+            )}>System Configuration</h2>
+          </div>
+
+          <div className={cn(
+            "bg-card border border-border rounded-2xl p-8 max-w-2xl",
+            uiStyle === 'UI/UX 2' && "border-blue-100 shadow-xl"
+          )}>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Online Status Text</label>
+                  <input
+                    type="text"
+                    value={localStatusOnline}
+                    onChange={(e) => setLocalStatusOnline(e.target.value)}
+                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Offline Status Text</label>
+                  <input
+                    type="text"
+                    value={localStatusOffline}
+                    onChange={(e) => setLocalStatusOffline(e.target.value)}
+                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Error Status Text</label>
+                  <input
+                    type="text"
+                    value={localStatusError}
+                    onChange={(e) => setLocalStatusError(e.target.value)}
+                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">App Version</label>
+                  <input
+                    type="text"
+                    value={localAppVersion}
+                    onChange={(e) => setLocalAppVersion(e.target.value)}
+                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <button
+                  onClick={async () => {
+                    await updateSystemSettings({
+                      statusOnlineText: localStatusOnline,
+                      statusOfflineText: localStatusOffline,
+                      statusErrorText: localStatusError,
+                      appVersion: localAppVersion
+                    });
+                    showNotification('System configuration updated successfully');
+                  }}
+                  className={cn(
+                    "w-full py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg",
+                    uiStyle === 'UI/UX 2' 
+                      ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200" 
+                      : "bg-primary text-white hover:opacity-90 shadow-primary/20"
+                  )}
+                >
+                  Save Global Configuration
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -953,7 +1202,7 @@ export default function FounderPanel() {
                   <button
                     onClick={handleCreateNotification}
                     disabled={!newNotification.title || !newNotification.message}
-                    className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg font-bold uppercase tracking-widest text-[10px] hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 py-2 bg-primary text-white rounded-lg font-bold uppercase tracking-widest text-[10px] hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     <Send className="w-4 h-4" />
                     {newNotification.status === 'sent' ? 'Send Now' : 'Save Notification'}
@@ -1018,7 +1267,7 @@ export default function FounderPanel() {
                       >
                         <div className={cn(
                           "w-8 h-8 rounded-full flex items-center justify-center",
-                          isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                          isSelected ? "bg-primary text-white" : "bg-muted text-muted-foreground"
                         )}>
                           <Icon className="w-4 h-4" />
                         </div>
@@ -1031,7 +1280,10 @@ export default function FounderPanel() {
                 <div className="flex gap-4 pt-4">
                   <button 
                     onClick={() => setEditingPermissionsUser(null)}
-                    className="flex-1 py-3 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/5 transition-all"
+                    className={cn(
+                      "flex-1 py-3 border text-[10px] font-bold uppercase tracking-widest transition-all",
+                      uiStyle === 'UI/UX 2' ? "border-blue-100 text-blue-600 hover:bg-blue-50" : "border-border text-foreground hover:bg-foreground/5"
+                    )}
                   >
                     Cancel
                   </button>
@@ -1046,7 +1298,10 @@ export default function FounderPanel() {
                         showNotification('Failed to update permissions', 'error');
                       }
                     }}
-                    className="flex-1 py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+                    className={cn(
+                      "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all",
+                      uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200" : "bg-foreground text-background hover:bg-foreground/90"
+                    )}
                   >
                     Save Permissions
                   </button>
@@ -1080,75 +1335,130 @@ export default function FounderPanel() {
                 </button>
               </div>
 
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase font-bold">Subscription Status</p>
+              <div className="p-8 space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Subscription Status</p>
                     {isEditingSubscription ? (
-                      <select 
-                        value={selectedCompany.subscriptionStatus}
-                        onChange={(e) => updateSubscription(selectedCompany.id, { subscriptionStatus: e.target.value })}
-                        className="w-full bg-background border border-border rounded-lg p-2 text-sm"
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="trial">Trial</option>
-                      </select>
+                      <div className="grid grid-cols-3 gap-2">
+                        {['active', 'inactive', 'trial'].map(status => (
+                          <button
+                            key={status}
+                            onClick={() => updateSubscription(selectedCompany.id, { subscriptionStatus: status })}
+                            className={cn(
+                              "py-2 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest border transition-all",
+                              selectedCompany.subscriptionStatus === status 
+                                ? status === 'active' ? "bg-emerald-500 border-emerald-600 text-white shadow-lg" :
+                                  status === 'trial' ? "bg-amber-500 border-amber-600 text-white shadow-lg" :
+                                  "bg-rose-500 border-rose-600 text-white shadow-lg"
+                                : "bg-background border-border text-muted-foreground hover:border-foreground"
+                            )}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                      </div>
                     ) : (
-                      <p className="text-sm font-medium">{selectedCompany.subscriptionStatus}</p>
+                      <div className={cn(
+                        "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                        selectedCompany.subscriptionStatus === 'active' ? "bg-emerald-500/10 text-emerald-500" :
+                        selectedCompany.subscriptionStatus === 'trial' ? "bg-amber-500/10 text-amber-500" :
+                        "bg-rose-500/10 text-rose-500"
+                      )}>
+                        <div className={cn(
+                          "w-1.5 h-1.5 rounded-full animate-pulse",
+                          selectedCompany.subscriptionStatus === 'active' ? "bg-emerald-500" :
+                          selectedCompany.subscriptionStatus === 'trial' ? "bg-amber-500" :
+                          "bg-rose-500"
+                        )} />
+                        {selectedCompany.subscriptionStatus}
+                      </div>
                     )}
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase font-bold">Plan Type</p>
+                  <div className="space-y-3">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Plan Type</p>
                     {isEditingSubscription ? (
-                      <select 
-                        value={selectedCompany.planType}
-                        onChange={(e) => updateSubscription(selectedCompany.id, { planType: e.target.value })}
-                        className="w-full bg-background border border-border rounded-lg p-2 text-sm"
-                      >
-                        <option value="free">Free</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="yearly">Yearly</option>
-                      </select>
+                      <div className="grid grid-cols-3 gap-2">
+                        {['free', 'monthly', 'yearly'].map(plan => (
+                          <button
+                            key={plan}
+                            onClick={() => updateSubscription(selectedCompany.id, { planType: plan })}
+                            className={cn(
+                              "py-2 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest border transition-all",
+                              selectedCompany.planType === plan 
+                                ? "bg-primary border-primary text-white shadow-lg"
+                                : "bg-background border-border text-muted-foreground hover:border-foreground"
+                            )}
+                          >
+                            {plan}
+                          </button>
+                        ))}
+                      </div>
                     ) : (
-                      <p className="text-sm font-medium">{selectedCompany.planType}</p>
+                      <p className="text-sm font-bold text-foreground uppercase tracking-widest bg-muted/50 px-3 py-1.5 rounded-lg w-fit">
+                        {selectedCompany.planType}
+                      </p>
                     )}
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase font-bold">Expiry Date</p>
+                  <div className="space-y-3">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Expiry Date</p>
                     {isEditingSubscription ? (
                       <input 
                         type="date"
                         value={selectedCompany.expiryDate && !isNaN(new Date(selectedCompany.expiryDate).getTime()) ? format(new Date(selectedCompany.expiryDate), 'yyyy-MM-dd') : ''}
                         onChange={(e) => updateSubscription(selectedCompany.id, { expiryDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                        className="w-full bg-background border border-border rounded-lg p-2 text-sm"
+                        className="w-full bg-background border border-border rounded-lg p-2.5 text-sm outline-none focus:border-primary"
                       />
                     ) : (
-                      <p className="text-sm font-medium">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground bg-muted/50 px-3 py-1.5 rounded-lg w-fit">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
                         {safeFormat(selectedCompany.expiryDate, 'dd MMM yyyy')}
-                      </p>
+                      </div>
                     )}
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground uppercase font-bold">Access Control</p>
-                    <p className="text-sm font-medium flex items-center gap-2">
-                      {selectedCompany.isAccessEnabled ? 'Enabled' : 'Disabled'}
+                  <div className="space-y-3">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Access Control</p>
+                    <div className="flex items-center gap-3">
+                      <span className={cn(
+                        "inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full",
+                        selectedCompany.isAccessEnabled ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'
+                      )}>
+                        {selectedCompany.isAccessEnabled ? (
+                          <><CheckCircle2 className="w-3 h-3" /> Enabled</>
+                        ) : (
+                          <><XCircle className="w-3 h-3" /> Disabled</>
+                        )}
+                      </span>
                       <button 
                         onClick={() => toggleAccess(selectedCompany)}
-                        className="text-[10px] text-primary hover:underline"
+                        className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest"
                       >
-                        Toggle
+                        Change
                       </button>
-                    </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="pt-6 border-t border-border">
+                <div className="pt-6 border-t border-border flex gap-4">
+                  <button 
+                    onClick={() => {
+                      setSelectedCompany(null);
+                      setIsEditingSubscription(false);
+                    }}
+                    className="flex-1 py-3 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-muted transition-all"
+                  >
+                    Close
+                  </button>
                   <button 
                     onClick={() => setIsEditingSubscription(!isEditingSubscription)}
-                    className="w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity"
+                    className={cn(
+                      "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg",
+                      isEditingSubscription 
+                        ? "bg-emerald-600 text-white hover:bg-emerald-700" 
+                        : "bg-primary text-white hover:opacity-90"
+                    )}
                   >
-                    {isEditingSubscription ? 'Finish Editing' : 'Edit Subscription'}
+                    {isEditingSubscription ? 'Save Changes' : 'Edit Subscription'}
                   </button>
                 </div>
               </div>
