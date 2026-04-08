@@ -19,6 +19,32 @@ const getSignatureHtml = (settings: any) => {
   `;
 };
 
+const getHeaderHtml = (settings: any, title: string, subtitle?: string) => {
+  const logoHtml = settings.companyLogo ? `
+    <div class="logo-container" style="width: 80px; height: 80px; margin-right: 20px; flex-shrink: 0;">
+      <img src="${settings.companyLogo}" style="width: 100%; height: 100%; object-contain: contain;" referrerPolicy="no-referrer" />
+    </div>
+  ` : '';
+
+  return `
+    <div class="header" style="display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; text-align: left;">
+      ${logoHtml}
+      <div style="flex: 1; text-align: center;">
+        <div class="company-name">${settings.companyName || 'SAPIENT ERP'}</div>
+        <div class="company-info" style="white-space: pre-line;">${settings.companyAddress || ''}</div>
+        <div class="company-info">
+          ${settings.showPrintPhone !== false && settings.printPhone ? `Phone: ${settings.printPhone}` : ''}
+          ${settings.showPrintEmail !== false && settings.printEmail ? ` | Email: ${settings.printEmail}` : ''}
+          ${settings.showPrintWebsite !== false && settings.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
+        </div>
+        ${settings.showPrintHeader !== false ? `<div class="print-header">${settings.printHeader || ''}</div>` : ''}
+        <div class="report-title">${title.toUpperCase()}</div>
+        ${subtitle ? `<div>${subtitle}</div>` : ''}
+      </div>
+    </div>
+  `;
+};
+
 export function printVoucher(voucher: any, settings: any = {}) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) return;
@@ -48,17 +74,7 @@ export function printVoucher(voucher: any, settings: any = {}) {
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="company-name">${settings.companyName || 'SAPIENT ERP'}</div>
-          <div class="company-info" style="white-space: pre-line;">${settings.companyAddress || ''}</div>
-          <div class="company-info">
-            ${settings.showPrintPhone !== false && settings.printPhone ? `Phone: ${settings.printPhone}` : ''}
-            ${settings.showPrintEmail !== false && settings.printEmail ? ` | Email: ${settings.printEmail}` : ''}
-            ${settings.showPrintWebsite !== false && settings.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
-          </div>
-          ${settings.showPrintHeader !== false ? `<div class="print-header">${settings.printHeader || ''}</div>` : ''}
-          <div class="voucher-title">${voucher.v_type.toUpperCase()} VOUCHER</div>
-        </div>
+        ${getHeaderHtml(settings, `${voucher.v_type.toUpperCase()} VOUCHER`)}
         
         <div class="meta">
           <div><strong>Voucher No:</strong> ${voucher.v_no}</div>
@@ -177,18 +193,7 @@ export function printProfitAndLoss(data: any, settings: any = {}) {
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="company-name">${settings.companyName || 'SAPIENT ERP'}</div>
-          <div class="company-info" style="white-space: pre-line;">${settings.companyAddress || ''}</div>
-          <div class="company-info">
-            ${settings.showPrintPhone !== false && settings.printPhone ? `Phone: ${settings.printPhone}` : ''}
-            ${settings.showPrintEmail !== false && settings.printEmail ? ` | Email: ${settings.printEmail}` : ''}
-            ${settings.showPrintWebsite !== false && settings.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
-          </div>
-          ${settings.showPrintHeader !== false ? `<div class="print-header">${settings.printHeader || ''}</div>` : ''}
-          <div class="report-title">PROFIT & LOSS A/C</div>
-          <div>For the period ended ${new Date().toLocaleDateString()}</div>
-        </div>
+        ${getHeaderHtml(settings, 'PROFIT & LOSS A/C', `For the period ended ${new Date().toLocaleDateString()}`)}
         
         <div class="container">
           <div class="side">
@@ -272,18 +277,7 @@ export function printBalanceSheet(data: any, settings: any = {}) {
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="company-name">${settings.companyName || 'SAPIENT ERP'}</div>
-          <div class="company-info" style="white-space: pre-line;">${settings.companyAddress || ''}</div>
-          <div class="company-info">
-            ${settings.showPrintPhone !== false && settings.printPhone ? `Phone: ${settings.printPhone}` : ''}
-            ${settings.showPrintEmail !== false && settings.printEmail ? ` | Email: ${settings.printEmail}` : ''}
-            ${settings.showPrintWebsite !== false && settings.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
-          </div>
-          ${settings.showPrintHeader !== false ? `<div class="print-header">${settings.printHeader || ''}</div>` : ''}
-          <div class="report-title">BALANCE SHEET</div>
-          <div>As on ${new Date().toLocaleDateString()}</div>
-        </div>
+        ${getHeaderHtml(settings, 'BALANCE SHEET', `As on ${new Date().toLocaleDateString()}`)}
         
         <div class="container">
           <div class="side">
@@ -353,18 +347,7 @@ export function printReport(title: string, data: any[], columns: string[], setti
         </style>
       </head>
       <body>
-        <div class="header">
-          <div class="company-name">${settings.companyName || 'SAPIENT ERP'}</div>
-          <div class="company-info" style="white-space: pre-line;">${settings.companyAddress || ''}</div>
-          <div class="company-info">
-            ${settings.showPrintPhone !== false && settings.printPhone ? `Phone: ${settings.printPhone}` : ''}
-            ${settings.showPrintEmail !== false && settings.printEmail ? ` | Email: ${settings.printEmail}` : ''}
-            ${settings.showPrintWebsite !== false && settings.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
-          </div>
-          ${settings.showPrintHeader !== false ? `<div class="print-header">${settings.printHeader || ''}</div>` : ''}
-          <div class="report-title" style="white-space: pre-line;">${title.toUpperCase()}</div>
-          <div style="text-align: right; font-size: 10px; margin-top: 5px;">Date of Print: ${new Date().toLocaleDateString()}</div>
-        </div>
+        ${getHeaderHtml(settings, title, `<div style="text-align: right; font-size: 10px; margin-top: 5px;">Date of Print: ${new Date().toLocaleDateString()}</div>`)}
         
         <table>
           <thead>

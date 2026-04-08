@@ -68,6 +68,18 @@ export function exportToPDF(filename: string, title: string, data: any[], header
   
   // Header
   let y = 26;
+  
+  // Add Logo if available
+  if (settings.companyLogo) {
+    try {
+      // We assume the logo is either a Base64 string or a valid URL
+      // For PDF, Base64 is safer if it's already loaded
+      doc.addImage(settings.companyLogo, 'PNG', 14, 10, 20, 20, undefined, 'FAST');
+    } catch (e) {
+      console.error('Error adding logo to PDF:', e);
+    }
+  }
+
   if (settings.reportLayout === 'Layout 2') {
     doc.setFontSize(18);
     doc.setFont('courier', 'bold');

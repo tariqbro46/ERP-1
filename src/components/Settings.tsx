@@ -498,6 +498,17 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                               Select File
                             </button>
                             <input id="logo-upload" type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                            
+                            <div className="pt-2 space-y-1">
+                              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Or Logo URL</label>
+                              <input 
+                                type="text"
+                                value={localCompanyLogo.startsWith('data:') ? '' : localCompanyLogo}
+                                onChange={(e) => setLocalCompanyLogo(e.target.value)}
+                                placeholder="https://example.com/logo.png"
+                                className="w-full bg-background border border-border text-foreground p-2 text-[10px] outline-none focus:border-foreground"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>

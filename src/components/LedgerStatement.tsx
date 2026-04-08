@@ -527,13 +527,20 @@ export function LedgerStatement() {
             <div class="container">
               <div class="page-num"><span>Page 1</span></div>
               
-              <div class="header-box">
-                <div class="company-name">${settings?.companyName || 'COMPANY NAME'}</div>
-                <div style="font-size: 12px;">${settings?.companyAddress || ''}</div>
-                <div style="font-size: 12px;">
-                  ${settings?.printEmail ? `E-Mail : ${settings.printEmail}` : ''}
-                  ${settings?.printPhone ? ` | Phone: ${settings.printPhone}` : ''}
-                  ${settings?.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
+              <div class="header-box" style="display: flex; align-items: center; justify-content: center; text-align: left;">
+                ${settings?.companyLogo ? `
+                  <div style="width: 60px; height: 60px; margin-right: 20px; flex-shrink: 0;">
+                    <img src="${settings.companyLogo}" style="width: 100%; height: 100%; object-fit: contain;" referrerPolicy="no-referrer" />
+                  </div>
+                ` : ''}
+                <div style="flex: 1; text-align: center;">
+                  <div class="company-name">${settings?.companyName || 'COMPANY NAME'}</div>
+                  <div style="font-size: 12px;">${settings?.companyAddress || ''}</div>
+                  <div style="font-size: 12px;">
+                    ${settings?.printEmail ? `E-Mail : ${settings.printEmail}` : ''}
+                    ${settings?.printPhone ? ` | Phone: ${settings.printPhone}` : ''}
+                    ${settings?.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
+                  </div>
                 </div>
               </div>
               
@@ -742,17 +749,25 @@ export function LedgerStatement() {
           </head>
           <body>
             <div class="container">
-              <div class="header-section">
-                <div class="company-name">${settings?.companyName || 'COMPANY NAME'}</div>
-                <div class="company-details">${settings?.companyAddress || ''}</div>
-                <div class="company-details">
-                  <span class="email-line">E-Mail : ${settings?.printEmail || ''}</span>
+              <div class="header-section" style="display: flex; align-items: center; justify-content: center; text-align: left;">
+                ${settings?.companyLogo ? `
+                  <div style="width: 60px; height: 60px; margin-right: 20px; flex-shrink: 0;">
+                    <img src="${settings.companyLogo}" style="width: 100%; height: 100%; object-fit: contain;" referrerPolicy="no-referrer" />
+                  </div>
+                ` : ''}
+                <div style="flex: 1; text-align: center;">
+                  <div class="company-name">${settings?.companyName || 'COMPANY NAME'}</div>
+                  <div class="company-details">${settings?.companyAddress || ''}</div>
+                  <div class="company-details">
+                    <span class="email-line">E-Mail : ${settings?.printEmail || ''}</span>
+                  </div>
                 </div>
-                
+              </div>
+              
+              <div style="text-align: center; margin-bottom: 20px;">
                 <div class="ledger-name">${ledgerName}</div>
                 <div class="ledger-label">Ledger Account</div>
                 <div class="ledger-address">${currentLedger?.address || ''}</div>
-                
                 <div class="period-text">${period}</div>
               </div>
               

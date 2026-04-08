@@ -245,11 +245,13 @@ function Layout({ children }: { children: React.ReactNode }) {
         "p-6 border-b border-border flex items-center justify-between"
       )}>
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-8 h-8 bg-foreground rounded-sm flex-shrink-0 flex items-center justify-center overflow-hidden">
+          <div className="w-8 h-8 rounded-sm flex-shrink-0 flex items-center justify-center overflow-hidden">
             {companyLogo || systemLogo ? (
               <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
             ) : (
-              <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
+              <div className="w-full h-full bg-foreground flex items-center justify-center">
+                <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
+              </div>
             )}
           </div>
           <div className="transition-opacity duration-300 relative group/logo">
@@ -379,11 +381,13 @@ function Layout({ children }: { children: React.ReactNode }) {
     <div className="bg-background/80 backdrop-blur-md border-b border-border h-10 px-4 flex items-center justify-between hidden lg:flex fixed top-0 left-0 right-0 z-[60]">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2 mr-4">
-          <div className="w-5 h-5 bg-foreground rounded-full flex items-center justify-center overflow-hidden">
+          <div className="w-5 h-5 rounded-full flex items-center justify-center overflow-hidden">
             {companyLogo || systemLogo ? (
               <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
             ) : (
-              <span className="text-background font-bold text-[10px]">{companyName.charAt(0)}</span>
+              <div className="w-full h-full bg-foreground flex items-center justify-center">
+                <span className="text-background font-bold text-[10px]">{companyName.charAt(0)}</span>
+              </div>
             )}
           </div>
           <span className="text-xs font-bold">{companyName}</span>
@@ -791,17 +795,21 @@ function Layout({ children }: { children: React.ReactNode }) {
                       to={isAdmin ? "/settings/company" : "#"}
                       className={cn(
                         "w-6 h-6 rounded-sm flex items-center justify-center overflow-hidden transition-transform",
-                        isAdmin && "active:scale-90",
-                        uiStyle === 'UI/UX 2' ? "bg-white" : "bg-foreground"
+                        isAdmin && "active:scale-90"
                       )}
                     >
                       {companyLogo || systemLogo ? (
                         <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                       ) : (
-                        <span className={cn(
-                          "font-bold text-xs",
-                          uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-background"
-                        )}>{companyName.charAt(0)}</span>
+                        <div className={cn(
+                          "w-full h-full flex items-center justify-center",
+                          uiStyle === 'UI/UX 2' ? "bg-white" : "bg-foreground"
+                        )}>
+                          <span className={cn(
+                            "font-bold text-xs",
+                            uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-background"
+                          )}>{companyName.charAt(0)}</span>
+                        </div>
                       )}
                     </Link>
                     <h1 className={cn(

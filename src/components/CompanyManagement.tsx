@@ -217,6 +217,15 @@ export function CompanyManagement() {
                     <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, false)} className="hidden" />
                   </label>
                 </div>
+                <div className="mt-2">
+                  <input 
+                    type="text"
+                    value={newCompany.logo_url.startsWith('data:') ? '' : newCompany.logo_url}
+                    onChange={(e) => setNewCompany(prev => ({ ...prev, logo_url: e.target.value }))}
+                    placeholder="Or enter Logo URL"
+                    className="w-full bg-background border border-border text-foreground p-2 text-[10px] outline-none focus:border-foreground"
+                  />
+                </div>
               </div>
               <button
                 type="submit"
@@ -252,12 +261,17 @@ export function CompanyManagement() {
                     <div className="flex items-center gap-4">
                       <div className={cn(
                         "w-10 h-10 flex items-center justify-center rounded-full border overflow-hidden",
-                        user?.companyId === company.id ? "bg-foreground text-background border-foreground" : "bg-background text-gray-500 border-border"
+                        user?.companyId === company.id ? "border-foreground" : "border-border hover:border-gray-500"
                       )}>
                         {company.logo_url ? (
                           <img src={company.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                         ) : (
-                          <Building2 className="w-5 h-5" />
+                          <div className={cn(
+                            "w-full h-full flex items-center justify-center",
+                            user?.companyId === company.id ? "bg-foreground text-background" : "bg-background text-gray-500"
+                          )}>
+                            <Building2 className="w-5 h-5" />
+                          </div>
                         )}
                       </div>
                       <div>
@@ -377,6 +391,15 @@ export function CompanyManagement() {
                                 <span className="text-[9px] font-bold uppercase tracking-widest text-foreground">Change Logo</span>
                                 <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, true)} className="hidden" />
                               </label>
+                            </div>
+                            <div className="mt-2">
+                              <input 
+                                type="text"
+                                value={editForm.logo_url.startsWith('data:') ? '' : editForm.logo_url}
+                                onChange={(e) => setEditForm(prev => ({ ...prev, logo_url: e.target.value }))}
+                                placeholder="Or enter Logo URL"
+                                className="w-full bg-background border border-border text-foreground p-2 text-[10px] outline-none focus:border-foreground"
+                              />
                             </div>
                           </div>
                         </div>
