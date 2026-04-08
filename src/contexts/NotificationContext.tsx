@@ -25,7 +25,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
-    }, 4000);
+    }, 5000);
   };
 
   const removeNotification = (id: string) => {
@@ -40,24 +40,31 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           <div 
             key={n.id}
             className={cn(
-              "pointer-events-auto flex items-center gap-3 px-4 py-3 bg-card border border-border shadow-2xl rounded-sm min-w-[300px] animate-in slide-in-from-top-full duration-300",
+              "pointer-events-auto flex flex-col bg-card border border-border shadow-2xl rounded-sm min-w-[300px] animate-in slide-in-from-top-full duration-300 overflow-hidden",
               n.type === 'success' ? "border-emerald-500/50" : n.type === 'error' ? "border-rose-500/50" : "border-border"
             )}
           >
-            {n.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-            ) : (
-              <AlertCircle className="w-5 h-5 text-rose-500" />
-            )}
-            <div className="text-[11px] font-mono uppercase tracking-widest text-foreground flex-1">
-              {n.message}
+            <div className="flex items-center gap-3 px-4 py-3">
+              {n.type === 'success' ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-rose-500" />
+              )}
+              <div className="text-[11px] font-mono uppercase tracking-widest text-foreground flex-1">
+                {n.message}
+              </div>
+              <button 
+                onClick={() => removeNotification(n.id)}
+                className="p-1 hover:bg-foreground/5 rounded transition-colors"
+              >
+                <X className="w-3.5 h-3.5 text-gray-500" />
+              </button>
             </div>
-            <button 
-              onClick={() => removeNotification(n.id)}
-              className="p-1 hover:bg-foreground/5 rounded transition-colors"
-            >
-              <X className="w-3.5 h-3.5 text-gray-500" />
-            </button>
+            {/* Progress Bar */}
+            <div className={cn(
+              "h-0.5 animate-progress",
+              n.type === 'success' ? "bg-emerald-500" : n.type === 'error' ? "bg-rose-500" : "bg-foreground"
+            )} />
           </div>
         ))}
       </div>

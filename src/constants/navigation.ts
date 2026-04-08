@@ -103,6 +103,7 @@ export const NAV_ITEMS: NavGroup[] = [
   {
     group: 'Utilities',
     items: [
+      { to: '/companies', icon: Building2, label: 'Company Management', adminOnly: true },
       { to: '/notes', icon: StickyNote, label: 'Notes / Memo' },
       { to: '/users', icon: Users, label: 'User Management', adminOnly: true },
       { to: '/founder', icon: Shield, label: 'Founder Panel', superAdminOnly: true },

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2 } from 'lucide-react';
+import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -285,6 +285,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const tabs = [
     { id: 'company', label: 'Company Information', icon: Building2 },
     { id: 'ui', label: 'UI Customization', icon: SettingsIcon },
+    { id: 'reports', label: 'Report Settings', icon: ClipboardList },
     { id: 'voucher', label: 'Voucher Settings', icon: Database },
     { id: 'print', label: 'Print Settings', icon: Printer },
     { id: 'features', label: 'F11 Features', icon: Database },
@@ -575,6 +576,56 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
             </div>
             )}
 
+            {activeTab === 'reports' && (
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
+                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">Report Settings</h3>
+                    <button 
+                      onClick={handleSaveGeneral}
+                      className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+                    >
+                      <Save className="w-3 h-3" /> Save Changes
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">Report Layout Style</label>
+                      <select 
+                        value={localReportLayout}
+                        onChange={(e) => setLocalReportLayout(e.target.value as any)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        <option value="Layout 1">Layout 1 (Standard)</option>
+                        <option value="Layout 2">Layout 2 (Tally Style - Default)</option>
+                      </select>
+                      <p className="text-[9px] text-gray-500 uppercase">Choose the visual style for generated reports and PDFs.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground uppercase">Show Running Balance in Reports</h4>
+                          <p className="text-[10px] text-gray-500">Enable running balance column in ledger statements by default.</p>
+                        </div>
+                        <button 
+                          onClick={() => setLocalShowRunningBalance(!localShowRunningBalance)}
+                          className={cn(
+                            "w-10 h-5 rounded-full transition-colors relative",
+                            localShowRunningBalance ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowRunningBalance ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             {activeTab === 'ui' && (
               <div className="space-y-8">
                 <div className="space-y-4">
@@ -642,41 +693,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       <p className="text-[9px] text-gray-500 uppercase">Choose the visual style for your main dashboard.</p>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Report Layout Style</label>
-                      <select 
-                        value={localReportLayout}
-                        onChange={(e) => setLocalReportLayout(e.target.value as any)}
-                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
-                      >
-                        <option value="Layout 1">Layout 1 (Standard)</option>
-                        <option value="Layout 2">Layout 2 (Tally Style - Default)</option>
-                      </select>
-                      <p className="text-[9px] text-gray-500 uppercase">Choose the visual style for generated reports and PDFs.</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
-                        <div>
-                          <h4 className="text-xs font-bold text-foreground uppercase">Show Running Balance in Reports</h4>
-                          <p className="text-[10px] text-gray-500">Enable running balance column in ledger statements by default.</p>
-                        </div>
-                        <button 
-                          onClick={() => setLocalShowRunningBalance(!localShowRunningBalance)}
-                          className={cn(
-                            "w-10 h-5 rounded-full transition-colors relative",
-                            localShowRunningBalance ? "bg-emerald-500" : "bg-gray-600"
-                          )}
-                        >
-                          <div className={cn(
-                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
-                            localShowRunningBalance ? "right-1" : "left-1"
-                          )} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
+                    <div className="space-y-2 md:col-span-2">
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
                         <div>
                           <h4 className="text-xs font-bold text-foreground uppercase">Show Mobile Navigation Bar</h4>
@@ -700,7 +717,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         <div className="p-4 bg-foreground/5 border-x border-b border-border space-y-3">
                           <h5 className="text-[10px] font-bold text-foreground uppercase">Bottom Navigation Items (Mobile)</h5>
                           <p className="text-[9px] text-gray-500 uppercase mb-2">Select up to 4 items to show in the bottom bar.</p>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
                             {NAV_ITEMS.flatMap(g => g.items).map(item => (
                               <label 
                                 key={item.label}
@@ -1364,7 +1381,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {Object.entries(localWhatsappTemplates).map(([key, value]) => (
                     <div key={key} className="space-y-2">
                       <label className="text-[10px] text-gray-500 uppercase font-bold">{key} Voucher Template</label>
