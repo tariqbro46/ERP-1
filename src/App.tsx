@@ -252,9 +252,18 @@ function Layout({ children }: { children: React.ReactNode }) {
               <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
             )}
           </div>
-          <div className="transition-opacity duration-300">
+          <div className="transition-opacity duration-300 relative group/logo">
             <h1 className="text-sm font-bold text-foreground tracking-tighter truncate max-w-[120px]">{companyName}</h1>
             <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate max-w-[120px]">{slogan}</p>
+            {isAdmin && (
+              <Link 
+                to="/settings/company" 
+                className="absolute -right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover/logo:opacity-100 transition-opacity p-1 hover:bg-foreground/5 rounded"
+                title="Edit Company Logo & Info"
+              >
+                <SettingsIcon className="w-3 h-3 text-gray-400" />
+              </Link>
+            )}
           </div>
         </div>
         <button 
@@ -778,10 +787,14 @@ function Layout({ children }: { children: React.ReactNode }) {
               ) : (
                 <div className="flex items-center gap-3 lg:hidden">
                   <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "w-6 h-6 rounded-sm flex items-center justify-center overflow-hidden",
-                      uiStyle === 'UI/UX 2' ? "bg-white" : "bg-foreground"
-                    )}>
+                    <Link 
+                      to={isAdmin ? "/settings/company" : "#"}
+                      className={cn(
+                        "w-6 h-6 rounded-sm flex items-center justify-center overflow-hidden transition-transform",
+                        isAdmin && "active:scale-90",
+                        uiStyle === 'UI/UX 2' ? "bg-white" : "bg-foreground"
+                      )}
+                    >
                       {companyLogo || systemLogo ? (
                         <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                       ) : (
@@ -790,7 +803,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                           uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-background"
                         )}>{companyName.charAt(0)}</span>
                       )}
-                    </div>
+                    </Link>
                     <h1 className={cn(
                       "text-[10px] font-bold tracking-tighter truncate max-w-[80px]",
                       uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground"

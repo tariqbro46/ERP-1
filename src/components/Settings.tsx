@@ -455,32 +455,49 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                           className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
                         />
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 uppercase">Company Logo</label>
-                        <div className="flex items-start gap-4">
-                          <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-muted/30 overflow-hidden">
-                            {localCompanyLogo ? (
-                              <img src={localCompanyLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                            ) : (
-                              <Building2 className="w-6 h-6 text-muted-foreground opacity-20" />
-                            )}
-                          </div>
-                          <div className="flex-1 space-y-2">
-                            <div className="flex gap-2">
-                              <label className="flex-1 cursor-pointer bg-foreground/5 border border-border hover:bg-foreground/10 transition-all p-2 text-center">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Upload Logo</span>
-                                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-                              </label>
-                              {localCompanyLogo && (
-                                <button 
-                                  onClick={() => setLocalCompanyLogo('')}
-                                  className="p-2 border border-border text-rose-500 hover:bg-rose-500/10 transition-all"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                      <div className="space-y-4 p-4 bg-foreground/5 border border-border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Company Logo</label>
+                          {localCompanyLogo && (
+                            <button 
+                              onClick={() => setLocalCompanyLogo('')}
+                              className="text-[9px] text-rose-500 uppercase font-bold hover:underline"
+                            >
+                              Remove Logo
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="relative group">
+                            <div className="w-24 h-24 border-2 border-dashed border-border rounded-xl flex items-center justify-center bg-background overflow-hidden transition-all group-hover:border-primary">
+                              {localCompanyLogo ? (
+                                <img src={localCompanyLogo} alt="Logo" className="w-full h-full object-contain p-2" referrerPolicy="no-referrer" />
+                              ) : (
+                                <div className="flex flex-col items-center gap-2">
+                                  <Building2 className="w-8 h-8 text-muted-foreground opacity-20" />
+                                  <span className="text-[8px] text-gray-400 uppercase font-bold">No Logo</span>
+                                </div>
                               )}
                             </div>
-                            <p className="text-[9px] text-gray-500 uppercase">Recommended: Square image, max 1MB. This will be used in the sidebar and top bar.</p>
+                            <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-xl">
+                              <Upload className="w-6 h-6 text-white" />
+                              <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                            </label>
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <h4 className="text-xs font-bold uppercase tracking-widest">Upload Brand Identity</h4>
+                            <p className="text-[10px] text-gray-500 leading-relaxed">
+                              Your logo will be displayed in the sidebar, reports, and mobile navigation. 
+                              <br />
+                              <span className="text-primary font-bold">Recommended:</span> Square PNG/SVG, max 1MB.
+                            </p>
+                            <button 
+                              onClick={() => document.getElementById('logo-upload')?.click()}
+                              className="px-4 py-2 bg-foreground/5 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/10 transition-all"
+                            >
+                              Select File
+                            </button>
+                            <input id="logo-upload" type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                           </div>
                         </div>
                       </div>

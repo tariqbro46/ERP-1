@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { Building2, Plus, Check, Loader2, ArrowRight, Trash2, X } from 'lucide-react';
+import { Building2, Plus, Check, Loader2, ArrowRight, Trash2, X, Upload } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export function CompanyManagement() {
@@ -17,14 +17,16 @@ export function CompanyManagement() {
     name: '',
     address: '',
     phone: '',
-    email: ''
+    email: '',
+    logo_url: ''
   });
 
   const [editForm, setEditForm] = useState({
     name: '',
     address: '',
     phone: '',
-    email: ''
+    email: '',
+    logo_url: ''
   });
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export function CompanyManagement() {
     try {
       await erpService.createCompany(user.uid, newCompany);
       showNotification('New company created and switched successfully!');
-      setNewCompany({ name: '', address: '', phone: '', email: '' });
+      setNewCompany({ name: '', address: '', phone: '', email: '', logo_url: '' });
       await fetchCompanies();
     } catch (err) {
       console.error('Error creating company:', err);
@@ -101,8 +103,29 @@ export function CompanyManagement() {
       name: company.name || '',
       address: company.address || '',
       phone: company.phone || '',
-      email: company.email || ''
+      email: company.email || '',
+      logo_url: company.logo_url || ''
     });
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>, isEdit: boolean) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 500 * 1024) { // 500KB limit for company management
+        showNotification('Logo size should be less than 500KB', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        if (isEdit) {
+          setEditForm(prev => ({ ...prev, logo_url: base64 }));
+        } else {
+          setNewCompany(prev => ({ ...prev, logo_url: base64 }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleDeleteCompany = async (companyId: string) => {
@@ -179,6 +202,22 @@ export function CompanyManagement() {
                   />
                 </div>
               </div>
+              <div className="space-y-1">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Company Logo</label>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 border border-dashed border-border flex items-center justify-center bg-background overflow-hidden">
+                    {newCompany.logo_url ? (
+                      <img src={newCompany.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                    ) : (
+                      <Building2 className="w-5 h-5 text-gray-400 opacity-20" />
+                    )}
+                  </div>
+                  <label className="flex-1 cursor-pointer bg-foreground/5 border border-border hover:bg-foreground/10 transition-all p-2 text-center">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-foreground">Upload Logo</span>
+                    <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, false)} className="hidden" />
+                  </label>
+                </div>
+              </div>
               <button
                 type="submit"
                 disabled={creating}
@@ -212,10 +251,14 @@ export function CompanyManagement() {
                   >
                     <div className="flex items-center gap-4">
                       <div className={cn(
-                        "w-10 h-10 flex items-center justify-center rounded-full border",
+                        "w-10 h-10 flex items-center justify-center rounded-full border overflow-hidden",
                         user?.companyId === company.id ? "bg-foreground text-background border-foreground" : "bg-background text-gray-500 border-border"
                       )}>
-                        <Building2 className="w-5 h-5" />
+                        {company.logo_url ? (
+                          <img src={company.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                        ) : (
+                          <Building2 className="w-5 h-5" />
+                        )}
                       </div>
                       <div>
                         <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">{company.name}</h3>
@@ -319,6 +362,22 @@ export function CompanyManagement() {
                               onChange={e => setEditForm({ ...editForm, email: e.target.value })}
                               className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
                             />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Company Logo</label>
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 border border-dashed border-border flex items-center justify-center bg-background overflow-hidden">
+                                {editForm.logo_url ? (
+                                  <img src={editForm.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                                ) : (
+                                  <Building2 className="w-5 h-5 text-gray-400 opacity-20" />
+                                )}
+                              </div>
+                              <label className="flex-1 cursor-pointer bg-foreground/5 border border-border hover:bg-foreground/10 transition-all p-2 text-center">
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-foreground">Change Logo</span>
+                                <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, true)} className="hidden" />
+                              </label>
+                            </div>
                           </div>
                         </div>
                         <div className="flex gap-3 pt-4">
