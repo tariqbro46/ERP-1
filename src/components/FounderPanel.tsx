@@ -28,6 +28,7 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
+  Building2,
   Clock,
   Trash2,
   Mail,
@@ -105,11 +106,12 @@ export default function FounderPanel() {
     { id: 'Settings', label: 'Settings', icon: Settings }
   ];
 
-  const { appVersion, updateSettings, updateSystemSettings, uiStyle, statusOnlineText, statusOfflineText, statusErrorText } = useSettings();
+  const { appVersion, updateSettings, updateSystemSettings, uiStyle, statusOnlineText, statusOfflineText, statusErrorText, systemLogo } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion);
   const [localStatusOnline, setLocalStatusOnline] = useState(statusOnlineText);
   const [localStatusOffline, setLocalStatusOffline] = useState(statusOfflineText);
   const [localStatusError, setLocalStatusError] = useState(statusErrorText);
+  const [localSystemLogo, setLocalSystemLogo] = useState(systemLogo || '');
 
   useEffect(() => {
     fetchData();
@@ -130,6 +132,10 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalStatusError(statusErrorText);
   }, [statusErrorText]);
+
+  useEffect(() => {
+    setLocalSystemLogo(systemLogo || '');
+  }, [systemLogo]);
 
   const safeFormat = (date: any, formatStr: string) => {
     try {
@@ -272,6 +278,21 @@ export default function FounderPanel() {
       console.error('Error deleting company:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSystemLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) {
+        showNotification('Logo size should be less than 1MB', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLocalSystemLogo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -1044,6 +1065,36 @@ export default function FounderPanel() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">System Logo (Global Default)</label>
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-muted/30 overflow-hidden rounded-lg">
+                    {localSystemLogo ? (
+                      <img src={localSystemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                    ) : (
+                      <Building2 className="w-6 h-6 text-muted-foreground opacity-20" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex gap-2">
+                      <label className="flex-1 cursor-pointer bg-foreground/5 border border-border hover:bg-foreground/10 transition-all p-2 text-center rounded-lg">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Upload System Logo</span>
+                        <input type="file" accept="image/*" onChange={handleSystemLogoUpload} className="hidden" />
+                      </label>
+                      {localSystemLogo && (
+                        <button 
+                          onClick={() => setLocalSystemLogo('')}
+                          className="p-2 border border-border text-rose-500 hover:bg-rose-500/10 transition-all rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[9px] text-muted-foreground uppercase">This logo will be used as a default for all companies if they don't have their own logo.</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-4">
                 <button
                   onClick={async () => {
@@ -1051,7 +1102,8 @@ export default function FounderPanel() {
                       statusOnlineText: localStatusOnline,
                       statusOfflineText: localStatusOffline,
                       statusErrorText: localStatusError,
-                      appVersion: localAppVersion
+                      appVersion: localAppVersion,
+                      systemLogo: localSystemLogo
                     });
                     showNotification('System configuration updated successfully');
                   }}

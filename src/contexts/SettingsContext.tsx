@@ -31,6 +31,8 @@ interface WhatsAppTemplates {
 
 interface SettingsContextType {
   companyName: string;
+  companyLogo?: string;
+  systemLogo?: string;
   companyAddress: string;
   slogan: string;
   financialYearStart: string;
@@ -83,6 +85,8 @@ interface SettingsContextType {
 
 const defaultSettings: SettingsContextType = {
   companyName: 'TallyFlow ERP',
+  companyLogo: '',
+  systemLogo: '',
   companyAddress: 'Dhaka, Bangladesh',
   slogan: 'Enterprise ERP Solution',
   financialYearStart: '2024-04-01',
@@ -171,7 +175,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           statusOnlineText: data.statusOnlineText || prev.statusOnlineText,
           statusOfflineText: data.statusOfflineText || prev.statusOfflineText,
           statusErrorText: data.statusErrorText || prev.statusErrorText,
-          appVersion: data.appVersion || prev.appVersion
+          appVersion: data.appVersion || prev.appVersion,
+          systemLogo: data.systemLogo || prev.systemLogo
         }));
       }
     });

@@ -13,6 +13,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const navigate = useNavigate();
   const { 
     companyName, 
+    companyLogo,
     companyAddress,
     slogan, 
     printHeader,
@@ -65,6 +66,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   
   // Local state for form fields
   const [localCompanyName, setLocalCompanyName] = useState(companyName);
+  const [localCompanyLogo, setLocalCompanyLogo] = useState(companyLogo || '');
   const [localCompanyAddress, setLocalCompanyAddress] = useState(companyAddress);
   const [localSlogan, setLocalSlogan] = useState(slogan);
   const [localMenuBarStyle, setLocalMenuBarStyle] = useState(menuBarStyle);
@@ -107,6 +109,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   // Sync local state when settings change (e.g. after registration or initial load)
   React.useEffect(() => {
     setLocalCompanyName(companyName);
+    setLocalCompanyLogo(companyLogo || '');
     setLocalCompanyAddress(companyAddress);
     setLocalSlogan(slogan);
     setLocalPrintHeader(printHeader);
@@ -158,6 +161,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const handleSaveGeneral = () => {
     updateSettings({ 
       companyName: localCompanyName, 
+      companyLogo: localCompanyLogo,
       companyAddress: localCompanyAddress,
       slogan: localSlogan,
       printPhone: localPrintPhone,
@@ -177,6 +181,21 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       timezone: localTimezone
     });
     showNotification(notifications.settingsUpdated);
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) { // 1MB limit for Base64
+        showNotification('Logo size should be less than 1MB', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLocalCompanyLogo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSavePrint = () => {
@@ -426,17 +445,49 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Company Name</label>
-                      <input 
-                        type="text" 
-                        value={localCompanyName || ''} 
-                        onChange={(e) => setLocalCompanyName(e.target.value)}
-                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
-                      />
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-gray-500 uppercase">Company Name</label>
+                        <input 
+                          type="text" 
+                          value={localCompanyName || ''} 
+                          onChange={(e) => setLocalCompanyName(e.target.value)}
+                          className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-gray-500 uppercase">Company Logo</label>
+                        <div className="flex items-start gap-4">
+                          <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-muted/30 overflow-hidden">
+                            {localCompanyLogo ? (
+                              <img src={localCompanyLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                            ) : (
+                              <Building2 className="w-6 h-6 text-muted-foreground opacity-20" />
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <div className="flex gap-2">
+                              <label className="flex-1 cursor-pointer bg-foreground/5 border border-border hover:bg-foreground/10 transition-all p-2 text-center">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Upload Logo</span>
+                                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                              </label>
+                              {localCompanyLogo && (
+                                <button 
+                                  onClick={() => setLocalCompanyLogo('')}
+                                  className="p-2 border border-border text-rose-500 hover:bg-rose-500/10 transition-all"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-[9px] text-gray-500 uppercase">Recommended: Square image, max 1MB. This will be used in the sidebar and top bar.</p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Company Slogan</label>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-gray-500 uppercase">Company Slogan</label>
                       <input 
                         type="text" 
                         value={localSlogan || ''} 
@@ -493,6 +544,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                   </div>
                 </div>
               </div>
+            </div>
             )}
 
             {activeTab === 'ui' && (
@@ -680,8 +732,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Regional Settings</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Regional Settings</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] text-gray-500 uppercase">Base Currency Symbol</label>
                       <select 
@@ -1043,6 +1095,28 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'shortcuts' && (
+              <div className="space-y-6">
+                <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Keyboard Shortcuts</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {shortcuts.map((s, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                      <span className="text-xs text-gray-400 uppercase tracking-widest">{s.action}</span>
+                      <kbd className="px-2 py-1 bg-background border border-border rounded text-[10px] font-bold text-foreground min-w-[60px] text-center">
+                        {s.key}
+                      </kbd>
+                    </div>
+                  ))}
+                </div>
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 flex gap-4">
+                  <Keyboard className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  <p className="text-[10px] text-blue-500 uppercase tracking-widest leading-relaxed">
+                    Shortcuts are global and can be used from any screen to quickly navigate or perform actions.
+                  </p>
                 </div>
               </div>
             )}

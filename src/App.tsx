@@ -130,6 +130,8 @@ function Layout({ children }: { children: React.ReactNode }) {
   const { user, company, logout, isAdmin, isSuperAdmin } = useAuth();
   const { 
     companyName, 
+    companyLogo,
+    systemLogo,
     slogan, 
     features = [], 
     menuBarStyle = 'classic', 
@@ -243,8 +245,12 @@ function Layout({ children }: { children: React.ReactNode }) {
         "p-6 border-b border-border flex items-center justify-between"
       )}>
         <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-8 h-8 bg-foreground rounded-sm flex-shrink-0 flex items-center justify-center">
-            <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
+          <div className="w-8 h-8 bg-foreground rounded-sm flex-shrink-0 flex items-center justify-center overflow-hidden">
+            {companyLogo || systemLogo ? (
+              <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
+            )}
           </div>
           <div className="transition-opacity duration-300">
             <h1 className="text-sm font-bold text-foreground tracking-tighter truncate max-w-[120px]">{companyName}</h1>
@@ -364,8 +370,12 @@ function Layout({ children }: { children: React.ReactNode }) {
     <div className="bg-background/80 backdrop-blur-md border-b border-border h-10 px-4 flex items-center justify-between hidden lg:flex fixed top-0 left-0 right-0 z-[60]">
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2 mr-4">
-          <div className="w-5 h-5 bg-foreground rounded-full flex items-center justify-center">
-            <span className="text-background font-bold text-[10px]">{companyName.charAt(0)}</span>
+          <div className="w-5 h-5 bg-foreground rounded-full flex items-center justify-center overflow-hidden">
+            {companyLogo || systemLogo ? (
+              <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="text-background font-bold text-[10px]">{companyName.charAt(0)}</span>
+            )}
           </div>
           <span className="text-xs font-bold">{companyName}</span>
         </div>
@@ -734,13 +744,17 @@ function Layout({ children }: { children: React.ReactNode }) {
               {menuBarStyle !== 'classic' && (
                 <div className="flex items-center gap-3 hidden lg:flex">
                   <div className={cn(
-                    "w-8 h-8 rounded-sm flex items-center justify-center",
+                    "w-8 h-8 rounded-sm flex items-center justify-center overflow-hidden",
                     uiStyle === 'UI/UX 2' ? "bg-white" : "bg-foreground"
                   )}>
-                    <span className={cn(
-                      "font-bold text-lg",
-                      uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-background"
-                    )}>{companyName.charAt(0)}</span>
+                    {companyLogo || systemLogo ? (
+                      <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className={cn(
+                        "font-bold text-lg",
+                        uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-background"
+                      )}>{companyName.charAt(0)}</span>
+                    )}
                   </div>
                   <h1 className={cn(
                     "text-sm font-bold tracking-tighter truncate",
@@ -765,13 +779,17 @@ function Layout({ children }: { children: React.ReactNode }) {
                 <div className="flex items-center gap-3 lg:hidden">
                   <div className="flex items-center gap-2">
                     <div className={cn(
-                      "w-6 h-6 rounded-sm flex items-center justify-center",
+                      "w-6 h-6 rounded-sm flex items-center justify-center overflow-hidden",
                       uiStyle === 'UI/UX 2' ? "bg-white" : "bg-foreground"
                     )}>
-                      <span className={cn(
-                        "font-bold text-xs",
-                        uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-background"
-                      )}>{companyName.charAt(0)}</span>
+                      {companyLogo || systemLogo ? (
+                        <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className={cn(
+                          "font-bold text-xs",
+                          uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-background"
+                        )}>{companyName.charAt(0)}</span>
+                      )}
                     </div>
                     <h1 className={cn(
                       "text-[10px] font-bold tracking-tighter truncate max-w-[80px]",
