@@ -7,10 +7,11 @@ import {
 } from 'firebase/auth';
 import { erpService } from '../services/erpService';
 import { doc, setDoc, collection, serverTimestamp } from 'firebase/firestore';
-import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, UserPlus, Loader2, KeyRound, Building2, AlertCircle, Users, ChevronLeft } from 'lucide-react';
+import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -18,14 +19,6 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
-  const [step, setStep] = useState<'email' | 'password'>('email');
-
-  const handleNext = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email.trim()) {
-      setStep('password');
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,77 +59,70 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
 
   if (showReset) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white sm:bg-gray-50 p-4">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-[450px] bg-white sm:border border-gray-200 rounded-lg p-6 sm:p-10 sm:shadow-sm"
-        >
-          <div className="flex flex-col items-center mb-8">
-            <div className="flex items-center gap-1 mb-3">
-              <span className="text-2xl font-medium tracking-tight text-[#4285F4]">G</span>
-              <span className="text-2xl font-medium tracking-tight text-[#EA4335]">o</span>
-              <span className="text-2xl font-medium tracking-tight text-[#FBBC05]">o</span>
-              <span className="text-2xl font-medium tracking-tight text-[#4285F4]">g</span>
-              <span className="text-2xl font-medium tracking-tight text-[#34A853]">l</span>
-              <span className="text-2xl font-medium tracking-tight text-[#EA4335]">e</span>
-            </div>
-            <h1 className="text-2xl font-normal text-gray-900 mb-2">Account recovery</h1>
-            <p className="text-base text-gray-700 text-center">To help keep your account safe, Google wants to make sure it’s really you</p>
+      <div className="min-h-screen w-full flex bg-background">
+        <div className="hidden lg:block lg:w-[40%] relative overflow-hidden">
+          <img 
+            src="https://picsum.photos/seed/auth-bg/1200/1600" 
+            alt="Auth Background" 
+            className="absolute inset-0 w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
+          <div className="absolute bottom-12 left-12 right-12 text-white">
+            <h2 className="text-4xl font-bold mb-4 tracking-tight">Recover your account.</h2>
+            <p className="text-lg opacity-80">Don't worry, it happens to the best of us.</p>
           </div>
+        </div>
 
-          {resetSent ? (
-            <div className="text-center">
-              <div className="p-4 bg-blue-50 text-blue-700 rounded-lg mb-6 text-sm">
-                A password reset link has been sent to your email address.
-              </div>
-              <button 
-                onClick={() => { setShowReset(false); setResetSent(false); }}
-                className="text-[#1a73e8] font-medium hover:bg-blue-50 px-4 py-2 rounded transition-colors"
-              >
-                Back to sign in
-              </button>
+        <div className="flex-1 flex flex-col p-8 md:p-12 lg:p-20 relative">
+          <button 
+            onClick={() => setShowReset(false)}
+            className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
+          >
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            Back
+          </button>
+
+          <div className="max-w-md w-full mx-auto my-auto">
+            <div className="mb-10">
+              <h1 className="text-3xl font-bold mb-2">Forgot Password?</h1>
+              <p className="text-muted-foreground">Enter your email and we'll send you a link to reset your password.</p>
             </div>
-          ) : (
-            <form onSubmit={handleReset} className="space-y-6">
-              <div className="relative">
-                <input
-                  type="email"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                  placeholder="Email"
-                  id="reset-email"
-                  required
-                />
-                <label 
-                  htmlFor="reset-email"
-                  className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]"
+
+            {resetSent ? (
+              <div className="p-6 bg-primary/5 border border-primary/20 rounded-2xl text-center">
+                <p className="text-sm font-medium mb-6">A password reset link has been sent to your email address.</p>
+                <button 
+                  onClick={() => { setShowReset(false); setResetSent(false); }}
+                  className="w-full py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity"
                 >
-                  Email
-                </label>
+                  Back to Sign In
+                </button>
               </div>
-              {error && <p className="text-sm text-[#d93025] flex items-center gap-2"><AlertCircle className="w-4 h-4" /> {error}</p>}
-              
-              <div className="flex justify-end pt-4">
+            ) : (
+              <form onSubmit={handleReset} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                    placeholder="name@company.com"
+                    required
+                  />
+                </div>
+                {error && <p className="text-sm text-rose-500 flex items-center gap-2 font-medium"><AlertCircle className="w-4 h-4" /> {error}</p>}
+                
                 <button
                   type="submit"
                   disabled={loading}
-                  className="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-6 py-2 rounded font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                  className="w-full py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Next"}
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Reset Link"}
                 </button>
-              </div>
-            </form>
-          )}
-        </motion.div>
-        
-        <div className="mt-6 flex gap-6 text-xs text-gray-500">
-          <button className="hover:underline">English (United States)</button>
-          <div className="flex gap-4">
-            <button className="hover:underline">Help</button>
-            <button className="hover:underline">Privacy</button>
-            <button className="hover:underline">Terms</button>
+              </form>
+            )}
           </div>
         </div>
       </div>
@@ -144,147 +130,107 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white sm:bg-gray-50 p-4">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-[450px] bg-white sm:border border-gray-200 rounded-lg p-6 sm:p-10 sm:shadow-sm"
-      >
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-1 mb-3">
-            <span className="text-2xl font-medium tracking-tight text-[#4285F4]">G</span>
-            <span className="text-2xl font-medium tracking-tight text-[#EA4335]">o</span>
-            <span className="text-2xl font-medium tracking-tight text-[#FBBC05]">o</span>
-            <span className="text-2xl font-medium tracking-tight text-[#4285F4]">g</span>
-            <span className="text-2xl font-medium tracking-tight text-[#34A853]">l</span>
-            <span className="text-2xl font-medium tracking-tight text-[#EA4335]">e</span>
-          </div>
-          <h1 className="text-2xl font-normal text-gray-900 mb-2">Sign in</h1>
-          <p className="text-base text-gray-700">Use your Google Account</p>
+    <div className="min-h-screen w-full flex bg-background">
+      {/* Left Side - Image (Dribbble Style) */}
+      <div className="hidden lg:block lg:w-[40%] relative overflow-hidden">
+        <img 
+          src="https://picsum.photos/seed/dribbble-login/1200/1600" 
+          alt="Auth Background" 
+          className="absolute inset-0 w-full h-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-black/10" />
+        <div className="absolute bottom-12 left-12 right-12 text-white">
+          <h2 className="text-4xl font-bold mb-4 tracking-tight">Streamline your business operations.</h2>
+          <p className="text-lg opacity-80 font-medium">The most powerful ERP solution for modern enterprises.</p>
         </div>
+      </div>
 
-        {step === 'email' ? (
-          <form onSubmit={handleNext} className="space-y-6">
-            <div className="relative">
+      {/* Right Side - Form */}
+      <div className="flex-1 flex flex-col p-8 md:p-12 lg:p-20 relative">
+        <button 
+          onClick={() => navigate('/')}
+          className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          Back
+        </button>
+
+        <div className="max-w-md w-full mx-auto my-auto">
+          <div className="mb-10">
+            <h1 className="text-3xl font-bold mb-2">Sign in to ERP System</h1>
+            <p className="text-muted-foreground">Enter your details below to access your account.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                placeholder="Email or phone"
-                id="email"
+                className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                placeholder="name@company.com"
                 required
               />
-              <label 
-                htmlFor="email"
-                className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]"
-              >
-                Email or phone
-              </label>
-            </div>
-            
-            <button type="button" className="text-[#1a73e8] text-sm font-medium hover:underline">Forgot email?</button>
-            
-            <div className="text-sm text-gray-600 leading-relaxed">
-              Not your computer? Use Guest mode to sign in privately.{' '}
-              <button type="button" className="text-[#1a73e8] font-medium hover:underline">Learn more</button>
             </div>
 
-            <div className="flex justify-between items-center pt-4">
-              <button 
-                type="button"
-                onClick={onToggle}
-                className="text-[#1a73e8] font-medium hover:bg-blue-50 px-4 py-2 rounded transition-colors"
-              >
-                Create account
-              </button>
-              <button
-                type="submit"
-                className="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-6 py-2 rounded font-medium transition-colors"
-              >
-                Next
-              </button>
-            </div>
-          </form>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="flex items-center gap-2 p-1.5 border border-gray-200 rounded-full w-fit mb-6">
-              <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center">
-                <Users className="w-3 h-3 text-gray-500" />
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</label>
+                <button 
+                  type="button"
+                  onClick={() => setShowReset(true)}
+                  className="text-xs font-bold text-primary hover:underline"
+                >
+                  Forgot?
+                </button>
               </div>
-              <span className="text-sm text-gray-700 pr-2">{email}</span>
-              <button 
-                type="button" 
-                onClick={() => setStep('email')}
-                className="p-1 hover:bg-gray-100 rounded-full"
-              >
-                <ChevronLeft className="w-4 h-4 text-gray-500" />
-              </button>
-            </div>
-
-            <div className="relative">
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                placeholder="Enter your password"
-                id="password"
-                autoFocus
+                className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                placeholder="••••••••"
                 required
               />
-              <label 
-                htmlFor="password"
-                className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]"
-              >
-                Enter your password
-              </label>
             </div>
 
-            {error && <p className="text-sm text-[#d93025] flex items-center gap-2"><AlertCircle className="w-4 h-4" /> {error}</p>}
+            {error && <p className="text-sm text-rose-500 flex items-center gap-2 font-medium"><AlertCircle className="w-4 h-4" /> {error}</p>}
 
-            <div className="flex items-center gap-2">
-              <input type="checkbox" id="show-password" title="Show password" />
-              <label htmlFor="show-password" className="text-sm text-gray-700">Show password</label>
-            </div>
-
-            <div className="flex justify-between items-center pt-4">
-              <button 
-                type="button"
-                onClick={() => setShowReset(true)}
-                className="text-[#1a73e8] font-medium hover:bg-blue-50 px-4 py-2 rounded transition-colors"
-              >
-                Forgot password?
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-6 py-2 rounded font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Next"}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign In"}
+            </button>
           </form>
-        )}
-      </motion.div>
 
-      <div className="mt-6 flex gap-6 text-xs text-gray-500">
-        <button className="hover:underline">English (United States)</button>
-        <div className="flex gap-4">
-          <button className="hover:underline">Help</button>
-          <button className="hover:underline">Privacy</button>
-          <button className="hover:underline">Terms</button>
+          <div className="mt-8 pt-8 border-t border-border text-center">
+            <p className="text-sm text-muted-foreground">
+              Don't have an account?{' '}
+              <button 
+                onClick={onToggle}
+                className="font-bold text-foreground hover:underline"
+              >
+                Create one
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     </div>
   );
-};export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
+};
+
+export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [displayName, setDisplayName] = useState('');
   
-  // New Fields
   const [slogan, setSlogan] = useState('');
   const [address, setAddress] = useState('');
   const [financialYearStart, setFinancialYearStart] = useState('2024-04-01');
@@ -311,14 +257,12 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
     setLoading(true);
 
     try {
-      // 1. Create User
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Create Company
       const companyRef = doc(collection(db, 'companies'));
       const trialExpiry = new Date();
-      trialExpiry.setDate(trialExpiry.getDate() + 14); // 14 days trial
+      trialExpiry.setDate(trialExpiry.getDate() + 14);
 
       await setDoc(companyRef, {
         id: companyRef.id,
@@ -337,7 +281,6 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
         isAccessEnabled: true
       });
 
-      // 3. Create User Profile
       const isFounder = email === 'sapientman46@gmail.com';
       await setDoc(doc(db, 'users', user.uid), {
         uid: user.uid,
@@ -348,7 +291,6 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
         createdAt: serverTimestamp()
       });
 
-      // 4. Create Settings
       await setDoc(doc(db, 'settings', companyRef.id), {
         companyId: companyRef.id,
         companyName,
@@ -370,7 +312,6 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
         updatedAt: serverTimestamp()
       });
 
-      // 5. Create Default Ledgers
       const groups = await erpService.seedDefaultGroups(companyRef.id);
       const getGroupId = (name: string) => groups.find(g => g.name === name)?.id;
 
@@ -404,240 +345,195 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white sm:bg-gray-50 p-4">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-[600px] bg-white sm:border border-gray-200 rounded-lg p-6 sm:p-10 sm:shadow-sm"
-      >
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-1 mb-3">
-            <span className="text-2xl font-medium tracking-tight text-[#4285F4]">G</span>
-            <span className="text-2xl font-medium tracking-tight text-[#EA4335]">o</span>
-            <span className="text-2xl font-medium tracking-tight text-[#FBBC05]">o</span>
-            <span className="text-2xl font-medium tracking-tight text-[#4285F4]">g</span>
-            <span className="text-2xl font-medium tracking-tight text-[#34A853]">l</span>
-            <span className="text-2xl font-medium tracking-tight text-[#EA4335]">e</span>
-          </div>
-          <h1 className="text-2xl font-normal text-gray-900 mb-2">Create your Account</h1>
-          <p className="text-base text-gray-700">Step {step} of 3</p>
+    <div className="min-h-screen w-full flex bg-background">
+      {/* Left Side - Image */}
+      <div className="hidden lg:block lg:w-[40%] relative overflow-hidden">
+        <img 
+          src="https://picsum.photos/seed/dribbble-reg/1200/1600" 
+          alt="Auth Background" 
+          className="absolute inset-0 w-full h-full object-cover"
+          referrerPolicy="no-referrer"
+        />
+        <div className="absolute inset-0 bg-black/10" />
+        <div className="absolute bottom-12 left-12 right-12 text-white">
+          <h2 className="text-4xl font-bold mb-4 tracking-tight">Join the future of ERP.</h2>
+          <p className="text-lg opacity-80 font-medium">Create your account and start managing your business today.</p>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {step === 1 && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="relative">
+      {/* Right Side - Form */}
+      <div className="flex-1 flex flex-col p-8 md:p-12 lg:p-20 relative overflow-y-auto">
+        <button 
+          onClick={() => navigate('/')}
+          className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          Back
+        </button>
+
+        <div className="max-w-md w-full mx-auto my-auto py-12">
+          <div className="mb-10">
+            <h1 className="text-3xl font-bold mb-2">Create your Account</h1>
+            <p className="text-muted-foreground">Step {step} of 3: {step === 1 ? 'Personal Details' : step === 2 ? 'Company Details' : 'Final Configuration'}</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {step === 1 && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Full Name</label>
                   <input
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                    placeholder="First name"
-                    id="first-name"
+                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                    placeholder="John Doe"
                     required
                   />
-                  <label htmlFor="first-name" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">First name</label>
                 </div>
-                <div className="relative">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
                   <input
-                    type="text"
-                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                    placeholder="Last name (optional)"
-                    id="last-name"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                    placeholder="name@company.com"
+                    required
                   />
-                  <label htmlFor="last-name" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Last name (optional)</label>
                 </div>
-              </div>
-
-              <div className="relative">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                  placeholder="Username"
-                  id="reg-email"
-                  required
-                />
-                <label htmlFor="reg-email" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Username</label>
-                <span className="absolute right-4 top-3.5 text-sm text-gray-500">@gmail.com</span>
-              </div>
-              <p className="text-xs text-gray-600">You can use letters, numbers & periods</p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="relative">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                    placeholder="Password"
-                    id="reg-password"
+                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                    placeholder="••••••••"
                     required
                   />
-                  <label htmlFor="reg-password" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Password</label>
-                </div>
-                <div className="relative">
-                  <input
-                    type="password"
-                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                    placeholder="Confirm"
-                    id="confirm-password"
-                    required
-                  />
-                  <label htmlFor="confirm-password" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Confirm</label>
+                  <p className="text-[10px] text-muted-foreground">Use 8 or more characters with a mix of letters, numbers & symbols.</p>
                 </div>
               </div>
-              <p className="text-xs text-gray-600">Use 8 or more characters with a mix of letters, numbers & symbols</p>
-            </div>
-          )}
+            )}
 
-          {step === 2 && (
-            <div className="space-y-6">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                  placeholder="Company Name"
-                  id="company-name"
-                  required
-                />
-                <label htmlFor="company-name" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Company Name</label>
-              </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={slogan}
-                  onChange={(e) => setSlogan(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                  placeholder="Company Slogan"
-                  id="slogan"
-                />
-                <label htmlFor="slogan" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Company Slogan</label>
-              </div>
-              <div className="relative">
-                <textarea
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent resize-none"
-                  placeholder="Company Address"
-                  id="address"
-                  rows={2}
-                  required
-                />
-                <label htmlFor="address" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Company Address</label>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="relative">
-                  <input
-                    type="date"
-                    value={financialYearStart}
-                    onChange={(e) => setFinancialYearStart(e.target.value)}
-                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer"
-                    id="fy-start"
-                    required
-                  />
-                  <label htmlFor="fy-start" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8]">Financial Year Start</label>
-                </div>
-                <div className="relative">
+            {step === 2 && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Company Name</label>
                   <input
                     type="text"
-                    value={currencySymbol}
-                    onChange={(e) => setCurrencySymbol(e.target.value)}
-                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                    placeholder="Currency Symbol"
-                    id="currency"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                    placeholder="Acme Corp"
                     required
                   />
-                  <label htmlFor="currency" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Currency Symbol</label>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-6">
-              <div className="relative">
-                <select
-                  value={timezone}
-                  onChange={(e) => setTimezone(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all"
-                  id="timezone"
-                >
-                  <option value="Asia/Dhaka">Asia/Dhaka (GMT+6)</option>
-                  <option value="UTC">UTC</option>
-                  <option value="Asia/Kolkata">Asia/Kolkata (GMT+5:30)</option>
-                </select>
-                <label htmlFor="timezone" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8]">Timezone</label>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="relative">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Company Slogan</label>
                   <input
                     type="text"
-                    value={contactPhone}
-                    onChange={(e) => setContactPhone(e.target.value)}
-                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                    placeholder="Contact Phone"
-                    id="phone"
+                    value={slogan}
+                    onChange={(e) => setSlogan(e.target.value)}
+                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                    placeholder="Innovating the future"
                   />
-                  <label htmlFor="phone" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Contact Phone</label>
                 </div>
-                <div className="relative">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Address</label>
+                  <textarea
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all resize-none"
+                    placeholder="123 Business St, City"
+                    rows={2}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">FY Start</label>
+                    <input
+                      type="date"
+                      value={financialYearStart}
+                      onChange={(e) => setFinancialYearStart(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Currency</label>
+                    <input
+                      type="text"
+                      value={currencySymbol}
+                      onChange={(e) => setCurrencySymbol(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                      placeholder="৳"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Timezone</label>
+                  <select
+                    value={timezone}
+                    onChange={(e) => setTimezone(e.target.value)}
+                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                  >
+                    <option value="Asia/Dhaka">Asia/Dhaka (GMT+6)</option>
+                    <option value="UTC">UTC</option>
+                    <option value="Asia/Kolkata">Asia/Kolkata (GMT+5:30)</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Phone</label>
+                    <input
+                      type="text"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                      placeholder="+880..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Website</label>
+                    <input
+                      type="text"
+                      value={websiteUrl}
+                      onChange={(e) => setWebsiteUrl(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                      placeholder="https://..."
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Print Header</label>
                   <input
                     type="text"
-                    value={websiteUrl}
-                    onChange={(e) => setWebsiteUrl(e.target.value)}
-                    className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                    placeholder="Website URL"
-                    id="website"
+                    value={printHeader}
+                    onChange={(e) => setPrintHeader(e.target.value)}
+                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                    placeholder="Company Name Ltd."
                   />
-                  <label htmlFor="website" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Website URL</label>
                 </div>
               </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={printHeader}
-                  onChange={(e) => setPrintHeader(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                  placeholder="Print Header"
-                  id="header"
-                />
-                <label htmlFor="header" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Print Header</label>
-              </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={printFooter}
-                  onChange={(e) => setPrintFooter(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded border border-gray-300 focus:border-2 focus:border-[#1a73e8] outline-none transition-all peer placeholder-transparent"
-                  placeholder="Print Footer"
-                  id="footer"
-                />
-                <label htmlFor="footer" className="absolute left-4 -top-2.5 bg-white px-1 text-xs text-[#1a73e8] transition-all peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-500 peer-placeholder-shown:top-3.5 peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-[#1a73e8]">Print Footer</label>
-              </div>
-            </div>
-          )}
+            )}
 
-          {error && <p className="text-sm text-[#d93025] flex items-center gap-2"><AlertCircle className="w-4 h-4" /> {error}</p>}
+            {error && <p className="text-sm text-rose-500 flex items-center gap-2 font-medium"><AlertCircle className="w-4 h-4" /> {error}</p>}
 
-          <div className="flex justify-between items-center pt-4">
-            <button 
-              type="button"
-              onClick={onToggle}
-              className="text-[#1a73e8] font-medium hover:bg-blue-50 px-4 py-2 rounded transition-colors"
-            >
-              Sign in instead
-            </button>
-            <div className="flex gap-2">
+            <div className="flex gap-4 pt-4">
               {step > 1 && (
                 <button
                   type="button"
                   onClick={() => setStep(step - 1)}
-                  className="text-[#1a73e8] font-medium hover:bg-blue-50 px-4 py-2 rounded transition-colors"
+                  className="flex-1 py-4 border border-border rounded-xl font-bold hover:bg-foreground/5 transition-colors"
                 >
                   Back
                 </button>
@@ -645,21 +541,24 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-6 py-2 rounded font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="flex-[2] py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (step === 3 ? "Complete" : "Next")}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (step === 3 ? "Complete Registration" : "Next Step")}
               </button>
             </div>
-          </div>
-        </form>
-      </motion.div>
+          </form>
 
-      <div className="mt-6 flex gap-6 text-xs text-gray-500">
-        <button className="hover:underline">English (United States)</button>
-        <div className="flex gap-4">
-          <button className="hover:underline">Help</button>
-          <button className="hover:underline">Privacy</button>
-          <button className="hover:underline">Terms</button>
+          <div className="mt-8 pt-8 border-t border-border text-center">
+            <p className="text-sm text-muted-foreground">
+              Already have an account?{' '}
+              <button 
+                onClick={onToggle}
+                className="font-bold text-foreground hover:underline"
+              >
+                Sign in
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     </div>

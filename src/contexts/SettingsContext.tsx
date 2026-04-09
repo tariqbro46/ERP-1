@@ -190,6 +190,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle
         }));
       }
+    }, (error) => {
+      console.error("System settings snapshot error:", error);
     });
 
     if (!user?.companyId) {

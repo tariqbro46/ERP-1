@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -70,6 +70,11 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login, Register } from './components/Auth';
 import { useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, PAGE_TITLES, DASHBOARD_ITEM } from './constants/navigation';
+
+import { Home } from './pages/landing/Home';
+import { Features } from './pages/landing/Features';
+import { About } from './pages/landing/About';
+import { Contact } from './pages/landing/Contact';
 
 const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => (
   <Link
@@ -1095,10 +1100,19 @@ function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AuthWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="h-screen h-[100dvh] flex items-start md:items-center justify-center bg-gray-50 p-4 overflow-y-auto">
+      <div className="my-auto w-full flex justify-center py-8">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function AppContent() {
   const { user, loading, isSuperAdmin, logout, firebaseUser } = useAuth();
-  const [isRegister, setIsRegister] = React.useState(false);
-
+  
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background">
@@ -1107,7 +1121,54 @@ function AppContent() {
     );
   }
 
-  // Handle case where user is logged into Firebase but has no ERP profile
+  return (
+    <Router>
+      <Routes>
+        {/* Public Landing Pages */}
+        <Route path="/" element={<Home />} />
+        <Route path="/features" element={<Features />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        
+        {/* Auth Pages */}
+        <Route path="/login" element={
+          user ? <Navigate to="/dashboard" /> : (
+            <AuthWrapper>
+              <LoginWrapper />
+            </AuthWrapper>
+          )
+        } />
+        <Route path="/register" element={
+          user ? <Navigate to="/dashboard" /> : (
+            <AuthWrapper>
+              <RegisterWrapper />
+            </AuthWrapper>
+          )
+        } />
+
+        {/* Protected App Routes */}
+        <Route path="/*" element={<ProtectedRoute />} />
+      </Routes>
+    </Router>
+  );
+}
+
+function LoginWrapper() {
+  const navigate = useNavigate();
+  return <Login onToggle={() => navigate('/register')} />;
+}
+
+function RegisterWrapper() {
+  const navigate = useNavigate();
+  return <Register onToggle={() => navigate('/login')} />;
+}
+
+function ProtectedRoute() {
+  const { user, isSuperAdmin, logout, firebaseUser, loading } = useAuth();
+  const navigate = useNavigate();
+
+  if (loading) return null;
+
   if (firebaseUser && !user) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50 p-4">
@@ -1137,49 +1198,35 @@ function AppContent() {
   }
 
   if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  if (!user.companyId && !isSuperAdmin) {
     return (
-      <div className="h-screen h-[100dvh] flex items-start md:items-center justify-center bg-gray-50 p-4 overflow-y-auto">
-        <div className="my-auto w-full flex justify-center py-8">
-          {isRegister ? (
-            <Register onToggle={() => setIsRegister(false)} />
-          ) : (
-            <Login onToggle={() => setIsRegister(true)} />
-          )}
+      <div className="h-screen bg-background flex flex-col">
+        <header className="h-14 border-b border-border bg-background flex items-center justify-between px-6">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
+              <span className="text-background font-bold">E</span>
+            </div>
+            <span className="text-sm font-bold uppercase tracking-tighter">ERP System</span>
+          </div>
+          <button onClick={() => logout()} className="text-[10px] uppercase font-bold tracking-widest text-rose-500 hover:text-rose-600">
+            Logout
+          </button>
+        </header>
+        <div className="flex-1 overflow-y-auto">
+          <CompanyManagement />
         </div>
       </div>
     );
   }
 
-  // Force company setup if not present and not super admin
-  if (!user.companyId && !isSuperAdmin) {
-    return (
-      <Router>
-        <div className="h-screen bg-background flex flex-col">
-          <header className="h-14 border-b border-border bg-background flex items-center justify-between px-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
-                <span className="text-background font-bold">E</span>
-              </div>
-              <span className="text-sm font-bold uppercase tracking-tighter">ERP System</span>
-            </div>
-            <button onClick={() => logout()} className="text-[10px] uppercase font-bold tracking-widest text-rose-500 hover:text-rose-600">
-              Logout
-            </button>
-          </header>
-          <div className="flex-1 overflow-y-auto">
-            <CompanyManagement />
-          </div>
-        </div>
-      </Router>
-    );
-  }
-
   return (
-    <Router>
-      <Layout>
-        <ErrorBoundary>
-          <Routes>
-          <Route path="/" element={<Dashboard />} />
+    <Layout>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/vouchers/new" element={<VoucherEntry />} />
           <Route path="/vouchers/edit/:id" element={<VoucherEntry />} />
           <Route path="/accounts/ledgers/new" element={<LedgerCreation />} />
@@ -1223,7 +1270,6 @@ function AppContent() {
         </Routes>
       </ErrorBoundary>
     </Layout>
-  </Router>
   );
 }
 

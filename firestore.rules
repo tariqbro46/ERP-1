@@ -11,7 +11,7 @@ service cloud.firestore {
     
     function isFounder() {
       return isAuthenticated() && 
-             (request.auth.token.get('email', '') == "sapientman46@gmail.com" || 
+             (request.auth.token.email == "sapientman46@gmail.com" || 
               (userExists() && getUserData().get('role', '') == 'Founder'));
     }
 
@@ -76,7 +76,7 @@ service cloud.firestore {
 
     // System Configuration
     match /system/{document} {
-      allow read: if isAuthenticated();
+      allow read: if true; // Allow public read for UI/UX settings
       allow write: if isFounder();
     }
 
@@ -230,7 +230,7 @@ service cloud.firestore {
         isSuperAdmin() || 
         (resource != null && (
           resource.data.targetType == 'all' ||
-          (resource.data.targetType == 'company' && resource.data.targetId == getUserData().companyId) ||
+          (resource.data.targetType == 'company' && userExists() && resource.data.targetId == getUserData().companyId) ||
           (resource.data.targetType == 'user' && resource.data.targetId == request.auth.uid)
         ))
       );
