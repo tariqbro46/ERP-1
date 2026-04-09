@@ -41,7 +41,7 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-export const DASHBOARD_ITEM: NavItem = { to: '/', icon: LayoutDashboard, label: 'Dashboard', permission: 'Dashboard' };
+export const DASHBOARD_ITEM: NavItem = { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', permission: 'Dashboard' };
 
 export const NAV_ITEMS: NavGroup[] = [
   {

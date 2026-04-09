@@ -257,7 +257,7 @@ export function Dashboard() {
           <div className="p-4 border-b border-gray-100 flex justify-between items-center">
             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Recent Transactions</h3>
             <button 
-              onClick={() => navigate('/vouchers')}
+              onClick={() => navigate('/reports/daybook')}
               className="text-[10px] font-bold text-blue-600 uppercase hover:underline"
             >
               View All
@@ -278,7 +278,7 @@ export function Dashboard() {
                 {recentVouchers.map((v, i) => (
                   <tr key={i} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-gray-600">{v.v_date}</td>
-                    <td className="px-6 py-4 text-blue-600 font-medium hover:underline cursor-pointer" onClick={() => navigate(`/vouchers/${v.id}`)}>
+                    <td className="px-6 py-4 text-blue-600 font-medium hover:underline cursor-pointer" onClick={() => navigate(`/vouchers/edit/${v.id}`)}>
                       {v.v_no}
                     </td>
                     <td className="px-6 py-4 text-gray-600 truncate max-w-[200px]">{v.particulars}</td>

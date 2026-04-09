@@ -743,14 +743,14 @@ function Layout({ children }: { children: React.ReactNode }) {
           <div className="w-[1px] h-6 bg-border mx-2" />
 
           <Link 
-            to="/" 
+            to="/dashboard" 
             className={cn(
               "p-2.5 rounded-xl transition-all hover:bg-foreground/10 group relative",
-              location.pathname === '/' ? "bg-foreground/5" : ""
+              location.pathname === '/dashboard' ? "bg-foreground/5" : ""
             )}
           >
-            <LayoutDashboard className={cn("w-6 h-6", location.pathname === '/' ? "text-primary" : "text-gray-500")} />
-            {location.pathname === '/' && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />}
+            <LayoutDashboard className={cn("w-6 h-6", location.pathname === '/dashboard' ? "text-primary" : "text-gray-500")} />
+            {location.pathname === '/dashboard' && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />}
           </Link>
           
           {NAV_ITEMS.flatMap(g => g.items).filter(item => {
@@ -836,7 +836,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               )}
 
               {/* Mobile Navigation / Menu Toggle */}
-              {location.pathname !== '/' ? (
+              {location.pathname !== '/dashboard' ? (
                 <div className="flex items-center gap-1 lg:hidden">
                   <button 
                     onClick={() => navigate(-1)}
@@ -1054,10 +1054,10 @@ function Layout({ children }: { children: React.ReactNode }) {
         {/* Mobile Bottom Navigation */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border h-16 flex items-center justify-around px-2 z-40">
           <Link 
-            to="/" 
+            to="/dashboard" 
             className={cn(
               "flex flex-col items-center gap-1 px-3 py-1 transition-colors",
-              location.pathname === '/' ? "text-foreground" : "text-gray-500"
+              location.pathname === '/dashboard' ? "text-foreground" : "text-gray-500"
             )}
           >
             <LayoutDashboard className="w-5 h-5" />
