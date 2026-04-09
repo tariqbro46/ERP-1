@@ -59,7 +59,7 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
 
   if (showReset) {
     return (
-      <div className="min-h-screen w-full flex bg-background">
+      <div className="h-screen w-full flex bg-background overflow-hidden">
         <div className="hidden lg:block lg:w-[40%] relative overflow-hidden">
           <img 
             src="https://picsum.photos/seed/auth-bg/1200/1600" 
@@ -74,55 +74,72 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col p-8 md:p-12 lg:p-20 relative">
+        <div className="flex-1 flex flex-col relative h-full">
           <button 
             onClick={() => setShowReset(false)}
-            className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
+            className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group z-10"
           >
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
             Back
           </button>
 
-          <div className="max-w-md w-full mx-auto my-auto">
-            <div className="mb-10">
-              <h1 className="text-3xl font-bold mb-2">Forgot Password?</h1>
-              <p className="text-muted-foreground">Enter your email and we'll send you a link to reset your password.</p>
-            </div>
-
-            {resetSent ? (
-              <div className="p-6 bg-primary/5 border border-primary/20 rounded-2xl text-center">
-                <p className="text-sm font-medium mb-6">A password reset link has been sent to your email address.</p>
-                <button 
-                  onClick={() => { setShowReset(false); setResetSent(false); }}
-                  className="w-full py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity"
-                >
-                  Back to Sign In
-                </button>
+          <div className="flex-1 flex flex-col justify-center px-8 md:px-12 lg:px-20 overflow-y-auto no-scrollbar">
+            <div className="max-w-md w-full mx-auto py-12">
+              <div className="mb-10">
+                <h1 className="text-3xl font-bold mb-2">Forgot Password?</h1>
+                <p className="text-muted-foreground">Enter your email and we'll send you a link to reset your password.</p>
               </div>
-            ) : (
-              <form onSubmit={handleReset} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
-                  <input
-                    type="email"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                    placeholder="name@company.com"
-                    required
-                  />
+
+              {resetSent ? (
+                <div className="p-6 bg-primary/5 border border-primary/20 rounded-2xl text-center">
+                  <p className="text-sm font-medium mb-6">A password reset link has been sent to your email address.</p>
+                  <button 
+                    onClick={() => { setShowReset(false); setResetSent(false); }}
+                    className="w-full py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity"
+                  >
+                    Back to Sign In
+                  </button>
                 </div>
-                {error && <p className="text-sm text-rose-500 flex items-center gap-2 font-medium"><AlertCircle className="w-4 h-4" /> {error}</p>}
-                
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Reset Link"}
-                </button>
-              </form>
-            )}
+              ) : (
+                <form onSubmit={handleReset} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
+                    <input
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                      placeholder="name@company.com"
+                      required
+                    />
+                  </div>
+                  {error && <p className="text-sm text-rose-500 flex items-center gap-2 font-medium"><AlertCircle className="w-4 h-4" /> {error}</p>}
+                  
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Reset Link"}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+              © 2026 ERP System. All rights reserved.
+            </p>
+            <div className="flex gap-4">
+              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
+              </a>
+              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -130,7 +147,7 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   }
 
   return (
-    <div className="min-h-screen w-full flex bg-background">
+    <div className="h-screen w-full flex bg-background overflow-hidden">
       {/* Left Side - Image (Dribbble Style) */}
       <div className="hidden lg:block lg:w-[40%] relative overflow-hidden">
         <img 
@@ -147,76 +164,93 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
       </div>
 
       {/* Right Side - Form */}
-      <div className="flex-1 flex flex-col p-8 md:p-12 lg:p-20 relative">
+      <div className="flex-1 flex flex-col relative h-full">
         <button 
           onClick={() => navigate('/')}
-          className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
+          className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group z-10"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
           Back
         </button>
 
-        <div className="max-w-md w-full mx-auto my-auto">
-          <div className="mb-10">
-            <h1 className="text-3xl font-bold mb-2">Sign in to ERP System</h1>
-            <p className="text-muted-foreground">Enter your details below to access your account.</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                placeholder="name@company.com"
-                required
-              />
+        <div className="flex-1 flex flex-col justify-center px-8 md:px-12 lg:px-20 overflow-y-auto no-scrollbar">
+          <div className="max-w-md w-full mx-auto py-12">
+            <div className="mb-10">
+              <h1 className="text-3xl font-bold mb-2">Sign in to ERP System</h1>
+              <p className="text-muted-foreground">Enter your details below to access your account.</p>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</label>
-                <button 
-                  type="button"
-                  onClick={() => setShowReset(true)}
-                  className="text-xs font-bold text-primary hover:underline"
-                >
-                  Forgot?
-                </button>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                  placeholder="name@company.com"
+                  required
+                />
               </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                placeholder="••••••••"
-                required
-              />
-            </div>
 
-            {error && <p className="text-sm text-rose-500 flex items-center gap-2 font-medium"><AlertCircle className="w-4 h-4" /> {error}</p>}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</label>
+                  <button 
+                    type="button"
+                    onClick={() => setShowReset(true)}
+                    className="text-xs font-bold text-primary hover:underline"
+                  >
+                    Forgot?
+                  </button>
+                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign In"}
-            </button>
-          </form>
+              {error && <p className="text-sm text-rose-500 flex items-center gap-2 font-medium"><AlertCircle className="w-4 h-4" /> {error}</p>}
 
-          <div className="mt-8 pt-8 border-t border-border text-center">
-            <p className="text-sm text-muted-foreground">
-              Don't have an account?{' '}
-              <button 
-                onClick={onToggle}
-                className="font-bold text-foreground hover:underline"
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                Create one
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign In"}
               </button>
-            </p>
+            </form>
+
+            <div className="mt-8 pt-8 border-t border-border text-center">
+              <p className="text-sm text-muted-foreground">
+                Don't have an account?{' '}
+                <button 
+                  onClick={onToggle}
+                  className="font-bold text-foreground hover:underline"
+                >
+                  Create one
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+            © 2026 ERP System. All rights reserved.
+          </p>
+          <div className="flex gap-4">
+            <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
+            </a>
+            <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+            </a>
           </div>
         </div>
       </div>
@@ -345,7 +379,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-background">
+    <div className="h-screen w-full flex bg-background overflow-hidden">
       {/* Left Side - Image */}
       <div className="hidden lg:block lg:w-[40%] relative overflow-hidden">
         <img 
@@ -362,202 +396,219 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
       </div>
 
       {/* Right Side - Form */}
-      <div className="flex-1 flex flex-col p-8 md:p-12 lg:p-20 relative overflow-y-auto">
+      <div className="flex-1 flex flex-col relative h-full">
         <button 
           onClick={() => navigate('/')}
-          className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group"
+          className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group z-10"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
           Back
         </button>
 
-        <div className="max-w-md w-full mx-auto my-auto py-12">
-          <div className="mb-10">
-            <h1 className="text-3xl font-bold mb-2">Create your Account</h1>
-            <p className="text-muted-foreground">Step {step} of 3: {step === 1 ? 'Personal Details' : step === 2 ? 'Company Details' : 'Final Configuration'}</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {step === 1 && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Full Name</label>
-                  <input
-                    type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                    placeholder="John Doe"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                    placeholder="name@company.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                    placeholder="••••••••"
-                    required
-                  />
-                  <p className="text-[10px] text-muted-foreground">Use 8 or more characters with a mix of letters, numbers & symbols.</p>
-                </div>
-              </div>
-            )}
-
-            {step === 2 && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Company Name</label>
-                  <input
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                    placeholder="Acme Corp"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Company Slogan</label>
-                  <input
-                    type="text"
-                    value={slogan}
-                    onChange={(e) => setSlogan(e.target.value)}
-                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                    placeholder="Innovating the future"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Address</label>
-                  <textarea
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all resize-none"
-                    placeholder="123 Business St, City"
-                    rows={2}
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">FY Start</label>
-                    <input
-                      type="date"
-                      value={financialYearStart}
-                      onChange={(e) => setFinancialYearStart(e.target.value)}
-                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Currency</label>
-                    <input
-                      type="text"
-                      value={currencySymbol}
-                      onChange={(e) => setCurrencySymbol(e.target.value)}
-                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                      placeholder="৳"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Timezone</label>
-                  <select
-                    value={timezone}
-                    onChange={(e) => setTimezone(e.target.value)}
-                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                  >
-                    <option value="Asia/Dhaka">Asia/Dhaka (GMT+6)</option>
-                    <option value="UTC">UTC</option>
-                    <option value="Asia/Kolkata">Asia/Kolkata (GMT+5:30)</option>
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Phone</label>
-                    <input
-                      type="text"
-                      value={contactPhone}
-                      onChange={(e) => setContactPhone(e.target.value)}
-                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                      placeholder="+880..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Website</label>
-                    <input
-                      type="text"
-                      value={websiteUrl}
-                      onChange={(e) => setWebsiteUrl(e.target.value)}
-                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                      placeholder="https://..."
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Print Header</label>
-                  <input
-                    type="text"
-                    value={printHeader}
-                    onChange={(e) => setPrintHeader(e.target.value)}
-                    className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
-                    placeholder="Company Name Ltd."
-                  />
-                </div>
-              </div>
-            )}
-
-            {error && <p className="text-sm text-rose-500 flex items-center gap-2 font-medium"><AlertCircle className="w-4 h-4" /> {error}</p>}
-
-            <div className="flex gap-4 pt-4">
-              {step > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setStep(step - 1)}
-                  className="flex-1 py-4 border border-border rounded-xl font-bold hover:bg-foreground/5 transition-colors"
-                >
-                  Back
-                </button>
-              )}
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-[2] py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (step === 3 ? "Complete Registration" : "Next Step")}
-              </button>
+        <div className="flex-1 flex flex-col justify-center px-8 md:px-12 lg:px-20 overflow-y-auto no-scrollbar">
+          <div className="max-w-md w-full mx-auto py-12">
+            <div className="mb-10">
+              <h1 className="text-3xl font-bold mb-2">Create your Account</h1>
+              <p className="text-muted-foreground">Step {step} of 3: {step === 1 ? 'Personal Details' : step === 2 ? 'Company Details' : 'Final Configuration'}</p>
             </div>
-          </form>
 
-          <div className="mt-8 pt-8 border-t border-border text-center">
-            <p className="text-sm text-muted-foreground">
-              Already have an account?{' '}
-              <button 
-                onClick={onToggle}
-                className="font-bold text-foreground hover:underline"
-              >
-                Sign in
-              </button>
-            </p>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {step === 1 && (
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Full Name</label>
+                    <input
+                      type="text"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                      placeholder="John Doe"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                      placeholder="name@company.com"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                      placeholder="••••••••"
+                      required
+                    />
+                    <p className="text-[10px] text-muted-foreground">Use 8 or more characters with a mix of letters, numbers & symbols.</p>
+                  </div>
+                </div>
+              )}
+
+              {step === 2 && (
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Company Name</label>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                      placeholder="Acme Corp"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Company Slogan</label>
+                    <input
+                      type="text"
+                      value={slogan}
+                      onChange={(e) => setSlogan(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                      placeholder="Innovating the future"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Address</label>
+                    <textarea
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all resize-none"
+                      placeholder="123 Business St, City"
+                      rows={2}
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">FY Start</label>
+                      <input
+                        type="date"
+                        value={financialYearStart}
+                        onChange={(e) => setFinancialYearStart(e.target.value)}
+                        className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Currency</label>
+                      <input
+                        type="text"
+                        value={currencySymbol}
+                        onChange={(e) => setCurrencySymbol(e.target.value)}
+                        className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                        placeholder="৳"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Timezone</label>
+                    <select
+                      value={timezone}
+                      onChange={(e) => setTimezone(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                    >
+                      <option value="Asia/Dhaka">Asia/Dhaka (GMT+6)</option>
+                      <option value="UTC">UTC</option>
+                      <option value="Asia/Kolkata">Asia/Kolkata (GMT+5:30)</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Phone</label>
+                      <input
+                        type="text"
+                        value={contactPhone}
+                        onChange={(e) => setContactPhone(e.target.value)}
+                        className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                        placeholder="+880..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Website</label>
+                      <input
+                        type="text"
+                        value={websiteUrl}
+                        onChange={(e) => setWebsiteUrl(e.target.value)}
+                        className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Print Header</label>
+                    <input
+                      type="text"
+                      value={printHeader}
+                      onChange={(e) => setPrintHeader(e.target.value)}
+                      className="w-full px-4 py-4 rounded-xl border border-border bg-card focus:ring-2 focus:ring-primary outline-none transition-all"
+                      placeholder="Company Name Ltd."
+                    />
+                  </div>
+                </div>
+              )}
+
+              {error && <p className="text-sm text-rose-500 flex items-center gap-2 font-medium"><AlertCircle className="w-4 h-4" /> {error}</p>}
+
+              <div className="flex gap-4 pt-4">
+                {step > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setStep(step - 1)}
+                    className="flex-1 py-4 border border-border rounded-xl font-bold hover:bg-foreground/5 transition-colors"
+                  >
+                    Back
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-[2] py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (step === 3 ? "Complete Registration" : "Next Step")}
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-8 pt-8 border-t border-border text-center">
+              <p className="text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <button 
+                  onClick={onToggle}
+                  className="font-bold text-foreground hover:underline"
+                >
+                  Sign in
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+            © 2026 ERP System. All rights reserved.
+          </p>
+          <div className="flex gap-4">
+            <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
+            </a>
+            <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+            </a>
           </div>
         </div>
       </div>

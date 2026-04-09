@@ -54,16 +54,25 @@ export const Contact = () => {
                 </div>
               </div>
 
-              <div className="p-8 bg-card border border-border rounded-3xl">
-                <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
-                  <MapPin className="w-6 h-6 text-primary" />
+              <div className="p-8 bg-card border border-border rounded-3xl overflow-hidden relative group h-64">
+                <img 
+                  src="https://picsum.photos/seed/erp-map/800/600" 
+                  alt="Office Location" 
+                  className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:scale-110 transition-transform duration-700"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
+                <div className="relative z-10 h-full flex flex-col justify-end">
+                  <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
+                    <MapPin className="w-6 h-6 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">Visit Our Office</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    123 Business Avenue, Suite 500<br />
+                    Silicon Valley, CA 94025<br />
+                    United States
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold mb-2">Visit Our Office</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  123 Business Avenue, Suite 500<br />
-                  Silicon Valley, CA 94025<br />
-                  United States
-                </p>
               </div>
             </div>
 

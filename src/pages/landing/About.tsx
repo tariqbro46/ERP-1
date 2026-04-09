@@ -24,7 +24,7 @@ export const About = () => {
           {/* Image Section */}
           <div className="relative h-[400px] rounded-3xl overflow-hidden mb-24 shadow-2xl">
             <img 
-              src="https://picsum.photos/seed/office/1200/600" 
+              src="https://picsum.photos/seed/erp-office-team/1200/600" 
               alt="Our Office" 
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"

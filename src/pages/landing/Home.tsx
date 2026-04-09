@@ -53,6 +53,27 @@ export const Home = () => {
                   </Link>
                 </div>
               </motion.div>
+
+              {/* Hero Image */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="mt-20 relative max-w-5xl mx-auto"
+              >
+                <div className="relative rounded-3xl overflow-hidden shadow-[0_0_50px_-12px_rgba(0,0,0,0.3)] border border-border bg-card">
+                  <img 
+                    src="https://picsum.photos/seed/erp-hero-dashboard/1600/900" 
+                    alt="ERP Dashboard Preview" 
+                    className="w-full h-auto"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent" />
+                </div>
+                {/* Floating Elements */}
+                <div className="absolute -top-6 -right-6 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+                <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl" />
+              </motion.div>
             </div>
           </div>
 

@@ -23,7 +23,7 @@ export const Features = () => {
       title: "Financial Management",
       desc: "Complete control over your finances with real-time reporting, automated bookkeeping, and advanced analytics.",
       icon: BarChart3,
-      image: "https://picsum.photos/seed/finance/800/600",
+      image: "https://picsum.photos/seed/erp-finance-dashboard/1200/800",
       details: [
         "Automated Balance Sheets",
         "Profit & Loss Statements",
@@ -35,7 +35,7 @@ export const Features = () => {
       title: "Inventory & Warehouse",
       desc: "Manage your stock levels across multiple locations, optimize reordering, and track every item in your supply chain.",
       icon: Database,
-      image: "https://picsum.photos/seed/inventory/800/600",
+      image: "https://picsum.photos/seed/erp-inventory-stock/1200/800",
       details: [
         "Multi-godown Management",
         "Batch & Expiry Tracking",
@@ -47,7 +47,7 @@ export const Features = () => {
       title: "Production & Manufacturing",
       desc: "Streamline your manufacturing process from order to delivery with integrated production planning and machine management.",
       icon: Cpu,
-      image: "https://picsum.photos/seed/factory/800/600",
+      image: "https://picsum.photos/seed/erp-production-line/1200/800",
       details: [
         "Order Management",
         "Machine Efficiency Tracking",
@@ -59,7 +59,7 @@ export const Features = () => {
       title: "Payroll & HR",
       desc: "Manage your most valuable asset—your people. Handle payroll, attendance, and employee records in one place.",
       icon: Users,
-      image: "https://picsum.photos/seed/team/800/600",
+      image: "https://picsum.photos/seed/erp-payroll-hr/1200/800",
       details: [
         "Automated Salary Sheets",
         "Employee Master Records",
