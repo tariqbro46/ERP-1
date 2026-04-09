@@ -160,4 +160,299 @@
   .animate-shimmer-sweep {
     animation: shimmer-sweep 2s infinite;
   }
+
+  /* UI/UX 3: Glassmorphism */
+  [data-ui-style="UI/UX 3"] {
+    --glass-bg: rgba(255, 255, 255, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.4);
+    --glass-blur: blur(20px);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    --glass-text: #1a1a1a;
+    --glass-overlay: rgba(255, 255, 255, 0.82);
+  }
+
+  [data-ui-style="UI/UX 3"].dark {
+    --glass-bg: rgba(15, 15, 15, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    --glass-text: #f0f0f0;
+    --glass-overlay: rgba(10, 10, 10, 0.82);
+  }
+
+  [data-ui-style="UI/UX 3"] {
+    background-attachment: fixed !important;
+    color: var(--glass-text);
+    animation: gradient-bg 15s ease infinite;
+  }
+
+  /* Default Dynamic Gradient */
+  [data-ui-style="UI/UX 3"][data-glass-bg="default"] {
+    background: linear-gradient(var(--glass-overlay), var(--glass-overlay)), 
+                linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab) !important;
+    background-size: 100% 100%, 400% 400% !important;
+    background-attachment: fixed !important;
+  }
+
+  /* Sunset Glow */
+  [data-ui-style="UI/UX 3"][data-glass-bg="sunset"] {
+    background: linear-gradient(var(--glass-overlay), var(--glass-overlay)), 
+                linear-gradient(-45deg, #f093fb 0%, #f5576c 100%) !important;
+    background-size: 100% 100%, 400% 400% !important;
+    background-attachment: fixed !important;
+  }
+
+  /* Deep Ocean */
+  [data-ui-style="UI/UX 3"][data-glass-bg="ocean"] {
+    background: linear-gradient(var(--glass-overlay), var(--glass-overlay)), 
+                linear-gradient(-45deg, #2af598 0%, #009efd 100%) !important;
+    background-size: 100% 100%, 400% 400% !important;
+    background-attachment: fixed !important;
+  }
+
+  /* Aurora Borealis */
+  [data-ui-style="UI/UX 3"][data-glass-bg="aurora"] {
+    background: linear-gradient(var(--glass-overlay), var(--glass-overlay)), 
+                linear-gradient(-45deg, #00cdac 0%, #8ddad5 100%) !important;
+    background-size: 100% 100%, 400% 400% !important;
+    background-attachment: fixed !important;
+  }
+
+  /* Minimal Soft Gray */
+  [data-ui-style="UI/UX 3"][data-glass-bg="minimal"] {
+    background: linear-gradient(var(--glass-overlay), var(--glass-overlay)), 
+                linear-gradient(-45deg, #e6e9f0 0%, #eef1f5 100%) !important;
+    background-size: 100% 100%, 400% 400% !important;
+    background-attachment: fixed !important;
+  }
+
+  [data-ui-style="UI/UX 3"][data-glass-bg="minimal"].dark {
+    background: linear-gradient(var(--glass-overlay), var(--glass-overlay)), 
+                linear-gradient(-45deg, #2c3e50 0%, #000000 100%) !important;
+    background-size: 100% 100%, 400% 400% !important;
+    background-attachment: fixed !important;
+  }
+
+  @keyframes gradient-bg {
+    0% { background-position: 0% 50%, 0% 50%; }
+    50% { background-position: 0% 50%, 100% 50%; }
+    100% { background-position: 0% 50%, 0% 50%; }
+  }
+
+  /* UI/UX 3 Glassmorphism Card Backgrounds */
+
+  [data-ui-style="UI/UX 3"].bg-background {
+    background-color: transparent !important;
+  }
+
+  [data-ui-style="UI/UX 3"] .bg-card,
+  [data-ui-style="UI/UX 3"] .bg-background,
+  [data-ui-style="UI/UX 3"] .bg-background\/95,
+  [data-ui-style="UI/UX 3"] .bg-background\/80,
+  [data-ui-style="UI/UX 3"] aside,
+  [data-ui-style="UI/UX 3"] header,
+  [data-ui-style="UI/UX 3"] main,
+  [data-ui-style="UI/UX 3"] section,
+  [data-ui-style="UI/UX 3"] .bg-white,
+  [data-ui-style="UI/UX 3"] .bg-slate-50,
+  [data-ui-style="UI/UX 3"] .bg-gray-50,
+  [data-ui-style="UI/UX 3"].dark .bg-zinc-900,
+  [data-ui-style="UI/UX 3"].dark .bg-slate-900,
+  [data-ui-style="UI/UX 3"] div:not([data-ui-style]) > .bg-background {
+    background-color: var(--glass-bg) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    -webkit-backdrop-filter: var(--glass-blur) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: var(--glass-shadow) !important;
+    border-radius: 24px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    color: var(--glass-text) !important;
+  }
+
+  [data-ui-style="UI/UX 3"] aside,
+  [data-ui-style="UI/UX 3"] header {
+    border-radius: 0 !important;
+    border-top: none !important;
+    border-bottom: 1px solid var(--glass-border) !important;
+  }
+
+  [data-ui-style="UI/UX 3"] aside {
+    border-right: 1px solid var(--glass-border) !important;
+    border-left: none !important;
+  }
+
+  [data-ui-style="UI/UX 3"] .bg-card:hover {
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    transform: translateY(-4px);
+    box-shadow: 0 15px 45px 0 rgba(0, 0, 0, 0.12) !important;
+  }
+
+  [data-ui-style="UI/UX 3"].dark .bg-card:hover {
+    background-color: rgba(30, 30, 30, 0.8) !important;
+  }
+
+  [data-ui-style="UI/UX 3"] button {
+    border-radius: 16px !important;
+  }
+
+  [data-ui-style="UI/UX 3"] button:not(.bg-primary):not(.bg-emerald-500):not(.bg-rose-500):not(.bg-amber-500):not(.bg-blue-600):not(.bg-indigo-600):not(.bg-purple-600) {
+    background-color: var(--glass-bg) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    border: 1px solid var(--glass-border) !important;
+    transition: all 0.2s ease !important;
+    color: var(--glass-text) !important;
+    font-weight: 500 !important;
+  }
+
+  [data-ui-style="UI/UX 3"] button:hover:not(.bg-primary):not(.bg-emerald-500):not(.bg-rose-500):not(.bg-amber-500):not(.bg-blue-600):not(.bg-indigo-600):not(.bg-purple-600) {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    transform: scale(1.03);
+  }
+
+  [data-ui-style="UI/UX 3"].dark button:hover:not(.bg-primary):not(.bg-emerald-500):not(.bg-rose-500):not(.bg-amber-500):not(.bg-blue-600):not(.bg-indigo-600):not(.bg-purple-600) {
+    background-color: rgba(40, 40, 40, 0.9) !important;
+  }
+
+  [data-ui-style="UI/UX 3"] .border,
+  [data-ui-style="UI/UX 3"] .border-border,
+  [data-ui-style="UI/UX 3"] .border-t,
+  [data-ui-style="UI/UX 3"] .border-b,
+  [data-ui-style="UI/UX 3"] .border-l,
+  [data-ui-style="UI/UX 3"] .border-r {
+    border-color: var(--glass-border) !important;
+  }
+
+  [data-ui-style="UI/UX 3"] input,
+  [data-ui-style="UI/UX 3"] select,
+  [data-ui-style="UI/UX 3"] textarea {
+    background-color: rgba(255, 255, 255, 0.4) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    -webkit-backdrop-filter: var(--glass-blur) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 14px !important;
+    color: var(--glass-text) !important;
+    padding: 0.75rem 1rem !important;
+  }
+
+  [data-ui-style="UI/UX 3"].dark input,
+  [data-ui-style="UI/UX 3"].dark select,
+  [data-ui-style="UI/UX 3"].dark textarea {
+    background-color: rgba(20, 20, 20, 0.4) !important;
+  }
+
+  [data-ui-style="UI/UX 3"] input:focus,
+  [data-ui-style="UI/UX 3"] select:focus,
+  [data-ui-style="UI/UX 3"] textarea:focus {
+    background-color: rgba(255, 255, 255, 0.6) !important;
+    border-color: var(--primary) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+  }
+
+  [data-ui-style="UI/UX 3"] button:not(.rounded-full),
+  [data-ui-style="UI/UX 3"] input,
+  [data-ui-style="UI/UX 3"] select,
+  [data-ui-style="UI/UX 3"] .rounded-lg,
+  [data-ui-style="UI/UX 3"] .rounded-xl,
+  [data-ui-style="UI/UX 3"] .rounded-md {
+    border-radius: 16px !important;
+  }
+
+  [data-ui-style="UI/UX 3"] .shadow-sm,
+  [data-ui-style="UI/UX 3"] .shadow,
+  [data-ui-style="UI/UX 3"] .shadow-md,
+  [data-ui-style="UI/UX 3"] .shadow-lg,
+  [data-ui-style="UI/UX 3"] .shadow-xl {
+    box-shadow: var(--glass-shadow) !important;
+  }
+
+  /* Specific fixes for UI/UX 3 */
+  [data-ui-style="UI/UX 3"] aside,
+  [data-ui-style="UI/UX 3"] header,
+  [data-ui-style="UI/UX 3"] nav {
+    background-color: var(--glass-bg) !important;
+    backdrop-filter: var(--glass-blur) !important;
+    -webkit-backdrop-filter: var(--glass-blur) !important;
+    color: var(--glass-text) !important;
+  }
+
+  [data-ui-style="UI/UX 3"] aside {
+    border-right: 1px solid var(--glass-border) !important;
+  }
+
+  [data-ui-style="UI/UX 3"] header {
+    border-bottom: 1px solid var(--glass-border) !important;
+  }
+
+  [data-ui-style="UI/UX 3"] .text-gray-500,
+  [data-ui-style="UI/UX 3"] .text-muted-foreground {
+    color: rgba(0, 0, 0, 0.5) !important;
+  }
+
+  [data-ui-style="UI/UX 3"].dark .text-gray-500,
+  [data-ui-style="UI/UX 3"].dark .text-muted-foreground {
+    color: rgba(255, 255, 255, 0.5) !important;
+  }
+
+  /* Glassmorphic Scrollbar */
+  [data-ui-style="UI/UX 3"] ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  [data-ui-style="UI/UX 3"] ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  [data-ui-style="UI/UX 3"] ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  [data-ui-style="UI/UX 3"].dark ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Modal and Dropdown Glassmorphism */
+  [data-ui-style="UI/UX 3"] .fixed.inset-0,
+  [data-ui-style="UI/UX 3"] .absolute.top-full {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  [data-ui-style="UI/UX 3"] .bg-card.shadow-2xl,
+  [data-ui-style="UI/UX 3"] .bg-card.shadow-xl {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    backdrop-filter: blur(30px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  }
+
+  [data-ui-style="UI/UX 3"].dark .bg-card.shadow-2xl,
+  [data-ui-style="UI/UX 3"].dark .bg-card.shadow-xl {
+    background-color: rgba(20, 20, 20, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* UI/UX 2: Modern Colorized Refinements */
+  [data-ui-style="UI/UX 2"] {
+    --primary: #2563eb;
+  }
+
+  [data-ui-style="UI/UX 2"] .bg-card {
+    border-radius: 12px;
+    border: 1px solid rgba(37, 99, 235, 0.1);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  }
+
+  [data-ui-style="UI/UX 2"] button.bg-foreground {
+    background-color: var(--primary) !important;
+    color: white !important;
+    border-radius: 8px;
+  }
+
+  [data-ui-style="UI/UX 2"] header,
+  [data-ui-style="UI/UX 2"] aside {
+    transition: all 0.3s ease;
+  }
 }

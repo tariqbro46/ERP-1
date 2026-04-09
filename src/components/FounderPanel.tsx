@@ -106,8 +106,10 @@ export default function FounderPanel() {
     { id: 'Settings', label: 'Settings', icon: Settings }
   ];
 
-  const { appVersion, updateSettings, updateSystemSettings, uiStyle, statusOnlineText, statusOfflineText, statusErrorText, systemLogo, notificationDuration, notificationAnimationStyle } = useSettings();
+  const { appVersion, updateSettings, updateSystemSettings, uiStyle, glassBackground, statusOnlineText, statusOfflineText, statusErrorText, systemLogo, notificationDuration, notificationAnimationStyle } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion);
+  const [localUIStyle, setLocalUIStyle] = useState(uiStyle);
+  const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground);
   const [localStatusOnline, setLocalStatusOnline] = useState(statusOnlineText);
   const [localStatusOffline, setLocalStatusOffline] = useState(statusOfflineText);
   const [localStatusError, setLocalStatusError] = useState(statusErrorText);
@@ -122,6 +124,10 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalAppVersion(appVersion);
   }, [appVersion]);
+
+  useEffect(() => {
+    setLocalUIStyle(uiStyle);
+  }, [uiStyle]);
 
   useEffect(() => {
     setLocalStatusOnline(statusOnlineText);
@@ -146,6 +152,10 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalNotificationAnimationStyle(notificationAnimationStyle);
   }, [notificationAnimationStyle]);
+
+  useEffect(() => {
+    setLocalGlassBackground(glassBackground);
+  }, [glassBackground]);
 
   const safeFormat = (date: any, formatStr: string) => {
     try {
@@ -1121,6 +1131,36 @@ export default function FounderPanel() {
                 </div>
               </div>
 
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Global UI Style</label>
+                  <select 
+                    value={localUIStyle}
+                    onChange={(e) => setLocalUIStyle(e.target.value as any)}
+                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="UI/UX 1">UI/UX 1 (Classic)</option>
+                    <option value="UI/UX 2">UI/UX 2 (Modern Colorized)</option>
+                    <option value="UI/UX 3">UI/UX 3 (Glassmorphism macOS)</option>
+                  </select>
+                  <p className="text-[9px] text-muted-foreground uppercase">Choose the overall UI/UX style for the application.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Default Glass Gradient Background (UI/UX 3)</label>
+                <select 
+                  value={localGlassBackground}
+                  onChange={(e) => setLocalGlassBackground(e.target.value as any)}
+                  className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="default">Default (Dynamic Gradient)</option>
+                  <option value="sunset">Sunset Glow (Warm)</option>
+                  <option value="ocean">Deep Ocean (Cool)</option>
+                  <option value="aurora">Aurora Borealis (Green/Purple)</option>
+                  <option value="minimal">Minimal Soft Gray</option>
+                </select>
+                <p className="text-[9px] text-muted-foreground uppercase">Choose the global default background for Glassmorphism style.</p>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">System Logo (Global Default)</label>
                 <div className="flex items-start gap-4">
@@ -1171,6 +1211,8 @@ export default function FounderPanel() {
                         statusErrorText: localStatusError,
                         appVersion: localAppVersion,
                         systemLogo: localSystemLogo,
+                        uiStyle: localUIStyle,
+                        glassBackground: localGlassBackground,
                         notificationDuration: localNotificationDuration,
                         notificationAnimationStyle: localNotificationAnimationStyle
                       });

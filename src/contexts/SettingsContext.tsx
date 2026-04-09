@@ -20,8 +20,9 @@ interface FeatureSettings {
 export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11';
 export type ReportLayout = 'Layout 1' | 'Layout 2';
 export type DashboardDesign = 'Design 1' | 'Design 2';
-export type UIStyle = 'UI/UX 1' | 'UI/UX 2';
+export type UIStyle = 'UI/UX 1' | 'UI/UX 2' | 'UI/UX 3';
 export type NotificationAnimationStyle = 'default' | 'neon' | 'snake' | 'liquid' | 'glitch' | 'shimmer';
+export type GlassBackground = 'default' | 'sunset' | 'ocean' | 'aurora' | 'minimal';
 
 interface WhatsAppTemplates {
   Sales: string;
@@ -73,6 +74,7 @@ interface SettingsContextType {
   layoutWidth: 'responsive' | 'constrained';
   sidebarDefaultExpanded: boolean;
   uiStyle: UIStyle;
+  glassBackground: GlassBackground;
   notificationDuration: number;
   notificationAnimationStyle: NotificationAnimationStyle;
   appVersion: string;
@@ -129,6 +131,7 @@ const defaultSettings: SettingsContextType = {
   layoutWidth: 'constrained',
   sidebarDefaultExpanded: true,
   uiStyle: 'UI/UX 1',
+  glassBackground: 'default',
   notificationDuration: 5000,
   notificationAnimationStyle: 'default',
   appVersion: 'v1.0.1',
@@ -182,6 +185,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           statusErrorText: data.statusErrorText || prev.statusErrorText,
           appVersion: data.appVersion || prev.appVersion,
           systemLogo: data.systemLogo || prev.systemLogo,
+          glassBackground: data.glassBackground || prev.glassBackground,
           notificationDuration: data.notificationDuration || prev.notificationDuration,
           notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle
         }));

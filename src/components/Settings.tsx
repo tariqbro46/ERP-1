@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard } from 'lucide-react';
+import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,10 +7,12 @@ import { erpService } from '../services/erpService';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { NAV_ITEMS } from '../constants/navigation';
+import { useTheme, Theme } from '../contexts/ThemeContext';
 
 export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   const { 
     companyName, 
     companyLogo,
@@ -47,6 +49,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     reportLayout,
     dashboardDesign,
     uiStyle,
+    glassBackground,
     notificationAnimationStyle,
     appVersion,
     menuBarStyle,
@@ -103,6 +106,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localReportLayout, setLocalReportLayout] = useState(reportLayout);
   const [localDashboardDesign, setLocalDashboardDesign] = useState(dashboardDesign);
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle);
+  const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground);
   const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle);
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded);
   const [localNotifications, setLocalNotifications] = useState(notifications);
@@ -145,6 +149,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalReportLayout(reportLayout);
     setLocalDashboardDesign(dashboardDesign);
     setLocalUIStyle(uiStyle);
+    setLocalGlassBackground(glassBackground);
     setLocalNotificationAnimationStyle(notificationAnimationStyle);
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded);
     setLocalMenuBarStyle(menuBarStyle);
@@ -178,6 +183,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       reportLayout: localReportLayout,
       dashboardDesign: localDashboardDesign,
       uiStyle: localUIStyle,
+      glassBackground: localGlassBackground,
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
       notificationAnimationStyle: localNotificationAnimationStyle,
       financialYearStart: localFinancialYearStart,
@@ -659,9 +665,59 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       >
                         <option value="UI/UX 1">UI/UX 1 (Classic)</option>
                         <option value="UI/UX 2">UI/UX 2 (Modern Colorized)</option>
+                        <option value="UI/UX 3">UI/UX 3 (Glassmorphism macOS)</option>
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">Choose the overall UI/UX style for the application.</p>
                     </div>
+
+                    {localUIStyle === 'UI/UX 1' && (
+                      <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                        <label className="text-[10px] text-gray-500 uppercase">Color Theme</label>
+                        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                          {(['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'] as Theme[]).map((t) => (
+                            <button
+                              key={t}
+                              onClick={() => setTheme(t)}
+                              className={cn(
+                                "flex flex-col items-center gap-1 p-2 border transition-all",
+                                theme === t ? "border-primary bg-primary/5" : "border-border bg-background hover:border-gray-400"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-6 h-6 rounded-sm",
+                                t === 'light' ? "bg-white border border-gray-200" : 
+                                t === 'dark' ? "bg-zinc-900" : 
+                                t === 'emerald' ? "bg-emerald-500" : 
+                                t === 'amber' ? "bg-amber-500" : 
+                                t === 'rose' ? "bg-rose-500" : 
+                                t === 'slate' ? "bg-slate-500" : 
+                                "bg-zinc-800"
+                              )} />
+                              <span className="text-[8px] font-bold uppercase truncate w-full text-center">{t}</span>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-gray-500 uppercase">Choose a color theme for the Classic UI style.</p>
+                      </div>
+                    )}
+
+                    {localUIStyle === 'UI/UX 3' && (
+                      <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                        <label className="text-[10px] text-gray-500 uppercase">Glass Gradient Background</label>
+                        <select 
+                          value={localGlassBackground}
+                          onChange={(e) => setLocalGlassBackground(e.target.value as any)}
+                          className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                        >
+                          <option value="default">Default (Dynamic Gradient)</option>
+                          <option value="sunset">Sunset Glow (Warm)</option>
+                          <option value="ocean">Deep Ocean (Cool)</option>
+                          <option value="aurora">Aurora Borealis (Green/Purple)</option>
+                          <option value="minimal">Minimal Soft Gray</option>
+                        </select>
+                        <p className="text-[9px] text-gray-500 uppercase">Choose the background gradient for Glassmorphism style.</p>
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <label className="text-[10px] text-gray-500 uppercase">Dashboard Design Style</label>

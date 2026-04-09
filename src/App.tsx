@@ -69,7 +69,7 @@ import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login, Register } from './components/Auth';
 import { useNavigate } from 'react-router-dom';
-import { NAV_ITEMS, PAGE_TITLES } from './constants/navigation';
+import { NAV_ITEMS, PAGE_TITLES, DASHBOARD_ITEM } from './constants/navigation';
 
 const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => (
   <Link
@@ -140,8 +140,10 @@ function Layout({ children }: { children: React.ReactNode }) {
     showMobileNav = false,
     mobileBottomNavItems = [],
     uiStyle = 'UI/UX 1',
+    glassBackground = 'default',
     appVersion = 'v1.0.1',
-    statusOnlineText = 'Status: Online'
+    statusOnlineText = 'Status: Online',
+    updateSettings
   } = useSettings();
 
   const navigate = useNavigate();
@@ -159,7 +161,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
-  const [activeRibbonTab, setActiveRibbonTab] = React.useState('Masters');
+  const [activeRibbonTab, setActiveRibbonTab] = React.useState('Dashboard');
   const [hoveredMacGroup, setHoveredMacGroup] = React.useState<string | null>(null);
   const [isWinStartOpen, setIsWinStartOpen] = React.useState(false);
   const [winSearchQuery, setWinSearchQuery] = React.useState('');
@@ -277,6 +279,15 @@ function Layout({ children }: { children: React.ReactNode }) {
       </div>
 
       <nav className="flex-1 py-2 overflow-y-auto no-scrollbar overflow-x-hidden">
+        <div className="px-3 mb-2">
+          <SidebarItem 
+            to={DASHBOARD_ITEM.to} 
+            icon={DASHBOARD_ITEM.icon} 
+            label={isSidebarCollapsed ? "" : DASHBOARD_ITEM.label} 
+            active={location.pathname === DASHBOARD_ITEM.to} 
+          />
+        </div>
+
         {NAV_ITEMS.map((group) => {
           const isEnabled = group.items.some(item => !item.feature || features.find(f => f.id === item.feature)?.enabled !== false);
           if (!isEnabled) return null;
@@ -324,6 +335,17 @@ function Layout({ children }: { children: React.ReactNode }) {
     return (
       <div className="bg-card border-b border-border hidden lg:block">
         <div className="flex border-b border-border px-4">
+          <button
+            onClick={() => setActiveRibbonTab('Dashboard')}
+            className={cn(
+              "px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-all border-b-2",
+              activeRibbonTab === 'Dashboard' 
+                ? "border-primary text-primary" 
+                : "border-transparent text-gray-500 hover:text-foreground"
+            )}
+          >
+            Dashboard
+          </button>
           {NAV_ITEMS.map(group => (
             <button
               key={group.group}
@@ -340,34 +362,55 @@ function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </div>
         <div className="p-2 flex items-center gap-6 overflow-x-auto no-scrollbar">
-          {NAV_ITEMS.find(g => g.group === activeRibbonTab)?.items.map((item: any) => {
-            if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
-            if (item.adminOnly && !isAdmin) return null;
-            if (item.superAdminOnly && !isSuperAdmin) return null;
-            if (item.permission && (!user?.permissions || !user.permissions.includes(item.permission)) && !isAdmin && !isSuperAdmin) return null;
-            
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex flex-col items-center gap-1 min-w-[70px] p-1.5 rounded hover:bg-foreground/5 transition-all group",
-                  location.pathname === item.to ? "bg-foreground/5" : ""
-                )}
-              >
-                <item.icon className={cn(
-                  "w-5 h-5 transition-transform group-hover:scale-110",
-                  location.pathname === item.to ? "text-primary" : "text-gray-500"
-                )} />
-                <span className={cn(
-                  "text-[8px] font-bold uppercase tracking-tighter text-center",
-                  location.pathname === item.to ? "text-primary" : "text-gray-500"
-                )}>
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
+          {activeRibbonTab === 'Dashboard' ? (
+            <Link
+              to={DASHBOARD_ITEM.to}
+              className={cn(
+                "flex flex-col items-center gap-1 min-w-[70px] p-1.5 rounded hover:bg-foreground/5 transition-all group",
+                location.pathname === DASHBOARD_ITEM.to ? "bg-foreground/5" : ""
+              )}
+            >
+              <DASHBOARD_ITEM.icon className={cn(
+                "w-5 h-5 transition-transform group-hover:scale-110",
+                location.pathname === DASHBOARD_ITEM.to ? "text-primary" : "text-gray-500"
+              )} />
+              <span className={cn(
+                "text-[8px] font-bold uppercase tracking-tighter text-center",
+                location.pathname === DASHBOARD_ITEM.to ? "text-primary" : "text-gray-500"
+              )}>
+                {DASHBOARD_ITEM.label}
+              </span>
+            </Link>
+          ) : (
+            NAV_ITEMS.find(g => g.group === activeRibbonTab)?.items.map((item: any) => {
+              if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
+              if (item.adminOnly && !isAdmin) return null;
+              if (item.superAdminOnly && !isSuperAdmin) return null;
+              if (item.permission && (!user?.permissions || !user.permissions.includes(item.permission)) && !isAdmin && !isSuperAdmin) return null;
+              
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={cn(
+                    "flex flex-col items-center gap-1 min-w-[70px] p-1.5 rounded hover:bg-foreground/5 transition-all group",
+                    location.pathname === item.to ? "bg-foreground/5" : ""
+                  )}
+                >
+                  <item.icon className={cn(
+                    "w-5 h-5 transition-transform group-hover:scale-110",
+                    location.pathname === item.to ? "text-primary" : "text-gray-500"
+                  )} />
+                  <span className={cn(
+                    "text-[8px] font-bold uppercase tracking-tighter text-center",
+                    location.pathname === item.to ? "text-primary" : "text-gray-500"
+                  )}>
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })
+          )}
         </div>
       </div>
     );
@@ -390,6 +433,15 @@ function Layout({ children }: { children: React.ReactNode }) {
         </div>
         
         <div className="flex items-center gap-2">
+          <Link
+            to={DASHBOARD_ITEM.to}
+            className={cn(
+              "text-[11px] font-medium px-2 py-1 rounded transition-colors",
+              location.pathname === DASHBOARD_ITEM.to ? "bg-foreground/5 text-primary" : "text-gray-500 hover:text-foreground"
+            )}
+          >
+            Dashboard
+          </Link>
           {NAV_ITEMS.map(group => (
             <div 
               key={group.group} 
@@ -543,7 +595,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   );
 
   const renderWindows11Menu = () => {
-    const allItems = NAV_ITEMS.flatMap(g => g.items).filter((item: any) => {
+    const allItems = [DASHBOARD_ITEM, ...NAV_ITEMS.flatMap(g => g.items)].filter((item: any) => {
       if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return false;
       if (item.adminOnly && !isAdmin) return false;
       if (item.superAdminOnly && !isSuperAdmin) return false;
@@ -718,7 +770,11 @@ function Layout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen h-[100dvh] bg-background text-foreground overflow-hidden transition-colors duration-300 relative">
+    <div 
+      className="flex h-screen h-[100dvh] bg-background text-foreground overflow-hidden transition-colors duration-300 relative"
+      data-ui-style={uiStyle}
+      data-glass-bg={glassBackground}
+    >
       {/* Placeholder Warning Banner */}
       {user?.companyId === 'placeholder' && (
         <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 text-white text-[10px] font-bold uppercase tracking-widest py-1 px-4 flex justify-between items-center shadow-lg">
@@ -919,34 +975,41 @@ function Layout({ children }: { children: React.ReactNode }) {
                     </Link>
 
                     <div className="h-[1px] bg-border my-2" />
-
-                    <div className="px-4 py-2">
-                      <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">Select Theme</p>
-                      <div className="grid grid-cols-4 gap-2">
-                        {(['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'] as Theme[]).map((t) => (
-                          <button
-                            key={t}
-                            onClick={() => setTheme(t)}
-                            className={cn(
-                              "w-full aspect-square rounded-md border-2 transition-all flex items-center justify-center",
-                              theme === t ? "border-primary scale-110 shadow-lg" : "border-transparent hover:border-border"
-                            )}
-                            title={t.charAt(0).toUpperCase() + t.slice(1)}
-                          >
-                            <div className={cn(
-                              "w-full h-full rounded-sm",
-                              t === 'light' ? "bg-white border border-gray-200" : 
-                              t === 'dark' ? "bg-zinc-900" : 
-                              t === 'emerald' ? "bg-emerald-500" : 
-                              t === 'amber' ? "bg-amber-500" : 
-                              t === 'rose' ? "bg-rose-500" : 
-                              t === 'slate' ? "bg-slate-500" : 
-                              "bg-zinc-800"
-                            )} />
-                          </button>
-                        ))}
+                    
+                    {uiStyle === 'UI/UX 1' && (
+                      <div className="px-4 py-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">Select Theme</p>
+                        <div className="grid grid-cols-4 gap-2">
+                          {(['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'] as Theme[]).map((t) => (
+                            <button
+                              key={t}
+                              onClick={() => {
+                                setTheme(t);
+                                if (uiStyle !== 'UI/UX 1') {
+                                  updateSettings({ uiStyle: 'UI/UX 1' });
+                                }
+                              }}
+                              className={cn(
+                                "w-full aspect-square rounded-md border-2 transition-all flex items-center justify-center",
+                                theme === t ? "border-primary scale-110 shadow-lg" : "border-transparent hover:border-border"
+                              )}
+                              title={t.charAt(0).toUpperCase() + t.slice(1)}
+                            >
+                              <div className={cn(
+                                "w-full h-full rounded-sm",
+                                t === 'light' ? "bg-white border border-gray-200" : 
+                                t === 'dark' ? "bg-zinc-900" : 
+                                t === 'emerald' ? "bg-emerald-500" : 
+                                t === 'amber' ? "bg-amber-500" : 
+                                t === 'rose' ? "bg-rose-500" : 
+                                t === 'slate' ? "bg-slate-500" : 
+                                "bg-zinc-800"
+                              )} />
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     <div className="h-[1px] bg-border my-2" />
 
