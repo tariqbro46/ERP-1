@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { 
   BarChart3, 
   Search, 
@@ -20,6 +21,7 @@ import autoTable from 'jspdf-autotable';
 
 export default function OrderReports() {
   const { user } = useAuth();
+  const settings = useSettings();
   const [orders, setOrders] = useState<PrintingOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -134,12 +136,25 @@ export default function OrderReports() {
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2 border-b border-border pb-2">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3 text-primary mb-1">
-            <BarChart3 className="w-5 h-5" />
-            <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-foreground">Analytics</span>
+        <div className="flex items-center gap-4">
+          {(settings.companyLogo || settings.systemLogo) && (
+            <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
+              <img 
+                src={settings.companyLogo || settings.systemLogo} 
+                alt="Logo" 
+                className="w-full h-full object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          )}
+          <div className="space-y-1">
+            <div className="flex items-center gap-3 text-primary mb-1">
+              <BarChart3 className="w-5 h-5" />
+              <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-foreground">Analytics</span>
+            </div>
+            <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Production Reports</h1>
+            <p className="text-[10px] text-gray-500 uppercase font-bold">{settings.companyName}</p>
           </div>
-          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Production Reports</h1>
         </div>
         <div className="flex w-full md:w-auto justify-end">
           <button 

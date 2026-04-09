@@ -162,9 +162,21 @@ export function StockSummary() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
-          <div className="flex flex-col">
-            <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Stock Summary</h1>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest">{settings.companyName || 'ERP System'} • as on {asOnDate}</p>
+          <div className="flex items-center gap-4">
+            {(settings.companyLogo || settings.systemLogo) && (
+              <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
+                <img 
+                  src={settings.companyLogo || settings.systemLogo} 
+                  alt="Logo" 
+                  className="w-full h-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            )}
+            <div className="flex flex-col">
+              <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Stock Summary</h1>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest">{settings.companyName || 'ERP System'} • as on {asOnDate}</p>
+            </div>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 w-full sm:w-auto">
             <div className="text-left sm:text-right">

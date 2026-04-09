@@ -106,12 +106,14 @@ export default function FounderPanel() {
     { id: 'Settings', label: 'Settings', icon: Settings }
   ];
 
-  const { appVersion, updateSettings, updateSystemSettings, uiStyle, statusOnlineText, statusOfflineText, statusErrorText, systemLogo } = useSettings();
+  const { appVersion, updateSettings, updateSystemSettings, uiStyle, statusOnlineText, statusOfflineText, statusErrorText, systemLogo, notificationDuration, notificationAnimationStyle } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion);
   const [localStatusOnline, setLocalStatusOnline] = useState(statusOnlineText);
   const [localStatusOffline, setLocalStatusOffline] = useState(statusOfflineText);
   const [localStatusError, setLocalStatusError] = useState(statusErrorText);
   const [localSystemLogo, setLocalSystemLogo] = useState(systemLogo || '');
+  const [localNotificationDuration, setLocalNotificationDuration] = useState(notificationDuration);
+  const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle);
 
   useEffect(() => {
     fetchData();
@@ -136,6 +138,14 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalSystemLogo(systemLogo || '');
   }, [systemLogo]);
+
+  useEffect(() => {
+    setLocalNotificationDuration(notificationDuration);
+  }, [notificationDuration]);
+
+  useEffect(() => {
+    setLocalNotificationAnimationStyle(notificationAnimationStyle);
+  }, [notificationAnimationStyle]);
 
   const safeFormat = (date: any, formatStr: string) => {
     try {
@@ -1063,12 +1073,58 @@ export default function FounderPanel() {
                     className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Notification Duration (ms)</label>
+                  <input
+                    type="number"
+                    value={localNotificationDuration}
+                    onChange={(e) => setLocalNotificationDuration(Number(e.target.value))}
+                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    step="500"
+                    min="1000"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Notification Border Animation Style</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[
+                    { id: 'default', label: 'Default Path', desc: 'Classic border trace' },
+                    { id: 'neon', label: 'Neon Glow', desc: 'Pulsating neon border' },
+                    { id: 'snake', label: 'Snake Chase', desc: 'Moving segment' },
+                    { id: 'liquid', label: 'Liquid Flow', desc: 'Rotating gradient' },
+                    { id: 'glitch', label: 'Cyber Glitch', desc: 'Digital distortion' },
+                    { id: 'shimmer', label: 'Shimmer Sweep', desc: 'Elegant light sweep' }
+                  ].map((style) => (
+                    <button
+                      key={style.id}
+                      onClick={() => setLocalNotificationAnimationStyle(style.id as any)}
+                      className={cn(
+                        "flex flex-col items-start p-3 rounded-xl border-2 transition-all text-left gap-1",
+                        localNotificationAnimationStyle === style.id
+                          ? "border-blue-500 bg-blue-500/5"
+                          : "border-border bg-background hover:border-gray-400"
+                      )}
+                    >
+                      <span className={cn(
+                        "text-[10px] font-bold uppercase tracking-wider",
+                        localNotificationAnimationStyle === style.id ? "text-blue-500" : "text-foreground"
+                      )}>
+                        {style.label}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground leading-tight">
+                        {style.desc}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-2">
                 <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">System Logo (Global Default)</label>
                 <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-muted/30 overflow-hidden rounded-lg">
+                  <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-foreground/5 overflow-hidden rounded-lg">
                     {localSystemLogo ? (
                       <img src={localSystemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                     ) : (
@@ -1090,6 +1146,16 @@ export default function FounderPanel() {
                         </button>
                       )}
                     </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Or set via URL</label>
+                      <input
+                        type="text"
+                        placeholder="https://example.com/logo.png"
+                        value={localSystemLogo}
+                        onChange={(e) => setLocalSystemLogo(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
                     <p className="text-[9px] text-muted-foreground uppercase">This logo will be used as a default for all companies if they don't have their own logo.</p>
                   </div>
                 </div>
@@ -1098,14 +1164,20 @@ export default function FounderPanel() {
               <div className="pt-4">
                 <button
                   onClick={async () => {
-                    await updateSystemSettings({
-                      statusOnlineText: localStatusOnline,
-                      statusOfflineText: localStatusOffline,
-                      statusErrorText: localStatusError,
-                      appVersion: localAppVersion,
-                      systemLogo: localSystemLogo
-                    });
-                    showNotification('System configuration updated successfully');
+                    try {
+                      await updateSystemSettings({
+                        statusOnlineText: localStatusOnline,
+                        statusOfflineText: localStatusOffline,
+                        statusErrorText: localStatusError,
+                        appVersion: localAppVersion,
+                        systemLogo: localSystemLogo,
+                        notificationDuration: localNotificationDuration,
+                        notificationAnimationStyle: localNotificationAnimationStyle
+                      });
+                      showNotification('System configuration updated successfully', 'success');
+                    } catch (err) {
+                      showNotification('Failed to update system configuration', 'error');
+                    }
                   }}
                   className={cn(
                     "w-full py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg",

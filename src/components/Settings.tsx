@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList } from 'lucide-react';
+import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -47,6 +47,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     reportLayout,
     dashboardDesign,
     uiStyle,
+    notificationAnimationStyle,
     appVersion,
     menuBarStyle,
     layoutWidth,
@@ -102,6 +103,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localReportLayout, setLocalReportLayout] = useState(reportLayout);
   const [localDashboardDesign, setLocalDashboardDesign] = useState(dashboardDesign);
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle);
+  const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle);
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded);
   const [localNotifications, setLocalNotifications] = useState(notifications);
   const [localWhatsappTemplates, setLocalWhatsappTemplates] = useState(whatsappTemplates);
@@ -143,6 +145,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalReportLayout(reportLayout);
     setLocalDashboardDesign(dashboardDesign);
     setLocalUIStyle(uiStyle);
+    setLocalNotificationAnimationStyle(notificationAnimationStyle);
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded);
     setLocalMenuBarStyle(menuBarStyle);
     setLocalLayoutWidth(layoutWidth);
@@ -176,6 +179,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       dashboardDesign: localDashboardDesign,
       uiStyle: localUIStyle,
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
+      notificationAnimationStyle: localNotificationAnimationStyle,
       financialYearStart: localFinancialYearStart,
       baseCurrencySymbol: localBaseCurrencySymbol,
       timezone: localTimezone
@@ -601,27 +605,6 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">Choose the visual style for generated reports and PDFs.</p>
                     </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
-                        <div>
-                          <h4 className="text-xs font-bold text-foreground uppercase">Show Running Balance in Reports</h4>
-                          <p className="text-[10px] text-gray-500">Enable running balance column in ledger statements by default.</p>
-                        </div>
-                        <button 
-                          onClick={() => setLocalShowRunningBalance(!localShowRunningBalance)}
-                          className={cn(
-                            "w-10 h-5 rounded-full transition-colors relative",
-                            localShowRunningBalance ? "bg-emerald-500" : "bg-gray-600"
-                          )}
-                        >
-                          <div className={cn(
-                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
-                            localShowRunningBalance ? "right-1" : "left-1"
-                          )} />
-                        </button>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -696,6 +679,27 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     <div className="space-y-2 md:col-span-2">
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
                         <div>
+                          <h4 className="text-xs font-bold text-foreground uppercase">Show Running Balance in Reports</h4>
+                          <p className="text-[10px] text-gray-500">Enable running balance column in ledger statements by default.</p>
+                        </div>
+                        <button 
+                          onClick={() => setLocalShowRunningBalance(!localShowRunningBalance)}
+                          className={cn(
+                            "w-10 h-5 rounded-full transition-colors relative",
+                            localShowRunningBalance ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowRunningBalance ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                        <div>
                           <h4 className="text-xs font-bold text-foreground uppercase">Show Mobile Navigation Bar</h4>
                           <p className="text-[10px] text-gray-500">Enable top navigation bar with Back/Forward buttons for mobile apps.</p>
                         </div>
@@ -718,35 +722,49 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                           <h5 className="text-[10px] font-bold text-foreground uppercase">Bottom Navigation Items (Mobile)</h5>
                           <p className="text-[9px] text-gray-500 uppercase mb-2">Select up to 4 items to show in the bottom bar.</p>
                           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-                            {NAV_ITEMS.flatMap(g => g.items).map(item => (
-                              <label 
-                                key={item.label}
-                                className={cn(
-                                  "flex items-center gap-2 p-2 border cursor-pointer transition-all",
-                                  localMobileBottomNavItems.includes(item.label)
-                                    ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-500"
-                                    : "bg-background border-border text-gray-500 hover:border-gray-400"
-                                )}
-                              >
-                                <input 
-                                  type="checkbox"
-                                  className="hidden"
-                                  checked={localMobileBottomNavItems.includes(item.label)}
-                                  onChange={() => {
-                                    if (localMobileBottomNavItems.includes(item.label)) {
-                                      setLocalMobileBottomNavItems(localMobileBottomNavItems.filter(i => i !== item.label));
-                                    } else {
-                                      if (localMobileBottomNavItems.length < 4) {
-                                        setLocalMobileBottomNavItems([...localMobileBottomNavItems, item.label]);
-                                      } else {
-                                        showNotification('You can only select up to 4 items.', 'info');
-                                      }
-                                    }
-                                  }}
-                                />
-                                <item.icon className="w-3 h-3" />
-                                <span className="text-[10px] font-medium truncate">{item.label}</span>
-                              </label>
+                            {/* Permanent Dashboard Item */}
+                            <div className="flex items-center gap-2 p-2 border bg-emerald-500/10 border-emerald-500/50 text-emerald-500 opacity-80 cursor-not-allowed">
+                              <LayoutDashboard className="w-3 h-3" />
+                              <span className="text-[10px] font-bold truncate">Dashboard</span>
+                              <span className="text-[8px] uppercase font-bold ml-auto">(Default)</span>
+                            </div>
+
+                            {NAV_ITEMS.map(group => (
+                              <React.Fragment key={group.group}>
+                                {group.items.map(item => {
+                                  if (item.label === 'Dashboard') return null;
+                                  return (
+                                    <label 
+                                      key={item.label}
+                                      className={cn(
+                                        "flex items-center gap-2 p-2 border cursor-pointer transition-all",
+                                        localMobileBottomNavItems.includes(item.label)
+                                          ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-500"
+                                          : "bg-background border-border text-gray-500 hover:border-gray-400"
+                                      )}
+                                    >
+                                      <input 
+                                        type="checkbox"
+                                        className="hidden"
+                                        checked={localMobileBottomNavItems.includes(item.label)}
+                                        onChange={() => {
+                                          if (localMobileBottomNavItems.includes(item.label)) {
+                                            setLocalMobileBottomNavItems(localMobileBottomNavItems.filter(i => i !== item.label));
+                                          } else {
+                                            if (localMobileBottomNavItems.length < 4) {
+                                              setLocalMobileBottomNavItems([...localMobileBottomNavItems, item.label]);
+                                            } else {
+                                              showNotification('You can only select up to 4 items.', 'info');
+                                            }
+                                          }
+                                        }}
+                                      />
+                                      <item.icon className="w-3 h-3" />
+                                      <span className="text-[10px] font-medium truncate">{item.label}</span>
+                                    </label>
+                                  );
+                                })}
+                              </React.Fragment>
                             ))}
                           </div>
                         </div>
@@ -771,6 +789,41 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                             localSidebarDefaultExpanded ? "right-1" : "left-1"
                           )} />
                         </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold text-foreground uppercase px-1">Notification Border Animation</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {[
+                          { id: 'default', label: 'Default Path', desc: 'Classic border trace' },
+                          { id: 'neon', label: 'Neon Glow', desc: 'Pulsating neon border' },
+                          { id: 'snake', label: 'Snake Chase', desc: 'Moving segment' },
+                          { id: 'liquid', label: 'Liquid Flow', desc: 'Rotating gradient' },
+                          { id: 'glitch', label: 'Cyber Glitch', desc: 'Digital distortion' },
+                          { id: 'shimmer', label: 'Shimmer Sweep', desc: 'Elegant light sweep' }
+                        ].map((style) => (
+                          <button
+                            key={style.id}
+                            onClick={() => setLocalNotificationAnimationStyle(style.id as any)}
+                            className={cn(
+                              "flex flex-col items-start p-3 border transition-all text-left gap-1",
+                              localNotificationAnimationStyle === style.id
+                                ? "border-emerald-500 bg-emerald-500/5"
+                                : "border-border bg-background hover:border-gray-400"
+                            )}
+                          >
+                            <span className={cn(
+                              "text-[10px] font-bold uppercase tracking-wider",
+                              localNotificationAnimationStyle === style.id ? "text-emerald-500" : "text-foreground"
+                            )}>
+                              {style.label}
+                            </span>
+                            <span className="text-[9px] text-gray-500 leading-tight">
+                              {style.desc}
+                            </span>
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -1411,7 +1464,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     <Save className="w-3 h-3" /> Save Messages
                   </button>
                 </div>
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] text-gray-500 uppercase">Voucher Saved Message</label>
                     <input 

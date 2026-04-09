@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { Users, TrendingUp, Target, Award, Calendar, Search, Loader2, ArrowUpRight, ArrowDownRight, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
@@ -19,6 +20,7 @@ interface SalespersonStat {
 
 export function SalespersonReport() {
   const { user } = useAuth();
+  const settings = useSettings();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<SalespersonStat[]>([]);
   const [startDate, setStartDate] = useState(() => {
@@ -81,11 +83,24 @@ export function SalespersonReport() {
   return (
     <div className="p-4 lg:p-6 space-y-6 font-mono transition-colors">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border pb-4">
-        <div className="flex flex-col">
-          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter flex items-center gap-3">
-            <Award className="w-6 h-6 text-amber-500" />
-            Sales Performance
-          </h1>
+        <div className="flex items-center gap-4">
+          {(settings.companyLogo || settings.systemLogo) && (
+            <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
+              <img 
+                src={settings.companyLogo || settings.systemLogo} 
+                alt="Logo" 
+                className="w-full h-full object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          )}
+          <div className="flex flex-col">
+            <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter flex items-center gap-3">
+              <Award className="w-6 h-6 text-amber-500" />
+              Sales Performance
+            </h1>
+            <p className="text-[10px] text-gray-500 uppercase font-bold">{settings.companyName}</p>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-4 w-full md:w-auto">

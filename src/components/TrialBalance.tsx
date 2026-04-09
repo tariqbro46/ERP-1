@@ -88,9 +88,23 @@ export function TrialBalance() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div className="flex items-baseline gap-4">
-            <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Trial Balance</h1>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest">Dutch Bangla Bank (Sample) • {firstDay} to {lastDay}</p>
+          <div className="flex items-center gap-4">
+            {(settings.companyLogo || settings.systemLogo) && (
+              <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
+                <img 
+                  src={settings.companyLogo || settings.systemLogo} 
+                  alt="Logo" 
+                  className="w-full h-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            )}
+            <div>
+              <div className="flex items-baseline gap-4">
+                <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Trial Balance</h1>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest">{settings.companyName} • {firstDay} to {lastDay}</p>
+              </div>
+            </div>
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
             <button 

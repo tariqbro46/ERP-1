@@ -21,6 +21,7 @@ export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11';
 export type ReportLayout = 'Layout 1' | 'Layout 2';
 export type DashboardDesign = 'Design 1' | 'Design 2';
 export type UIStyle = 'UI/UX 1' | 'UI/UX 2';
+export type NotificationAnimationStyle = 'default' | 'neon' | 'snake' | 'liquid' | 'glitch' | 'shimmer';
 
 interface WhatsAppTemplates {
   Sales: string;
@@ -72,6 +73,8 @@ interface SettingsContextType {
   layoutWidth: 'responsive' | 'constrained';
   sidebarDefaultExpanded: boolean;
   uiStyle: UIStyle;
+  notificationDuration: number;
+  notificationAnimationStyle: NotificationAnimationStyle;
   appVersion: string;
   statusOnlineText: string;
   statusOfflineText: string;
@@ -126,6 +129,8 @@ const defaultSettings: SettingsContextType = {
   layoutWidth: 'constrained',
   sidebarDefaultExpanded: true,
   uiStyle: 'UI/UX 1',
+  notificationDuration: 5000,
+  notificationAnimationStyle: 'default',
   appVersion: 'v1.0.1',
   statusOnlineText: 'Status: Online',
   statusOfflineText: 'Status: Offline',
@@ -176,7 +181,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           statusOfflineText: data.statusOfflineText || prev.statusOfflineText,
           statusErrorText: data.statusErrorText || prev.statusErrorText,
           appVersion: data.appVersion || prev.appVersion,
-          systemLogo: data.systemLogo || prev.systemLogo
+          systemLogo: data.systemLogo || prev.systemLogo,
+          notificationDuration: data.notificationDuration || prev.notificationDuration,
+          notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle
         }));
       }
     });

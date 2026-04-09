@@ -277,10 +277,6 @@ function Layout({ children }: { children: React.ReactNode }) {
       </div>
 
       <nav className="flex-1 py-2 overflow-y-auto no-scrollbar overflow-x-hidden">
-        <div className={cn("px-4 mb-2", isSidebarCollapsed && "px-2")}>
-          <SidebarItem to="/" icon={LayoutDashboard} label={isSidebarCollapsed ? "" : "Dashboard"} active={location.pathname === '/'} />
-        </div>
-
         {NAV_ITEMS.map((group) => {
           const isEnabled = group.items.some(item => !item.feature || features.find(f => f.id === item.feature)?.enabled !== false);
           if (!isEnabled) return null;
@@ -989,8 +985,19 @@ function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Mobile Bottom Navigation */}
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border h-16 flex items-center justify-around px-2 z-40">
+          <Link 
+            to="/" 
+            className={cn(
+              "flex flex-col items-center gap-1 px-3 py-1 transition-colors",
+              location.pathname === '/' ? "text-foreground" : "text-gray-500"
+            )}
+          >
+            <LayoutDashboard className="w-5 h-5" />
+            <span className="text-[9px] font-bold uppercase tracking-tighter">Dashboard</span>
+          </Link>
+
           {NAV_ITEMS.flatMap(g => g.items).filter(item => {
-            return mobileBottomNavItems.includes(item.label);
+            return mobileBottomNavItems.includes(item.label) && item.label !== 'Dashboard';
           }).map(item => (
             <Link 
               key={item.to}
