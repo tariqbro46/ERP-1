@@ -8,11 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { NAV_ITEMS } from '../constants/navigation';
 import { useTheme, Theme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
   const { 
     companyName, 
     companyLogo,
@@ -628,6 +630,31 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">{t('settings.language')}</label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setLanguage('en')}
+                          className={cn(
+                            "flex-1 py-3 text-sm font-bold uppercase tracking-widest rounded border transition-all",
+                            language === 'en' ? "bg-foreground text-background border-foreground" : "bg-background text-gray-500 border-border hover:border-gray-400"
+                          )}
+                        >
+                          English
+                        </button>
+                        <button
+                          onClick={() => setLanguage('bn')}
+                          className={cn(
+                            "flex-1 py-3 text-sm font-bold uppercase tracking-widest rounded border transition-all",
+                            language === 'bn' ? "bg-foreground text-background border-foreground" : "bg-background text-gray-500 border-border hover:border-gray-400"
+                          )}
+                        >
+                          বাংলা
+                        </button>
+                      </div>
+                      <p className="text-[9px] text-gray-500 uppercase">Choose your preferred application language.</p>
+                    </div>
+
                     <div className="space-y-2">
                       <label className="text-[10px] text-gray-500 uppercase">Menu Bar Style</label>
                       <select 

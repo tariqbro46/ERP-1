@@ -2,12 +2,14 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 import { useSiteContent } from '../../hooks/useSiteContent';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export const Footer = () => {
+  const { t } = useLanguage();
   const { content: globalSettings } = useSiteContent('global', { 
     siteName: 'ERP System',
     siteNameColor: '#0a0a0a',
-    footerText: '© 2026 ERP System. All rights reserved.',
+    footerText: `© 2026 ${t('nav.home')}. All rights reserved.`,
     footerTextColor: '#64748b',
     footerBgColor: '#ffffff'
   });
@@ -24,24 +26,24 @@ export const Footer = () => {
               <span className="text-lg font-bold uppercase tracking-tighter" style={{ color: globalSettings.siteNameColor }}>{globalSettings.siteName}</span>
             </div>
             <p className="text-sm max-w-xs" style={{ color: globalSettings.footerTextColor }}>
-              A comprehensive ERP solution designed to streamline your business operations, from inventory management to financial reporting.
+              {t('footer.description')}
             </p>
           </div>
           
           <div>
-            <h4 className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: globalSettings.siteNameColor }}>Product</h4>
+            <h4 className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: globalSettings.siteNameColor }}>{t('footer.product')}</h4>
             <ul className="space-y-2">
-              <li><Link to="/features" className="text-sm transition-colors hover:text-foreground" style={{ color: globalSettings.footerTextColor }}>Features</Link></li>
-              <li><Link to="/about" className="text-sm transition-colors hover:text-foreground" style={{ color: globalSettings.footerTextColor }}>About Us</Link></li>
-              <li><Link to="/contact" className="text-sm transition-colors hover:text-foreground" style={{ color: globalSettings.footerTextColor }}>Contact</Link></li>
+              <li><Link to="/features" className="text-sm transition-colors hover:text-foreground" style={{ color: globalSettings.footerTextColor }}>{t('nav.features')}</Link></li>
+              <li><Link to="/about" className="text-sm transition-colors hover:text-foreground" style={{ color: globalSettings.footerTextColor }}>{t('nav.about')}</Link></li>
+              <li><Link to="/contact" className="text-sm transition-colors hover:text-foreground" style={{ color: globalSettings.footerTextColor }}>{t('nav.contact')}</Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: globalSettings.siteNameColor }}>Legal</h4>
+            <h4 className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: globalSettings.siteNameColor }}>{t('footer.legal')}</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-sm transition-colors hover:text-foreground" style={{ color: globalSettings.footerTextColor }}>Privacy Policy</a></li>
-              <li><a href="#" className="text-sm transition-colors hover:text-foreground" style={{ color: globalSettings.footerTextColor }}>Terms of Service</a></li>
+              <li><a href="#" className="text-sm transition-colors hover:text-foreground" style={{ color: globalSettings.footerTextColor }}>{t('footer.privacy')}</a></li>
+              <li><a href="#" className="text-sm transition-colors hover:text-foreground" style={{ color: globalSettings.footerTextColor }}>{t('footer.terms')}</a></li>
             </ul>
           </div>
         </div>

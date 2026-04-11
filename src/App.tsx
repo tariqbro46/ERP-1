@@ -67,6 +67,7 @@ import NotificationCenter from './components/NotificationCenter';
 import NotificationPage from './components/NotificationPage';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { Login, Register } from './components/Auth';
 import { useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, PAGE_TITLES, DASHBOARD_ITEM } from './constants/navigation';
@@ -132,6 +133,7 @@ import { useSettings } from './contexts/SettingsContext';
 function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
   const { user, company, logout, isAdmin, isSuperAdmin } = useAuth();
   const { 
     companyName, 
@@ -556,6 +558,32 @@ function Layout({ children }: { children: React.ReactNode }) {
               <Link to="/companies" className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors">
                 <Building2 className="w-3.5 h-3.5" /> Company Info
               </Link>
+
+              <div className="h-[1px] bg-border my-2" />
+
+              <div className="px-4 py-2">
+                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">{t('settings.language')}</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setLanguage('en')}
+                    className={cn(
+                      "flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded border transition-all",
+                      language === 'en' ? "bg-primary text-white border-primary" : "text-gray-500 border-border hover:bg-foreground/5"
+                    )}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => setLanguage('bn')}
+                    className={cn(
+                      "flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded border transition-all",
+                      language === 'bn' ? "bg-primary text-white border-primary" : "text-gray-500 border-border hover:bg-foreground/5"
+                    )}
+                  >
+                    বাংলা
+                  </button>
+                </div>
+              </div>
 
               <div className="h-[1px] bg-border my-2" />
 
@@ -1258,7 +1286,9 @@ function ProtectedRoute() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
     </AuthProvider>
   );
 }

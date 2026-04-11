@@ -1,14 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, X, LayoutDashboard } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Globe } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 import { useSiteContent } from '../../hooks/useSiteContent';
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const { user } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const { content: globalSettings } = useSiteContent('global', { 
     siteName: 'ERP System',
     siteNameColor: '#0a0a0a',
@@ -18,10 +20,10 @@ export const Navbar = () => {
   });
 
   const navLinks = [
-    { name: 'Home', href: '/' },
-    { name: 'Features', href: '/features' },
-    { name: 'About', href: '/about' },
-    { name: 'Contact', href: '/contact' },
+    { name: t('nav.home'), href: '/' },
+    { name: t('nav.features'), href: '/features' },
+    { name: t('nav.about'), href: '/about' },
+    { name: t('nav.contact'), href: '/contact' },
   ];
 
   return (
@@ -50,13 +52,36 @@ export const Navbar = () => {
                 {link.name}
               </Link>
             ))}
+
+            {/* Language Switcher */}
+            <div className="flex items-center gap-2 border-l border-border pl-4">
+              <button 
+                onClick={() => setLanguage('en')}
+                className={cn(
+                  "text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded transition-all",
+                  language === 'en' ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                EN
+              </button>
+              <button 
+                onClick={() => setLanguage('bn')}
+                className={cn(
+                  "text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded transition-all",
+                  language === 'bn' ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                BN
+              </button>
+            </div>
+
             {user ? (
               <Link
                 to="/dashboard"
                 className="px-4 py-2 bg-foreground text-background rounded-full text-sm font-bold hover:opacity-90 transition-opacity flex items-center gap-2"
               >
                 <LayoutDashboard className="w-4 h-4" />
-                Go to App
+                {t('nav.dashboard')}
               </Link>
             ) : (
               <div className="flex items-center gap-4">
@@ -65,14 +90,14 @@ export const Navbar = () => {
                   className="text-sm font-medium transition-colors"
                   style={{ color: globalSettings.navbarTextColor }}
                 >
-                  Sign In
+                  {t('nav.signIn')}
                 </Link>
                 {globalSettings.registrationEnabled && (
                   <Link
                     to="/register"
                     className="px-4 py-2 bg-foreground text-background rounded-full text-sm font-bold hover:opacity-90 transition-opacity"
                   >
-                    Get Started
+                    {t('nav.getStarted')}
                   </Link>
                 )}
               </div>
@@ -95,7 +120,7 @@ export const Navbar = () => {
       <div
         className={cn(
           "md:hidden absolute top-16 left-0 right-0 bg-background border-b border-border transition-all duration-300 ease-in-out overflow-hidden",
-          isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+          isOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
         )}
       >
         <div className="px-4 pt-2 pb-6 space-y-4">
@@ -109,6 +134,32 @@ export const Navbar = () => {
               {link.name}
             </Link>
           ))}
+          
+          {/* Mobile Language Switcher */}
+          <div className="flex items-center gap-4 pt-2">
+            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Language:</span>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => { setLanguage('en'); setIsOpen(false); }}
+                className={cn(
+                  "text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border border-border",
+                  language === 'en' ? "bg-foreground text-background" : "text-muted-foreground"
+                )}
+              >
+                English
+              </button>
+              <button 
+                onClick={() => { setLanguage('bn'); setIsOpen(false); }}
+                className={cn(
+                  "text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border border-border",
+                  language === 'bn' ? "bg-foreground text-background" : "text-muted-foreground"
+                )}
+              >
+                বাংলা
+              </button>
+            </div>
+          </div>
+
           <div className="pt-4 border-t border-border flex flex-col gap-4">
             {user ? (
               <Link
@@ -117,7 +168,7 @@ export const Navbar = () => {
                 className="w-full py-3 bg-foreground text-background rounded-xl text-center font-bold flex items-center justify-center gap-2"
               >
                 <LayoutDashboard className="w-4 h-4" />
-                Go to App
+                {t('nav.dashboard')}
               </Link>
             ) : (
               <>
@@ -126,7 +177,7 @@ export const Navbar = () => {
                   onClick={() => setIsOpen(false)}
                   className="w-full py-3 text-center font-medium text-muted-foreground hover:text-foreground"
                 >
-                  Sign In
+                  {t('nav.signIn')}
                 </Link>
                 {globalSettings.registrationEnabled && (
                   <Link
@@ -134,7 +185,7 @@ export const Navbar = () => {
                     onClick={() => setIsOpen(false)}
                     className="w-full py-3 bg-foreground text-background rounded-xl text-center font-bold"
                   >
-                    Get Started
+                    {t('nav.getStarted')}
                   </Link>
                 )}
               </>

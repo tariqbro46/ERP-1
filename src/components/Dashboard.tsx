@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { cn } from '../lib/utils';
 import { format, differenceInDays } from 'date-fns';
 
@@ -60,6 +61,7 @@ const StatCard = ({ title, value, change, icon: Icon, trend, loading, color, uiS
 export function Dashboard() {
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { t } = useLanguage();
   const { companyName, financialYearStart, financialYearEnd, dashboardDesign, uiStyle } = useSettings();
   const { isAdmin, user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -151,48 +153,48 @@ export function Dashboard() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-800">Dashboard Overview</h1>
-            <p className="text-sm text-gray-500 uppercase tracking-wider font-medium">Financial Summary • {companyName}</p>
+            <h1 className="text-2xl font-semibold text-gray-800">{t('dashboard.overview')}</h1>
+            <p className="text-sm text-gray-500 uppercase tracking-wider font-medium">{t('dashboard.financialSummary')} • {companyName}</p>
           </div>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => window.location.reload()}
               className="text-[11px] font-bold text-gray-500 uppercase hover:text-gray-800 transition-colors"
             >
-              Refresh
+              {t('common.refresh')}
             </button>
           </div>
         </div>
 
         {/* Metric Cards Section */}
         <div className="space-y-4">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Key Performance Indicators</h2>
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('dashboard.kpi')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-[#ffbf00] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
               <div className="space-y-4">
                 <CreditCard className="w-6 h-6 text-black/60" />
-                <p className="text-[10px] font-bold text-black/60 uppercase leading-tight">Total Revenue</p>
+                <p className="text-[10px] font-bold text-black/60 uppercase leading-tight">{t('dashboard.revenue')}</p>
               </div>
               <span className="text-2xl font-light text-black/80">₹{revenue.toLocaleString()}</span>
             </div>
             <div className="bg-[#34a853] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
               <div className="space-y-4">
                 <Activity className="w-6 h-6 text-white/60" />
-                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">Net Profit</p>
+                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dashboard.profit')}</p>
               </div>
               <span className="text-2xl font-light text-white/90">₹{profit.toLocaleString()}</span>
             </div>
             <div className="bg-[#ea4335] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
               <div className="space-y-4">
                 <Users className="w-6 h-6 text-white/60" />
-                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">Active Ledgers</p>
+                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dashboard.activeLedgers')}</p>
               </div>
               <span className="text-3xl font-light text-white/90">{activeLedgers}</span>
             </div>
             <div className="bg-[#e91e63] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
               <div className="space-y-4">
                 <Package className="w-6 h-6 text-white/60" />
-                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">Stock Value</p>
+                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dashboard.stockValue')}</p>
               </div>
               <span className="text-2xl font-light text-white/90">₹{stockValue.toLocaleString()}</span>
             </div>
@@ -356,7 +358,7 @@ export function Dashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
-          title="Total Revenue" 
+          title={t('dashboard.revenue')} 
           value={`৳ ${stats.revenue.toLocaleString()}`} 
           change="+12.5%" 
           icon={Activity} 
@@ -366,7 +368,7 @@ export function Dashboard() {
           uiStyle={uiStyle}
         />
         <StatCard 
-          title="Net Profit" 
+          title={t('dashboard.profit')} 
           value={`৳ ${stats.profit.toLocaleString()}`} 
           change="+5.2%" 
           icon={CreditCard} 
@@ -376,7 +378,7 @@ export function Dashboard() {
           uiStyle={uiStyle}
         />
         <StatCard 
-          title="Active Ledgers" 
+          title={t('dashboard.activeLedgers')} 
           value={stats.activeLedgers?.toString() || '0'} 
           change="+3" 
           icon={Users} 
@@ -386,7 +388,7 @@ export function Dashboard() {
           uiStyle={uiStyle}
         />
         <StatCard 
-          title="Stock Value" 
+          title={t('dashboard.stockValue')} 
           value={`৳ ${stats.stockValue.toLocaleString()}`} 
           change="-2.1%" 
           icon={Package} 

@@ -13,50 +13,52 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useSiteContent } from '../../hooks/useSiteContent';
-
-const DEFAULT_CONTENT = {
-  heroTitle: "Manage Your Business With Intelligence",
-  heroTitleColor: "#0a0a0a",
-  heroSubtitle: "The all-in-one ERP solution for modern enterprises. Streamline operations, gain real-time insights, and scale your business with confidence.",
-  heroSubtitleColor: "#64748b",
-  heroCtaPrimary: "Start Free Trial",
-  heroCtaPrimaryBg: "#0a0a0a",
-  heroCtaPrimaryText: "#ffffff",
-  heroCtaSecondary: "View Features",
-  heroCtaSecondaryBg: "#ffffff",
-  heroCtaSecondaryText: "#0a0a0a",
-  heroImage: "https://picsum.photos/seed/erp-hero-dashboard/1600/900",
-  heroBgColor: "#ffffff",
-  showHero: true,
-  statsClients: "500+",
-  statsUptime: "99.9%",
-  statsSupport: "24/7",
-  statsExperience: "15+",
-  statsSectionBg: "#f9fafb",
-  statsTitleColor: "#0a0a0a",
-  statsSubtitleColor: "#64748b",
-  showStats: true,
-  featuresTitle: "Everything You Need",
-  featuresTitleColor: "#0a0a0a",
-  featuresSubtitle: "Powerful tools to help you manage every aspect of your business from a single, unified platform.",
-  featuresSubtitleColor: "#64748b",
-  featuresSectionBg: "#ffffff",
-  featureCardBg: "#f5f5f5",
-  featureCardTitleColor: "#0a0a0a",
-  featureCardDescColor: "#64748b",
-  showFeatures: true,
-  ctaTitle: "Ready to Transform Your Business?",
-  ctaTitleColor: "#ffffff",
-  ctaSubtitle: "Join hundreds of successful companies already using our ERP system to power their growth.",
-  ctaSubtitleColor: "rgba(255,255,255,0.7)",
-  ctaSectionBg: "#0a0a0a",
-  ctaButton: "Get Started Now",
-  ctaButtonBg: "#ffffff",
-  ctaButtonText: "#0a0a0a",
-  showCta: true
-};
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export const Home = () => {
+  const { t } = useLanguage();
+  const DEFAULT_CONTENT = {
+    heroTitle: t('home.heroTitle'),
+    heroTitleColor: "#0a0a0a",
+    heroSubtitle: t('home.heroSubtitle'),
+    heroSubtitleColor: "#64748b",
+    heroCtaPrimary: t('home.startTrial'),
+    heroCtaPrimaryBg: "#0a0a0a",
+    heroCtaPrimaryText: "#ffffff",
+    heroCtaSecondary: t('home.viewFeatures'),
+    heroCtaSecondaryBg: "#ffffff",
+    heroCtaSecondaryText: "#0a0a0a",
+    heroImage: "https://picsum.photos/seed/erp-hero-dashboard/1600/900",
+    heroBgColor: "#ffffff",
+    showHero: true,
+    statsClients: "500+",
+    statsUptime: "99.9%",
+    statsSupport: "24/7",
+    statsExperience: "15+",
+    statsSectionBg: "#f9fafb",
+    statsTitleColor: "#0a0a0a",
+    statsSubtitleColor: "#64748b",
+    showStats: true,
+    featuresTitle: t('home.featuresTitle'),
+    featuresTitleColor: "#0a0a0a",
+    featuresSubtitle: t('home.featuresSubtitle'),
+    featuresSubtitleColor: "#64748b",
+    featuresSectionBg: "#ffffff",
+    featureCardBg: "#f5f5f5",
+    featureCardTitleColor: "#0a0a0a",
+    featureCardDescColor: "#64748b",
+    showFeatures: true,
+    ctaTitle: t('home.ctaTitle'),
+    ctaTitleColor: "#ffffff",
+    ctaSubtitle: t('home.ctaSubtitle'),
+    ctaSubtitleColor: "rgba(255,255,255,0.7)",
+    ctaSectionBg: "#0a0a0a",
+    ctaButton: t('home.getStarted'),
+    ctaButtonBg: "#ffffff",
+    ctaButtonText: "#0a0a0a",
+    showCta: true
+  };
+
   const { content } = useSiteContent('home', DEFAULT_CONTENT);
 
   return (
@@ -143,19 +145,19 @@ export const Home = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                 <div>
                   <p className="text-3xl font-bold mb-1" style={{ color: content.statsTitleColor }}>{content.statsClients}</p>
-                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: content.statsSubtitleColor }}>Active Clients</p>
+                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: content.statsSubtitleColor }}>{t('home.statsClients')}</p>
                 </div>
                 <div>
                   <p className="text-3xl font-bold mb-1" style={{ color: content.statsTitleColor }}>{content.statsUptime}</p>
-                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: content.statsSubtitleColor }}>Uptime Rate</p>
+                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: content.statsSubtitleColor }}>{t('home.statsUptime')}</p>
                 </div>
                 <div>
                   <p className="text-3xl font-bold mb-1" style={{ color: content.statsTitleColor }}>{content.statsSupport}</p>
-                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: content.statsSubtitleColor }}>Expert Support</p>
+                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: content.statsSubtitleColor }}>{t('home.statsSupport')}</p>
                 </div>
                 <div>
                   <p className="text-3xl font-bold mb-1" style={{ color: content.statsTitleColor }}>{content.statsExperience}</p>
-                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: content.statsSubtitleColor }}>Years Experience</p>
+                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: content.statsSubtitleColor }}>{t('home.statsExperience')}</p>
                 </div>
               </div>
             </div>
