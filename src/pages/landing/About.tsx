@@ -141,9 +141,9 @@ export const About = () => {
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {[
-                  { name: "John Doe", role: "CEO & Founder", img: "https://api.dicebear.com/7.x/pixel-art/svg?seed=John" },
-                  { name: "Jane Smith", role: "CTO", img: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Jane" },
-                  { name: "Mike Johnson", role: "Head of Product", img: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Mike" }
+                  { name: "John Doe", role: t('about.roleCEO'), img: "https://api.dicebear.com/7.x/pixel-art/svg?seed=John" },
+                  { name: "Jane Smith", role: t('about.roleCTO'), img: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Jane" },
+                  { name: "Mike Johnson", role: t('about.roleProduct'), img: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Mike" }
                 ].map((member, i) => (
                   <div key={i} className="p-8 bg-card border border-border rounded-3xl">
                     <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-6 border-4 border-primary/20">

@@ -64,12 +64,14 @@ export const Contact = () => {
     subject: '',
     message: ''
   });
+  const [isSubmitted, setIsSubmitted] = React.useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // In a real app, you'd send this to your backend
-    alert('Thank you for your message! We will get back to you soon.');
+    setIsSubmitted(true);
     setFormState({ name: '', email: '', subject: '', message: '' });
+    setTimeout(() => setIsSubmitted(false), 5000);
   };
 
   return (
@@ -138,7 +140,24 @@ export const Contact = () => {
             </div>
 
             {/* Contact Form */}
-            <div className="border border-border rounded-3xl p-8 md:p-12 shadow-xl" style={{ backgroundColor: content.formBgColor }}>
+            <div className="border border-border rounded-3xl p-8 md:p-12 shadow-xl relative" style={{ backgroundColor: content.formBgColor }}>
+              {isSubmitted && (
+                <div className="absolute inset-0 z-10 bg-card/90 backdrop-blur-sm flex items-center justify-center p-8 text-center animate-in fade-in duration-300 rounded-3xl">
+                  <div className="space-y-4">
+                    <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto">
+                      <Send className="w-8 h-8 text-emerald-500" />
+                    </div>
+                    <h3 className="text-xl font-bold">{t('contact.successTitle') || 'Message Sent!'}</h3>
+                    <p className="text-muted-foreground">{t('contact.successMessage')}</p>
+                    <button 
+                      onClick={() => setIsSubmitted(false)}
+                      className="px-6 py-2 bg-foreground text-background rounded-full text-sm font-bold"
+                    >
+                      {t('common.close') || 'Close'}
+                    </button>
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
