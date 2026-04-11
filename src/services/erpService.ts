@@ -1650,5 +1650,30 @@ export const erpService = {
       handleFirestoreError(error, OperationType.LIST, 'users');
       return [];
     }
+  },
+
+  async getSiteContent(pageId: string): Promise<any> {
+    try {
+      const snap = await getDoc(doc(db, 'site_content', pageId));
+      if (snap.exists()) {
+        return snap.data().content;
+      }
+      return null;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `site_content/${pageId}`);
+      return null;
+    }
+  },
+
+  async updateSiteContent(pageId: string, content: any) {
+    try {
+      await setDoc(doc(db, 'site_content', pageId), {
+        pageId,
+        content,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `site_content/${pageId}`);
+    }
   }
 };

@@ -55,6 +55,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
+import { SiteContentEditor } from './SiteContentEditor';
 
 interface CompanyStats extends Company {
   userCount: number;
@@ -76,7 +77,7 @@ export default function FounderPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<CompanyStats | null>(null);
   const [isEditingSubscription, setIsEditingSubscription] = useState(false);
-  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings'>('companies');
+  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent'>('companies');
   const [globalActivity, setGlobalActivity] = useState<any[]>([]);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
@@ -395,7 +396,7 @@ export default function FounderPanel() {
           </p>
           <button 
             onClick={() => navigate('/')}
-            className="px-6 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+            className="px-6 py-2 bg-primary text-white text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-sm rounded-lg"
           >
             Return to Dashboard
           </button>
@@ -502,6 +503,18 @@ export default function FounderPanel() {
             >
               <Activity className="w-4 h-4" />
               Activity
+            </button>
+            <button
+              onClick={() => setViewMode('siteContent')}
+              className={cn(
+                "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
+                viewMode === 'siteContent' 
+                  ? uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white shadow-md" : "bg-background text-foreground shadow-sm"
+                  : uiStyle === 'UI/UX 2' ? "text-blue-400 hover:text-blue-600" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Site Content
             </button>
             <button
               onClick={() => setViewMode('settings')}
@@ -695,7 +708,7 @@ export default function FounderPanel() {
                     <div className="flex items-center justify-end gap-2">
                       {currentUser?.companyId !== company.id ? (
                         <button 
-                          onClick={() => handleSwitchCompany(company.id)}
+                           onClick={() => handleSwitchCompany(company.id)}
                           className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
                           title="Switch to this Company"
                         >
@@ -737,6 +750,8 @@ export default function FounderPanel() {
             </tbody>
           </table>
         </div>
+      ) : viewMode === 'siteContent' ? (
+        <SiteContentEditor />
       ) : viewMode === 'users' ? (
         <div className="space-y-4">
           {allUsers
@@ -1466,7 +1481,7 @@ export default function FounderPanel() {
                     }}
                     className={cn(
                       "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all",
-                      uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200" : "bg-foreground text-background hover:bg-foreground/90"
+                      uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200" : "bg-primary text-white hover:opacity-90 shadow-sm rounded-lg"
                     )}
                   >
                     Save Permissions

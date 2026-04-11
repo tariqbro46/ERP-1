@@ -9,9 +9,24 @@ import { erpService } from '../services/erpService';
 import { doc, setDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useSiteContent } from '../hooks/useSiteContent';
+
+const LOGIN_DEFAULT = {
+  title: "Sign in to ERP System",
+  subtitle: "Enter your details below to access your account.",
+  loginImage: "https://picsum.photos/seed/dribbble-login/1200/1600",
+  imageTitle: "Streamline your business operations.",
+  imageSubtitle: "The most powerful ERP solution for modern enterprises.",
+  forgotTitle: "Forgot Password?",
+  forgotSubtitle: "Enter your email and we'll send you a link to reset your password.",
+  resetImageTitle: "Recover your account.",
+  resetImageSubtitle: "Don't worry, it happens to the best of us."
+};
 
 export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   const navigate = useNavigate();
+  const { content } = useSiteContent('login', LOGIN_DEFAULT);
+  const { content: globalSettings } = useSiteContent('global', { registrationEnabled: true });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -69,8 +84,8 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
           />
           <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
           <div className="absolute bottom-12 left-12 right-12 text-white">
-            <h2 className="text-4xl font-bold mb-4 tracking-tight">Recover your account.</h2>
-            <p className="text-lg opacity-80">Don't worry, it happens to the best of us.</p>
+            <h2 className="text-4xl font-bold mb-4 tracking-tight">{content.resetImageTitle}</h2>
+            <p className="text-lg opacity-80">{content.resetImageSubtitle}</p>
           </div>
         </div>
 
@@ -86,8 +101,8 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
           <div className="flex-1 flex flex-col justify-center px-8 md:px-12 lg:px-20 overflow-y-auto no-scrollbar">
             <div className="max-w-md w-full mx-auto py-12">
               <div className="mb-10">
-                <h1 className="text-3xl font-bold mb-2">Forgot Password?</h1>
-                <p className="text-muted-foreground">Enter your email and we'll send you a link to reset your password.</p>
+                <h1 className="text-3xl font-bold mb-2">{content.forgotTitle}</h1>
+                <p className="text-muted-foreground">{content.forgotSubtitle}</p>
               </div>
 
               {resetSent ? (
@@ -148,18 +163,17 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
 
   return (
     <div className="h-screen w-full flex bg-background overflow-hidden">
-      {/* Left Side - Image (Dribbble Style) */}
       <div className="hidden lg:block lg:w-[40%] relative overflow-hidden">
         <img 
-          src="https://picsum.photos/seed/dribbble-login/1200/1600" 
+          src={content.loginImage} 
           alt="Auth Background" 
           className="absolute inset-0 w-full h-full object-cover"
           referrerPolicy="no-referrer"
         />
         <div className="absolute inset-0 bg-black/10" />
         <div className="absolute bottom-12 left-12 right-12 text-white">
-          <h2 className="text-4xl font-bold mb-4 tracking-tight">Streamline your business operations.</h2>
-          <p className="text-lg opacity-80 font-medium">The most powerful ERP solution for modern enterprises.</p>
+          <h2 className="text-4xl font-bold mb-4 tracking-tight">{content.imageTitle}</h2>
+          <p className="text-lg opacity-80 font-medium">{content.imageSubtitle}</p>
         </div>
       </div>
 
@@ -176,8 +190,8 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
         <div className="flex-1 flex flex-col justify-center px-8 md:px-12 lg:px-20 overflow-y-auto no-scrollbar">
           <div className="max-w-md w-full mx-auto py-12">
             <div className="mb-10">
-              <h1 className="text-3xl font-bold mb-2">Sign in to ERP System</h1>
-              <p className="text-muted-foreground">Enter your details below to access your account.</p>
+              <h1 className="text-3xl font-bold mb-2">{content.title}</h1>
+              <p className="text-muted-foreground">{content.subtitle}</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -225,17 +239,19 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
               </button>
             </form>
 
-            <div className="mt-8 pt-8 border-t border-border text-center">
-              <p className="text-sm text-muted-foreground">
-                Don't have an account?{' '}
-                <button 
-                  onClick={onToggle}
-                  className="font-bold text-foreground hover:underline"
-                >
-                  Create one
-                </button>
-              </p>
-            </div>
+            {globalSettings.registrationEnabled && (
+              <div className="mt-8 pt-8 border-t border-border text-center">
+                <p className="text-sm text-muted-foreground">
+                  Don't have an account?{' '}
+                  <button 
+                    onClick={onToggle}
+                    className="font-bold text-foreground hover:underline"
+                  >
+                    Create one
+                  </button>
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -258,8 +274,24 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   );
 };
 
+const REGISTER_DEFAULT = {
+  title: "Create your Account",
+  registerImage: "https://picsum.photos/seed/dribbble-reg/1200/1600",
+  imageTitle: "Join the future of ERP.",
+  imageSubtitle: "Create your account and start managing your business today."
+};
+
 export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   const navigate = useNavigate();
+  const { content } = useSiteContent('register', REGISTER_DEFAULT);
+  const { content: globalSettings } = useSiteContent('global', { registrationEnabled: true });
+
+  React.useEffect(() => {
+    if (globalSettings.registrationEnabled === false) {
+      onToggle();
+    }
+  }, [globalSettings.registrationEnabled, onToggle]);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -380,18 +412,17 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
 
   return (
     <div className="h-screen w-full flex bg-background overflow-hidden">
-      {/* Left Side - Image */}
       <div className="hidden lg:block lg:w-[40%] relative overflow-hidden">
         <img 
-          src="https://picsum.photos/seed/dribbble-reg/1200/1600" 
+          src={content.registerImage} 
           alt="Auth Background" 
           className="absolute inset-0 w-full h-full object-cover"
           referrerPolicy="no-referrer"
         />
         <div className="absolute inset-0 bg-black/10" />
         <div className="absolute bottom-12 left-12 right-12 text-white">
-          <h2 className="text-4xl font-bold mb-4 tracking-tight">Join the future of ERP.</h2>
-          <p className="text-lg opacity-80 font-medium">Create your account and start managing your business today.</p>
+          <h2 className="text-4xl font-bold mb-4 tracking-tight">{content.imageTitle}</h2>
+          <p className="text-lg opacity-80 font-medium">{content.imageSubtitle}</p>
         </div>
       </div>
 
@@ -408,7 +439,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
         <div className="flex-1 flex flex-col justify-center px-8 md:px-12 lg:px-20 overflow-y-auto no-scrollbar">
           <div className="max-w-md w-full mx-auto py-12">
             <div className="mb-10">
-              <h1 className="text-3xl font-bold mb-2">Create your Account</h1>
+              <h1 className="text-3xl font-bold mb-2">{content.title}</h1>
               <p className="text-muted-foreground">Step {step} of 3: {step === 1 ? 'Personal Details' : step === 2 ? 'Company Details' : 'Final Configuration'}</p>
             </div>
 

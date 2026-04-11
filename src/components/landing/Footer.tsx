@@ -1,7 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+import { useSiteContent } from '../../hooks/useSiteContent';
+
 export const Footer = () => {
+  const { content: globalSettings } = useSiteContent('global', { 
+    siteName: 'ERP System',
+    footerText: '© 2026 ERP System. All rights reserved.'
+  });
+
   return (
     <footer className="bg-background border-t border-border py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -9,9 +16,9 @@ export const Footer = () => {
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
-                <span className="text-background font-bold">E</span>
+                <span className="text-background font-bold">{globalSettings.siteName?.charAt(0)}</span>
               </div>
-              <span className="text-lg font-bold uppercase tracking-tighter">ERP System</span>
+              <span className="text-lg font-bold uppercase tracking-tighter">{globalSettings.siteName}</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
               A comprehensive ERP solution designed to streamline your business operations, from inventory management to financial reporting.
@@ -38,7 +45,7 @@ export const Footer = () => {
         
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-            © {new Date().getFullYear()} ERP System. All rights reserved.
+            {globalSettings.footerText}
           </p>
           <div className="flex gap-6">
             <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">

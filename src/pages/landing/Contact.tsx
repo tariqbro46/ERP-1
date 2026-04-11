@@ -2,8 +2,26 @@ import React from 'react';
 import { Navbar } from '../../components/landing/Navbar';
 import { Footer } from '../../components/landing/Footer';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
+import { useSiteContent } from '../../hooks/useSiteContent';
+
+const DEFAULT_CONTENT = {
+  title: "Get in Touch",
+  subtitle: "Have questions? We're here to help. Send us a message and our team will get back to you within 24 hours.",
+  bgColor: "#ffffff",
+  emailLabel: "Email Us",
+  email1: "support@erpsystem.com",
+  email2: "sales@erpsystem.com",
+  phoneLabel: "Call Us",
+  phone1: "+1 (555) 123-4567",
+  phone2: "Mon-Fri, 9am-6pm EST",
+  addressLabel: "Visit Our Office",
+  addressLine1: "123 Business Avenue, Suite 500",
+  addressLine2: "Silicon Valley, CA 94025",
+  addressLine3: "United States"
+};
 
 export const Contact = () => {
+  const { content } = useSiteContent('contact', DEFAULT_CONTENT);
   const [formState, setFormState] = React.useState({
     name: '',
     email: '',
@@ -19,16 +37,15 @@ export const Contact = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: content.bgColor }}>
       <Navbar />
       
       <main className="flex-1 pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">Get in Touch</h1>
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">{content.title}</h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Have questions? We're here to help. Send us a message and our team 
-              will get back to you within 24 hours.
+              {content.subtitle}
             </p>
           </div>
 
@@ -40,17 +57,17 @@ export const Contact = () => {
                   <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
                     <Mail className="w-6 h-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-bold mb-2">Email Us</h3>
-                  <p className="text-sm text-muted-foreground">support@erpsystem.com</p>
-                  <p className="text-sm text-muted-foreground">sales@erpsystem.com</p>
+                  <h3 className="text-lg font-bold mb-2">{content.emailLabel}</h3>
+                  <p className="text-sm text-muted-foreground">{content.email1}</p>
+                  <p className="text-sm text-muted-foreground">{content.email2}</p>
                 </div>
                 <div className="p-8 bg-card border border-border rounded-3xl">
                   <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
                     <Phone className="w-6 h-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-bold mb-2">Call Us</h3>
-                  <p className="text-sm text-muted-foreground">+1 (555) 123-4567</p>
-                  <p className="text-sm text-muted-foreground">Mon-Fri, 9am-6pm EST</p>
+                  <h3 className="text-lg font-bold mb-2">{content.phoneLabel}</h3>
+                  <p className="text-sm text-muted-foreground">{content.phone1}</p>
+                  <p className="text-sm text-muted-foreground">{content.phone2}</p>
                 </div>
               </div>
 
@@ -66,11 +83,11 @@ export const Contact = () => {
                   <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
                     <MapPin className="w-6 h-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-bold mb-2">Visit Our Office</h3>
+                  <h3 className="text-lg font-bold mb-2">{content.addressLabel}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    123 Business Avenue, Suite 500<br />
-                    Silicon Valley, CA 94025<br />
-                    United States
+                    {content.addressLine1}<br />
+                    {content.addressLine2}<br />
+                    {content.addressLine3}
                   </p>
                 </div>
               </div>
@@ -142,3 +159,4 @@ export const Contact = () => {
     </div>
   );
 };
+

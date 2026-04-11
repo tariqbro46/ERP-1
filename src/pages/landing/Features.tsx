@@ -16,14 +16,38 @@ import {
   Globe
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useSiteContent } from '../../hooks/useSiteContent';
+
+const DEFAULT_CONTENT = {
+  title: "Powerful Features for Modern Enterprises",
+  subtitle: "Explore the comprehensive suite of tools designed to help your business operate more efficiently and grow faster.",
+  bgColor: "#f8fafc",
+  feature1Title: "Financial Management",
+  feature1Desc: "Complete control over your finances with real-time reporting, automated bookkeeping, and advanced analytics.",
+  feature1Image: "https://picsum.photos/seed/erp-finance-dashboard/1200/800",
+  feature2Title: "Inventory & Warehouse",
+  feature2Desc: "Manage your stock levels across multiple locations, optimize reordering, and track every item in your supply chain.",
+  feature2Image: "https://picsum.photos/seed/erp-inventory-stock/1200/800",
+  feature3Title: "Production & Manufacturing",
+  feature3Desc: "Streamline your manufacturing process from order to delivery with integrated production planning and machine management.",
+  feature3Image: "https://picsum.photos/seed/erp-production-line/1200/800",
+  feature4Title: "Payroll & HR",
+  feature4Desc: "Manage your most valuable asset—your people. Handle payroll, attendance, and employee records in one place.",
+  feature4Image: "https://picsum.photos/seed/erp-payroll-hr/1200/800",
+  moreTitle: "And Much More",
+  moreSubtitle: "Every detail considered for your business success.",
+  showMore: true
+};
 
 export const Features = () => {
+  const { content } = useSiteContent('features', DEFAULT_CONTENT);
+
   const features = [
     {
-      title: "Financial Management",
-      desc: "Complete control over your finances with real-time reporting, automated bookkeeping, and advanced analytics.",
+      title: content.feature1Title,
+      desc: content.feature1Desc,
       icon: BarChart3,
-      image: "https://picsum.photos/seed/erp-finance-dashboard/1200/800",
+      image: content.feature1Image,
       details: [
         "Automated Balance Sheets",
         "Profit & Loss Statements",
@@ -32,10 +56,10 @@ export const Features = () => {
       ]
     },
     {
-      title: "Inventory & Warehouse",
-      desc: "Manage your stock levels across multiple locations, optimize reordering, and track every item in your supply chain.",
+      title: content.feature2Title,
+      desc: content.feature2Desc,
       icon: Database,
-      image: "https://picsum.photos/seed/erp-inventory-stock/1200/800",
+      image: content.feature2Image,
       details: [
         "Multi-godown Management",
         "Batch & Expiry Tracking",
@@ -44,10 +68,10 @@ export const Features = () => {
       ]
     },
     {
-      title: "Production & Manufacturing",
-      desc: "Streamline your manufacturing process from order to delivery with integrated production planning and machine management.",
+      title: content.feature3Title,
+      desc: content.feature3Desc,
       icon: Cpu,
-      image: "https://picsum.photos/seed/erp-production-line/1200/800",
+      image: content.feature3Image,
       details: [
         "Order Management",
         "Machine Efficiency Tracking",
@@ -56,10 +80,10 @@ export const Features = () => {
       ]
     },
     {
-      title: "Payroll & HR",
-      desc: "Manage your most valuable asset—your people. Handle payroll, attendance, and employee records in one place.",
+      title: content.feature4Title,
+      desc: content.feature4Desc,
       icon: Users,
-      image: "https://picsum.photos/seed/erp-payroll-hr/1200/800",
+      image: content.feature4Image,
       details: [
         "Automated Salary Sheets",
         "Employee Master Records",
@@ -70,19 +94,17 @@ export const Features = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: content.bgColor }}>
       <Navbar />
       
       <main className="flex-1 pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-24">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-              Powerful Features for <br />
-              <span className="text-primary">Modern Enterprises</span>
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 whitespace-pre-line">
+              {content.title}
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Explore the comprehensive suite of tools designed to help your business 
-              operate more efficiently and grow faster.
+              {content.subtitle}
             </p>
           </div>
 
@@ -128,30 +150,32 @@ export const Features = () => {
           </div>
 
           {/* Grid of smaller features */}
-          <div className="py-24 border-t border-border">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold mb-4">And Much More</h2>
-              <p className="text-muted-foreground">Every detail considered for your business success.</p>
+          {content.showMore && (
+            <div className="py-24 border-t border-border">
+              <div className="text-center mb-16">
+                <h2 className="text-3xl font-bold mb-4">{content.moreTitle}</h2>
+                <p className="text-muted-foreground">{content.moreSubtitle}</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                {[
+                  { icon: Shield, title: "Data Security", desc: "Your data is encrypted and backed up daily." },
+                  { icon: Zap, title: "Instant Sync", desc: "Real-time updates across all your devices." },
+                  { icon: Printer, title: "Custom Printing", desc: "Design and print invoices, reports, and more." },
+                  { icon: Globe, title: "Global Access", desc: "Secure access from any browser, anywhere." },
+                  { icon: Activity, title: "Ratio Analysis", desc: "Advanced financial health indicators." },
+                  { icon: TrendingUp, title: "Growth Tracking", desc: "Monitor your business progress over time." },
+                  { icon: FileText, title: "Voucher Entry", desc: "Simplified accounting for non-accountants." },
+                  { icon: Users, title: "User Roles", desc: "Granular permission control for your team." }
+                ].map((item, i) => (
+                  <div key={i} className="p-6 bg-card border border-border rounded-2xl">
+                    <item.icon className="w-6 h-6 text-primary mb-4" />
+                    <h3 className="font-bold mb-2">{item.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[
-                { icon: Shield, title: "Data Security", desc: "Your data is encrypted and backed up daily." },
-                { icon: Zap, title: "Instant Sync", desc: "Real-time updates across all your devices." },
-                { icon: Printer, title: "Custom Printing", desc: "Design and print invoices, reports, and more." },
-                { icon: Globe, title: "Global Access", desc: "Secure access from any browser, anywhere." },
-                { icon: Activity, title: "Ratio Analysis", desc: "Advanced financial health indicators." },
-                { icon: TrendingUp, title: "Growth Tracking", desc: "Monitor your business progress over time." },
-                { icon: FileText, title: "Voucher Entry", desc: "Simplified accounting for non-accountants." },
-                { icon: Users, title: "User Roles", desc: "Granular permission control for your team." }
-              ].map((item, i) => (
-                <div key={i} className="p-6 bg-card border border-border rounded-2xl">
-                  <item.icon className="w-6 h-6 text-primary mb-4" />
-                  <h3 className="font-bold mb-2">{item.title}</h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
       </main>
 
@@ -159,3 +183,4 @@ export const Features = () => {
     </div>
   );
 };
+

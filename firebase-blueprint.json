@@ -318,9 +318,24 @@
         "statusErrorText": { "type": "string" },
         "appVersion": { "type": "string" }
       }
+    },
+    "SiteContent": {
+      "title": "Site Content",
+      "description": "Content for public-facing pages (Home, About, etc.)",
+      "type": "object",
+      "properties": {
+        "pageId": { "type": "string" },
+        "content": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["pageId", "content"]
     }
   },
   "firestore": {
+    "/site_content/{pageId}": {
+      "schema": "SiteContent",
+      "description": "Content for landing pages."
+    },
     "/system/config": {
       "schema": "SystemConfig",
       "description": "Global application configuration."

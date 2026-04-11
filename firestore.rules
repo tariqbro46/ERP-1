@@ -241,5 +241,11 @@ service cloud.firestore {
       );
       allow delete: if isSuperAdmin();
     }
+
+    // Site Content (Landing Pages)
+    match /site_content/{pageId} {
+      allow read: if true; // Public read for landing pages
+      allow write: if isFounder();
+    }
   }
 }

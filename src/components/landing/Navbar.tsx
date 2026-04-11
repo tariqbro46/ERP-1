@@ -4,9 +4,15 @@ import { Menu, X, LayoutDashboard } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 
+import { useSiteContent } from '../../hooks/useSiteContent';
+
 export const Navbar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const { user } = useAuth();
+  const { content: globalSettings } = useSiteContent('global', { 
+    siteName: 'ERP System',
+    registrationEnabled: true
+  });
 
   const navLinks = [
     { name: 'Home', href: '/' },
@@ -21,9 +27,9 @@ export const Navbar = () => {
         <div className="flex justify-between h-16 items-center">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
-              <span className="text-background font-bold">E</span>
+              <span className="text-background font-bold">{globalSettings.siteName?.charAt(0)}</span>
             </div>
-            <span className="text-lg font-bold uppercase tracking-tighter">ERP System</span>
+            <span className="text-lg font-bold uppercase tracking-tighter">{globalSettings.siteName}</span>
           </div>
 
           {/* Desktop Links */}
@@ -53,12 +59,14 @@ export const Navbar = () => {
                 >
                   Sign In
                 </Link>
-                <Link
-                  to="/register"
-                  className="px-4 py-2 bg-foreground text-background rounded-full text-sm font-bold hover:opacity-90 transition-opacity"
-                >
-                  Get Started
-                </Link>
+                {globalSettings.registrationEnabled && (
+                  <Link
+                    to="/register"
+                    className="px-4 py-2 bg-foreground text-background rounded-full text-sm font-bold hover:opacity-90 transition-opacity"
+                  >
+                    Get Started
+                  </Link>
+                )}
               </div>
             )}
           </div>
@@ -112,13 +120,15 @@ export const Navbar = () => {
                 >
                   Sign In
                 </Link>
-                <Link
-                  to="/register"
-                  onClick={() => setIsOpen(false)}
-                  className="w-full py-3 bg-foreground text-background rounded-xl text-center font-bold"
-                >
-                  Get Started
-                </Link>
+                {globalSettings.registrationEnabled && (
+                  <Link
+                    to="/register"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full py-3 bg-foreground text-background rounded-xl text-center font-bold"
+                  >
+                    Get Started
+                  </Link>
+                )}
               </>
             )}
           </div>
