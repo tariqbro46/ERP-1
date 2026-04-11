@@ -1,17 +1,20 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export function useSiteContent(pageId: string, defaultContent: any) {
+  const { language } = useLanguage();
   const [content, setContent] = useState(defaultContent);
   const [loading, setLoading] = useState(true);
 
-  // Use useMemo to stabilize defaultContent if it's an object
-  // or just rely on the fact that it changes when language changes
   useEffect(() => {
+    // Try to fetch language-specific content first, then fallback to base content
     const unsub = onSnapshot(doc(db, 'site_content', pageId), (snap) => {
       if (snap.exists()) {
-        setContent({ ...defaultContent, ...snap.data().content });
+        const data = snap.data();
+        const languageContent = data[`content_${language}`] || data.content || {};
+        setContent({ ...defaultContent, ...languageContent });
       } else {
         setContent(defaultContent);
       }
@@ -22,7 +25,7 @@ export function useSiteContent(pageId: string, defaultContent: any) {
     });
 
     return () => unsub();
-  }, [pageId, JSON.stringify(defaultContent)]);
+  }, [pageId, language, JSON.stringify(defaultContent)]);
 
   return { content, loading };
 }

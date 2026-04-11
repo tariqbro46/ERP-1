@@ -3,6 +3,7 @@ import { Navbar } from '../../components/landing/Navbar';
 import { Footer } from '../../components/landing/Footer';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
 import { useSiteContent } from '../../hooks/useSiteContent';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const DEFAULT_CONTENT = {
   title: "Get in Touch",
@@ -30,6 +31,32 @@ const DEFAULT_CONTENT = {
 };
 
 export const Contact = () => {
+  const { t } = useLanguage();
+  const DEFAULT_CONTENT = {
+    title: t('contact.title'),
+    titleColor: "#0a0a0a",
+    subtitle: t('contact.subtitle'),
+    subtitleColor: "#64748b",
+    pageBgColor: "#ffffff",
+    formBgColor: "#f5f5f5",
+    formTitleColor: "#0a0a0a",
+    formSubtitleColor: "#64748b",
+    inputBgColor: "#ffffff",
+    inputTextColor: "#0a0a0a",
+    buttonBgColor: "#0a0a0a",
+    buttonTextColor: "#ffffff",
+    emailLabel: t('contact.emailLabel'),
+    email1: "support@erpsystem.com",
+    email2: "sales@erpsystem.com",
+    phoneLabel: t('contact.phoneLabel'),
+    phone1: "+1 (555) 123-4567",
+    phone2: t('contact.phone2'),
+    addressLabel: t('contact.addressLabel'),
+    addressLine1: "123 Business Avenue, Suite 500",
+    addressLine2: "Silicon Valley, CA 94025",
+    addressLine3: "United States"
+  };
+
   const { content } = useSiteContent('contact', DEFAULT_CONTENT);
   const [formState, setFormState] = React.useState({
     name: '',
@@ -115,7 +142,7 @@ export const Contact = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest" style={{ color: content.formSubtitleColor }}>Full Name</label>
+                    <label className="text-xs font-bold uppercase tracking-widest" style={{ color: content.formSubtitleColor }}>{t('contact.fullName')}</label>
                     <input 
                       type="text" 
                       required
@@ -123,11 +150,11 @@ export const Contact = () => {
                       onChange={(e) => setFormState({...formState, name: e.target.value})}
                       className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
                       style={{ backgroundColor: content.inputBgColor, color: content.inputTextColor }}
-                      placeholder="John Doe"
+                      placeholder={t('contact.fullNamePlaceholder')}
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest" style={{ color: content.formSubtitleColor }}>Email Address</label>
+                    <label className="text-xs font-bold uppercase tracking-widest" style={{ color: content.formSubtitleColor }}>{t('contact.emailAddress')}</label>
                     <input 
                       type="email" 
                       required
@@ -135,12 +162,12 @@ export const Contact = () => {
                       onChange={(e) => setFormState({...formState, email: e.target.value})}
                       className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
                       style={{ backgroundColor: content.inputBgColor, color: content.inputTextColor }}
-                      placeholder="john@example.com"
+                      placeholder={t('contact.emailPlaceholder')}
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: content.formSubtitleColor }}>Subject</label>
+                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: content.formSubtitleColor }}>{t('contact.subject')}</label>
                   <input 
                     type="text" 
                     required
@@ -148,11 +175,11 @@ export const Contact = () => {
                     onChange={(e) => setFormState({...formState, subject: e.target.value})}
                     className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
                     style={{ backgroundColor: content.inputBgColor, color: content.inputTextColor }}
-                    placeholder="How can we help?"
+                    placeholder={t('contact.subjectPlaceholder')}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: content.formSubtitleColor }}>Message</label>
+                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: content.formSubtitleColor }}>{t('contact.message')}</label>
                   <textarea 
                     required
                     rows={5}
@@ -160,7 +187,7 @@ export const Contact = () => {
                     onChange={(e) => setFormState({...formState, message: e.target.value})}
                     className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all resize-none"
                     style={{ backgroundColor: content.inputBgColor, color: content.inputTextColor }}
-                    placeholder="Tell us more about your needs..."
+                    placeholder={t('contact.messagePlaceholder')}
                   />
                 </div>
                 <button 
@@ -169,7 +196,7 @@ export const Contact = () => {
                   style={{ backgroundColor: content.buttonBgColor, color: content.buttonTextColor }}
                 >
                   <Send className="w-4 h-4" />
-                  Send Message
+                  {t('contact.sendMessage')}
                 </button>
               </form>
             </div>

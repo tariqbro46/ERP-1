@@ -153,8 +153,8 @@ export function Dashboard() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-800">{t('dashboard.overview')}</h1>
-            <p className="text-sm text-gray-500 uppercase tracking-wider font-medium">{t('dashboard.financialSummary')} • {companyName}</p>
+            <h1 className="text-2xl font-semibold text-gray-800">{t('dash.overview')}</h1>
+            <p className="text-sm text-gray-500 uppercase tracking-wider font-medium">{t('dash.financialSummary')} • {companyName}</p>
           </div>
           <div className="flex items-center gap-3">
             <button 
@@ -168,33 +168,33 @@ export function Dashboard() {
 
         {/* Metric Cards Section */}
         <div className="space-y-4">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('dashboard.kpi')}</h2>
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('dash.kpi')}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-[#ffbf00] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
               <div className="space-y-4">
                 <CreditCard className="w-6 h-6 text-black/60" />
-                <p className="text-[10px] font-bold text-black/60 uppercase leading-tight">{t('dashboard.revenue')}</p>
+                <p className="text-[10px] font-bold text-black/60 uppercase leading-tight">{t('dash.revenue')}</p>
               </div>
               <span className="text-2xl font-light text-black/80">₹{revenue.toLocaleString()}</span>
             </div>
             <div className="bg-[#34a853] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
               <div className="space-y-4">
                 <Activity className="w-6 h-6 text-white/60" />
-                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dashboard.profit')}</p>
+                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dash.profit')}</p>
               </div>
               <span className="text-2xl font-light text-white/90">₹{profit.toLocaleString()}</span>
             </div>
             <div className="bg-[#ea4335] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
               <div className="space-y-4">
                 <Users className="w-6 h-6 text-white/60" />
-                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dashboard.activeLedgers')}</p>
+                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dash.activeLedgers')}</p>
               </div>
               <span className="text-3xl font-light text-white/90">{activeLedgers}</span>
             </div>
             <div className="bg-[#e91e63] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
               <div className="space-y-4">
                 <Package className="w-6 h-6 text-white/60" />
-                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dashboard.stockValue')}</p>
+                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dash.stockValue')}</p>
               </div>
               <span className="text-2xl font-light text-white/90">₹{stockValue.toLocaleString()}</span>
             </div>
@@ -358,7 +358,7 @@ export function Dashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
-          title={t('dashboard.revenue')} 
+          title={t('dash.revenue')} 
           value={`৳ ${stats.revenue.toLocaleString()}`} 
           change="+12.5%" 
           icon={Activity} 
@@ -368,7 +368,7 @@ export function Dashboard() {
           uiStyle={uiStyle}
         />
         <StatCard 
-          title={t('dashboard.profit')} 
+          title={t('dash.profit')} 
           value={`৳ ${stats.profit.toLocaleString()}`} 
           change="+5.2%" 
           icon={CreditCard} 
@@ -378,7 +378,7 @@ export function Dashboard() {
           uiStyle={uiStyle}
         />
         <StatCard 
-          title={t('dashboard.activeLedgers')} 
+          title={t('dash.activeLedgers')} 
           value={stats.activeLedgers?.toString() || '0'} 
           change="+3" 
           icon={Users} 
@@ -388,7 +388,7 @@ export function Dashboard() {
           uiStyle={uiStyle}
         />
         <StatCard 
-          title={t('dashboard.stockValue')} 
+          title={t('dash.stockValue')} 
           value={`৳ ${stats.stockValue.toLocaleString()}`} 
           change="-2.1%" 
           icon={Package} 

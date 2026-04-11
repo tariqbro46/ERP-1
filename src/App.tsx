@@ -150,6 +150,7 @@ function Layout({ children }: { children: React.ReactNode }) {
     glassBackground = 'default',
     appVersion = 'v1.0.1',
     statusOnlineText = 'Status: Online',
+    showGoToShortcut = true,
     updateSettings
   } = useSettings();
 
@@ -922,21 +923,23 @@ function Layout({ children }: { children: React.ReactNode }) {
             <div className="ml-auto flex items-center gap-3 lg:gap-6 z-10">
               <NotificationCenter />
               
-              <div className={cn(
-                "hidden md:flex items-center gap-2 text-[10px] font-mono",
-                uiStyle === 'UI/UX 2' ? "text-blue-100" : "text-gray-500"
-              )}>
-                <kbd className={cn(
-                  "px-1.5 py-0.5 border rounded",
-                  uiStyle === 'UI/UX 2' ? "bg-white/10 border-white/20 text-white" : "bg-card border-border text-gray-400"
-                )}>Alt</kbd>
-                <span>+</span>
-                <kbd className={cn(
-                  "px-1.5 py-0.5 border rounded",
-                  uiStyle === 'UI/UX 2' ? "bg-white/10 border-white/20 text-white" : "bg-card border-border text-gray-400"
-                )}>G</kbd>
-                <span className="ml-1 uppercase tracking-widest">Go To</span>
-              </div>
+              {showGoToShortcut && (
+                <div className={cn(
+                  "hidden md:flex items-center gap-2 text-[10px] font-mono",
+                  uiStyle === 'UI/UX 2' ? "text-blue-100" : "text-gray-500"
+                )}>
+                  <kbd className={cn(
+                    "px-1.5 py-0.5 border rounded",
+                    uiStyle === 'UI/UX 2' ? "bg-white/10 border-white/20 text-white" : "bg-card border-border text-gray-400"
+                  )}>Alt</kbd>
+                  <span>+</span>
+                  <kbd className={cn(
+                    "px-1.5 py-0.5 border rounded",
+                    uiStyle === 'UI/UX 2' ? "bg-white/10 border-white/20 text-white" : "bg-card border-border text-gray-400"
+                  )}>G</kbd>
+                  <span className="ml-1 uppercase tracking-widest">Go To</span>
+                </div>
+              )}
               <div className={cn(
                 "flex items-center gap-3 border-l pl-4 lg:pl-6 relative",
                 uiStyle === 'UI/UX 2' ? "border-white/20" : "border-border"

@@ -81,6 +81,7 @@ interface SettingsContextType {
   statusOnlineText: string;
   statusOfflineText: string;
   statusErrorText: string;
+  showGoToShortcut: boolean;
   whatsappTemplates: WhatsAppTemplates;
   notifications: NotificationSettings;
   features: FeatureSettings[];
@@ -138,6 +139,7 @@ const defaultSettings: SettingsContextType = {
   statusOnlineText: 'Status: Online',
   statusOfflineText: 'Status: Offline',
   statusErrorText: 'Database Error',
+  showGoToShortcut: true,
   whatsappTemplates: {
     Sales: "*{{companyName}}*\nSales Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
     Purchase: "*{{companyName}}*\nPurchase Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
@@ -183,6 +185,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           statusOnlineText: data.statusOnlineText || prev.statusOnlineText,
           statusOfflineText: data.statusOfflineText || prev.statusOfflineText,
           statusErrorText: data.statusErrorText || prev.statusErrorText,
+          showGoToShortcut: data.showGoToShortcut !== undefined ? data.showGoToShortcut : prev.showGoToShortcut,
           appVersion: data.appVersion || prev.appVersion,
           systemLogo: data.systemLogo || prev.systemLogo,
           glassBackground: data.glassBackground || prev.glassBackground,

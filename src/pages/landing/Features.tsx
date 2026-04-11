@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useSiteContent } from '../../hooks/useSiteContent';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const DEFAULT_CONTENT = {
   title: "Powerful Features for Modern Enterprises",
@@ -45,6 +46,33 @@ const DEFAULT_CONTENT = {
 };
 
 export const Features = () => {
+  const { t } = useLanguage();
+  const DEFAULT_CONTENT = {
+    title: t('features.title'),
+    titleColor: "#0a0a0a",
+    subtitle: t('features.subtitle'),
+    subtitleColor: "#64748b",
+    pageBgColor: "#ffffff",
+    cardBgColor: "#f5f5f5",
+    cardTitleColor: "#0a0a0a",
+    cardDescColor: "#64748b",
+    feature1Title: t('features.feature1Title'),
+    feature1Desc: t('features.feature1Desc'),
+    feature1Image: "https://picsum.photos/seed/erp-finance-dashboard/1200/800",
+    feature2Title: t('features.feature2Title'),
+    feature2Desc: t('features.feature2Desc'),
+    feature2Image: "https://picsum.photos/seed/erp-inventory-stock/1200/800",
+    feature3Title: t('features.feature3Title'),
+    feature3Desc: t('features.feature3Desc'),
+    feature3Image: "https://picsum.photos/seed/erp-production-line/1200/800",
+    feature4Title: t('features.feature4Title'),
+    feature4Desc: t('features.feature4Desc'),
+    feature4Image: "https://picsum.photos/seed/erp-payroll-hr/1200/800",
+    moreTitle: t('features.moreTitle'),
+    moreSubtitle: t('features.moreSubtitle'),
+    showMore: true
+  };
+
   const { content } = useSiteContent('features', DEFAULT_CONTENT);
 
   const features = [
@@ -54,10 +82,10 @@ export const Features = () => {
       icon: BarChart3,
       image: content.feature1Image,
       details: [
-        "Automated Balance Sheets",
-        "Profit & Loss Statements",
-        "Real-time Cash Flow Tracking",
-        "Multi-currency Support"
+        t('features.feature1Detail1'),
+        t('features.feature1Detail2'),
+        t('features.feature1Detail3'),
+        t('features.feature1Detail4')
       ]
     },
     {
@@ -66,10 +94,10 @@ export const Features = () => {
       icon: Database,
       image: content.feature2Image,
       details: [
-        "Multi-godown Management",
-        "Batch & Expiry Tracking",
-        "Automated Stock Alerts",
-        "Barcode Integration"
+        t('features.feature2Detail1'),
+        t('features.feature2Detail2'),
+        t('features.feature2Detail3'),
+        t('features.feature2Detail4')
       ]
     },
     {
@@ -78,10 +106,10 @@ export const Features = () => {
       icon: Cpu,
       image: content.feature3Image,
       details: [
-        "Order Management",
-        "Machine Efficiency Tracking",
-        "Production Reports",
-        "Resource Allocation"
+        t('features.feature3Detail1'),
+        t('features.feature3Detail2'),
+        t('features.feature3Detail3'),
+        t('features.feature3Detail4')
       ]
     },
     {
@@ -90,10 +118,10 @@ export const Features = () => {
       icon: Users,
       image: content.feature4Image,
       details: [
-        "Automated Salary Sheets",
-        "Employee Master Records",
-        "Attendance Tracking",
-        "Performance Analytics"
+        t('features.feature4Detail1'),
+        t('features.feature4Detail2'),
+        t('features.feature4Detail3'),
+        t('features.feature4Detail4')
       ]
     }
   ];
@@ -169,14 +197,14 @@ export const Features = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
-                  { icon: Shield, title: "Data Security", desc: "Your data is encrypted and backed up daily." },
-                  { icon: Zap, title: "Instant Sync", desc: "Real-time updates across all your devices." },
-                  { icon: Printer, title: "Custom Printing", desc: "Design and print invoices, reports, and more." },
-                  { icon: Globe, title: "Global Access", desc: "Secure access from any browser, anywhere." },
-                  { icon: Activity, title: "Ratio Analysis", desc: "Advanced financial health indicators." },
-                  { icon: TrendingUp, title: "Growth Tracking", desc: "Monitor your business progress over time." },
-                  { icon: FileText, title: "Voucher Entry", desc: "Simplified accounting for non-accountants." },
-                  { icon: Users, title: "User Roles", desc: "Granular permission control for your team." }
+                  { icon: Shield, title: t('features.extra1Title'), desc: t('features.extra1Desc') },
+                  { icon: Zap, title: t('features.extra2Title'), desc: t('features.extra2Desc') },
+                  { icon: Printer, title: t('features.extra3Title'), desc: t('features.extra3Desc') },
+                  { icon: Globe, title: t('features.extra4Title'), desc: t('features.extra4Desc') },
+                  { icon: Activity, title: t('features.extra5Title'), desc: t('features.extra5Desc') },
+                  { icon: TrendingUp, title: t('features.extra6Title'), desc: t('features.extra6Desc') },
+                  { icon: FileText, title: t('features.extra7Title'), desc: t('features.extra7Desc') },
+                  { icon: Users, title: t('features.extra8Title'), desc: t('features.extra8Desc') }
                 ].map((item, i) => (
                   <div key={i} className="p-6 border border-border rounded-2xl" style={{ backgroundColor: content.cardBgColor }}>
                     <item.icon className="w-6 h-6 text-primary mb-4" />

@@ -4,6 +4,7 @@ import { Footer } from '../../components/landing/Footer';
 import { motion } from 'motion/react';
 import { Award, Users, Globe, Zap } from 'lucide-react';
 import { useSiteContent } from '../../hooks/useSiteContent';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const DEFAULT_CONTENT = {
   missionTitle: "Our Mission",
@@ -24,6 +25,25 @@ const DEFAULT_CONTENT = {
 };
 
 export const About = () => {
+  const { t } = useLanguage();
+  const DEFAULT_CONTENT = {
+    missionTitle: t('about.missionTitle'),
+    missionTitleColor: "#0a0a0a",
+    missionDesc: t('about.missionDesc'),
+    missionDescColor: "#64748b",
+    missionBgColor: "#ffffff",
+    missionImage: "https://picsum.photos/seed/erp-office-team/1200/600",
+    bannerTitle: t('about.bannerTitle'),
+    bannerTitleColor: "#ffffff",
+    bannerSubtitle: t('about.bannerSubtitle'),
+    bannerSubtitleColor: "rgba(255,255,255,0.8)",
+    bannerBgColor: "#0a0a0a",
+    leadershipTitle: t('about.leadershipTitle'),
+    leadershipTitleColor: "#0a0a0a",
+    showLeadership: true,
+    pageBgColor: "#ffffff"
+  };
+
   const { content } = useSiteContent('about', DEFAULT_CONTENT);
 
   return (
@@ -79,23 +99,23 @@ export const About = () => {
             {[
               {
                 icon: Zap,
-                title: "Innovation",
-                desc: "We constantly push the boundaries of what's possible in ERP technology."
+                title: t('about.value1Title'),
+                desc: t('about.value1Desc')
               },
               {
                 icon: Users,
-                title: "Customer First",
-                desc: "Our customers' success is our primary metric for our own success."
+                title: t('about.value2Title'),
+                desc: t('about.value2Desc')
               },
               {
                 icon: Globe,
-                title: "Global Reach",
-                desc: "Supporting businesses across continents with localized solutions."
+                title: t('about.value3Title'),
+                desc: t('about.value3Desc')
               },
               {
                 icon: Award,
-                title: "Excellence",
-                desc: "We strive for perfection in every line of code and every support interaction."
+                title: t('about.value4Title'),
+                desc: t('about.value4Desc')
               }
             ].map((value, i) => (
               <div key={i} className="text-center">

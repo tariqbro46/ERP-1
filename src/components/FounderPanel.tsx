@@ -107,7 +107,7 @@ export default function FounderPanel() {
     { id: 'Settings', label: 'Settings', icon: Settings }
   ];
 
-  const { appVersion, updateSettings, updateSystemSettings, uiStyle, glassBackground, statusOnlineText, statusOfflineText, statusErrorText, systemLogo, notificationDuration, notificationAnimationStyle } = useSettings();
+  const { showGoToShortcut, appVersion, updateSettings, updateSystemSettings, uiStyle, glassBackground, statusOnlineText, statusOfflineText, statusErrorText, systemLogo, notificationDuration, notificationAnimationStyle } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion);
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle);
   const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground);
@@ -117,6 +117,7 @@ export default function FounderPanel() {
   const [localSystemLogo, setLocalSystemLogo] = useState(systemLogo || '');
   const [localNotificationDuration, setLocalNotificationDuration] = useState(notificationDuration);
   const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle);
+  const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut);
 
   useEffect(() => {
     fetchData();
@@ -153,6 +154,10 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalNotificationAnimationStyle(notificationAnimationStyle);
   }, [notificationAnimationStyle]);
+
+  useEffect(() => {
+    setLocalShowGoToShortcut(showGoToShortcut);
+  }, [showGoToShortcut]);
 
   useEffect(() => {
     setLocalGlassBackground(glassBackground);
@@ -1146,6 +1151,25 @@ export default function FounderPanel() {
                 </div>
               </div>
 
+                <div className="flex items-center justify-between p-3 bg-background border border-border rounded-xl">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-foreground uppercase tracking-widest">Show "Alt + G" Shortcut</p>
+                    <p className="text-[9px] text-muted-foreground uppercase">Toggle the visibility of the "Go To" text in the top bar.</p>
+                  </div>
+                  <button
+                    onClick={() => setLocalShowGoToShortcut(!localShowGoToShortcut)}
+                    className={cn(
+                      "w-10 h-5 rounded-full transition-colors relative",
+                      localShowGoToShortcut ? "bg-blue-600" : "bg-gray-300"
+                    )}
+                  >
+                    <div className={cn(
+                      "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                      localShowGoToShortcut ? "right-1" : "left-1"
+                    )} />
+                  </button>
+                </div>
+
                 <div className="space-y-2">
                   <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Global UI Style</label>
                   <select 
@@ -1229,7 +1253,8 @@ export default function FounderPanel() {
                         uiStyle: localUIStyle,
                         glassBackground: localGlassBackground,
                         notificationDuration: localNotificationDuration,
-                        notificationAnimationStyle: localNotificationAnimationStyle
+                        notificationAnimationStyle: localNotificationAnimationStyle,
+                        showGoToShortcut: localShowGoToShortcut
                       });
                       showNotification('System configuration updated successfully', 'success');
                     } catch (err) {

@@ -6,11 +6,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 
+import { useLanguage } from '../contexts/LanguageContext';
+
 export function ItemCreation() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { showNotification } = useNotification();
-  const { notifications, features = [] } = useSettings();
+  const { notifications, features = [], baseCurrencySymbol } = useSettings();
   const { id } = useParams();
 
   const isCategoryEnabled = features.find(f => f.id === 'cat')?.enabled ?? true;
@@ -157,7 +160,7 @@ export function ItemCreation() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="text-sm font-bold text-foreground uppercase tracking-widest">
-              Stock Item {isEdit ? 'Alteration' : 'Creation'}
+              {t('item.title')} {isEdit ? t('common.alteration') : t('common.creation')}
             </h1>
           </div>
           {isEdit && (
@@ -167,7 +170,7 @@ export function ItemCreation() {
               className="flex items-center gap-2 px-4 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all w-full sm:w-auto justify-center"
             >
               <Trash2 className="w-3 h-3" />
-              Delete
+              {t('common.delete')}
             </button>
           )}
         </div>
@@ -175,7 +178,7 @@ export function ItemCreation() {
         <form onSubmit={handleSubmit} className="p-4 lg:p-8 grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Item Name</label>
+              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.name')}</label>
               <input
                 autoFocus
                 type="text"
@@ -183,13 +186,13 @@ export function ItemCreation() {
                 value={formData.name || ''}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                 className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
-                placeholder="e.g., Item Name"
+                placeholder={t('item.namePlaceholder')}
               />
             </div>
 
             {isCategoryEnabled && (
               <div className="space-y-2">
-                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Under (Category)</label>
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.category')}</label>
                 {showNewCategoryInput ? (
                   <div className="flex gap-2">
                     <input
@@ -197,8 +200,8 @@ export function ItemCreation() {
                       autoFocus
                       value={newCategory || ''}
                       onChange={e => setNewCategory(e.target.value)}
-                      className="flex-1 bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
-                      placeholder="New Category Name"
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                      placeholder={t('item.newCategoryPlaceholder')}
                     />
                     <button
                       type="button"
@@ -212,14 +215,14 @@ export function ItemCreation() {
                       }}
                       className="px-4 bg-foreground text-background text-[10px] font-bold uppercase"
                     >
-                      Add
+                      {t('common.add')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowNewCategoryInput(false)}
                       className="px-4 border border-border text-[10px] text-gray-500 uppercase"
                     >
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                   </div>
                 ) : (
@@ -235,11 +238,11 @@ export function ItemCreation() {
                       }}
                       className="flex-1 bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
                     >
-                      <option value="General Items">General Items</option>
+                      <option value="General Items">{t('item.generalItems')}</option>
                       {categories.filter(c => c !== 'General Items').map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
-                      <option value="ADD_NEW" className="font-bold text-emerald-500">+ Add New Category</option>
+                      <option value="ADD_NEW" className="font-bold text-emerald-500">+ {t('item.addNewCategory')}</option>
                     </select>
                   </div>
                 )}
@@ -247,18 +250,18 @@ export function ItemCreation() {
             )}
 
             <div className="space-y-2">
-              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Part No.</label>
+              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.partNo')}</label>
               <input
                 type="text"
                 value={formData.part_no || ''}
                 onChange={e => setFormData({ ...formData, part_no: e.target.value })}
                 className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
-                placeholder="Manufacturer Part Number"
+                placeholder={t('item.partNoPlaceholder')}
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Unit of Measure</label>
+              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.unit')}</label>
               <select
                 required
                 value={formData.unit_id}
@@ -273,7 +276,7 @@ export function ItemCreation() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Opening Qty</label>
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.openingQty')}</label>
                 <input
                   type="number"
                   value={formData.opening_qty ?? ''}
@@ -283,7 +286,7 @@ export function ItemCreation() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Opening Rate (৳)</label>
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.openingRate')} ({baseCurrencySymbol})</label>
                 <input
                   type="number"
                   value={formData.opening_rate ?? ''}
@@ -297,18 +300,18 @@ export function ItemCreation() {
 
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Description</label>
+              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.description')}</label>
               <textarea
                 value={formData.description || ''}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
                 className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors h-24 resize-none"
-                placeholder="Item technical specifications..."
+                placeholder={t('item.descriptionPlaceholder')}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Low Stock Alert at</label>
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.lowStockThreshold')}</label>
                 <input
                   type="number"
                   value={formData.low_stock_threshold ?? ''}
@@ -319,7 +322,7 @@ export function ItemCreation() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Tax Percent (%)</label>
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.taxPercent')}</label>
                 <input
                   type="number"
                   value={formData.tax_percent ?? ''}
@@ -333,7 +336,7 @@ export function ItemCreation() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Scheme Qty (Buy)</label>
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.schemeQty')}</label>
                 <input
                   type="number"
                   value={formData.scheme_qty ?? ''}
@@ -344,7 +347,7 @@ export function ItemCreation() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Free Qty (Get)</label>
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.schemeFreeQty')}</label>
                 <input
                   type="number"
                   value={formData.scheme_free_qty ?? ''}
@@ -357,13 +360,13 @@ export function ItemCreation() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Barcode / SKU</label>
+              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.barcode')}</label>
               <input
                 type="text"
                 value={formData.barcode || ''}
                 onChange={e => setFormData({ ...formData, barcode: e.target.value })}
                 className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
-                placeholder="Scan or enter barcode..."
+                placeholder={t('item.barcodePlaceholder')}
               />
             </div>
 
@@ -379,7 +382,7 @@ export function ItemCreation() {
                       className="w-4 h-4 accent-foreground bg-background border-border"
                     />
                     <label htmlFor="has_batches" className="text-[10px] text-gray-400 uppercase tracking-widest cursor-pointer">
-                      Maintain in Batches
+                      {t('item.hasBatches')}
                     </label>
                   </div>
                 )}
@@ -393,7 +396,7 @@ export function ItemCreation() {
                       className="w-4 h-4 accent-foreground bg-background border-border"
                     />
                     <label htmlFor="has_expiry" className="text-[10px] text-gray-400 uppercase tracking-widest cursor-pointer">
-                      Track Expiry Dates
+                      {t('item.hasExpiry')}
                     </label>
                   </div>
                 )}
@@ -407,11 +410,11 @@ export function ItemCreation() {
               onClick={() => navigate(-1)}
               className="px-6 py-2 text-[10px] text-gray-500 hover:text-foreground uppercase tracking-widest transition-colors order-2 sm:order-1"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="submit" disabled={loading} className="flex items-center justify-center gap-2 px-12 py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all disabled:opacity-50 order-1 sm:order-2">
               {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-              {isEdit ? 'Update Stock Item' : 'Create Stock Item'}
+              {isEdit ? t('common.update') : t('common.create')}
             </button>
           </div>
         </form>
@@ -427,25 +430,23 @@ export function ItemCreation() {
                   <AlertTriangle className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest">Confirm Deletion</h3>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">This action cannot be undone</p>
+                  <h3 className="text-sm font-bold uppercase tracking-widest">{t('common.confirmDeletion')}</h3>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{t('common.cannotUndone')}</p>
                 </div>
               </div>
 
               {hasTransactions ? (
                 <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded space-y-2">
                   <p className="text-[11px] text-rose-500 leading-relaxed">
-                    <span className="font-bold uppercase">Warning:</span> This item has existing inventory transactions. 
-                    Deleting it will cause inconsistencies in your stock reports and vouchers.
+                    <span className="font-bold uppercase">{t('common.warning')}:</span> {t('item.deleteWarning')}
                   </p>
                   <p className="text-[10px] text-rose-500 uppercase tracking-widest font-bold">
-                    It is highly recommended to keep this item.
+                    {t('item.recommendKeep')}
                   </p>
                 </div>
               ) : (
                 <p className="text-[11px] text-gray-400 leading-relaxed">
-                  Are you sure you want to delete <span className="text-foreground font-bold">"{formData.name}"</span>? 
-                  This item will be permanently removed from your inventory.
+                  {t('item.deleteConfirmText', { name: formData.name })}
                 </p>
               )}
 
@@ -455,7 +456,7 @@ export function ItemCreation() {
                   onClick={() => setShowDeleteConfirm(false)}
                   className="px-4 py-2 text-[10px] text-gray-500 hover:text-foreground uppercase tracking-widest transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleDelete}
@@ -463,7 +464,7 @@ export function ItemCreation() {
                   className="flex items-center gap-2 px-6 py-2 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500 transition-all disabled:opacity-50"
                 >
                   {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                  Confirm Delete
+                  {t('common.confirmDelete')}
                 </button>
               </div>
             </div>

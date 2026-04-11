@@ -7,11 +7,14 @@ import { cn } from '../lib/utils';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 
+import { useLanguage } from '../contexts/LanguageContext';
+
 export function LedgerCreation() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { showNotification } = useNotification();
-  const { notifications, companyName, features = [] } = useSettings();
+  const { notifications, companyName, features = [], baseCurrencySymbol } = useSettings();
   const { id } = useParams();
 
   const isBillWiseEnabled = features.find(f => f.id === 'bill')?.enabled ?? true;
@@ -220,7 +223,7 @@ export function LedgerCreation() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="text-sm font-bold text-foreground uppercase tracking-widest">
-              Ledger {isEdit ? 'Alteration' : 'Creation'}
+              {t('ledger.title')} {isEdit ? t('common.alteration') : t('common.creation')}
             </h1>
           </div>
           <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
@@ -245,10 +248,10 @@ export function LedgerCreation() {
             {/* Left Column: Primary Details */}
             <div className="space-y-6">
               <div className="space-y-4">
-                <h3 className="text-[11px] text-foreground font-bold uppercase tracking-[0.2em] border-b border-border pb-2">General Details</h3>
+                <h3 className="text-[11px] text-foreground font-bold uppercase tracking-[0.2em] border-b border-border pb-2">{t('ledger.generalDetails')}</h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Name</label>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.name')}</label>
                     <input
                       autoFocus
                       type="text"
@@ -263,11 +266,11 @@ export function LedgerCreation() {
                         }));
                       }}
                       className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
-                      placeholder="e.g., Company Name"
+                      placeholder={t('ledger.namePlaceholder')}
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block">(alias)</label>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.alias')}</label>
                     <input
                       type="text"
                       value={formData.alias || ''}
@@ -276,7 +279,7 @@ export function LedgerCreation() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Under (Group)</label>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.under')}</label>
                     <select
                       required
                       value={formData.group_id}
@@ -316,9 +319,9 @@ export function LedgerCreation() {
                         onChange={e => setFormData({ ...formData, is_bill_wise: e.target.checked })}
                         className="w-4 h-4 accent-foreground bg-background border-border"
                       />
-                      <label htmlFor="is_bill_wise" className="text-[10px] text-gray-400 uppercase tracking-widest cursor-pointer">
-                        Maintain balances bill-by-bill
-                      </label>
+                  <label htmlFor="is_bill_wise" className="text-[10px] text-gray-400 uppercase tracking-widest cursor-pointer">
+                    {t('ledger.billByBill')}
+                  </label>
                     </div>
                   )}
                   {isCostCenterEnabled && (
@@ -330,9 +333,9 @@ export function LedgerCreation() {
                         onChange={e => setFormData({ ...formData, is_cost_center: e.target.checked } as any)}
                         className="w-4 h-4 accent-foreground bg-background border-border"
                       />
-                      <label htmlFor="is_cost_center" className="text-[10px] text-gray-400 uppercase tracking-widest cursor-pointer">
-                        Cost Centers are applicable
-                      </label>
+                  <label htmlFor="is_cost_center" className="text-[10px] text-gray-400 uppercase tracking-widest cursor-pointer">
+                    {t('ledger.costCenters')}
+                  </label>
                     </div>
                   )}
                   {isInterestEnabled && (
@@ -344,9 +347,9 @@ export function LedgerCreation() {
                         onChange={e => setFormData({ ...formData, is_interest: e.target.checked } as any)}
                         className="w-4 h-4 accent-foreground bg-background border-border"
                       />
-                      <label htmlFor="is_interest" className="text-[10px] text-gray-400 uppercase tracking-widest cursor-pointer">
-                        Activate interest calculation
-                      </label>
+                  <label htmlFor="is_interest" className="text-[10px] text-gray-400 uppercase tracking-widest cursor-pointer">
+                    {t('ledger.interestCalculation')}
+                  </label>
                     </div>
                   )}
                 </div>
@@ -355,7 +358,7 @@ export function LedgerCreation() {
               {/* Contact Details Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-border pb-2">
-                  <h3 className="text-[11px] text-foreground font-bold uppercase tracking-[0.2em]">Contact Details</h3>
+                  <h3 className="text-[11px] text-foreground font-bold uppercase tracking-[0.2em]">{t('ledger.contactDetails')}</h3>
                   <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -364,13 +367,13 @@ export function LedgerCreation() {
                       onChange={e => setFormData({ ...formData, provide_contact_details: e.target.checked })}
                       className="w-3 h-3 accent-foreground bg-background border-border"
                     />
-                    <label htmlFor="provide_contact_details" className="text-[9px] text-gray-500 uppercase cursor-pointer">Provide Contact Details</label>
+                    <label htmlFor="provide_contact_details" className="text-[9px] text-gray-500 uppercase cursor-pointer">{t('ledger.provideContactDetails')}</label>
                   </div>
                 </div>
                 {formData.provide_contact_details && (
                   <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Contact Person Name</label>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.contactPerson')}</label>
                       <input
                         type="text"
                         value={formData.contact_name || ''}
@@ -380,7 +383,7 @@ export function LedgerCreation() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Phone No.</label>
+                        <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.phone')}</label>
                         <input
                           type="text"
                           value={formData.contact_phone || ''}
@@ -389,7 +392,7 @@ export function LedgerCreation() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Email</label>
+                        <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.email')}</label>
                         <input
                           type="email"
                           value={formData.contact_email || ''}
@@ -406,10 +409,10 @@ export function LedgerCreation() {
             {/* Right Column: Mailing & Banking Details */}
             <div className="space-y-6">
               <div className="space-y-4">
-                <h3 className="text-[11px] text-foreground font-bold uppercase tracking-[0.2em] border-b border-border pb-2">Mailing Details</h3>
+                <h3 className="text-[11px] text-foreground font-bold uppercase tracking-[0.2em] border-b border-border pb-2">{t('ledger.mailingDetails')}</h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Name</label>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.name')}</label>
                     <input
                       type="text"
                       value={formData.mailing_name || ''}
@@ -418,7 +421,7 @@ export function LedgerCreation() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Address</label>
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.address')}</label>
                     <textarea
                       value={formData.address || ''}
                       onChange={e => setFormData({ ...formData, address: e.target.value })}
@@ -427,7 +430,7 @@ export function LedgerCreation() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Division / State</label>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.division')}</label>
                       <input
                         type="text"
                         value={formData.division || ''}
@@ -436,7 +439,7 @@ export function LedgerCreation() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Country</label>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.country')}</label>
                       <input
                         type="text"
                         value={formData.country || ''}
@@ -447,7 +450,7 @@ export function LedgerCreation() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Postal Code</label>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.postalCode')}</label>
                       <input
                         type="text"
                         value={formData.postal_code || ''}
@@ -456,7 +459,7 @@ export function LedgerCreation() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Primary Mobile No.</label>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.mobile')}</label>
                       <input
                         type="text"
                         value={formData.primary_mobile || ''}
@@ -467,7 +470,7 @@ export function LedgerCreation() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Email</label>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.email')}</label>
                       <input
                         type="email"
                         value={formData.email || ''}
@@ -476,7 +479,7 @@ export function LedgerCreation() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Website</label>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.website')}</label>
                       <input
                         type="text"
                         value={formData.website || ''}
@@ -491,7 +494,7 @@ export function LedgerCreation() {
               {/* Banking Details Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between border-b border-border pb-2">
-                  <h3 className="text-[11px] text-foreground font-bold uppercase tracking-[0.2em]">Banking Details</h3>
+                  <h3 className="text-[11px] text-foreground font-bold uppercase tracking-[0.2em]">{t('ledger.bankingDetails')}</h3>
                   <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -500,26 +503,26 @@ export function LedgerCreation() {
                       onChange={e => setFormData({ ...formData, provide_bank_details: e.target.checked })}
                       className="w-3 h-3 accent-foreground bg-background border-border"
                     />
-                    <label htmlFor="provide_bank_details" className="text-[9px] text-gray-500 uppercase cursor-pointer">Provide Bank Details</label>
+                    <label htmlFor="provide_bank_details" className="text-[9px] text-gray-500 uppercase cursor-pointer">{t('ledger.provideBankDetails')}</label>
                   </div>
                 </div>
                 {formData.provide_bank_details && (
                   <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Transaction Type</label>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.transactionType')}</label>
                       <select
                         value={formData.bank_transaction_type}
                         onChange={e => setFormData({ ...formData, bank_transaction_type: e.target.value })}
                         className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
                       >
-                        <option>Cheque</option>
-                        <option>e-fund Transfer</option>
-                        <option>Other</option>
+                        <option>{t('ledger.cheque')}</option>
+                        <option>{t('ledger.eFundTransfer')}</option>
+                        <option>{t('ledger.other')}</option>
                       </select>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 uppercase tracking-widest block">A/c No.</label>
+                        <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.accountNo')}</label>
                         <input
                           type="text"
                           value={formData.bank_account_no || ''}
@@ -528,7 +531,7 @@ export function LedgerCreation() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Bank Code (IFSC/Swift)</label>
+                        <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.bankCode')}</label>
                         <input
                           type="text"
                           value={formData.bank_code || ''}
@@ -538,7 +541,7 @@ export function LedgerCreation() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Bank Name</label>
+                      <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.bankName')}</label>
                       <input
                         type="text"
                         value={formData.bank_name || ''}
@@ -555,7 +558,7 @@ export function LedgerCreation() {
           {/* Opening Balance Section */}
           <div className="pt-8 border-t border-border flex flex-col items-end">
             <div className="w-full md:w-1/2 space-y-2">
-              <label className="text-[10px] text-gray-500 uppercase tracking-widest block text-right">Opening Balance (৳)</label>
+              <label className="text-[10px] text-gray-500 uppercase tracking-widest block text-right">{t('ledger.openingBalance')} ({baseCurrencySymbol})</label>
               <div className="flex gap-2">
                 <select
                   value={formData.opening_balance_type}
@@ -583,7 +586,7 @@ export function LedgerCreation() {
               onClick={() => navigate(-1)}
               className="px-6 py-2 text-[10px] text-gray-500 hover:text-foreground uppercase tracking-widest transition-colors order-2 sm:order-1"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -591,7 +594,7 @@ export function LedgerCreation() {
               className="flex items-center justify-center gap-2 px-12 py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(0,0,0,0.1)] order-1 sm:order-2"
             >
               {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-              {isEdit ? 'Update Ledger' : 'Create Ledger'}
+              {isEdit ? t('common.update') : t('common.create')}
             </button>
           </div>
         </form>
@@ -607,25 +610,23 @@ export function LedgerCreation() {
                   <AlertTriangle className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest">Confirm Deletion</h3>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">This action cannot be undone</p>
+                  <h3 className="text-sm font-bold uppercase tracking-widest">{t('common.confirmDeletion')}</h3>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{t('common.cannotUndone')}</p>
                 </div>
               </div>
 
               {hasTransactions ? (
                 <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded space-y-2">
                   <p className="text-[11px] text-rose-500 leading-relaxed">
-                    <span className="font-bold uppercase">Warning:</span> This ledger has existing transactions in the system. 
-                    Deleting it will cause inconsistencies in your financial reports.
+                    <span className="font-bold uppercase">{t('common.warning')}:</span> {t('ledger.deleteWarning')}
                   </p>
                   <p className="text-[10px] text-rose-500 uppercase tracking-widest font-bold">
-                    It is highly recommended to keep this ledger.
+                    {t('ledger.recommendKeep')}
                   </p>
                 </div>
               ) : (
                 <p className="text-[11px] text-gray-400 leading-relaxed">
-                  Are you sure you want to delete <span className="text-foreground font-bold">"{formData.name}"</span>? 
-                  This ledger will be permanently removed from your chart of accounts.
+                  {t('ledger.deleteConfirmText', { name: formData.name })}
                 </p>
               )}
 
@@ -635,7 +636,7 @@ export function LedgerCreation() {
                   onClick={() => setShowDeleteConfirm(false)}
                   className="px-4 py-2 text-[10px] text-gray-500 hover:text-foreground uppercase tracking-widest transition-colors"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleDelete}
@@ -643,7 +644,7 @@ export function LedgerCreation() {
                   className="flex items-center gap-2 px-6 py-2 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500 transition-all disabled:opacity-50"
                 >
                   {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                  Confirm Delete
+                  {t('common.confirmDelete')}
                 </button>
               </div>
             </div>
