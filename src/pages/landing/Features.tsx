@@ -20,7 +20,9 @@ import { useSiteContent } from '../../hooks/useSiteContent';
 
 const DEFAULT_CONTENT = {
   title: "Powerful Features for Modern Enterprises",
+  titleColor: "#0a0a0a",
   subtitle: "Explore the comprehensive suite of tools designed to help your business operate more efficiently and grow faster.",
+  subtitleColor: "#64748b",
   bgColor: "#f8fafc",
   feature1Title: "Financial Management",
   feature1Desc: "Complete control over your finances with real-time reporting, automated bookkeeping, and advanced analytics.",
@@ -100,10 +102,16 @@ export const Features = () => {
       <main className="flex-1 pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-24">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 whitespace-pre-line">
+            <h1 
+              className="text-4xl md:text-6xl font-bold tracking-tight mb-6 whitespace-pre-line"
+              style={{ color: content.titleColor }}
+            >
               {content.title}
             </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            <p 
+              className="text-xl max-w-2xl mx-auto"
+              style={{ color: content.subtitleColor }}
+            >
               {content.subtitle}
             </p>
           </div>

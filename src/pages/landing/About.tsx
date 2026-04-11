@@ -7,11 +7,16 @@ import { useSiteContent } from '../../hooks/useSiteContent';
 
 const DEFAULT_CONTENT = {
   missionTitle: "Our Mission",
+  missionTitleColor: "#0a0a0a",
   missionDesc: "We are dedicated to empowering businesses of all sizes with the tools they need to thrive in a digital-first world. Our goal is to simplify complex operations and provide clarity through intelligent data.",
+  missionDescColor: "#64748b",
   missionImage: "https://picsum.photos/seed/erp-office-team/1200/600",
   bannerTitle: "Built for Business",
+  bannerTitleColor: "#ffffff",
   bannerSubtitle: "Founded in 2010, serving over 500+ companies worldwide.",
+  bannerSubtitleColor: "rgba(255,255,255,0.8)",
   leadershipTitle: "Our Leadership",
+  leadershipTitleColor: "#0a0a0a",
   showLeadership: true
 };
 
@@ -26,8 +31,16 @@ export const About = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Mission Section */}
           <div className="max-w-3xl mx-auto text-center mb-24">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-8">{content.missionTitle}</h1>
-            <p className="text-xl text-muted-foreground leading-relaxed">
+            <h1 
+              className="text-4xl md:text-6xl font-bold tracking-tight mb-8"
+              style={{ color: content.missionTitleColor }}
+            >
+              {content.missionTitle}
+            </h1>
+            <p 
+              className="text-xl leading-relaxed"
+              style={{ color: content.missionDescColor }}
+            >
               {content.missionDesc}
             </p>
           </div>
@@ -42,8 +55,18 @@ export const About = () => {
             />
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
               <div className="text-center text-white p-8">
-                <h2 className="text-3xl md:text-5xl font-bold mb-4">{content.bannerTitle}</h2>
-                <p className="text-lg opacity-80">{content.bannerSubtitle}</p>
+                <h2 
+                  className="text-3xl md:text-5xl font-bold mb-4"
+                  style={{ color: content.bannerTitleColor }}
+                >
+                  {content.bannerTitle}
+                </h2>
+                <p 
+                  className="text-lg"
+                  style={{ color: content.bannerSubtitleColor }}
+                >
+                  {content.bannerSubtitle}
+                </p>
               </div>
             </div>
           </div>
@@ -87,7 +110,12 @@ export const About = () => {
           {/* Team Section Preview */}
           {content.showLeadership && (
             <div className="py-24 border-t border-border text-center">
-              <h2 className="text-3xl font-bold mb-12">{content.leadershipTitle}</h2>
+              <h2 
+                className="text-3xl font-bold mb-12"
+                style={{ color: content.leadershipTitleColor }}
+              >
+                {content.leadershipTitle}
+              </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {[
                   { name: "John Doe", role: "CEO & Founder", img: "https://api.dicebear.com/7.x/pixel-art/svg?seed=John" },

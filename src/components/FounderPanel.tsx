@@ -396,7 +396,7 @@ export default function FounderPanel() {
           </p>
           <button 
             onClick={() => navigate('/')}
-            className="px-6 py-2 bg-primary text-white text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-sm rounded-lg"
+            className="px-6 py-2 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all shadow-sm rounded-lg"
           >
             Return to Dashboard
           </button>
@@ -1383,7 +1383,7 @@ export default function FounderPanel() {
                   <button
                     onClick={handleCreateNotification}
                     disabled={!newNotification.title || !newNotification.message}
-                    className="flex-1 py-2 bg-primary text-white rounded-lg font-bold uppercase tracking-widest text-[10px] hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg font-bold uppercase tracking-widest text-[10px] hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     <Send className="w-4 h-4" />
                     {newNotification.status === 'sent' ? 'Send Now' : 'Save Notification'}
@@ -1636,7 +1636,7 @@ export default function FounderPanel() {
                       "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg",
                       isEditingSubscription 
                         ? "bg-emerald-600 text-white hover:bg-emerald-700" 
-                        : "bg-primary text-white hover:opacity-90"
+                        : "bg-primary text-primary-foreground hover:opacity-90"
                     )}
                   >
                     {isEditingSubscription ? 'Save Changes' : 'Edit Subscription'}

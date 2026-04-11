@@ -16,7 +16,9 @@ import { useSiteContent } from '../../hooks/useSiteContent';
 
 const DEFAULT_CONTENT = {
   heroTitle: "Manage Your Business With Intelligence",
+  heroTitleColor: "#0a0a0a",
   heroSubtitle: "The all-in-one ERP solution for modern enterprises. Streamline operations, gain real-time insights, and scale your business with confidence.",
+  heroSubtitleColor: "#64748b",
   heroCtaPrimary: "Start Free Trial",
   heroCtaSecondary: "View Features",
   heroImage: "https://picsum.photos/seed/erp-hero-dashboard/1600/900",
@@ -28,10 +30,14 @@ const DEFAULT_CONTENT = {
   statsExperience: "15+",
   showStats: true,
   featuresTitle: "Everything You Need",
+  featuresTitleColor: "#0a0a0a",
   featuresSubtitle: "Powerful tools to help you manage every aspect of your business from a single, unified platform.",
+  featuresSubtitleColor: "#64748b",
   showFeatures: true,
   ctaTitle: "Ready to Transform Your Business?",
+  ctaTitleColor: "#ffffff",
   ctaSubtitle: "Join hundreds of successful companies already using our ERP system to power their growth.",
+  ctaSubtitleColor: "rgba(255,255,255,0.7)",
   ctaButton: "Get Started Now",
   showCta: true
 };
@@ -54,10 +60,16 @@ export const Home = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5 }}
                 >
-                  <h1 className="text-5xl md:text-7xl font-bold tracking-tighter mb-6 whitespace-pre-line">
+                  <h1 
+                    className="text-5xl md:text-7xl font-bold tracking-tighter mb-6 whitespace-pre-line"
+                    style={{ color: content.heroTitleColor }}
+                  >
                     {content.heroTitle}
                   </h1>
-                  <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
+                  <p 
+                    className="text-xl max-w-2xl mx-auto mb-10"
+                    style={{ color: content.heroSubtitleColor }}
+                  >
                     {content.heroSubtitle}
                   </p>
                   <div className="flex flex-col sm:flex-row justify-center gap-4">
@@ -139,8 +151,16 @@ export const Home = () => {
           <section className="py-24">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-16">
-                <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">{content.featuresTitle}</h2>
-                <p className="text-muted-foreground max-w-xl mx-auto">
+                <h2 
+                  className="text-3xl md:text-5xl font-bold tracking-tight mb-4"
+                  style={{ color: content.featuresTitleColor }}
+                >
+                  {content.featuresTitle}
+                </h2>
+                <p 
+                  className="max-w-xl mx-auto"
+                  style={{ color: content.featuresSubtitleColor }}
+                >
                   {content.featuresSubtitle}
                 </p>
               </div>
@@ -201,8 +221,16 @@ export const Home = () => {
         {content.showCta && (
           <section className="py-24 bg-foreground text-background">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-              <h2 className="text-3xl md:text-5xl font-bold mb-8">{content.ctaTitle}</h2>
-              <p className="text-background/70 max-w-xl mx-auto mb-10 text-lg">
+              <h2 
+                className="text-3xl md:text-5xl font-bold mb-8"
+                style={{ color: content.ctaTitleColor }}
+              >
+                {content.ctaTitle}
+              </h2>
+              <p 
+                className="max-w-xl mx-auto mb-10 text-lg"
+                style={{ color: content.ctaSubtitleColor }}
+              >
                 {content.ctaSubtitle}
               </p>
               <Link

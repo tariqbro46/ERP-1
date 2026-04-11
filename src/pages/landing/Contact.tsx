@@ -6,7 +6,9 @@ import { useSiteContent } from '../../hooks/useSiteContent';
 
 const DEFAULT_CONTENT = {
   title: "Get in Touch",
+  titleColor: "#0a0a0a",
   subtitle: "Have questions? We're here to help. Send us a message and our team will get back to you within 24 hours.",
+  subtitleColor: "#64748b",
   bgColor: "#ffffff",
   emailLabel: "Email Us",
   email1: "support@erpsystem.com",
@@ -43,8 +45,16 @@ export const Contact = () => {
       <main className="flex-1 pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">{content.title}</h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            <h1 
+              className="text-4xl md:text-6xl font-bold tracking-tight mb-4"
+              style={{ color: content.titleColor }}
+            >
+              {content.title}
+            </h1>
+            <p 
+              className="text-xl max-w-2xl mx-auto"
+              style={{ color: content.subtitleColor }}
+            >
               {content.subtitle}
             </p>
           </div>

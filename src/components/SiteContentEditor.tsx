@@ -27,7 +27,9 @@ const PAGES: PageContent[] = [
     name: 'Home Page',
     defaultContent: {
       heroTitle: "Manage Your Business With Intelligence",
+      heroTitleColor: "#0a0a0a",
       heroSubtitle: "The all-in-one ERP solution for modern enterprises. Streamline operations, gain real-time insights, and scale your business with confidence.",
+      heroSubtitleColor: "#64748b",
       heroCtaPrimary: "Start Free Trial",
       heroCtaSecondary: "View Features",
       heroImage: "https://picsum.photos/seed/erp-hero/1200/800",
@@ -39,10 +41,14 @@ const PAGES: PageContent[] = [
       statsExperience: "15+",
       showStats: true,
       featuresTitle: "Everything You Need",
+      featuresTitleColor: "#0a0a0a",
       featuresSubtitle: "Powerful tools to help you manage every aspect of your business from a single, unified platform.",
+      featuresSubtitleColor: "#64748b",
       showFeatures: true,
       ctaTitle: "Ready to Transform Your Business?",
+      ctaTitleColor: "#ffffff",
       ctaSubtitle: "Join hundreds of successful companies already using our ERP system to power their growth.",
+      ctaSubtitleColor: "rgba(255,255,255,0.7)",
       ctaButton: "Get Started Now",
       showCta: true
     }
@@ -52,7 +58,9 @@ const PAGES: PageContent[] = [
     name: 'Features Page',
     defaultContent: {
       title: "Powerful Features for Modern Enterprises",
+      titleColor: "#0a0a0a",
       subtitle: "Explore the comprehensive suite of tools designed to help your business operate more efficiently and grow faster.",
+      subtitleColor: "#64748b",
       bgColor: "#f8fafc",
       feature1Title: "Financial Management",
       feature1Desc: "Complete control over your finances with real-time reporting, automated bookkeeping, and advanced analytics.",
@@ -76,11 +84,16 @@ const PAGES: PageContent[] = [
     name: 'About Page',
     defaultContent: {
       missionTitle: "Our Mission",
+      missionTitleColor: "#0a0a0a",
       missionDesc: "We are dedicated to empowering businesses of all sizes with the tools they need to thrive in a digital-first world. Our goal is to simplify complex operations and provide clarity through intelligent data.",
+      missionDescColor: "#64748b",
       missionImage: "https://picsum.photos/seed/mission/1200/600",
       bannerTitle: "Built for Business",
+      bannerTitleColor: "#ffffff",
       bannerSubtitle: "Founded in 2010, serving over 500+ companies worldwide.",
+      bannerSubtitleColor: "rgba(255,255,255,0.8)",
       leadershipTitle: "Our Leadership",
+      leadershipTitleColor: "#0a0a0a",
       showLeadership: true
     }
   },
@@ -89,7 +102,9 @@ const PAGES: PageContent[] = [
     name: 'Contact Page',
     defaultContent: {
       title: "Get in Touch",
+      titleColor: "#0a0a0a",
       subtitle: "Have questions? We're here to help. Send us a message and our team will get back to you within 24 hours.",
+      subtitleColor: "#64748b",
       bgColor: "#ffffff",
       emailLabel: "Email Us",
       email1: "support@erpsystem.com",
@@ -108,14 +123,22 @@ const PAGES: PageContent[] = [
     name: 'Login Page',
     defaultContent: {
       title: "Sign in to ERP System",
+      titleColor: "#0a0a0a",
       subtitle: "Enter your details below to access your account.",
+      subtitleColor: "#64748b",
       imageTitle: "Streamline your business operations.",
+      imageTitleColor: "#ffffff",
       imageSubtitle: "The most powerful ERP solution for modern enterprises.",
+      imageSubtitleColor: "rgba(255,255,255,0.8)",
       loginImage: "https://picsum.photos/seed/dribbble-login/1200/1600",
       forgotTitle: "Forgot Password?",
+      forgotTitleColor: "#0a0a0a",
       forgotSubtitle: "Enter your email and we'll send you a link to reset your password.",
+      forgotSubtitleColor: "#64748b",
       resetImageTitle: "Recover your account.",
+      resetImageTitleColor: "#ffffff",
       resetImageSubtitle: "Don't worry, it happens to the best of us.",
+      resetImageSubtitleColor: "rgba(255,255,255,0.8)",
       resetImage: "https://picsum.photos/seed/auth-bg/1200/1600"
     }
   },
@@ -124,8 +147,11 @@ const PAGES: PageContent[] = [
     name: 'Register Page',
     defaultContent: {
       title: "Create your Account",
+      titleColor: "#0a0a0a",
       imageTitle: "Join the future of ERP.",
+      imageTitleColor: "#ffffff",
       imageSubtitle: "Create your account and start managing your business today.",
+      imageSubtitleColor: "rgba(255,255,255,0.8)",
       registerImage: "https://picsum.photos/seed/dribbble-reg/1200/1600"
     }
   }
@@ -271,7 +297,7 @@ export function SiteContentEditor() {
               className={cn(
                 "w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3",
                 selectedPage.id === page.id
-                  ? "bg-primary text-white shadow-md"
+                  ? "bg-primary text-primary-foreground shadow-md"
                   : "hover:bg-muted text-muted-foreground hover:text-foreground"
               )}
             >
@@ -299,7 +325,7 @@ export function SiteContentEditor() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm"
+                className="px-6 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-bold flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm"
               >
                 {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Save Changes

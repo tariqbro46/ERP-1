@@ -13,14 +13,22 @@ import { useSiteContent } from '../hooks/useSiteContent';
 
 const LOGIN_DEFAULT = {
   title: "Sign in to ERP System",
+  titleColor: "#0a0a0a",
   subtitle: "Enter your details below to access your account.",
+  subtitleColor: "#64748b",
   loginImage: "https://picsum.photos/seed/dribbble-login/1200/1600",
   imageTitle: "Streamline your business operations.",
+  imageTitleColor: "#ffffff",
   imageSubtitle: "The most powerful ERP solution for modern enterprises.",
+  imageSubtitleColor: "rgba(255,255,255,0.8)",
   forgotTitle: "Forgot Password?",
+  forgotTitleColor: "#0a0a0a",
   forgotSubtitle: "Enter your email and we'll send you a link to reset your password.",
+  forgotSubtitleColor: "#64748b",
   resetImageTitle: "Recover your account.",
-  resetImageSubtitle: "Don't worry, it happens to the best of us."
+  resetImageTitleColor: "#ffffff",
+  resetImageSubtitle: "Don't worry, it happens to the best of us.",
+  resetImageSubtitleColor: "rgba(255,255,255,0.8)"
 };
 
 export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
@@ -84,8 +92,18 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
           />
           <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
           <div className="absolute bottom-12 left-12 right-12 text-white">
-            <h2 className="text-4xl font-bold mb-4 tracking-tight">{content.resetImageTitle}</h2>
-            <p className="text-lg opacity-80">{content.resetImageSubtitle}</p>
+            <h2 
+              className="text-4xl font-bold mb-4 tracking-tight"
+              style={{ color: content.resetImageTitleColor }}
+            >
+              {content.resetImageTitle}
+            </h2>
+            <p 
+              className="text-lg font-medium"
+              style={{ color: content.resetImageSubtitleColor }}
+            >
+              {content.resetImageSubtitle}
+            </p>
           </div>
         </div>
 
@@ -101,8 +119,18 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
           <div className="flex-1 flex flex-col justify-center px-8 md:px-12 lg:px-20 overflow-y-auto no-scrollbar">
             <div className="max-w-md w-full mx-auto py-12">
               <div className="mb-10">
-                <h1 className="text-3xl font-bold mb-2">{content.forgotTitle}</h1>
-                <p className="text-muted-foreground">{content.forgotSubtitle}</p>
+                <h1 
+                  className="text-3xl font-bold mb-2"
+                  style={{ color: content.forgotTitleColor }}
+                >
+                  {content.forgotTitle}
+                </h1>
+                <p 
+                  className=""
+                  style={{ color: content.forgotSubtitleColor }}
+                >
+                  {content.forgotSubtitle}
+                </p>
               </div>
 
               {resetSent ? (
@@ -190,8 +218,18 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
         <div className="flex-1 flex flex-col justify-center px-8 md:px-12 lg:px-20 overflow-y-auto no-scrollbar">
           <div className="max-w-md w-full mx-auto py-12">
             <div className="mb-10">
-              <h1 className="text-3xl font-bold mb-2">{content.title}</h1>
-              <p className="text-muted-foreground">{content.subtitle}</p>
+              <h1 
+                className="text-3xl font-bold mb-2"
+                style={{ color: content.titleColor }}
+              >
+                {content.title}
+              </h1>
+              <p 
+                className=""
+                style={{ color: content.subtitleColor }}
+              >
+                {content.subtitle}
+              </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -276,9 +314,12 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
 
 const REGISTER_DEFAULT = {
   title: "Create your Account",
+  titleColor: "#0a0a0a",
   registerImage: "https://picsum.photos/seed/dribbble-reg/1200/1600",
   imageTitle: "Join the future of ERP.",
-  imageSubtitle: "Create your account and start managing your business today."
+  imageTitleColor: "#ffffff",
+  imageSubtitle: "Create your account and start managing your business today.",
+  imageSubtitleColor: "rgba(255,255,255,0.8)"
 };
 
 export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
@@ -421,8 +462,18 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
         />
         <div className="absolute inset-0 bg-black/10" />
         <div className="absolute bottom-12 left-12 right-12 text-white">
-          <h2 className="text-4xl font-bold mb-4 tracking-tight">{content.imageTitle}</h2>
-          <p className="text-lg opacity-80 font-medium">{content.imageSubtitle}</p>
+          <h2 
+            className="text-4xl font-bold mb-4 tracking-tight"
+            style={{ color: content.imageTitleColor }}
+          >
+            {content.imageTitle}
+          </h2>
+          <p 
+            className="text-lg font-medium"
+            style={{ color: content.imageSubtitleColor }}
+          >
+            {content.imageSubtitle}
+          </p>
         </div>
       </div>
 
@@ -439,7 +490,12 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
         <div className="flex-1 flex flex-col justify-center px-8 md:px-12 lg:px-20 overflow-y-auto no-scrollbar">
           <div className="max-w-md w-full mx-auto py-12">
             <div className="mb-10">
-              <h1 className="text-3xl font-bold mb-2">{content.title}</h1>
+              <h1 
+                className="text-3xl font-bold mb-2"
+                style={{ color: content.titleColor }}
+              >
+                {content.title}
+              </h1>
               <p className="text-muted-foreground">Step {step} of 3: {step === 1 ? 'Personal Details' : step === 2 ? 'Company Details' : 'Final Configuration'}</p>
             </div>
 
