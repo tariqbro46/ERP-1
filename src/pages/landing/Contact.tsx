@@ -9,7 +9,14 @@ const DEFAULT_CONTENT = {
   titleColor: "#0a0a0a",
   subtitle: "Have questions? We're here to help. Send us a message and our team will get back to you within 24 hours.",
   subtitleColor: "#64748b",
-  bgColor: "#ffffff",
+  pageBgColor: "#ffffff",
+  formBgColor: "#f5f5f5",
+  formTitleColor: "#0a0a0a",
+  formSubtitleColor: "#64748b",
+  inputBgColor: "#ffffff",
+  inputTextColor: "#0a0a0a",
+  buttonBgColor: "#0a0a0a",
+  buttonTextColor: "#ffffff",
   emailLabel: "Email Us",
   email1: "support@erpsystem.com",
   email2: "sales@erpsystem.com",
@@ -39,7 +46,7 @@ export const Contact = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: content.bgColor }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: content.pageBgColor }}>
       <Navbar />
       
       <main className="flex-1 pt-32">
@@ -63,25 +70,25 @@ export const Contact = () => {
             {/* Contact Info */}
             <div className="space-y-12">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                <div className="p-8 bg-card border border-border rounded-3xl">
+                <div className="p-8 border border-border rounded-3xl" style={{ backgroundColor: content.formBgColor }}>
                   <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
                     <Mail className="w-6 h-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-bold mb-2">{content.emailLabel}</h3>
-                  <p className="text-sm text-muted-foreground">{content.email1}</p>
-                  <p className="text-sm text-muted-foreground">{content.email2}</p>
+                  <h3 className="text-lg font-bold mb-2" style={{ color: content.formTitleColor }}>{content.emailLabel}</h3>
+                  <p className="text-sm" style={{ color: content.formSubtitleColor }}>{content.email1}</p>
+                  <p className="text-sm" style={{ color: content.formSubtitleColor }}>{content.email2}</p>
                 </div>
-                <div className="p-8 bg-card border border-border rounded-3xl">
+                <div className="p-8 border border-border rounded-3xl" style={{ backgroundColor: content.formBgColor }}>
                   <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
                     <Phone className="w-6 h-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-bold mb-2">{content.phoneLabel}</h3>
-                  <p className="text-sm text-muted-foreground">{content.phone1}</p>
-                  <p className="text-sm text-muted-foreground">{content.phone2}</p>
+                  <h3 className="text-lg font-bold mb-2" style={{ color: content.formTitleColor }}>{content.phoneLabel}</h3>
+                  <p className="text-sm" style={{ color: content.formSubtitleColor }}>{content.phone1}</p>
+                  <p className="text-sm" style={{ color: content.formSubtitleColor }}>{content.phone2}</p>
                 </div>
               </div>
 
-              <div className="p-8 bg-card border border-border rounded-3xl overflow-hidden relative group h-64">
+              <div className="p-8 border border-border rounded-3xl overflow-hidden relative group h-64" style={{ backgroundColor: content.formBgColor }}>
                 <img 
                   src="https://picsum.photos/seed/erp-map/800/600" 
                   alt="Office Location" 
@@ -93,8 +100,8 @@ export const Contact = () => {
                   <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
                     <MapPin className="w-6 h-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-bold mb-2">{content.addressLabel}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <h3 className="text-lg font-bold mb-2" style={{ color: content.formTitleColor }}>{content.addressLabel}</h3>
+                  <p className="text-sm leading-relaxed" style={{ color: content.formSubtitleColor }}>
                     {content.addressLine1}<br />
                     {content.addressLine2}<br />
                     {content.addressLine3}
@@ -104,57 +111,62 @@ export const Contact = () => {
             </div>
 
             {/* Contact Form */}
-            <div className="bg-card border border-border rounded-3xl p-8 md:p-12 shadow-xl">
+            <div className="border border-border rounded-3xl p-8 md:p-12 shadow-xl" style={{ backgroundColor: content.formBgColor }}>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Full Name</label>
+                    <label className="text-xs font-bold uppercase tracking-widest" style={{ color: content.formSubtitleColor }}>Full Name</label>
                     <input 
                       type="text" 
                       required
                       value={formState.name}
                       onChange={(e) => setFormState({...formState, name: e.target.value})}
-                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                      className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                      style={{ backgroundColor: content.inputBgColor, color: content.inputTextColor }}
                       placeholder="John Doe"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
+                    <label className="text-xs font-bold uppercase tracking-widest" style={{ color: content.formSubtitleColor }}>Email Address</label>
                     <input 
                       type="email" 
                       required
                       value={formState.email}
                       onChange={(e) => setFormState({...formState, email: e.target.value})}
-                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                      className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                      style={{ backgroundColor: content.inputBgColor, color: content.inputTextColor }}
                       placeholder="john@example.com"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Subject</label>
+                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: content.formSubtitleColor }}>Subject</label>
                   <input 
                     type="text" 
                     required
                     value={formState.subject}
                     onChange={(e) => setFormState({...formState, subject: e.target.value})}
-                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                    className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all"
+                    style={{ backgroundColor: content.inputBgColor, color: content.inputTextColor }}
                     placeholder="How can we help?"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Message</label>
+                  <label className="text-xs font-bold uppercase tracking-widest" style={{ color: content.formSubtitleColor }}>Message</label>
                   <textarea 
                     required
                     rows={5}
                     value={formState.message}
                     onChange={(e) => setFormState({...formState, message: e.target.value})}
-                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all resize-none"
+                    className="w-full border border-border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all resize-none"
+                    style={{ backgroundColor: content.inputBgColor, color: content.inputTextColor }}
                     placeholder="Tell us more about your needs..."
                   />
                 </div>
                 <button 
                   type="submit"
-                  className="w-full py-4 bg-foreground text-background rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                  className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: content.buttonBgColor, color: content.buttonTextColor }}
                 >
                   <Send className="w-4 h-4" />
                   Send Message

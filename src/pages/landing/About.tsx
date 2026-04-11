@@ -10,27 +10,30 @@ const DEFAULT_CONTENT = {
   missionTitleColor: "#0a0a0a",
   missionDesc: "We are dedicated to empowering businesses of all sizes with the tools they need to thrive in a digital-first world. Our goal is to simplify complex operations and provide clarity through intelligent data.",
   missionDescColor: "#64748b",
+  missionBgColor: "#ffffff",
   missionImage: "https://picsum.photos/seed/erp-office-team/1200/600",
   bannerTitle: "Built for Business",
   bannerTitleColor: "#ffffff",
   bannerSubtitle: "Founded in 2010, serving over 500+ companies worldwide.",
   bannerSubtitleColor: "rgba(255,255,255,0.8)",
+  bannerBgColor: "#0a0a0a",
   leadershipTitle: "Our Leadership",
   leadershipTitleColor: "#0a0a0a",
-  showLeadership: true
+  showLeadership: true,
+  pageBgColor: "#ffffff"
 };
 
 export const About = () => {
   const { content } = useSiteContent('about', DEFAULT_CONTENT);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: content.pageBgColor }}>
       <Navbar />
       
       <main className="flex-1 pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Mission Section */}
-          <div className="max-w-3xl mx-auto text-center mb-24">
+          <div className="max-w-3xl mx-auto text-center mb-24 p-8 rounded-3xl" style={{ backgroundColor: content.missionBgColor }}>
             <h1 
               className="text-4xl md:text-6xl font-bold tracking-tight mb-8"
               style={{ color: content.missionTitleColor }}
@@ -53,8 +56,8 @@ export const About = () => {
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
             />
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-              <div className="text-center text-white p-8">
+            <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: content.bannerBgColor + '66' }}>
+              <div className="text-center p-8">
                 <h2 
                   className="text-3xl md:text-5xl font-bold mb-4"
                   style={{ color: content.bannerTitleColor }}

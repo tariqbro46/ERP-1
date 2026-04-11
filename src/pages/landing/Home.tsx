@@ -20,7 +20,11 @@ const DEFAULT_CONTENT = {
   heroSubtitle: "The all-in-one ERP solution for modern enterprises. Streamline operations, gain real-time insights, and scale your business with confidence.",
   heroSubtitleColor: "#64748b",
   heroCtaPrimary: "Start Free Trial",
+  heroCtaPrimaryBg: "#0a0a0a",
+  heroCtaPrimaryText: "#ffffff",
   heroCtaSecondary: "View Features",
+  heroCtaSecondaryBg: "#ffffff",
+  heroCtaSecondaryText: "#0a0a0a",
   heroImage: "https://picsum.photos/seed/erp-hero-dashboard/1600/900",
   heroBgColor: "#ffffff",
   showHero: true,
@@ -28,17 +32,27 @@ const DEFAULT_CONTENT = {
   statsUptime: "99.9%",
   statsSupport: "24/7",
   statsExperience: "15+",
+  statsSectionBg: "#f9fafb",
+  statsTitleColor: "#0a0a0a",
+  statsSubtitleColor: "#64748b",
   showStats: true,
   featuresTitle: "Everything You Need",
   featuresTitleColor: "#0a0a0a",
   featuresSubtitle: "Powerful tools to help you manage every aspect of your business from a single, unified platform.",
   featuresSubtitleColor: "#64748b",
+  featuresSectionBg: "#ffffff",
+  featureCardBg: "#f5f5f5",
+  featureCardTitleColor: "#0a0a0a",
+  featureCardDescColor: "#64748b",
   showFeatures: true,
   ctaTitle: "Ready to Transform Your Business?",
   ctaTitleColor: "#ffffff",
   ctaSubtitle: "Join hundreds of successful companies already using our ERP system to power their growth.",
   ctaSubtitleColor: "rgba(255,255,255,0.7)",
+  ctaSectionBg: "#0a0a0a",
   ctaButton: "Get Started Now",
+  ctaButtonBg: "#ffffff",
+  ctaButtonText: "#0a0a0a",
   showCta: true
 };
 
@@ -52,7 +66,7 @@ export const Home = () => {
       <main className="flex-1 pt-16">
         {/* Hero Section */}
         {content.showHero && (
-          <section className="relative py-20 overflow-hidden">
+          <section className="relative py-20 overflow-hidden" style={{ backgroundColor: content.heroBgColor }}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
               <div className="text-center">
                 <motion.div
@@ -75,14 +89,16 @@ export const Home = () => {
                   <div className="flex flex-col sm:flex-row justify-center gap-4">
                     <Link
                       to="/register"
-                      className="px-8 py-4 bg-foreground text-background rounded-full text-lg font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                      className="px-8 py-4 rounded-full text-lg font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                      style={{ backgroundColor: content.heroCtaPrimaryBg, color: content.heroCtaPrimaryText }}
                     >
                       {content.heroCtaPrimary}
                       <ArrowRight className="w-5 h-5" />
                     </Link>
                     <Link
                       to="/features"
-                      className="px-8 py-4 bg-background border border-border rounded-full text-lg font-bold hover:bg-foreground/5 transition-colors"
+                      className="px-8 py-4 border border-border rounded-full text-lg font-bold hover:bg-foreground/5 transition-colors"
+                      style={{ backgroundColor: content.heroCtaSecondaryBg, color: content.heroCtaSecondaryText }}
                     >
                       {content.heroCtaSecondary}
                     </Link>
@@ -122,24 +138,24 @@ export const Home = () => {
 
         {/* Stats Section */}
         {content.showStats && (
-          <section className="py-12 border-y border-border bg-foreground/[0.02]">
+          <section className="py-12 border-y border-border" style={{ backgroundColor: content.statsSectionBg }}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                 <div>
-                  <p className="text-3xl font-bold mb-1">{content.statsClients}</p>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Active Clients</p>
+                  <p className="text-3xl font-bold mb-1" style={{ color: content.statsTitleColor }}>{content.statsClients}</p>
+                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: content.statsSubtitleColor }}>Active Clients</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold mb-1">{content.statsUptime}</p>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Uptime Rate</p>
+                  <p className="text-3xl font-bold mb-1" style={{ color: content.statsTitleColor }}>{content.statsUptime}</p>
+                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: content.statsSubtitleColor }}>Uptime Rate</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold mb-1">{content.statsSupport}</p>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Expert Support</p>
+                  <p className="text-3xl font-bold mb-1" style={{ color: content.statsTitleColor }}>{content.statsSupport}</p>
+                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: content.statsSubtitleColor }}>Expert Support</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold mb-1">{content.statsExperience}</p>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Years Experience</p>
+                  <p className="text-3xl font-bold mb-1" style={{ color: content.statsTitleColor }}>{content.statsExperience}</p>
+                  <p className="text-xs uppercase tracking-widest font-bold" style={{ color: content.statsSubtitleColor }}>Years Experience</p>
                 </div>
               </div>
             </div>
@@ -148,7 +164,7 @@ export const Home = () => {
 
         {/* Features Preview */}
         {content.showFeatures && (
-          <section className="py-24">
+          <section className="py-24" style={{ backgroundColor: content.featuresSectionBg }}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="text-center mb-16">
                 <h2 
@@ -201,13 +217,14 @@ export const Home = () => {
                   <motion.div
                     key={i}
                     whileHover={{ y: -5 }}
-                    className="p-8 bg-card border border-border rounded-3xl hover:shadow-xl transition-all"
+                    className="p-8 border border-border rounded-3xl hover:shadow-xl transition-all"
+                    style={{ backgroundColor: content.featureCardBg }}
                   >
                     <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
                       <feature.icon className="w-6 h-6 text-primary" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
+                    <h3 className="text-xl font-bold mb-3" style={{ color: content.featureCardTitleColor }}>{feature.title}</h3>
+                    <p className="text-sm leading-relaxed" style={{ color: content.featureCardDescColor }}>
                       {feature.desc}
                     </p>
                   </motion.div>
@@ -219,7 +236,7 @@ export const Home = () => {
 
         {/* CTA Section */}
         {content.showCta && (
-          <section className="py-24 bg-foreground text-background">
+          <section className="py-24" style={{ backgroundColor: content.ctaSectionBg }}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
               <h2 
                 className="text-3xl md:text-5xl font-bold mb-8"
@@ -235,7 +252,8 @@ export const Home = () => {
               </p>
               <Link
                 to="/register"
-                className="inline-flex items-center gap-2 px-8 py-4 bg-background text-foreground rounded-full text-lg font-bold hover:opacity-90 transition-opacity"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-lg font-bold hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: content.ctaButtonBg, color: content.ctaButtonText }}
               >
                 {content.ctaButton}
                 <ArrowRight className="w-5 h-5" />

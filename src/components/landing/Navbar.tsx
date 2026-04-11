@@ -11,6 +11,9 @@ export const Navbar = () => {
   const { user } = useAuth();
   const { content: globalSettings } = useSiteContent('global', { 
     siteName: 'ERP System',
+    siteNameColor: '#0a0a0a',
+    navbarBgColor: 'rgba(255, 255, 255, 0.8)',
+    navbarTextColor: '#0a0a0a',
     registrationEnabled: true
   });
 
@@ -22,14 +25,17 @@ export const Navbar = () => {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+    <nav 
+      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md border-b border-border"
+      style={{ backgroundColor: globalSettings.navbarBgColor }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
               <span className="text-background font-bold">{globalSettings.siteName?.charAt(0)}</span>
             </div>
-            <span className="text-lg font-bold uppercase tracking-tighter">{globalSettings.siteName}</span>
+            <span className="text-lg font-bold uppercase tracking-tighter" style={{ color: globalSettings.siteNameColor }}>{globalSettings.siteName}</span>
           </div>
 
           {/* Desktop Links */}
@@ -38,7 +44,8 @@ export const Navbar = () => {
               <Link
                 key={link.name}
                 to={link.href}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="text-sm font-medium transition-colors"
+                style={{ color: globalSettings.navbarTextColor }}
               >
                 {link.name}
               </Link>
@@ -55,7 +62,8 @@ export const Navbar = () => {
               <div className="flex items-center gap-4">
                 <Link
                   to="/login"
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-sm font-medium transition-colors"
+                  style={{ color: globalSettings.navbarTextColor }}
                 >
                   Sign In
                 </Link>

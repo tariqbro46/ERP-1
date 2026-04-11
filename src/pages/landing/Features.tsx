@@ -23,7 +23,10 @@ const DEFAULT_CONTENT = {
   titleColor: "#0a0a0a",
   subtitle: "Explore the comprehensive suite of tools designed to help your business operate more efficiently and grow faster.",
   subtitleColor: "#64748b",
-  bgColor: "#f8fafc",
+  pageBgColor: "#ffffff",
+  cardBgColor: "#f5f5f5",
+  cardTitleColor: "#0a0a0a",
+  cardDescColor: "#64748b",
   feature1Title: "Financial Management",
   feature1Desc: "Complete control over your finances with real-time reporting, automated bookkeeping, and advanced analytics.",
   feature1Image: "https://picsum.photos/seed/erp-finance-dashboard/1200/800",
@@ -96,7 +99,7 @@ export const Features = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: content.bgColor }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: content.pageBgColor }}>
       <Navbar />
       
       <main className="flex-1 pt-32">
@@ -126,13 +129,13 @@ export const Features = () => {
                   <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center">
                     <feature.icon className="w-8 h-8 text-primary" />
                   </div>
-                  <h2 className="text-3xl md:text-4xl font-bold">{feature.title}</h2>
-                  <p className="text-lg text-muted-foreground leading-relaxed">
+                  <h2 className="text-3xl md:text-4xl font-bold" style={{ color: content.cardTitleColor }}>{feature.title}</h2>
+                  <p className="text-lg leading-relaxed" style={{ color: content.cardDescColor }}>
                     {feature.desc}
                   </p>
                   <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {feature.details.map((detail, j) => (
-                      <li key={j} className="flex items-center gap-2 text-sm font-medium">
+                      <li key={j} className="flex items-center gap-2 text-sm font-medium" style={{ color: content.cardDescColor }}>
                         <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                         {detail}
                       </li>
@@ -161,8 +164,8 @@ export const Features = () => {
           {content.showMore && (
             <div className="py-24 border-t border-border">
               <div className="text-center mb-16">
-                <h2 className="text-3xl font-bold mb-4">{content.moreTitle}</h2>
-                <p className="text-muted-foreground">{content.moreSubtitle}</p>
+                <h2 className="text-3xl font-bold mb-4" style={{ color: content.titleColor }}>{content.moreTitle}</h2>
+                <p style={{ color: content.subtitleColor }}>{content.moreSubtitle}</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
@@ -175,10 +178,10 @@ export const Features = () => {
                   { icon: FileText, title: "Voucher Entry", desc: "Simplified accounting for non-accountants." },
                   { icon: Users, title: "User Roles", desc: "Granular permission control for your team." }
                 ].map((item, i) => (
-                  <div key={i} className="p-6 bg-card border border-border rounded-2xl">
+                  <div key={i} className="p-6 border border-border rounded-2xl" style={{ backgroundColor: content.cardBgColor }}>
                     <item.icon className="w-6 h-6 text-primary mb-4" />
-                    <h3 className="font-bold mb-2">{item.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                    <h3 className="font-bold mb-2" style={{ color: content.cardTitleColor }}>{item.title}</h3>
+                    <p className="text-xs leading-relaxed" style={{ color: content.cardDescColor }}>{item.desc}</p>
                   </div>
                 ))}
               </div>
