@@ -1100,16 +1100,6 @@ function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function AuthWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="h-screen h-[100dvh] flex items-start md:items-center justify-center bg-gray-50 p-4 overflow-y-auto">
-      <div className="my-auto w-full flex justify-center py-8">
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function AppContent() {
   const { user, loading, isSuperAdmin, logout, firebaseUser } = useAuth();
   
@@ -1132,18 +1122,10 @@ function AppContent() {
         
         {/* Auth Pages */}
         <Route path="/login" element={
-          user ? <Navigate to="/dashboard" /> : (
-            <AuthWrapper>
-              <LoginWrapper />
-            </AuthWrapper>
-          )
+          user ? <Navigate to="/dashboard" /> : <LoginWrapper />
         } />
         <Route path="/register" element={
-          user ? <Navigate to="/dashboard" /> : (
-            <AuthWrapper>
-              <RegisterWrapper />
-            </AuthWrapper>
-          )
+          user ? <Navigate to="/dashboard" /> : <RegisterWrapper />
         } />
 
         {/* Protected App Routes */}
