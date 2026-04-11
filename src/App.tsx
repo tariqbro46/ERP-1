@@ -155,7 +155,8 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   const navigate = useNavigate();
 
-  const currentPageTitle = PAGE_TITLES[location.pathname] || (location.pathname.includes('/edit/') ? 'Edit Record' : 'ERP System');
+  const currentPageTitleKey = PAGE_TITLES[location.pathname] || (location.pathname.includes('/edit/') ? 'Edit Record' : 'ERP System');
+  const currentPageTitle = currentPageTitleKey.startsWith('nav.') ? t(currentPageTitleKey) : currentPageTitleKey;
 
   // If access is disabled and user is not a super admin, show subscription required page
   // We only block if isAccessEnabled is explicitly false
@@ -287,12 +288,12 @@ function Layout({ children }: { children: React.ReactNode }) {
 
       <nav className="flex-1 py-2 overflow-y-auto no-scrollbar overflow-x-hidden">
         <div className="px-3 mb-2">
-          <SidebarItem 
-            to={DASHBOARD_ITEM.to} 
-            icon={DASHBOARD_ITEM.icon} 
-            label={isSidebarCollapsed ? "" : DASHBOARD_ITEM.label} 
-            active={location.pathname === DASHBOARD_ITEM.to} 
-          />
+            <SidebarItem 
+              to={DASHBOARD_ITEM.to} 
+              icon={DASHBOARD_ITEM.icon} 
+              label={isSidebarCollapsed ? "" : t(DASHBOARD_ITEM.labelKey)} 
+              active={location.pathname === DASHBOARD_ITEM.to} 
+            />
         </div>
 
         {NAV_ITEMS.map((group) => {
@@ -302,7 +303,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           return (
             <SidebarGroup 
               key={group.group}
-              title={isSidebarCollapsed ? group.group.charAt(0) : group.group} 
+              title={isSidebarCollapsed ? t(group.groupKey).charAt(0) : t(group.groupKey)} 
               isOpen={expandedGroups.has(group.group)} 
               onToggle={() => toggleGroup(group.group)}
             >
@@ -316,7 +317,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                     key={item.to}
                     to={item.to} 
                     icon={item.icon} 
-                    label={isSidebarCollapsed ? "" : item.label} 
+                    label={isSidebarCollapsed ? "" : t(item.labelKey)} 
                     active={location.pathname === item.to} 
                   />
                 );
@@ -342,31 +343,31 @@ function Layout({ children }: { children: React.ReactNode }) {
     return (
       <div className="bg-card border-b border-border hidden lg:block">
         <div className="flex border-b border-border px-4">
-          <button
-            onClick={() => setActiveRibbonTab('Dashboard')}
-            className={cn(
-              "px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-all border-b-2",
-              activeRibbonTab === 'Dashboard' 
-                ? "border-primary text-primary" 
-                : "border-transparent text-gray-500 hover:text-foreground"
-            )}
-          >
-            Dashboard
-          </button>
-          {NAV_ITEMS.map(group => (
             <button
-              key={group.group}
-              onClick={() => setActiveRibbonTab(group.group)}
+              onClick={() => setActiveRibbonTab('Dashboard')}
               className={cn(
                 "px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-all border-b-2",
-                activeRibbonTab === group.group 
+                activeRibbonTab === 'Dashboard' 
                   ? "border-primary text-primary" 
                   : "border-transparent text-gray-500 hover:text-foreground"
               )}
             >
-              {group.group}
+              {t('nav.dashboard')}
             </button>
-          ))}
+            {NAV_ITEMS.map(group => (
+              <button
+                key={group.group}
+                onClick={() => setActiveRibbonTab(group.group)}
+                className={cn(
+                  "px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest transition-all border-b-2",
+                  activeRibbonTab === group.group 
+                    ? "border-primary text-primary" 
+                    : "border-transparent text-gray-500 hover:text-foreground"
+                )}
+              >
+                {t(group.groupKey)}
+              </button>
+            ))}
         </div>
         <div className="p-2 flex items-center gap-6 overflow-x-auto no-scrollbar">
           {activeRibbonTab === 'Dashboard' ? (
@@ -385,7 +386,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                 "text-[8px] font-bold uppercase tracking-tighter text-center",
                 location.pathname === DASHBOARD_ITEM.to ? "text-primary" : "text-gray-500"
               )}>
-                {DASHBOARD_ITEM.label}
+                {t(DASHBOARD_ITEM.labelKey)}
               </span>
             </Link>
           ) : (
@@ -408,12 +409,12 @@ function Layout({ children }: { children: React.ReactNode }) {
                     "w-5 h-5 transition-transform group-hover:scale-110",
                     location.pathname === item.to ? "text-primary" : "text-gray-500"
                   )} />
-                  <span className={cn(
-                    "text-[8px] font-bold uppercase tracking-tighter text-center",
-                    location.pathname === item.to ? "text-primary" : "text-gray-500"
-                  )}>
-                    {item.label}
-                  </span>
+                    <span className={cn(
+                      "text-[8px] font-bold uppercase tracking-tighter text-center",
+                      location.pathname === item.to ? "text-primary" : "text-gray-500"
+                    )}>
+                      {t(item.labelKey)}
+                    </span>
                 </Link>
               );
             })
@@ -447,7 +448,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               location.pathname === DASHBOARD_ITEM.to ? "bg-foreground/5 text-primary" : "text-gray-500 hover:text-foreground"
             )}
           >
-            Dashboard
+            {t('nav.dashboard')}
           </Link>
           {NAV_ITEMS.map(group => (
             <div 
@@ -467,7 +468,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                 "text-[11px] font-medium px-2 py-1 rounded transition-colors",
                 hoveredMacGroup === group.group ? "bg-foreground/5 text-foreground" : "text-gray-500 hover:text-foreground"
               )}>
-                {group.group}
+                {t(group.groupKey)}
               </button>
               {hoveredMacGroup === group.group && (
                 <div 
@@ -498,7 +499,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                         )}
                       >
                         <item.icon className="w-3.5 h-3.5" />
-                        {item.label}
+                        {t(item.labelKey)}
                       </Link>
                     );
                   })}
@@ -545,18 +546,18 @@ function Layout({ children }: { children: React.ReactNode }) {
               
               {isSuperAdmin && (
                 <Link to="/founder" className="flex items-center gap-3 px-4 py-2 text-[10px] text-primary hover:bg-primary/5 uppercase tracking-widest transition-colors font-bold">
-                  <Shield className="w-3.5 h-3.5" /> Founder Panel
+                  <Shield className="w-3.5 h-3.5" /> {t('nav.founderPanel')}
                 </Link>
               )}
               
               {isAdmin && (
                 <Link to="/users" className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors">
-                  <Users className="w-3.5 h-3.5" /> User Management
+                  <Users className="w-3.5 h-3.5" /> {t('nav.userManagement')}
                 </Link>
               )}
 
               <Link to="/companies" className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors">
-                <Building2 className="w-3.5 h-3.5" /> Company Info
+                <Building2 className="w-3.5 h-3.5" /> {t('nav.companyManagement')}
               </Link>
 
               <div className="h-[1px] bg-border my-2" />
@@ -985,7 +986,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                         className="flex items-center gap-3 px-4 py-2 text-[10px] text-primary hover:bg-primary/5 uppercase tracking-widest transition-colors font-bold"
                       >
                         <Shield className="w-3.5 h-3.5" />
-                        Founder Panel
+                        {t('nav.founderPanel')}
                       </Link>
                     )}
                     
@@ -995,7 +996,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                         className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
                       >
                         <Users className="w-3.5 h-3.5" />
-                        User Management
+                        {t('nav.userManagement')}
                       </Link>
                     )}
 
@@ -1004,7 +1005,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                       className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
                     >
                       <Building2 className="w-3.5 h-3.5" />
-                      Company Info
+                      {t('nav.companyManagement')}
                     </Link>
 
                     <div className="h-[1px] bg-border my-2" />
@@ -1051,7 +1052,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                       className="w-full flex items-center gap-3 px-4 py-2 text-[10px] text-red-500 hover:bg-red-500/5 uppercase tracking-widest transition-colors"
                     >
                       <LogOut className="w-3.5 h-3.5" />
-                      Logout Session
+                      {t('nav.logout')}
                     </button>
                   </div>
                 )}
@@ -1089,7 +1090,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             )}
           >
             <LayoutDashboard className="w-5 h-5" />
-            <span className="text-[9px] font-bold uppercase tracking-tighter">Dashboard</span>
+            <span className="text-[9px] font-bold uppercase tracking-tighter">{t('nav.dashboard')}</span>
           </Link>
 
           {NAV_ITEMS.flatMap(g => g.items).filter(item => {
@@ -1104,9 +1105,9 @@ function Layout({ children }: { children: React.ReactNode }) {
               )}
             >
               <item.icon className="w-5 h-5" />
-              <span className="text-[9px] font-bold uppercase tracking-tighter truncate max-w-[60px]">
-                {item.label.split(' ')[0]}
-              </span>
+                      <span className="text-[9px] font-bold uppercase tracking-tighter truncate max-w-[60px]">
+                        {t(item.labelKey).split(' ')[0]}
+                      </span>
             </Link>
           ))}
 
@@ -1118,7 +1119,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             )}
           >
             <Menu className="w-5 h-5" />
-            <span className="text-[9px] font-bold uppercase tracking-tighter">Menu</span>
+            <span className="text-[9px] font-bold uppercase tracking-tighter">{t('nav.menu')}</span>
           </button>
         </nav>
       </main>

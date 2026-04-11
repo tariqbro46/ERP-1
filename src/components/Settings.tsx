@@ -295,18 +295,18 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   };
 
   const tabs = [
-    { id: 'company', label: 'Company Information', icon: Building2 },
-    { id: 'ui', label: 'UI Customization', icon: SettingsIcon },
-    { id: 'reports', label: 'Report Settings', icon: ClipboardList },
-    { id: 'voucher', label: 'Voucher Settings', icon: Database },
-    { id: 'print', label: 'Print Settings', icon: Printer },
-    { id: 'features', label: 'F11 Features', icon: Database },
-    { id: 'security', label: 'Security', icon: Shield },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'whatsapp', label: 'WhatsApp Templates', icon: MessageSquare },
-    { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
-    { id: 'backup', label: 'Backup & Export', icon: Download },
-    { id: 'integrations', label: 'Integrations', icon: Globe },
+    { id: 'company', label: t('settings.companyInfo'), icon: Building2 },
+    { id: 'ui', label: t('settings.uiCustomization'), icon: SettingsIcon },
+    { id: 'reports', label: t('settings.reportSettings'), icon: ClipboardList },
+    { id: 'voucher', label: t('settings.voucherSettings'), icon: Database },
+    { id: 'print', label: t('settings.printSettings'), icon: Printer },
+    { id: 'features', label: t('settings.f11Features'), icon: Database },
+    { id: 'security', label: t('settings.security'), icon: Shield },
+    { id: 'notifications', label: t('settings.notifications'), icon: Bell },
+    { id: 'whatsapp', label: t('settings.whatsappTemplates'), icon: MessageSquare },
+    { id: 'shortcuts', label: t('settings.shortcuts'), icon: Keyboard },
+    { id: 'backup', label: t('settings.backupExport'), icon: Download },
+    { id: 'integrations', label: t('settings.integrations'), icon: Globe },
   ];
 
   const shortcuts = [
@@ -330,8 +330,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
         <div className="border-b border-border pb-4 flex items-baseline gap-4">
-          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">System Settings</h1>
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest">Configure your ERP environment</p>
+          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">{t('settings.systemSettings')}</h1>
+          <p className="text-[10px] text-gray-500 uppercase tracking-widest">{t('settings.configureEnvironment')}</p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
@@ -358,18 +358,18 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
             {activeTab === 'voucher' && (
               <div className="space-y-8">
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center border-b border-border pb-2">
-                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">Voucher Configuration</h3>
+                   <div className="flex justify-between items-center border-b border-border pb-2">
+                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">{t('settings.voucherConfiguration')}</h3>
                     <button 
                       onClick={handleSaveVoucher}
                       className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
                     >
-                      <Save className="w-3 h-3" /> Save Changes
+                      <Save className="w-3 h-3" /> {t('settings.save')}
                     </button>
                   </div>
                   <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Reference No. Default Format</label>
+                      <label className="text-[10px] text-gray-500 uppercase">{t('settings.referenceNoFormat')}</label>
                       <input 
                         type="text" 
                         value={localRefNoFormat || ''} 
@@ -381,12 +381,12 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     </div>
 
                     <div className="space-y-4 pt-4">
-                      <h4 className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Field Visibility</h4>
+                      <h4 className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('settings.fieldVisibility')}</h4>
                       
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
                         <div>
-                          <h4 className="text-xs font-bold text-foreground uppercase">Show Free Quantity</h4>
-                          <p className="text-[10px] text-gray-500">Enable/Disable Free Quantity column in vouchers.</p>
+                          <h4 className="text-xs font-bold text-foreground uppercase">{t('settings.showFreeQty')}</h4>
+                          <p className="text-[10px] text-gray-500">{t('settings.showFreeQtyDesc')}</p>
                         </div>
                         <button 
                           onClick={() => setLocalShowFreeQty(!localShowFreeQty)}

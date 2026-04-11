@@ -205,7 +205,7 @@ export function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Sales Trend */}
           <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-100 lg:col-span-2">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Monthly Sales Trend</h3>
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">{t('dash.monthlySalesTrend')}</h3>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
@@ -229,13 +229,13 @@ export function Dashboard() {
 
           {/* Performance Breakdown */}
           <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-100">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">Performance Metrics</h3>
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">{t('dash.performanceMetrics')}</h3>
             <div className="space-y-6">
               {[
-                { label: 'Revenue Target', value: 75, color: '#4285f4' },
-                { label: 'Profit Margin', value: 45, color: '#673ab7' },
-                { label: 'Stock Turnover', value: 60, color: '#00bcd4' },
-                { label: 'Collection Efficiency', value: 90, color: '#34a853' },
+                { label: t('dash.revenueTarget'), value: 75, color: '#4285f4' },
+                { label: t('dash.profitMargin'), value: 45, color: '#673ab7' },
+                { label: t('dash.stockTurnover'), value: 60, color: '#00bcd4' },
+                { label: t('dash.collectionEfficiency'), value: 90, color: '#34a853' },
               ].map((item) => (
                 <div key={item.label} className="space-y-2">
                   <div className="flex justify-between text-[10px] font-bold text-gray-500 uppercase">
@@ -257,23 +257,23 @@ export function Dashboard() {
         {/* Table Section */}
         <div className="bg-white rounded-sm shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Recent Transactions</h3>
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">{t('dash.recentTransactions')}</h3>
             <button 
               onClick={() => navigate('/reports/daybook')}
               className="text-[10px] font-bold text-blue-600 uppercase hover:underline"
             >
-              View All
+              {t('dash.viewAll')}
             </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left font-sans text-xs">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 uppercase font-bold border-b border-gray-100">
-                  <th className="px-6 py-3">Date</th>
-                  <th className="px-6 py-3">Voucher No.</th>
-                  <th className="px-6 py-3">Particulars</th>
-                  <th className="px-6 py-3">Type</th>
-                  <th className="px-6 py-3 text-right">Amount</th>
+                  <th className="px-6 py-3">{t('common.date')}</th>
+                  <th className="px-6 py-3">{t('common.voucherNo')}</th>
+                  <th className="px-6 py-3">{t('common.particulars')}</th>
+                  <th className="px-6 py-3">{t('common.type')}</th>
+                  <th className="px-6 py-3 text-right">{t('common.amount')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -299,7 +299,7 @@ export function Dashboard() {
                 ))}
                 {recentVouchers.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-10 text-center text-gray-400 uppercase font-bold tracking-widest">No recent transactions</td>
+                    <td colSpan={5} className="px-6 py-10 text-center text-gray-400 uppercase font-bold tracking-widest">{t('dash.noRecentTransactions')}</td>
                   </tr>
                 )}
               </tbody>
@@ -311,11 +311,11 @@ export function Dashboard() {
         <div className="bg-[#0078d4] p-2 text-white text-[10px] font-medium flex justify-between items-center px-4">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-3 h-3" />
-            <span>Financial Year: {formatFY(financialYearStart, financialYearEnd)} • System Status: Online</span>
+            <span>{t('dash.financialYear')}: {formatFY(financialYearStart, financialYearEnd)} • {t('dash.systemStatus')}: {t('dash.online')}</span>
           </div>
           <div className="flex gap-4">
-            <span className="uppercase font-bold">Support</span>
-            <span className="uppercase font-bold">Documentation</span>
+            <span className="uppercase font-bold">{t('dash.support')}</span>
+            <span className="uppercase font-bold">{t('dash.documentation')}</span>
           </div>
         </div>
       </div>
@@ -327,15 +327,15 @@ export function Dashboard() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
         <div className="flex items-baseline gap-4">
           <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">
-            <span className="lg:hidden">Dashboard</span>
-            <span className="hidden lg:inline">Gateway of {companyName}</span>
+            <span className="lg:hidden">{t('dash.overview')}</span>
+            <span className="hidden lg:inline">{t('dash.gatewayOf')} {companyName}</span>
           </h1>
-          <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">Technical Overview • Financial Year {formatFY(periodStart, periodEnd)}</p>
+          <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">{t('dash.technicalOverview')} • {t('dash.financialYear')} {formatFY(periodStart, periodEnd)}</p>
         </div>
         <div className="flex flex-col items-end sm:items-end gap-2 w-full sm:w-auto">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="flex-1">
-              <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">From</label>
+              <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('dash.from')}</label>
               <input 
                 type="date" 
                 value={periodStart || ''} 
@@ -344,7 +344,7 @@ export function Dashboard() {
               />
             </div>
             <div className="flex-1">
-              <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">To</label>
+              <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('dash.to')}</label>
               <input 
                 type="date" 
                 value={periodEnd || ''} 
@@ -418,20 +418,20 @@ export function Dashboard() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-foreground uppercase tracking-tight">
-                {company.subscriptionStatus === 'trial' ? 'Trial Period' : 
-                 company.subscriptionStatus === 'active' ? 'Subscription Active' : 
-                 'Subscription Inactive'}
+                {company.subscriptionStatus === 'trial' ? t('dash.trialPeriod') : 
+                 company.subscriptionStatus === 'active' ? t('dash.subscriptionActive') : 
+                 t('dash.subscriptionInactive')}
               </h3>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                Plan: {company.planType} • {company.expiryDate ? differenceInDays(new Date(company.expiryDate), new Date()) : 'N/A'} days remaining
+                {t('dash.plan')}: {company.planType} • {company.expiryDate ? differenceInDays(new Date(company.expiryDate), new Date()) : 'N/A'} {t('dash.daysRemaining')}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">Expires On</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">{t('dash.expiresOn')}</p>
               <p className="text-sm font-mono text-foreground">
-                {company.expiryDate ? format(new Date(company.expiryDate), 'dd MMM yyyy') : 'Not Set'}
+                {company.expiryDate ? format(new Date(company.expiryDate), 'dd MMM yyyy') : t('dash.notSet')}
               </p>
             </div>
             <button 
@@ -444,7 +444,7 @@ export function Dashboard() {
               }}
               className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-opacity flex items-center gap-2"
             >
-              <CreditCard className="w-3 h-3" /> Renew Plan
+              <CreditCard className="w-3 h-3" /> {t('dash.renewPlan')}
             </button>
           </div>
         </div>
@@ -453,7 +453,7 @@ export function Dashboard() {
       {/* Quick Actions */}
       <div className="bg-card border border-border p-4">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <h3 className="text-[11px] font-mono text-gray-500 uppercase tracking-widest hidden sm:block">Quick Actions</h3>
+          <h3 className="text-[11px] font-mono text-gray-500 uppercase tracking-widest hidden sm:block">{t('dash.quickActions')}</h3>
           <div className="grid grid-cols-3 sm:flex flex-wrap gap-2 lg:gap-3 flex-1">
             <button 
               onClick={() => navigate('/vouchers/new')}
@@ -464,7 +464,7 @@ export function Dashboard() {
                   : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
               )}
             >
-              <Plus className="w-3 h-3" /> <span className="text-center">Voucher</span>
+              <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.voucher')}</span>
             </button>
             <button 
               onClick={() => navigate('/inventory/items/new')}
@@ -475,7 +475,7 @@ export function Dashboard() {
                   : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
               )}
             >
-              <Plus className="w-3 h-3" /> <span className="text-center">Item</span>
+              <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.item')}</span>
             </button>
             <button 
               onClick={() => navigate('/accounts/ledgers/new')}
@@ -486,7 +486,7 @@ export function Dashboard() {
                   : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
               )}
             >
-              <Plus className="w-3 h-3" /> <span className="text-center">Ledger</span>
+              <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.ledger')}</span>
             </button>
             <button 
               onClick={() => navigate('/inventory/godowns')}
@@ -497,7 +497,7 @@ export function Dashboard() {
                   : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
               )}
             >
-              <Plus className="w-3 h-3" /> <span className="text-center">Godown</span>
+              <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.godown')}</span>
             </button>
             {isAdmin && (
               <button 
@@ -509,7 +509,7 @@ export function Dashboard() {
                     : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white"
                 )}
               >
-                <Users className="w-3 h-3" /> <span className="text-center">Users</span>
+                <Users className="w-3 h-3" /> <span className="text-center">{t('dash.users')}</span>
               </button>
             )}
           </div>
@@ -524,7 +524,7 @@ export function Dashboard() {
           <h3 className={cn(
             "text-[10px] font-mono uppercase mb-1 tracking-widest px-1",
             uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
-          )}>Revenue Trajectory</h3>
+          )}>{t('dash.revenueTrajectory')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
@@ -560,7 +560,7 @@ export function Dashboard() {
           <h3 className={cn(
             "text-[10px] font-mono uppercase mb-1 tracking-widest px-1",
             uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
-          )}>Expense Distribution</h3>
+          )}>{t('dash.expenseDistribution')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
@@ -590,7 +590,7 @@ export function Dashboard() {
           <h3 className={cn(
             "text-[10px] font-mono uppercase mb-1 tracking-widest px-1",
             uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
-          )}>Net Profit Margin</h3>
+          )}>{t('dash.netProfitMargin')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 0.15 })) : mockChartData.map(d => ({ ...d, value: d.value * 0.15 }))} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
@@ -620,7 +620,7 @@ export function Dashboard() {
           <h3 className={cn(
             "text-[10px] font-mono uppercase mb-1 tracking-widest px-1",
             uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
-          )}>Cash Flow Projection</h3>
+          )}>{t('dash.cashFlowProjection')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 1.2 })) : mockChartData.map(d => ({ ...d, value: d.value * 1.2 }))} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
@@ -646,12 +646,12 @@ export function Dashboard() {
 
       <div className="bg-card border border-border overflow-hidden">
         <div className="px-4 py-3 border-b border-border flex justify-between items-center">
-          <h3 className="text-[11px] font-mono text-gray-500 uppercase tracking-widest">Recent Transactions</h3>
+          <h3 className="text-[11px] font-mono text-gray-500 uppercase tracking-widest">{t('dash.recentTransactions')}</h3>
           <button 
             onClick={() => navigate('/reports/daybook')}
             className="text-[10px] font-mono text-gray-400 hover:text-foreground uppercase"
           >
-            View Daybook
+            {t('dash.viewDaybook')}
           </button>
         </div>
         <div className="block sm:hidden divide-y divide-border/50">
@@ -679,7 +679,7 @@ export function Dashboard() {
             </div>
           ))}
           {recentVouchers.length === 0 && !loading && (
-            <div className="p-10 text-center text-gray-600 uppercase tracking-widest text-[10px]">No recent transactions</div>
+            <div className="p-10 text-center text-gray-600 uppercase tracking-widest text-[10px]">{t('dash.noRecentTransactions')}</div>
           )}
         </div>
 
@@ -687,10 +687,10 @@ export function Dashboard() {
           <table className="w-full text-left font-mono text-xs min-w-[600px] sm:min-w-0">
             <thead>
               <tr className="border-b border-border text-gray-500 uppercase">
-                <th className="px-4 py-3 font-medium">Date</th>
-                <th className="px-4 py-3 font-medium">Particulars</th>
-                <th className="px-4 py-3 font-medium">Type</th>
-                <th className="px-4 py-3 font-medium text-right">Amount</th>
+                <th className="px-4 py-3 font-medium">{t('common.date')}</th>
+                <th className="px-4 py-3 font-medium">{t('common.particulars')}</th>
+                <th className="px-4 py-3 font-medium">{t('common.type')}</th>
+                <th className="px-4 py-3 font-medium text-right">{t('common.amount')}</th>
               </tr>
             </thead>
             <tbody className="text-foreground/80">
@@ -717,7 +717,7 @@ export function Dashboard() {
               ))}
               {recentVouchers.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-gray-600 uppercase tracking-widest">No recent transactions</td>
+                  <td colSpan={4} className="px-4 py-10 text-center text-gray-600 uppercase tracking-widest">{t('dash.noRecentTransactions')}</td>
                 </tr>
               )}
               {loading && (

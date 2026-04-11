@@ -187,33 +187,33 @@ export const Home = () => {
                 {[
                   {
                     icon: BarChart3,
-                    title: "Financial Insights",
-                    desc: "Real-time reporting and analytics to help you make data-driven decisions."
+                    title: t('home.feature1Title'),
+                    desc: t('home.feature1Desc')
                   },
                   {
                     icon: Database,
-                    title: "Inventory Control",
-                    desc: "Track stock levels, manage warehouses, and optimize your supply chain."
+                    title: t('home.feature2Title'),
+                    desc: t('home.feature2Desc')
                   },
                   {
                     icon: Users,
-                    title: "Team Collaboration",
-                    desc: "Manage employees, payroll, and permissions with ease."
+                    title: t('home.feature3Title'),
+                    desc: t('home.feature3Desc')
                   },
                   {
                     icon: Shield,
-                    title: "Enterprise Security",
-                    desc: "Bank-grade security to keep your sensitive business data safe."
+                    title: t('home.feature4Title'),
+                    desc: t('home.feature4Desc')
                   },
                   {
                     icon: Zap,
-                    title: "Fast Performance",
-                    desc: "Optimized for speed to ensure your business never slows down."
+                    title: t('home.feature5Title'),
+                    desc: t('home.feature5Desc')
                   },
                   {
                     icon: Globe,
-                    title: "Cloud Access",
-                    desc: "Access your business data from anywhere in the world, on any device."
+                    title: t('home.feature6Title'),
+                    desc: t('home.feature6Desc')
                   }
                 ].map((feature, i) => (
                   <motion.div

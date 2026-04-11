@@ -9,6 +9,7 @@ import { QuickLedgerModal } from './QuickLedgerModal';
 import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { printVoucher } from '../utils/printUtils';
 import { pdfService } from '../services/pdfService';
 import { BankDetails, VoucherType, UserRole, Company, Ledger, Voucher, UserProfile, VoucherEntry as VoucherEntryType, InventoryEntry, Item } from '../types';
@@ -74,6 +75,7 @@ export function VoucherEntry() {
   const location = useLocation();
   const { id } = useParams();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const isEdit = !!id;
   const { showNotification } = useNotification();
   const settings = useSettings();
@@ -800,12 +802,12 @@ export function VoucherEntry() {
             {/* Voucher Type for Desktop (Row 1, Col 5) */}
             <div className="hidden lg:block space-y-1 lg:space-y-2">
               <div className="flex justify-between items-center">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Voucher Type</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.voucherType')}</label>
                 <button 
                   onClick={() => setIsVoucherSettingsOpen(true)}
                   className="text-[9px] text-blue-500 hover:underline font-bold uppercase"
                 >
-                  Settings
+                  {t('nav.settings')}
                 </button>
               </div>
               <select
@@ -839,13 +841,13 @@ export function VoucherEntry() {
             {(isInventory || isJournal) ? (
               <div className="space-y-1 lg:space-y-2 col-span-2 lg:col-span-3">
                 <div className="flex justify-between items-center">
-                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Party A/c Name</label>
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.partyName')}</label>
                   <button 
                     type="button" 
                     onClick={() => openQuickLedger('Sundry', 'party')}
                     className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
                   >
-                    <PlusCircle className="w-2 h-2" /> Quick
+                    <PlusCircle className="w-2 h-2" /> {t('common.quick')}
                   </button>
                 </div>
                 <SearchableSelect
@@ -865,13 +867,13 @@ export function VoucherEntry() {
             ) : isSingleEntry ? (
               <div className="space-y-1 lg:space-y-2 col-span-2 lg:col-span-3">
                 <div className="flex justify-between items-center">
-                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Account (Bank/Cash)</label>
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.account')}</label>
                   <button 
                     type="button" 
                     onClick={() => openQuickLedger('Bank', 'account')}
                     className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
                   >
-                    <PlusCircle className="w-2 h-2" /> Quick
+                    <PlusCircle className="w-2 h-2" /> {t('common.quick')}
                   </button>
                 </div>
                 <SearchableSelect
@@ -957,7 +959,7 @@ export function VoucherEntry() {
                   <tr>
                     <th className={cn("border-b border-border min-w-[35ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>
                       <div className="flex justify-between items-center">
-                        <span>Name of Item</span>
+                        <span>{t('common.itemName')}</span>
                         <button 
                           type="button" 
                           onClick={() => {
@@ -966,7 +968,7 @@ export function VoucherEntry() {
                           }}
                           className="text-[8px] text-amber-600 hover:text-amber-500 font-bold uppercase flex items-center gap-1"
                         >
-                          <PlusCircle className="w-2 h-2" /> Quick
+                          <PlusCircle className="w-2 h-2" /> {t('common.quick')}
                         </button>
                       </div>
                     </th>
