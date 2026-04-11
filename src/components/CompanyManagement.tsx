@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Building2, Plus, Check, Loader2, ArrowRight, Trash2, X, Upload } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export function CompanyManagement() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { showNotification } = useNotification();
   const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +54,7 @@ export function CompanyManagement() {
     setCreating(true);
     try {
       await erpService.createCompany(user.uid, newCompany);
-      showNotification('New company created and switched successfully!');
+      showNotification(t('company.createSuccess'));
       setNewCompany({ name: '', address: '', phone: '', email: '', logo_url: '' });
       await fetchCompanies();
     } catch (err) {
@@ -69,7 +71,7 @@ export function CompanyManagement() {
     setSwitching(companyId);
     try {
       await erpService.switchCompany(user.uid, companyId);
-      showNotification('Switched company successfully!');
+      showNotification(t('company.switchSuccess'));
       // The AuthContext listener will pick up the change and update the UI
     } catch (err) {
       console.error('Error switching company:', err);
@@ -86,7 +88,7 @@ export function CompanyManagement() {
     setSwitching(editingId);
     try {
       await erpService.updateCompany(editingId, editForm);
-      showNotification('Company updated successfully!');
+      showNotification(t('company.updateSuccess'));
       setEditingId(null);
       await fetchCompanies();
     } catch (err) {
@@ -136,7 +138,7 @@ export function CompanyManagement() {
     setSwitching(companyId);
     try {
       await erpService.deleteCompany(companyId);
-      showNotification('Company deleted successfully!');
+      showNotification(t('company.deleteSuccess'));
       await fetchCompanies();
     } catch (err) {
       console.error('Error deleting company:', err);
@@ -150,8 +152,8 @@ export function CompanyManagement() {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono">
       <div className="space-y-8">
         <div className="border-b border-border pb-4 flex items-baseline gap-4">
-          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Company Management</h1>
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest">Manage and switch between your business entities</p>
+          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">{t('company.title')}</h1>
+          <p className="text-[10px] text-gray-500 uppercase tracking-widest">{t('company.subtitle')}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -159,11 +161,11 @@ export function CompanyManagement() {
           <div className="bg-card border border-border p-6 space-y-6">
             <div className="flex items-center gap-2 text-foreground font-bold text-xs uppercase tracking-widest">
               <Plus className="w-4 h-4" />
-              Create New Company
+              {t('company.create')}
             </div>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Company Name *</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('company.name')} *</label>
                 <input
                   type="text"
                   required
@@ -174,7 +176,7 @@ export function CompanyManagement() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Address</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.address')}</label>
                 <textarea
                   value={newCompany.address}
                   onChange={e => setNewCompany({ ...newCompany, address: e.target.value })}
@@ -184,7 +186,7 @@ export function CompanyManagement() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Phone</label>
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.phone')}</label>
                   <input
                     type="text"
                     value={newCompany.phone}
@@ -193,7 +195,7 @@ export function CompanyManagement() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Email</label>
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('auth.email')}</label>
                   <input
                     type="email"
                     value={newCompany.email}
@@ -203,7 +205,7 @@ export function CompanyManagement() {
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Company Logo</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('company.logo')}</label>
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 border border-dashed border-border flex items-center justify-center bg-background overflow-hidden">
                     {newCompany.logo_url ? (
@@ -213,7 +215,7 @@ export function CompanyManagement() {
                     )}
                   </div>
                   <label className="flex-1 cursor-pointer bg-foreground/5 border border-border hover:bg-foreground/10 transition-all p-2 text-center">
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-foreground">Upload Logo</span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-foreground">{t('common.upload')} {t('company.logo')}</span>
                     <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, false)} className="hidden" />
                   </label>
                 </div>
@@ -233,7 +235,7 @@ export function CompanyManagement() {
                 className="w-full bg-foreground text-background py-3 text-[10px] uppercase font-bold tracking-widest hover:bg-foreground/90 transition-colors flex items-center justify-center gap-2"
               >
                 {creating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                Create & Switch
+                {t('company.create')} & {t('company.switch')}
               </button>
             </form>
           </div>
@@ -242,7 +244,7 @@ export function CompanyManagement() {
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-foreground font-bold text-xs uppercase tracking-widest px-2">
               <Building2 className="w-4 h-4" />
-              Your Companies
+              {t('company.title')}
             </div>
             {loading ? (
               <div className="flex justify-center py-10">
@@ -290,7 +292,7 @@ export function CompanyManagement() {
                       {user?.companyId === company.id && (
                         <div className="flex items-center gap-1 text-emerald-500 text-[8px] font-bold uppercase tracking-widest mr-2">
                           <Check className="w-3 h-3" />
-                          Active
+                          {t('company.current')}
                         </div>
                       )}
                       {!editingId && (

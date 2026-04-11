@@ -6,6 +6,7 @@ import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { printReport } from '../utils/printUtils';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { pdfService } from '../services/pdfService';
@@ -31,6 +32,7 @@ const DEFAULT_CONFIG: ReportConfig = {
 export function Daybook() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const settings = useSettings();
   const { showNotification } = useNotification();
   const [vouchers, setVouchers] = useState<any[]>([]);
@@ -290,7 +292,7 @@ export function Daybook() {
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">From</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('common.from')}</label>
                 <input 
                   type="date" 
                   value={startDate || ''} 
@@ -299,7 +301,7 @@ export function Daybook() {
                 />
               </div>
               <div className="flex-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">To</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('common.to')}</label>
                 <input 
                   type="date" 
                   value={endDate || ''} 
@@ -313,9 +315,9 @@ export function Daybook() {
             <button 
               onClick={() => setIsConfigOpen(true)}
               className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
-              title="Configure Report"
+              title={t('daybook.configureReport')}
             >
-              <SettingsIcon className="w-3 h-3" /> F12: CONFIGURE
+              <SettingsIcon className="w-3 h-3" /> {t('common.f12Configure')}
             </button>
             <button 
               onClick={handlePrint}
@@ -327,17 +329,17 @@ export function Daybook() {
               onClick={handleDownloadExcel}
               disabled={vouchers.length === 0}
               className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-              title="Download Excel"
+              title={t('daybook.downloadExcel')}
             >
-              <Download className="w-3 h-3" /> EXCEL
+              <Download className="w-3 h-3" /> {t('common.excel')}
             </button>
             <button 
               onClick={handleDownloadPDF}
               disabled={vouchers.length === 0}
               className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-              title="Download PDF"
+              title={t('daybook.downloadPDF')}
             >
-              <Download className="w-3 h-3" /> PDF
+              <Download className="w-3 h-3" /> {t('common.pdf')}
             </button>
           </div>
         </div>
@@ -354,9 +356,9 @@ export function Daybook() {
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
             {loading ? (
-              <div className="p-10 text-center text-gray-500">Loading transactions...</div>
+              <div className="p-10 text-center text-gray-500">{t('daybook.loading')}</div>
             ) : vouchers.length === 0 ? (
-              <div className="p-10 text-center text-gray-500">No transactions recorded</div>
+              <div className="p-10 text-center text-gray-500">{t('daybook.noTransactions')}</div>
             ) : vouchers.map((v, idx) => (
               <div 
                 key={v.id} 
@@ -382,7 +384,7 @@ export function Daybook() {
                       <span className="text-[9px] text-gray-500 italic">({v.narration})</span>
                     )}
                     {config.showEnteredBy && (
-                      <span className="text-[8px] text-gray-400 uppercase">By: {users.find(u => u.uid === v.createdBy)?.displayName || 'System'}</span>
+                      <span className="text-[8px] text-gray-400 uppercase">{t('common.providedBy')}: {users.find(u => u.uid === v.createdBy)?.displayName || 'System'}</span>
                     )}
                     <span className="text-[10px] text-gray-500 font-mono">{v.v_no}</span>
                   </div>
@@ -393,13 +395,13 @@ export function Daybook() {
                     onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(v); }}
                     className="flex-1 py-1.5 bg-emerald-500/10 text-emerald-500 text-[9px] font-bold uppercase rounded flex items-center justify-center gap-1"
                   >
-                    <MessageCircle className="w-3 h-3" /> WhatsApp
+                    <MessageCircle className="w-3 h-3" /> {t('common.whatsapp')}
                   </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleShareEmail(v); }}
                     className="flex-1 py-1.5 bg-blue-500/10 text-blue-500 text-[9px] font-bold uppercase rounded flex items-center justify-center gap-1"
                   >
-                    <Mail className="w-3 h-3" /> Email
+                    <Mail className="w-3 h-3" /> {t('common.email')}
                   </button>
                 </div>
               </div>
@@ -411,19 +413,19 @@ export function Daybook() {
             <table className="w-full text-left text-xs min-w-[700px] lg:min-w-0">
               <thead>
                 <tr className="border-b border-border text-gray-500 uppercase">
-                  <th className="px-4 lg:px-6 py-4 font-medium">Date</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium">Particulars</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase">Vch Type</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase">Vch No.</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right">Amount</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right">Share</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium">{t('common.date')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium">{t('common.particulars')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase">{t('common.vchType')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase">{t('common.vchNo')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right">{t('common.amount')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right">{t('common.share')}</th>
                 </tr>
               </thead>
               <tbody className="text-foreground/80">
                 {loading ? (
-                  <tr><td colSpan={5} className="px-6 py-10 text-center text-gray-500">Loading transactions...</td></tr>
+                  <tr><td colSpan={5} className="px-6 py-10 text-center text-gray-500">{t('daybook.loading')}</td></tr>
                 ) : vouchers.length === 0 ? (
-                  <tr><td colSpan={5} className="px-6 py-10 text-center text-gray-500">No transactions recorded for this period</td></tr>
+                  <tr><td colSpan={5} className="px-6 py-10 text-center text-gray-500">{t('daybook.noTransactionsPeriod')}</td></tr>
                 ) : vouchers.map((v, idx) => (
                   <React.Fragment key={v.id}>
                     <tr 
@@ -451,7 +453,7 @@ export function Daybook() {
                             <span className="text-[9px] text-gray-500 italic">({v.narration})</span>
                           )}
                           {config.showEnteredBy && (
-                            <span className="text-[8px] text-gray-400 uppercase">By: {users.find(u => u.uid === v.createdBy)?.displayName || 'System'}</span>
+                            <span className="text-[8px] text-gray-400 uppercase">{t('common.providedBy')}: {users.find(u => u.uid === v.createdBy)?.displayName || 'System'}</span>
                           )}
                         </div>
                       </td>
@@ -483,15 +485,15 @@ export function Daybook() {
                           <table className="w-full text-[10px] text-gray-500">
                             <thead>
                               <tr className="border-b border-border/20 uppercase text-[8px]">
-                                <th className="py-1 text-left">Name of Item</th>
-                                <th className="py-1 text-left">Godown</th>
-                                <th className="py-1 text-right">Quantity</th>
-                                <th className="py-1 text-right">Free</th>
-                                <th className="py-1 text-right">Rate</th>
-                                <th className="py-1 text-center">per</th>
-                                <th className="py-1 text-right">Disc %</th>
-                                <th className="py-1 text-right">Tax %</th>
-                                <th className="py-1 text-right">Amount</th>
+                            <th className="py-1 text-left">{t('common.nameOfItem')}</th>
+                            <th className="py-1 text-left">{t('common.godown')}</th>
+                            <th className="py-1 text-right">{t('common.quantity')}</th>
+                            <th className="py-1 text-right">{t('common.free')}</th>
+                            <th className="py-1 text-right">{t('common.rate')}</th>
+                            <th className="py-1 text-center">{t('common.per')}</th>
+                            <th className="py-1 text-right">{t('common.discPercent')}</th>
+                            <th className="py-1 text-right">{t('common.taxPercent')}</th>
+                            <th className="py-1 text-right">{t('common.amount')}</th>
                               </tr>
                             </thead>
                             <tbody>

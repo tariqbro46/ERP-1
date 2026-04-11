@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, Loader2, MapPin, User, Phone } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useNotification } from '../contexts/NotificationContext';
 
 export function GodownMaster() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [godowns, setGodowns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,7 +60,7 @@ export function GodownMaster() {
           description 
         });
       }
-      showNotification(editingGodown ? 'Godown updated successfully' : 'Godown saved successfully');
+      showNotification(editingGodown ? t('godown.updateSuccess') : t('godown.saveSuccess'));
       setIsModalOpen(false);
       setName('');
       setLocation('');
@@ -76,12 +78,12 @@ export function GodownMaster() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this godown?')) return;
+    if (!window.confirm(t('godown.deleteConfirm'))) return;
     
     setLoading(true);
     try {
       await erpService.deleteGodown(id);
-      showNotification('Godown deleted successfully');
+      showNotification(t('godown.deleteSuccess'));
       fetchGodowns();
     } catch (err: any) {
       console.error('Error deleting godown:', err);
@@ -95,7 +97,7 @@ export function GodownMaster() {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
-          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Godown / Location Master</h1>
+          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">{t('godown.title')}</h1>
           <button 
             onClick={() => {
               setEditingGodown(null);
@@ -108,7 +110,7 @@ export function GodownMaster() {
             }}
             className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
           >
-            <Plus className="w-3 h-3" /> Create Godown
+            <Plus className="w-3 h-3" /> {t('godown.add')}
           </button>
         </div>
 
@@ -172,7 +174,7 @@ export function GodownMaster() {
             ))}
             {godowns.length === 0 && (
               <div className="col-span-full py-20 text-center border border-dashed border-border text-gray-500 uppercase text-[10px] tracking-widest">
-                No godowns found. Create your first storage location.
+                {t('godown.noGodowns')}
               </div>
             )}
           </div>
@@ -184,7 +186,7 @@ export function GodownMaster() {
           <div className="bg-card border border-border w-full max-w-md overflow-hidden shadow-2xl my-auto md:my-8">
             <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-foreground/5 sticky top-0 z-10 backdrop-blur-sm">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">
-                {editingGodown ? 'Edit Godown' : 'Create New Godown'}
+                {editingGodown ? t('godown.edit') : t('godown.add')}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-foreground">
                 <Plus className="w-4 h-4 rotate-45" />
@@ -192,7 +194,7 @@ export function GodownMaster() {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="space-y-2">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Godown Name</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('godown.name')}</label>
                 <input 
                   autoFocus
                   type="text" 
@@ -203,7 +205,7 @@ export function GodownMaster() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Location</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('godown.location')}</label>
                 <input 
                   type="text" 
                   value={location || ''}
@@ -214,7 +216,7 @@ export function GodownMaster() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Contact Person</label>
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('godown.contactPerson')}</label>
                   <input 
                     type="text" 
                     value={contactPerson || ''}
@@ -224,7 +226,7 @@ export function GodownMaster() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Phone Number</label>
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('godown.phoneNumber')}</label>
                   <input 
                     type="text" 
                     value={phoneNumber || ''}
@@ -235,7 +237,7 @@ export function GodownMaster() {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Description</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('godown.description')}</label>
                 <textarea 
                   value={description || ''}
                   onChange={e => setDescription(e.target.value)}
@@ -249,7 +251,7 @@ export function GodownMaster() {
                   disabled={loading || !name}
                   className="w-full py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50"
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Save Godown'}
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : (editingGodown ? t('common.update') : t('common.save'))}
                 </button>
               </div>
             </form>

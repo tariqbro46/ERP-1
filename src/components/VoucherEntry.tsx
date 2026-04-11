@@ -864,7 +864,7 @@ export function VoucherEntry() {
                   options={ledgers}
                   value={partyLedgerId}
                   onChange={setPartyLedgerId}
-                  placeholder="Select Party..."
+                  placeholder={t('voucher.selectParty')}
                   onQuickCreate={() => openQuickLedger('Sundry', 'party')}
                   tabIndex={6}
                 />
@@ -890,7 +890,7 @@ export function VoucherEntry() {
                   options={ledgers.filter(l => l.ledger_groups?.name.includes('Bank') || l.ledger_groups?.name.includes('Cash'))}
                   value={bankCashLedgerId}
                   onChange={setBankCashLedgerId}
-                  placeholder="Select Account..."
+                  placeholder={t('voucher.selectAccount')}
                   onQuickCreate={() => openQuickLedger('Bank', 'account')}
                   tabIndex={6}
                 />
@@ -1023,7 +1023,7 @@ export function VoucherEntry() {
                               setInvEntries(next);
                               fetchItemStock(val, entry.godown_id);
                             }}
-                            placeholder="Select Item..."
+                            placeholder={t('voucher.selectItem')}
                             onQuickCreate={() => {
                               setPendingRowIdx(idx);
                               setIsQuickItemOpen(true);
@@ -1032,7 +1032,7 @@ export function VoucherEntry() {
                           />
                           {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
                             <p className="text-[8px] text-gray-500 uppercase">
-                              Stock: <span className="font-bold text-foreground">{itemStocks[`${entry.item_id}-${entry.godown_id}`]} {entry.unit}</span>
+                              {t('item.currentStock')}: <span className="font-bold text-foreground">{itemStocks[`${entry.item_id}-${entry.godown_id}`]} {entry.unit}</span>
                             </p>
                           )}
                         </div>
@@ -1046,7 +1046,7 @@ export function VoucherEntry() {
                             next[idx].godown_id = val;
                             setInvEntries(next);
                           }}
-                          placeholder="Select Godown..."
+                          placeholder={t('voucher.selectGodown')}
                           tabIndex={9 + idx * 10}
                         />
                       </td>
@@ -1055,7 +1055,7 @@ export function VoucherEntry() {
                           <input 
                             type="text" 
                             className="bg-transparent border border-border text-foreground outline-none w-full text-xs p-1 focus:border-foreground" 
-                            placeholder="Batch"
+                            placeholder={t('common.batch')}
                             value={entry.batch_no || ''} 
                             onChange={e => {
                               const next = [...invEntries];
@@ -1218,11 +1218,11 @@ export function VoucherEntry() {
                       className="absolute top-2 right-4 p-1 text-rose-500 flex items-center gap-1 hover:bg-rose-500/10 rounded transition-colors"
                     >
                       <Trash2 className="w-3 h-3" />
-                      <span className="text-[8px] font-bold uppercase tracking-widest">Delete Item</span>
+                      <span className="text-[8px] font-bold uppercase tracking-widest">{t('common.deleteItem')}</span>
                     </button>
 
                     <div className="space-y-1">
-                      <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Name of Item</label>
+                      <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.nameOfItem')}</label>
                       <SearchableSelect
                         options={items}
                         value={entry.item_id}
@@ -1234,7 +1234,7 @@ export function VoucherEntry() {
                           setInvEntries(next);
                           fetchItemStock(val, entry.godown_id);
                         }}
-                        placeholder="Select Item..."
+                        placeholder={t('voucher.selectItem')}
                         onQuickCreate={() => {
                           setPendingRowIdx(idx);
                           setIsQuickItemOpen(true);
@@ -1242,14 +1242,14 @@ export function VoucherEntry() {
                       />
                       {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
                         <p className="text-[8px] text-gray-500 uppercase">
-                          Stock: <span className="font-bold text-foreground">{itemStocks[`${entry.item_id}-${entry.godown_id}`]} {entry.unit}</span>
+                          {t('item.currentStock')}: <span className="font-bold text-foreground">{itemStocks[`${entry.item_id}-${entry.godown_id}`]} {entry.unit}</span>
                         </p>
                       )}
                     </div>
 
                     <div className="flex flex-wrap gap-3">
                       <div className="flex-1 min-w-[140px] space-y-1">
-                        <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Godown</label>
+                        <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.godown')}</label>
                         <SearchableSelect
                           options={godowns}
                           value={entry.godown_id}
@@ -1258,11 +1258,11 @@ export function VoucherEntry() {
                             next[idx].godown_id = val;
                             setInvEntries(next);
                           }}
-                          placeholder="Select Godown..."
+                          placeholder={t('voucher.selectGodown')}
                         />
                       </div>
                       <div className="flex-1 min-w-[100px] space-y-1">
-                        <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Quantity</label>
+                        <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.quantity')}</label>
                         <input 
                           type="number" 
                           className="w-full bg-background border border-border text-foreground p-1.5 text-xs outline-none focus:border-foreground" 
@@ -1285,7 +1285,7 @@ export function VoucherEntry() {
 
                       {showFreeQty && (
                         <div className="flex-1 min-w-[80px] space-y-1">
-                          <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Free</label>
+                          <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.free')}</label>
                           <input 
                             type="number" 
                             className="w-full bg-background border border-border text-emerald-500 font-bold p-1.5 text-xs outline-none focus:border-foreground" 
@@ -1301,7 +1301,7 @@ export function VoucherEntry() {
                       )}
                       
                       <div className="flex-1 min-w-[100px] space-y-1">
-                        <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Rate</label>
+                        <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.rate')}</label>
                         <input 
                           type="number" 
                           className="w-full bg-background border border-border text-foreground p-1.5 text-xs outline-none focus:border-foreground" 
@@ -1317,7 +1317,7 @@ export function VoucherEntry() {
                       </div>
 
                       <div className="flex-1 min-w-[120px] space-y-1">
-                        <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">per</label>
+                        <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.per')}</label>
                         <div className="w-full bg-background border border-border text-gray-500 p-1.5 text-xs uppercase text-center font-bold">
                           {entry.unit}
                         </div>
@@ -1325,7 +1325,7 @@ export function VoucherEntry() {
 
                       {showDiscPercent && (
                         <div className="flex-1 min-w-[80px] space-y-1">
-                          <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Disc %</label>
+                          <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.discPercent')}</label>
                           <input 
                             type="number" 
                             className="w-full bg-background border border-border text-foreground p-1.5 text-xs outline-none focus:border-foreground" 
@@ -1343,7 +1343,7 @@ export function VoucherEntry() {
 
                       {isTaxEnabled && showTaxPercent && (
                         <div className="flex-1 min-w-[80px] space-y-1">
-                          <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Tax %</label>
+                          <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.taxPercent')}</label>
                           <input 
                             type="number" 
                             className="w-full bg-background border border-border text-foreground p-1.5 text-xs outline-none focus:border-foreground" 
@@ -1361,7 +1361,7 @@ export function VoucherEntry() {
                     </div>
 
                     <div className="flex justify-between items-center pt-2 border-t border-border/50">
-                      <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Amount</span>
+                      <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.amount')}</span>
                       <span className="text-sm text-foreground font-bold">{baseCurrencySymbol} {entry.amount.toLocaleString()}</span>
                     </div>
                   </div>
@@ -1376,7 +1376,7 @@ export function VoucherEntry() {
                       getVoucherHoverBgColor(vType)
                     )}
                   >
-                    <PlusCircle className="w-4 h-4" /> ADD ITEM
+                    <PlusCircle className="w-4 h-4" /> {t('common.addItem')}
                   </button>
                 </div>
               </div>
@@ -1385,8 +1385,8 @@ export function VoucherEntry() {
             <table className="w-full text-left text-xs border-collapse min-w-[600px]">
               <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px]">
                 <tr>
-                  <th className={cn("border-b border-border font-bold tracking-widest", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Particulars</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Amount</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.particulars')}</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.amount')}</th>
                   <th className={cn("border-b border-border w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}></th>
                 </tr>
               </thead>
@@ -1403,7 +1403,7 @@ export function VoucherEntry() {
                             next[idx].ledger_id = val;
                             setAccEntries(next);
                           }}
-                          placeholder="Select Particulars..."
+                          placeholder={t('voucher.selectParticulars')}
                           onQuickCreate={() => openQuickLedger('', 'particulars', idx)}
                         />
                       </div>
@@ -1432,7 +1432,7 @@ export function VoucherEntry() {
                           getVoucherHoverBgColor(vType)
                         )}
                       >
-                        <PlusCircle className="w-3 h-3" /> ADD ITEM
+                        <PlusCircle className="w-3 h-3" /> {t('common.addItem')}
                       </button>
                     </div>
                   </td>
@@ -1609,7 +1609,7 @@ export function VoucherEntry() {
                   type="text"
                   value={bankDetails.bank_name}
                   onChange={(e) => setBankDetails({ ...bankDetails, bank_name: e.target.value })}
-                  placeholder="Bank Name"
+                  placeholder={t('common.bankName')}
                   className="w-full bg-background border border-border p-1.5 lg:p-2 text-xs outline-none focus:border-foreground font-medium"
                 />
               </div>
@@ -1634,7 +1634,7 @@ export function VoucherEntry() {
             </div>
             <div className="flex flex-col justify-end items-end space-y-2 order-1 lg:order-2 lg:col-span-2">
               <div className="flex items-center gap-4 bg-background border border-border p-3 rounded mb-1 w-full lg:w-auto justify-between lg:justify-end">
-                <label htmlFor="globalDiscount" className="text-[10px] text-gray-500 uppercase font-bold cursor-pointer tracking-widest">Disc</label>
+                <label htmlFor="globalDiscount" className="text-[10px] text-gray-500 uppercase font-bold cursor-pointer tracking-widest">{t('common.disc')}</label>
                 <div className="flex items-center gap-2">
                   <input 
                     id="globalDiscount"
@@ -1652,15 +1652,15 @@ export function VoucherEntry() {
                     tabIndex={503}
                     className="bg-transparent border-none text-xs outline-none font-bold text-gray-500"
                   >
-                    <option value="fixed">{baseCurrencySymbol} TAKA</option>
-                    <option value="percent">% Percent</option>
+                    <option value="fixed">{baseCurrencySymbol} {t('common.taka')}</option>
+                    <option value="percent">% {t('common.percent')}</option>
                   </select>
                 </div>
               </div>
               <div className="text-right space-y-0.5 w-full">
                 {totalTaxAmount > 0 && (
                   <p className="text-[10px] text-emerald-500 font-bold">
-                    Tax: {currency} {totalTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {t('common.tax')}: {currency} {totalTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                 )}
                 <p className="text-[8px] text-gray-500 uppercase tracking-widest">{t('common.totalAmount')}</p>
@@ -1695,14 +1695,14 @@ export function VoucherEntry() {
                           className="w-full flex items-center gap-3 px-4 py-3 text-[10px] uppercase tracking-widest hover:bg-foreground/5 text-left"
                         >
                           <MessageSquare className="w-4 h-4 text-emerald-500" />
-                          WhatsApp
+                          {t('common.whatsapp')}
                         </button>
                         <button 
                           onClick={() => handleShare('email')}
                           className="w-full flex items-center gap-3 px-4 py-3 text-[10px] uppercase tracking-widest hover:bg-foreground/5 text-left"
                         >
                           <Mail className="w-4 h-4 text-blue-500" />
-                          Email
+                          {t('common.email')}
                         </button>
                       </div>
                     )}
@@ -1773,7 +1773,7 @@ export function VoucherEntry() {
             <div className="flex items-center justify-between p-4 border-b border-border bg-foreground/5">
               <div className="flex items-center gap-2">
                 <Settings2 className="w-4 h-4 text-gray-500" />
-                <h3 className="text-[10px] uppercase font-bold tracking-widest">Voucher Configuration</h3>
+                <h3 className="text-[10px] uppercase font-bold tracking-widest">{t('voucher.config')}</h3>
               </div>
               <button onClick={() => setIsVoucherSettingsOpen(false)} className="text-gray-500 hover:text-foreground">
                 <X className="w-4 h-4" />
@@ -1782,65 +1782,65 @@ export function VoucherEntry() {
             
             <div className="p-6 space-y-6 overflow-y-auto max-h-[70vh]">
               <div className="space-y-1">
-                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mb-2">Inventory Settings</p>
+                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mb-2">{t('voucher.invSettings')}</p>
                 <Toggle 
-                  label="Maintain Inventory" 
+                  label={t('voucher.maintainInv')} 
                   enabled={isInventoryEnabled} 
                   onChange={() => toggleFeature('inv')} 
                 />
                 <Toggle 
-                  label="Maintain Godowns" 
+                  label={t('voucher.maintainGodowns')} 
                   enabled={features.find(f => f.id === 'godown')?.enabled ?? false} 
                   onChange={() => toggleFeature('godown')} 
                 />
                 <Toggle 
-                  label="Maintain Batches" 
+                  label={t('voucher.maintainBatches')} 
                   enabled={isBatchEnabled} 
                   onChange={() => toggleFeature('batch')} 
                 />
                 <Toggle 
-                  label="Track Expiry Dates" 
+                  label={t('voucher.trackExpiry')} 
                   enabled={isExpiryEnabled} 
                   onChange={() => toggleFeature('expiry')} 
                 />
                 <Toggle 
-                  label="Barcode Scanning" 
+                  label={t('voucher.barcodeScanning')} 
                   enabled={isBarcodeEnabled} 
                   onChange={() => toggleFeature('barcode')} 
                 />
               </div>
 
               <div className="space-y-1 pt-4 border-t border-border">
-                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mb-2">Voucher Display Settings</p>
+                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mb-2">{t('voucher.displaySettings')}</p>
                 <Toggle 
-                  label="Show Free Quantity" 
+                  label={t('voucher.showFreeQty')} 
                   enabled={showFreeQty} 
                   onChange={() => updateSettings({ showFreeQty: !showFreeQty })} 
                 />
                 <Toggle 
-                  label="Show Discount %" 
+                  label={t('voucher.showDiscPercent')} 
                   enabled={showDiscPercent} 
                   onChange={() => updateSettings({ showDiscPercent: !showDiscPercent })} 
                 />
                 <Toggle 
-                  label="Show Tax %" 
+                  label={t('voucher.showTaxPercent')} 
                   enabled={showTaxPercent} 
                   onChange={() => updateSettings({ showTaxPercent: !showTaxPercent })} 
                 />
                 <Toggle 
-                  label="Enable Multi-Currency" 
+                  label={t('voucher.enableMultiCurrency')} 
                   enabled={isMultiCurrencyEnabled} 
                   onChange={() => toggleFeature('curr')} 
                 />
                 <Toggle 
-                  label="Enable Tax Calculation" 
+                  label={t('voucher.enableTaxCalc')} 
                   enabled={isTaxEnabled} 
                   onChange={() => toggleFeature('tax')} 
                 />
               </div>
 
               <div className="space-y-4 pt-4 border-t border-border">
-                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mb-2">Print Preview (Mock)</p>
+                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mb-2">{t('voucher.printPreviewMock')}</p>
                 <div className="bg-background border border-border p-4 rounded space-y-4 scale-90 origin-top">
                   {/* Mock Header */}
                   <div className="border-b border-border pb-2 text-center space-y-1">
@@ -1876,7 +1876,7 @@ export function VoucherEntry() {
                     </div>
                   </div>
                 </div>
-                <p className="text-[7px] text-gray-400 uppercase text-center">Visual representation of current layout settings</p>
+                <p className="text-[7px] text-gray-400 uppercase text-center">{t('voucher.printPreviewDesc')}</p>
               </div>
             </div>
 
@@ -1885,7 +1885,7 @@ export function VoucherEntry() {
                 onClick={() => setIsVoucherSettingsOpen(false)}
                 className="px-6 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90"
               >
-                Close
+                {t('common.close')}
               </button>
             </div>
           </div>
@@ -1903,23 +1903,23 @@ function ClearModal({ isOpen, onClose, onConfirm }: { isOpen: boolean, onClose: 
       <div className="bg-card border border-border shadow-2xl w-full max-w-sm p-6 space-y-6">
         <div className="flex items-center gap-3 text-rose-500">
           <AlertCircle className="w-6 h-6" />
-          <h3 className="text-lg font-bold uppercase tracking-tighter">Warning</h3>
+          <h3 className="text-lg font-bold uppercase tracking-tighter">{t('common.warning')}</h3>
         </div>
         <p className="text-xs text-gray-500 uppercase tracking-widest leading-relaxed">
-          Are you sure you want to clear all voucher data? This action cannot be undone.
+          {t('common.clearVoucherConfirm')}
         </p>
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
             className="flex-1 px-4 py-2 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/5 transition-colors"
           >
-            Back
+            {t('common.back')}
           </button>
           <button
             onClick={onConfirm}
             className="flex-1 px-4 py-2 bg-rose-500 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-rose-600 transition-colors"
           >
-            Clear Voucher
+            {t('common.clearVoucher')}
           </button>
         </div>
       </div>

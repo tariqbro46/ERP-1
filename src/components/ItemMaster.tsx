@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Package, Search, Edit2, Plus, Loader2, Filter, List, Grid, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function ItemMaster() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -76,20 +78,20 @@ export function ItemMaster() {
       <div className="space-y-6">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-          <h1 className="text-2xl font-mono text-foreground uppercase tracking-tighter">Item Master</h1>
+          <h1 className="text-2xl font-mono text-foreground uppercase tracking-tighter">{t('item.title')}</h1>
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex gap-4">
               <button 
                 onClick={() => setViewMode('master')}
                 className={`text-[10px] uppercase tracking-widest pb-1 border-b-2 transition-all ${viewMode === 'master' ? 'border-foreground text-foreground font-bold' : 'border-transparent text-gray-500'}`}
               >
-                Master View
+                {t('item.masterView')}
               </button>
               <button 
                 onClick={() => setViewMode('pricelist')}
                 className={`text-[10px] uppercase tracking-widest pb-1 border-b-2 transition-all ${viewMode === 'pricelist' ? 'border-foreground text-foreground font-bold' : 'border-transparent text-gray-500'}`}
               >
-                Price List
+                {t('item.priceList')}
               </button>
             </div>
             <button 
@@ -98,14 +100,14 @@ export function ItemMaster() {
               className="px-4 py-2 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/5 transition-all flex items-center gap-2 disabled:opacity-50"
             >
               {recalculating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Activity className="w-3 h-3" />}
-              Recalculate Stats
+              {t('item.recalculateStats')}
             </button>
             <button 
               onClick={() => navigate('/inventory/items/new')}
               className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
             >
               <Plus className="w-3 h-3" />
-              Create New Item
+              {t('item.createNewItem')}
             </button>
           </div>
         </div>
@@ -116,7 +118,7 @@ export function ItemMaster() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
             <input 
               type="text"
-              placeholder="SEARCH BY NAME OR PART NO..."
+              placeholder={t('item.searchPlaceholder')}
               value={search || ''}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-background border border-border text-foreground pl-10 pr-4 py-2 text-[10px] outline-none focus:border-foreground transition-colors uppercase tracking-widest"
@@ -135,7 +137,7 @@ export function ItemMaster() {
             </select>
           </div>
           <div className="flex items-center justify-end text-[10px] text-gray-600 uppercase tracking-widest pr-2">
-            Total Items: {filteredItems.length}
+            {t('item.totalItems')}: {filteredItems.length}
           </div>
         </div>
 
@@ -144,12 +146,12 @@ export function ItemMaster() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="w-6 h-6 text-foreground animate-spin" />
-              <div className="text-[10px] text-gray-600 uppercase tracking-widest">Loading Inventory...</div>
+              <div className="text-[10px] text-gray-600 uppercase tracking-widest">{t('item.loadingInventory')}</div>
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="text-center py-20">
               <Package className="w-12 h-12 text-border mx-auto mb-4" />
-              <p className="text-[10px] text-gray-600 uppercase tracking-widest">No items found matching your criteria</p>
+              <p className="text-[10px] text-gray-600 uppercase tracking-widest">{t('item.noItemsFound')}</p>
             </div>
           ) : viewMode === 'master' ? (
             <>
@@ -173,12 +175,12 @@ export function ItemMaster() {
                     </div>
                     <div className="flex justify-between items-end">
                       <div className="space-y-1">
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">Part No: {item.part_no || '---'}</p>
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">Opening: {item.opening_qty} @ ৳ {item.opening_rate}</p>
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">Avg Cost: ৳ {item.avg_cost?.toLocaleString()}</p>
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">{t('item.partNo')}: {item.part_no || '---'}</p>
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">{t('item.openingQty')}: {item.opening_qty} @ ৳ {item.opening_rate}</p>
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">{t('item.avgCost')}: ৳ {item.avg_cost?.toLocaleString()}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[9px] text-gray-500 uppercase tracking-widest">Current Stock</p>
+                        <p className="text-[9px] text-gray-500 uppercase tracking-widest">{t('item.currentStock')}</p>
                         <p className={cn(
                           "text-sm font-bold font-mono",
                           item.current_stock > 0 ? "text-emerald-500" : "text-rose-500"
@@ -196,14 +198,14 @@ export function ItemMaster() {
                 <table className="w-full text-left border-collapse min-w-[800px]">
                   <thead className="bg-foreground/5 border-b border-border">
                     <tr>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">Item Name</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">Category</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">Part No.</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">Unit</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">Opening Qty</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">Opening Rate</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">Current Stock</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">Avg Cost</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">{t('item.name')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">{t('item.category')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">{t('item.partNo')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">{t('item.unit')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.openingQty')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.openingRate')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.currentStock')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.avgCost')}</th>
                       <th className="px-6 py-4 text-right w-20"></th>
                     </tr>
                   </thead>
@@ -269,11 +271,11 @@ export function ItemMaster() {
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead className="bg-foreground/5 border-b border-border">
                   <tr>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">Item Name</th>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">Category</th>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">Standard Price</th>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">Wholesale Price</th>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">Retail Price</th>
+                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">{t('item.name')}</th>
+                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">{t('item.category')}</th>
+                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.standardPrice')}</th>
+                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.wholesalePrice')}</th>
+                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.retailPrice')}</th>
                     <th className="px-6 py-4 text-right w-20"></th>
                   </tr>
                 </thead>
@@ -299,7 +301,7 @@ export function ItemMaster() {
                         ৳ {(item.standard_price * 1.1)?.toLocaleString() || '0.00'}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="text-blue-500 text-[10px] uppercase font-bold hover:underline">Update</button>
+                        <button className="text-blue-500 text-[10px] uppercase font-bold hover:underline">{t('common.update')}</button>
                       </td>
                     </tr>
                   ))}

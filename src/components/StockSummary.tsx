@@ -7,9 +7,11 @@ import { cn } from '../lib/utils';
 import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export function StockSummary() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const settings = useSettings();
   const { showNotification } = useNotification();
   const [items, setItems] = useState<any[]>([]);
@@ -189,30 +191,30 @@ export function StockSummary() {
                 className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
               >
                 <Printer className="w-4 h-4" />
-                Print
+                {t('common.print')}
               </button>
               <button 
                 onClick={handleDownload}
                 disabled={processedItems.length === 0}
                 className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-                title="Download CSV"
+                title={t('common.csv')}
               >
-                <Download className="w-3 h-3" /> CSV
+                <Download className="w-3 h-3" /> {t('common.csv')}
               </button>
               <button 
                 onClick={handleDownloadPDF}
                 disabled={processedItems.length === 0}
                 className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-                title="Download PDF"
+                title={t('common.pdf')}
               >
-                <Download className="w-3 h-3" /> PDF
+                <Download className="w-3 h-3" /> {t('common.pdf')}
               </button>
               <button 
                 onClick={() => setIsQuickItemOpen(true)}
                 className="px-3 py-2 bg-amber-600/10 border border-amber-600/20 text-amber-600 hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 text-[10px] font-bold uppercase"
-                title="Quick Create Item"
+                title={t('stock.quickCreateItem')}
               >
-                <Package className="w-3 h-3" /> New Item
+                <Package className="w-3 h-3" /> {t('item.new')}
               </button>
             </div>
           </div>
@@ -225,7 +227,7 @@ export function StockSummary() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 z-10" />
               <input
                 type="text"
-                placeholder="Search items or categories..."
+                placeholder={t('stock.searchPlaceholder')}
                 value={search || ''}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-background border border-border text-foreground pl-10 pr-4 py-2 text-xs outline-none focus:border-foreground transition-colors"
@@ -238,7 +240,7 @@ export function StockSummary() {
                   onChange={(e) => setSelectedGodown(e.target.value)}
                   className="bg-background border border-border text-foreground px-3 py-1.5 text-[10px] uppercase tracking-widest outline-none focus:border-foreground transition-colors"
                 >
-                  <option value="">All Godowns</option>
+                  <option value="">{t('stock.allGodowns')}</option>
                   {godowns.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
               </div>
@@ -251,7 +253,7 @@ export function StockSummary() {
                   className="w-3.5 h-3.5 accent-foreground"
                 />
                 <label htmlFor="lowStockOnly" className="text-[10px] text-gray-500 uppercase tracking-widest cursor-pointer whitespace-nowrap">
-                  Low Stock Only
+                  {t('stock.lowStockOnly')}
                 </label>
               </div>
             </div>
@@ -263,10 +265,10 @@ export function StockSummary() {
               className="flex items-center gap-2 text-[10px] text-gray-500 uppercase tracking-widest hover:text-foreground disabled:opacity-50"
             >
               {recalculating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Activity className="w-3 h-3" />}
-              Recalculate
+              {t('common.recalculate')}
             </button>
             <button className="flex items-center gap-2 text-[10px] text-gray-500 uppercase tracking-widest hover:text-foreground">
-              <Filter className="w-3 h-3" /> F12: Configure
+              <Filter className="w-3 h-3" /> {t('common.f12Configure')}
             </button>
           </div>
         </div>
@@ -292,7 +294,7 @@ export function StockSummary() {
                       <span className="text-xs font-bold text-foreground uppercase tracking-tight">{groupName}</span>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] text-gray-500 uppercase">Total Value</p>
+                      <p className="text-[10px] text-gray-500 uppercase">{t('common.totalValue')}</p>
                       <p className="text-xs font-bold text-foreground font-mono">৳ {groupValue.toLocaleString()}</p>
                     </div>
                   </div>
@@ -303,8 +305,8 @@ export function StockSummary() {
                         <span className="text-xs font-bold text-foreground font-mono">{item.displayStock} {item.units?.name}</span>
                       </div>
                       <div className="flex justify-between items-center text-[10px] text-gray-500 uppercase">
-                        <span>Avg Rate: ৳ {(item.avg_cost || item.opening_rate || 0).toLocaleString()}</span>
-                        <span className="font-bold text-foreground/60">Value: ৳ {(item.displayStock * (item.avg_cost || item.opening_rate || 0)).toLocaleString()}</span>
+                        <span>{t('common.avgRate')}: ৳ {(item.avg_cost || item.opening_rate || 0).toLocaleString()}</span>
+                        <span className="font-bold text-foreground/60">{t('common.value')}: ৳ {(item.displayStock * (item.avg_cost || item.opening_rate || 0)).toLocaleString()}</span>
                       </div>
                     </div>
                   ))}
@@ -312,11 +314,11 @@ export function StockSummary() {
               );
             })}
             {filteredGroups.length === 0 && (
-              <div className="p-10 text-center text-gray-500 uppercase tracking-widest text-[10px]">No stock items matching search</div>
+              <div className="p-10 text-center text-gray-500 uppercase tracking-widest text-[10px]">{t('stock.noItems')}</div>
             )}
             {/* Grand Total Mobile */}
             <div className="p-4 bg-foreground/10 flex justify-between items-center font-bold">
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest">Grand Total</span>
+              <span className="text-[10px] text-gray-500 uppercase tracking-widest">{t('common.grandTotal')}</span>
               <div className="text-right">
                 <p className="text-sm text-foreground font-mono">৳ {totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
               </div>
@@ -328,10 +330,10 @@ export function StockSummary() {
             <table className="w-full text-left text-xs min-w-[600px]">
               <thead>
                 <tr className="border-b border-border text-gray-500 uppercase bg-foreground/5">
-                  <th className="px-6 py-4 font-medium">Particulars</th>
-                  <th className="px-6 py-4 font-medium text-right w-48">Quantity</th>
-                  <th className="px-6 py-4 font-medium text-right w-48">Rate (Avg)</th>
-                  <th className="px-6 py-4 font-medium text-right w-48">Value (৳)</th>
+                  <th className="px-6 py-4 font-medium">{t('common.particulars')}</th>
+                  <th className="px-6 py-4 font-medium text-right w-48">{t('common.quantity')}</th>
+                  <th className="px-6 py-4 font-medium text-right w-48">{t('common.rate')} ({t('common.avgRate')})</th>
+                  <th className="px-6 py-4 font-medium text-right w-48">{t('common.value')} (৳)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -369,7 +371,7 @@ export function StockSummary() {
                             {item.name}
                             {item.isLowStock && (
                               <span className="px-1.5 py-0.5 bg-rose-500 text-white text-[8px] font-bold uppercase rounded flex items-center gap-1">
-                                <AlertTriangle className="w-2 h-2" /> Low Stock
+                                <AlertTriangle className="w-2 h-2" /> {t('stock.lowStock')}
                               </span>
                             )}
                           </td>
@@ -389,13 +391,13 @@ export function StockSummary() {
                 })}
                 {filteredGroups.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-gray-500 uppercase tracking-widest">No stock items matching search</td>
+                    <td colSpan={4} className="px-6 py-10 text-center text-gray-500 uppercase tracking-widest">{t('stock.noItems')}</td>
                   </tr>
                 )}
               </tbody>
               <tfoot className="bg-foreground/5 border-t border-border">
                 <tr className="font-bold text-foreground">
-                  <td className="px-6 py-4 uppercase text-[10px] text-gray-500 tracking-widest">Grand Total</td>
+                  <td className="px-6 py-4 uppercase text-[10px] text-gray-500 tracking-widest">{t('common.grandTotal')}</td>
                   <td className="px-6 py-4 text-right font-mono border-l border-border">
                     {processedItems.reduce((sum, i) => sum + i.displayStock, 0).toLocaleString()}
                   </td>
@@ -413,8 +415,8 @@ export function StockSummary() {
 
         {/* Stock Valuation Method Note */}
         <div className="flex justify-between items-center text-[9px] text-gray-500 uppercase tracking-[0.2em]">
-          <span>Valuation Method: Weighted Average</span>
-          <span>Press F1 for Help</span>
+          <span>{t('stock.valuationMethod')}: {t('stock.weightedAvg')}</span>
+          <span>{t('common.f1Help')}</span>
         </div>
       </div>
 

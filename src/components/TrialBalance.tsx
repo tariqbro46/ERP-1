@@ -4,11 +4,13 @@ import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { useSettings } from '../contexts/SettingsContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { printReport } from '../utils/printUtils';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 
 export function TrialBalance() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const settings = useSettings();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any[]>([]);
@@ -46,7 +48,7 @@ export function TrialBalance() {
       credit: l.current_balance < 0 ? Math.abs(l.current_balance) : 0
     }));
 
-    printReport('Trial Balance', printData, ['Particulars', 'Group', 'Debit', 'Credit'], settings);
+    printReport(t('reports.trialBalance'), printData, [t('common.particulars'), t('common.group'), t('reports.debit'), t('reports.credit')], settings);
   };
 
   const handleDownload = () => {
@@ -57,7 +59,7 @@ export function TrialBalance() {
       credit: l.current_balance < 0 ? Math.abs(l.current_balance) : 0
     }));
 
-    exportToCSV('Trial_Balance', 'Trial Balance', exportData, ['Particulars', 'Group', 'Debit', 'Credit'], settings);
+    exportToCSV('Trial_Balance', t('reports.trialBalance'), exportData, [t('common.particulars'), t('common.group'), t('reports.debit'), t('reports.credit')], settings);
   };
 
   const handleDownloadPDF = () => {
@@ -68,7 +70,7 @@ export function TrialBalance() {
       credit: l.current_balance < 0 ? Math.abs(l.current_balance) : 0
     }));
 
-    exportToPDF('Trial_Balance', 'Trial Balance', exportData, ['Particulars', 'Group', 'Debit', 'Credit'], settings);
+    exportToPDF('Trial_Balance', t('reports.trialBalance'), exportData, [t('common.particulars'), t('common.group'), t('reports.debit'), t('reports.credit')], settings);
   };
 
   if (loading) {
@@ -101,7 +103,7 @@ export function TrialBalance() {
             )}
             <div>
               <div className="flex items-baseline gap-4">
-                <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Trial Balance</h1>
+                <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">{t('reports.trialBalance')}</h1>
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest">{settings.companyName} • {firstDay} to {lastDay}</p>
               </div>
             </div>
@@ -117,7 +119,7 @@ export function TrialBalance() {
               onClick={handleDownload}
               disabled={filteredData.length === 0}
               className="flex-1 sm:flex-none px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-              title="Download CSV"
+              title={t('common.downloadPdf')}
             >
               <Download className="w-3 h-3" /> CSV
             </button>
@@ -125,7 +127,7 @@ export function TrialBalance() {
               onClick={handleDownloadPDF}
               disabled={filteredData.length === 0}
               className="flex-1 sm:flex-none px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-              title="Download PDF"
+              title={t('common.downloadPdf')}
             >
               <Download className="w-3 h-3" /> PDF
             </button>
@@ -138,7 +140,7 @@ export function TrialBalance() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
             <input
               type="text"
-              placeholder="Search ledgers or groups..."
+              placeholder={t('common.searchPlaceholder')}
               value={search || ''}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-background border border-border text-foreground pl-10 pr-4 py-2 text-xs outline-none focus:border-foreground transition-colors"
@@ -146,7 +148,7 @@ export function TrialBalance() {
           </div>
           <div className="flex gap-4 justify-end">
             <button className="flex items-center gap-2 text-[10px] text-gray-500 uppercase tracking-widest hover:text-foreground">
-              <Filter className="w-3 h-3" /> Filter
+              <Filter className="w-3 h-3" /> {t('common.filter')}
             </button>
           </div>
         </div>
@@ -174,16 +176,16 @@ export function TrialBalance() {
               </div>
             ))}
             {filteredData.length === 0 && (
-              <div className="p-10 text-center text-gray-600 uppercase tracking-widest text-[10px]">No ledgers found</div>
+              <div className="p-10 text-center text-gray-600 uppercase tracking-widest text-[10px]">{t('common.noData')}</div>
             )}
             {/* Grand Total Mobile */}
             <div className="p-4 bg-foreground/10 space-y-2">
               <div className="flex justify-between items-center font-bold text-[10px] text-gray-500 uppercase tracking-widest">
-                <span>Total Debit</span>
+                <span>{t('reports.totalDebit')}</span>
                 <span className="text-foreground font-mono text-xs">৳ {totalDebit.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center font-bold text-[10px] text-gray-500 uppercase tracking-widest">
-                <span>Total Credit</span>
+                <span>{t('reports.totalCredit')}</span>
                 <span className="text-foreground font-mono text-xs">৳ {totalCredit.toLocaleString()}</span>
               </div>
             </div>
@@ -194,10 +196,10 @@ export function TrialBalance() {
             <table className="w-full text-left text-xs min-w-[600px]">
               <thead>
                 <tr className="border-b border-border text-gray-500 uppercase bg-foreground/5">
-                  <th className="px-6 py-4 font-medium">Particulars</th>
-                  <th className="px-6 py-4 font-medium">Group</th>
-                  <th className="px-6 py-4 font-medium text-right w-48">Debit (৳)</th>
-                  <th className="px-6 py-4 font-medium text-right w-48">Credit (৳)</th>
+                  <th className="px-6 py-4 font-medium">{t('common.particulars')}</th>
+                  <th className="px-6 py-4 font-medium">{t('common.group')}</th>
+                  <th className="px-6 py-4 font-medium text-right w-48">{t('reports.debit')} (৳)</th>
+                  <th className="px-6 py-4 font-medium text-right w-48">{t('reports.credit')} (৳)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -215,13 +217,13 @@ export function TrialBalance() {
                 ))}
                 {filteredData.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-gray-600 uppercase tracking-widest">No ledgers found</td>
+                    <td colSpan={4} className="px-6 py-10 text-center text-gray-600 uppercase tracking-widest">{t('common.noData')}</td>
                   </tr>
                 )}
               </tbody>
               <tfoot className="bg-foreground/5 border-t border-border">
                 <tr className="font-bold text-foreground">
-                  <td colSpan={2} className="px-6 py-4 text-right uppercase text-[10px] text-gray-500 tracking-widest">Grand Total</td>
+                  <td colSpan={2} className="px-6 py-4 text-right uppercase text-[10px] text-gray-500 tracking-widest">{t('common.grandTotal')}</td>
                   <td className="px-6 py-4 text-right font-mono border-l border-border">৳ {totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                   <td className="px-6 py-4 text-right font-mono border-l border-border">৳ {totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                 </tr>
@@ -233,7 +235,7 @@ export function TrialBalance() {
         {/* Difference Bar */}
         {Math.abs(totalDebit - totalCredit) > 0.01 && (
           <div className="bg-rose-950/30 border border-rose-900/50 p-4 flex justify-between items-center">
-            <span className="text-[10px] text-rose-400 uppercase tracking-widest font-bold">Difference in Opening Balances</span>
+            <span className="text-[10px] text-rose-400 uppercase tracking-widest font-bold">{t('reports.differenceInOpening')}</span>
             <span className="text-sm text-rose-400 font-mono font-bold">৳ {Math.abs(totalDebit - totalCredit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
         )}

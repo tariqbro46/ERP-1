@@ -10,6 +10,7 @@ import { doc, setDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSiteContent } from '../hooks/useSiteContent';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const LOGIN_DEFAULT = {
   title: "Sign in to ERP System",
@@ -33,6 +34,7 @@ const LOGIN_DEFAULT = {
 
 export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { content } = useSiteContent('login', LOGIN_DEFAULT);
   const { content: globalSettings } = useSiteContent('global', { registrationEnabled: true });
   const [email, setEmail] = useState('');
@@ -113,7 +115,7 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
             className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group z-10"
           >
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-            Back
+            {t('auth.backToLogin')}
           </button>
 
           <div className="flex-1 flex flex-col justify-center px-8 md:px-12 lg:px-20 overflow-y-auto no-scrollbar">
@@ -123,30 +125,30 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                   className="text-3xl font-bold mb-2"
                   style={{ color: content.forgotTitleColor }}
                 >
-                  {content.forgotTitle}
+                  {t('auth.forgotPassword')}
                 </h1>
                 <p 
                   className=""
                   style={{ color: content.forgotSubtitleColor }}
                 >
-                  {content.forgotSubtitle}
+                  {t('auth.signInSubtitle')}
                 </p>
               </div>
 
               {resetSent ? (
                 <div className="p-6 bg-primary/5 border border-primary/20 rounded-2xl text-center">
-                  <p className="text-sm font-medium mb-6">A password reset link has been sent to your email address.</p>
+                  <p className="text-sm font-medium mb-6">{t('auth.resetSent')}</p>
                   <button 
                     onClick={() => { setShowReset(false); setResetSent(false); }}
                     className="w-full py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity"
                   >
-                    Back to Sign In
+                    {t('auth.backToLogin')}
                   </button>
                 </div>
               ) : (
                 <form onSubmit={handleReset} className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('auth.email')}</label>
                     <input
                       type="email"
                       value={resetEmail}
@@ -163,7 +165,7 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                     disabled={loading}
                     className="w-full py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Reset Link"}
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('auth.sendResetLink')}
                   </button>
                 </form>
               )}
@@ -222,19 +224,19 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                 className="text-3xl font-bold mb-2"
                 style={{ color: content.titleColor }}
               >
-                {content.title}
+                {t('auth.signIn')}
               </h1>
               <p 
                 className=""
                 style={{ color: content.subtitleColor }}
               >
-                {content.subtitle}
+                {t('auth.signInSubtitle')}
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
+                <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('auth.email')}</label>
                 <input
                   type="email"
                   value={email}
@@ -247,13 +249,13 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</label>
+                  <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('auth.password')}</label>
                   <button 
                     type="button"
                     onClick={() => setShowReset(true)}
                     className="text-xs font-bold text-primary hover:underline"
                   >
-                    Forgot?
+                    {t('auth.forgotPassword')}
                   </button>
                 </div>
                 <input
@@ -273,19 +275,19 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                 disabled={loading}
                 className="w-full py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign In"}
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('auth.login')}
               </button>
             </form>
 
             {globalSettings.registrationEnabled && (
               <div className="mt-8 pt-8 border-t border-border text-center">
                 <p className="text-sm text-muted-foreground">
-                  Don't have an account?{' '}
+                  {t('auth.noAccount')}{' '}
                   <button 
                     onClick={onToggle}
                     className="font-bold text-foreground hover:underline"
                   >
-                    Create one
+                    {t('auth.register')}
                   </button>
                 </p>
               </div>
@@ -324,6 +326,7 @@ const REGISTER_DEFAULT = {
 
 export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { content } = useSiteContent('register', REGISTER_DEFAULT);
   const { content: globalSettings } = useSiteContent('global', { registrationEnabled: true });
 
@@ -484,7 +487,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
           className="absolute top-8 left-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group z-10"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          Back
+          {t('common.back')}
         </button>
 
         <div className="flex-1 flex flex-col justify-center px-8 md:px-12 lg:px-20 overflow-y-auto no-scrollbar">
@@ -494,16 +497,16 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                 className="text-3xl font-bold mb-2"
                 style={{ color: content.titleColor }}
               >
-                {content.title}
+                {t('auth.createAccount')}
               </h1>
-              <p className="text-muted-foreground">Step {step} of 3: {step === 1 ? 'Personal Details' : step === 2 ? 'Company Details' : 'Final Configuration'}</p>
+              <p className="text-muted-foreground">{t('common.step')} {step} {t('common.of')} 3</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {step === 1 && (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Full Name</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('auth.fullName')}</label>
                     <input
                       type="text"
                       value={displayName}
@@ -514,7 +517,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email Address</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('auth.email')}</label>
                     <input
                       type="email"
                       value={email}
@@ -525,7 +528,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('auth.password')}</label>
                     <input
                       type="password"
                       value={password}
@@ -542,7 +545,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
               {step === 2 && (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Company Name</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('auth.companyName')}</label>
                     <input
                       type="text"
                       value={companyName}
@@ -553,7 +556,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Company Slogan</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('common.slogan')}</label>
                     <input
                       type="text"
                       value={slogan}
@@ -563,7 +566,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Address</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('common.address')}</label>
                     <textarea
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
@@ -602,7 +605,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
               {step === 3 && (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Timezone</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('common.timezone')}</label>
                     <select
                       value={timezone}
                       onChange={(e) => setTimezone(e.target.value)}
@@ -615,7 +618,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Phone</label>
+                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('common.phone')}</label>
                       <input
                         type="text"
                         value={contactPhone}
@@ -625,7 +628,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Website</label>
+                      <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('common.website')}</label>
                       <input
                         type="text"
                         value={websiteUrl}
@@ -636,7 +639,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Print Header</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('settings.printHeader')}</label>
                     <input
                       type="text"
                       value={printHeader}
@@ -657,7 +660,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                     onClick={() => setStep(step - 1)}
                     className="flex-1 py-4 border border-border rounded-xl font-bold hover:bg-foreground/5 transition-colors"
                   >
-                    Back
+                    {t('common.back')}
                   </button>
                 )}
                 <button
@@ -665,19 +668,19 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
                   disabled={loading}
                   className="flex-[2] py-4 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (step === 3 ? "Complete Registration" : "Next Step")}
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : (step === 3 ? t('auth.register') : t('common.next'))}
                 </button>
               </div>
             </form>
 
             <div className="mt-8 pt-8 border-t border-border text-center">
               <p className="text-sm text-muted-foreground">
-                Already have an account?{' '}
+                {t('auth.alreadyHaveAccount')}{' '}
                 <button 
                   onClick={onToggle}
                   className="font-bold text-foreground hover:underline"
                 >
-                  Sign in
+                  {t('auth.login')}
                 </button>
               </p>
             </div>

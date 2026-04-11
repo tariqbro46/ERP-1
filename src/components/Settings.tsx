@@ -619,7 +619,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         <option value="Layout 1">Layout 1 (Standard)</option>
                         <option value="Layout 2">Layout 2 (Tally Style - Default)</option>
                       </select>
-                      <p className="text-[9px] text-gray-500 uppercase">Choose the visual style for generated reports and PDFs.</p>
+                      <p className="text-[9px] text-gray-500 uppercase">{t('common.reportLayoutDesc')}</p>
                     </div>
                   </div>
                 </div>
@@ -640,7 +640,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">
-                        {language === 'en' ? 'Language' : 'ভাষা'}
+                        {t('settings.language')}
                       </label>
                       <div className="flex gap-2">
                         <button
@@ -662,7 +662,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                           বাংলা
                         </button>
                       </div>
-                      <p className="text-[9px] text-gray-500 uppercase">Choose your preferred application language.</p>
+                      <p className="text-[9px] text-gray-500 uppercase">{t('settings.selectLanguage')}</p>
                     </div>
 
                     <div className="space-y-2">
@@ -679,7 +679,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         <option value="Lato">Lato (Professional)</option>
                         <option value="system-ui">System Default</option>
                       </select>
-                      <p className="text-[9px] text-gray-500 uppercase">Select font for English text.</p>
+                      <p className="text-[9px] text-gray-500 uppercase">{t('common.selectFont')} (English)</p>
                     </div>
 
                     <div className="space-y-2">
@@ -695,7 +695,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         <option value="Mina">Mina (Modern)</option>
                         <option value="SolaimanLipi">SolaimanLipi (Classic)</option>
                       </select>
-                      <p className="text-[9px] text-gray-500 uppercase">Select font for Bangla text.</p>
+                      <p className="text-[9px] text-gray-500 uppercase">{t('common.selectFont')} (Bangla)</p>
                     </div>
 
                     <div className="space-y-2">

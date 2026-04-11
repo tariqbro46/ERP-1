@@ -4,11 +4,13 @@ import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { useSettings } from '../contexts/SettingsContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { printBalanceSheet } from '../utils/printUtils';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 
 export function BalanceSheet() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const settings = useSettings();
   const [loading, setLoading] = useState(true);
   const [asOnDate, setAsOnDate] = useState(() => {
@@ -86,12 +88,12 @@ export function BalanceSheet() {
 
         setAssetGroups([
           ...gList.filter(g => g.nature === 'Asset'),
-          { name: 'Closing Stock', balance: closingStockValue, ledgers: [], isSystem: true }
+          { name: t('reports.closingStock'), balance: closingStockValue, ledgers: [], isSystem: true }
         ]);
 
         setLiabilityGroups([
           ...gList.filter(g => g.nature === 'Liability'),
-          { name: 'Profit & Loss A/c', balance: -netProfit, ledgers: [], isSystem: true }
+          { name: t('reports.profitAndLoss'), balance: -netProfit, ledgers: [], isSystem: true }
         ]);
 
       } catch (err) {
@@ -150,22 +152,22 @@ export function BalanceSheet() {
     const exportData: any[] = [];
     
     // Add Liabilities
-    exportData.push({ particulars: 'LIABILITIES', amount: '' });
+    exportData.push({ particulars: t('reports.liabilities').toUpperCase(), amount: '' });
     liabilityGroups.forEach(g => {
       exportData.push({ particulars: g.name, amount: Math.abs(g.balance) });
     });
-    exportData.push({ particulars: 'TOTAL LIABILITIES', amount: Math.abs(totalLiabilities) });
+    exportData.push({ particulars: t('reports.totalLiabilities').toUpperCase(), amount: Math.abs(totalLiabilities) });
     
     exportData.push({ particulars: '', amount: '' }); // Spacer
     
     // Add Assets
-    exportData.push({ particulars: 'ASSETS', amount: '' });
+    exportData.push({ particulars: t('reports.assets').toUpperCase(), amount: '' });
     assetGroups.forEach(g => {
       exportData.push({ particulars: g.name, amount: Math.abs(g.balance) });
     });
-    exportData.push({ particulars: 'TOTAL ASSETS', amount: Math.abs(totalAssets) });
+    exportData.push({ particulars: t('reports.totalAssets').toUpperCase(), amount: Math.abs(totalAssets) });
 
-    exportToPDF('Balance_Sheet', 'Balance Sheet', exportData, ['Particulars', 'Amount'], settings);
+    exportToPDF('Balance_Sheet', t('reports.balanceSheet'), exportData, [t('common.particulars'), t('common.amount')], settings);
   };
 
   if (loading) {
@@ -197,13 +199,13 @@ export function BalanceSheet() {
                 </div>
               )}
               <div>
-                <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Balance Sheet</h1>
+                <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">{t('reports.balanceSheet')}</h1>
                 <p className="text-[10px] text-gray-500 uppercase font-bold">{settings.companyName}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">As on Date</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('reports.asOnDate')}</label>
                 <input 
                   type="date" 
                   value={asOnDate} 
@@ -223,14 +225,14 @@ export function BalanceSheet() {
             <button 
               onClick={handleDownload}
               className="flex-1 sm:flex-none px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
-              title="Download CSV"
+              title={t('common.downloadPdf')}
             >
               <Download className="w-3 h-3" /> CSV
             </button>
             <button 
               onClick={handleDownloadPDF}
               className="flex-1 sm:flex-none px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
-              title="Download PDF"
+              title={t('common.downloadPdf')}
             >
               <Download className="w-3 h-3" /> PDF
             </button>
@@ -241,8 +243,8 @@ export function BalanceSheet() {
           {/* Liabilities Side */}
           <div className="overflow-hidden">
             <div className="px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Liabilities</span>
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">Amount (৳)</span>
+              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('reports.liabilities')}</span>
+              <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
             </div>
             <div className="min-h-[300px] lg:min-h-[500px] divide-y divide-border/50">
               {liabilityGroups.map(group => (
@@ -271,7 +273,7 @@ export function BalanceSheet() {
               ))}
             </div>
             <div className="px-4 lg:px-6 py-4 bg-foreground/5 border-t border-border flex justify-between font-bold text-foreground">
-              <span className="uppercase text-[10px] tracking-widest">Total Liabilities</span>
+              <span className="uppercase text-[10px] tracking-widest">{t('reports.totalLiabilities')}</span>
               <span className="font-mono">৳ {Math.abs(totalLiabilities).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
@@ -279,8 +281,8 @@ export function BalanceSheet() {
           {/* Assets Side */}
           <div className="overflow-hidden">
             <div className="px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Assets</span>
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">Amount (৳)</span>
+              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('reports.assets')}</span>
+              <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
             </div>
             <div className="min-h-[300px] lg:min-h-[500px] divide-y divide-border/50">
               {assetGroups.map(group => (
@@ -309,7 +311,7 @@ export function BalanceSheet() {
               ))}
             </div>
             <div className="px-4 lg:px-6 py-4 bg-foreground/5 border-t border-border flex justify-between font-bold text-foreground">
-              <span className="uppercase text-[10px] tracking-widest">Total Assets</span>
+              <span className="uppercase text-[10px] tracking-widest">{t('reports.totalAssets')}</span>
               <span className="font-mono">৳ {Math.abs(totalAssets).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
@@ -318,7 +320,7 @@ export function BalanceSheet() {
         {/* Difference Check */}
         {Math.abs(totalAssets - Math.abs(totalLiabilities)) > 0.01 && (
           <div className="bg-rose-950/30 border border-rose-900/50 p-4 flex justify-between items-center">
-            <span className="text-[10px] text-rose-400 uppercase tracking-widest font-bold">Difference in Opening Balances</span>
+            <span className="text-[10px] text-rose-400 uppercase tracking-widest font-bold">{t('reports.differenceInOpening')}</span>
             <span className="text-sm text-rose-400 font-mono font-bold">৳ {Math.abs(totalAssets - Math.abs(totalLiabilities)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
           </div>
         )}

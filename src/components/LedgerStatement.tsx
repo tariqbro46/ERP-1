@@ -5,6 +5,7 @@ import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { printReport } from '../utils/printUtils';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { QuickAdjustmentModal } from './QuickAdjustmentModal';
@@ -29,6 +30,7 @@ const DEFAULT_CONFIG: ReportConfig = {
 export function LedgerStatement() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const settings = useSettings();
   const [ledgers, setLedgers] = useState<any[]>([]);
   const [selectedLedger, setSelectedLedger] = useState<string>('');
@@ -824,7 +826,7 @@ export function LedgerStatement() {
               </div>
             )}
             <div>
-              <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Ledger Statement</h1>
+              <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">{t('ledger.statement')}</h1>
               <p className="text-[10px] text-gray-500 uppercase font-bold">{settings.companyName}</p>
             </div>
           </div>
@@ -845,7 +847,7 @@ export function LedgerStatement() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <input
                   type="text"
-                  placeholder="Search Ledger..."
+                  placeholder={t('ledger.searchLedgers')}
                   value={ledgerSearch || ''}
                   onChange={(e) => {
                     setLedgerSearch(e.target.value);
@@ -883,7 +885,7 @@ export function LedgerStatement() {
 
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">From</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('common.from')}</label>
                 <input 
                   type="date" 
                   value={startDate || ''} 
@@ -892,7 +894,7 @@ export function LedgerStatement() {
                 />
               </div>
               <div className="flex-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">To</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('common.to')}</label>
                 <input 
                   type="date" 
                   value={endDate || ''} 
@@ -925,13 +927,13 @@ export function LedgerStatement() {
                 className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
               >
                 <Printer className="w-4 h-4" />
-                Print
+                {t('common.print')}
               </button>
               <button 
                 onClick={handleDownload}
                 disabled={!selectedLedger || entries.length === 0}
                 className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-                title="Download CSV"
+                title={t('common.downloadPdf')}
               >
                 <Download className="w-3 h-3" /> CSV
               </button>
@@ -939,7 +941,7 @@ export function LedgerStatement() {
                 onClick={handleDownloadPDF}
                 disabled={!selectedLedger || entries.length === 0}
                 className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-                title="Download PDF"
+                title={t('common.downloadPdf')}
               >
                 <Download className="w-3 h-3" /> PDF
               </button>
@@ -959,7 +961,7 @@ export function LedgerStatement() {
           onClose={() => setIsConfigOpen(false)}
           config={config}
           onSave={handleSaveConfig}
-          title="Ledger Statement"
+          title={t('ledger.statement')}
         />
 
         <div className={cn(
@@ -995,14 +997,14 @@ export function LedgerStatement() {
                 "border-b border-border text-gray-500 uppercase",
                 settings.reportLayout === 'Layout 2' && "border-black text-black font-bold"
               )}>
-                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[12%]" : "w-[120px]")}>Date</th>
-                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[38%]" : "")}>Particulars</th>
-                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>Vch Type</th>
-                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>Vch No.</th>
-                <th className={cn("px-6 py-4 font-medium text-right", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>Debit</th>
-                <th className={cn("px-6 py-4 font-medium text-right", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>Credit</th>
+                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[12%]" : "w-[120px]")}>{t('common.date')}</th>
+                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[38%]" : "")}>{t('ledger.particulars')}</th>
+                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>{t('ledger.vchType')}</th>
+                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>{t('ledger.vchNo')}</th>
+                <th className={cn("px-6 py-4 font-medium text-right", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>{t('reports.debit')}</th>
+                <th className={cn("px-6 py-4 font-medium text-right", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>{t('reports.credit')}</th>
                 {config.showRunningBalance && (
-                  <th className={cn("px-6 py-4 font-medium text-right", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>Balance</th>
+                  <th className={cn("px-6 py-4 font-medium text-right", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>{t('ledger.runningBalance')}</th>
                 )}
               </tr>
             </thead>
@@ -1011,9 +1013,9 @@ export function LedgerStatement() {
               settings.reportLayout === 'Layout 2' && "text-black"
             )}>
               {!selectedLedger ? (
-                <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-600">Please select a ledger to view statement</td></tr>
+                <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-600">{t('ledger.selectToView')}</td></tr>
               ) : loading ? (
-                <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-600">Loading entries...</td></tr>
+                <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-600">{t('ledger.loadingEntries')}</td></tr>
               ) : (
                 <>
                   {/* Opening Balance Row */}
@@ -1030,7 +1032,7 @@ export function LedgerStatement() {
                           settings.reportLayout === 'Layout 2' && openingBalanceRowIsStripe && "bg-[#F3F4F6]"
                         )}>
                           <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{new Date(startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')}</td>
-                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>Dr Opening Balance</td>
+                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{t('ledger.openingBalance')}</td>
                           <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>-</td>
                           <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>-</td>
                           <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
@@ -1047,7 +1049,7 @@ export function LedgerStatement() {
                         </tr>
 
                         {entries.length === 0 ? (
-                          <tr><td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-10 text-center text-gray-600 italic">No transactions found for this period</td></tr>
+                          <tr><td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-10 text-center text-gray-600 italic">{t('ledger.noTransactions')}</td></tr>
                         ) : entries.map((e, idx) => {
                           runningBalance += (e.debit || 0) - (e.credit || 0);
                           const currentBalance = runningBalance;
@@ -1163,7 +1165,7 @@ export function LedgerStatement() {
                     settings.reportLayout === 'Layout 2' ? "bg-white text-black border border-black" : "bg-foreground/5"
                   )}>
                     <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
-                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>Dr Closing Balance</td>
+                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{t('ledger.closingBalance')}</td>
                     <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                     <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                     <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
@@ -1182,7 +1184,7 @@ export function LedgerStatement() {
                   {/* Totals Row for Layout 2 */}
                   {settings.reportLayout === 'Layout 2' && (
                     <tr className="border-t-2 border-black font-bold bg-white text-black">
-                      <td colSpan={4} className="px-6 py-4 text-right border border-black">Total</td>
+                      <td colSpan={4} className="px-6 py-4 text-right border border-black">{t('common.total')}</td>
                       <td className="px-6 py-4 text-right border border-black">
                         {(totalDebit + (openingBalance > 0 ? openingBalance : 0) + (runningBalance < 0 ? Math.abs(runningBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>

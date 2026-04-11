@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { ChevronRight, ChevronDown, Folder, FileText, Edit2, Search, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function ChartOfAccounts() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [groups, setGroups] = useState<any[]>([]);
   const [ledgers, setLedgers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,14 +47,14 @@ export function ChartOfAccounts() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex items-baseline gap-4">
-            <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Chart of Accounts</h1>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest">Hierarchy of Ledgers and Groups</p>
+            <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">{t('accounts.chartOfAccounts')}</h1>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest">{t('accounts.hierarchy')}</p>
           </div>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-600" />
             <input 
               type="text"
-              placeholder="Search accounts..."
+              placeholder={t('common.searchPlaceholder')}
               value={search || ''}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-card border border-border text-foreground pl-9 pr-4 py-2 text-[10px] outline-none focus:border-foreground transition-colors uppercase tracking-widest"
@@ -64,7 +66,7 @@ export function ChartOfAccounts() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="w-6 h-6 text-foreground animate-spin" />
-              <div className="text-[10px] text-gray-600 uppercase tracking-widest">Loading Hierarchy...</div>
+              <div className="text-[10px] text-gray-600 uppercase tracking-widest">{t('accounts.loadingHierarchy')}</div>
             </div>
           ) : (
             <div className="space-y-8 min-w-[400px]">
@@ -77,7 +79,7 @@ export function ChartOfAccounts() {
                   </div>
                   <div className="ml-6 space-y-1 border-l border-border pl-6">
                     {ledgers.filter(l => l.group_id === group.id).length === 0 ? (
-                      <div className="text-[9px] text-gray-700 italic uppercase tracking-widest py-1">No ledgers in this group</div>
+                      <div className="text-[9px] text-gray-700 italic uppercase tracking-widest py-1">{t('accounts.noLedgersInGroup')}</div>
                     ) : (
                       ledgers.filter(l => l.group_id === group.id).map(ledger => (
                         <div key={ledger.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 sm:py-2 group hover:bg-foreground/5 px-2 -ml-2 transition-colors gap-2">
@@ -95,7 +97,7 @@ export function ChartOfAccounts() {
                             <button 
                               onClick={() => navigate(`/accounts/ledgers/edit/${ledger.id}`)}
                               className="p-1.5 bg-card border border-border text-gray-600 hover:text-foreground hover:border-foreground transition-all sm:opacity-0 group-hover:opacity-100"
-                              title="Edit Ledger"
+                              title={t('ledger.edit')}
                             >
                               <Edit2 className="w-3 h-3" />
                             </button>
