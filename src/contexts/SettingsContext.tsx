@@ -78,6 +78,8 @@ interface SettingsContextType {
   notificationDuration: number;
   notificationAnimationStyle: NotificationAnimationStyle;
   appVersion: string;
+  englishFont: string;
+  banglaFont: string;
   statusOnlineText: string;
   statusOfflineText: string;
   statusErrorText: string;
@@ -136,6 +138,8 @@ const defaultSettings: SettingsContextType = {
   notificationDuration: 5000,
   notificationAnimationStyle: 'default',
   appVersion: 'v1.0.1',
+  englishFont: 'Inter',
+  banglaFont: 'Hind Siliguri',
   statusOnlineText: 'Status: Online',
   statusOfflineText: 'Status: Offline',
   statusErrorText: 'Database Error',
@@ -187,6 +191,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           statusErrorText: data.statusErrorText || prev.statusErrorText,
           showGoToShortcut: data.showGoToShortcut !== undefined ? data.showGoToShortcut : prev.showGoToShortcut,
           appVersion: data.appVersion || prev.appVersion,
+          englishFont: data.englishFont || prev.englishFont,
+          banglaFont: data.banglaFont || prev.banglaFont,
           systemLogo: data.systemLogo || prev.systemLogo,
           glassBackground: data.glassBackground || prev.glassBackground,
           notificationDuration: data.notificationDuration || prev.notificationDuration,

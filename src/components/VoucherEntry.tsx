@@ -519,13 +519,13 @@ export function VoucherEntry() {
         isDebtorOrCreditor(l)
       );
 
-      const partyLedgerName = partyLedger?.name || 
+      const partyLedgerName = (partyLedger?.name || 
                              (isInventory ? '' : (ledgers.find(l => l.id === partyLedgerId)?.name || ledgers.find(l => l.id === bankCashLedgerId)?.name)) ||
-                             (accEntries[0]?.ledger_id ? ledgers.find(l => l.id === accEntries[0].ledger_id)?.name : '');
+                             (accEntries[0]?.ledger_id ? ledgers.find(l => l.id === accEntries[0].ledger_id)?.name : '')) || '';
 
       const itemNames = isInventory ? invEntries.map(i => items.find(item => item.id === i.item_id)?.name).filter(Boolean).join(', ') : '';
 
-      const voucher = {
+      const voucher: any = {
         v_no: refNo,
         v_type: vType,
         v_date: vDate,
@@ -540,9 +540,19 @@ export function VoucherEntry() {
         discount_type: globalDiscountType,
         currency,
         exchange_rate: exchangeRate,
-        salesperson_id: salespersonId,
-        bank_details: showBankDetails ? bankDetails : undefined
+        salesperson_id: salespersonId
       };
+
+      if (showBankDetails && bankDetails) {
+        // Ensure no undefined fields in bankDetails
+        const cleanBankDetails = {
+          transaction_type: bankDetails.transaction_type || 'Others',
+          instrument_no: bankDetails.instrument_no || '',
+          instrument_date: bankDetails.instrument_date || '',
+          bank_name: bankDetails.bank_name || ''
+        };
+        voucher.bank_details = cleanBankDetails;
+      }
       
       let finalAccEntries = [];
       if (isInventory) {
@@ -696,12 +706,12 @@ export function VoucherEntry() {
           <div className="lg:hidden grid grid-cols-1 gap-2">
             <div className="space-y-1 col-span-1">
               <div className="flex justify-between items-center">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Voucher Type</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.voucherType')}</label>
                 <button 
                   onClick={() => setIsVoucherSettingsOpen(true)}
                   className="text-[9px] text-blue-500 hover:underline font-bold uppercase"
                 >
-                  Settings
+                  {t('nav.settings')}
                 </button>
               </div>
               <select
@@ -732,7 +742,7 @@ export function VoucherEntry() {
           {/* Row 1: Reference No., Date, Currency, Ex. Rate, Voucher Type (Desktop) */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 lg:gap-6">
             <div className="space-y-1 lg:space-y-2">
-              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Reference No.</label>
+              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.referenceNo')}</label>
               <input 
                 type="text" 
                 value={refNo || ''}
@@ -743,7 +753,7 @@ export function VoucherEntry() {
               />
             </div>
             <div className="space-y-1 lg:space-y-2">
-              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Date</label>
+              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.date')}</label>
               <input 
                 type="date" 
                 value={vDate || ''}
@@ -757,7 +767,7 @@ export function VoucherEntry() {
               <>
                 <div className="space-y-1 lg:space-y-2">
                   <div className="flex items-center h-4">
-                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Currency</label>
+                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.currency')}</label>
                   </div>
                   <select
                     value={currency}
@@ -773,11 +783,11 @@ export function VoucherEntry() {
                 </div>
                 <div className="space-y-1 lg:space-y-2">
                   <div className="flex items-center gap-2 h-4">
-                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Ex. Rate</label>
+                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.exchangeRate')}</label>
                     <div className="group relative">
                       <AlertCircle className="w-3 h-3 text-gray-400 cursor-help" />
                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-foreground text-background text-[8px] uppercase tracking-widest rounded hidden group-hover:block z-50">
-                        Exchange Rate: Multiplier to convert transaction currency to base currency ({baseCurrencySymbol}).
+                        {t('common.exchangeRateDesc')}
                       </div>
                     </div>
                   </div>
@@ -860,7 +870,7 @@ export function VoucherEntry() {
                 />
                 {partyLedgerId && balances[partyLedgerId] !== undefined && (
                   <p className="text-[9px] text-gray-500 uppercase mt-1">
-                    Current Balance: <span className="font-bold text-foreground">{formatBalance(balances[partyLedgerId])}</span>
+                    {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[partyLedgerId])}</span>
                   </p>
                 )}
               </div>
@@ -886,7 +896,7 @@ export function VoucherEntry() {
                 />
                 {bankCashLedgerId && balances[bankCashLedgerId] !== undefined && (
                   <p className="text-[9px] text-gray-500 uppercase mt-1">
-                    Current Balance: <span className="font-bold text-foreground">{formatBalance(balances[bankCashLedgerId])}</span>
+                    {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[bankCashLedgerId])}</span>
                   </p>
                 )}
               </div>
@@ -898,26 +908,28 @@ export function VoucherEntry() {
             {isInventory ? (
               <div className="space-y-1 lg:space-y-2 col-span-1 lg:col-span-1">
                 <div className="flex justify-between items-center">
-                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{vType} Ledger</label>
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">
+                    {vType === 'Sales' ? t('common.salesLedger') : t('common.purchaseLedger')}
+                  </label>
                   <button 
                     type="button" 
                     onClick={() => openQuickLedger(vType, 'sales')}
                     className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
                   >
-                    <PlusCircle className="w-2 h-2" /> Quick
+                    <PlusCircle className="w-2 h-2" /> {t('common.quick')}
                   </button>
                 </div>
                 <SearchableSelect
                   options={ledgers.filter(l => l.ledger_groups?.name.includes(vType))}
                   value={salesPurchaseLedgerId}
                   onChange={setSalesPurchaseLedgerId}
-                  placeholder={`Select ${vType} Ledger...`}
+                  placeholder={vType === 'Sales' ? t('common.salesLedger') : t('common.purchaseLedger')}
                   onQuickCreate={() => openQuickLedger(vType, 'sales')}
                   tabIndex={7}
                 />
                 {salesPurchaseLedgerId && balances[salesPurchaseLedgerId] !== undefined && (
                   <p className="text-[9px] text-gray-500 uppercase mt-1">
-                    Current Balance: <span className="font-bold text-foreground">{formatBalance(balances[salesPurchaseLedgerId])}</span>
+                    {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[salesPurchaseLedgerId])}</span>
                   </p>
                 )}
               </div>
@@ -929,7 +941,7 @@ export function VoucherEntry() {
             {(vType === 'Sales' || vType === 'Purchase' || vType === 'Payment' || vType === 'Receipt') ? (
               <div className={cn("space-y-1 lg:space-y-2 col-span-1", (vType === 'Payment' || vType === 'Receipt') ? "lg:col-span-2" : "lg:col-span-1")}>
                 <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">
-                  {vType === 'Sales' ? 'Salesperson' : (vType === 'Payment' ? 'Provided by' : 'Received by')}
+                  {vType === 'Sales' ? t('common.salesperson') : (vType === 'Payment' ? t('common.providedBy') : t('common.receivedBy'))}
                 </label>
                 <select
                   value={salespersonId}
@@ -937,7 +949,7 @@ export function VoucherEntry() {
                   tabIndex={5}
                   className="w-full bg-background border border-border text-foreground p-1.5 lg:p-2 text-xs lg:text-sm outline-none focus:border-foreground"
                 >
-                  <option value="">Select {vType === 'Sales' ? 'Salesperson' : (vType === 'Payment' ? 'Provided by' : 'Received by')}...</option>
+                  <option value="">{t('common.select')} {vType === 'Sales' ? t('common.salesperson') : (vType === 'Payment' ? t('common.providedBy') : t('common.receivedBy'))}...</option>
                   {users.map(u => (
                     <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>
                   ))}
@@ -972,26 +984,26 @@ export function VoucherEntry() {
                         </button>
                       </div>
                     </th>
-                    <th className={cn("border-b border-border w-[22ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Godown</th>
+                    <th className={cn("border-b border-border w-[22ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.godown')}</th>
                     {isBatchEnabled && (
-                      <th className={cn("border-b border-border text-left w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Batch</th>
+                      <th className={cn("border-b border-border text-left w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.batch')}</th>
                     )}
                     {isExpiryEnabled && (
-                      <th className={cn("border-b border-border text-left w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Expiry</th>
+                      <th className={cn("border-b border-border text-left w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.expiry')}</th>
                     )}
-                    <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Quantity</th>
+                    <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.quantity')}</th>
                     {showFreeQty && (
-                      <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Free</th>
+                      <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.free')}</th>
                     )}
-                    <th className={cn("border-b border-border text-right w-40", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Rate</th>
-                    <th className={cn("border-b border-border text-center w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>per</th>
+                    <th className={cn("border-b border-border text-right w-40", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.rate')}</th>
+                    <th className={cn("border-b border-border text-center w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.per')}</th>
                     {showDiscPercent && (
-                      <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Disc %</th>
+                      <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.discPercent')}</th>
                     )}
                     {isTaxEnabled && showTaxPercent && (
-                      <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Tax %</th>
+                      <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.taxPercent')}</th>
                     )}
-                    <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Amount</th>
+                    <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.amount')}</th>
                     <th className={cn("border-b border-border w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}></th>
                   </tr>
                 </thead>
@@ -1189,7 +1201,7 @@ export function VoucherEntry() {
                             getVoucherHoverBgColor(vType)
                           )}
                         >
-                          <PlusCircle className="w-3 h-3" /> ADD ITEM
+                          <PlusCircle className="w-3 h-3" /> {t('common.addItem')}
                         </button>
                       </div>
                     </td>
@@ -1431,10 +1443,10 @@ export function VoucherEntry() {
             <table className="w-full text-left text-xs border-collapse min-w-[800px]">
               <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px]">
                 <tr>
-                  <th className={cn("border-b border-border w-20", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Dr/Cr</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Particulars</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Debit</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>Credit</th>
+                  <th className={cn("border-b border-border w-20", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.drCr')}</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.particulars')}</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.debit')}</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.credit')}</th>
                   <th className={cn("border-b border-border w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}></th>
                 </tr>
               </thead>
@@ -1535,7 +1547,7 @@ export function VoucherEntry() {
         {isInventory && isBarcodeEnabled && (
           <div className="p-4 border-b border-border flex justify-end items-center">
             <div className="flex items-center gap-2">
-              <label className="text-[9px] text-gray-500 uppercase font-bold">Barcode Scan</label>
+              <label className="text-[9px] text-gray-500 uppercase font-bold">{t('common.barcodeScan')}</label>
               <input
                 type="text"
                 value={barcodeInput}
@@ -1546,7 +1558,7 @@ export function VoucherEntry() {
                     handleBarcodeScan(barcodeInput);
                   }
                 }}
-                placeholder="Scan barcode..."
+                placeholder={t('common.barcodeScan')}
                 className="bg-background border border-border text-foreground p-1 text-[10px] outline-none focus:border-foreground w-40"
               />
             </div>
@@ -1557,11 +1569,11 @@ export function VoucherEntry() {
           <div className="bg-foreground/5 p-4 border-b border-border">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-1 h-3 bg-indigo-500 rounded-full" />
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Bank Transaction Details</h4>
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{t('common.bankDetails')}</h4>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
               <div className="space-y-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Transaction Type</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.transactionType')}</label>
                 <select
                   value={bankDetails.transaction_type}
                   onChange={(e) => setBankDetails({ ...bankDetails, transaction_type: e.target.value as any })}
@@ -1573,17 +1585,17 @@ export function VoucherEntry() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Inst. No.</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.instNo')}</label>
                 <input
                   type="text"
                   value={bankDetails.instrument_no}
                   onChange={(e) => setBankDetails({ ...bankDetails, instrument_no: e.target.value })}
-                  placeholder="Cheque/Ref No"
+                  placeholder={t('common.instNo')}
                   className="w-full bg-background border border-border p-1.5 lg:p-2 text-xs outline-none focus:border-foreground font-medium"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Inst. Date</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.instDate')}</label>
                 <input
                   type="date"
                   value={bankDetails.instrument_date}
@@ -1592,7 +1604,7 @@ export function VoucherEntry() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Bank Name</label>
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.bankName')}</label>
                 <input
                   type="text"
                   value={bankDetails.bank_name}
@@ -1611,13 +1623,13 @@ export function VoucherEntry() {
         )}>
           <div className="flex flex-col lg:grid lg:grid-cols-5 gap-4 lg:gap-6">
             <div className="space-y-1 order-2 lg:order-1 lg:col-span-3">
-              <label className="text-[8px] text-gray-500 uppercase font-bold tracking-widest">Narration</label>
+              <label className="text-[8px] text-gray-500 uppercase font-bold tracking-widest">{t('common.narration')}</label>
               <textarea
                 value={narration || ''}
                 onChange={e => setNarration(e.target.value)}
                 tabIndex={501}
                 className="w-full bg-background border border-border text-foreground p-2 text-xs outline-none focus:border-foreground transition-colors h-16 lg:h-20 resize-none"
-                placeholder="Enter narration details..."
+                placeholder={t('common.narration')}
               />
             </div>
             <div className="flex flex-col justify-end items-end space-y-2 order-1 lg:order-2 lg:col-span-2">
@@ -1651,7 +1663,7 @@ export function VoucherEntry() {
                     Tax: {currency} {totalTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                 )}
-                <p className="text-[8px] text-gray-500 uppercase tracking-widest">Total Amount</p>
+                <p className="text-[8px] text-gray-500 uppercase tracking-widest">{t('common.totalAmount')}</p>
                 <p className="text-2xl lg:text-3xl text-foreground font-bold tracking-tighter">
                   {currency} {finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </p>
@@ -1664,7 +1676,7 @@ export function VoucherEntry() {
                     disabled={loading}
                     className="flex-1 lg:flex-none px-6 lg:px-8 py-2 border border-rose-900/50 text-[10px] text-rose-500 uppercase tracking-widest hover:bg-rose-500/10 transition-colors flex items-center justify-center gap-2"
                   >
-                    <Trash className="w-3 h-3" /> Delete
+                    <Trash className="w-3 h-3" /> {t('common.delete')}
                   </button>
                 )}
                 {(isEdit || isBalanced()) && (
@@ -1674,7 +1686,7 @@ export function VoucherEntry() {
                       onClick={() => setShowShareMenu(!showShareMenu)}
                       className="w-full px-6 lg:px-8 py-2 border border-border text-[10px] text-gray-500 uppercase tracking-widest hover:text-foreground transition-colors flex items-center justify-center gap-2"
                     >
-                      <Share2 className="w-3 h-3" /> Share
+                      <Share2 className="w-3 h-3" /> {t('common.share')}
                     </button>
                     {showShareMenu && (
                       <div className="absolute bottom-full left-0 mb-2 w-48 bg-card border border-border shadow-xl z-50">
@@ -1703,14 +1715,14 @@ export function VoucherEntry() {
                   tabIndex={504}
                   className="flex-1 lg:flex-none px-6 lg:px-8 py-2 border border-border text-[10px] text-gray-500 uppercase tracking-widest hover:text-foreground transition-colors disabled:opacity-50"
                 >
-                  Print
+                  {t('common.print')}
                 </button>
                 <button 
                   type="button"
                   onClick={() => setIsClearModalOpen(true)}
                   className="flex-1 lg:flex-none px-6 lg:px-8 py-2 border border-amber-500/50 text-[10px] text-amber-600 uppercase tracking-widest hover:bg-amber-500/10 transition-colors flex items-center justify-center gap-2"
                 >
-                  <X className="w-3 h-3" /> Clear
+                  <X className="w-3 h-3" /> {t('common.clear')}
                 </button>
                 <button
                   onClick={handleSave}
@@ -1721,7 +1733,7 @@ export function VoucherEntry() {
                     isBalanced() ? "bg-foreground text-background hover:opacity-90 shadow-lg" : "bg-border text-gray-600 cursor-not-allowed"
                   )}
                 >
-                  {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (isEdit ? 'Update' : 'Accept')}
+                  {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (isEdit ? t('common.update') : t('common.saveVoucher'))}
                 </button>
               </div>
           </div>

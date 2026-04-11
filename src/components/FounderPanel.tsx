@@ -327,11 +327,13 @@ export default function FounderPanel() {
     
     try {
       setLoading(true);
-      const data = {
+      const data: any = {
         ...newNotification,
-        createdBy: currentUser?.uid,
-        sentAt: newNotification.status === 'sent' ? new Date() : undefined
+        createdBy: currentUser?.uid
       };
+      if (newNotification.status === 'sent') {
+        data.sentAt = new Date();
+      }
       await erpService.createNotification(data);
       setIsCreatingNotification(false);
       setNewNotification({

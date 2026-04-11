@@ -562,15 +562,39 @@ export const erpService = {
       ...item,
       id: ref.id,
       companyId,
-      current_stock: item.opening_qty || 0,
-      avg_cost: item.opening_rate || 0
+      opening_qty: Number(item.opening_qty) || 0,
+      opening_rate: Number(item.opening_rate) || 0,
+      current_stock: Number(item.opening_qty) || 0,
+      avg_cost: Number(item.opening_rate) || 0
     };
     await setDoc(ref, data);
+    // Ensure stats are perfectly calculated from the start
+    await this.recalculateItemStats(ref.id);
     return data;
   },
 
   async updateItem(id: string, item: any) {
-    await updateDoc(doc(db, 'items', id), item);
+    const itemRef = doc(db, 'items', id);
+    const oldSnap = await getDoc(itemRef);
+    if (!oldSnap.exists()) {
+      await updateDoc(itemRef, item);
+      return;
+    }
+    
+    const oldData = oldSnap.data();
+    const updates: any = { ...item };
+    
+    // Ensure numeric values
+    if (updates.opening_qty !== undefined) updates.opening_qty = Number(updates.opening_qty) || 0;
+    if (updates.opening_rate !== undefined) updates.opening_rate = Number(updates.opening_rate) || 0;
+
+    await updateDoc(itemRef, {
+      ...updates,
+      updated_at: serverTimestamp()
+    });
+
+    // Always recalculate to be safe and ensure current_stock/avg_cost are correct
+    await this.recalculateItemStats(id);
   },
 
   async deleteItem(id: string, companyId: string) {
@@ -682,17 +706,43 @@ export const erpService = {
   },
 
   async recalculateItemStats(itemId: string) {
+    const itemRef = doc(db, 'items', itemId);
+    const itemSnap = await getDoc(itemRef);
+    if (!itemSnap.exists()) return;
+    const itemData = itemSnap.data();
+
     const q = query(collection(db, 'inventory_entries'), where('item_id', '==', itemId));
     const snap = await getDocs(q);
     const entries = snap.docs.map(d => d.data());
     
-    let stock = 0;
+    let stock = Number(itemData.opening_qty) || 0;
+    let totalValue = stock * (Number(itemData.opening_rate) || 0);
+    let totalQty = stock;
+
     for (const e of entries) {
       const movementType = e.movement_type || e.m_type;
-      stock += movementType === 'Inward' ? e.qty : -e.qty;
+      const qty = Number(e.qty) || 0;
+      const freeQty = Number(e.free_qty) || 0;
+      const rate = Number(e.rate) || 0;
+      const totalEntryQty = qty + freeQty;
+
+      if (movementType === 'Inward') {
+        stock += totalEntryQty;
+        totalValue += (qty * rate);
+        totalQty += qty;
+      } else {
+        // Outward: physical stock decreases by total quantity (including free)
+        stock -= totalEntryQty;
+        // Average cost doesn't change on outward movements in WAC
+      }
     }
     
-    await updateDoc(doc(db, 'items', itemId), { current_stock: stock });
+    const avgCost = totalQty > 0 ? totalValue / totalQty : (Number(itemData.opening_rate) || 0);
+
+    await updateDoc(itemRef, { 
+      current_stock: stock,
+      avg_cost: avgCost
+    });
   },
 
   async getVoucherEntriesByDate(companyId: string, asOnDate: string): Promise<any[]> {

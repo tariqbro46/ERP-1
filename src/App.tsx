@@ -148,6 +148,8 @@ function Layout({ children }: { children: React.ReactNode }) {
     mobileBottomNavItems = [],
     uiStyle = 'UI/UX 1',
     glassBackground = 'default',
+    englishFont = 'Inter',
+    banglaFont = 'Hind Siliguri',
     appVersion = 'v1.0.1',
     statusOnlineText = 'Status: Online',
     showGoToShortcut = true,
@@ -178,6 +180,12 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+  
+  // Apply fonts globally
+  React.useEffect(() => {
+    const font = language === 'en' ? englishFont : banglaFont;
+    document.documentElement.style.setProperty('--app-font', `"${font}", sans-serif`);
+  }, [language, englishFont, banglaFont]);
 
   // Close sidebar and scroll to top on navigation
   React.useEffect(() => {

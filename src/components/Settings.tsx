@@ -57,6 +57,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     menuBarStyle,
     layoutWidth,
     sidebarDefaultExpanded,
+    englishFont,
+    banglaFont,
     notifications, 
     whatsappTemplates,
     features = [], 
@@ -111,6 +113,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground);
   const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle);
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded);
+  const [localEnglishFont, setLocalEnglishFont] = useState(englishFont);
+  const [localBanglaFont, setLocalBanglaFont] = useState(banglaFont);
   const [localNotifications, setLocalNotifications] = useState(notifications);
   const [localWhatsappTemplates, setLocalWhatsappTemplates] = useState(whatsappTemplates);
 
@@ -154,6 +158,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalGlassBackground(glassBackground);
     setLocalNotificationAnimationStyle(notificationAnimationStyle);
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded);
+    setLocalEnglishFont(englishFont);
+    setLocalBanglaFont(banglaFont);
     setLocalMenuBarStyle(menuBarStyle);
     setLocalLayoutWidth(layoutWidth);
     setLocalNotifications(notifications);
@@ -187,6 +193,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       uiStyle: localUIStyle,
       glassBackground: localGlassBackground,
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
+      englishFont: localEnglishFont,
+      banglaFont: localBanglaFont,
       notificationAnimationStyle: localNotificationAnimationStyle,
       financialYearStart: localFinancialYearStart,
       baseCurrencySymbol: localBaseCurrencySymbol,
@@ -449,18 +457,18 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
               <div className="space-y-8">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center border-b border-border pb-2">
-                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">Company Information</h3>
+                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">{t('settings.companyInfo')}</h3>
                     <button 
                       onClick={handleSaveGeneral}
                       className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
                     >
-                      <Save className="w-3 h-3" /> Save Changes
+                      <Save className="w-3 h-3" /> {t('settings.save')}
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 uppercase">Company Name</label>
+                        <label className="text-[10px] text-gray-500 uppercase">{t('settings.companyName')}</label>
                         <input 
                           type="text" 
                           value={localCompanyName || ''} 
@@ -470,13 +478,13 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       </div>
                       <div className="space-y-4 p-4 bg-foreground/5 border border-border rounded-lg">
                         <div className="flex items-center justify-between">
-                          <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Company Logo</label>
+                          <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.companyLogo')}</label>
                           {localCompanyLogo && (
                             <button 
                               onClick={() => setLocalCompanyLogo('')}
                               className="text-[9px] text-rose-500 uppercase font-bold hover:underline"
                             >
-                              Remove Logo
+                              {t('settings.removeLogo')}
                             </button>
                           )}
                         </div>
@@ -528,7 +536,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     </div>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] text-gray-500 uppercase">Company Slogan</label>
+                        <label className="text-[10px] text-gray-500 uppercase">{t('settings.companySlogan')}</label>
                       <input 
                         type="text" 
                         value={localSlogan || ''} 
@@ -538,7 +546,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Company Address</label>
+                      <label className="text-[10px] text-gray-500 uppercase">{t('settings.companyAddress')}</label>
                       <textarea 
                         value={localCompanyAddress || ''} 
                         onChange={(e) => setLocalCompanyAddress(e.target.value)}
@@ -547,7 +555,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Phone</label>
+                      <label className="text-[10px] text-gray-500 uppercase">{t('common.phone')}</label>
                       <input 
                         type="text" 
                         value={localPrintPhone || ''} 
@@ -556,7 +564,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Email</label>
+                      <label className="text-[10px] text-gray-500 uppercase">{t('common.email')}</label>
                       <input 
                         type="email" 
                         value={localPrintEmail || ''} 
@@ -565,7 +573,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Website</label>
+                      <label className="text-[10px] text-gray-500 uppercase">{t('common.website')}</label>
                       <input 
                         type="text" 
                         value={localPrintWebsite || ''} 
@@ -574,7 +582,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Financial Year Start</label>
+                      <label className="text-[10px] text-gray-500 uppercase">{t('settings.financialYearStart')}</label>
                       <input 
                         type="date" 
                         value={localFinancialYearStart} 
@@ -592,17 +600,17 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
               <div className="space-y-8">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center border-b border-border pb-2">
-                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">Report Settings</h3>
+                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">{t('settings.reportSettings')}</h3>
                     <button 
                       onClick={handleSaveGeneral}
                       className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
                     >
-                      <Save className="w-3 h-3" /> Save Changes
+                      <Save className="w-3 h-3" /> {t('settings.save')}
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Report Layout Style</label>
+                      <label className="text-[10px] text-gray-500 uppercase">{t('settings.reportLayoutStyle')}</label>
                       <select 
                         value={localReportLayout}
                         onChange={(e) => setLocalReportLayout(e.target.value as any)}
@@ -621,17 +629,19 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
               <div className="space-y-8">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center border-b border-border pb-2">
-                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">UI Customization</h3>
+                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">{t('settings.uiCustomization')}</h3>
                     <button 
                       onClick={handleSaveGeneral}
                       className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
                     >
-                      <Save className="w-3 h-3" /> Save Changes
+                      <Save className="w-3 h-3" /> {t('settings.save')}
                     </button>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">{t('settings.language')}</label>
+                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                        {language === 'en' ? 'Language' : 'ভাষা'}
+                      </label>
                       <div className="flex gap-2">
                         <button
                           onClick={() => setLanguage('en')}
@@ -656,45 +666,78 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Menu Bar Style</label>
+                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('common.englishFont')}</label>
+                      <select 
+                        value={localEnglishFont}
+                        onChange={(e) => setLocalEnglishFont(e.target.value)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        <option value="Inter">Inter (Modern)</option>
+                        <option value="Roboto">Roboto (Clean)</option>
+                        <option value="Open Sans">Open Sans (Friendly)</option>
+                        <option value="Montserrat">Montserrat (Geometric)</option>
+                        <option value="Lato">Lato (Professional)</option>
+                        <option value="system-ui">System Default</option>
+                      </select>
+                      <p className="text-[9px] text-gray-500 uppercase">Select font for English text.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('common.banglaFont')}</label>
+                      <select 
+                        value={localBanglaFont}
+                        onChange={(e) => setLocalBanglaFont(e.target.value)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        <option value="Hind Siliguri">Hind Siliguri (Standard)</option>
+                        <option value="Noto Sans Bengali">Noto Sans Bengali (Universal)</option>
+                        <option value="Tiro Bangla">Tiro Bangla (Elegant)</option>
+                        <option value="Mina">Mina (Modern)</option>
+                        <option value="SolaimanLipi">SolaimanLipi (Classic)</option>
+                      </select>
+                      <p className="text-[9px] text-gray-500 uppercase">Select font for Bangla text.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.menuBarStyle')}</label>
                       <select 
                         value={localMenuBarStyle}
                         onChange={(e) => setLocalMenuBarStyle(e.target.value as any)}
                         className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
                       >
-                        <option value="classic">Classic Sidebar (Default)</option>
-                        <option value="ribbon">Microsoft Office Ribbon</option>
-                        <option value="macos">macOS Top Menu Bar</option>
-                        <option value="windows11">Windows 11 Taskbar Style</option>
+                        <option value="classic">{t('settings.classicSidebar')}</option>
+                        <option value="ribbon">{t('settings.ribbonStyle')}</option>
+                        <option value="macos">{t('settings.macosStyle')}</option>
+                        <option value="windows11">{t('settings.windows11Style')}</option>
                       </select>
-                      <p className="text-[9px] text-gray-500 uppercase">Choose your preferred navigation layout.</p>
+                      <p className="text-[9px] text-gray-500 uppercase">{t('settings.menuBarStyleDesc')}</p>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Layout Width</label>
+                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.layoutWidth')}</label>
                       <select 
                         value={localLayoutWidth}
                         onChange={(e) => setLocalLayoutWidth(e.target.value as any)}
                         className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
                       >
-                        <option value="responsive">Full Responsive (Dashboard Style)</option>
-                        <option value="constrained">Founder Panel Style (Max 7xl)</option>
+                        <option value="responsive">{t('settings.fullResponsive')}</option>
+                        <option value="constrained">{t('settings.constrainedWidth')}</option>
                       </select>
-                      <p className="text-[9px] text-gray-500 uppercase">Choose how wide the application content should be.</p>
+                      <p className="text-[9px] text-gray-500 uppercase">{t('settings.layoutWidthDesc')}</p>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">UI/UX Style Style</label>
+                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.uiStyle')}</label>
                       <select 
                         value={localUIStyle}
                         onChange={(e) => setLocalUIStyle(e.target.value as any)}
                         className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
                       >
-                        <option value="UI/UX 1">UI/UX 1 (Classic)</option>
-                        <option value="UI/UX 2">UI/UX 2 (Modern Colorized)</option>
-                        <option value="UI/UX 3">UI/UX 3 (Glassmorphism macOS)</option>
+                        <option value="UI/UX 1">{t('settings.uiStyleClassic')}</option>
+                        <option value="UI/UX 2">{t('settings.uiStyleModern')}</option>
+                        <option value="UI/UX 3">{t('settings.uiStyleGlass')}</option>
                       </select>
-                      <p className="text-[9px] text-gray-500 uppercase">Choose the overall UI/UX style for the application.</p>
+                      <p className="text-[9px] text-gray-500 uppercase">{t('settings.uiStyleDesc')}</p>
                     </div>
 
                     {localUIStyle === 'UI/UX 1' && (
@@ -747,23 +790,23 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     )}
 
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">Dashboard Design Style</label>
+                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.dashboardDesign')}</label>
                       <select 
                         value={localDashboardDesign}
                         onChange={(e) => setLocalDashboardDesign(e.target.value as any)}
                         className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
                       >
-                        <option value="Design 1">Design 1 (Classic Tally Style)</option>
-                        <option value="Design 2">Design 2 (Modern Colorful Dashboard)</option>
+                        <option value="Design 1">{t('settings.dashboardDesignClassic')}</option>
+                        <option value="Design 2">{t('settings.dashboardDesignModern')}</option>
                       </select>
-                      <p className="text-[9px] text-gray-500 uppercase">Choose the visual style for your main dashboard.</p>
+                      <p className="text-[9px] text-gray-500 uppercase">{t('settings.dashboardDesignDesc')}</p>
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
                         <div>
-                          <h4 className="text-xs font-bold text-foreground uppercase">Show Running Balance in Reports</h4>
-                          <p className="text-[10px] text-gray-500">Enable running balance column in ledger statements by default.</p>
+                          <h4 className="text-xs font-bold text-foreground uppercase">{t('settings.showRunningBalance')}</h4>
+                          <p className="text-[10px] text-gray-500">{t('settings.showRunningBalanceDesc')}</p>
                         </div>
                         <button 
                           onClick={() => setLocalShowRunningBalance(!localShowRunningBalance)}
@@ -783,8 +826,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     <div className="space-y-2 md:col-span-2">
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
                         <div>
-                          <h4 className="text-xs font-bold text-foreground uppercase">Show Mobile Navigation Bar</h4>
-                          <p className="text-[10px] text-gray-500">Enable top navigation bar with Back/Forward buttons for mobile apps.</p>
+                          <h4 className="text-xs font-bold text-foreground uppercase">{t('settings.showMobileNav')}</h4>
+                          <p className="text-[10px] text-gray-500">{t('settings.showMobileNavDesc')}</p>
                         </div>
                         <button 
                           onClick={() => setLocalShowMobileNav(!localShowMobileNav)}

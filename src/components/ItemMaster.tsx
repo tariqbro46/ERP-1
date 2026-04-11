@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
-import { Package, Search, Edit2, Plus, Loader2, Filter, List, Grid } from 'lucide-react';
+import { Package, Search, Edit2, Plus, Loader2, Filter, List, Grid, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function ItemMaster() {
@@ -12,6 +12,31 @@ export function ItemMaster() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [viewMode, setViewMode] = useState<'master' | 'pricelist'>('master');
+  const [recalculating, setRecalculating] = useState(false);
+
+  const handleRecalculateAll = async () => {
+    if (!user?.companyId) return;
+    setRecalculating(true);
+    try {
+      await Promise.all(items.map(item => erpService.recalculateItemStats(item.id)));
+      // Refresh items
+      const [itemsData, unitsData] = await Promise.all([
+        erpService.getItems(user.companyId),
+        erpService.getUnits(user.companyId)
+      ]);
+      
+      const itemsWithUnits = itemsData.map(item => ({
+        ...item,
+        units: unitsData.find(u => u.id === item.unit_id) || unitsData.find(u => u.name.toLowerCase() === item.unit_id?.toLowerCase())
+      }));
+      
+      setItems(itemsWithUnits);
+    } catch (err) {
+      console.error('Error recalculating stats:', err);
+    } finally {
+      setRecalculating(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -67,6 +92,14 @@ export function ItemMaster() {
                 Price List
               </button>
             </div>
+            <button 
+              onClick={handleRecalculateAll}
+              disabled={recalculating}
+              className="px-4 py-2 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/5 transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              {recalculating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Activity className="w-3 h-3" />}
+              Recalculate Stats
+            </button>
             <button 
               onClick={() => navigate('/inventory/items/new')}
               className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
@@ -141,6 +174,7 @@ export function ItemMaster() {
                     <div className="flex justify-between items-end">
                       <div className="space-y-1">
                         <p className="text-[8px] text-gray-500 uppercase tracking-widest">Part No: {item.part_no || '---'}</p>
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">Opening: {item.opening_qty} @ ৳ {item.opening_rate}</p>
                         <p className="text-[8px] text-gray-500 uppercase tracking-widest">Avg Cost: ৳ {item.avg_cost?.toLocaleString()}</p>
                       </div>
                       <div className="text-right">
@@ -166,6 +200,8 @@ export function ItemMaster() {
                       <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">Category</th>
                       <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">Part No.</th>
                       <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">Unit</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">Opening Qty</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">Opening Rate</th>
                       <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">Current Stock</th>
                       <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">Avg Cost</th>
                       <th className="px-6 py-4 text-right w-20"></th>
@@ -195,6 +231,12 @@ export function ItemMaster() {
                         </td>
                         <td className="px-6 py-4 text-[10px] text-gray-500 uppercase">
                           {item.units?.name}
+                        </td>
+                        <td className="px-6 py-4 text-right text-[10px] text-gray-500 font-mono">
+                          {item.opening_qty?.toLocaleString() || '0'}
+                        </td>
+                        <td className="px-6 py-4 text-right text-[10px] text-gray-500 font-mono">
+                          ৳ {item.opening_rate?.toLocaleString() || '0.00'}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <p className={cn(
