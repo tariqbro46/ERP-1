@@ -97,13 +97,9 @@ service cloud.firestore {
     match /companies/{companyId} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() || 
-        (resource != null && resource.data.get('isAccessEnabled', true) != false && (
-          (userExists() && getUserData().companyId == companyId) ||
-          resource.data.ownerId == request.auth.uid || 
-          resource.data.createdBy == request.auth.uid
-        )) ||
-        // Allow reading even if disabled if you are the owner
-        (resource != null && (resource.data.ownerId == request.auth.uid || resource.data.createdBy == request.auth.uid))
+        resource == null ||
+        (resource != null && (resource.data.ownerId == request.auth.uid || resource.data.createdBy == request.auth.uid)) ||
+        (userExists() && getUserData().companyId == companyId && resource.data.get('isAccessEnabled', true) != false)
       );
       allow create: if isAuthenticated();
       allow update: if isCompanyAdmin(companyId);

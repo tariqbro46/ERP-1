@@ -181,7 +181,27 @@ export default function OrderEntry() {
       const orders = await erpService.getOrders(user!.companyId);
       const order = orders.find(o => o.id === id);
       if (order) {
-        setFormData(order);
+        setFormData({
+          ...order,
+          clientId: order.clientId || '',
+          clientName: order.clientName || '',
+          orderType: order.orderType || 'Production',
+          receivedBy: order.receivedBy || '',
+          deliveryDate: order.deliveryDate || format(new Date(), 'yyyy-MM-dd'),
+          deliveryTime: order.deliveryTime || '12:00',
+          deliveryLocation: order.deliveryLocation || '',
+          notes: order.notes || '',
+          status: order.status || 'Pending',
+          items: (order.items || []).map((i: any) => ({
+            itemId: i.itemId || '',
+            itemName: i.itemName || '',
+            quantity: i.quantity || 0,
+            price: i.price || 0,
+            printDesign: i.printDesign || '',
+            printType: i.printType || 'Analog',
+            isDoubleSided: i.isDoubleSided || false
+          }))
+        });
       }
     } catch (err) {
       console.error('Error fetching order:', err);

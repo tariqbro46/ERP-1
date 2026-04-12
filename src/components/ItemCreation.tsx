@@ -90,8 +90,18 @@ export function ItemCreation() {
           setFormData({
             ...formData,
             ...iData,
+            name: iData.name || '',
+            category: iData.category || 'General Items',
+            part_no: iData.part_no || '',
+            description: iData.description || '',
+            unit_id: iData.unit_id || '',
+            barcode: iData.barcode || '',
             opening_qty: iData.opening_qty || 0,
-            opening_rate: iData.opening_rate || 0
+            opening_rate: iData.opening_rate || 0,
+            low_stock_threshold: iData.low_stock_threshold || 0,
+            tax_percent: iData.tax_percent || 0,
+            scheme_qty: iData.scheme_qty || 0,
+            scheme_free_qty: iData.scheme_free_qty || 0
           });
         } else if (uData && uData.length > 0) {
           const pcsUnit = uData.find(u => u.name.toLowerCase() === 'pcs');

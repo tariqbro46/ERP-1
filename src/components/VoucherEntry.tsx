@@ -286,17 +286,22 @@ export function VoucherEntry() {
     setLoading(true);
     try {
       const v = await erpService.getVoucherById(id!);
-      setVType(v.v_type);
-      setVDate(v.v_date);
-      setRefNo(v.v_no);
-      setNarration(v.narration);
+      setVType(v.v_type || 'Sales');
+      setVDate(v.v_date || new Date().toISOString().split('T')[0]);
+      setRefNo(v.v_no || '');
+      setNarration(v.narration || '');
       setGlobalDiscount(v.discount_amount || 0);
       setGlobalDiscountType(v.discount_type || 'fixed');
       setCurrency(v.currency || baseCurrencySymbol);
       setExchangeRate(v.exchange_rate || 1);
       setSalespersonId(v.salesperson_id || '');
       if (v.bank_details) {
-        setBankDetails(v.bank_details);
+        setBankDetails({
+          transaction_type: v.bank_details.transaction_type || 'Cheque',
+          instrument_no: v.bank_details.instrument_no || '',
+          instrument_date: v.bank_details.instrument_date || new Date().toISOString().split('T')[0],
+          bank_name: v.bank_details.bank_name || ''
+        });
       }
 
       if (v.v_type === 'Sales' || v.v_type === 'Purchase') {
@@ -315,16 +320,16 @@ export function VoucherEntry() {
         setPartyLedgerId(partyEntry?.ledger_id || '');
         setSalesPurchaseLedgerId(spEntry?.ledger_id || '');
         const inv = v.inventory.map((i: any) => ({
-          item_id: i.item_id,
+          item_id: i.item_id || '',
           godown_id: i.godown_id || '',
-          qty: i.qty,
+          qty: i.qty || 0,
           free_qty: i.free_qty || 0,
-          rate: i.rate,
+          rate: i.rate || 0,
           disc_percent: i.discount_percent || 0,
           tax_percent: i.tax_percent || 0,
           batch_no: i.batch_no || '',
           expiry_date: i.expiry_date || '',
-          amount: i.amount,
+          amount: i.amount || 0,
           unit: i.unit_name || 'pcs'
         }));
         setInvEntries(inv.length > 0 ? inv : [{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
@@ -332,30 +337,30 @@ export function VoucherEntry() {
         // For Journal, we might have a party tagged in the first entry if it's a specific type
         setPartyLedgerId(v.entries[0]?.ledger_id || '');
         setAccEntries(v.entries.map((e: any) => ({
-          ledger_id: e.ledger_id,
-          debit: e.debit,
-          credit: e.credit,
+          ledger_id: e.ledger_id || '',
+          debit: e.debit || 0,
+          credit: e.credit || 0,
           type: e.debit > 0 ? 'Dr' : 'Cr',
-          amount: Math.max(e.debit, e.credit)
+          amount: Math.max(e.debit || 0, e.credit || 0)
         })));
       } else if (v.v_type === 'Payment' || v.v_type === 'Receipt' || v.v_type === 'Contra') {
         // In our save logic: last entry is bank/cash
         const mainEntry = v.entries[v.entries.length - 1];
         setBankCashLedgerId(mainEntry?.ledger_id || '');
         setAccEntries(v.entries.slice(0, -1).map((e: any) => ({
-          ledger_id: e.ledger_id,
-          amount: Math.max(e.debit, e.credit),
-          debit: e.debit,
-          credit: e.credit,
+          ledger_id: e.ledger_id || '',
+          amount: Math.max(e.debit || 0, e.credit || 0),
+          debit: e.debit || 0,
+          credit: e.credit || 0,
           type: e.debit > 0 ? 'Dr' : 'Cr'
         })));
       } else {
         setAccEntries(v.entries.map((e: any) => ({
-          ledger_id: e.ledger_id,
-          debit: e.debit,
-          credit: e.credit,
+          ledger_id: e.ledger_id || '',
+          debit: e.debit || 0,
+          credit: e.credit || 0,
           type: e.debit > 0 ? 'Dr' : 'Cr',
-          amount: Math.max(e.debit, e.credit)
+          amount: Math.max(e.debit || 0, e.credit || 0)
         })));
       }
     } catch (err) {

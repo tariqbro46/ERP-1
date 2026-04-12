@@ -25,6 +25,7 @@ export interface Company {
 export interface Ledger {
   id: string;
   name: string;
+  alias?: string;
   group_id: string;
   group_name: string;
   nature: 'Asset' | 'Liability' | 'Income' | 'Expense';
@@ -32,12 +33,20 @@ export interface Ledger {
   current_balance: number;
   vat_no?: string;
   currency?: string;
+  mailing_name?: string;
+  address?: string;
+  division?: string;
+  country?: string;
+  postal_code?: string;
+  primary_mobile?: string;
+  email?: string;
+  website?: string;
   contact_name?: string;
   contact_phone?: string;
   contact_email?: string;
   bank_account_no?: string;
+  bank_code?: string;
   bank_name?: string;
-  address?: string;
 }
 
 export interface BankDetails {
@@ -101,6 +110,7 @@ export interface Item {
   unit_name: string;
   unit_id?: string;
   part_no?: string;
+  description?: string;
   current_stock: number;
   avg_cost: number;
   opening_qty?: number;
