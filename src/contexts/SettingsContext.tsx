@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { erpService } from '../services/erpService';
 import { doc, onSnapshot, collection } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { SubscriptionPlan } from '../types';
 
 interface NotificationSettings {

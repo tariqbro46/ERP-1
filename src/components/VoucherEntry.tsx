@@ -70,12 +70,15 @@ const getVoucherHoverBgColor = (type: string) => {
   }
 };
 
+import { useSubscription } from '../hooks/useSubscription';
+
 export function VoucherEntry() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { checkLimit } = useSubscription();
   const isEdit = !!id;
   const { showNotification } = useNotification();
   const settings = useSettings();
@@ -510,6 +513,22 @@ export function VoucherEntry() {
     if (!isBalanced() || !user?.companyId) return;
     setLoading(true);
     try {
+      // Check subscription limits
+      if (!isEdit) {
+        const count = await erpService.getCollectionCount('vouchers', user.companyId);
+        if (!checkLimit('vouchers', count)) {
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (exchangeRate !== 1) {
+        if (!checkLimit('multiCurrency')) {
+          setLoading(false);
+          return;
+        }
+      }
+
       // Find a ledger that belongs to Sundry Debtors or Sundry Creditors
       const isDebtorOrCreditor = (l: any) => 
         ['Sundry Debtors', 'Sundry Creditors', 'Sundry Debtor', 'Sundry Creditor', 'Debtors', 'Creditors'].includes(l.group_name);
@@ -771,7 +790,12 @@ export function VoucherEntry() {
                   </div>
                   <select
                     value={currency}
-                    onChange={e => setCurrency(e.target.value)}
+                    onChange={e => {
+                      if (e.target.value !== baseCurrencySymbol) {
+                        if (!checkLimit('multiCurrency')) return;
+                      }
+                      setCurrency(e.target.value);
+                    }}
                     tabIndex={4}
                     className="w-full bg-background border border-border text-foreground p-1.5 lg:p-2 text-xs lg:text-sm outline-none focus:border-foreground"
                   >
@@ -795,7 +819,13 @@ export function VoucherEntry() {
                     type="number"
                     step="0.0001"
                     value={exchangeRate}
-                    onChange={e => setExchangeRate(Number(e.target.value))}
+                    onChange={e => {
+                      const val = Number(e.target.value);
+                      if (val !== 1) {
+                        if (!checkLimit('multiCurrency')) return;
+                      }
+                      setExchangeRate(val);
+                    }}
                     onFocus={e => e.target.value === '0' && e.target.select()}
                     tabIndex={5}
                     className="w-full bg-background border border-border text-foreground p-1.5 lg:p-2 text-xs lg:text-sm outline-none focus:border-foreground"

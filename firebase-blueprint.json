@@ -341,10 +341,22 @@
         "priceMonthly": { "type": "number" },
         "priceYearly": { "type": "number" },
         "features": { "type": "array", "items": { "type": "string" } },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "vouchers": { "type": "integer" },
+            "items": { "type": "integer" },
+            "ledgers": { "type": "integer" },
+            "users": { "type": "integer" },
+            "godowns": { "type": "integer" },
+            "multiCurrency": { "type": "boolean" },
+            "rolePermissions": { "type": "boolean" }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["name", "description", "priceMonthly", "priceYearly", "features"]
+      "required": ["name", "description", "priceMonthly", "priceYearly", "features", "limits"]
     }
   },
   "firestore": {

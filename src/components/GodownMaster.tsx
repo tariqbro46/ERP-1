@@ -5,9 +5,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useNotification } from '../contexts/NotificationContext';
 
+import { useSubscription } from '../hooks/useSubscription';
+
 export function GodownMaster() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { checkLimit } = useSubscription();
   const [godowns, setGodowns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -39,10 +42,18 @@ export function GodownMaster() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) return;
+    if (!name || !user?.companyId) return;
     
     setLoading(true);
     try {
+      if (!editingGodown) {
+        const count = await erpService.getCollectionCount('godowns', user.companyId);
+        if (!checkLimit('godowns', count)) {
+          setLoading(false);
+          return;
+        }
+      }
+
       if (editingGodown) {
         await erpService.updateGodown(editingGodown.id, { 
           name, 

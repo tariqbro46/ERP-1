@@ -1774,6 +1774,17 @@ export const erpService = {
     }
   },
 
+  async getCollectionCount(colName: string, companyId: string): Promise<number> {
+    try {
+      const q = query(collection(db, colName), where('companyId', '==', companyId));
+      const snapshot = await getDocs(q);
+      return snapshot.size;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, colName);
+      return 0;
+    }
+  },
+
   async updateCompanySubscription(companyId: string, updates: any) {
     try {
       await updateDoc(doc(db, 'companies', companyId), {

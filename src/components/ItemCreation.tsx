@@ -8,11 +8,14 @@ import { useSettings } from '../contexts/SettingsContext';
 
 import { useLanguage } from '../contexts/LanguageContext';
 
+import { useSubscription } from '../hooks/useSubscription';
+
 export function ItemCreation() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
   const { showNotification } = useNotification();
+  const { checkLimit } = useSubscription();
   const { notifications, features = [], baseCurrencySymbol } = useSettings();
   const { id } = useParams();
 
@@ -105,10 +108,18 @@ export function ItemCreation() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.unit_id) return;
+    if (!formData.name || !formData.unit_id || !user?.companyId) return;
 
     setLoading(true);
     try {
+      if (!isEdit) {
+        const count = await erpService.getCollectionCount('items', user.companyId);
+        if (!checkLimit('items', count)) {
+          setLoading(false);
+          return;
+        }
+      }
+
       // Clean data for saving
       const { units: _u, id: _id, created_at: _ca, current_stock: _cs, avg_cost: _ac, ...cleanData } = formData as any;
       

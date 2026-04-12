@@ -153,8 +153,11 @@ function Layout({ children }: { children: React.ReactNode }) {
     appVersion = 'v1.0.1',
     statusOnlineText = 'Status: Online',
     showGoToShortcut = true,
+    subscriptionPlans = [],
     updateSettings
   } = useSettings();
+
+  const activePlan = subscriptionPlans.find(p => p.id === company?.planId);
 
   const navigate = useNavigate();
 
@@ -275,7 +278,14 @@ function Layout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="transition-opacity duration-300 relative group/logo">
             <h1 className="text-sm font-bold text-foreground tracking-tighter truncate max-w-[120px]">{companyName}</h1>
-            <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate max-w-[120px]">{slogan}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate max-w-[120px]">{slogan}</p>
+              {activePlan && (
+                <span className="text-[7px] font-bold text-primary uppercase tracking-tighter bg-primary/5 px-1 rounded">
+                  {activePlan.name}
+                </span>
+              )}
+            </div>
             {isAdmin && (
               <Link 
                 to="/settings/company" 
@@ -870,6 +880,15 @@ function Layout({ children }: { children: React.ReactNode }) {
                   )}>
                     {companyName}
                   </h1>
+                  {activePlan && (
+                    <div className={cn(
+                      "px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest flex items-center gap-1",
+                      uiStyle === 'UI/UX 2' ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
+                    )}>
+                      <Award className="w-2.5 h-2.5" />
+                      {activePlan.name}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -913,6 +932,15 @@ function Layout({ children }: { children: React.ReactNode }) {
                     )}>
                       {companyName}
                     </h1>
+                    {activePlan && (
+                      <div className={cn(
+                        "px-1.5 py-0.5 rounded text-[7px] font-bold uppercase tracking-tighter flex items-center gap-0.5",
+                        uiStyle === 'UI/UX 2' ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
+                      )}>
+                        <Award className="w-2 h-2" />
+                        {activePlan.name}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

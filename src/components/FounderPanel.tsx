@@ -96,7 +96,16 @@ export default function FounderPanel() {
     description: '',
     priceMonthly: 0,
     priceYearly: 0,
-    features: []
+    features: [],
+    limits: {
+      vouchers: -1,
+      items: -1,
+      ledgers: -1,
+      users: -1,
+      godowns: -1,
+      multiCurrency: false,
+      rolePermissions: false
+    }
   });
   const [newNotification, setNewNotification] = useState<Partial<AppNotification>>({
     title: '',
@@ -1064,7 +1073,22 @@ export default function FounderPanel() {
             )}>Subscription Plans</h2>
             <button
               onClick={() => {
-                setCurrentPlan({ name: '', description: '', priceMonthly: 0, priceYearly: 0, features: [] });
+                setCurrentPlan({ 
+                  name: '', 
+                  description: '', 
+                  priceMonthly: 0, 
+                  priceYearly: 0, 
+                  features: [],
+                  limits: {
+                    vouchers: -1,
+                    items: -1,
+                    ledgers: -1,
+                    users: -1,
+                    godowns: -1,
+                    multiCurrency: false,
+                    rolePermissions: false
+                  }
+                });
                 setIsEditingPlan(true);
               }}
               className={cn(
@@ -1197,6 +1221,99 @@ export default function FounderPanel() {
                           onChange={(e) => setCurrentPlan({ ...currentPlan, priceYearly: Number(e.target.value) })}
                           className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
                         />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Plan Limits (-1 for Unlimited)</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[9px] uppercase font-bold text-muted-foreground">Vouchers</label>
+                          <input
+                            type="number"
+                            value={currentPlan.limits?.vouchers}
+                            onChange={(e) => setCurrentPlan({ 
+                              ...currentPlan, 
+                              limits: { ...currentPlan.limits!, vouchers: Number(e.target.value) } 
+                            })}
+                            className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-primary outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] uppercase font-bold text-muted-foreground">Items/Products</label>
+                          <input
+                            type="number"
+                            value={currentPlan.limits?.items}
+                            onChange={(e) => setCurrentPlan({ 
+                              ...currentPlan, 
+                              limits: { ...currentPlan.limits!, items: Number(e.target.value) } 
+                            })}
+                            className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-primary outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] uppercase font-bold text-muted-foreground">Ledgers</label>
+                          <input
+                            type="number"
+                            value={currentPlan.limits?.ledgers}
+                            onChange={(e) => setCurrentPlan({ 
+                              ...currentPlan, 
+                              limits: { ...currentPlan.limits!, ledgers: Number(e.target.value) } 
+                            })}
+                            className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-primary outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] uppercase font-bold text-muted-foreground">Users</label>
+                          <input
+                            type="number"
+                            value={currentPlan.limits?.users}
+                            onChange={(e) => setCurrentPlan({ 
+                              ...currentPlan, 
+                              limits: { ...currentPlan.limits!, users: Number(e.target.value) } 
+                            })}
+                            className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-primary outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] uppercase font-bold text-muted-foreground">Godowns</label>
+                          <input
+                            type="number"
+                            value={currentPlan.limits?.godowns}
+                            onChange={(e) => setCurrentPlan({ 
+                              ...currentPlan, 
+                              limits: { ...currentPlan.limits!, godowns: Number(e.target.value) } 
+                            })}
+                            className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-primary outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-4 pt-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={currentPlan.limits?.multiCurrency}
+                            onChange={(e) => setCurrentPlan({ 
+                              ...currentPlan, 
+                              limits: { ...currentPlan.limits!, multiCurrency: e.target.checked } 
+                            })}
+                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground">Multi-Currency</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={currentPlan.limits?.rolePermissions}
+                            onChange={(e) => setCurrentPlan({ 
+                              ...currentPlan, 
+                              limits: { ...currentPlan.limits!, rolePermissions: e.target.checked } 
+                            })}
+                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground">Role Permissions</span>
+                        </label>
                       </div>
                     </div>
 

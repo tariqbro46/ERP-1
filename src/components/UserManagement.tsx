@@ -5,9 +5,12 @@ import { Users, Shield, ShieldCheck, ShieldAlert, Mail, Calendar, Loader2, Searc
 import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
 
+import { useSubscription } from '../hooks/useSubscription';
+
 export const UserManagement: React.FC = () => {
   const { isAdmin, isSuperAdmin, user } = useAuth();
   const { uiStyle } = useSettings();
+  const { checkLimit } = useSubscription();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,6 +51,11 @@ export const UserManagement: React.FC = () => {
       alert("You cannot change your own role.");
       return;
     }
+
+    if (!checkLimit('rolePermissions')) {
+      return;
+    }
+
     setUpdatingId(uid);
     try {
       await erpService.updateUserRole(uid, newRole);
@@ -63,12 +71,21 @@ export const UserManagement: React.FC = () => {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddError(null);
+    if (!user?.companyId) return;
+
     if (newUser.password.length < 6) {
       setAddError('Password must be at least 6 characters long.');
       return;
     }
+
     setAddLoading(true);
     try {
+      const count = await erpService.getCollectionCount('users', user.companyId);
+      if (!checkLimit('users', count)) {
+        setAddLoading(false);
+        return;
+      }
+
       await erpService.adminAddUser({
         ...newUser,
         companyId: user!.companyId

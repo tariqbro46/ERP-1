@@ -298,6 +298,15 @@ export interface SubscriptionPlan {
   priceMonthly: number;
   priceYearly: number;
   features: string[]; // List of feature IDs
+  limits: {
+    vouchers: number; // -1 for unlimited
+    items: number;
+    ledgers: number;
+    users: number;
+    godowns: number;
+    multiCurrency: boolean;
+    rolePermissions: boolean;
+  };
   createdAt: any;
   updatedAt?: any;
 }

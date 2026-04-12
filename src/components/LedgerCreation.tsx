@@ -9,11 +9,14 @@ import { useSettings } from '../contexts/SettingsContext';
 
 import { useLanguage } from '../contexts/LanguageContext';
 
+import { useSubscription } from '../hooks/useSubscription';
+
 export function LedgerCreation() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
   const { showNotification } = useNotification();
+  const { checkLimit } = useSubscription();
   const { notifications, companyName, features = [], baseCurrencySymbol } = useSettings();
   const { id } = useParams();
 
@@ -121,10 +124,18 @@ export function LedgerCreation() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.group_id) return;
+    if (!formData.name || !formData.group_id || !user?.companyId) return;
 
     setLoading(true);
     try {
+      if (!isEdit) {
+        const count = await erpService.getCollectionCount('ledgers', user.companyId);
+        if (!checkLimit('ledgers', count)) {
+          setLoading(false);
+          return;
+        }
+      }
+
       // Clean the data: Remove joined objects and internal fields that are not columns
       const { 
         ledger_groups, 
