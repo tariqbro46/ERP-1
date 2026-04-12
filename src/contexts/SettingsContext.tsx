@@ -213,6 +213,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setSettings(prev => ({ ...prev, subscriptionPlans: plans }));
     }, (error) => {
       console.error("Subscription plans snapshot error:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
+      console.error("Current User:", auth.currentUser?.uid, auth.currentUser?.email);
     });
 
     if (!user?.companyId) {
@@ -226,7 +228,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         updateSettings: prev.updateSettings,
         updateSystemSettings: prev.updateSystemSettings
       }));
-      return () => unsubscribeSystem();
+      return () => {
+        unsubscribeSystem();
+        unsubscribePlans();
+      };
     }
 
     const ref = doc(db, 'settings', user.companyId);

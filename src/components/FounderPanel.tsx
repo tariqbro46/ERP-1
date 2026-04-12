@@ -202,16 +202,18 @@ export default function FounderPanel() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [companiesSnap, usersSnap, notificationsData, activitySnap] = await Promise.all([
+      const [companiesSnap, usersSnap, notificationsData, activitySnap, plansData] = await Promise.all([
         getDocs(collection(db, 'companies')),
         erpService.getAllUsers(),
         erpService.getNotifications(currentUser?.uid || '', currentUser?.companyId || '', true),
-        getDocs(query(collection(db, 'activity_log'), orderBy('createdAt', 'desc'), limit(50)))
+        getDocs(query(collection(db, 'activity_log'), orderBy('createdAt', 'desc'), limit(50))),
+        erpService.getSubscriptionPlans()
       ]);
       
       setAllUsers(usersSnap);
       setNotifications(notificationsData);
       setGlobalActivity(activitySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setSubscriptionPlans(plansData);
       const companyData: CompanyStats[] = [];
 
       for (const companyDoc of companiesSnap.docs) {

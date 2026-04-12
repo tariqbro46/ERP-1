@@ -329,6 +329,22 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["pageId", "content"]
+    },
+    "SubscriptionPlan": {
+      "title": "Subscription Plan",
+      "description": "Subscription plans for companies.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "priceMonthly": { "type": "number" },
+        "priceYearly": { "type": "number" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "description", "priceMonthly", "priceYearly", "features"]
     }
   },
   "firestore": {
@@ -415,6 +431,10 @@
     "/machines/{id}": {
       "schema": "PrintingMachine",
       "description": "Collection of printing machines."
+    },
+    "/subscription_plans/{id}": {
+      "schema": "SubscriptionPlan",
+      "description": "Collection of subscription plans."
     }
   }
 }

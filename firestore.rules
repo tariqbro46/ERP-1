@@ -74,6 +74,12 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
+    // Subscription Plans - Move to top for priority
+    match /subscription_plans/{planId} {
+      allow get, list: if true;
+      allow write: if isFounder() || isMarketingManager();
+    }
+
     // System Configuration
     match /system/{document} {
       allow read: if true; // Allow public read for UI/UX settings
