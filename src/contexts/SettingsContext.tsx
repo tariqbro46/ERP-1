@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { erpService } from '../services/erpService';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../firebase';
+import { SubscriptionPlan } from '../types';
 
 interface NotificationSettings {
   voucherSaved: string;
@@ -87,6 +88,7 @@ interface SettingsContextType {
   whatsappTemplates: WhatsAppTemplates;
   notifications: NotificationSettings;
   features: FeatureSettings[];
+  subscriptionPlans: SubscriptionPlan[];
   updateSettings: (newSettings: Partial<SettingsContextType>) => void;
   updateSystemSettings: (newSettings: any) => Promise<void>;
 }
@@ -168,6 +170,7 @@ const defaultSettings: SettingsContextType = {
     { id: 'tax', label: 'Enable Tax % in Vouchers', enabled: true },
     { id: 'barcode', label: 'Enable Barcode Scanning', enabled: false },
   ],
+  subscriptionPlans: [],
   updateSettings: () => {},
   updateSystemSettings: async () => {}
 };
@@ -201,6 +204,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }
     }, (error) => {
       console.error("System settings snapshot error:", error);
+    });
+
+    // Listen to subscription plans
+    const plansRef = collection(db, 'subscription_plans');
+    const unsubscribePlans = onSnapshot(plansRef, (snap) => {
+      const plans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionPlan));
+      setSettings(prev => ({ ...prev, subscriptionPlans: plans }));
+    }, (error) => {
+      console.error("Subscription plans snapshot error:", error);
     });
 
     if (!user?.companyId) {
@@ -245,6 +257,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return () => {
       unsubscribe();
       unsubscribeSystem();
+      unsubscribePlans();
     };
   }, [user?.companyId]);
 

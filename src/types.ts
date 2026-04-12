@@ -15,6 +15,7 @@ export interface Company {
   website?: string;
   subscriptionStatus: 'active' | 'inactive' | 'trial';
   planType: 'monthly' | 'yearly' | 'free';
+  planId?: string;
   expiryDate: string;
   isAccessEnabled: boolean;
   createdBy?: string;
@@ -288,4 +289,15 @@ export interface PrintingMachine {
   currentOrderName?: string;
   lastMaintenance?: string;
   createdAt: any;
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description: string;
+  priceMonthly: number;
+  priceYearly: number;
+  features: string[]; // List of feature IDs
+  createdAt: any;
+  updatedAt?: any;
 }

@@ -12,7 +12,7 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Company, UserRole, UserProfile, AppNotification } from '../types';
+import { Company, UserRole, UserProfile, AppNotification, SubscriptionPlan } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
@@ -46,7 +46,12 @@ import {
   ClipboardList,
   Printer,
   Cpu,
-  Settings
+  Settings,
+  LayoutDashboard,
+  PieChart,
+  StickyNote,
+  CreditCard,
+  Check
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { erpService } from '../services/erpService';
@@ -77,12 +82,21 @@ export default function FounderPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<CompanyStats | null>(null);
   const [isEditingSubscription, setIsEditingSubscription] = useState(false);
-  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent'>('companies');
+  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent' | 'plans'>('companies');
   const [globalActivity, setGlobalActivity] = useState<any[]>([]);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isCreatingNotification, setIsCreatingNotification] = useState(false);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
+  const [isEditingPlan, setIsEditingPlan] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<Partial<SubscriptionPlan>>({
+    name: '',
+    description: '',
+    priceMonthly: 0,
+    priceYearly: 0,
+    features: []
+  });
   const [newNotification, setNewNotification] = useState<Partial<AppNotification>>({
     title: '',
     message: '',
@@ -259,6 +273,50 @@ export default function FounderPanel() {
     } catch (error) {
       console.error('Error toggling access:', error);
     }
+  };
+
+  const handleSavePlan = async () => {
+    if (!currentPlan.name || !currentPlan.description) {
+      showNotification('Please fill in all required fields', 'error');
+      return;
+    }
+
+    try {
+      if (currentPlan.id) {
+        await erpService.updateSubscriptionPlan(currentPlan.id, currentPlan);
+        showNotification('Subscription plan updated successfully');
+      } else {
+        await erpService.createSubscriptionPlan(currentPlan as Omit<SubscriptionPlan, 'id'>);
+        showNotification('Subscription plan created successfully');
+      }
+      setIsEditingPlan(false);
+      setCurrentPlan({ name: '', description: '', priceMonthly: 0, priceYearly: 0, features: [] });
+      fetchData();
+    } catch (err) {
+      showNotification('Failed to save subscription plan', 'error');
+    }
+  };
+
+  const handleDeletePlan = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this plan?')) return;
+    try {
+      await erpService.deleteSubscriptionPlan(id);
+      showNotification('Subscription plan deleted successfully');
+      fetchData();
+    } catch (err) {
+      showNotification('Failed to delete subscription plan', 'error');
+    }
+  };
+
+  const toggleFeatureForPlan = (featureId: string) => {
+    setCurrentPlan(prev => {
+      const features = prev.features || [];
+      if (features.includes(featureId)) {
+        return { ...prev, features: features.filter(f => f !== featureId) };
+      } else {
+        return { ...prev, features: [...features, featureId] };
+      }
+    });
   };
 
   const updateSubscription = async (companyId: string, updates: any) => {
@@ -522,6 +580,18 @@ export default function FounderPanel() {
             >
               <LayoutGrid className="w-4 h-4" />
               Site Content
+            </button>
+            <button
+              onClick={() => setViewMode('plans')}
+              className={cn(
+                "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
+                viewMode === 'plans' 
+                  ? uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white shadow-md" : "bg-background text-foreground shadow-sm"
+                  : uiStyle === 'UI/UX 2' ? "text-blue-400 hover:text-blue-600" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <CreditCard className="w-4 h-4" />
+              Plans
             </button>
             <button
               onClick={() => setViewMode('settings')}
@@ -971,6 +1041,202 @@ export default function FounderPanel() {
               </div>
             )}
           </div>
+        </div>
+      ) : viewMode === 'plans' ? (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className={cn(
+              "text-lg font-bold uppercase tracking-widest",
+              uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+            )}>Subscription Plans</h2>
+            <button
+              onClick={() => {
+                setCurrentPlan({ name: '', description: '', priceMonthly: 0, priceYearly: 0, features: [] });
+                setIsEditingPlan(true);
+              }}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all shadow-md",
+                uiStyle === 'UI/UX 2' 
+                  ? "bg-blue-600 text-white hover:bg-blue-700" 
+                  : "bg-primary text-white hover:opacity-90"
+              )}
+            >
+              <Plus className="w-4 h-4" />
+              New Plan
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {subscriptionPlans.map((plan) => (
+              <div key={plan.id} className={cn(
+                "bg-card border border-border rounded-2xl p-6 space-y-4 transition-all hover:shadow-xl",
+                uiStyle === 'UI/UX 2' && "border-blue-100"
+              )}>
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{plan.description}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setCurrentPlan(plan);
+                        setIsEditingPlan(true);
+                      }}
+                      className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeletePlan(plan.id)}
+                      className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 py-4 border-y border-border">
+                  <div className="text-center">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Monthly</p>
+                    <p className="text-xl font-bold text-primary">{plan.priceMonthly} {currentUser?.companyId ? '৳' : '$'}</p>
+                  </div>
+                  <div className="text-center border-l border-border">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Yearly</p>
+                    <p className="text-xl font-bold text-primary">{plan.priceYearly} {currentUser?.companyId ? '৳' : '$'}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Features Included:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {plan.features.map(fId => {
+                      const feature = AVAILABLE_FEATURES.find(af => af.id === fId);
+                      return (
+                        <span key={fId} className="px-2 py-1 bg-muted rounded text-[9px] font-bold uppercase tracking-tighter flex items-center gap-1">
+                          {feature?.icon && <feature.icon className="w-3 h-3" />}
+                          {feature?.label || fId}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Edit Plan Modal */}
+          <AnimatePresence>
+            {isEditingPlan && (
+              <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
+                >
+                  <div className="p-6 border-b border-border flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-foreground">{currentPlan.id ? 'Edit Plan' : 'New Subscription Plan'}</h2>
+                    <button 
+                      onClick={() => setIsEditingPlan(false)}
+                      className="p-2 hover:bg-foreground/5 rounded-lg transition-colors"
+                    >
+                      <XCircle className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar text-foreground">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Plan Name</label>
+                        <input
+                          type="text"
+                          value={currentPlan.name}
+                          onChange={(e) => setCurrentPlan({ ...currentPlan, name: e.target.value })}
+                          className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                          placeholder="e.g. Professional"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Description</label>
+                        <input
+                          type="text"
+                          value={currentPlan.description}
+                          onChange={(e) => setCurrentPlan({ ...currentPlan, description: e.target.value })}
+                          className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                          placeholder="Short description of the plan"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Monthly Price</label>
+                        <input
+                          type="number"
+                          value={currentPlan.priceMonthly}
+                          onChange={(e) => setCurrentPlan({ ...currentPlan, priceMonthly: Number(e.target.value) })}
+                          className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Yearly Price</label>
+                        <input
+                          type="number"
+                          value={currentPlan.priceYearly}
+                          onChange={(e) => setCurrentPlan({ ...currentPlan, priceYearly: Number(e.target.value) })}
+                          className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Select Features</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {AVAILABLE_FEATURES.map((feature) => {
+                          const Icon = feature.icon;
+                          const isSelected = currentPlan.features?.includes(feature.id);
+                          return (
+                            <button
+                              key={feature.id}
+                              onClick={() => toggleFeatureForPlan(feature.id)}
+                              className={cn(
+                                "flex items-center gap-3 p-3 border rounded-xl transition-all text-left",
+                                isSelected 
+                                  ? "bg-primary/10 border-primary text-primary shadow-sm" 
+                                  : "bg-background border-border text-muted-foreground hover:border-foreground"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-8 h-8 rounded-full flex items-center justify-center",
+                                isSelected ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                              )}>
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <span className="text-[10px] font-bold uppercase tracking-widest">{feature.label}</span>
+                              {isSelected && <Check className="w-3 h-3 ml-auto" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-6 border-t border-border flex gap-4">
+                    <button
+                      onClick={() => setIsEditingPlan(false)}
+                      className="flex-1 py-3 border border-border text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-muted transition-all text-foreground"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSavePlan}
+                      className="flex-1 py-3 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+                    >
+                      Save Plan
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
         </div>
       ) : viewMode === 'notifications' ? (
         <div className="space-y-6">
@@ -1586,26 +1852,48 @@ export default function FounderPanel() {
                   <div className="space-y-3">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Plan Type</p>
                     {isEditingSubscription ? (
-                      <div className="grid grid-cols-3 gap-2">
-                        {['free', 'monthly', 'yearly'].map(plan => (
-                          <button
-                            key={plan}
-                            onClick={() => updateSubscription(selectedCompany.id, { planType: plan })}
-                            className={cn(
-                              "py-2 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest border transition-all",
-                              selectedCompany.planType === plan 
-                                ? "bg-primary border-primary text-white shadow-lg"
-                                : "bg-background border-border text-muted-foreground hover:border-foreground"
-                            )}
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-3 gap-2">
+                          {['free', 'monthly', 'yearly'].map(plan => (
+                            <button
+                              key={plan}
+                              onClick={() => updateSubscription(selectedCompany.id, { planType: plan })}
+                              className={cn(
+                                "py-2 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest border transition-all",
+                                selectedCompany.planType === plan 
+                                  ? "bg-primary border-primary text-white shadow-lg"
+                                  : "bg-background border-border text-muted-foreground hover:border-foreground"
+                              )}
+                            >
+                              {plan}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Assigned Subscription Plan</label>
+                          <select
+                            value={selectedCompany.planId || ''}
+                            onChange={(e) => updateSubscription(selectedCompany.id, { planId: e.target.value })}
+                            className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary"
                           >
-                            {plan}
-                          </button>
-                        ))}
+                            <option value="">No Plan Assigned</option>
+                            {subscriptionPlans.map(p => (
+                              <option key={p.id} value={p.id}>{p.name} ({p.priceMonthly}/mo)</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                     ) : (
-                      <p className="text-sm font-bold text-foreground uppercase tracking-widest bg-muted/50 px-3 py-1.5 rounded-lg w-fit">
-                        {selectedCompany.planType}
-                      </p>
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-foreground uppercase tracking-widest bg-muted/50 px-3 py-1.5 rounded-lg w-fit">
+                          {selectedCompany.planType}
+                        </p>
+                        {selectedCompany.planId && (
+                          <p className="text-[10px] text-primary font-bold uppercase tracking-widest">
+                            Plan: {subscriptionPlans.find(p => p.id === selectedCompany.planId)?.name || 'Unknown'}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="space-y-3">

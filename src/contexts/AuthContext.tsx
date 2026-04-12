@@ -20,6 +20,7 @@ export interface CompanyData {
   name: string;
   subscriptionStatus: 'active' | 'inactive' | 'trial';
   planType: 'monthly' | 'yearly' | 'free';
+  planId?: string;
   expiryDate: string;
   isAccessEnabled: boolean;
 }

@@ -33,7 +33,8 @@ import {
   AppNotification,
   PrintingOrder,
   PrintingMachine,
-  UserProfile
+  UserProfile,
+  SubscriptionPlan
 } from '../types';
 import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -1724,6 +1725,63 @@ export const erpService = {
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `site_content/${pageId}`);
+    }
+  },
+
+  async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+    try {
+      const q = query(collection(db, 'subscription_plans'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionPlan));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'subscription_plans');
+      return [];
+    }
+  },
+
+  async createSubscriptionPlan(plan: Omit<SubscriptionPlan, 'id'>) {
+    try {
+      const ref = doc(collection(db, 'subscription_plans'));
+      const data = {
+        ...plan,
+        id: ref.id,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      await setDoc(ref, data);
+      return data;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'subscription_plans');
+    }
+  },
+
+  async updateSubscriptionPlan(id: string, updates: Partial<SubscriptionPlan>) {
+    try {
+      await updateDoc(doc(db, 'subscription_plans', id), {
+        ...updates,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `subscription_plans/${id}`);
+    }
+  },
+
+  async deleteSubscriptionPlan(id: string) {
+    try {
+      await deleteDoc(doc(db, 'subscription_plans', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `subscription_plans/${id}`);
+    }
+  },
+
+  async updateCompanySubscription(companyId: string, updates: any) {
+    try {
+      await updateDoc(doc(db, 'companies', companyId), {
+        ...updates,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `companies/${companyId}`);
     }
   }
 };
