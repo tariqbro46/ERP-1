@@ -1897,6 +1897,7 @@ export function VoucherEntry() {
 }
 
 function ClearModal({ isOpen, onClose, onConfirm }: { isOpen: boolean, onClose: () => void, onConfirm: () => void }) {
+  const { t } = useLanguage();
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">

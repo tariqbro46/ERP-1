@@ -18,6 +18,7 @@ import {
   Users, 
   Shield, 
   Activity, 
+  BarChart3,
   Database, 
   Lock, 
   Unlock, 
@@ -119,6 +120,16 @@ export default function FounderPanel() {
     { id: 'Order Management', label: 'Order Management', icon: Printer },
     { id: 'Machine Management', label: 'Machine Management', icon: Cpu },
     { id: 'Settings', label: 'Settings', icon: Settings }
+  ];
+
+  const AVAILABLE_FEATURES = [
+    { id: 'inv', label: 'Inventory Management', icon: Package },
+    { id: 'payroll', label: 'Payroll & Employees', icon: Users },
+    { id: 'production', label: 'Production & Orders', icon: Printer },
+    { id: 'insights', label: 'Financial Insights', icon: BarChart3 },
+    { id: 'notifications', label: 'System Notifications', icon: Bell },
+    { id: 'notes', label: 'Sticky Notes', icon: StickyNote },
+    { id: 'search', label: 'Global Search', icon: Search }
   ];
 
   const { showGoToShortcut, appVersion, updateSettings, updateSystemSettings, uiStyle, glassBackground, statusOnlineText, statusOfflineText, statusErrorText, systemLogo, notificationDuration, notificationAnimationStyle } = useSettings();
