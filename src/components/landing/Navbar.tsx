@@ -22,6 +22,7 @@ export const Navbar = () => {
   const navLinks = [
     { name: t('nav.home'), href: '/' },
     { name: t('nav.features'), href: '/features' },
+    { name: t('nav.pricing'), href: '/pricing' },
     { name: t('nav.about'), href: '/about' },
     { name: t('nav.contact'), href: '/contact' },
   ];

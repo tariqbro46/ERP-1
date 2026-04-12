@@ -15,6 +15,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Navbar
     'nav.home': 'Home',
     'nav.features': 'Features',
+    'nav.pricing': 'Pricing',
     'nav.about': 'About',
     'nav.contact': 'Contact',
     'nav.signIn': 'Sign In',
@@ -654,6 +655,7 @@ export const translations: Record<Language, Record<string, string>> = {
     // Navbar
     'nav.home': 'হোম',
     'nav.features': 'বৈশিষ্ট্য',
+    'nav.pricing': 'প্রাইসিং',
     'nav.about': 'আমাদের সম্পর্কে',
     'nav.contact': 'যোগাযোগ',
     'nav.signIn': 'লগইন',

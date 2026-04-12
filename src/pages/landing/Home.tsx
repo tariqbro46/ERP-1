@@ -98,11 +98,11 @@ export const Home = () => {
                       <ArrowRight className="w-5 h-5" />
                     </Link>
                     <Link
-                      to="/features"
+                      to="/pricing"
                       className="px-8 py-4 border border-border rounded-full text-lg font-bold hover:bg-foreground/5 transition-colors"
                       style={{ backgroundColor: content.heroCtaSecondaryBg, color: content.heroCtaSecondaryText }}
                     >
-                      {content.heroCtaSecondary}
+                      View Pricing
                     </Link>
                   </div>
                 </motion.div>

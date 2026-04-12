@@ -76,6 +76,7 @@ import { Home } from './pages/landing/Home';
 import { Features } from './pages/landing/Features';
 import { About } from './pages/landing/About';
 import { Contact } from './pages/landing/Contact';
+import { Pricing } from './pages/landing/Pricing';
 
 const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => (
   <Link
@@ -1187,6 +1188,7 @@ function AppContent() {
         <Route path="/features" element={<Features />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/pricing" element={<Pricing />} />
         
         {/* Auth Pages */}
         <Route path="/login" element={
