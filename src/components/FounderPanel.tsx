@@ -52,7 +52,9 @@ import {
   PieChart,
   StickyNote,
   CreditCard,
-  Check
+  Check,
+  MessageSquare,
+  Zap
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { erpService } from '../services/erpService';
@@ -138,7 +140,27 @@ export default function FounderPanel() {
     { id: 'insights', label: 'Financial Insights', icon: BarChart3 },
     { id: 'notifications', label: 'System Notifications', icon: Bell },
     { id: 'notes', label: 'Sticky Notes', icon: StickyNote },
-    { id: 'search', label: 'Global Search', icon: Search }
+    { id: 'search', label: 'Global Search', icon: Search },
+    { id: 'ui_custom', label: 'UI Customization', icon: Settings },
+    { id: 'report_layout', label: 'Report Layout Style', icon: FileText },
+    { id: 'popup_notif', label: 'Popup Notifications', icon: Bell },
+    { id: 'whatsapp_temp', label: 'WhatsApp Templates', icon: MessageSquare },
+    { id: 'voucher_entry', label: 'Voucher Entry', icon: ClipboardList },
+    { id: 'godowns', label: 'Godown Management', icon: Database },
+    { id: 'employee_master', label: 'Employee Master', icon: Users },
+    { id: 'chart_accounts', label: 'Chart of Accounts', icon: ListTree },
+    { id: 'item_master', label: 'Item Master', icon: Package },
+    { id: 'daybook', label: 'Daybook Reports', icon: BookOpen },
+    { id: 'financial_reports', label: 'Financial Reports (BS/PL/TB)', icon: BarChart3 },
+    { id: 'ratio_analysis', label: 'Ratio Analysis', icon: PieChart },
+    { id: 'sales_perf', label: 'Sales Performance', icon: Activity },
+    { id: 'voucher_settings', label: 'Voucher Settings', icon: Settings },
+    { id: 'print_settings', label: 'Print Settings', icon: Printer },
+    { id: 'f11_features', label: 'F11 Features', icon: Cpu },
+    { id: 'security', label: 'Security Settings', icon: Shield },
+    { id: 'utilities', label: 'System Utilities', icon: Settings },
+    { id: 'company_mgmt', label: 'Company Management', icon: Building2 },
+    { id: 'user_mgmt', label: 'User Management', icon: Users }
   ];
 
   const { showGoToShortcut, appVersion, updateSettings, updateSystemSettings, uiStyle, glassBackground, statusOnlineText, statusOfflineText, statusErrorText, systemLogo, notificationDuration, notificationAnimationStyle } = useSettings();
@@ -303,27 +325,52 @@ export default function FounderPanel() {
       return;
     }
 
+    const planData = {
+      ...currentPlan,
+      tier: currentPlan.tier || 1,
+      discount: currentPlan.discount || { type: 'percentage', value: 0 }
+    } as Omit<SubscriptionPlan, 'id'>;
+
     try {
       if (currentPlan.id) {
-        await erpService.updateSubscriptionPlan(currentPlan.id, currentPlan);
+        await erpService.updateSubscriptionPlan(currentPlan.id, planData);
         showNotification('Subscription plan updated successfully');
       } else {
-        await erpService.createSubscriptionPlan(currentPlan as Omit<SubscriptionPlan, 'id'>);
+        await erpService.createSubscriptionPlan(planData);
         showNotification('Subscription plan created successfully');
       }
       setIsEditingPlan(false);
-      setCurrentPlan({ name: '', description: '', priceMonthly: 0, priceYearly: 0, features: [] });
+      setCurrentPlan({ 
+        name: '', 
+        description: '', 
+        priceMonthly: 0, 
+        priceYearly: 0, 
+        features: [], 
+        tier: 1, 
+        discount: { type: 'percentage', value: 0 },
+        supportType: 'Email',
+        trainingIncluded: false,
+        customReports: false,
+        apiAccess: false
+      });
       fetchData();
     } catch (err) {
       showNotification('Failed to save subscription plan', 'error');
     }
   };
 
+  const [planToDelete, setPlanToDelete] = useState<string | null>(null);
+
   const handleDeletePlan = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this plan?')) return;
+    setPlanToDelete(id);
+  };
+
+  const confirmDeletePlan = async () => {
+    if (!planToDelete) return;
     try {
-      await erpService.deleteSubscriptionPlan(id);
+      await erpService.deleteSubscriptionPlan(planToDelete);
       showNotification('Subscription plan deleted successfully');
+      setPlanToDelete(null);
       fetchData();
     } catch (err) {
       showNotification('Failed to delete subscription plan', 'error');
@@ -1104,14 +1151,21 @@ export default function FounderPanel() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {subscriptionPlans.map((plan) => (
+            {subscriptionPlans.sort((a, b) => (a.tier || 0) - (b.tier || 0)).map((plan) => (
               <div key={plan.id} className={cn(
                 "bg-card border border-border rounded-2xl p-6 space-y-4 transition-all hover:shadow-xl",
-                uiStyle === 'UI/UX 2' && "border-blue-100"
+                uiStyle === 'UI/UX 2' && "border-blue-100",
+                plan.tier === 1 && "border-slate-200 bg-white",
+                plan.tier === 2 && "border-slate-300 bg-slate-50",
+                plan.tier === 3 && "border-amber-200 bg-amber-50/30",
+                plan.tier === 4 && "border-blue-200 bg-blue-50/30"
               )}>
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
-                    <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
+                      <span className="text-[8px] px-1.5 py-0.5 bg-primary/10 text-primary rounded-full font-bold uppercase">Tier {plan.tier}</span>
+                    </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">{plan.description}</p>
                   </div>
                   <div className="flex gap-2">
@@ -1195,6 +1249,19 @@ export default function FounderPanel() {
                         />
                       </div>
                       <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Plan Tier (1-4)</label>
+                        <select
+                          value={currentPlan.tier || 1}
+                          onChange={(e) => setCurrentPlan({ ...currentPlan, tier: Number(e.target.value) })}
+                          className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                        >
+                          <option value={1}>Tier 1: Bronze (Free)</option>
+                          <option value={2}>Tier 2: Silver</option>
+                          <option value={3}>Tier 3: Gold</option>
+                          <option value={4}>Tier 4: Platinum</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
                         <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Description</label>
                         <input
                           type="text"
@@ -1221,6 +1288,84 @@ export default function FounderPanel() {
                           onChange={(e) => setCurrentPlan({ ...currentPlan, priceYearly: Number(e.target.value) })}
                           className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
                         />
+                      </div>
+                      
+                      {/* Discount Fields */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Discount Type</label>
+                        <select
+                          value={currentPlan.discount?.type || 'percentage'}
+                          onChange={(e) => setCurrentPlan({ 
+                            ...currentPlan, 
+                            discount: { 
+                              type: e.target.value as 'percentage' | 'fixed', 
+                              value: currentPlan.discount?.value || 0 
+                            } 
+                          })}
+                          className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                        >
+                          <option value="percentage">Percentage (%)</option>
+                          <option value="fixed">Fixed Amount (৳)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Discount Value</label>
+                        <input
+                          type="number"
+                          value={currentPlan.discount?.value || 0}
+                          onChange={(e) => setCurrentPlan({ 
+                            ...currentPlan, 
+                            discount: { 
+                              type: currentPlan.discount?.type || 'percentage', 
+                              value: Number(e.target.value) 
+                            } 
+                          })}
+                          className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                        />
+                      </div>
+
+                      {/* Additional Details */}
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Support Type</label>
+                        <select
+                          value={currentPlan.supportType || 'Email'}
+                          onChange={(e) => setCurrentPlan({ ...currentPlan, supportType: e.target.value as any })}
+                          className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                        >
+                          <option value="Email">Email</option>
+                          <option value="Chat">Chat</option>
+                          <option value="Phone">Phone</option>
+                          <option value="Dedicated Manager">Dedicated Manager</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-wrap gap-4 pt-2 md:col-span-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={currentPlan.trainingIncluded}
+                            onChange={(e) => setCurrentPlan({ ...currentPlan, trainingIncluded: e.target.checked })}
+                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground">Training Included</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={currentPlan.customReports}
+                            onChange={(e) => setCurrentPlan({ ...currentPlan, customReports: e.target.checked })}
+                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground">Custom Reports</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={currentPlan.apiAccess}
+                            onChange={(e) => setCurrentPlan({ ...currentPlan, apiAccess: e.target.checked })}
+                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground">API Access</span>
+                        </label>
                       </div>
                     </div>
 
@@ -1361,6 +1506,42 @@ export default function FounderPanel() {
                       className="flex-1 py-3 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20"
                     >
                       Save Plan
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Delete Plan Confirmation Modal */}
+          <AnimatePresence>
+            {planToDelete && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+                >
+                  <div className="p-6 text-center space-y-4">
+                    <div className="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mx-auto">
+                      <Trash2 className="w-8 h-8" />
+                    </div>
+                    <h2 className="text-xl font-bold text-foreground">Delete Plan?</h2>
+                    <p className="text-sm text-muted-foreground">Are you sure you want to delete this subscription plan? This action cannot be undone.</p>
+                  </div>
+                  <div className="p-6 border-t border-border flex gap-4">
+                    <button
+                      onClick={() => setPlanToDelete(null)}
+                      className="flex-1 py-3 border border-border text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-muted transition-all text-foreground"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmDeletePlan}
+                      className="flex-1 py-3 bg-rose-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20"
+                    >
+                      Delete
                     </button>
                   </div>
                 </motion.div>

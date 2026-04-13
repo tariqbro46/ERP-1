@@ -89,6 +89,7 @@ interface SettingsContextType {
   notifications: NotificationSettings;
   features: FeatureSettings[];
   subscriptionPlans: SubscriptionPlan[];
+  activePlan?: SubscriptionPlan;
   updateSettings: (newSettings: Partial<SettingsContextType>) => void;
   updateSystemSettings: (newSettings: any) => Promise<void>;
 }

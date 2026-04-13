@@ -304,9 +304,14 @@ export interface PrintingMachine {
 export interface SubscriptionPlan {
   id: string;
   name: string;
+  tier: number; // 1: Bronze, 2: Silver, 3: Gold, 4: Platinum
   description: string;
   priceMonthly: number;
   priceYearly: number;
+  discount?: {
+    type: 'percentage' | 'fixed';
+    value: number;
+  };
   features: string[]; // List of feature IDs
   limits: {
     vouchers: number; // -1 for unlimited
@@ -317,6 +322,10 @@ export interface SubscriptionPlan {
     multiCurrency: boolean;
     rolePermissions: boolean;
   };
+  supportType?: 'Email' | 'Chat' | 'Phone' | 'Dedicated Manager';
+  trainingIncluded?: boolean;
+  customReports?: boolean;
+  apiAccess?: boolean;
   createdAt: any;
   updatedAt?: any;
 }

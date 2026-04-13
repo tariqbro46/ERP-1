@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette } from 'lucide-react';
+import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2 } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { erpService } from '../services/erpService';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { NAV_ITEMS } from '../constants/navigation';
 import { useTheme, Theme } from '../contexts/ThemeContext';
@@ -62,6 +62,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     notifications, 
     whatsappTemplates,
     features = [], 
+    activePlan,
     updateSettings 
   } = useSettings();
   const { showNotification } = useNotification();
@@ -312,6 +313,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     { id: 'security', label: t('settings.security'), icon: Shield },
     { id: 'notifications', label: t('settings.notifications'), icon: Bell },
     { id: 'whatsapp', label: t('settings.whatsappTemplates'), icon: MessageSquare },
+    { id: 'subscription', label: 'Subscription', icon: CreditCard },
     { id: 'shortcuts', label: t('settings.shortcuts'), icon: Keyboard },
     { id: 'backup', label: t('settings.backupExport'), icon: Download },
     { id: 'integrations', label: t('settings.integrations'), icon: Globe },
@@ -1463,7 +1465,151 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
               </div>
             )}
 
-            {activeTab === 'security' && (
+            {activeTab === 'subscription' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">Subscription Plan</h2>
+                  <p className="text-xs text-muted-foreground">Manage your company subscription and limits.</p>
+                </div>
+                <Link 
+                  to="/pricing" 
+                  className="px-4 py-2 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition-all"
+                >
+                  Upgrade Plan
+                </Link>
+              </div>
+
+              {activePlan ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-2 space-y-6">
+                    <div className="bg-card border border-border rounded-2xl p-6 space-y-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={cn(
+                            "w-12 h-12 rounded-2xl flex items-center justify-center",
+                            activePlan.tier === 1 ? "bg-slate-100 text-slate-600" :
+                            activePlan.tier === 2 ? "bg-slate-200 text-slate-700" :
+                            activePlan.tier === 3 ? "bg-amber-100 text-amber-600" :
+                            "bg-blue-100 text-blue-600"
+                          )}>
+                            <Zap className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-bold text-foreground">{activePlan.name}</h3>
+                            <p className="text-xs text-muted-foreground">{activePlan.description}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-3 py-1 rounded-full uppercase tracking-widest">Active</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-border">
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Vouchers</p>
+                          <p className="text-lg font-bold text-foreground">{activePlan.limits.vouchers === -1 ? 'Unlimited' : activePlan.limits.vouchers}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Users</p>
+                          <p className="text-lg font-bold text-foreground">{activePlan.limits.users === -1 ? 'Unlimited' : activePlan.limits.users}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Items</p>
+                          <p className="text-lg font-bold text-foreground">{activePlan.limits.items === -1 ? 'Unlimited' : activePlan.limits.items}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Godowns</p>
+                          <p className="text-lg font-bold text-foreground">{activePlan.limits.godowns === -1 ? 'Unlimited' : activePlan.limits.godowns}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-foreground">Features & Access</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {activePlan.features.map(fId => (
+                          <div key={fId} className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <span className="capitalize">{fId.replace('_', ' ')}</span>
+                          </div>
+                        ))}
+                        {activePlan.limits.multiCurrency && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <span>Multi-Currency Support</span>
+                          </div>
+                        )}
+                        {activePlan.limits.rolePermissions && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <span>Advanced Role Permissions</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-foreground">Support & Services</h4>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Support Type</span>
+                          <span className="font-bold text-foreground">{activePlan.supportType || 'Email'}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Training</span>
+                          <span className={cn("font-bold", activePlan.trainingIncluded ? "text-emerald-500" : "text-muted-foreground")}>
+                            {activePlan.trainingIncluded ? 'Included' : 'Not Included'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Custom Reports</span>
+                          <span className={cn("font-bold", activePlan.customReports ? "text-emerald-500" : "text-muted-foreground")}>
+                            {activePlan.customReports ? 'Available' : 'Not Available'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">API Access</span>
+                          <span className={cn("font-bold", activePlan.apiAccess ? "text-emerald-500" : "text-muted-foreground")}>
+                            {activePlan.apiAccess ? 'Enabled' : 'Disabled'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-600 rounded-2xl p-6 text-white space-y-4 shadow-lg shadow-blue-600/20">
+                      <h4 className="text-xs font-bold uppercase tracking-widest opacity-80">Need more?</h4>
+                      <p className="text-sm leading-relaxed">Upgrade to a higher tier to unlock more vouchers, users, and advanced features.</p>
+                      <Link 
+                        to="/pricing" 
+                        className="block w-full py-3 bg-white text-blue-600 text-center rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-blue-50 transition-colors"
+                      >
+                        View All Plans
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-card border border-border rounded-2xl p-12 text-center space-y-4">
+                  <CreditCard className="w-12 h-12 text-muted-foreground mx-auto opacity-20" />
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-bold text-foreground">No Active Subscription</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mx-auto">It seems you don't have an active subscription plan assigned. Please contact support or choose a plan to get started.</p>
+                  </div>
+                  <Link 
+                    to="/pricing" 
+                    className="inline-block px-8 py-3 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:opacity-90 transition-all"
+                  >
+                    Choose a Plan
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'security' && (
               <div className="space-y-6">
                 <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Security Settings</h3>
                 <div className="space-y-6">

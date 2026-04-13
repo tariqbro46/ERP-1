@@ -12,7 +12,8 @@ import {
   Database,
   FileText,
   Printer,
-  Globe
+  Globe,
+  Settings
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -31,18 +32,17 @@ export const Pricing = () => {
       try {
         const data = await erpService.getSubscriptionPlans();
         
-        // Check if Platinum plan exists, if not, we'll handle it in the UI or seed it
-        const hasPlatinum = data.some(p => p.name.toLowerCase() === 'platinum');
+        // Check if Platinum plan exists by tier
+        const hasPlatinum = data.some(p => p.tier === 4);
         
-        if (!hasPlatinum) {
-          // We could seed it here, but for now let's just ensure it's in the list for display
-          // The user asked to add it to the app, so seeding is appropriate
+        if (!hasPlatinum && data.length > 0) {
           const platinumPlan: Omit<SubscriptionPlan, 'id'> = {
             name: 'Platinum',
+            tier: 4,
             description: 'Customized limits and features tailored to your business needs.',
             priceMonthly: 0,
             priceYearly: 0,
-            features: ['inv', 'payroll', 'production', 'insights', 'notifications', 'notes', 'search'],
+            features: ['inv', 'payroll', 'production', 'insights', 'notifications', 'notes', 'search', 'ui_custom', 'report_layout', 'whatsapp_temp'],
             limits: {
               vouchers: -1,
               items: -1,
@@ -79,6 +79,9 @@ export const Pricing = () => {
       case 'notifications': return Shield;
       case 'notes': return FileText;
       case 'search': return Globe;
+      case 'ui_custom': return Settings;
+      case 'report_layout': return FileText;
+      case 'whatsapp_temp': return MessageSquare;
       default: return Check;
     }
   };
@@ -127,9 +130,14 @@ export const Pricing = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {plans.sort((a, b) => (a.priceMonthly || 0) - (b.priceMonthly || 0)).map((plan, i) => {
-                const isPlatinum = plan.name.toLowerCase() === 'platinum';
+              {plans.sort((a, b) => (a.tier || 0) - (b.tier || 0)).map((plan, i) => {
+                const isPlatinum = plan.tier === 4;
+                const isGold = plan.tier === 3;
+                const isSilver = plan.tier === 2;
+                const isBronze = plan.tier === 1;
+
                 const price = billingCycle === 'monthly' ? plan.priceMonthly : plan.priceYearly;
+                const discount = plan.discount;
                 
                 return (
                   <motion.div
@@ -139,20 +147,31 @@ export const Pricing = () => {
                     transition={{ duration: 0.5, delay: i * 0.1 }}
                     className={cn(
                       "relative p-8 rounded-3xl border flex flex-col transition-all hover:shadow-2xl",
-                      isPlatinum 
-                        ? "bg-foreground text-background border-foreground shadow-xl scale-105 z-10" 
-                        : "bg-card border-border text-foreground"
+                      isBronze && "bg-white border-slate-200 text-slate-900",
+                      isSilver && "bg-slate-50 border-slate-300 text-slate-900 shadow-sm",
+                      isGold && "bg-amber-50 border-amber-200 text-amber-900 shadow-md",
+                      isPlatinum && "bg-blue-600 border-blue-500 text-white shadow-xl scale-105 z-10"
                     )}
                   >
                     {isPlatinum && (
-                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest px-4 py-1 rounded-full">
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white text-blue-600 text-[10px] font-bold uppercase tracking-widest px-4 py-1 rounded-full shadow-lg">
                         Most Flexible
                       </div>
                     )}
 
                     <div className="mb-8">
-                      <h3 className="text-2xl font-bold mb-2 uppercase tracking-tight">{plan.name}</h3>
-                      <p className={cn("text-sm leading-relaxed", isPlatinum ? "text-background/70" : "text-muted-foreground")}>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-2xl font-bold uppercase tracking-tight">{plan.name}</h3>
+                        {discount && discount.value > 0 && (
+                          <span className={cn(
+                            "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest",
+                            isPlatinum ? "bg-white/20 text-white" : "bg-emerald-500/10 text-emerald-600"
+                          )}>
+                            {discount.type === 'percentage' ? `${discount.value}% OFF` : `৳${discount.value} OFF`}
+                          </span>
+                        )}
+                      </div>
+                      <p className={cn("text-sm leading-relaxed opacity-70")}>
                         {plan.description}
                       </p>
                     </div>
@@ -161,46 +180,62 @@ export const Pricing = () => {
                       {isPlatinum ? (
                         <div className="text-3xl font-bold tracking-tighter">Custom Pricing</div>
                       ) : (
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-4xl font-bold tracking-tighter">৳{price}</span>
-                          <span className={cn("text-sm font-medium", isPlatinum ? "text-background/60" : "text-muted-foreground")}>
-                            /{billingCycle === 'monthly' ? 'mo' : 'yr'}
-                          </span>
+                        <div className="flex flex-col">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-4xl font-bold tracking-tighter">৳{price}</span>
+                            <span className="text-sm font-medium opacity-60">
+                              /{billingCycle === 'monthly' ? 'mo' : 'yr'}
+                            </span>
+                          </div>
+                          {discount && discount.value > 0 && (
+                            <p className="text-xs line-through opacity-40 mt-1">
+                              ৳{billingCycle === 'monthly' ? plan.priceMonthly + (discount.type === 'percentage' ? (plan.priceMonthly * discount.value / 100) : discount.value) : plan.priceYearly + (discount.type === 'percentage' ? (plan.priceYearly * discount.value / 100) : discount.value)}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
 
                     <div className="flex-1 space-y-4 mb-8">
-                      <p className={cn("text-[10px] font-bold uppercase tracking-widest", isPlatinum ? "text-background/50" : "text-muted-foreground")}>
+                      <p className="text-[10px] font-bold uppercase tracking-widest opacity-50">
                         What's included:
                       </p>
                       <ul className="space-y-3">
-                        {plan.features.map((fId) => {
+                        <li className="flex items-center gap-3 text-sm">
+                          <Check className={cn("w-4 h-4", isPlatinum ? "text-white" : "text-emerald-500")} />
+                          <span>{plan.limits.vouchers === -1 ? 'Unlimited' : plan.limits.vouchers} Vouchers</span>
+                        </li>
+                        <li className="flex items-center gap-3 text-sm">
+                          <Check className={cn("w-4 h-4", isPlatinum ? "text-white" : "text-emerald-500")} />
+                          <span>{plan.limits.users === -1 ? 'Unlimited' : plan.limits.users} Users</span>
+                        </li>
+                        <li className="flex items-center gap-3 text-sm">
+                          <Check className={cn("w-4 h-4", isPlatinum ? "text-white" : "text-emerald-500")} />
+                          <span>{plan.supportType || 'Email'} Support</span>
+                        </li>
+                        {plan.features.slice(0, 6).map((fId) => {
                           const Icon = getFeatureIcon(fId);
                           return (
                             <li key={fId} className="flex items-center gap-3 text-sm">
-                              <div className={cn("w-5 h-5 rounded-full flex items-center justify-center", isPlatinum ? "bg-background/10" : "bg-foreground/5")}>
+                              <div className={cn("w-5 h-5 rounded-full flex items-center justify-center", isPlatinum ? "bg-white/10" : "bg-black/5")}>
                                 <Icon className="w-3 h-3" />
                               </div>
                               <span className="capitalize">{fId.replace('_', ' ')}</span>
                             </li>
                           );
                         })}
-                        <li className="flex items-center gap-3 text-sm">
-                          <Check className={cn("w-4 h-4", isPlatinum ? "text-emerald-400" : "text-emerald-500")} />
-                          <span>{plan.limits.vouchers === -1 ? 'Unlimited' : plan.limits.vouchers} Vouchers</span>
-                        </li>
-                        <li className="flex items-center gap-3 text-sm">
-                          <Check className={cn("w-4 h-4", isPlatinum ? "text-emerald-400" : "text-emerald-500")} />
-                          <span>{plan.limits.users === -1 ? 'Unlimited' : plan.limits.users} Users</span>
-                        </li>
+                        {plan.features.length > 6 && (
+                          <li className="text-[10px] font-bold uppercase tracking-widest opacity-40 pl-8">
+                            + {plan.features.length - 6} more features
+                          </li>
+                        )}
                       </ul>
                     </div>
 
                     {isPlatinum ? (
                       <Link
                         to="/contact"
-                        className="w-full py-4 bg-background text-foreground rounded-2xl font-bold text-center hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                        className="w-full py-4 bg-white text-blue-600 rounded-2xl font-bold text-center hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-lg"
                       >
                         <MessageSquare className="w-4 h-4" />
                         Contact Sales
@@ -208,7 +243,12 @@ export const Pricing = () => {
                     ) : (
                       <Link
                         to="/register"
-                        className="w-full py-4 bg-foreground text-background rounded-2xl font-bold text-center hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                        className={cn(
+                          "w-full py-4 rounded-2xl font-bold text-center hover:opacity-90 transition-opacity flex items-center justify-center gap-2",
+                          isBronze ? "bg-slate-900 text-white" : 
+                          isSilver ? "bg-slate-800 text-white" :
+                          "bg-amber-600 text-white"
+                        )}
                       >
                         Get Started
                         <ArrowRight className="w-4 h-4" />

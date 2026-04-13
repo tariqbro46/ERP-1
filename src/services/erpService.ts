@@ -1774,6 +1774,21 @@ export const erpService = {
     }
   },
 
+  async getCompanySubscription(companyId: string): Promise<SubscriptionPlan | null> {
+    try {
+      const companyDoc = await getDoc(doc(db, 'companies', companyId));
+      if (!companyDoc.exists()) return null;
+      const planId = companyDoc.data().subscriptionPlanId;
+      if (!planId) return null;
+      const planDoc = await getDoc(doc(db, 'subscription_plans', planId));
+      if (!planDoc.exists()) return null;
+      return { id: planDoc.id, ...planDoc.data() } as SubscriptionPlan;
+    } catch (error) {
+      console.error('Error fetching company subscription:', error);
+      return null;
+    }
+  },
+
   async getCollectionCount(colName: string, companyId: string): Promise<number> {
     try {
       const q = query(collection(db, colName), where('companyId', '==', companyId));
