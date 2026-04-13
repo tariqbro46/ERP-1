@@ -323,9 +323,12 @@ export interface SubscriptionPlan {
     rolePermissions: boolean;
   };
   supportType?: 'Email' | 'Chat' | 'Phone' | 'Dedicated Manager';
+  supportHours?: string;
   trainingIncluded?: boolean;
   customReports?: boolean;
   apiAccess?: boolean;
+  setupFee?: number;
+  customDomain?: boolean;
   createdAt: any;
   updatedAt?: any;
 }

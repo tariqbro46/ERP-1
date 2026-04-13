@@ -99,6 +99,13 @@ export default function FounderPanel() {
     priceMonthly: 0,
     priceYearly: 0,
     features: [],
+    supportType: 'Email',
+    supportHours: '24/7',
+    trainingIncluded: false,
+    customReports: false,
+    apiAccess: false,
+    setupFee: 0,
+    customDomain: false,
     limits: {
       vouchers: -1,
       items: -1,
@@ -164,16 +171,16 @@ export default function FounderPanel() {
   ];
 
   const { showGoToShortcut, appVersion, updateSettings, updateSystemSettings, uiStyle, glassBackground, statusOnlineText, statusOfflineText, statusErrorText, systemLogo, notificationDuration, notificationAnimationStyle } = useSettings();
-  const [localAppVersion, setLocalAppVersion] = useState(appVersion);
-  const [localUIStyle, setLocalUIStyle] = useState(uiStyle);
-  const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground);
-  const [localStatusOnline, setLocalStatusOnline] = useState(statusOnlineText);
-  const [localStatusOffline, setLocalStatusOffline] = useState(statusOfflineText);
-  const [localStatusError, setLocalStatusError] = useState(statusErrorText);
+  const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
+  const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
+  const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground || 'default');
+  const [localStatusOnline, setLocalStatusOnline] = useState(statusOnlineText || 'Status: Online');
+  const [localStatusOffline, setLocalStatusOffline] = useState(statusOfflineText || 'Status: Offline');
+  const [localStatusError, setLocalStatusError] = useState(statusErrorText || 'Database Error');
   const [localSystemLogo, setLocalSystemLogo] = useState(systemLogo || '');
-  const [localNotificationDuration, setLocalNotificationDuration] = useState(notificationDuration);
-  const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle);
-  const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut);
+  const [localNotificationDuration, setLocalNotificationDuration] = useState(notificationDuration || 5000);
+  const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle || 'default');
+  const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut ?? true);
 
   useEffect(() => {
     fetchData();
@@ -349,9 +356,21 @@ export default function FounderPanel() {
         tier: 1, 
         discount: { type: 'percentage', value: 0 },
         supportType: 'Email',
+        supportHours: '24/7',
         trainingIncluded: false,
         customReports: false,
-        apiAccess: false
+        apiAccess: false,
+        setupFee: 0,
+        customDomain: false,
+        limits: {
+          vouchers: 100,
+          items: 50,
+          ledgers: 50,
+          users: 1,
+          godowns: 1,
+          multiCurrency: false,
+          rolePermissions: false
+        }
       });
       fetchData();
     } catch (err) {
@@ -563,7 +582,7 @@ export default function FounderPanel() {
             )}>v</span>
             <input 
               type="text" 
-              value={localAppVersion} 
+              value={localAppVersion || ''} 
               onChange={(e) => setLocalAppVersion(e.target.value)}
               className={cn(
                 "bg-transparent border-none text-[10px] font-mono focus:ring-0 w-16 p-0",
@@ -1125,13 +1144,22 @@ export default function FounderPanel() {
                   description: '', 
                   priceMonthly: 0, 
                   priceYearly: 0, 
-                  features: [],
+                  features: [], 
+                  tier: 1, 
+                  discount: { type: 'percentage', value: 0 },
+                  supportType: 'Email',
+                  supportHours: '24/7',
+                  trainingIncluded: false,
+                  customReports: false,
+                  apiAccess: false,
+                  setupFee: 0,
+                  customDomain: false,
                   limits: {
-                    vouchers: -1,
-                    items: -1,
-                    ledgers: -1,
-                    users: -1,
-                    godowns: -1,
+                    vouchers: 100,
+                    items: 50,
+                    ledgers: 50,
+                    users: 1,
+                    godowns: 1,
                     multiCurrency: false,
                     rolePermissions: false
                   }
@@ -1242,7 +1270,7 @@ export default function FounderPanel() {
                         <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Plan Name</label>
                         <input
                           type="text"
-                          value={currentPlan.name}
+                          value={currentPlan.name || ''}
                           onChange={(e) => setCurrentPlan({ ...currentPlan, name: e.target.value })}
                           className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
                           placeholder="e.g. Professional"
@@ -1265,7 +1293,7 @@ export default function FounderPanel() {
                         <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Description</label>
                         <input
                           type="text"
-                          value={currentPlan.description}
+                          value={currentPlan.description || ''}
                           onChange={(e) => setCurrentPlan({ ...currentPlan, description: e.target.value })}
                           className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
                           placeholder="Short description of the plan"
@@ -1275,7 +1303,7 @@ export default function FounderPanel() {
                         <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Monthly Price</label>
                         <input
                           type="number"
-                          value={currentPlan.priceMonthly}
+                          value={currentPlan.priceMonthly || 0}
                           onChange={(e) => setCurrentPlan({ ...currentPlan, priceMonthly: Number(e.target.value) })}
                           className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
                         />
@@ -1284,7 +1312,7 @@ export default function FounderPanel() {
                         <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Yearly Price</label>
                         <input
                           type="number"
-                          value={currentPlan.priceYearly}
+                          value={currentPlan.priceYearly || 0}
                           onChange={(e) => setCurrentPlan({ ...currentPlan, priceYearly: Number(e.target.value) })}
                           className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
                         />
@@ -1338,11 +1366,30 @@ export default function FounderPanel() {
                           <option value="Dedicated Manager">Dedicated Manager</option>
                         </select>
                       </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Support Hours</label>
+                        <input
+                          type="text"
+                          value={currentPlan.supportHours || ''}
+                          onChange={(e) => setCurrentPlan({ ...currentPlan, supportHours: e.target.value })}
+                          className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                          placeholder="e.g. 24/7 or 9am-5pm"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Setup Fee (৳)</label>
+                        <input
+                          type="number"
+                          value={currentPlan.setupFee || 0}
+                          onChange={(e) => setCurrentPlan({ ...currentPlan, setupFee: Number(e.target.value) })}
+                          className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                        />
+                      </div>
                       <div className="flex flex-wrap gap-4 pt-2 md:col-span-2">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={currentPlan.trainingIncluded}
+                            checked={currentPlan.trainingIncluded || false}
                             onChange={(e) => setCurrentPlan({ ...currentPlan, trainingIncluded: e.target.checked })}
                             className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                           />
@@ -1351,7 +1398,7 @@ export default function FounderPanel() {
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={currentPlan.customReports}
+                            checked={currentPlan.customReports || false}
                             onChange={(e) => setCurrentPlan({ ...currentPlan, customReports: e.target.checked })}
                             className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                           />
@@ -1360,11 +1407,20 @@ export default function FounderPanel() {
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={currentPlan.apiAccess}
+                            checked={currentPlan.apiAccess || false}
                             onChange={(e) => setCurrentPlan({ ...currentPlan, apiAccess: e.target.checked })}
                             className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                           />
                           <span className="text-[10px] uppercase font-bold text-muted-foreground">API Access</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={currentPlan.customDomain || false}
+                            onChange={(e) => setCurrentPlan({ ...currentPlan, customDomain: e.target.checked })}
+                            className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground">Custom Domain</span>
                         </label>
                       </div>
                     </div>
@@ -1376,7 +1432,7 @@ export default function FounderPanel() {
                           <label className="text-[9px] uppercase font-bold text-muted-foreground">Vouchers</label>
                           <input
                             type="number"
-                            value={currentPlan.limits?.vouchers}
+                            value={currentPlan.limits?.vouchers || 0}
                             onChange={(e) => setCurrentPlan({ 
                               ...currentPlan, 
                               limits: { ...currentPlan.limits!, vouchers: Number(e.target.value) } 
@@ -1388,7 +1444,7 @@ export default function FounderPanel() {
                           <label className="text-[9px] uppercase font-bold text-muted-foreground">Items/Products</label>
                           <input
                             type="number"
-                            value={currentPlan.limits?.items}
+                            value={currentPlan.limits?.items || 0}
                             onChange={(e) => setCurrentPlan({ 
                               ...currentPlan, 
                               limits: { ...currentPlan.limits!, items: Number(e.target.value) } 
@@ -1400,7 +1456,7 @@ export default function FounderPanel() {
                           <label className="text-[9px] uppercase font-bold text-muted-foreground">Ledgers</label>
                           <input
                             type="number"
-                            value={currentPlan.limits?.ledgers}
+                            value={currentPlan.limits?.ledgers || 0}
                             onChange={(e) => setCurrentPlan({ 
                               ...currentPlan, 
                               limits: { ...currentPlan.limits!, ledgers: Number(e.target.value) } 
@@ -1412,7 +1468,7 @@ export default function FounderPanel() {
                           <label className="text-[9px] uppercase font-bold text-muted-foreground">Users</label>
                           <input
                             type="number"
-                            value={currentPlan.limits?.users}
+                            value={currentPlan.limits?.users || 0}
                             onChange={(e) => setCurrentPlan({ 
                               ...currentPlan, 
                               limits: { ...currentPlan.limits!, users: Number(e.target.value) } 
@@ -1424,7 +1480,7 @@ export default function FounderPanel() {
                           <label className="text-[9px] uppercase font-bold text-muted-foreground">Godowns</label>
                           <input
                             type="number"
-                            value={currentPlan.limits?.godowns}
+                            value={currentPlan.limits?.godowns || 0}
                             onChange={(e) => setCurrentPlan({ 
                               ...currentPlan, 
                               limits: { ...currentPlan.limits!, godowns: Number(e.target.value) } 
@@ -1438,7 +1494,7 @@ export default function FounderPanel() {
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={currentPlan.limits?.multiCurrency}
+                            checked={currentPlan.limits?.multiCurrency || false}
                             onChange={(e) => setCurrentPlan({ 
                               ...currentPlan, 
                               limits: { ...currentPlan.limits!, multiCurrency: e.target.checked } 
@@ -1450,7 +1506,7 @@ export default function FounderPanel() {
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
-                            checked={currentPlan.limits?.rolePermissions}
+                            checked={currentPlan.limits?.rolePermissions || false}
                             onChange={(e) => setCurrentPlan({ 
                               ...currentPlan, 
                               limits: { ...currentPlan.limits!, rolePermissions: e.target.checked } 
@@ -1650,7 +1706,7 @@ export default function FounderPanel() {
                   <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Online Status Text</label>
                   <input
                     type="text"
-                    value={localStatusOnline}
+                    value={localStatusOnline || ''}
                     onChange={(e) => setLocalStatusOnline(e.target.value)}
                     className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
@@ -1659,7 +1715,7 @@ export default function FounderPanel() {
                   <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Offline Status Text</label>
                   <input
                     type="text"
-                    value={localStatusOffline}
+                    value={localStatusOffline || ''}
                     onChange={(e) => setLocalStatusOffline(e.target.value)}
                     className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
@@ -1668,7 +1724,7 @@ export default function FounderPanel() {
                   <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Error Status Text</label>
                   <input
                     type="text"
-                    value={localStatusError}
+                    value={localStatusError || ''}
                     onChange={(e) => setLocalStatusError(e.target.value)}
                     className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
@@ -1677,7 +1733,7 @@ export default function FounderPanel() {
                   <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">App Version</label>
                   <input
                     type="text"
-                    value={localAppVersion}
+                    value={localAppVersion || ''}
                     onChange={(e) => setLocalAppVersion(e.target.value)}
                     className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
@@ -1686,7 +1742,7 @@ export default function FounderPanel() {
                   <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Notification Duration (ms)</label>
                   <input
                     type="number"
-                    value={localNotificationDuration}
+                    value={localNotificationDuration || 3000}
                     onChange={(e) => setLocalNotificationDuration(Number(e.target.value))}
                     className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                     step="500"
@@ -1880,7 +1936,7 @@ export default function FounderPanel() {
                   <label className="text-[10px] uppercase font-bold text-muted-foreground">Title</label>
                   <input
                     type="text"
-                    value={newNotification.title}
+                    value={newNotification.title || ''}
                     onChange={(e) => setNewNotification({ ...newNotification, title: e.target.value })}
                     placeholder="Notification Title"
                     className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none"
@@ -1890,7 +1946,7 @@ export default function FounderPanel() {
                 <div className="space-y-1">
                   <label className="text-[10px] uppercase font-bold text-muted-foreground">Message</label>
                   <textarea
-                    value={newNotification.message}
+                    value={newNotification.message || ''}
                     onChange={(e) => setNewNotification({ ...newNotification, message: e.target.value })}
                     placeholder="Enter your message here..."
                     rows={4}

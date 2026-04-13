@@ -1556,12 +1556,22 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Support Type</span>
-                          <span className="font-bold text-foreground">{activePlan.supportType || 'Email'}</span>
+                          <span className="font-bold text-foreground">{activePlan.supportType || 'Email'} ({activePlan.supportHours || '24/7'})</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Setup Fee</span>
+                          <span className="font-bold text-foreground">{activePlan.setupFee && activePlan.setupFee > 0 ? `৳${activePlan.setupFee}` : 'Free'}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Training</span>
                           <span className={cn("font-bold", activePlan.trainingIncluded ? "text-emerald-500" : "text-muted-foreground")}>
                             {activePlan.trainingIncluded ? 'Included' : 'Not Included'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Custom Domain</span>
+                          <span className={cn("font-bold", activePlan.customDomain ? "text-emerald-500" : "text-muted-foreground")}>
+                            {activePlan.customDomain ? 'Supported' : 'Not Supported'}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-sm">

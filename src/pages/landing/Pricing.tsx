@@ -32,8 +32,8 @@ export const Pricing = () => {
       try {
         const data = await erpService.getSubscriptionPlans();
         
-        // Check if Platinum plan exists by tier
-        const hasPlatinum = data.some(p => p.tier === 4);
+        // Check if Platinum plan exists by tier or name
+        const hasPlatinum = data.some(p => p.tier === 4 || p.name.toLowerCase() === 'platinum');
         
         if (!hasPlatinum && data.length > 0) {
           const platinumPlan: Omit<SubscriptionPlan, 'id'> = {
@@ -43,6 +43,13 @@ export const Pricing = () => {
             priceMonthly: 0,
             priceYearly: 0,
             features: ['inv', 'payroll', 'production', 'insights', 'notifications', 'notes', 'search', 'ui_custom', 'report_layout', 'whatsapp_temp'],
+            supportType: 'Dedicated Manager',
+            supportHours: '24/7',
+            trainingIncluded: true,
+            customReports: true,
+            apiAccess: true,
+            setupFee: 0,
+            customDomain: true,
             limits: {
               vouchers: -1,
               items: -1,
@@ -211,8 +218,18 @@ export const Pricing = () => {
                         </li>
                         <li className="flex items-center gap-3 text-sm">
                           <Check className={cn("w-4 h-4", isPlatinum ? "text-white" : "text-emerald-500")} />
-                          <span>{plan.supportType || 'Email'} Support</span>
+                          <span>{plan.supportType || 'Email'} Support ({plan.supportHours || '24/7'})</span>
                         </li>
+                        <li className="flex items-center gap-3 text-sm">
+                          <Check className={cn("w-4 h-4", isPlatinum ? "text-white" : "text-emerald-500")} />
+                          <span>{plan.setupFee && plan.setupFee > 0 ? `Setup Fee: ৳${plan.setupFee}` : 'Free Setup'}</span>
+                        </li>
+                        {plan.customDomain && (
+                          <li className="flex items-center gap-3 text-sm">
+                            <Check className={cn("w-4 h-4", isPlatinum ? "text-white" : "text-emerald-500")} />
+                            <span>Custom Domain Supported</span>
+                          </li>
+                        )}
                         {plan.features.slice(0, 6).map((fId) => {
                           const Icon = getFeatureIcon(fId);
                           return (
