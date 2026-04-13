@@ -54,7 +54,8 @@ import {
   CreditCard,
   Check,
   MessageSquare,
-  Zap
+  Zap,
+  MapPin
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { erpService } from '../services/erpService';
@@ -64,6 +65,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { SiteContentEditor } from './SiteContentEditor';
+import { AVAILABLE_FEATURES } from '../constants/features';
 
 interface CompanyStats extends Company {
   userCount: number;
@@ -85,13 +87,14 @@ export default function FounderPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<CompanyStats | null>(null);
   const [isEditingSubscription, setIsEditingSubscription] = useState(false);
-  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent' | 'plans'>('companies');
+  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent' | 'plans' | 'orders'>('companies');
   const [globalActivity, setGlobalActivity] = useState<any[]>([]);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isCreatingNotification, setIsCreatingNotification] = useState(false);
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
+  const [subscriptionOrders, setSubscriptionOrders] = useState<any[]>([]);
   const [isEditingPlan, setIsEditingPlan] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<Partial<SubscriptionPlan>>({
     name: '',
@@ -138,36 +141,6 @@ export default function FounderPanel() {
     { id: 'Order Management', label: 'Order Management', icon: Printer },
     { id: 'Machine Management', label: 'Machine Management', icon: Cpu },
     { id: 'Settings', label: 'Settings', icon: Settings }
-  ];
-
-  const AVAILABLE_FEATURES = [
-    { id: 'inv', label: 'Inventory Management', icon: Package },
-    { id: 'payroll', label: 'Payroll & Employees', icon: Users },
-    { id: 'production', label: 'Production & Orders', icon: Printer },
-    { id: 'insights', label: 'Financial Insights', icon: BarChart3 },
-    { id: 'notifications', label: 'System Notifications', icon: Bell },
-    { id: 'notes', label: 'Sticky Notes', icon: StickyNote },
-    { id: 'search', label: 'Global Search', icon: Search },
-    { id: 'ui_custom', label: 'UI Customization', icon: Settings },
-    { id: 'report_layout', label: 'Report Layout Style', icon: FileText },
-    { id: 'popup_notif', label: 'Popup Notifications', icon: Bell },
-    { id: 'whatsapp_temp', label: 'WhatsApp Templates', icon: MessageSquare },
-    { id: 'voucher_entry', label: 'Voucher Entry', icon: ClipboardList },
-    { id: 'godowns', label: 'Godown Management', icon: Database },
-    { id: 'employee_master', label: 'Employee Master', icon: Users },
-    { id: 'chart_accounts', label: 'Chart of Accounts', icon: ListTree },
-    { id: 'item_master', label: 'Item Master', icon: Package },
-    { id: 'daybook', label: 'Daybook Reports', icon: BookOpen },
-    { id: 'financial_reports', label: 'Financial Reports (BS/PL/TB)', icon: BarChart3 },
-    { id: 'ratio_analysis', label: 'Ratio Analysis', icon: PieChart },
-    { id: 'sales_perf', label: 'Sales Performance', icon: Activity },
-    { id: 'voucher_settings', label: 'Voucher Settings', icon: Settings },
-    { id: 'print_settings', label: 'Print Settings', icon: Printer },
-    { id: 'f11_features', label: 'F11 Features', icon: Cpu },
-    { id: 'security', label: 'Security Settings', icon: Shield },
-    { id: 'utilities', label: 'System Utilities', icon: Settings },
-    { id: 'company_mgmt', label: 'Company Management', icon: Building2 },
-    { id: 'user_mgmt', label: 'User Management', icon: Users }
   ];
 
   const { showGoToShortcut, appVersion, updateSettings, updateSystemSettings, uiStyle, glassBackground, statusOnlineText, statusOfflineText, statusErrorText, systemLogo, notificationDuration, notificationAnimationStyle } = useSettings();
@@ -229,7 +202,7 @@ export default function FounderPanel() {
   const safeFormat = (date: any, formatStr: string) => {
     try {
       if (!date) return 'N/A';
-      const d = date instanceof Date ? date : new Date(date);
+      const d = (date as any)?.toDate ? (date as any).toDate() : (date instanceof Date ? date : new Date(date));
       if (isNaN(d.getTime())) return 'N/A';
       return format(d, formatStr);
     } catch (e) {
@@ -240,18 +213,20 @@ export default function FounderPanel() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [companiesSnap, usersSnap, notificationsData, activitySnap, plansData] = await Promise.all([
+      const [companiesSnap, usersSnap, notificationsData, activitySnap, plansData, ordersData] = await Promise.all([
         getDocs(collection(db, 'companies')),
         erpService.getAllUsers(),
         erpService.getNotifications(currentUser?.uid || '', currentUser?.companyId || '', true),
         getDocs(query(collection(db, 'activity_log'), orderBy('createdAt', 'desc'), limit(50))),
-        erpService.getSubscriptionPlans()
+        erpService.getSubscriptionPlans(),
+        erpService.getSubscriptionOrders()
       ]);
       
       setAllUsers(usersSnap);
       setNotifications(notificationsData);
       setGlobalActivity(activitySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setSubscriptionPlans(plansData);
+      setSubscriptionOrders(ordersData);
       const companyData: CompanyStats[] = [];
 
       for (const companyDoc of companiesSnap.docs) {
@@ -606,7 +581,7 @@ export default function FounderPanel() {
           </div>
 
           <div className={cn(
-            "grid grid-cols-2 sm:flex sm:flex-row rounded-lg p-1 w-full sm:w-auto gap-1",
+            "grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap rounded-lg p-1 w-full sm:w-auto gap-1",
             uiStyle === 'UI/UX 2' ? "bg-blue-50" : "bg-muted"
           )}>
             <button
@@ -680,6 +655,18 @@ export default function FounderPanel() {
             >
               <CreditCard className="w-4 h-4" />
               Plans
+            </button>
+            <button
+              onClick={() => setViewMode('orders')}
+              className={cn(
+                "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
+                viewMode === 'orders' 
+                  ? uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white shadow-md" : "bg-background text-foreground shadow-sm"
+                  : uiStyle === 'UI/UX 2' ? "text-blue-400 hover:text-blue-600" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <ClipboardList className="w-4 h-4" />
+              Orders
             </button>
             <button
               onClick={() => setViewMode('settings')}
@@ -1128,6 +1115,162 @@ export default function FounderPanel() {
                 <p className="text-sm text-muted-foreground italic">No activity recorded yet.</p>
               </div>
             )}
+          </div>
+        </div>
+      ) : viewMode === 'orders' ? (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className={cn(
+              "text-lg font-bold uppercase tracking-widest",
+              uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+            )}>Subscription Orders</h2>
+            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+              Total Orders: {subscriptionOrders.length}
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-muted/50 border-b border-border">
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Customer / Company</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Plan Details</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Amount</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Date & Time</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {subscriptionOrders.length > 0 ? (
+                    subscriptionOrders.map((order) => (
+                      <tr key={order.id} className="hover:bg-muted/30 transition-colors group">
+                        <td className="p-4">
+                          <div className="space-y-1">
+                            <p className="text-sm font-bold text-foreground">{order.userName}</p>
+                            <p className="text-[10px] text-primary font-bold uppercase tracking-widest">{order.companyName}</p>
+                            <div className="flex flex-col gap-0.5 text-[9px] text-muted-foreground">
+                              <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {order.userEmail}</span>
+                              <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {order.userPhone}</span>
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {order.userAddress}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-foreground uppercase">{order.planName}</p>
+                            <p className="text-[9px] text-muted-foreground uppercase font-bold">{order.planType}</p>
+                            {order.notes && (
+                              <p className="text-[9px] text-amber-600 italic mt-1 max-w-[200px] line-clamp-2">" {order.notes} "</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <p className="text-sm font-bold text-foreground">{order.amount} ৳</p>
+                        </td>
+                        <td className="p-4">
+                          <span className={cn(
+                            "px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest",
+                            order.status === 'pending' ? "bg-amber-500/10 text-amber-500" :
+                            order.status === 'approved' ? "bg-emerald-500/10 text-emerald-500" :
+                            order.status === 'rejected' ? "bg-rose-500/10 text-rose-500" :
+                            "bg-gray-500/10 text-gray-500"
+                          )}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                            {order.createdAt?.toDate ? safeFormat(order.createdAt.toDate(), 'dd MMM yyyy, HH:mm') : 'N/A'}
+                          </p>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-2">
+                            {order.status === 'pending' && (
+                              <>
+                                <button
+                                  onClick={async () => {
+                                    if (confirm('Approve this order and update company plan?')) {
+                                      try {
+                                        // 1. Update order status
+                                        await erpService.updateSubscriptionOrder(order.id, { status: 'approved' });
+                                        // 2. Update company plan
+                                        await erpService.updateCompanySubscription(order.companyId, {
+                                          planId: order.planId,
+                                          planType: order.planType,
+                                          subscriptionStatus: 'active',
+                                          expiryDate: order.planType === 'monthly' 
+                                            ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                                            : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+                                        });
+                                        showNotification('Order approved and company plan updated');
+                                        fetchData();
+                                      } catch (err) {
+                                        showNotification('Failed to approve order', 'error');
+                                      }
+                                    }
+                                  }}
+                                  className="p-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white rounded-lg transition-all"
+                                  title="Approve"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    const reason = prompt('Reason for rejection:');
+                                    if (reason !== null) {
+                                      try {
+                                        await erpService.updateSubscriptionOrder(order.id, { 
+                                          status: 'rejected',
+                                          founderNotes: reason 
+                                        });
+                                        showNotification('Order rejected');
+                                        fetchData();
+                                      } catch (err) {
+                                        showNotification('Failed to reject order', 'error');
+                                      }
+                                    }
+                                  }}
+                                  className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition-all"
+                                  title="Reject"
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={async () => {
+                                if (confirm('Delete this order record?')) {
+                                  try {
+                                    await erpService.deleteSubscriptionOrder(order.id);
+                                    showNotification('Order deleted');
+                                    fetchData();
+                                  } catch (err) {
+                                    showNotification('Failed to delete order', 'error');
+                                  }
+                                }
+                              }}
+                              className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="p-12 text-center">
+                        <ClipboardList className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                        <p className="text-sm text-muted-foreground italic">No subscription orders found.</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       ) : viewMode === 'plans' ? (
@@ -2268,7 +2411,7 @@ export default function FounderPanel() {
                     {isEditingSubscription ? (
                       <input 
                         type="date"
-                        value={selectedCompany.expiryDate && !isNaN(new Date(selectedCompany.expiryDate).getTime()) ? format(new Date(selectedCompany.expiryDate), 'yyyy-MM-dd') : ''}
+                        value={selectedCompany.expiryDate ? safeFormat(selectedCompany.expiryDate, 'yyyy-MM-dd') : ''}
                         onChange={(e) => updateSubscription(selectedCompany.id, { expiryDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
                         className="w-full bg-background border border-border rounded-lg p-2.5 text-sm outline-none focus:border-primary"
                       />
@@ -2299,6 +2442,114 @@ export default function FounderPanel() {
                         Change
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* Extra Features & Custom Limits */}
+                <div className="space-y-6 pt-6 border-t border-border">
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-primary" />
+                      Extra Features & Custom Limits
+                    </h3>
+                    
+                    {isEditingSubscription ? (
+                      <div className="space-y-6">
+                        <div className="space-y-3">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Grant Extra Features</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {AVAILABLE_FEATURES.map(feature => {
+                              const isExtra = selectedCompany.extraFeatures?.includes(feature.id);
+                              const plan = subscriptionPlans.find(p => p.id === selectedCompany.planId);
+                              const inPlan = plan?.features.includes(feature.id);
+                              
+                              return (
+                                <button
+                                  key={feature.id}
+                                  onClick={() => {
+                                    const currentExtra = selectedCompany.extraFeatures || [];
+                                    const newExtra = isExtra 
+                                      ? currentExtra.filter(id => id !== feature.id)
+                                      : [...currentExtra, feature.id];
+                                    updateSubscription(selectedCompany.id, { extraFeatures: newExtra });
+                                  }}
+                                  className={cn(
+                                    "flex items-center gap-2 p-2 border rounded-lg text-[9px] font-bold uppercase tracking-tight transition-all text-left",
+                                    isExtra ? "bg-primary/10 border-primary text-primary" : "bg-background border-border text-muted-foreground",
+                                    inPlan && "opacity-50 cursor-not-allowed grayscale"
+                                  )}
+                                  disabled={inPlan}
+                                  title={inPlan ? "Included in Plan" : ""}
+                                >
+                                  <feature.icon className="w-3 h-3" />
+                                  <span className="truncate">{feature.label}</span>
+                                  {isExtra && <Check className="w-2 h-2 ml-auto" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Custom Plan Limits</label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {['vouchers', 'items', 'ledgers', 'users', 'godowns'].map(limitKey => (
+                              <div key={limitKey} className="space-y-1">
+                                <label className="text-[9px] uppercase font-bold text-muted-foreground">{limitKey}</label>
+                                <input
+                                  type="number"
+                                  value={selectedCompany.customLimits?.[limitKey] ?? ''}
+                                  placeholder="Plan Default"
+                                  onChange={(e) => {
+                                    const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                    const newLimits = { ...(selectedCompany.customLimits || {}), [limitKey]: val };
+                                    updateSubscription(selectedCompany.id, { customLimits: newLimits });
+                                  }}
+                                  className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {selectedCompany.extraFeatures && selectedCompany.extraFeatures.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Extra Features Granted:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedCompany.extraFeatures.map(fId => {
+                                const feature = AVAILABLE_FEATURES.find(af => af.id === fId);
+                                return (
+                                  <span key={fId} className="px-2 py-1 bg-primary/10 text-primary rounded text-[9px] font-bold uppercase tracking-widest flex items-center gap-1">
+                                    {feature?.icon && <feature.icon className="w-3 h-3" />}
+                                    {feature?.label || fId}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {selectedCompany.customLimits && Object.keys(selectedCompany.customLimits).length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Custom Limit Overrides:</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {Object.entries(selectedCompany.customLimits).map(([key, val]) => (
+                                <div key={key} className="px-2 py-1 bg-muted rounded text-[9px] font-bold uppercase tracking-widest flex justify-between">
+                                  <span className="text-muted-foreground">{key}:</span>
+                                  <span className="text-foreground">{val}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {(!selectedCompany.extraFeatures?.length && !selectedCompany.customLimits) && (
+                          <p className="text-xs text-muted-foreground italic">No extra features or custom limits assigned.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

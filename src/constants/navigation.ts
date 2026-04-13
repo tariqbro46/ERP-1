@@ -118,6 +118,7 @@ export const NAV_ITEMS: NavGroup[] = [
       { to: '/notes', icon: StickyNote, label: 'Notes / Memo', labelKey: 'nav.notesMemo' },
       { to: '/users', icon: Users, label: 'User Management', labelKey: 'nav.userManagement', adminOnly: true },
       { to: '/founder', icon: Shield, label: 'Founder Panel', labelKey: 'nav.founderPanel', superAdminOnly: true },
+      { to: '/subscription', icon: Award, label: 'Subscription', labelKey: 'nav.subscription' },
     ]
   }
 ];

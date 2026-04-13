@@ -18,6 +18,16 @@ export interface Company {
   planId?: string;
   expiryDate: string;
   isAccessEnabled: boolean;
+  extraFeatures?: string[];
+  customLimits?: {
+    vouchers?: number;
+    items?: number;
+    ledgers?: number;
+    users?: number;
+    godowns?: number;
+    multiCurrency?: boolean;
+    rolePermissions?: boolean;
+  };
   createdBy?: string;
   ownerId?: string;
 }
@@ -329,6 +339,24 @@ export interface SubscriptionPlan {
   apiAccess?: boolean;
   setupFee?: number;
   customDomain?: boolean;
+  createdAt: any;
+  updatedAt?: any;
+}
+
+export interface SubscriptionOrder {
+  id: string;
+  companyId: string;
+  companyName: string;
+  planId: string;
+  planName: string;
+  planType: 'monthly' | 'yearly';
+  amount: number;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  requestedBy: string;
+  requestedByName: string;
+  paymentMethod?: string;
+  notes?: string;
+  founderNotes?: string;
   createdAt: any;
   updatedAt?: any;
 }

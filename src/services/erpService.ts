@@ -1809,5 +1809,57 @@ export const erpService = {
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `companies/${companyId}`);
     }
+  },
+
+  // Subscription Orders
+  async createSubscriptionOrder(order: any) {
+    try {
+      const ref = doc(collection(db, 'subscription_orders'));
+      const data = {
+        ...order,
+        id: ref.id,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      await setDoc(ref, data);
+      return data;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'subscription_orders');
+    }
+  },
+
+  async getSubscriptionOrders(companyId?: string): Promise<any[]> {
+    try {
+      let q;
+      if (companyId) {
+        q = query(collection(db, 'subscription_orders'), where('companyId', '==', companyId), orderBy('createdAt', 'desc'));
+      } else {
+        q = query(collection(db, 'subscription_orders'), orderBy('createdAt', 'desc'));
+      }
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'subscription_orders');
+      return [];
+    }
+  },
+
+  async updateSubscriptionOrder(id: string, updates: any) {
+    try {
+      await updateDoc(doc(db, 'subscription_orders', id), {
+        ...updates,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `subscription_orders/${id}`);
+    }
+  },
+
+  async deleteSubscriptionOrder(id: string) {
+    try {
+      await deleteDoc(doc(db, 'subscription_orders', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `subscription_orders/${id}`);
+    }
   }
 };

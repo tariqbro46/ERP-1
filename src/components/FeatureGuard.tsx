@@ -26,8 +26,9 @@ export const FeatureGuard: React.FC<FeatureGuardProps> = ({ featureId, children,
   // Find the company's plan
   const plan = subscriptionPlans.find(p => p.id === company.planId);
 
-  // If no plan is found or the feature is not in the plan's features list
-  const hasAccess = plan && plan.features.includes(featureId);
+  // Check if feature is in plan or granted as extra
+  const hasAccess = (plan && plan.features.includes(featureId)) || 
+                    (company.extraFeatures?.includes(featureId));
 
   if (hasAccess) {
     return <>{children}</>;
@@ -38,22 +39,25 @@ export const FeatureGuard: React.FC<FeatureGuardProps> = ({ featureId, children,
   }
 
   return (
-    <div className="p-8 text-center space-y-4 bg-card border border-border rounded-xl">
-      <div className="w-12 h-12 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto">
-        <ShieldAlert className="w-6 h-6 text-amber-500" />
+    <div className="p-12 text-center space-y-6 bg-card border border-border rounded-2xl shadow-sm max-w-lg mx-auto my-8">
+      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto animate-pulse">
+        <ShieldAlert className="w-8 h-8 text-primary" />
       </div>
-      <div className="space-y-2">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Feature Restricted</h3>
+      <div className="space-y-3">
+        <h3 className="text-lg font-bold uppercase tracking-widest text-foreground">Premium Feature</h3>
         <p className="text-xs text-muted-foreground uppercase tracking-widest leading-relaxed">
-          Your current subscription plan does not include this feature.
+          This feature is not included in your current <span className="text-primary font-bold">{plan?.name || 'Free'}</span> plan. 
+          Upgrade your subscription to unlock this and many other powerful tools.
         </p>
       </div>
-      <Link 
-        to="/settings/company" 
-        className="inline-block px-6 py-2 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-lg hover:opacity-90 transition-all"
-      >
-        Upgrade Plan
-      </Link>
+      <div className="pt-4">
+        <Link 
+          to="/subscription" 
+          className="inline-flex items-center gap-2 px-8 py-3 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
+        >
+          View Upgrade Options
+        </Link>
+      </div>
     </div>
   );
 };

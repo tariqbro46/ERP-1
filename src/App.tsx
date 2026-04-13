@@ -62,6 +62,7 @@ import { MachineManagement } from './components/MachineManagement';
 import OrderReports from './components/OrderReports';
 import FounderPanel from './components/FounderPanel';
 import SubscriptionRequired from './components/SubscriptionRequired';
+import { SubscriptionPage } from './components/SubscriptionPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import NotificationCenter from './components/NotificationCenter';
 import NotificationPage from './components/NotificationPage';
@@ -1290,6 +1291,7 @@ function ProtectedRoute() {
           <Route path="/employees" element={<EmployeeMaster />} />
           <Route path="/payroll" element={<PayrollManagement />} />
           <Route path="/notes" element={<Notes />} />
+          <Route path="/subscription" element={<SubscriptionPage />} />
           <Route path="/reports/daybook" element={<Daybook />} />
           <Route path="/reports/stock" element={<StockSummary />} />
           <Route path="/reports/balance-sheet" element={<BalanceSheet />} />

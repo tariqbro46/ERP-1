@@ -102,6 +102,17 @@ export function Dashboard() {
   const [periodStart, setPeriodStart] = useState(defaultPeriod.start);
   const [periodEnd, setPeriodEnd] = useState(defaultPeriod.end);
 
+  const safeFormat = (date: any, formatStr: string) => {
+    try {
+      if (!date) return 'N/A';
+      const d = (date as any)?.toDate ? (date as any).toDate() : (date instanceof Date ? date : new Date(date));
+      if (isNaN(d.getTime())) return 'N/A';
+      return format(d, formatStr);
+    } catch (e) {
+      return 'N/A';
+    }
+  };
+
   useEffect(() => {
     async function fetchData() {
       if (!user?.companyId) return;
@@ -423,7 +434,7 @@ export function Dashboard() {
                  t('dash.subscriptionInactive')}
               </h3>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                {t('dash.plan')}: {company.planType} • {company.expiryDate ? differenceInDays(new Date(company.expiryDate), new Date()) : 'N/A'} {t('dash.daysRemaining')}
+                {t('dash.plan')}: {company.planType} • {company.expiryDate ? differenceInDays((company.expiryDate as any)?.toDate ? (company.expiryDate as any).toDate() : new Date(company.expiryDate), new Date()) : 'N/A'} {t('dash.daysRemaining')}
               </p>
             </div>
           </div>
@@ -431,7 +442,7 @@ export function Dashboard() {
             <div className="text-right hidden sm:block">
               <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">{t('dash.expiresOn')}</p>
               <p className="text-sm font-mono text-foreground">
-                {company.expiryDate ? format(new Date(company.expiryDate), 'dd MMM yyyy') : t('dash.notSet')}
+                {company.expiryDate ? safeFormat(company.expiryDate, 'dd MMM yyyy') : t('dash.notSet')}
               </p>
             </div>
             <button 

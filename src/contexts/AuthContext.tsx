@@ -23,6 +23,16 @@ export interface CompanyData {
   planId?: string;
   expiryDate: string;
   isAccessEnabled: boolean;
+  extraFeatures?: string[];
+  customLimits?: {
+    vouchers?: number;
+    items?: number;
+    ledgers?: number;
+    users?: number;
+    godowns?: number;
+    multiCurrency?: boolean;
+    rolePermissions?: boolean;
+  };
 }
 
 interface AuthContextType {
