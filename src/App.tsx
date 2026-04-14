@@ -1107,7 +1107,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         {menuBarStyle === 'macos' && renderMacOSMenu()}
 
         <div ref={scrollRef} className={cn(
-          "flex-1 overflow-y-auto no-scrollbar pb-16 lg:pb-0",
+          "flex-1 overflow-y-auto overflow-x-auto no-scrollbar pb-16 lg:pb-0",
           menuBarStyle === 'macos' && "pt-10"
         )}>
           <div className={cn(

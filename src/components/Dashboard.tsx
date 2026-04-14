@@ -34,7 +34,7 @@ const StatCard = ({ title, value, change, icon: Icon, trend, loading, color, uiS
       )}>{title}</span>
       <Icon className={cn("w-4 h-4", uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-600")} />
     </div>
-    <div className="flex items-baseline gap-2">
+    <div className="flex items-baseline justify-between gap-2 flex-wrap">
       {loading ? (
         <div className="h-8 w-24 bg-foreground/5 animate-pulse rounded" />
       ) : (
@@ -45,7 +45,7 @@ const StatCard = ({ title, value, change, icon: Icon, trend, loading, color, uiS
           )}>{value}</span>
           {change && (
             <span className={cn(
-              "text-[10px] font-mono flex items-center",
+              "text-[10px] font-mono flex items-center whitespace-nowrap",
               uiStyle === 'UI/UX 2' ? "text-white/90" : trend === 'up' ? 'text-emerald-500' : 'text-rose-500'
             )}>
               {trend === 'up' ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}

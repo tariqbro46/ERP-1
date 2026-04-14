@@ -702,7 +702,9 @@ export default function FounderPanel() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="overflow-x-auto pb-6 -mx-6 px-6">
+        <div className="min-w-[1000px] lg:min-w-0 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className={cn(
           "bg-card border border-border rounded-xl p-6 shadow-sm transition-all",
           uiStyle === 'UI/UX 2' ? "bg-blue-600 border-blue-700 text-white shadow-blue-200" : ""
@@ -2053,6 +2055,8 @@ export default function FounderPanel() {
           </div>
         </div>
       )}
+      </div>
+      </div>
 
       {/* Create Notification Modal */}
       <AnimatePresence>
@@ -2319,7 +2323,7 @@ export default function FounderPanel() {
                 </button>
               </div>
 
-              <div className="p-8 space-y-8">
+              <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                   <div className="space-y-3">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Subscription Status</p>
