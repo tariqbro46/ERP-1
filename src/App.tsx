@@ -257,12 +257,6 @@ function Layout({ children }: { children: React.ReactNode }) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
   
-  // Apply fonts globally
-  React.useEffect(() => {
-    const font = language === 'en' ? englishFont : banglaFont;
-    document.documentElement.style.setProperty('--app-font', `"${font}", sans-serif`);
-  }, [language, englishFont, banglaFont]);
-
   // Close sidebar and scroll to top on navigation
   React.useEffect(() => {
     setIsSidebarOpen(false);
@@ -1246,6 +1240,14 @@ function Layout({ children }: { children: React.ReactNode }) {
 
 function AppContent() {
   const { user, loading, isSuperAdmin, logout, firebaseUser } = useAuth();
+  const { language } = useLanguage();
+  const { englishFont = 'Inter', banglaFont = 'Hind Siliguri' } = useSettings();
+
+  // Apply fonts globally
+  React.useEffect(() => {
+    const font = language === 'en' ? englishFont : banglaFont;
+    document.documentElement.style.setProperty('--app-font', `"${font}", sans-serif`);
+  }, [language, englishFont, banglaFont]);
   
   if (loading) {
     return (

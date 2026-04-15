@@ -727,7 +727,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         <option value="Noto Sans Bengali">Noto Sans Bengali (Universal)</option>
                         <option value="Tiro Bangla">Tiro Bangla (Elegant)</option>
                         <option value="Mina">Mina (Modern)</option>
-                        <option value="SolaimanLipi">SolaimanLipi (Classic)</option>
+                        <option value="Anek Bangla">Anek Bangla (Stylish)</option>
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">{t('common.selectFont')} (Bangla)</p>
                     </div>
