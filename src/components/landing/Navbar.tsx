@@ -13,9 +13,9 @@ export const Navbar = () => {
   const { language, setLanguage, t } = useLanguage();
   const { content: globalSettings } = useSiteContent('global', { 
     siteName: 'ERP System',
-    siteNameColor: '#0a0a0a',
-    navbarBgColor: 'rgba(255, 255, 255, 0.8)',
-    navbarTextColor: '#0a0a0a',
+    siteNameColor: '#1e293b',
+    navbarBgColor: 'rgba(241, 245, 249, 0.8)',
+    navbarTextColor: '#1e293b',
     registrationEnabled: true
   });
 

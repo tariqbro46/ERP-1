@@ -28,20 +28,20 @@ export const About = () => {
   const { t } = useLanguage();
   const DEFAULT_CONTENT = {
     missionTitle: t('about.missionTitle'),
-    missionTitleColor: "#0a0a0a",
+    missionTitleColor: "#1e293b",
     missionDesc: t('about.missionDesc'),
-    missionDescColor: "#64748b",
+    missionDescColor: "#334155",
     missionBgColor: "#ffffff",
     missionImage: "https://picsum.photos/seed/erp-office-team/1200/600",
     bannerTitle: t('about.bannerTitle'),
     bannerTitleColor: "#ffffff",
     bannerSubtitle: t('about.bannerSubtitle'),
     bannerSubtitleColor: "rgba(255,255,255,0.8)",
-    bannerBgColor: "#0a0a0a",
+    bannerBgColor: "#0f172a",
     leadershipTitle: t('about.leadershipTitle'),
-    leadershipTitleColor: "#0a0a0a",
+    leadershipTitleColor: "#1e293b",
     showLeadership: true,
-    pageBgColor: "#ffffff"
+    pageBgColor: "#f1f5f9"
   };
 
   const { content } = useSiteContent('about', DEFAULT_CONTENT);

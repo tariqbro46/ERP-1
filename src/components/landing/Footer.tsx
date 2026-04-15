@@ -8,10 +8,10 @@ export const Footer = () => {
   const { t } = useLanguage();
   const { content: globalSettings } = useSiteContent('global', { 
     siteName: 'ERP System',
-    siteNameColor: '#0a0a0a',
+    siteNameColor: '#1e293b',
     footerText: `© 2026 ${t('nav.home')}. All rights reserved.`,
-    footerTextColor: '#64748b',
-    footerBgColor: '#ffffff'
+    footerTextColor: '#334155',
+    footerBgColor: '#f1f5f9'
   });
 
   return (
