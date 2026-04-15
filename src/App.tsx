@@ -1374,7 +1374,6 @@ function ProtectedRoute() {
           <Route path="/reports/payroll" element={<ReportPlaceholder title="Payroll Reports" />} />
           <Route path="/reports/negative-ledger" element={<NegativeReports type="ledger" />} />
           <Route path="/reports/negative-stock" element={<NegativeReports type="stock" />} />
-          <Route path="/reports/cash-bank" element={<ReportPlaceholder title="Cash/Bank Book" />} />
           <Route path="/reports/group-summary" element={<ReportPlaceholder title="Group Summary" />} />
           <Route path="/reports/item-monthly" element={<ReportPlaceholder title="Item Monthly Summary" />} />
           <Route path="/reports/movement" element={<ReportPlaceholder title="Movement Analysis" />} />
@@ -1388,6 +1387,33 @@ function ProtectedRoute() {
           <Route path="/reports/financial-insights" element={<FinancialInsights />} />
           <Route path="/reports/ledger" element={<LedgerStatement />} />
           <Route path="/reports/sales-performance" element={<SalespersonReport />} />
+          <Route path="/reports/cash-flow" element={<ReportPlaceholder title="Cash Flow" />} />
+          <Route path="/reports/funds-flow" element={<ReportPlaceholder title="Funds Flow" />} />
+          <Route path="/reports/group-voucher" element={<ReportPlaceholder title="Group Voucher" />} />
+          <Route path="/reports/contra-register" element={<ReportPlaceholder title="Contra Register" />} />
+          <Route path="/reports/payment-register" element={<ReportPlaceholder title="Payment Register" />} />
+          <Route path="/reports/receipt-register" element={<ReportPlaceholder title="Receipt Register" />} />
+          <Route path="/reports/sales-register" element={<ReportPlaceholder title="Sales Register" />} />
+          <Route path="/reports/purchase-register" element={<ReportPlaceholder title="Purchase Register" />} />
+          <Route path="/reports/journal-register" element={<ReportPlaceholder title="Journal Register" />} />
+          <Route path="/reports/statistics" element={<ReportPlaceholder title="Statistics" />} />
+          <Route path="/reports/location" element={<ReportPlaceholder title="Location" />} />
+          <Route path="/reports/stock-group-summary" element={<ReportPlaceholder title="Stock Group Summary" />} />
+          <Route path="/reports/stock-category-summary" element={<ReportPlaceholder title="Stock Category Summary" />} />
+          <Route path="/reports/stock-transfer-register" element={<ReportPlaceholder title="Stock Transfer Register" />} />
+          <Route path="/reports/physical-stock-register" element={<ReportPlaceholder title="Physical Stock Register" />} />
+          <Route path="/reports/ageing-analysis" element={<ReportPlaceholder title="Ageing Analysis" />} />
+          <Route path="/reports/pay-slip" element={<ReportPlaceholder title="Pay Slip" />} />
+          <Route path="/reports/pay-sheet" element={<ReportPlaceholder title="Pay Sheet" />} />
+          <Route path="/reports/attendance-sheet" element={<ReportPlaceholder title="Attendance Sheet" />} />
+          <Route path="/reports/payment-advice" element={<ReportPlaceholder title="Payment Advice" />} />
+          <Route path="/reports/payroll-statement" element={<ReportPlaceholder title="Payroll Statement" />} />
+          <Route path="/reports/payroll-register" element={<ReportPlaceholder title="Payroll Register" />} />
+          <Route path="/reports/attendance-register" element={<ReportPlaceholder title="Attendance Register" />} />
+          <Route path="/reports/employee-profile" element={<ReportPlaceholder title="Employee Profile" />} />
+          <Route path="/reports/employee-head-count" element={<ReportPlaceholder title="Employee Head Count" />} />
+          <Route path="/reports/cash-bank" element={<ReportPlaceholder title="Cash/Bank Books" />} />
+          <Route path="/reports/stock-item" element={<ReportPlaceholder title="Stock Item" />} />
           <Route path="/production/orders" element={<OrderManagement />} />
           <Route path="/production/orders/new" element={<OrderEntry />} />
           <Route path="/production/orders/edit/:id" element={<OrderEntry />} />

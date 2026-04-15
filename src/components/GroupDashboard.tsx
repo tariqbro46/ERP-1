@@ -49,16 +49,17 @@ export const GroupDashboard: React.FC = () => {
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">
+        <h1 className="text-3xl font-bold text-foreground mb-1">
           {group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey) : group.group}
         </h1>
+        {isSuperAdmin && (
+          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-[0.2em] mb-2">Hidden from sidebar</p>
+        )}
         <p className="text-muted-foreground">Quick access to all items in this section.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {group.items.filter(item => {
-          if (item.hidden && !isSuperAdmin) return false;
-          
           // Hide specific items from Reports group dashboard as requested
           if (group.id === 'group-reports' || group.group.toLowerCase() === 'reports') {
             const itemsToHide = ['Balance Sheet', 'Profit & Loss', 'Stock Summary', 'Ratio Analysis', 'Display More Reports'];

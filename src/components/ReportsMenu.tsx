@@ -59,32 +59,32 @@ export const ReportsMenu: React.FC = () => {
   // Categorize items based on keywords or labels for a better layout
   const categories = [
     {
-      id: 'financial',
-      title: 'Financial Reports',
-      titleKey: 'reports.financial',
-      icon: Scale,
-      keywords: ['balance', 'profit', 'trial', 'pl', 'sheet', 'insights', 'ratio']
-    },
-    {
       id: 'inventory',
-      title: 'Inventory Books',
-      titleKey: 'nav.inventoryBooks',
+      title: 'Inventory',
+      titleKey: 'nav.inventory',
       icon: Package,
-      keywords: ['stock', 'inventory', 'item', 'movement', 'godown']
+      keywords: ['stock', 'inventory', 'item', 'movement', 'godown', 'location', 'category', 'transfer', 'physical', 'query', 'ageing']
     },
     {
-      id: 'accounts',
-      title: 'Account Books',
-      titleKey: 'nav.accountBooks',
-      icon: BookOpen,
-      keywords: ['ledger', 'cash', 'bank', 'daybook', 'book']
+      id: 'accounting',
+      title: 'Accounting',
+      titleKey: 'nav.accounting',
+      icon: Scale,
+      keywords: ['balance', 'profit', 'trial', 'pl', 'sheet', 'insights', 'ratio', 'cash flow', 'funds flow', 'daybook', 'statistics', 'register', 'voucher', 'book', 'summary']
     },
     {
       id: 'payroll',
-      title: 'Payroll & Others',
-      titleKey: 'nav.payrollReports',
+      title: 'Payroll',
+      titleKey: 'nav.payroll',
       icon: Users,
-      keywords: ['payroll', 'salary', 'employee', 'negative', 'performance', 'sales']
+      keywords: ['payroll', 'salary', 'employee', 'pay slip', 'pay sheet', 'attendance', 'advice', 'statement', 'head count']
+    },
+    {
+      id: 'exception',
+      title: 'Exception Reports',
+      titleKey: 'nav.exceptionReports',
+      icon: AlertCircle,
+      keywords: ['negative']
     }
   ];
 
@@ -95,7 +95,7 @@ export const ReportsMenu: React.FC = () => {
         return cat.id;
       }
     }
-    return 'financial'; // Default
+    return 'accounting'; // Default
   };
 
   const groupedReports = reportsGroup.items
@@ -115,6 +115,9 @@ export const ReportsMenu: React.FC = () => {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">{t('nav.reports')}</h1>
+          {isSuperAdmin && (
+            <p className="text-[10px] uppercase font-bold text-gray-400 tracking-[0.2em] mt-1">Hidden from sidebar</p>
+          )}
           <p className="text-gray-500 mt-2">Comprehensive business insights and financial statements.</p>
         </div>
         <Link to="/dashboard" className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors">

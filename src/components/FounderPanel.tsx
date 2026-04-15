@@ -342,6 +342,111 @@ export default function FounderPanel() {
     }
   };
 
+  const cleanupDuplicates = async () => {
+    if (!menuConfig) return;
+    try {
+      setLoading(true);
+      const updatedGroups = menuConfig.groups.map(group => {
+        const seenPaths = new Set<string>();
+        const uniqueItems = group.items.filter(item => {
+          if (seenPaths.has(item.to)) return false;
+          seenPaths.add(item.to);
+          return true;
+        });
+        return { ...group, items: uniqueItems };
+      });
+
+      const newConfig = { ...menuConfig, groups: updatedGroups, updatedAt: new Date() };
+      await erpService.updateMenuConfig(newConfig);
+      setMenuConfig(newConfig);
+      showNotification('Menu deduplicated successfully', 'success');
+    } catch (error) {
+      showNotification('Failed to cleanup duplicates', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const syncMenuWithDefaults = async () => {
+    try {
+      setLoading(true);
+      const { NAV_ITEMS } = await import('../constants/navigation');
+      
+      if (!menuConfig) {
+        await seedInitialMenu();
+        return;
+      }
+
+      const updatedGroups = [...menuConfig.groups];
+      let itemsAdded = 0;
+
+      NAV_ITEMS.forEach(defaultGroup => {
+        const existingGroupIndex = updatedGroups.findIndex(g => g.id === defaultGroup.id || g.group.toLowerCase() === defaultGroup.group.toLowerCase());
+        
+        if (existingGroupIndex === -1) {
+          // Add missing group
+          updatedGroups.push({
+            id: defaultGroup.id,
+            group: defaultGroup.group,
+            groupKey: defaultGroup.groupKey,
+            items: defaultGroup.items.map(item => ({
+              id: item.id,
+              to: item.to,
+              icon: item.iconName,
+              label: item.label,
+              labelKey: item.labelKey,
+              feature: item.feature,
+              adminOnly: item.adminOnly,
+              superAdminOnly: item.superAdminOnly,
+              permission: item.permission,
+              hidden: item.hidden
+            }))
+          });
+          itemsAdded += defaultGroup.items.length;
+        } else {
+          // Sync items in existing group
+          const existingGroup = { ...updatedGroups[existingGroupIndex] };
+          const existingItemIds = new Set(existingGroup.items.map(i => i.id));
+          const existingPaths = new Set(existingGroup.items.map(i => i.to));
+          
+          defaultGroup.items.forEach(defaultItem => {
+            if (!existingItemIds.has(defaultItem.id) && !existingPaths.has(defaultItem.to)) {
+              existingGroup.items.push({
+                id: defaultItem.id,
+                to: defaultItem.to,
+                icon: defaultItem.iconName,
+                label: defaultItem.label,
+                labelKey: defaultItem.labelKey,
+                feature: defaultItem.feature,
+                adminOnly: defaultItem.adminOnly,
+                superAdminOnly: defaultItem.superAdminOnly,
+                permission: defaultItem.permission,
+                hidden: defaultItem.hidden
+              });
+              itemsAdded++;
+            }
+          });
+          
+          updatedGroups[existingGroupIndex] = existingGroup;
+        }
+      });
+
+      if (itemsAdded > 0) {
+        const newConfig = { ...menuConfig, groups: updatedGroups, updatedAt: new Date() };
+        await erpService.updateMenuConfig(newConfig);
+        setMenuConfig(newConfig);
+        showNotification(`Synced ${itemsAdded} new items from defaults`, 'success');
+      } else {
+        showNotification('Menu is already up to date', 'info');
+      }
+    } catch (error) {
+      console.error('Error syncing menu:', error);
+      showNotification('Failed to sync menu', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const seedInitialMenu = async () => {
     try {
       setLoading(true);
@@ -2247,9 +2352,26 @@ export default function FounderPanel() {
                   }
                 }}
                 className="px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-amber-600 transition-all flex items-center gap-2"
+                title="Reset everything to factory defaults"
               >
                 <Zap className="w-4 h-4" />
-                Reset to Defaults
+                Reset
+              </button>
+              <button
+                onClick={syncMenuWithDefaults}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center gap-2"
+                title="Add missing items from code to database"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Sync Items
+              </button>
+              <button
+                onClick={cleanupDuplicates}
+                className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-rose-700 transition-all flex items-center gap-2"
+                title="Remove duplicate items from all groups"
+              >
+                <Trash2 className="w-4 h-4" />
+                Cleanup
               </button>
               <button
                 onClick={() => {
