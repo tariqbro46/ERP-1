@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import * as LucideIcons from 'lucide-react';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { erpService } from '../services/erpService';
 import { MenuConfig } from '../types';
@@ -10,6 +11,7 @@ import { MenuConfig } from '../types';
 export const GroupDashboard: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const { t } = useLanguage();
+  const { isSuperAdmin } = useAuth();
   const [menuConfig, setMenuConfig] = React.useState<MenuConfig | null>(null);
   const [loading, setLoading] = React.useState(true);
 
@@ -54,7 +56,17 @@ export const GroupDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {group.items.filter(item => !item.hidden).map((item, index) => {
+        {group.items.filter(item => {
+          if (item.hidden && !isSuperAdmin) return false;
+          
+          // Hide specific items from Reports group dashboard as requested
+          if (group.id === 'group-reports' || group.group.toLowerCase() === 'reports') {
+            const itemsToHide = ['Balance Sheet', 'Profit & Loss', 'Stock Summary', 'Ratio Analysis', 'Display More Reports'];
+            if (itemsToHide.includes(item.label)) return false;
+          }
+          
+          return true;
+        }).map((item, index) => {
           const Icon = (LucideIcons as any)[item.icon] || LucideIcons.Package;
           
           return (
@@ -78,6 +90,11 @@ export const GroupDashboard: React.FC = () => {
                   <h3 className="font-bold text-foreground group-hover:text-primary transition-colors">
                     {item.labelKey && t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.label}
                   </h3>
+                  {item.hidden && isSuperAdmin && (
+                    <p className="text-[8px] uppercase font-bold text-gray-400 tracking-widest mt-0.5">
+                      Hidden from sidebar
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
                     Open {item.label}
                   </p>

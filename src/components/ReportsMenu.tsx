@@ -16,6 +16,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
 import { erpService } from '../services/erpService';
@@ -23,6 +24,7 @@ import { MenuConfig } from '../types';
 
 export const ReportsMenu: React.FC = () => {
   const { t } = useLanguage();
+  const { isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [menuConfig, setMenuConfig] = React.useState<MenuConfig | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -96,12 +98,17 @@ export const ReportsMenu: React.FC = () => {
     return 'financial'; // Default
   };
 
-  const groupedReports = reportsGroup.items.reduce((acc, item) => {
-    const catId = getCategoryForReport(item.label);
-    if (!acc[catId]) acc[catId] = [];
-    acc[catId].push(item);
-    return acc;
-  }, {} as Record<string, typeof reportsGroup.items>);
+  const groupedReports = reportsGroup.items
+    .filter(item => {
+      const itemsToHide = ['Balance Sheet', 'Profit & Loss', 'Stock Summary', 'Ratio Analysis', 'Display More Reports'];
+      return !itemsToHide.includes(item.label);
+    })
+    .reduce((acc, item) => {
+      const catId = getCategoryForReport(item.label);
+      if (!acc[catId]) acc[catId] = [];
+      acc[catId].push(item);
+      return acc;
+    }, {} as Record<string, typeof reportsGroup.items>);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -153,7 +160,7 @@ export const ReportsMenu: React.FC = () => {
                         <h3 className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
                           {item.labelKey && t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.label}
                         </h3>
-                        {item.hidden && (
+                        {item.hidden && isSuperAdmin && (
                           <span className="text-[8px] uppercase font-bold text-gray-400 tracking-widest">Hidden from sidebar</span>
                         )}
                       </div>
