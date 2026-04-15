@@ -57,6 +57,7 @@ export interface Ledger {
   bank_account_no?: string;
   bank_code?: string;
   bank_name?: string;
+  credit_limit?: number;
 }
 
 export interface BankDetails {
@@ -359,4 +360,30 @@ export interface SubscriptionOrder {
   founderNotes?: string;
   createdAt: any;
   updatedAt?: any;
+}
+
+export interface MenuItemConfig {
+  id: string;
+  to: string;
+  icon: string; // Name of the lucide icon
+  label: string;
+  labelKey: string;
+  feature?: string;
+  adminOnly?: boolean;
+  superAdminOnly?: boolean;
+  permission?: string;
+  hidden?: boolean;
+}
+
+export interface MenuGroupConfig {
+  id: string;
+  group: string;
+  groupKey: string;
+  items: MenuItemConfig[];
+  to?: string;
+}
+
+export interface MenuConfig {
+  groups: MenuGroupConfig[];
+  updatedAt: any;
 }

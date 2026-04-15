@@ -61,6 +61,7 @@ export function LedgerCreation() {
     // Additional
     is_bill_wise: false,
     vat_no: '',
+    credit_limit: 0,
   });
 
   useEffect(() => {
@@ -107,6 +108,7 @@ export function LedgerCreation() {
             bank_code: lData.bank_code || '',
             bank_name: lData.bank_name || '',
             vat_no: lData.vat_no || '',
+            credit_limit: lData.credit_limit || 0,
             opening_balance: Math.abs(ob),
             opening_balance_type: ob >= 0 ? 'Dr' : 'Cr',
             provide_contact_details: !!(lData.contact_name || lData.contact_phone || lData.contact_email),
@@ -381,6 +383,17 @@ export function LedgerCreation() {
                   </label>
                     </div>
                   )}
+                  <div className="space-y-2 pt-4 border-t border-border/50">
+                    <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('ledger.creditLimit')} ({baseCurrencySymbol})</label>
+                    <input
+                      type="number"
+                      value={formData.credit_limit ?? ''}
+                      onFocus={e => e.target.value === '0' && e.target.select()}
+                      onChange={e => setFormData({ ...formData, credit_limit: Number(e.target.value) })}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors font-bold"
+                      placeholder="0.00"
+                    />
+                  </div>
                 </div>
               </div>
 

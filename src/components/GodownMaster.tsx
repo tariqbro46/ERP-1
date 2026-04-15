@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, Loader2, MapPin, User, Phone } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -21,6 +22,19 @@ export function GodownMaster() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [description, setDescription] = useState('');
   const { showNotification } = useNotification();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setEditingGodown(null);
+      setName('');
+      setLocation('');
+      setContactPerson('');
+      setPhoneNumber('');
+      setDescription('');
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchGodowns();

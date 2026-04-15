@@ -228,6 +228,51 @@
       },
       "required": ["companyId", "employeeId", "amount", "remainingBalance"]
     },
+    "StockGroup": {
+      "title": "Stock Group",
+      "description": "Classification for stock items.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["name", "companyId"]
+    },
+    "StockCategory": {
+      "title": "Stock Category",
+      "description": "Category for stock items.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["name", "companyId"]
+    },
+    "VoucherType": {
+      "title": "Voucher Type",
+      "description": "Type of voucher (e.g., Sales, Purchase, Payment).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "base_type": { "type": "string" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["name", "base_type", "companyId"]
+    },
+    "EmployeeGroup": {
+      "title": "Employee Group",
+      "description": "Classification for employees.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["name", "companyId"]
+    },
     "Settings": {
       "title": "Settings",
       "description": "System-wide settings for a company.",
@@ -357,6 +402,29 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "description", "priceMonthly", "priceYearly", "features", "limits"]
+    },
+    "MenuConfig": {
+      "title": "Menu Configuration",
+      "description": "Dynamic sidebar menu configuration.",
+      "type": "object",
+      "properties": {
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "labelKey": { "type": "string" },
+              "items": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "firestore": {
@@ -432,6 +500,22 @@
       "schema": "Loan",
       "description": "Collection of employee loans."
     },
+    "/stock_groups/{id}": {
+      "schema": "StockGroup",
+      "description": "Collection of stock groups."
+    },
+    "/stock_categories/{id}": {
+      "schema": "StockCategory",
+      "description": "Collection of stock categories."
+    },
+    "/voucher_types/{id}": {
+      "schema": "VoucherType",
+      "description": "Collection of voucher types."
+    },
+    "/employee_groups/{id}": {
+      "schema": "EmployeeGroup",
+      "description": "Collection of employee groups."
+    },
     "/notifications/{id}": {
       "schema": "Notification",
       "description": "Global notifications collection."
@@ -447,6 +531,10 @@
     "/subscription_plans/{id}": {
       "schema": "SubscriptionPlan",
       "description": "Collection of subscription plans."
+    },
+    "/system/menu": {
+      "schema": "MenuConfig",
+      "description": "Dynamic sidebar menu configuration."
     }
   }
 }

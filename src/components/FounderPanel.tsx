@@ -12,7 +12,7 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Company, UserRole, UserProfile, AppNotification, SubscriptionPlan } from '../types';
+import { Company, UserRole, UserProfile, AppNotification, SubscriptionPlan, MenuConfig, MenuGroupConfig, MenuItemConfig } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
@@ -55,8 +55,15 @@ import {
   Check,
   MessageSquare,
   Zap,
-  MapPin
+  MapPin,
+  GripVertical,
+  RefreshCw,
+  EyeOff,
+  UserCog,
+  Square,
+  CheckSquare
 } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
 import { erpService } from '../services/erpService';
 import { useSettings } from '../contexts/SettingsContext';
@@ -87,13 +94,71 @@ export default function FounderPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<CompanyStats | null>(null);
   const [isEditingSubscription, setIsEditingSubscription] = useState(false);
-  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent' | 'plans' | 'orders'>('companies');
+  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent' | 'plans' | 'orders' | 'menu'>('companies');
+  const [menuConfig, setMenuConfig] = useState<MenuConfig | null>(null);
+  const [isEditingMenu, setIsEditingMenu] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<MenuGroupConfig | null>(null);
+  const [editingMenuItem, setEditingMenuItem] = useState<{groupId: string, item: MenuItemConfig} | null>(null);
   const [globalActivity, setGlobalActivity] = useState<any[]>([]);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isCreatingNotification, setIsCreatingNotification] = useState(false);
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
+
+  useEffect(() => {
+    if (viewMode === 'menu') {
+      const unsubscribe = erpService.subscribeToMenuConfig((config) => {
+        if (config) setMenuConfig(config);
+      });
+      return () => unsubscribe();
+    }
+  }, [viewMode]);
+
+  const onDragEnd = (result: any) => {
+    if (!result.destination || !menuConfig) return;
+
+    const { source, destination, type } = result;
+
+    if (type === 'group') {
+      const newGroups = Array.from(menuConfig.groups);
+      const [removed] = newGroups.splice(source.index, 1);
+      newGroups.splice(destination.index, 0, removed);
+
+      const newConfig = { ...menuConfig, groups: newGroups };
+      setMenuConfig(newConfig);
+      erpService.updateMenuConfig(newConfig);
+      showNotification('Menu groups reordered', 'success');
+      return;
+    }
+
+    // Item reordering
+    const sourceGroupIndex = menuConfig.groups.findIndex(g => g.id === source.droppableId);
+    const destGroupIndex = menuConfig.groups.findIndex(g => g.id === destination.droppableId);
+
+    if (sourceGroupIndex === -1 || destGroupIndex === -1) return;
+
+    const newGroups = Array.from(menuConfig.groups);
+    const sourceGroup = { ...newGroups[sourceGroupIndex] };
+    const destGroup = { ...newGroups[destGroupIndex] };
+
+    const [removed] = sourceGroup.items.splice(source.index, 1);
+
+    if (source.droppableId === destination.droppableId) {
+      sourceGroup.items.splice(destination.index, 0, removed);
+      newGroups[sourceGroupIndex] = sourceGroup;
+    } else {
+      destGroup.items.splice(destination.index, 0, removed);
+      newGroups[sourceGroupIndex] = sourceGroup;
+      newGroups[destGroupIndex] = destGroup;
+    }
+
+    const newConfig = { ...menuConfig, groups: newGroups };
+    setMenuConfig(newConfig);
+    erpService.updateMenuConfig(newConfig);
+    showNotification('Menu items reordered', 'success');
+  };
   const [subscriptionOrders, setSubscriptionOrders] = useState<any[]>([]);
   const [isEditingPlan, setIsEditingPlan] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<Partial<SubscriptionPlan>>({
@@ -276,6 +341,87 @@ export default function FounderPanel() {
       setLoading(false);
     }
   };
+
+  const seedInitialMenu = async () => {
+    try {
+      setLoading(true);
+      const { NAV_ITEMS } = await import('../constants/navigation');
+      const initialGroups: MenuGroupConfig[] = NAV_ITEMS.map((group) => ({
+        id: group.id,
+        group: group.group,
+        groupKey: group.groupKey,
+        items: group.items.map((item) => {
+          const menuItem: MenuItemConfig = {
+            id: item.id,
+            to: item.to,
+            icon: item.iconName,
+            label: item.label,
+            labelKey: item.labelKey
+          };
+          
+          if (item.feature) menuItem.feature = item.feature;
+          if (item.adminOnly !== undefined) menuItem.adminOnly = item.adminOnly;
+          if (item.superAdminOnly !== undefined) menuItem.superAdminOnly = item.superAdminOnly;
+          if (item.permission) menuItem.permission = item.permission;
+          
+          return menuItem;
+        })
+      }));
+
+      const config: MenuConfig = {
+        groups: initialGroups,
+        updatedAt: new Date()
+      };
+
+      await erpService.updateMenuConfig(config);
+      setMenuConfig(config);
+      showNotification('Menu seeded successfully from defaults', 'success');
+    } catch (error) {
+      console.error('Error seeding menu:', error);
+      showNotification('Failed to seed menu', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBulkUpdate = async (updates: Partial<MenuItemConfig>) => {
+    if (!menuConfig) return;
+    
+    const newGroups = menuConfig.groups.map(group => ({
+      ...group,
+      items: group.items.map(item => {
+        if (selectedItemIds.has(item.id)) {
+          return { ...item, ...updates };
+        }
+        return item;
+      })
+    }));
+
+    const newConfig = { ...menuConfig, groups: newGroups, updatedAt: new Date() };
+    try {
+      await erpService.updateMenuConfig(newConfig);
+      setMenuConfig(newConfig);
+      setSelectedItemIds(new Set());
+      showNotification('Bulk update successful');
+    } catch (err) {
+      showNotification('Failed to update items', 'error');
+    }
+  };
+
+  const fetchMenuConfig = async () => {
+    try {
+      const config = await erpService.getMenuConfig();
+      setMenuConfig(config);
+    } catch (error) {
+      console.error('Error fetching menu config:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (viewMode === 'menu') {
+      fetchMenuConfig();
+    }
+  }, [viewMode]);
 
   const toggleUserExpansion = (userId: string) => {
     const newExpanded = new Set(expandedUsers);
@@ -669,6 +815,18 @@ export default function FounderPanel() {
               Orders
             </button>
             <button
+              onClick={() => setViewMode('menu')}
+              className={cn(
+                "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
+                viewMode === 'menu' 
+                  ? uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white shadow-md" : "bg-background text-foreground shadow-sm"
+                  : uiStyle === 'UI/UX 2' ? "text-blue-400 hover:text-blue-600" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <ListTree className="w-4 h-4" />
+              Menu
+            </button>
+            <button
               onClick={() => setViewMode('settings')}
               className={cn(
                 "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
@@ -702,9 +860,7 @@ export default function FounderPanel() {
         </div>
       </header>
 
-      <div className="overflow-x-auto pb-6 -mx-6 px-6">
-        <div className="min-w-[1000px] lg:min-w-0 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className={cn(
           "bg-card border border-border rounded-xl p-6 shadow-sm transition-all",
           uiStyle === 'UI/UX 2' ? "bg-blue-600 border-blue-700 text-white shadow-blue-200" : ""
@@ -775,10 +931,11 @@ export default function FounderPanel() {
 
       {viewMode === 'companies' ? (
         <div className={cn(
-          "bg-card border border-border rounded-xl shadow-sm overflow-hidden",
+          "bg-card border border-border rounded-xl shadow-sm overflow-x-auto",
           uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
         )}>
-          <table className="w-full text-left text-sm">
+          <div className="min-w-[1000px] lg:min-w-0">
+            <table className="w-full text-left text-sm">
             <thead className={cn(
               "font-medium border-b border-border",
               uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-muted/50 text-muted-foreground"
@@ -903,162 +1060,166 @@ export default function FounderPanel() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       ) : viewMode === 'siteContent' ? (
         <SiteContentEditor />
       ) : viewMode === 'users' ? (
-        <div className="space-y-4">
-          {allUsers
-            .filter(u => u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || u.email?.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map((user) => {
-              const userCompanies = companies.filter(c => 
-                c.createdBy === user.uid || 
-                c.ownerId === user.uid || 
-                (c.email && c.email === user.email)
-              );
-              const isExpanded = expandedUsers.has(user.uid);
+        <div className="overflow-x-auto pb-4">
+          <div className="min-w-[600px] lg:min-w-0 space-y-4">
+            {allUsers
+              .filter(u => u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || u.email?.toLowerCase().includes(searchTerm.toLowerCase()))
+              .map((user) => {
+                const userCompanies = companies.filter(c => 
+                  c.createdBy === user.uid || 
+                  c.ownerId === user.uid || 
+                  (c.email && c.email === user.email)
+                );
+                const isExpanded = expandedUsers.has(user.uid);
 
-              return (
-                <div key={user.uid} className={cn(
-                  "bg-card border border-border rounded-xl overflow-hidden transition-all",
-                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
-                )}>
-                  <div 
-                    onClick={() => toggleUserExpansion(user.uid)}
-                    className={cn(
-                      "p-4 flex items-center justify-between cursor-pointer transition-colors",
-                      uiStyle === 'UI/UX 2' ? "hover:bg-blue-50/50" : "hover:bg-muted/30"
-                    )}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center",
-                        uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-primary/10 text-primary"
-                      )}>
-                        <Users className="w-5 h-5" />
+                return (
+                  <div key={user.uid} className={cn(
+                    "bg-card border border-border rounded-xl overflow-hidden transition-all",
+                    uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                  )}>
+                    <div 
+                      onClick={() => toggleUserExpansion(user.uid)}
+                      className={cn(
+                        "p-4 flex items-center justify-between cursor-pointer transition-colors",
+                        uiStyle === 'UI/UX 2' ? "hover:bg-blue-50/50" : "hover:bg-muted/30"
+                      )}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center",
+                          uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-primary/10 text-primary"
+                        )}>
+                          <Users className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className={cn(
+                            "text-sm font-bold",
+                            uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+                          )}>{user.displayName || 'Unnamed User'}</h3>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className={cn(
-                          "text-sm font-bold",
-                          uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
-                        )}>{user.displayName || 'Unnamed User'}</h3>
-                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                      <div className="flex items-center gap-4">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingPermissionsUser(user);
+                            setSelectedPermissions(user.permissions || []);
+                          }}
+                          className={cn(
+                            "p-2 rounded-lg transition-colors flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest",
+                            uiStyle === 'UI/UX 2' ? "text-blue-600 hover:bg-blue-50" : "text-primary hover:bg-primary/10"
+                          )}
+                          title="Manage Permissions"
+                        >
+                          <Shield className="w-4 h-4" />
+                          Permissions
+                        </button>
+                        <span className={cn(
+                          "text-[10px] uppercase font-bold px-2 py-1 rounded",
+                          uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "text-gray-500 bg-muted"
+                        )}>
+                          {userCompanies.length} Companies
+                        </span>
+                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingPermissionsUser(user);
-                          setSelectedPermissions(user.permissions || []);
-                        }}
-                        className={cn(
-                          "p-2 rounded-lg transition-colors flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest",
-                          uiStyle === 'UI/UX 2' ? "text-blue-600 hover:bg-blue-50" : "text-primary hover:bg-primary/10"
-                        )}
-                        title="Manage Permissions"
-                      >
-                        <Shield className="w-4 h-4" />
-                        Permissions
-                      </button>
-                      <span className={cn(
-                        "text-[10px] uppercase font-bold px-2 py-1 rounded",
-                        uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "text-gray-500 bg-muted"
-                      )}>
-                        {userCompanies.length} Companies
-                      </span>
-                      {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                    </div>
-                  </div>
 
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="border-t border-border bg-muted/10"
-                      >
-                        {userCompanies.length > 0 ? (
-                          <div className="p-4 space-y-4">
-                            {userCompanies.map((company) => (
-                              <div key={company.id} className="bg-background border border-border rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div className="space-y-2">
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="border-t border-border bg-muted/10"
+                        >
+                          {userCompanies.length > 0 ? (
+                            <div className="p-4 space-y-4">
+                              {userCompanies.map((company) => (
+                                <div key={company.id} className="bg-background border border-border rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                  <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="text-sm font-bold text-foreground">{company.name}</h4>
+                                      <span className={`text-[8px] uppercase font-bold px-1.5 py-0.5 rounded ${
+                                        company.subscriptionStatus === 'active' ? 'bg-emerald-500/10 text-emerald-500' :
+                                        company.subscriptionStatus === 'trial' ? 'bg-amber-500/10 text-amber-500' :
+                                        'bg-rose-500/10 text-rose-500'
+                                      }`}>
+                                        {company.subscriptionStatus}
+                                      </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                        <Mail className="w-3 h-3" />
+                                        {company.email || 'N/A'}
+                                      </div>
+                                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                        <Phone className="w-3 h-3" />
+                                        {company.phone || 'N/A'}
+                                      </div>
+                                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                        <Globe className="w-3 h-3" />
+                                        {company.website || 'N/A'}
+                                      </div>
+                                    </div>
+                                  </div>
                                   <div className="flex items-center gap-2">
-                                    <h4 className="text-sm font-bold text-foreground">{company.name}</h4>
-                                    <span className={`text-[8px] uppercase font-bold px-1.5 py-0.5 rounded ${
-                                      company.subscriptionStatus === 'active' ? 'bg-emerald-500/10 text-emerald-500' :
-                                      company.subscriptionStatus === 'trial' ? 'bg-amber-500/10 text-amber-500' :
-                                      'bg-rose-500/10 text-rose-500'
-                                    }`}>
-                                      {company.subscriptionStatus}
-                                    </span>
-                                  </div>
-                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                      <Mail className="w-3 h-3" />
-                                      {company.email || 'N/A'}
-                                    </div>
-                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                      <Phone className="w-3 h-3" />
-                                      {company.phone || 'N/A'}
-                                    </div>
-                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                      <Globe className="w-3 h-3" />
-                                      {company.website || 'N/A'}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {currentUser?.companyId !== company.id ? (
+                                    {currentUser?.companyId !== company.id ? (
+                                      <button 
+                                        onClick={() => handleSwitchCompany(company.id)}
+                                        className="px-3 py-1.5 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded hover:opacity-90 transition-all flex items-center gap-1"
+                                      >
+                                        <ArrowRight className="w-3 h-3" />
+                                        Switch
+                                      </button>
+                                    ) : (
+                                      <div className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase tracking-widest rounded flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3" />
+                                        Active
+                                      </div>
+                                    )}
                                     <button 
-                                      onClick={() => handleSwitchCompany(company.id)}
-                                      className="px-3 py-1.5 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded hover:opacity-90 transition-all flex items-center gap-1"
+                                      onClick={() => setSelectedCompany(company)}
+                                      className="px-3 py-1.5 bg-muted text-foreground text-[10px] font-bold uppercase tracking-widest rounded hover:bg-muted/80 transition-all"
                                     >
-                                      <ArrowRight className="w-3 h-3" />
-                                      Switch
+                                      Manage
                                     </button>
-                                  ) : (
-                                    <div className="px-3 py-1.5 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase tracking-widest rounded flex items-center gap-1">
-                                      <CheckCircle2 className="w-3 h-3" />
-                                      Active
-                                    </div>
-                                  )}
-                                  <button 
-                                    onClick={() => setSelectedCompany(company)}
-                                    className="px-3 py-1.5 bg-muted text-foreground text-[10px] font-bold uppercase tracking-widest rounded hover:bg-muted/80 transition-all"
-                                  >
-                                    Manage
-                                  </button>
-                                  <button 
-                                    onClick={() => setCompanyToDelete(company.id)}
-                                    className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
-                                    title="Delete Company"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+                                    <button 
+                                      onClick={() => setCompanyToDelete(company.id)}
+                                      className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                                      title="Delete Company"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="p-8 text-center">
-                            <p className="text-xs text-muted-foreground italic">This user hasn't created any companies yet.</p>
-                          </div>
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              );
-            })}
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-8 text-center">
+                              <p className="text-xs text-muted-foreground italic">This user hasn't created any companies yet.</p>
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+          </div>
         </div>
       ) : viewMode === 'activity' ? (
         <div className={cn(
-          "bg-card border border-border rounded-xl shadow-sm overflow-hidden",
+          "bg-card border border-border rounded-xl shadow-sm overflow-x-auto",
           uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
         )}>
-          <div className={cn(
+          <div className="min-w-[700px] lg:min-w-0">
+            <div className={cn(
             "p-4 border-b border-border",
             uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-muted/30"
           )}>
@@ -1068,7 +1229,7 @@ export default function FounderPanel() {
             </h2>
           </div>
           <div className="divide-y divide-border">
-            {globalActivity.length > 0 ? (
+            {globalActivity && globalActivity.length > 0 ? (
               globalActivity.map((log) => {
                 const company = companies.find(c => c.id === log.companyId);
                 const user = allUsers.find(u => u.uid === log.userId);
@@ -1091,7 +1252,7 @@ export default function FounderPanel() {
                             uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
                           )}>{log.action}</span>
                           <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                            {company?.name || 'Unknown Company'}
+                            {company?.name || log.companyName || 'System'}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground">
@@ -1105,7 +1266,8 @@ export default function FounderPanel() {
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                        {log.createdAt?.toDate ? safeFormat(log.createdAt.toDate(), 'dd MMM, HH:mm:ss') : 'N/A'}
+                        {log.createdAt?.toDate ? safeFormat(log.createdAt.toDate(), 'dd MMM, HH:mm:ss') : 
+                         log.createdAt ? safeFormat(log.createdAt, 'dd MMM, HH:mm:ss') : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -1117,6 +1279,7 @@ export default function FounderPanel() {
                 <p className="text-sm text-muted-foreground italic">No activity recorded yet.</p>
               </div>
             )}
+          </div>
           </div>
         </div>
       ) : viewMode === 'orders' ? (
@@ -2055,8 +2218,290 @@ export default function FounderPanel() {
           </div>
         </div>
       )}
-      </div>
-      </div>
+
+      {viewMode === 'menu' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Dynamic Menu Management</h2>
+              <p className="text-sm text-muted-foreground">Control the sidebar navigation structure and items.</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  const unsubscribe = erpService.subscribeToMenuConfig((config) => {
+                    if (config) setMenuConfig(config);
+                  });
+                  setTimeout(unsubscribe, 1000);
+                  showNotification('Menu refreshed');
+                }}
+                className="p-2 hover:bg-foreground/5 rounded-lg transition-colors"
+                title="Refresh Menu"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to reset the menu to defaults? This will overwrite your current configuration.')) {
+                    seedInitialMenu();
+                  }
+                }}
+                className="px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-amber-600 transition-all flex items-center gap-2"
+              >
+                <Zap className="w-4 h-4" />
+                Reset to Defaults
+              </button>
+              <button
+                onClick={() => {
+                  setEditingGroup({
+                    id: `group-${Date.now()}`,
+                    group: '',
+                    groupKey: '',
+                    items: []
+                  });
+                }}
+                className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add Group
+              </button>
+            </div>
+          </div>
+
+          {selectedItemIds.size > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-primary/10 border border-primary/20 rounded-xl p-4 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-bold text-primary uppercase tracking-widest">
+                  {selectedItemIds.size} Items Selected
+                </span>
+                <div className="h-4 w-[1px] bg-primary/20" />
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleBulkUpdate({ adminOnly: true })}
+                    className="px-3 py-1.5 bg-white border border-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center gap-2"
+                  >
+                    <Shield className="w-3 h-3" />
+                    Admin Only
+                  </button>
+                  <button 
+                    onClick={() => handleBulkUpdate({ superAdminOnly: true })}
+                    className="px-3 py-1.5 bg-white border border-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center gap-2"
+                  >
+                    <UserCog className="w-3 h-3" />
+                    Founder Only
+                  </button>
+                  <button 
+                    onClick={() => handleBulkUpdate({ hidden: true })}
+                    className="px-3 py-1.5 bg-white border border-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center gap-2"
+                  >
+                    <EyeOff className="w-3 h-3" />
+                    Hide
+                  </button>
+                  <button 
+                    onClick={() => handleBulkUpdate({ adminOnly: false, superAdminOnly: false, hidden: false })}
+                    className="px-3 py-1.5 bg-white border border-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Reset
+                  </button>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedItemIds(new Set())}
+                className="text-xs font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest"
+              >
+                Clear
+              </button>
+            </motion.div>
+          )}
+
+          {!menuConfig ? (
+            <div className="bg-card border border-border rounded-xl p-12 text-center space-y-4">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
+                <ListTree className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground">No menu configuration found. Seed from static to start.</p>
+              <button
+                onClick={seedInitialMenu}
+                className="px-6 py-2 bg-primary text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all"
+              >
+                Seed Initial Menu
+              </button>
+            </div>
+          ) : (
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="menu-groups" type="group">
+                {(provided) => (
+                  <div 
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-4"
+                  >
+                    {menuConfig.groups.map((group, index) => (
+                      <Draggable key={group.id} draggableId={group.id} index={index}>
+                        {(provided, snapshot) => (
+                          <div 
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={cn(
+                              "bg-card border border-border rounded-xl overflow-hidden shadow-sm transition-shadow",
+                              snapshot.isDragging && "shadow-2xl ring-2 ring-primary/20"
+                            )}
+                          >
+                            <div className="p-4 bg-muted/30 flex items-center justify-between border-b border-border">
+                              <div className="flex items-center gap-3">
+                                <div {...provided.dragHandleProps} className="p-1 hover:bg-foreground/5 rounded cursor-grab active:cursor-grabbing">
+                                  <GripVertical className="w-4 h-4 text-muted-foreground" />
+                                </div>
+                                <LayoutGrid className="w-5 h-5 text-primary" />
+                                <div>
+                                  <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">{group.group || 'Unnamed Group'}</h3>
+                                  <p className="text-[10px] text-muted-foreground font-mono">{group.groupKey}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setEditingGroup(group)}
+                                  className="p-2 hover:bg-foreground/5 rounded-lg text-muted-foreground hover:text-primary transition-colors"
+                                >
+                                  <Settings className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const newGroups = menuConfig.groups.filter(g => g.id !== group.id);
+                                    const newConfig = { ...menuConfig, groups: newGroups };
+                                    erpService.updateMenuConfig(newConfig);
+                                    setMenuConfig(newConfig);
+                                    showNotification('Group removed');
+                                  }}
+                                  className="p-2 hover:bg-rose-500/10 rounded-lg text-muted-foreground hover:text-rose-500 transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="p-4">
+                              <Droppable droppableId={group.id} type="item">
+                                {(provided, snapshot) => (
+                                  <div 
+                                    {...provided.droppableProps}
+                                    ref={provided.innerRef}
+                                    className={cn(
+                                      "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[50px] transition-colors rounded-lg p-1",
+                                      snapshot.isDraggingOver && "bg-primary/5"
+                                    )}
+                                  >
+                                    {group.items.map((item, itemIndex) => (
+                                      <Draggable key={item.id} draggableId={item.id} index={itemIndex}>
+                                        {(provided, snapshot) => (
+                                          <div 
+                                            ref={provided.innerRef}
+                                            {...provided.draggableProps}
+                                            className={cn(
+                                              "p-3 border border-border rounded-lg flex items-center justify-between group hover:border-primary/50 transition-all bg-card",
+                                              snapshot.isDragging && "shadow-xl border-primary ring-1 ring-primary/20"
+                                            )}
+                                          >
+                                            <div className="flex items-center gap-3">
+                                              <button 
+                                                onClick={() => {
+                                                  const newSelected = new Set(selectedItemIds);
+                                                  if (newSelected.has(item.id)) {
+                                                    newSelected.delete(item.id);
+                                                  } else {
+                                                    newSelected.add(item.id);
+                                                  }
+                                                  setSelectedItemIds(newSelected);
+                                                }}
+                                                className={cn(
+                                                  "p-1 rounded transition-colors",
+                                                  selectedItemIds.has(item.id) ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                                                )}
+                                              >
+                                                {selectedItemIds.has(item.id) ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                                              </button>
+                                              <div {...provided.dragHandleProps} className="p-1 hover:bg-foreground/5 rounded cursor-grab active:cursor-grabbing">
+                                                <GripVertical className="w-3 h-3 text-muted-foreground" />
+                                              </div>
+                                              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary relative">
+                                                <LayoutDashboard className="w-4 h-4" />
+                                                <div className="absolute -top-1 -right-1 flex flex-col gap-0.5">
+                                                  {item.adminOnly && <div className="p-0.5 bg-blue-500 text-white rounded-full shadow-sm" title="Admin Only"><Shield className="w-2 h-2" /></div>}
+                                                  {item.superAdminOnly && <div className="p-0.5 bg-amber-500 text-white rounded-full shadow-sm" title="Founder Only"><UserCog className="w-2 h-2" /></div>}
+                                                  {item.hidden && <div className="p-0.5 bg-gray-500 text-white rounded-full shadow-sm" title="Hidden from Sidebar"><EyeOff className="w-2 h-2" /></div>}
+                                                </div>
+                                              </div>
+                                              <div>
+                                                <p className="text-xs font-bold text-foreground">{item.label}</p>
+                                                <p className="text-[9px] text-muted-foreground font-mono">{item.to}</p>
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <button
+                                                onClick={() => setEditingMenuItem({ groupId: group.id, item })}
+                                                className="p-1.5 hover:bg-foreground/5 rounded-md text-muted-foreground hover:text-primary"
+                                              >
+                                                <Settings className="w-3.5 h-3.5" />
+                                              </button>
+                                              <button
+                                                onClick={() => {
+                                                  const newGroups = menuConfig.groups.map(g => {
+                                                    if (g.id === group.id) {
+                                                      return { ...g, items: g.items.filter(i => i.id !== item.id) };
+                                                    }
+                                                    return g;
+                                                  });
+                                                  const newConfig = { ...menuConfig, groups: newGroups };
+                                                  erpService.updateMenuConfig(newConfig);
+                                                  setMenuConfig(newConfig);
+                                                  showNotification('Item removed');
+                                                }}
+                                                className="p-1.5 hover:bg-rose-500/10 rounded-md text-muted-foreground hover:text-rose-500"
+                                              >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                    <button
+                                      onClick={() => setEditingMenuItem({
+                                        groupId: group.id,
+                                        item: {
+                                          id: `item-${Date.now()}`,
+                                          to: '',
+                                          icon: 'Package',
+                                          label: '',
+                                          labelKey: ''
+                                        }
+                                      })}
+                                      className="p-3 border border-dashed border-border rounded-lg flex items-center justify-center gap-2 text-muted-foreground hover:text-primary hover:border-primary/50 transition-all h-[54px]"
+                                    >
+                                      <Plus className="w-4 h-4" />
+                                      <span className="text-[10px] font-bold uppercase tracking-widest">Add Item</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </Droppable>
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          )}
+        </div>
+      )}
 
       {/* Create Notification Modal */}
       <AnimatePresence>
@@ -2292,6 +2737,296 @@ export default function FounderPanel() {
                     )}
                   >
                     Save Permissions
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Menu Group Modal */}
+      <AnimatePresence>
+        {editingGroup && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            >
+              <div className="p-6 border-b border-border flex items-center justify-between">
+                <h2 className="text-xl font-bold text-foreground">Edit Menu Group</h2>
+                <button 
+                  onClick={() => setEditingGroup(null)}
+                  className="p-2 hover:bg-foreground/5 rounded-lg transition-colors"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Group Name</label>
+                  <input
+                    type="text"
+                    value={editingGroup.group}
+                    onChange={(e) => setEditingGroup({ ...editingGroup, group: e.target.value })}
+                    placeholder="e.g. Masters"
+                    className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground">Group Translation Key</label>
+                  <input
+                    type="text"
+                    value={editingGroup.groupKey}
+                    onChange={(e) => setEditingGroup({ ...editingGroup, groupKey: e.target.value })}
+                    placeholder="e.g. nav.masters"
+                    className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground flex justify-between">
+                    <span>Group Route (To)</span>
+                    <span className="text-[8px] normal-case font-normal text-blue-500 italic">Optional: Link group title to a page</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editingGroup.to || ''}
+                    onChange={(e) => setEditingGroup({ ...editingGroup, to: e.target.value })}
+                    placeholder="e.g. /reports"
+                    className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button
+                    onClick={() => setEditingGroup(null)}
+                    className="flex-1 py-2 border border-border text-foreground rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-muted transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!menuConfig) {
+                        const newConfig: MenuConfig = {
+                          groups: [editingGroup],
+                          updatedAt: new Date()
+                        };
+                        await erpService.updateMenuConfig(newConfig);
+                        setMenuConfig(newConfig);
+                      } else {
+                        const exists = menuConfig.groups.find(g => g.id === editingGroup.id);
+                        let newGroups;
+                        if (exists) {
+                          newGroups = menuConfig.groups.map(g => g.id === editingGroup.id ? editingGroup : g);
+                        } else {
+                          newGroups = [...menuConfig.groups, editingGroup];
+                        }
+                        const newConfig = { ...menuConfig, groups: newGroups };
+                        await erpService.updateMenuConfig(newConfig);
+                        setMenuConfig(newConfig);
+                      }
+                      setEditingGroup(null);
+                      showNotification('Menu group saved');
+                    }}
+                    className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg font-bold uppercase tracking-widest text-[10px] hover:opacity-90 transition-all"
+                  >
+                    Save Group
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Menu Item Modal */}
+      <AnimatePresence>
+        {editingMenuItem && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+            >
+              <div className="p-6 border-b border-border flex items-center justify-between">
+                <h2 className="text-xl font-bold text-foreground">Edit Menu Item</h2>
+                <button 
+                  onClick={() => setEditingMenuItem(null)}
+                  className="p-2 hover:bg-foreground/5 rounded-lg transition-colors"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground">Label</label>
+                    <input
+                      type="text"
+                      value={editingMenuItem.item.label}
+                      onChange={(e) => setEditingMenuItem({ 
+                        ...editingMenuItem, 
+                        item: { ...editingMenuItem.item, label: e.target.value } 
+                      })}
+                      placeholder="e.g. Ledgers"
+                      className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground flex justify-between">
+                      <span>Translation Key</span>
+                      <span className="text-[8px] normal-case font-normal text-amber-500">Overrides Label if set</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editingMenuItem.item.labelKey}
+                      onChange={(e) => setEditingMenuItem({ 
+                        ...editingMenuItem, 
+                        item: { ...editingMenuItem.item, labelKey: e.target.value } 
+                      })}
+                      placeholder="e.g. nav.ledgers"
+                      className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground flex justify-between">
+                      <span>Route (To)</span>
+                      <span className="text-[8px] normal-case font-normal text-blue-500">Use /group/ID for dashboard</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editingMenuItem.item.to}
+                      onChange={(e) => setEditingMenuItem({ 
+                        ...editingMenuItem, 
+                        item: { ...editingMenuItem.item, to: e.target.value } 
+                      })}
+                      placeholder="e.g. /ledgers"
+                      className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground">Icon Name</label>
+                    <input
+                      type="text"
+                      value={editingMenuItem.item.icon}
+                      onChange={(e) => setEditingMenuItem({ 
+                        ...editingMenuItem, 
+                        item: { ...editingMenuItem.item, icon: e.target.value } 
+                      })}
+                      placeholder="e.g. Package"
+                      className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground">Feature Flag</label>
+                    <input
+                      type="text"
+                      value={editingMenuItem.item.feature || ''}
+                      onChange={(e) => setEditingMenuItem({ 
+                        ...editingMenuItem, 
+                        item: { ...editingMenuItem.item, feature: e.target.value } 
+                      })}
+                      placeholder="e.g. accounting"
+                      className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground">Permission</label>
+                    <input
+                      type="text"
+                      value={editingMenuItem.item.permission || ''}
+                      onChange={(e) => setEditingMenuItem({ 
+                        ...editingMenuItem, 
+                        item: { ...editingMenuItem.item, permission: e.target.value } 
+                      })}
+                      placeholder="e.g. view_ledgers"
+                      className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6 pt-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingMenuItem.item.adminOnly}
+                      onChange={(e) => setEditingMenuItem({ 
+                        ...editingMenuItem, 
+                        item: { ...editingMenuItem.item, adminOnly: e.target.checked } 
+                      })}
+                      className="rounded border-border text-primary focus:ring-primary"
+                    />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Admin Only</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingMenuItem.item.superAdminOnly}
+                      onChange={(e) => setEditingMenuItem({ 
+                        ...editingMenuItem, 
+                        item: { ...editingMenuItem.item, superAdminOnly: e.target.checked } 
+                      })}
+                      className="rounded border-border text-primary focus:ring-primary"
+                    />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Founder Only</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingMenuItem.item.hidden || false}
+                      onChange={(e) => setEditingMenuItem({ 
+                        ...editingMenuItem, 
+                        item: { ...editingMenuItem.item, hidden: e.target.checked } 
+                      })}
+                      className="rounded border-border text-primary focus:ring-primary"
+                    />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Hide from Sidebar</span>
+                  </label>
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button
+                    onClick={() => setEditingMenuItem(null)}
+                    className="flex-1 py-2 border border-border text-foreground rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-muted transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!menuConfig) return;
+                      const newGroups = menuConfig.groups.map(g => {
+                        if (g.id === editingMenuItem.groupId) {
+                          const exists = g.items.find(i => i.id === editingMenuItem.item.id);
+                          let newItems;
+                          if (exists) {
+                            newItems = g.items.map(i => i.id === editingMenuItem.item.id ? editingMenuItem.item : i);
+                          } else {
+                            newItems = [...g.items, editingMenuItem.item];
+                          }
+                          return { ...g, items: newItems };
+                        }
+                        return g;
+                      });
+                      const newConfig = { ...menuConfig, groups: newGroups };
+                      await erpService.updateMenuConfig(newConfig);
+                      setMenuConfig(newConfig);
+                      setEditingMenuItem(null);
+                      showNotification('Menu item saved');
+                    }}
+                    className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg font-bold uppercase tracking-widest text-[10px] hover:opacity-90 transition-all"
+                  >
+                    Save Item
                   </button>
                 </div>
               </div>

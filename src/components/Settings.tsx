@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2 } from 'lucide-react';
+import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2, Package } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,6 +8,7 @@ import { erpService } from '../services/erpService';
 import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { NAV_ITEMS } from '../constants/navigation';
+import { MenuConfig } from '../types';
 import { useTheme, Theme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -118,6 +120,36 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localBanglaFont, setLocalBanglaFont] = useState(banglaFont || 'Hind Siliguri');
   const [localNotifications, setLocalNotifications] = useState(notifications);
   const [localWhatsappTemplates, setLocalWhatsappTemplates] = useState(whatsappTemplates);
+
+  const [dynamicMenu, setDynamicMenu] = React.useState<MenuConfig | null>(null);
+
+  React.useEffect(() => {
+    const unsubscribe = erpService.subscribeToMenuConfig((config) => {
+      if (config) {
+        setDynamicMenu(config);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const menuGroups = React.useMemo(() => {
+    if (!dynamicMenu) {
+      return NAV_ITEMS.map((group) => ({
+        ...group,
+        items: group.items.map((item) => ({
+          ...item,
+          icon: item.icon // Static items already have the component
+        }))
+      }));
+    }
+    return dynamicMenu.groups.map(group => ({
+      ...group,
+      items: group.items.map(item => ({
+        ...item,
+        icon: LucideIcons[item.icon as keyof typeof LucideIcons] || LucideIcons.Package
+      }))
+    }));
+  }, [dynamicMenu]);
 
   // Sync local state when settings change (e.g. after registration or initial load)
   React.useEffect(() => {
@@ -857,13 +889,13 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                               <span className="text-[8px] uppercase font-bold ml-auto">(Default)</span>
                             </div>
 
-                            {NAV_ITEMS.map(group => (
+                            {menuGroups.map(group => (
                               <React.Fragment key={group.group}>
                                 {group.items.map(item => {
                                   if (item.label === 'Dashboard') return null;
                                   return (
                                     <label 
-                                      key={item.label}
+                                      key={item.id}
                                       className={cn(
                                         "flex items-center gap-2 p-2 border cursor-pointer transition-all",
                                         localMobileBottomNavItems.includes(item.label)

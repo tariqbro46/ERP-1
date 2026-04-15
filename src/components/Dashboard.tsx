@@ -34,18 +34,18 @@ const StatCard = ({ title, value, change, icon: Icon, trend, loading, color, uiS
       )}>{title}</span>
       <Icon className={cn("w-4 h-4", uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-600")} />
     </div>
-    <div className="flex items-baseline justify-between gap-2 flex-wrap">
+    <div className="flex items-baseline justify-start gap-2 flex-wrap">
       {loading ? (
         <div className="h-8 w-24 bg-foreground/5 animate-pulse rounded" />
       ) : (
         <>
           <span className={cn(
-            "text-2xl font-mono",
+            "text-xl sm:text-2xl font-mono",
             uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground"
           )}>{value}</span>
           {change && (
             <span className={cn(
-              "text-[10px] font-mono flex items-center whitespace-nowrap",
+              "text-[9px] sm:text-[10px] font-mono flex items-center whitespace-nowrap",
               uiStyle === 'UI/UX 2' ? "text-white/90" : trend === 'up' ? 'text-emerald-500' : 'text-rose-500'
             )}>
               {trend === 'up' ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
@@ -400,7 +400,7 @@ export function Dashboard() {
         />
         <StatCard 
           title={t('dash.stockValue')} 
-          value={`৳ ${stats.stockValue.toLocaleString()}`} 
+          value={`৳ ${Math.floor(stats.stockValue).toLocaleString()}`} 
           change="-2.1%" 
           icon={Package} 
           trend="down" 

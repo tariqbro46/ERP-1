@@ -1,5 +1,6 @@
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import * as LucideIcons from 'lucide-react';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -66,12 +67,19 @@ import { SubscriptionPage } from './components/SubscriptionPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import NotificationCenter from './components/NotificationCenter';
 import NotificationPage from './components/NotificationPage';
+import { AlterMaster } from './components/AlterMaster';
+import { ReportsMenu } from './components/ReportsMenu';
+import { NegativeReports } from './components/NegativeReports';
+import { ReportPlaceholder } from './components/ReportPlaceholder';
+import { GroupDashboard } from './components/GroupDashboard';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { Login, Register } from './components/Auth';
 import { useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, PAGE_TITLES, DASHBOARD_ITEM } from './constants/navigation';
+import { erpService } from './services/erpService';
+import { MenuConfig } from './types';
 
 import { Home } from './pages/landing/Home';
 import { Features } from './pages/landing/Features';
@@ -97,30 +105,58 @@ const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => (
   </Link>
 );
 
-const SidebarGroup = ({ title, children, isOpen, onToggle }: { title: string, children: React.ReactNode, isOpen: boolean, onToggle: () => void }) => (
+const SidebarGroup = ({ title, children, isOpen, onToggle, to }: { title: string, children: React.ReactNode, isOpen: boolean, onToggle: () => void, to?: string }) => (
   <div className="mb-2">
-    <button 
-      onClick={onToggle}
-      className={cn(
-        "w-full px-4 py-3 flex items-center justify-between group transition-colors",
-        isOpen ? "bg-foreground/5" : "hover:bg-card"
+    <div className="flex items-center group transition-colors">
+      {to ? (
+        <Link 
+          to={to}
+          className={cn(
+            "flex-1 px-4 py-3 flex items-center justify-between transition-colors",
+            isOpen ? "bg-foreground/5" : "hover:bg-card"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <div className={cn("h-[1px] w-2 transition-all", isOpen ? "bg-foreground" : "bg-border")} />
+            <p className={cn(
+              "text-[9px] uppercase tracking-[0.2em] font-bold whitespace-nowrap transition-colors",
+              isOpen ? "text-foreground" : "text-gray-600 group-hover:text-gray-400"
+            )}>{title}</p>
+          </div>
+        </Link>
+      ) : (
+        <button 
+          onClick={onToggle}
+          className={cn(
+            "flex-1 px-4 py-3 flex items-center justify-between transition-colors",
+            isOpen ? "bg-foreground/5" : "hover:bg-card"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <div className={cn("h-[1px] w-2 transition-all", isOpen ? "bg-foreground" : "bg-border")} />
+            <p className={cn(
+              "text-[9px] uppercase tracking-[0.2em] font-bold whitespace-nowrap transition-colors",
+              isOpen ? "text-foreground" : "text-gray-600 group-hover:text-gray-400"
+            )}>{title}</p>
+          </div>
+        </button>
       )}
-    >
-      <div className="flex items-center gap-2">
-        <div className={cn("h-[1px] w-2 transition-all", isOpen ? "bg-foreground" : "bg-border")} />
-        <p className={cn(
-          "text-[9px] uppercase tracking-[0.2em] font-bold whitespace-nowrap transition-colors",
-          isOpen ? "text-foreground" : "text-gray-600 group-hover:text-gray-400"
-        )}>{title}</p>
-      </div>
-      <ChevronRight className={cn(
-        "w-3 h-3 transition-transform duration-300",
-        isOpen ? "rotate-90 text-foreground" : "text-gray-600"
-      )} />
-    </button>
+      <button 
+        onClick={onToggle}
+        className={cn(
+          "px-3 py-3 transition-colors",
+          isOpen ? "bg-foreground/5" : "hover:bg-card"
+        )}
+      >
+        <ChevronRight className={cn(
+          "w-3 h-3 transition-transform duration-300",
+          isOpen ? "rotate-90 text-foreground" : "text-gray-600"
+        )} />
+      </button>
+    </div>
     <div className={cn(
       "overflow-hidden transition-all duration-300 ease-in-out",
-      isOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+      isOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
     )}>
       <div className="py-1 space-y-0.5">
         {children}
@@ -162,6 +198,41 @@ function Layout({ children }: { children: React.ReactNode }) {
   const activePlan = subscriptionPlans.find(p => p.id === company?.planId);
 
   const navigate = useNavigate();
+
+  const [dynamicMenu, setDynamicMenu] = React.useState<MenuConfig | null>(null);
+
+  React.useEffect(() => {
+    const unsubscribe = erpService.subscribeToMenuConfig((config) => {
+      if (config) {
+        setDynamicMenu(config);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const getIcon = (name: string) => {
+    const Icon = (LucideIcons as any)[name];
+    return Icon || LucideIcons.Package;
+  };
+
+  const menuGroups = React.useMemo(() => {
+    if (!dynamicMenu) {
+      return NAV_ITEMS.map((group) => ({
+        ...group,
+        items: group.items.map((item) => ({
+          ...item,
+          icon: item.icon // Static items already have the component
+        }))
+      }));
+    }
+    return dynamicMenu.groups.map(group => ({
+      ...group,
+      items: group.items.map(item => ({
+        ...item,
+        icon: getIcon(item.icon)
+      }))
+    }));
+  }, [dynamicMenu]);
 
   const currentPageTitleKey = PAGE_TITLES[location.pathname] || (location.pathname.includes('/edit/') ? 'Edit Record' : 'ERP System');
   const currentPageTitle = currentPageTitleKey.startsWith('nav.') ? t(currentPageTitleKey) : currentPageTitleKey;
@@ -215,11 +286,11 @@ function Layout({ children }: { children: React.ReactNode }) {
   // Initialize expandedGroups based on sidebarDefaultExpanded
   React.useEffect(() => {
     if (sidebarDefaultExpanded) {
-      setExpandedGroups(new Set(NAV_ITEMS.map(item => item.group)));
+      setExpandedGroups(new Set(menuGroups.map(item => item.group)));
     } else {
       setExpandedGroups(new Set());
     }
-  }, [sidebarDefaultExpanded]);
+  }, [sidebarDefaultExpanded, menuGroups]);
 
   // Auto-expand group based on current path
   React.useEffect(() => {
@@ -312,33 +383,35 @@ function Layout({ children }: { children: React.ReactNode }) {
             <SidebarItem 
               to={DASHBOARD_ITEM.to} 
               icon={DASHBOARD_ITEM.icon} 
-              label={isSidebarCollapsed ? "" : t(DASHBOARD_ITEM.labelKey)} 
+              label={isSidebarCollapsed ? "" : (DASHBOARD_ITEM.labelKey && t(DASHBOARD_ITEM.labelKey) !== DASHBOARD_ITEM.labelKey ? t(DASHBOARD_ITEM.labelKey) : DASHBOARD_ITEM.label)} 
               active={location.pathname === DASHBOARD_ITEM.to} 
             />
         </div>
 
-        {NAV_ITEMS.map((group) => {
+        {menuGroups.map((group) => {
           const isEnabled = group.items.some(item => !item.feature || features.find(f => f.id === item.feature)?.enabled !== false);
           if (!isEnabled) return null;
 
           return (
             <SidebarGroup 
-              key={group.group}
-              title={isSidebarCollapsed ? t(group.groupKey).charAt(0) : t(group.groupKey)} 
+              key={group.id}
+              title={isSidebarCollapsed ? (group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey).charAt(0) : group.group.charAt(0)) : (group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey) : group.group)} 
               isOpen={expandedGroups.has(group.group)} 
               onToggle={() => toggleGroup(group.group)}
+              to={group.to}
             >
               {group.items.map((item: any) => {
+                if (item.hidden) return null;
                 if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
                 if (item.adminOnly && !isAdmin) return null;
                 if (item.superAdminOnly && !isSuperAdmin) return null;
                 if (item.permission && (!user?.permissions || !user.permissions.includes(item.permission)) && !isAdmin && !isSuperAdmin) return null;
                 return (
                   <SidebarItem 
-                    key={item.to}
+                    key={item.id}
                     to={item.to} 
                     icon={item.icon} 
-                    label={isSidebarCollapsed ? "" : t(item.labelKey)} 
+                    label={isSidebarCollapsed ? "" : (item.labelKey && t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.label)} 
                     active={location.pathname === item.to} 
                   />
                 );
@@ -375,7 +448,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             >
               {t('nav.dashboard')}
             </button>
-            {NAV_ITEMS.map(group => (
+            {menuGroups.map(group => (
               <button
                 key={group.group}
                 onClick={() => setActiveRibbonTab(group.group)}
@@ -411,7 +484,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               </span>
             </Link>
           ) : (
-            NAV_ITEMS.find(g => g.group === activeRibbonTab)?.items.map((item: any) => {
+            menuGroups.find(g => g.group === activeRibbonTab)?.items.map((item: any) => {
               if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
               if (item.adminOnly && !isAdmin) return null;
               if (item.superAdminOnly && !isSuperAdmin) return null;
@@ -419,7 +492,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               
               return (
                 <Link
-                  key={item.to}
+                  key={item.id}
                   to={item.to}
                   className={cn(
                     "flex flex-col items-center gap-1 min-w-[70px] p-1.5 rounded hover:bg-foreground/5 transition-all group",
@@ -471,7 +544,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           >
             {t('nav.dashboard')}
           </Link>
-          {NAV_ITEMS.map(group => (
+          {menuGroups.map(group => (
             <div 
               key={group.group} 
               className="relative"
@@ -510,7 +583,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                     
                     return (
                       <Link
-                        key={item.to}
+                        key={item.id}
                         to={item.to}
                         className={cn(
                           "flex items-center gap-3 px-4 py-2 text-[11px] transition-colors",
@@ -650,7 +723,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   );
 
   const renderWindows11Menu = () => {
-    const allItems = [DASHBOARD_ITEM, ...NAV_ITEMS.flatMap(g => g.items)].filter((item: any) => {
+    const allItems = [DASHBOARD_ITEM, ...menuGroups.flatMap(g => g.items)].filter((item: any) => {
       if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return false;
       if (item.adminOnly && !isAdmin) return false;
       if (item.superAdminOnly && !isSuperAdmin) return false;
@@ -697,7 +770,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                 <div className="grid grid-cols-6 gap-2 max-h-[320px] overflow-y-auto no-scrollbar">
                   {allItems.map(item => (
                     <Link
-                      key={item.to}
+                      key={item.id}
                       to={item.to}
                       onClick={() => {
                         setIsWinStartOpen(false);
@@ -803,11 +876,11 @@ function Layout({ children }: { children: React.ReactNode }) {
             {location.pathname === '/dashboard' && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full" />}
           </Link>
           
-          {NAV_ITEMS.flatMap(g => g.items).filter(item => {
+          {menuGroups.flatMap(g => g.items).filter(item => {
             return mobileBottomNavItems.includes(item.label);
           }).map(item => (
             <Link 
-              key={item.to}
+              key={item.id}
               to={item.to} 
               className={cn(
                 "p-2.5 rounded-xl transition-all hover:bg-foreground/10 group relative",
@@ -1134,11 +1207,11 @@ function Layout({ children }: { children: React.ReactNode }) {
             <span className="text-[9px] font-bold uppercase tracking-tighter">{t('nav.dashboard')}</span>
           </Link>
 
-          {NAV_ITEMS.flatMap(g => g.items).filter(item => {
+          {menuGroups.flatMap(g => g.items).filter(item => {
             return mobileBottomNavItems.includes(item.label) && item.label !== 'Dashboard';
           }).map(item => (
             <Link 
-              key={item.to}
+              key={item.id}
               to={item.to} 
               className={cn(
                 "flex flex-col items-center gap-1 px-3 py-1 transition-colors",
@@ -1292,6 +1365,20 @@ function ProtectedRoute() {
           <Route path="/payroll" element={<PayrollManagement />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/subscription" element={<SubscriptionPage />} />
+          <Route path="/alter" element={<AlterMaster />} />
+          <Route path="/group/:groupId" element={<GroupDashboard />} />
+          <Route path="/reports" element={<ReportsMenu />} />
+          <Route path="/reports/account-books" element={<ReportPlaceholder title="Account Books" />} />
+          <Route path="/reports/inventory-books" element={<ReportPlaceholder title="Inventory Books" />} />
+          <Route path="/reports/statement-of-inventory" element={<ReportPlaceholder title="Statement of Inventory" />} />
+          <Route path="/reports/payroll" element={<ReportPlaceholder title="Payroll Reports" />} />
+          <Route path="/reports/negative-ledger" element={<NegativeReports type="ledger" />} />
+          <Route path="/reports/negative-stock" element={<NegativeReports type="stock" />} />
+          <Route path="/reports/cash-bank" element={<ReportPlaceholder title="Cash/Bank Book" />} />
+          <Route path="/reports/group-summary" element={<ReportPlaceholder title="Group Summary" />} />
+          <Route path="/reports/item-monthly" element={<ReportPlaceholder title="Item Monthly Summary" />} />
+          <Route path="/reports/movement" element={<ReportPlaceholder title="Movement Analysis" />} />
+          <Route path="/reports/stock-query" element={<ReportPlaceholder title="Stock Query" />} />
           <Route path="/reports/daybook" element={<Daybook />} />
           <Route path="/reports/stock" element={<StockSummary />} />
           <Route path="/reports/balance-sheet" element={<BalanceSheet />} />

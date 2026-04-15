@@ -10,13 +10,12 @@ export function useSubscription() {
   const activePlan = subscriptionPlans.find(p => p.id === company?.planId);
 
   const checkLimit = (type: 'vouchers' | 'items' | 'ledgers' | 'users' | 'godowns' | 'multiCurrency' | 'rolePermissions', currentCount?: number) => {
-    if (!activePlan) return true;
-
-    const limits = activePlan.limits;
-    if (!limits) return true;
-
+    // 1. Check Custom Limits first (Extra Features & Custom Limits)
+    const customLimit = company?.customLimits?.[type];
+    
     if (type === 'multiCurrency') {
-      if (!limits.multiCurrency) {
+      const isEnabled = customLimit ?? activePlan?.limits?.multiCurrency;
+      if (!isEnabled) {
         showNotification('Multi-Currency is not available in your current plan. Please upgrade.', 'error');
         return false;
       }
@@ -24,18 +23,23 @@ export function useSubscription() {
     }
 
     if (type === 'rolePermissions') {
-      if (!limits.rolePermissions) {
+      const isEnabled = customLimit ?? activePlan?.limits?.rolePermissions;
+      if (!isEnabled) {
         showNotification('Role-based permissions are not available in your current plan. Please upgrade.', 'error');
         return false;
       }
       return true;
     }
 
-    const limit = (limits as any)[type];
+    // For numeric limits
+    const limit = (customLimit as number) ?? (activePlan?.limits as any)?.[type];
+    
+    if (limit === undefined) return true;
     if (limit === -1) return true;
 
     if (currentCount !== undefined && currentCount >= limit) {
-      showNotification(`Limit reached: Your current plan allows up to ${limit} ${type}. Please upgrade your plan.`, 'error');
+      const limitSource = customLimit !== undefined ? 'custom limit' : 'current plan';
+      showNotification(`Limit reached: Your ${limitSource} allows up to ${limit} ${type}. Please upgrade your plan.`, 'error');
       return false;
     }
 
@@ -43,6 +47,9 @@ export function useSubscription() {
   };
 
   const isFeatureEnabled = (featureId: string) => {
+    // Check extra features first
+    if (company?.extraFeatures?.includes(featureId)) return true;
+    
     if (!activePlan) return true;
     return activePlan.features.includes(featureId);
   };

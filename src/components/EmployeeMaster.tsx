@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, Loader2, User, Phone, Mail, MapPin, Briefcase, Calendar } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -13,6 +14,14 @@ export function EmployeeMaster() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<any>(null);
   const { showNotification } = useNotification();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      resetForm();
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
 
   const [formData, setFormData] = useState({
     name: '',

@@ -34,7 +34,10 @@ import {
   PrintingOrder,
   PrintingMachine,
   UserProfile,
-  SubscriptionPlan
+  SubscriptionPlan,
+  MenuConfig,
+  MenuGroupConfig,
+  MenuItemConfig
 } from '../types';
 import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -94,6 +97,23 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
+}
+
+function cleanData(data: any): any {
+  if (data === undefined) return null;
+  if (data === null) return null;
+  if (Array.isArray(data)) return data.map(cleanData);
+  if (typeof data === 'object' && !(data instanceof Date) && !(data instanceof Timestamp)) {
+    const cleaned: any = {};
+    for (const key in data) {
+      const value = cleanData(data[key]);
+      if (value !== null) {
+        cleaned[key] = value;
+      }
+    }
+    return cleaned;
+  }
+  return data;
 }
 
 // Helper to get collection with company filter
@@ -368,10 +388,12 @@ export const erpService = {
   // Ledgers
   async getLedgers(companyId: string): Promise<Ledger[]> {
     try {
+      console.log('erpService.getLedgers called for companyId:', companyId);
       const [ledgers, groups] = await Promise.all([
         getCollection<Ledger>('ledgers', companyId),
         getCollection<any>('ledger_groups', companyId)
       ]);
+      console.log(`Fetched ${ledgers.length} ledgers and ${groups.length} groups`);
       
       return ledgers.map(l => ({
         ...l,
@@ -414,27 +436,165 @@ export const erpService = {
     try {
       const groups = await getCollection<any>('ledger_groups', companyId);
       if (groups.length === 0) {
-        // Use a lock or check again to prevent duplicate seeding
-        const secondCheck = await getCollection<any>('ledger_groups', companyId);
-        if (secondCheck.length > 0) return secondCheck;
         return await this.seedDefaultGroups(companyId);
       }
-      // Ensure unique by name just in case
-      const unique = Array.from(new Map(groups.map(g => [g.name, g])).values());
-      return unique;
+      return groups;
     } catch (error) {
-      // Retry once if it's a permission error (might be race condition during registration)
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const groups = await getCollection<any>('ledger_groups', companyId);
-        if (groups.length === 0) {
-          return await this.seedDefaultGroups(companyId);
-        }
-        return groups;
-      } catch (retryError) {
-        handleFirestoreError(retryError, OperationType.LIST, 'ledger_groups');
-        return [];
+      handleFirestoreError(error, OperationType.LIST, 'ledger_groups');
+      return [];
+    }
+  },
+
+  async getVoucherTypes(companyId: string): Promise<any[]> {
+    try {
+      const types = await getCollection<any>('voucher_types', companyId);
+      if (types.length === 0) {
+        return await this.seedDefaultVoucherTypes(companyId);
       }
+      return types;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'voucher_types');
+      return [];
+    }
+  },
+
+  async seedDefaultVoucherTypes(companyId: string) {
+    const defaults = [
+      { name: 'Sales', base_type: 'Sales' },
+      { name: 'Purchase', base_type: 'Purchase' },
+      { name: 'Payment', base_type: 'Payment' },
+      { name: 'Receipt', base_type: 'Receipt' },
+      { name: 'Contra', base_type: 'Contra' },
+      { name: 'Journal', base_type: 'Journal' },
+      { name: 'Credit Note', base_type: 'Credit Note' },
+      { name: 'Debit Note', base_type: 'Debit Note' }
+    ];
+    const batch = writeBatch(db);
+    const results: any[] = [];
+    for (const v of defaults) {
+      const ref = doc(collection(db, 'voucher_types'));
+      const data = { ...v, id: ref.id, companyId };
+      batch.set(ref, data);
+      results.push(data);
+    }
+    await batch.commit();
+    return results;
+  },
+
+  async getStockGroups(companyId: string): Promise<any[]> {
+    return getCollection<any>('stock_groups', companyId);
+  },
+
+  async getStockCategories(companyId: string): Promise<any[]> {
+    return getCollection<any>('stock_categories', companyId);
+  },
+
+  async getEmployeeGroups(companyId: string): Promise<any[]> {
+    return getCollection<any>('employee_groups', companyId);
+  },
+
+  async updateLedgerGroup(id: string, group: any) {
+    try {
+      const ref = doc(db, 'ledger_groups', id);
+      await updateDoc(ref, group);
+      return { id, ...group };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `ledger_groups/${id}`);
+    }
+  },
+
+  async updateVoucherType(id: string, type: any) {
+    try {
+      const ref = doc(db, 'voucher_types', id);
+      await updateDoc(ref, type);
+      return { id, ...type };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `voucher_types/${id}`);
+    }
+  },
+
+  async updateStockCategory(id: string, category: any) {
+    try {
+      const ref = doc(db, 'stock_categories', id);
+      await updateDoc(ref, category);
+      return { id, ...category };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `stock_categories/${id}`);
+    }
+  },
+
+  async updateEmployeeGroup(id: string, group: any) {
+    try {
+      const ref = doc(db, 'employee_groups', id);
+      await updateDoc(ref, group);
+      return { id, ...group };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `employee_groups/${id}`);
+    }
+  },
+
+  async updateUnit(id: string, unit: any) {
+    try {
+      const ref = doc(db, 'units', id);
+      await updateDoc(ref, unit);
+      return { id, ...unit };
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `units/${id}`);
+    }
+  },
+
+  async createLedgerGroup(companyId: string, group: any) {
+    try {
+      const ref = doc(collection(db, 'ledger_groups'));
+      const data = { ...group, id: ref.id, companyId };
+      await setDoc(ref, data);
+      return data;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'ledger_groups');
+    }
+  },
+
+  async createVoucherType(companyId: string, type: any) {
+    try {
+      const ref = doc(collection(db, 'voucher_types'));
+      const data = { ...type, id: ref.id, companyId };
+      await setDoc(ref, data);
+      return data;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'voucher_types');
+    }
+  },
+
+  async createStockCategory(companyId: string, category: any) {
+    try {
+      const ref = doc(collection(db, 'stock_categories'));
+      const data = { ...category, id: ref.id, companyId };
+      await setDoc(ref, data);
+      return data;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'stock_categories');
+    }
+  },
+
+  async createEmployeeGroup(companyId: string, group: any) {
+    try {
+      const ref = doc(collection(db, 'employee_groups'));
+      const data = { ...group, id: ref.id, companyId };
+      await setDoc(ref, data);
+      return data;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'employee_groups');
+    }
+  },
+
+  async createUnit(companyId: string, unit: any) {
+    try {
+      const ref = doc(collection(db, 'units'));
+      const data = { ...unit, id: ref.id, companyId };
+      await setDoc(ref, data);
+      return data;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'units');
     }
   },
 
@@ -1737,6 +1897,44 @@ export const erpService = {
       handleFirestoreError(error, OperationType.LIST, 'subscription_plans');
       return [];
     }
+  },
+
+  // Menu Configuration
+  async getMenuConfig(): Promise<MenuConfig | null> {
+    try {
+      const menuDoc = await getDoc(doc(db, 'system', 'menu'));
+      if (menuDoc.exists()) {
+        return menuDoc.data() as MenuConfig;
+      }
+      return null;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, 'system/menu');
+      return null;
+    }
+  },
+
+  async updateMenuConfig(config: MenuConfig): Promise<void> {
+    try {
+      const cleanedConfig = cleanData(config);
+      await setDoc(doc(db, 'system', 'menu'), {
+        ...cleanedConfig,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'system/menu');
+    }
+  },
+
+  subscribeToMenuConfig(callback: (config: MenuConfig | null) => void) {
+    return onSnapshot(doc(db, 'system', 'menu'), (doc) => {
+      if (doc.exists()) {
+        callback(doc.data() as MenuConfig);
+      } else {
+        callback(null);
+      }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'system/menu');
+    });
   },
 
   async createSubscriptionPlan(plan: Omit<SubscriptionPlan, 'id'>) {
