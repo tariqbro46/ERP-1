@@ -56,59 +56,59 @@ export const ReportsMenu: React.FC = () => {
     );
   }
 
-  // Categorize items based on keywords or labels for a better layout
+  // Categorize items based on user request
   const categories = [
-    {
-      id: 'inventory',
-      title: 'Inventory',
-      titleKey: 'nav.inventory',
-      icon: Package,
-      keywords: ['stock', 'inventory', 'item', 'movement', 'godown', 'location', 'category', 'transfer', 'physical', 'query', 'ageing']
-    },
     {
       id: 'accounting',
       title: 'Accounting',
       titleKey: 'nav.accounting',
       icon: Scale,
-      keywords: ['balance', 'profit', 'trial', 'pl', 'sheet', 'insights', 'ratio', 'cash flow', 'funds flow', 'daybook', 'statistics', 'register', 'voucher', 'book', 'summary']
+      itemIds: [
+        'rep-trial-balance', 
+        'rep-daybook', 
+        'rep-cash-flow', 
+        'rep-funds-flow', 
+        'rep-account-books',
+        'rep-statement-of-account'
+      ]
+    },
+    {
+      id: 'inventory',
+      title: 'Inventory',
+      titleKey: 'nav.inventory',
+      icon: Package,
+      itemIds: [
+        'rep-inventory-books',
+        'rep-statement-of-inventory',
+        'rep-stock-query',
+        'rep-movement',
+        'rep-ageing-analysis'
+      ]
     },
     {
       id: 'payroll',
       title: 'Payroll',
       titleKey: 'nav.payroll',
       icon: Users,
-      keywords: ['payroll', 'salary', 'employee', 'pay slip', 'pay sheet', 'attendance', 'advice', 'statement', 'head count']
+      itemIds: [
+        'rep-payroll'
+      ]
     },
     {
       id: 'exception',
       title: 'Exception Reports',
       titleKey: 'nav.exceptionReports',
       icon: AlertCircle,
-      keywords: ['negative']
+      itemIds: [
+        'rep-exception-reports'
+      ]
     }
   ];
 
-  const getCategoryForReport = (label: string) => {
-    const lowerLabel = label.toLowerCase();
-    for (const cat of categories) {
-      if (cat.keywords.some(k => lowerLabel.includes(k))) {
-        return cat.id;
-      }
-    }
-    return 'accounting'; // Default
-  };
-
-  const groupedReports = reportsGroup.items
-    .filter(item => {
-      const itemsToHide = ['Balance Sheet', 'Profit & Loss', 'Stock Summary', 'Ratio Analysis', 'Display More Reports'];
-      return !itemsToHide.includes(item.label);
-    })
-    .reduce((acc, item) => {
-      const catId = getCategoryForReport(item.label);
-      if (!acc[catId]) acc[catId] = [];
-      acc[catId].push(item);
-      return acc;
-    }, {} as Record<string, typeof reportsGroup.items>);
+  const groupedReports = categories.reduce((acc, cat) => {
+    acc[cat.id] = reportsGroup.items.filter(item => cat.itemIds.includes(item.id));
+    return acc;
+  }, {} as Record<string, typeof reportsGroup.items>);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">

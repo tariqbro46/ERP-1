@@ -373,6 +373,7 @@ export interface MenuItemConfig {
   superAdminOnly?: boolean;
   permission?: string;
   hidden?: boolean;
+  children?: MenuItemConfig[];
 }
 
 export interface MenuGroupConfig {
@@ -381,6 +382,7 @@ export interface MenuGroupConfig {
   groupKey: string;
   items: MenuItemConfig[];
   to?: string;
+  hidden?: boolean;
 }
 
 export interface MenuConfig {

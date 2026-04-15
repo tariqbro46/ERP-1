@@ -389,6 +389,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         {menuGroups.map((group) => {
+          if (group.hidden) return null;
           const isEnabled = group.items.some(item => !item.feature || features.find(f => f.id === item.feature)?.enabled !== false);
           if (!isEnabled) return null;
 

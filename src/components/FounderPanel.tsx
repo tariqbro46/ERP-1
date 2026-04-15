@@ -389,6 +389,7 @@ export default function FounderPanel() {
             id: defaultGroup.id,
             group: defaultGroup.group,
             groupKey: defaultGroup.groupKey,
+            hidden: defaultGroup.hidden,
             items: defaultGroup.items.map(item => ({
               id: item.id,
               to: item.to,
@@ -399,13 +400,26 @@ export default function FounderPanel() {
               adminOnly: item.adminOnly,
               superAdminOnly: item.superAdminOnly,
               permission: item.permission,
-              hidden: item.hidden
+              hidden: item.hidden,
+              children: item.children?.map(child => ({
+                id: child.id,
+                to: child.to,
+                icon: child.iconName,
+                label: child.label,
+                labelKey: child.labelKey,
+                feature: child.feature,
+                adminOnly: child.adminOnly,
+                superAdminOnly: child.superAdminOnly,
+                permission: child.permission,
+                hidden: child.hidden
+              }))
             }))
           });
           itemsAdded += defaultGroup.items.length;
         } else {
           // Sync items in existing group
           const existingGroup = { ...updatedGroups[existingGroupIndex] };
+          existingGroup.hidden = defaultGroup.hidden; // Sync hidden status
           const existingItemIds = new Set(existingGroup.items.map(i => i.id));
           const existingPaths = new Set(existingGroup.items.map(i => i.to));
           
@@ -421,7 +435,19 @@ export default function FounderPanel() {
                 adminOnly: defaultItem.adminOnly,
                 superAdminOnly: defaultItem.superAdminOnly,
                 permission: defaultItem.permission,
-                hidden: defaultItem.hidden
+                hidden: defaultItem.hidden,
+                children: defaultItem.children?.map(child => ({
+                  id: child.id,
+                  to: child.to,
+                  icon: child.iconName,
+                  label: child.label,
+                  labelKey: child.labelKey,
+                  feature: child.feature,
+                  adminOnly: child.adminOnly,
+                  superAdminOnly: child.superAdminOnly,
+                  permission: child.permission,
+                  hidden: child.hidden
+                }))
               });
               itemsAdded++;
             }
@@ -799,39 +825,6 @@ export default function FounderPanel() {
 
         <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
           <div className={cn(
-            "flex items-center gap-2 border p-1.5 rounded-lg w-full sm:w-auto",
-            uiStyle === 'UI/UX 2' ? "bg-white border-blue-100 shadow-sm" : "bg-card border-border"
-          )}>
-            <span className={cn(
-              "text-[10px] font-bold uppercase px-2",
-              uiStyle === 'UI/UX 2' ? "text-blue-400" : "text-gray-500"
-            )}>v</span>
-            <input 
-              type="text" 
-              value={localAppVersion || ''} 
-              onChange={(e) => setLocalAppVersion(e.target.value)}
-              className={cn(
-                "bg-transparent border-none text-[10px] font-mono focus:ring-0 w-16 p-0",
-                uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
-              )}
-            />
-            <button 
-              onClick={() => {
-                updateSystemSettings({ appVersion: localAppVersion });
-                showNotification('App version updated');
-              }}
-              className={cn(
-                "px-3 py-1 rounded text-[9px] font-bold uppercase transition-colors",
-                uiStyle === 'UI/UX 2' 
-                  ? "bg-blue-600 text-white hover:bg-blue-700" 
-                  : "bg-primary/10 text-primary hover:bg-primary/20"
-              )}
-            >
-              Update
-            </button>
-          </div>
-
-          <div className={cn(
             "grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap rounded-lg p-1 w-full sm:w-auto gap-1",
             uiStyle === 'UI/UX 2' ? "bg-blue-50" : "bg-muted"
           )}>
@@ -945,16 +938,18 @@ export default function FounderPanel() {
             </button>
           </div>
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={viewMode === 'companies' ? "Search companies..." : "Search users..."}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none w-64"
-            />
-          </div>
+          {(viewMode === 'companies' || viewMode === 'users') && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder={viewMode === 'companies' ? "Search companies..." : "Search users..."}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none w-64"
+              />
+            </div>
+          )}
           <button 
             onClick={fetchData}
             className="p-2 hover:bg-foreground/5 rounded-lg transition-colors"
@@ -2100,7 +2095,7 @@ export default function FounderPanel() {
             )}
           </div>
         </div>
-      ) : (
+      ) : viewMode === 'settings' ? (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className={cn(
@@ -2322,124 +2317,126 @@ export default function FounderPanel() {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       {viewMode === 'menu' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-foreground">Dynamic Menu Management</h2>
-              <p className="text-sm text-muted-foreground">Control the sidebar navigation structure and items.</p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  const unsubscribe = erpService.subscribeToMenuConfig((config) => {
-                    if (config) setMenuConfig(config);
-                  });
-                  setTimeout(unsubscribe, 1000);
-                  showNotification('Menu refreshed');
-                }}
-                className="p-2 hover:bg-foreground/5 rounded-lg transition-colors"
-                title="Refresh Menu"
-              >
-                <RefreshCw className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to reset the menu to defaults? This will overwrite your current configuration.')) {
-                    seedInitialMenu();
-                  }
-                }}
-                className="px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-amber-600 transition-all flex items-center gap-2"
-                title="Reset everything to factory defaults"
-              >
-                <Zap className="w-4 h-4" />
-                Reset
-              </button>
-              <button
-                onClick={syncMenuWithDefaults}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center gap-2"
-                title="Add missing items from code to database"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Sync Items
-              </button>
-              <button
-                onClick={cleanupDuplicates}
-                className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-rose-700 transition-all flex items-center gap-2"
-                title="Remove duplicate items from all groups"
-              >
-                <Trash2 className="w-4 h-4" />
-                Cleanup
-              </button>
-              <button
-                onClick={() => {
-                  setEditingGroup({
-                    id: `group-${Date.now()}`,
-                    group: '',
-                    groupKey: '',
-                    items: []
-                  });
-                }}
-                className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Group
-              </button>
-            </div>
-          </div>
-
-          {selectedItemIds.size > 0 && (
-            <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-primary/10 border border-primary/20 rounded-xl p-4 flex items-center justify-between"
-            >
-              <div className="flex items-center gap-4">
-                <span className="text-xs font-bold text-primary uppercase tracking-widest">
-                  {selectedItemIds.size} Items Selected
-                </span>
-                <div className="h-4 w-[1px] bg-primary/20" />
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => handleBulkUpdate({ adminOnly: true })}
-                    className="px-3 py-1.5 bg-white border border-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center gap-2"
-                  >
-                    <Shield className="w-3 h-3" />
-                    Admin Only
-                  </button>
-                  <button 
-                    onClick={() => handleBulkUpdate({ superAdminOnly: true })}
-                    className="px-3 py-1.5 bg-white border border-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center gap-2"
-                  >
-                    <UserCog className="w-3 h-3" />
-                    Founder Only
-                  </button>
-                  <button 
-                    onClick={() => handleBulkUpdate({ hidden: true })}
-                    className="px-3 py-1.5 bg-white border border-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center gap-2"
-                  >
-                    <EyeOff className="w-3 h-3" />
-                    Hide
-                  </button>
-                  <button 
-                    onClick={() => handleBulkUpdate({ adminOnly: false, superAdminOnly: false, hidden: false })}
-                    className="px-3 py-1.5 bg-white border border-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    Reset
-                  </button>
-                </div>
+          <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm -mx-6 px-6 py-4 border-b border-border space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-foreground">Dynamic Menu Management</h2>
+                <p className="text-sm text-muted-foreground">Control the sidebar navigation structure and items.</p>
               </div>
-              <button 
-                onClick={() => setSelectedItemIds(new Set())}
-                className="text-xs font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest"
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    const unsubscribe = erpService.subscribeToMenuConfig((config) => {
+                      if (config) setMenuConfig(config);
+                    });
+                    setTimeout(unsubscribe, 1000);
+                    showNotification('Menu refreshed');
+                  }}
+                  className="p-2 hover:bg-foreground/5 rounded-lg transition-colors"
+                  title="Refresh Menu"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to reset the menu to defaults? This will overwrite your current configuration.')) {
+                      seedInitialMenu();
+                    }
+                  }}
+                  className="px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-amber-600 transition-all flex items-center gap-2"
+                  title="Reset everything to factory defaults"
+                >
+                  <Zap className="w-4 h-4" />
+                  Reset
+                </button>
+                <button
+                  onClick={syncMenuWithDefaults}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center gap-2"
+                  title="Add missing items from code to database"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Sync Items
+                </button>
+                <button
+                  onClick={cleanupDuplicates}
+                  className="px-4 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-rose-700 transition-all flex items-center gap-2"
+                  title="Remove duplicate items from all groups"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Cleanup
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingGroup({
+                      id: `group-${Date.now()}`,
+                      group: '',
+                      groupKey: '',
+                      items: []
+                    });
+                  }}
+                  className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Group
+                </button>
+              </div>
+            </div>
+
+            {selectedItemIds.size > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-primary/10 border border-primary/20 rounded-xl p-4 flex items-center justify-between"
               >
-                Clear
-              </button>
-            </motion.div>
-          )}
+                <div className="flex items-center gap-4">
+                  <span className="text-xs font-bold text-primary uppercase tracking-widest">
+                    {selectedItemIds.size} Items Selected
+                  </span>
+                  <div className="h-4 w-[1px] bg-primary/20" />
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => handleBulkUpdate({ adminOnly: true })}
+                      className="px-3 py-1.5 bg-white border border-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center gap-2"
+                    >
+                      <Shield className="w-3 h-3" />
+                      Admin Only
+                    </button>
+                    <button 
+                      onClick={() => handleBulkUpdate({ superAdminOnly: true })}
+                      className="px-3 py-1.5 bg-white border border-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center gap-2"
+                    >
+                      <UserCog className="w-3 h-3" />
+                      Founder Only
+                    </button>
+                    <button 
+                      onClick={() => handleBulkUpdate({ hidden: true })}
+                      className="px-3 py-1.5 bg-white border border-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center gap-2"
+                    >
+                      <EyeOff className="w-3 h-3" />
+                      Hide
+                    </button>
+                    <button 
+                      onClick={() => handleBulkUpdate({ adminOnly: false, superAdminOnly: false, hidden: false })}
+                      className="px-3 py-1.5 bg-white border border-primary/20 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all flex items-center gap-2"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Reset
+                    </button>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedItemIds(new Set())}
+                  className="text-xs font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest"
+                >
+                  Clear
+                </button>
+              </motion.div>
+            )}
+          </div>
 
           {!menuConfig ? (
             <div className="bg-card border border-border rounded-xl p-12 text-center space-y-4">
@@ -2463,7 +2460,9 @@ export default function FounderPanel() {
                     ref={provided.innerRef}
                     className="space-y-4"
                   >
-                    {menuConfig.groups.map((group, index) => (
+                    {menuConfig.groups
+                      .filter(g => g.group !== 'System Configuration')
+                      .map((group, index) => (
                       <Draggable key={group.id} draggableId={group.id} index={index}>
                         {(provided, snapshot) => (
                           <div 
@@ -2518,78 +2517,107 @@ export default function FounderPanel() {
                                     )}
                                   >
                                     {group.items.map((item, itemIndex) => (
-                                      <Draggable key={item.id} draggableId={item.id} index={itemIndex}>
-                                        {(provided, snapshot) => (
-                                          <div 
-                                            ref={provided.innerRef}
-                                            {...provided.draggableProps}
-                                            className={cn(
-                                              "p-3 border border-border rounded-lg flex items-center justify-between group hover:border-primary/50 transition-all bg-card",
-                                              snapshot.isDragging && "shadow-xl border-primary ring-1 ring-primary/20"
-                                            )}
-                                          >
-                                            <div className="flex items-center gap-3">
-                                              <button 
-                                                onClick={() => {
-                                                  const newSelected = new Set(selectedItemIds);
-                                                  if (newSelected.has(item.id)) {
-                                                    newSelected.delete(item.id);
-                                                  } else {
-                                                    newSelected.add(item.id);
-                                                  }
-                                                  setSelectedItemIds(newSelected);
-                                                }}
-                                                className={cn(
-                                                  "p-1 rounded transition-colors",
-                                                  selectedItemIds.has(item.id) ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                                                )}
-                                              >
-                                                {selectedItemIds.has(item.id) ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                                              </button>
-                                              <div {...provided.dragHandleProps} className="p-1 hover:bg-foreground/5 rounded cursor-grab active:cursor-grabbing">
-                                                <GripVertical className="w-3 h-3 text-muted-foreground" />
-                                              </div>
-                                              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary relative">
-                                                <LayoutDashboard className="w-4 h-4" />
-                                                <div className="absolute -top-1 -right-1 flex flex-col gap-0.5">
-                                                  {item.adminOnly && <div className="p-0.5 bg-blue-500 text-white rounded-full shadow-sm" title="Admin Only"><Shield className="w-2 h-2" /></div>}
-                                                  {item.superAdminOnly && <div className="p-0.5 bg-amber-500 text-white rounded-full shadow-sm" title="Founder Only"><UserCog className="w-2 h-2" /></div>}
-                                                  {item.hidden && <div className="p-0.5 bg-gray-500 text-white rounded-full shadow-sm" title="Hidden from Sidebar"><EyeOff className="w-2 h-2" /></div>}
+                                      <div key={item.id} className="space-y-2">
+                                        <Draggable draggableId={item.id} index={itemIndex}>
+                                          {(provided, snapshot) => (
+                                            <div 
+                                              ref={provided.innerRef}
+                                              {...provided.draggableProps}
+                                              className={cn(
+                                                "p-3 border border-border rounded-lg flex items-center justify-between group hover:border-primary/50 transition-all bg-card",
+                                                snapshot.isDragging && "shadow-xl border-primary ring-1 ring-primary/20"
+                                              )}
+                                            >
+                                              <div className="flex items-center gap-3">
+                                                <button 
+                                                  onClick={() => {
+                                                    const newSelected = new Set(selectedItemIds);
+                                                    if (newSelected.has(item.id)) {
+                                                      newSelected.delete(item.id);
+                                                    } else {
+                                                      newSelected.add(item.id);
+                                                    }
+                                                    setSelectedItemIds(newSelected);
+                                                  }}
+                                                  className={cn(
+                                                    "p-1 rounded transition-colors",
+                                                    selectedItemIds.has(item.id) ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                                                  )}
+                                                >
+                                                  {selectedItemIds.has(item.id) ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                                                </button>
+                                                <div {...provided.dragHandleProps} className="p-1 hover:bg-foreground/5 rounded cursor-grab active:cursor-grabbing">
+                                                  <GripVertical className="w-3 h-3 text-muted-foreground" />
+                                                </div>
+                                                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary relative">
+                                                  <LayoutDashboard className="w-4 h-4" />
+                                                  <div className="absolute -top-1 -right-1 flex flex-col gap-0.5">
+                                                    {item.adminOnly && <div className="p-0.5 bg-blue-500 text-white rounded-full shadow-sm" title="Admin Only"><Shield className="w-2 h-2" /></div>}
+                                                    {item.superAdminOnly && <div className="p-0.5 bg-amber-500 text-white rounded-full shadow-sm" title="Founder Only"><UserCog className="w-2 h-2" /></div>}
+                                                    {item.hidden && <div className="p-0.5 bg-gray-500 text-white rounded-full shadow-sm" title="Hidden from Sidebar"><EyeOff className="w-2 h-2" /></div>}
+                                                  </div>
+                                                </div>
+                                                <div>
+                                                  <p className="text-xs font-bold text-foreground">{item.label}</p>
+                                                  <p className="text-[9px] text-muted-foreground font-mono">{item.to}</p>
                                                 </div>
                                               </div>
-                                              <div>
-                                                <p className="text-xs font-bold text-foreground">{item.label}</p>
-                                                <p className="text-[9px] text-muted-foreground font-mono">{item.to}</p>
+                                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                  onClick={() => setEditingMenuItem({ groupId: group.id, item })}
+                                                  className="p-1.5 hover:bg-foreground/5 rounded-md text-muted-foreground hover:text-primary"
+                                                >
+                                                  <Settings className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                  onClick={() => {
+                                                    const newGroups = menuConfig.groups.map(g => {
+                                                      if (g.id === group.id) {
+                                                        return { ...g, items: g.items.filter(i => i.id !== item.id) };
+                                                      }
+                                                      return g;
+                                                    });
+                                                    const newConfig = { ...menuConfig, groups: newGroups };
+                                                    erpService.updateMenuConfig(newConfig);
+                                                    setMenuConfig(newConfig);
+                                                    showNotification('Item removed');
+                                                  }}
+                                                  className="p-1.5 hover:bg-rose-500/10 rounded-md text-muted-foreground hover:text-rose-500"
+                                                >
+                                                  <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
                                               </div>
                                             </div>
-                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                              <button
-                                                onClick={() => setEditingMenuItem({ groupId: group.id, item })}
-                                                className="p-1.5 hover:bg-foreground/5 rounded-md text-muted-foreground hover:text-primary"
-                                              >
-                                                <Settings className="w-3.5 h-3.5" />
-                                              </button>
-                                              <button
-                                                onClick={() => {
-                                                  const newGroups = menuConfig.groups.map(g => {
-                                                    if (g.id === group.id) {
-                                                      return { ...g, items: g.items.filter(i => i.id !== item.id) };
-                                                    }
-                                                    return g;
-                                                  });
-                                                  const newConfig = { ...menuConfig, groups: newGroups };
-                                                  erpService.updateMenuConfig(newConfig);
-                                                  setMenuConfig(newConfig);
-                                                  showNotification('Item removed');
-                                                }}
-                                                className="p-1.5 hover:bg-rose-500/10 rounded-md text-muted-foreground hover:text-rose-500"
-                                              >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                              </button>
-                                            </div>
+                                          )}
+                                        </Draggable>
+                                        
+                                        {/* Nested Children Tree View */}
+                                        {item.children && item.children.length > 0 && (
+                                          <div className="ml-8 space-y-2 border-l-2 border-primary/10 pl-4 py-1">
+                                            {item.children.map((child) => (
+                                              <div key={child.id} className="p-2 border border-border/50 rounded-lg flex items-center justify-between bg-muted/20 group/child">
+                                                <div className="flex items-center gap-3">
+                                                  <div className="w-6 h-6 rounded bg-primary/5 flex items-center justify-center text-primary/60">
+                                                    <ChevronRight className="w-3 h-3" />
+                                                  </div>
+                                                  <div>
+                                                    <p className="text-[10px] font-bold text-foreground">{child.label}</p>
+                                                    <p className="text-[8px] text-muted-foreground font-mono">{child.to}</p>
+                                                  </div>
+                                                </div>
+                                                <div className="flex items-center gap-1 opacity-0 group-hover/child:opacity-100 transition-opacity">
+                                                  <button
+                                                    onClick={() => setEditingMenuItem({ groupId: group.id, item: child })}
+                                                    className="p-1 hover:bg-foreground/5 rounded text-muted-foreground hover:text-primary"
+                                                  >
+                                                    <Settings className="w-3 h-3" />
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            ))}
                                           </div>
                                         )}
-                                      </Draggable>
+                                      </div>
                                     ))}
                                     {provided.placeholder}
                                     <button

@@ -683,7 +683,6 @@ export const translations: Record<Language, Record<string, string>> = {
     'about.roleProduct': 'Head of Product',
     'nav.accounting': 'Accounting',
     'nav.inventory': 'Inventory',
-    'nav.exceptionReports': 'Exception Reports',
     'nav.cashFlow': 'Cash Flow',
     'nav.fundsFlow': 'Funds Flow',
     'nav.groupVoucher': 'Group Voucher',
@@ -714,6 +713,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.movementAnalysis': 'Movement Analysis',
     'nav.cashBankBooks': 'Cash/Bank Books',
     'nav.stockItem': 'Stock Item',
+    'nav.statementOfAccount': 'Statement of Account',
+    'nav.exceptionReports': 'Exception Reports',
+    'nav.ledger': 'Ledger',
   },
   bn: {
     // Navbar
@@ -1369,7 +1371,6 @@ export const translations: Record<Language, Record<string, string>> = {
     'about.roleProduct': 'পণ্য প্রধান',
     'nav.accounting': 'অ্যাকাউন্টিং',
     'nav.inventory': 'ইনভেন্টরি',
-    'nav.exceptionReports': 'এক্সেপশন রিপোর্ট',
     'nav.cashFlow': 'ক্যাশ ফ্লো',
     'nav.fundsFlow': 'ফান্ডস ফ্লো',
     'nav.groupVoucher': 'গ্রুপ ভাউচার',
@@ -1400,6 +1401,9 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.movementAnalysis': 'মুভমেন্ট অ্যানালাইসিস',
     'nav.cashBankBooks': 'ক্যাশ/ব্যাংক বুকস',
     'nav.stockItem': 'স্টক আইটেম',
+    'nav.statementOfAccount': 'স্টেটমেন্ট অফ অ্যাকাউন্ট',
+    'nav.exceptionReports': 'এক্সেপশন রিপোর্টস',
+    'nav.ledger': 'লেজার',
   }
 };
 
