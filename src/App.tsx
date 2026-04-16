@@ -678,7 +678,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               <div className="h-[1px] bg-border my-2" />
 
               <div className="px-4 py-2">
-                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">Select Theme</p>
+                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">{t('common.selectTheme')}</p>
                 <div className="grid grid-cols-4 gap-2">
                   {(['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'] as Theme[]).map((t) => (
                     <button
@@ -708,7 +708,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               <div className="h-[1px] bg-border my-2" />
 
               <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2 text-[10px] text-red-500 hover:bg-red-500/5 uppercase tracking-widest transition-colors">
-                <LogOut className="w-3.5 h-3.5" /> Logout Session
+                <LogOut className="w-3.5 h-3.5" /> {t('nav.logout')}
               </button>
             </div>
           )}
@@ -742,7 +742,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input 
                     type="text"
-                    placeholder="Search for apps, settings, and documents"
+                    placeholder={t('common.searchAppsPlaceholder')}
                     value={winSearchQuery}
                     onChange={(e) => setWinSearchQuery(e.target.value)}
                     className="w-full bg-foreground/5 border border-border/50 rounded-xl py-3 pl-12 pr-4 text-xs font-mono outline-none focus:border-primary transition-colors"
@@ -754,11 +754,11 @@ function Layout({ children }: { children: React.ReactNode }) {
               <div className="mb-8">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                    {winSearchQuery ? 'Search Results' : 'Pinned Apps'}
+                    {winSearchQuery ? t('common.searchResults') : t('common.pinnedApps')}
                   </h3>
                   {!winSearchQuery && (
                     <button className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">
-                      All Apps
+                      {t('common.allApps')}
                     </button>
                   )}
                 </div>
@@ -781,7 +781,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                   ))}
                   {allItems.length === 0 && (
                     <div className="col-span-6 py-10 text-center text-gray-500 text-[10px] uppercase tracking-widest">
-                      No results found
+                      {t('common.noResultsFound')}
                     </div>
                   )}
                 </div>
@@ -789,7 +789,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               
               <div className="pt-6 border-t border-border flex flex-col gap-4">
                 <div className="px-2">
-                  <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">Select Theme</p>
+                  <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">{t('common.selectTheme')}</p>
                   <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                     {(['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'] as Theme[]).map((t) => (
                       <button
@@ -825,12 +825,12 @@ function Layout({ children }: { children: React.ReactNode }) {
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-widest">{user?.displayName || 'User'}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">{user?.displayName || t('common.user')}</span>
                   </div>
                   <button 
                     onClick={logout}
                     className="p-2 hover:bg-rose-500/10 rounded-lg text-rose-500 transition-colors"
-                    title="Sign out"
+                    title={t('common.logout')}
                   >
                     <LogOut className="w-4 h-4" />
                   </button>
@@ -903,9 +903,9 @@ function Layout({ children }: { children: React.ReactNode }) {
         <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 text-white text-[10px] font-bold uppercase tracking-widest py-1 px-4 flex justify-between items-center shadow-lg">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-3 h-3" />
-            <span>You are currently in a placeholder company. Your data might be in another company.</span>
+            <span>{t('common.placeholderWarning')}</span>
           </div>
-          <Link to="/companies" className="underline hover:text-white/80">Switch Company</Link>
+          <Link to="/companies" className="underline hover:text-white/80">{t('common.switchCompany')}</Link>
         </div>
       )}
       
@@ -1043,7 +1043,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                     "px-1.5 py-0.5 border rounded",
                     uiStyle === 'UI/UX 2' ? "bg-white/10 border-white/20 text-white" : "bg-card border-border text-gray-400"
                   )}>G</kbd>
-                  <span className="ml-1 uppercase tracking-widest">Go To</span>
+                  <span className="ml-1 uppercase tracking-widest">{t('common.goTo')}</span>
                 </div>
               )}
               <div className={cn(
@@ -1054,11 +1054,11 @@ function Layout({ children }: { children: React.ReactNode }) {
                   <p className={cn(
                     "text-[10px] font-mono",
                     uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground"
-                  )}>{user?.displayName || user?.email || 'User'}</p>
+                  )}>{user?.displayName || user?.email || t('common.user')}</p>
                   <p className={cn(
                     "text-[9px] uppercase font-mono",
                     uiStyle === 'UI/UX 2' ? "text-blue-100" : "text-gray-500"
-                  )}>{user?.role || 'Staff'}</p>
+                  )}>{user?.role || t('common.staff')}</p>
                 </div>
                 <button 
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
@@ -1082,10 +1082,10 @@ function Layout({ children }: { children: React.ReactNode }) {
                 {isProfileDropdownOpen && (
                   <div className="absolute top-full right-0 mt-2 w-56 bg-card border border-border shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-3 border-b border-border mb-2">
-                      <p className="text-[10px] font-bold text-foreground uppercase tracking-widest truncate">{user?.displayName || 'User'}</p>
+                      <p className="text-[10px] font-bold text-foreground uppercase tracking-widest truncate">{user?.displayName || t('common.user')}</p>
                       <p className="text-[9px] text-gray-500 truncate">{user?.email}</p>
                       <div className="mt-2 inline-block px-2 py-0.5 bg-foreground/5 rounded text-[8px] font-bold text-foreground uppercase tracking-widest">
-                        {user?.role || 'Staff'}
+                        {user?.role || t('common.staff')}
                       </div>
                     </div>
                     
@@ -1294,6 +1294,7 @@ function RegisterWrapper() {
 
 function ProtectedRoute() {
   const { user, isSuperAdmin, logout, firebaseUser, loading } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   if (loading) return null;
@@ -1305,20 +1306,19 @@ function ProtectedRoute() {
           <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-6">
             <AlertCircle className="w-8 h-8 text-amber-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Profile Not Found</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">{t('common.profileNotFound')}</h2>
           <p className="text-gray-600 mb-8">
-            Your account exists, but we couldn't find your ERP profile. 
-            This might happen if your account was created manually or if there was an error during registration.
+            {t('common.profileNotFoundDesc')}
           </p>
           <div className="space-y-4">
             <button 
               onClick={() => logout()}
               className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
             >
-              Sign Out & Try Again
+              {t('common.signOutTryAgain')}
             </button>
             <p className="text-sm text-gray-500">
-              Logged in as: <span className="font-medium text-gray-700">{firebaseUser.email}</span>
+              {t('common.loggedInAs')} <span className="font-medium text-gray-700">{firebaseUser.email}</span>
             </p>
           </div>
         </div>
@@ -1338,10 +1338,10 @@ function ProtectedRoute() {
             <div className="w-8 h-8 bg-foreground rounded-sm flex items-center justify-center">
               <span className="text-background font-bold">E</span>
             </div>
-            <span className="text-sm font-bold uppercase tracking-tighter">ERP System</span>
+            <span className="text-sm font-bold uppercase tracking-tighter">{t('common.erpSystem')}</span>
           </div>
           <button onClick={() => logout()} className="text-[10px] uppercase font-bold tracking-widest text-rose-500 hover:text-rose-600">
-            Logout
+            {t('common.logout')}
           </button>
         </header>
         <div className="flex-1 overflow-y-auto">

@@ -50,8 +50,8 @@ export const ReportsMenu: React.FC = () => {
   if (!reportsGroup) {
     return (
       <div className="p-8 text-center">
-        <h2 className="text-xl font-bold text-foreground mb-2">Reports Group Not Found</h2>
-        <p className="text-muted-foreground">Please configure the Reports group in the Founder Panel.</p>
+        <h2 className="text-xl font-bold text-foreground mb-2">{t('common.reportsGroupNotFound')}</h2>
+        <p className="text-muted-foreground">{t('common.configureReportsGroup')}</p>
       </div>
     );
   }
@@ -60,7 +60,6 @@ export const ReportsMenu: React.FC = () => {
   const categories = [
     {
       id: 'accounting',
-      title: 'Accounting',
       titleKey: 'nav.accounting',
       icon: Scale,
       itemIds: [
@@ -74,7 +73,6 @@ export const ReportsMenu: React.FC = () => {
     },
     {
       id: 'inventory',
-      title: 'Inventory',
       titleKey: 'nav.inventory',
       icon: Package,
       itemIds: [
@@ -87,7 +85,6 @@ export const ReportsMenu: React.FC = () => {
     },
     {
       id: 'payroll',
-      title: 'Payroll',
       titleKey: 'nav.payroll',
       icon: Users,
       itemIds: [
@@ -96,7 +93,6 @@ export const ReportsMenu: React.FC = () => {
     },
     {
       id: 'exception',
-      title: 'Exception Reports',
       titleKey: 'nav.exceptionReports',
       icon: AlertCircle,
       itemIds: [

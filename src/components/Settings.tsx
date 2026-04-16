@@ -118,6 +118,13 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded ?? true);
   const [localEnglishFont, setLocalEnglishFont] = useState(englishFont || 'Inter');
   const [localBanglaFont, setLocalBanglaFont] = useState(banglaFont || 'Hind Siliguri');
+
+  // Apply fonts immediately for preview
+  React.useEffect(() => {
+    const font = language === 'en' ? localEnglishFont : localBanglaFont;
+    document.documentElement.style.setProperty('--app-font', `"${font}", sans-serif`);
+  }, [language, localEnglishFont, localBanglaFont]);
+
   const [localNotifications, setLocalNotifications] = useState(notifications);
   const [localWhatsappTemplates, setLocalWhatsappTemplates] = useState(whatsappTemplates);
 
