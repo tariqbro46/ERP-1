@@ -352,12 +352,13 @@ export const erpService = {
 
   async getCashBankSummary(companyId: string, from: string, to: string) {
     try {
-      const ledgers = await getCollection<any>('ledgers', companyId);
-      const cashBankLedgers = ledgers.filter(l => 
-        l.group_name?.includes('Cash') || 
-        l.group_name?.includes('Bank') ||
-        (l.nature === 'Asset' && (l.name.toLowerCase().includes('cash') || l.name.toLowerCase().includes('bank')))
-      );
+      const ledgers = await this.getLedgers(companyId);
+      const cashBankLedgers = ledgers.filter(l => {
+        const groupName = (l as any).ledger_groups?.name || (l as any).group_name || '';
+        return groupName.includes('Cash') || 
+               groupName.includes('Bank') ||
+               ((l as any).nature === 'Asset' && (l.name.toLowerCase().includes('cash') || l.name.toLowerCase().includes('bank')));
+      });
 
       if (cashBankLedgers.length === 0) return [];
 
@@ -381,14 +382,14 @@ export const erpService = {
       const entriesInRange: any[] = [];
       for (let i = 0; i < vIdsInRange.length; i += 30) {
         const chunk = vIdsInRange.slice(i, i + 30);
-        const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk)));
+        const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId)));
         entriesInRange.push(...eSnap.docs.map(d => d.data()).filter((e: any) => ledgerIds.includes(e.ledger_id)));
       }
 
       const entriesBeforeRange: any[] = [];
       for (let i = 0; i < vIdsBeforeRange.length; i += 30) {
         const chunk = vIdsBeforeRange.slice(i, i + 30);
-        const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk)));
+        const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId)));
         entriesBeforeRange.push(...eSnap.docs.map(d => d.data()).filter((e: any) => ledgerIds.includes(e.ledger_id)));
       }
 
@@ -660,10 +661,14 @@ export const erpService = {
       ]);
       console.log(`Fetched ${ledgers.length} ledgers and ${groups.length} groups`);
       
-      return ledgers.map(l => ({
-        ...l,
-        ledger_groups: groups.find(g => g.id === l.group_id)
-      }));
+      return ledgers.map(l => {
+        const group = groups.find(g => g.id === l.group_id);
+        return {
+          ...l,
+          ledger_groups: group,
+          group_name: group?.name || l.group_name
+        };
+      });
     } catch (error) {
       console.error('Error in getLedgers:', error);
       return [];
@@ -1187,7 +1192,11 @@ export const erpService = {
     if (!itemSnap.exists()) return;
     const itemData = itemSnap.data();
 
-    const q = query(collection(db, 'inventory_entries'), where('item_id', '==', itemId));
+    const q = query(
+      collection(db, 'inventory_entries'),
+      where('item_id', '==', itemId),
+      where('companyId', '==', itemData.companyId)
+    );
     const snap = await getDocs(q);
     const entries = snap.docs.map(d => d.data());
     
@@ -1237,7 +1246,7 @@ export const erpService = {
     // Or just fetch all entries for the company and filter? That's too much data.
     // Let's fetch all accounting entries for the company first (might be large, but let's try)
     const entriesQuery = query(
-      collection(db, 'accounting_entries'),
+      collection(db, 'voucher_entries'),
       where('companyId', '==', companyId)
     );
     const entriesSnap = await getDocs(entriesQuery);
@@ -1286,8 +1295,8 @@ export const erpService = {
     for (let i = 0; i < voucherIds.length; i += 30) {
       const chunk = voucherIds.slice(i, i + 30);
       const [eSnap, iSnap] = await Promise.all([
-        getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk))),
-        getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', 'in', chunk)))
+        getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId))),
+        getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId)))
       ]);
       allEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       allInvEntries.push(...iSnap.docs.map(d => ({ id: d.id, ...d.data() })));

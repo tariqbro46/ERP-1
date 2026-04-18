@@ -72,9 +72,16 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
     }
 
     if (['Sales', 'Purchase'].includes(v.v_type)) {
+      const isSalesPurchaseAccount = (l: any) => {
+        const name = l.name?.toLowerCase() || '';
+        const group = l.ledger_groups?.name?.toLowerCase() || l.group_name?.toLowerCase() || '';
+        return group.includes('sales account') || group.includes('purchase account') ||
+               name === 'sales' || name === 'purchase' || name === 'sales account' || name === 'purchase account';
+      };
+
       const otherEntries = v.entries.filter((e: any) => {
         const ledger = ledgers.find(l => l.id === e.ledger_id);
-        return ledger && !['Sales', 'Purchase', 'Sales Account', 'Purchase Account'].includes(ledger.name);
+        return ledger && !isSalesPurchaseAccount(ledger);
       });
       if (otherEntries.length > 0) {
         return ledgers.find(l => l.id === otherEntries[0].ledger_id)?.name || 'N/A';

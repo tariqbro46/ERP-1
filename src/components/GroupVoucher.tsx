@@ -78,6 +78,16 @@ export function GroupVoucher() {
     const targetGroupIds = getChildGroupIds(selectedGroup);
     const groupLedgerIds = ledgers.filter(l => targetGroupIds.includes(l.group_id)).map(l => l.id);
     
+    // For a group report, users often want to see which specific ledger in that group was used.
+    const inGroupEntries = v.entries.filter((e: any) => groupLedgerIds.includes(e.ledger_id));
+    if (inGroupEntries.length === 1) {
+      return ledgers.find(l => l.id === inGroupEntries[0].ledger_id)?.name || 'N/A';
+    } else if (inGroupEntries.length > 1) {
+      const names = inGroupEntries.map((e: any) => ledgers.find(l => l.id === e.ledger_id)?.name).filter(Boolean);
+      return names.length > 0 ? names.join(', ') : 'Multiple Ledgers';
+    }
+
+    // Fallback back to the other side if no entry is in the group (shouldn't happen with group vouchers)
     const otherEntries = v.entries.filter((e: any) => !groupLedgerIds.includes(e.ledger_id));
     if (otherEntries.length === 1) {
       return ledgers.find(l => l.id === otherEntries[0].ledger_id)?.name || 'N/A';

@@ -551,7 +551,7 @@ export function VoucherEntry() {
           partyLedgerName = names.length > 0 ? names.join(', ') : 'Multiple Ledgers';
         } else {
           // Fallback only if no rows have ledgers yet
-          partyLedgerName = ledgers.find(l => l.id === bankCashLedgerId)?.name || vType;
+          partyLedgerName = vType;
         }
       } else if (vType === 'Journal') {
         const drEntries = accEntries.filter(e => e.type === 'Dr');

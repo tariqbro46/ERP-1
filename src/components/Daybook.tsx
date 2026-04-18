@@ -75,7 +75,7 @@ export function Daybook() {
 
       const processed = (vData || []).map(v => ({
         ...v,
-        particulars: v.party_ledger_name || v.ledger_name || v.ledgers || v.particulars || v.v_type || 'Voucher'
+        particulars: getLedgerName(v, lData)
       }));
 
       // Apply sorting
@@ -138,7 +138,7 @@ export function Daybook() {
     }
   };
 
-  const getOtherPartyName = (v: any) => {
+  const getOtherPartyName = (v: any, currentLedgers: any[]) => {
     if (!v.entries || v.entries.length === 0) return null;
 
     // For Receipt/Payment/Contra, find the ledger that isn't Cash/Bank
@@ -152,34 +152,41 @@ export function Daybook() {
 
       // First try to find entries that are NOT Cash/Bank
       const otherEntries = v.entries.filter((e: any) => {
-        const ledger = ledgers.find(l => l.id === e.ledger_id);
+        const ledger = currentLedgers.find(l => l.id === e.ledger_id);
         return ledger && !isBankCash(ledger);
       });
 
       if (otherEntries.length === 1) {
-        return ledgers.find(l => l.id === otherEntries[0].ledger_id)?.name;
+        return currentLedgers.find(l => l.id === otherEntries[0].ledger_id)?.name;
       } else if (otherEntries.length > 1) {
-        return otherEntries.map((e: any) => ledgers.find(l => l.id === e.ledger_id)?.name).join(', ');
+        return otherEntries.map((e: any) => currentLedgers.find(l => l.id === e.ledger_id)?.name).filter(Boolean).join(', ');
       }
     }
 
     // For Sales/Purchase, usually the party is the one that's NOT the Sales/Purchase account
     if (['Sales', 'Purchase'].includes(v.v_type)) {
+      const isSalesPurchaseAccount = (l: any) => {
+        const name = l.name?.toLowerCase() || '';
+        const group = l.ledger_groups?.name?.toLowerCase() || l.group_name?.toLowerCase() || '';
+        return group.includes('sales account') || group.includes('purchase account') ||
+               name === 'sales' || name === 'purchase' || name === 'sales account' || name === 'purchase account';
+      };
+
       const otherEntries = v.entries.filter((e: any) => {
-        const ledger = ledgers.find(l => l.id === e.ledger_id);
-        return ledger && !['Sales', 'Purchase', 'Sales Account', 'Purchase Account'].includes(ledger.name);
+        const ledger = currentLedgers.find(l => l.id === e.ledger_id);
+        return ledger && !isSalesPurchaseAccount(ledger);
       });
       if (otherEntries.length > 0) {
-        return ledgers.find(l => l.id === otherEntries[0].ledger_id)?.name;
+        return currentLedgers.find(l => l.id === otherEntries[0].ledger_id)?.name;
       }
     }
 
     return null;
   };
 
-  const getLedgerName = (v: any) => {
+  const getLedgerName = (v: any, currentLedgers: any[] = ledgers) => {
     // Try the calculated other party first (especially for detailed mode)
-    const otherParty = getOtherPartyName(v);
+    const otherParty = getOtherPartyName(v, currentLedgers);
     if (otherParty) return otherParty;
 
     const name = v.party_ledger_name || v.ledger_name || v.ledgers || (['Sales', 'Purchase'].includes(v.particulars) ? '' : v.particulars) || v.v_type || 'Voucher';
