@@ -176,13 +176,13 @@ export function StockSummary() {
               </div>
             )}
             <div className="flex flex-col">
-              <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">Stock Summary</h1>
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest">{settings.companyName || 'ERP System'} • as on {asOnDate}</p>
+              <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">{t('stock.title')}</h1>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest">{settings.companyName || 'ERP System'} • {t('reports.asOnDate')} {asOnDate}</p>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 w-full sm:w-auto">
             <div className="text-left sm:text-right">
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest">Total Value</p>
+              <p className="text-[9px] text-gray-500 uppercase tracking-widest">{t('common.totalValue')}</p>
               <p className="text-lg lg:text-xl text-foreground font-bold">৳ {totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
             </div>
             <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">

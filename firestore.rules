@@ -10,20 +10,26 @@ service cloud.firestore {
     }
     
     function isFounder() {
-      return isAuthenticated() && 
-             (request.auth.token.email == "sapientman46@gmail.com" || 
-              request.auth.uid == "yt5Vi0mPs2aag2ENJZu1mw0Nowz2" ||
-              (userExists() && (getUserData().get('role', '') == 'Founder' || getUserData().get('email', '') == "sapientman46@gmail.com")));
+      return isAuthenticated() && (
+        request.auth.uid == "yt5Vi0mPs2aag2ENJZu1mw0Nowz2" || 
+        request.auth.token.email == "sapientman46@gmail.com" ||
+        (userExists() && (getUserData().get('role', '') == 'Founder' || getUserData().get('email', '') == "sapientman46@gmail.com"))
+      );
     }
 
     function isMarketingManager() {
-      return isAuthenticated() && 
-             userExists() && 
+      return isAuthenticated() && userExists() && 
              (getUserData().get('role', '') == 'Marketing Manager' || getUserData().get('role', '') == 'Marketing');
     }
 
     function isSuperAdmin() {
-      return isFounder() || isMarketingManager();
+      // Direct UID/Email check for absolute priority
+      return isAuthenticated() && (
+        request.auth.uid == "yt5Vi0mPs2aag2ENJZu1mw0Nowz2" || 
+        request.auth.token.email == "sapientman46@gmail.com" ||
+        isFounder() || 
+        isMarketingManager()
+      );
     }
 
     function getUserData() {
@@ -38,23 +44,24 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/companies/$(companyId)).data;
     }
     
-     function isCompanyMember(companyId) {
-      return isAuthenticated() && companyId != null && companyId != "" && (
+    function isCompanyMember(companyId) {
+      return isAuthenticated() && (
         isSuperAdmin() || 
-        (userExists() && getUserData().get('companyId', '') == companyId) ||
-        (exists(/databases/$(database)/documents/companies/$(companyId)) && 
-         (get(/databases/$(database)/documents/companies/$(companyId)).data.ownerId == request.auth.uid || 
-          get(/databases/$(database)/documents/companies/$(companyId)).data.createdBy == request.auth.uid))
+        (companyId != null && companyId != "" && userExists() && getUserData().get('companyId', '') == companyId) ||
+        (companyId != null && companyId != "" && exists(/databases/$(database)/documents/companies/$(companyId)) && 
+         (get(/databases/$(database)/documents/companies/$(companyId)).data.get('ownerId', '') == request.auth.uid || 
+          get(/databases/$(database)/documents/companies/$(companyId)).data.get('createdBy', '') == request.auth.uid))
       );
     }
     
     function isCompanyAdmin(companyId) {
-      return isAuthenticated() && companyId != null && companyId != "" && (
+      return isAuthenticated() && (
         isSuperAdmin() || 
-        (userExists() && getUserData().get('companyId', '') == companyId && (getUserData().get('role', '') == 'Admin' || getUserData().get('role', '') == 'Founder')) ||
-        (exists(/databases/$(database)/documents/companies/$(companyId)) && 
-         (get(/databases/$(database)/documents/companies/$(companyId)).data.ownerId == request.auth.uid || 
-          get(/databases/$(database)/documents/companies/$(companyId)).data.createdBy == request.auth.uid))
+        (companyId != null && companyId != "" && userExists() && getUserData().get('companyId', '') == companyId && 
+         (getUserData().get('role', '') in ['Admin', 'Founder', 'Marketing Manager'])) ||
+        (companyId != null && companyId != "" && exists(/databases/$(database)/documents/companies/$(companyId)) && 
+         (get(/databases/$(database)/documents/companies/$(companyId)).data.get('ownerId', '') == request.auth.uid || 
+          get(/databases/$(database)/documents/companies/$(companyId)).data.get('createdBy', '') == request.auth.uid))
       );
     }
 
@@ -94,7 +101,7 @@ service cloud.firestore {
         isSuperAdmin() || 
         resource == null ||
         (resource != null && (resource.data.ownerId == request.auth.uid || resource.data.createdBy == request.auth.uid)) ||
-        (userExists() && getUserData().companyId == companyId && resource.data.get('isAccessEnabled', true) != false)
+        (userExists() && getUserData().get('companyId', '') == companyId && resource.data.get('isAccessEnabled', true) != false)
       );
       allow create: if isAuthenticated();
       allow update: if isCompanyAdmin(companyId);
@@ -244,25 +251,25 @@ service cloud.firestore {
     }
 
     match /activity_log/{id} {
-      allow read: if isCompanyAdmin(resource.data.companyId);
-      allow create: if isAuthenticated() && request.resource.data.companyId == getUserData().companyId;
-      allow delete: if isSuperAdmin();
+      allow read: if isAuthenticated() && (isSuperAdmin() || isCompanyMember(resource.data.companyId));
+      allow create: if isAuthenticated();
+      allow update, delete: if isSuperAdmin();
     }
 
-    // Notifications
     match /notifications/{id} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() || 
         (resource != null && (
-          resource.data.targetType == 'all' ||
-          (resource.data.targetType == 'company' && userExists() && resource.data.targetId == getUserData().companyId) ||
-          (resource.data.targetType == 'user' && resource.data.targetId == request.auth.uid)
+          resource.data.get('targetType', '') == 'all' ||
+          (resource.data.get('targetType', '') == 'company' && resource.data.get('targetId', '') == getUserData().get('companyId', '')) ||
+          (resource.data.get('targetType', '') == 'user' && resource.data.get('targetId', '') == request.auth.uid)
         ))
       );
       allow create: if isSuperAdmin();
       allow update: if isSuperAdmin() || (
         isAuthenticated() && 
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+        (resource != null && resource.data.get('targetType', '') == 'user' && resource.data.get('targetId', '') == request.auth.uid) ||
+        (resource != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']))
       );
       allow delete: if isSuperAdmin();
     }

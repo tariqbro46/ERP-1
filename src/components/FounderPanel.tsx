@@ -278,24 +278,23 @@ export default function FounderPanel() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [companiesSnap, usersSnap, notificationsData, activitySnap, plansData, ordersData] = await Promise.all([
-        getDocs(collection(db, 'companies')),
+      const [companiesSnap, usersSnap, notificationsData, activityData, plansData, ordersData] = await Promise.all([
+        erpService.getAllCompanies(),
         erpService.getAllUsers(),
         erpService.getNotifications(currentUser?.uid || '', currentUser?.companyId || '', true),
-        getDocs(query(collection(db, 'activity_log'), orderBy('createdAt', 'desc'), limit(50))),
+        erpService.getActivityLogs(),
         erpService.getSubscriptionPlans(),
         erpService.getSubscriptionOrders()
       ]);
       
       setAllUsers(usersSnap);
       setNotifications(notificationsData);
-      setGlobalActivity(activitySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setGlobalActivity(activityData);
       setSubscriptionPlans(plansData);
       setSubscriptionOrders(ordersData);
       const companyData: CompanyStats[] = [];
 
-      for (const companyDoc of companiesSnap.docs) {
-        const data = companyDoc.data() as Company;
+      for (const data of companiesSnap) {
         const creatorId = data.createdBy || data.ownerId;
         
         // Fetch Creator Email
@@ -308,28 +307,23 @@ export default function FounderPanel() {
         }
 
         // Fetch User Count (from pre-fetched users)
-        const userCount = usersSnap.filter(u => u.companyId === companyDoc.id).length;
+        const userCount = usersSnap.filter(u => u.companyId === data.id).length;
         
         // Fetch Voucher Count (as a proxy for DB size/usage)
-        const [vouchersSnap, ledgersSnap, itemsSnap, activitySnap] = await Promise.all([
-          getDocs(query(collection(db, 'vouchers'), where('companyId', '==', companyDoc.id))),
-          getDocs(query(collection(db, 'ledgers'), where('companyId', '==', companyDoc.id))),
-          getDocs(query(collection(db, 'items'), where('companyId', '==', companyDoc.id))),
-          getDocs(query(
-            collection(db, 'activity_log'), 
-            where('companyId', '==', companyDoc.id),
-            orderBy('createdAt', 'desc'),
-            limit(1)
-          ))
+        const [vCount, lCount, iCount, lastActData] = await Promise.all([
+          erpService.getCollectionCount('vouchers', data.id),
+          erpService.getCollectionCount('ledgers', data.id),
+          erpService.getCollectionCount('items', data.id),
+          erpService.getActivityLogs(data.id, 1)
         ]);
         
         companyData.push({
           ...data,
           userCount,
-          voucherCount: vouchersSnap.size,
-          ledgerCount: ledgersSnap.size,
-          itemCount: itemsSnap.size,
-          lastActivity: activitySnap.docs[0]?.data(),
+          voucherCount: vCount,
+          ledgerCount: lCount,
+          itemCount: iCount,
+          lastActivity: lastActData?.[0],
           creatorEmail
         });
       }

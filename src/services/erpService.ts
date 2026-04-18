@@ -125,7 +125,7 @@ async function getCollection<T = any>(colName: string, companyId: string): Promi
   try {
     const q = query(collection(db, colName), where('companyId', '==', companyId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as T));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) } as unknown as T));
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, colName);
     return [];
@@ -1195,53 +1195,57 @@ export const erpService = {
   },
 
   async recalculateItemStats(itemId: string, companyId?: string, itemData?: any) {
-    const itemRef = doc(db, 'items', itemId);
-    let effectiveItemData = itemData;
+    try {
+      const itemRef = doc(db, 'items', itemId);
+      let effectiveItemData = itemData;
 
-    if (!effectiveItemData) {
-      const itemSnap = await getDoc(itemRef);
-      if (!itemSnap.exists()) return;
-      effectiveItemData = itemSnap.data();
-    }
-
-    const effectiveCompanyId = companyId || effectiveItemData.companyId;
-    if (!effectiveCompanyId) return;
-
-    const q = query(
-      collection(db, 'inventory_entries'),
-      where('item_id', '==', itemId),
-      where('companyId', '==', effectiveCompanyId)
-    );
-    const snap = await getDocs(q);
-    const entries = snap.docs.map(d => d.data());
-    
-    let stock = Number(effectiveItemData.opening_qty) || 0;
-    let totalValue = stock * (Number(effectiveItemData.opening_rate) || 0);
-    let totalQty = stock;
-
-    for (const e of entries) {
-      const movementType = e.movement_type || e.m_type;
-      const qty = Number(e.qty) || 0;
-      const freeQty = Number(e.free_qty) || 0;
-      const rate = Number(e.rate) || 0;
-      const totalEntryQty = qty + freeQty;
-
-      if (movementType === 'Inward') {
-        stock += totalEntryQty;
-        totalValue += (qty * rate);
-        totalQty += qty;
-      } else {
-        stock -= totalEntryQty;
+      if (!effectiveItemData) {
+        const itemSnap = await getDoc(itemRef);
+        if (!itemSnap.exists()) return;
+        effectiveItemData = itemSnap.data();
       }
-    }
-    
-    const avgCost = totalQty > 0 ? totalValue / totalQty : (Number(effectiveItemData.opening_rate) || 0);
 
-    await updateDoc(itemRef, { 
-      current_stock: stock,
-      avg_cost: avgCost,
-      companyId: effectiveCompanyId // Ensure companyId field persists
-    });
+      const effectiveCompanyId = companyId || effectiveItemData.companyId;
+      if (!effectiveCompanyId) return;
+
+      const q = query(
+        collection(db, 'inventory_entries'),
+        where('item_id', '==', itemId),
+        where('companyId', '==', effectiveCompanyId)
+      );
+      const snap = await getDocs(q);
+      const entries = snap.docs.map(d => d.data());
+      
+      let stock = Number(effectiveItemData.opening_qty) || 0;
+      let totalValue = stock * (Number(effectiveItemData.opening_rate) || 0);
+      let totalQty = stock;
+
+      for (const e of entries) {
+        const movementType = e.movement_type || e.m_type;
+        const qty = Number(e.qty) || 0;
+        const freeQty = Number(e.free_qty) || 0;
+        const rate = Number(e.rate) || 0;
+        const totalEntryQty = qty + freeQty;
+
+        if (movementType === 'Inward') {
+          stock += totalEntryQty;
+          totalValue += (qty * rate);
+          totalQty += qty;
+        } else {
+          stock -= totalEntryQty;
+        }
+      }
+      
+      const avgCost = totalQty > 0 ? totalValue / totalQty : (Number(effectiveItemData.opening_rate) || 0);
+
+      await updateDoc(itemRef, { 
+        current_stock: stock,
+        avg_cost: avgCost,
+        companyId: effectiveCompanyId // Ensure companyId field persists
+      });
+    } catch (error) {
+      console.error('Error recalculating item stats:', error);
+    }
   },
 
   async getVoucherEntriesByDate(companyId: string, asOnDate: string): Promise<any[]> {
@@ -1366,100 +1370,106 @@ export const erpService = {
   },
 
   async getRecentVouchers(companyId: string, limitCount = 5): Promise<any[]> {
-    const q = query(
-      collection(db, 'vouchers'), 
-      where('companyId', '==', companyId),
-      orderBy('v_date', 'desc'),
-      limit(limitCount)
-    );
-    const snapshot = await getDocs(q);
-    const vouchers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
-    if (vouchers.length === 0) return [];
+    try {
+      const q = query(
+        collection(db, 'vouchers'), 
+        where('companyId', '==', companyId),
+        orderBy('v_date', 'desc'),
+        limit(limitCount)
+      );
+      const snapshot = await getDocs(q);
+      const vouchers = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+      
+      if (vouchers.length === 0) return [];
 
-    // Fetch inventory for these vouchers to show item names
-    const invSnap = await getDocs(query(collection(db, 'inventory_entries'), where('companyId', '==', companyId)));
-    const allInv = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const vIds = vouchers.map(v => v.id);
+      const allInv: any[] = [];
+      
+      // Only fetch inventory for these specific vouchers
+      for (let i = 0; i < vIds.length; i += 30) {
+        const chunk = vIds.slice(i, i + 30);
+        const invSnap = await getDocs(query(
+          collection(db, 'inventory_entries'), 
+          where('companyId', '==', companyId),
+          where('voucher_id', 'in', chunk)
+        ));
+        allInv.push(...invSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) })));
+      }
 
-    return vouchers.map(v => ({
-      ...v,
-      inventory: allInv.filter((i: any) => i.voucher_id === v.id),
-      item_names: (v as any).item_names || allInv.filter((i: any) => i.voucher_id === v.id).map((i: any) => i.item_name).filter(Boolean).join(', ')
-    }));
+      return vouchers.map(v => ({
+        ...v,
+        inventory: allInv.filter((i: any) => i.voucher_id === v.id),
+        item_names: (v as any).item_names || allInv.filter((i: any) => i.voucher_id === v.id).map((i: any) => i.item_name).filter(Boolean).join(', ')
+      }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'vouchers');
+      return [];
+    }
   },
 
   async getVouchersByDateRange(companyId: string, startDate: string, endDate: string): Promise<any[]> {
-    const q = query(
-      collection(db, 'vouchers'),
-      where('companyId', '==', companyId),
-      where('v_date', '>=', startDate),
-      where('v_date', '<=', endDate),
-      orderBy('v_date', 'desc')
-    );
-    const snapshot = await getDocs(q);
-    const vouchers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
-    if (vouchers.length === 0) return [];
+    try {
+      const q = query(
+        collection(db, 'vouchers'),
+        where('companyId', '==', companyId),
+        where('v_date', '>=', startDate),
+        where('v_date', '<=', endDate),
+        orderBy('v_date', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const vouchers = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+      
+      if (vouchers.length === 0) return [];
 
-    // Fetch entries and inventory for these vouchers
-    const voucherIds = vouchers.map(v => v.id);
-    const allAccEntries: any[] = [];
-    
-    // Chunk accounting entries fetch
-    for (let i = 0; i < voucherIds.length; i += 30) {
-      const chunk = voucherIds.slice(i, i + 30);
-      const eSnap = await getDocs(query(
-        collection(db, 'voucher_entries'), 
-        where('voucher_id', 'in', chunk),
-        where('companyId', '==', companyId)
-      ));
-      allAccEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      // Fetch entries and inventory for these vouchers
+      const voucherIds = vouchers.map(v => v.id);
+      const allAccEntries: any[] = [];
+      const allInvEntries: any[] = [];
+      
+      // Chunk accounting entries fetch
+      for (let i = 0; i < voucherIds.length; i += 30) {
+        const chunk = voucherIds.slice(i, i + 30);
+        
+        const [eSnap, iSnap] = await Promise.all([
+          getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId))),
+          getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId)))
+        ]);
+        
+        allAccEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) })));
+        allInvEntries.push(...iSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) })));
+      }
+
+      return vouchers.map(v => ({
+        ...v,
+        entries: allAccEntries.filter((e: any) => e.voucher_id === v.id),
+        inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id)
+      }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'vouchers');
+      return [];
     }
-
-    const invSnap = await getDocs(query(collection(db, 'inventory_entries'), where('companyId', '==', companyId)));
-    const allInv = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    return vouchers.map(v => ({
-      ...v,
-      entries: allAccEntries.filter((e: any) => e.voucher_id === v.id),
-      item_names: (v as any).item_names || allInv.filter((i: any) => i.voucher_id === v.id).map((i: any) => i.item_name).filter(Boolean).join(', ')
-    }));
   },
 
   async getVouchersDetailedByDateRange(companyId: string, startDate: string, endDate: string): Promise<any[]> {
-    const vouchers = await this.getVouchersByDateRange(companyId, startDate, endDate);
-    if (vouchers.length === 0) return [];
-
-    const voucherIds = vouchers.map(v => v.id);
-    
-    // Fetch all entries for these vouchers
-    // Note: Firestore 'in' query limit is 30. If we have more than 30 vouchers, we need to chunk.
-    // For now, we'll fetch all entries for the company and filter in memory, similar to other methods.
-    const [accEntriesSnap, invEntriesSnap] = await Promise.all([
-      getDocs(query(collection(db, 'voucher_entries'), where('companyId', '==', companyId))),
-      getDocs(query(collection(db, 'inventory_entries'), where('companyId', '==', companyId)))
-    ]);
-
-    const allAccEntries = accEntriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const allInvEntries = invEntriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    return vouchers.map(v => ({
-      ...v,
-      entries: allAccEntries.filter((e: any) => e.voucher_id === v.id),
-      inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id)
-    }));
+    try {
+      const vouchers = await this.getVouchersByDateRange(companyId, startDate, endDate);
+      return vouchers; // getVouchersByDateRange already fetches entries and inventory now
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'vouchers');
+      return [];
+    }
   },
 
   async getUsers(companyId: string): Promise<any[]> {
     const q = query(collection(db, 'users'), where('companyId', '==', companyId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ uid: doc.id, ...(doc.data() as any) }));
   },
 
   async getAllUsers(): Promise<any[]> {
     try {
       const snapshot = await getDocs(collection(db, 'users'));
-      return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      return snapshot.docs.map(doc => ({ uid: doc.id, ...(doc.data() as any) }));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'users');
       return [];
@@ -1469,9 +1479,25 @@ export const erpService = {
   async getAllCompanies(): Promise<any[]> {
     try {
       const snapshot = await getDocs(collection(db, 'companies'));
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'companies');
+      return [];
+    }
+  },
+
+  async getActivityLogs(companyId?: string, limitCount = 50): Promise<any[]> {
+    try {
+      let q;
+      if (companyId) {
+        q = query(collection(db, 'activity_log'), where('companyId', '==', companyId), orderBy('createdAt', 'desc'), limit(limitCount));
+      } else {
+        q = query(collection(db, 'activity_log'), orderBy('createdAt', 'desc'), limit(limitCount));
+      }
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'activity_log');
       return [];
     }
   },
@@ -2260,7 +2286,7 @@ export const erpService = {
     try {
       const q = query(collection(db, 'subscription_plans'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionPlan));
+      return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) } as SubscriptionPlan));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'subscription_plans');
       return [];

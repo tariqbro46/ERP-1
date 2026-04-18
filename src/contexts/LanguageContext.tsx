@@ -87,6 +87,26 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.theme': 'Select Theme',
     'nav.daybook': 'Daybook',
     'nav.subscription': 'Subscription',
+    'subscription.title': 'Subscription Management',
+    'subscription.subtitle': 'Manage your plan, view billing history, and upgrade your features.',
+    'subscription.usageLimits': 'Usage Limits',
+    'subscription.upgradePlan': 'Upgrade Plan',
+    'subscription.currentSubscription': 'Current Subscription',
+    'subscription.planType': 'Plan Type',
+    'subscription.expiryDate': 'Expiry Date',
+    'subscription.price': 'Price',
+    'subscription.featuresIncluded': 'Features Included:',
+    'subscription.orderHistory': 'Order History',
+    'subscription.needHelp': 'Need Help?',
+    'subscription.needHelpDesc': 'If you have any issues with your subscription or need a custom plan for your business, please contact our support team.',
+    'subscription.paymentMethods': 'Payment Methods',
+    'subscription.paymentMethodsDesc': 'Currently we only support manual bank transfers and mobile banking (bKash/Nagad).',
+    'common.vouchers': 'Vouchers',
+    'common.items': 'Items',
+    'common.ledgers': 'Ledgers',
+    'common.users': 'Users',
+    'common.godowns': 'Godowns',
+    'common.employees': 'Employees',
 
     // Home
     'home.heroTitle': 'Manage Your Business With Intelligence',
@@ -243,6 +263,21 @@ export const translations: Record<Language, Record<string, string>> = {
     'item.wholesalePrice': 'Wholesale Price',
     'item.retailPrice': 'Retail Price',
     'item.avgCost': 'Avg Cost',
+    'item.currentStock': 'Current Stock',
+    'production.productionControl': 'Production Control',
+    'production.newOrder': 'New Order',
+    'production.idle': 'System Idle',
+    'production.processingJob': 'Processing Print Job',
+    'production.readyForAssignment': 'Ready for Assignment',
+    'production.searchPlaceholder': 'Search Client / Item / Design...',
+    'production.noMachinesConfigured': 'No machines configured. Add machines in settings.',
+    'production.statusUpdateSuccess': 'Order status updated to {status}',
+    'production.statusUpdateError': 'Failed to update status',
+    'production.status.Pending': 'Pending',
+    'production.status.Printing': 'Printing',
+    'production.status.Completed': 'Completed',
+    'production.status.Delivered': 'Delivered',
+    'production.status.Cancelled': 'Cancelled',
     'stock.title': 'Stock Summary',
     'stock.loading': 'Loading stock data...',
     'stock.noItems': 'No stock items matching search',
@@ -835,6 +870,26 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.theme': 'থিম নির্বাচন করুন',
     'nav.daybook': 'ডে-বুক',
     'nav.subscription': 'সাবস্ক্রিপশন',
+    'subscription.title': 'সাবস্ক্রিপশন ম্যানেজমেন্ট',
+    'subscription.subtitle': 'আপনার প্ল্যান পরিচালনা করুন, বিলিং ইতিহাস দেখুন এবং আপনার ফিচারগুলো আপগ্রেড করুন।',
+    'subscription.usageLimits': 'ব্যবহারের সীমা',
+    'subscription.upgradePlan': 'প্ল্যান আপগ্রেড করুন',
+    'subscription.currentSubscription': 'বর্তমান সাবস্ক্রিপশন',
+    'subscription.planType': 'প্ল্যানের ধরণ',
+    'subscription.expiryDate': 'মেয়াদ উত্তীর্ণের তারিখ',
+    'subscription.price': 'মূল্য',
+    'subscription.featuresIncluded': 'অন্তর্ভুক্ত ফিচারসমূহ:',
+    'subscription.orderHistory': 'অর্ডারের ইতিহাস',
+    'subscription.needHelp': 'সাহায্য প্রয়োজন?',
+    'subscription.needHelpDesc': 'আপনার সাবস্ক্রিপশন নিয়ে কোনো সমস্যা থাকলে বা আপনার ব্যবসার জন্য কাস্টম প্ল্যানের প্রয়োজন হলে, দয়া করে আমাদের সাপোর্ট টিমের সাথে যোগাযোগ করুন।',
+    'subscription.paymentMethods': 'পেমেন্ট পদ্ধতিসমূহ',
+    'subscription.paymentMethodsDesc': 'বর্তমানে আমরা শুধুমাত্র ম্যানুয়াল ব্যাংক ট্রান্সফার এবং মোবাইল ব্যাংকিং (বিকাশ/নগদ) সমর্থন করি।',
+    'common.vouchers': 'ভাউচার',
+    'common.items': 'আইটেম',
+    'common.ledgers': 'লেজার',
+    'common.users': 'ব্যবহারকারী',
+    'common.godowns': 'গোডাউন',
+    'common.employees': 'কর্মচারী',
 
     // Home
     'home.heroTitle': 'বুদ্ধিমত্তার সাথে আপনার ব্যবসা পরিচালনা করুন',
@@ -987,6 +1042,21 @@ export const translations: Record<Language, Record<string, string>> = {
     'item.wholesalePrice': 'পাইকারি মূল্য',
     'item.retailPrice': 'খুচরা মূল্য',
     'item.avgCost': 'গড় খরচ',
+    'item.currentStock': 'বর্তমান স্টক',
+    'production.productionControl': 'প্রোডাকশন কন্ট্রোল',
+    'production.newOrder': 'নতুন অর্ডার',
+    'production.idle': 'সিস্টেম অলস',
+    'production.processingJob': 'প্রিন্ট জব প্রসেস হচ্ছে',
+    'production.readyForAssignment': 'এসাইনমেন্টের জন্য প্রস্তুত',
+    'production.searchPlaceholder': 'ক্লায়েন্ট / আইটেম / ডিজাইন অনুসন্ধান করুন...',
+    'production.noMachinesConfigured': 'কোনো মেশিন কনফিগার করা নেই। সেটিংসে মেশিন যোগ করুন।',
+    'production.statusUpdateSuccess': 'অর্ডারের অবস্থা {status} এ আপডেট করা হয়েছে',
+    'production.statusUpdateError': 'অবস্থা আপডেট করতে ব্যর্থ হয়েছে',
+    'production.status.Pending': 'পেন্ডিং',
+    'production.status.Printing': 'প্রিন্টিং',
+    'production.status.Completed': 'সম্পন্ন',
+    'production.status.Delivered': 'ডেলিভার করা হয়েছে',
+    'production.status.Cancelled': 'বাতিল',
     'stock.title': 'স্টক সামারি',
     'stock.loading': 'স্টক ডেটা লোড হচ্ছে...',
     'stock.noItems': 'অনুসন্ধানের সাথে মেলে এমন কোনো স্টক আইটেম নেই',
@@ -1503,7 +1573,27 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const t = (key: string, variables?: Record<string, string | number>): string => {
-    let translation = translations[language][key] || key;
+    let translation = translations[language][key];
+    
+    // Fallback to English if missing in target language
+    if (translation === undefined && language !== 'en') {
+      translation = translations['en'][key];
+    }
+
+    if (translation === undefined) {
+      // Intelligent fallback: Convert key to readable title (e.g., 'item.currentStock' -> 'Current Stock')
+      const parts = key.split('.');
+      const lastPart = parts[parts.length - 1];
+      translation = lastPart
+        .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+        .replace(/[_-]/g, ' ')      // Replace underscores/hyphens with spaces
+        .trim()
+        .replace(/^\w/, (c) => c.toUpperCase()) // Capitalize first letter
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    }
+
     if (variables) {
       Object.entries(variables).forEach(([k, v]) => {
         translation = translation.replace(`{${k}}`, String(v));

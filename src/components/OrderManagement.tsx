@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { 
   ClipboardList, 
   Plus, 
@@ -31,6 +32,7 @@ import { SearchableSelect } from './SearchableSelect';
 
 export function OrderManagement() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { showNotification } = useNotification();
   const [orders, setOrders] = useState<PrintingOrder[]>([]);
@@ -156,10 +158,10 @@ export function OrderManagement() {
       }
 
       await erpService.updateOrder(order.id, updates);
-      showNotification(`Order status updated to ${newStatus}`);
+      showNotification(t('production.statusUpdateSuccess', { status: newStatus }));
       fetchData();
     } catch (err) {
-      showNotification('Failed to update status', 'error');
+      showNotification(t('production.statusUpdateError'), 'error');
     }
   };
 
@@ -195,9 +197,9 @@ export function OrderManagement() {
         <div className="space-y-1">
           <div className="flex items-center gap-3 text-primary mb-1">
             <Printer className="w-5 h-5" />
-            <span className="text-[10px] uppercase tracking-[0.3em] font-bold">Production Control</span>
+            <span className="text-[10px] uppercase tracking-[0.3em] font-bold">{t('production.productionControl')}</span>
           </div>
-          <h1 className="text-2xl md:text-4xl font-bold tracking-tighter text-foreground uppercase">Order Management</h1>
+          <h1 className="text-2xl md:text-4xl font-bold tracking-tighter text-foreground uppercase">{t('nav.orderManagement')}</h1>
         </div>
         
         <button 
@@ -205,7 +207,7 @@ export function OrderManagement() {
           className="px-4 md:px-6 py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
-          New Order
+          {t('production.newOrder')}
         </button>
       </div>
 
@@ -223,17 +225,17 @@ export function OrderManagement() {
             </div>
             <div className="space-y-1">
               <p className="text-xs font-bold text-foreground uppercase">
-                {machine.status === 'Busy' ? machine.currentOrderName : 'System Idle'}
+                {machine.status === 'Busy' ? machine.currentOrderName : t('production.idle')}
               </p>
               <p className="text-[9px] text-muted-foreground uppercase tracking-tighter">
-                {machine.status === 'Busy' ? 'Processing Print Job' : 'Ready for Assignment'}
+                {machine.status === 'Busy' ? t('production.processingJob') : t('production.readyForAssignment')}
               </p>
             </div>
           </div>
         ))}
         {machines.length === 0 && (
           <div className="col-span-full py-4 text-center border border-dashed border-border text-[10px] uppercase tracking-widest text-muted-foreground">
-            No machines configured. Add machines in settings.
+            {t('production.noMachinesConfigured')}
           </div>
         )}
       </div>
@@ -245,7 +247,7 @@ export function OrderManagement() {
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
             <input 
               type="text"
-              placeholder="SEARCH..."
+              placeholder={t('production.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-background border border-border py-1.5 pl-8 pr-2 text-[9px] uppercase tracking-widest outline-none focus:border-primary"
@@ -256,12 +258,12 @@ export function OrderManagement() {
             onChange={(e) => setStatusFilter(e.target.value as any)}
             className="bg-background border border-border py-1.5 px-2 text-[9px] uppercase tracking-widest outline-none focus:border-primary"
           >
-            <option value="All">ALL</option>
-            <option value="Pending">PENDING</option>
-            <option value="Printing">PRINTING</option>
-            <option value="Completed">COMPLETED</option>
-            <option value="Delivered">DELIVERED</option>
-            <option value="Cancelled">CANCELLED</option>
+            <option value="All">{t('common.all')}</option>
+            <option value="Pending">{t('production.status.Pending')}</option>
+            <option value="Printing">{t('production.status.Printing')}</option>
+            <option value="Completed">{t('production.status.Completed')}</option>
+            <option value="Delivered">{t('production.status.Delivered')}</option>
+            <option value="Cancelled">{t('production.status.Cancelled')}</option>
           </select>
         </div>
         

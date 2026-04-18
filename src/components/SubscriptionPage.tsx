@@ -28,10 +28,14 @@ import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AVAILABLE_FEATURES } from '../constants/features';
 
+import { useLanguage } from '../contexts/LanguageContext';
+
 export function SubscriptionPage() {
   const { company, user, isAdmin } = useAuth();
   const { subscriptionPlans } = useSettings();
+  const { t } = useLanguage();
   const [orders, setOrders] = useState<SubscriptionOrder[]>([]);
+  const [usageStats, setUsageStats] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
@@ -42,8 +46,34 @@ export function SubscriptionPage() {
   useEffect(() => {
     if (company?.id) {
       fetchOrders();
+      fetchUsageStats();
     }
   }, [company?.id]);
+
+  const fetchUsageStats = async () => {
+    if (!company?.id) return;
+    try {
+      const stats = await Promise.all([
+        erpService.getCollectionCount('vouchers', company.id),
+        erpService.getCollectionCount('items', company.id),
+        erpService.getCollectionCount('ledgers', company.id),
+        erpService.getCollectionCount('users', company.id),
+        erpService.getCollectionCount('godowns', company.id),
+        erpService.getCollectionCount('employees', company.id)
+      ]);
+
+      setUsageStats({
+        vouchers: stats[0],
+        items: stats[1],
+        ledgers: stats[2],
+        users: stats[3],
+        godowns: stats[4],
+        employees: stats[5]
+      });
+    } catch (err) {
+      console.error('Error fetching usage stats:', err);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -138,9 +168,9 @@ export function SubscriptionPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
             <Shield className="w-8 h-8 text-primary" />
-            Subscription Management
+            {t('subscription.title')}
           </h1>
-          <p className="text-sm text-muted-foreground">Manage your plan, view billing history, and upgrade your features.</p>
+          <p className="text-sm text-muted-foreground">{t('subscription.subtitle')}</p>
         </div>
         {isAdmin && (
           <button
@@ -148,7 +178,7 @@ export function SubscriptionPage() {
             className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
           >
             <ArrowUpCircle className="w-4 h-4" />
-            Upgrade Plan
+            {t('subscription.upgradePlan')}
           </button>
         )}
       </div>
@@ -177,7 +207,7 @@ export function SubscriptionPage() {
                 <div className="p-2 bg-primary/10 rounded-lg">
                   <Shield className="w-5 h-5 text-primary" />
                 </div>
-                <h2 className="text-lg font-bold uppercase tracking-widest">Current Subscription</h2>
+                <h2 className="text-lg font-bold uppercase tracking-widest">{t('subscription.currentSubscription')}</h2>
               </div>
               <span className={cn(
                 "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
@@ -206,18 +236,18 @@ export function SubscriptionPage() {
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
                     <div className="space-y-1">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Plan Type</p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{t('subscription.planType')}</p>
                       <p className="text-sm font-bold text-foreground uppercase">{company?.planType || 'Free'}</p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Expiry Date</p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{t('subscription.expiryDate')}</p>
                       <div className="flex items-center gap-2 text-sm font-bold text-foreground">
                         <Calendar className="w-4 h-4 text-primary" />
                         {company?.expiryDate ? safeFormat(company.expiryDate, 'dd MMM yyyy') : 'No Expiry'}
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Price</p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{t('subscription.price')}</p>
                       <p className="text-sm font-bold text-foreground">
                         {company?.planType === 'yearly' ? activePlan?.priceYearly : activePlan?.priceMonthly || 0} ৳
                         <span className="text-[10px] text-muted-foreground font-normal ml-1">/{company?.planType === 'yearly' ? 'yr' : 'mo'}</span>
@@ -226,7 +256,7 @@ export function SubscriptionPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Features Included:</p>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{t('subscription.featuresIncluded')}</p>
                     <div className="flex flex-wrap gap-2">
                       {activePlan?.features.map(fId => {
                         const feature = AVAILABLE_FEATURES.find(af => af.id === fId);
@@ -250,43 +280,6 @@ export function SubscriptionPage() {
                     </div>
                   </div>
                 </div>
-
-                <div className="w-full md:w-64 bg-muted/30 rounded-2xl p-6 border border-border space-y-4">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                    <Info className="w-3.5 h-3.5" />
-                    Usage Limits
-                  </h4>
-                  <div className="space-y-4">
-                    {[
-                      { label: 'Vouchers', key: 'vouchers' },
-                      { label: 'Items', key: 'items' },
-                      { label: 'Ledgers', key: 'ledgers' },
-                      { label: 'Users', key: 'users' },
-                      { label: 'Godowns', key: 'godowns' }
-                    ].map(limit => {
-                      const customVal = company?.customLimits?.[limit.key];
-                      const planVal = activePlan?.limits?.[limit.key as keyof typeof activePlan.limits];
-                      const val = customVal ?? planVal ?? 0;
-                      
-                      return (
-                        <div key={limit.key} className="space-y-1">
-                          <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
-                            <span className="text-muted-foreground">{limit.label}</span>
-                            <span className={cn(customVal !== undefined ? "text-primary" : "text-foreground")}>
-                              {val === -1 ? 'Unlimited' : val}
-                            </span>
-                          </div>
-                          <div className="h-1.5 bg-border rounded-full overflow-hidden">
-                            <div 
-                              className={cn("h-full rounded-full", customVal !== undefined ? "bg-primary" : "bg-foreground/20")}
-                              style={{ width: val === -1 ? '100%' : '30%' }} // Mock usage for now
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -298,7 +291,7 @@ export function SubscriptionPage() {
                 <div className="p-2 bg-primary/10 rounded-lg">
                   <History className="w-5 h-5 text-primary" />
                 </div>
-                <h2 className="text-lg font-bold uppercase tracking-widest">Order History</h2>
+                <h2 className="text-lg font-bold uppercase tracking-widest">{t('subscription.orderHistory')}</h2>
               </div>
             </div>
             
@@ -377,13 +370,85 @@ export function SubscriptionPage() {
 
         {/* Sidebar Info */}
         <div className="space-y-6">
+          {/* Usage Limits moved to sidebar */}
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-6 shadow-sm">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" />
+              {t('subscription.usageLimits')}
+            </h3>
+            <div className="space-y-5">
+              {[
+                { label: t('common.vouchers'), key: 'vouchers' },
+                { label: t('common.items'), key: 'items' },
+                { label: t('common.ledgers'), key: 'ledgers' },
+                { label: t('common.users'), key: 'users' },
+                { label: t('common.godowns'), key: 'godowns' },
+                { label: t('common.employees'), key: 'employees' }
+              ].map(limit => {
+                const customVal = company?.customLimits?.[limit.key];
+                const planVal = activePlan?.limits?.[limit.key as keyof typeof activePlan.limits];
+                const limitVal = customVal ?? planVal ?? 0;
+                const currentVal = usageStats[limit.key] || 0;
+                
+                const percentage = limitVal === -1 ? 0 : Math.min(100, (currentVal / limitVal) * 100);
+                const isNearLimit = limitVal !== -1 && percentage > 80;
+                const isOverLimit = limitVal !== -1 && currentVal >= limitVal;
+
+                return (
+                  <div key={limit.key} className="space-y-2">
+                    <div className="flex justify-between items-end">
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{limit.label}</p>
+                        <p className={cn(
+                          "text-xs font-mono font-bold",
+                          isOverLimit ? "text-rose-500" : isNearLimit ? "text-amber-500" : "text-foreground"
+                        )}>
+                          {currentVal.toLocaleString()} 
+                          <span className="text-[9px] text-muted-foreground font-normal ml-1">
+                            / {limitVal === -1 ? '∞' : limitVal.toLocaleString()}
+                          </span>
+                        </p>
+                      </div>
+                      <span className={cn(
+                        "text-[9px] font-black tracking-widest",
+                        isOverLimit ? "text-rose-500" : isNearLimit ? "text-amber-500" : "text-emerald-500"
+                      )}>
+                        {limitVal === -1 ? 'UNLIMITED' : `${Math.round(percentage)}%`}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${limitVal === -1 ? 100 : percentage}%` }}
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          limitVal === -1 ? "bg-primary" :
+                          isOverLimit ? "bg-rose-500" :
+                          isNearLimit ? "bg-amber-500" : "bg-emerald-500"
+                        )}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {company?.subscriptionStatus === 'trial' && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-[9px] text-amber-600 font-medium leading-tight">
+                  You are currently on a trial plan. Upgrade to remove limits and unlock more features.
+                </p>
+              </div>
+            )}
+          </div>
+
           <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
               <Info className="w-4 h-4" />
-              Need Help?
+              {t('subscription.needHelp')}
             </h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              If you have any issues with your subscription or need a custom plan for your business, please contact our support team.
+              {t('subscription.needHelpDesc')}
             </p>
             <div className="space-y-2">
               <button className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">
@@ -398,10 +463,10 @@ export function SubscriptionPage() {
           <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-primary" />
-              Payment Methods
+              {t('subscription.paymentMethods')}
             </h3>
             <p className="text-xs text-muted-foreground">
-              Currently we only support manual bank transfers and mobile banking (bKash/Nagad).
+              {t('subscription.paymentMethodsDesc')}
             </p>
             <div className="flex flex-wrap gap-2">
               <div className="px-3 py-1.5 bg-muted rounded-lg text-[9px] font-bold uppercase tracking-widest border border-border/50">bKash</div>
