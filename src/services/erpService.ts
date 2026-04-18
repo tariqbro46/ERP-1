@@ -118,6 +118,10 @@ function cleanData(data: any): any {
 
 // Helper to get collection with company filter
 async function getCollection<T = any>(colName: string, companyId: string): Promise<T[]> {
+  if (!companyId) {
+    console.warn(`Attempted to fetch collection ${colName} without companyId`);
+    return [];
+  }
   try {
     const q = query(collection(db, colName), where('companyId', '==', companyId));
     const snapshot = await getDocs(q);
@@ -254,7 +258,8 @@ export const erpService = {
         const chunk = voucherIds.slice(i, i + 30);
         const eSnap = await getDocs(query(
           collection(db, 'voucher_entries'), 
-          where('voucher_id', 'in', chunk)
+          where('voucher_id', 'in', chunk),
+          where('companyId', '==', companyId)
         ));
         allEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       }
@@ -311,7 +316,8 @@ export const erpService = {
         const chunk = voucherIds.slice(i, i + 30);
         const eSnap = await getDocs(query(
           collection(db, 'voucher_entries'), 
-          where('voucher_id', 'in', chunk)
+          where('voucher_id', 'in', chunk),
+          where('companyId', '==', companyId)
         ));
         
         eSnap.docs.forEach(d => {
@@ -335,7 +341,8 @@ export const erpService = {
         const chunk = finalVoucherIds.slice(i, i + 30);
         const eSnap = await getDocs(query(
           collection(db, 'voucher_entries'), 
-          where('voucher_id', 'in', chunk)
+          where('voucher_id', 'in', chunk),
+          where('companyId', '==', companyId)
         ));
         allEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       }
@@ -1043,8 +1050,8 @@ export const erpService = {
       avg_cost: Number(item.opening_rate) || 0
     };
     await setDoc(ref, data);
-    // Ensure stats are perfectly calculated from the start
-    await this.recalculateItemStats(ref.id);
+    // Ensure stats are perfectly calculated from the start - pass data to avoid redundant getDoc
+    await this.recalculateItemStats(ref.id, companyId, data);
     return data;
   },
 
@@ -1065,11 +1072,12 @@ export const erpService = {
 
     await updateDoc(itemRef, {
       ...updates,
-      updated_at: serverTimestamp()
+      updated_at: serverTimestamp(),
+      companyId: oldData.companyId // Ensure it stays
     });
 
     // Always recalculate to be safe and ensure current_stock/avg_cost are correct
-    await this.recalculateItemStats(id);
+    await this.recalculateItemStats(id, oldData.companyId, { ...oldData, ...updates });
   },
 
   async deleteItem(id: string, companyId: string) {
@@ -1186,22 +1194,29 @@ export const erpService = {
     await deleteDoc(doc(db, 'loans', id));
   },
 
-  async recalculateItemStats(itemId: string) {
+  async recalculateItemStats(itemId: string, companyId?: string, itemData?: any) {
     const itemRef = doc(db, 'items', itemId);
-    const itemSnap = await getDoc(itemRef);
-    if (!itemSnap.exists()) return;
-    const itemData = itemSnap.data();
+    let effectiveItemData = itemData;
+
+    if (!effectiveItemData) {
+      const itemSnap = await getDoc(itemRef);
+      if (!itemSnap.exists()) return;
+      effectiveItemData = itemSnap.data();
+    }
+
+    const effectiveCompanyId = companyId || effectiveItemData.companyId;
+    if (!effectiveCompanyId) return;
 
     const q = query(
       collection(db, 'inventory_entries'),
       where('item_id', '==', itemId),
-      where('companyId', '==', itemData.companyId)
+      where('companyId', '==', effectiveCompanyId)
     );
     const snap = await getDocs(q);
     const entries = snap.docs.map(d => d.data());
     
-    let stock = Number(itemData.opening_qty) || 0;
-    let totalValue = stock * (Number(itemData.opening_rate) || 0);
+    let stock = Number(effectiveItemData.opening_qty) || 0;
+    let totalValue = stock * (Number(effectiveItemData.opening_rate) || 0);
     let totalQty = stock;
 
     for (const e of entries) {
@@ -1216,17 +1231,16 @@ export const erpService = {
         totalValue += (qty * rate);
         totalQty += qty;
       } else {
-        // Outward: physical stock decreases by total quantity (including free)
         stock -= totalEntryQty;
-        // Average cost doesn't change on outward movements in WAC
       }
     }
     
-    const avgCost = totalQty > 0 ? totalValue / totalQty : (Number(itemData.opening_rate) || 0);
+    const avgCost = totalQty > 0 ? totalValue / totalQty : (Number(effectiveItemData.opening_rate) || 0);
 
     await updateDoc(itemRef, { 
       current_stock: stock,
-      avg_cost: avgCost
+      avg_cost: avgCost,
+      companyId: effectiveCompanyId // Ensure companyId field persists
     });
   },
 
@@ -1396,7 +1410,8 @@ export const erpService = {
       const chunk = voucherIds.slice(i, i + 30);
       const eSnap = await getDocs(query(
         collection(db, 'voucher_entries'), 
-        where('voucher_id', 'in', chunk)
+        where('voucher_id', 'in', chunk),
+        where('companyId', '==', companyId)
       ));
       allAccEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
     }
@@ -2341,6 +2356,7 @@ export const erpService = {
   },
 
   async getCollectionCount(colName: string, companyId: string): Promise<number> {
+    if (!companyId) return 0;
     try {
       const q = query(collection(db, colName), where('companyId', '==', companyId));
       const snapshot = await getDocs(q);

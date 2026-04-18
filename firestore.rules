@@ -38,10 +38,10 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/companies/$(companyId)).data;
     }
     
-    function isCompanyMember(companyId) {
-      return isAuthenticated() && (
+     function isCompanyMember(companyId) {
+      return isAuthenticated() && companyId != null && companyId != "" && (
         isSuperAdmin() || 
-        (userExists() && getUserData().companyId == companyId) ||
+        (userExists() && getUserData().get('companyId', '') == companyId) ||
         (exists(/databases/$(database)/documents/companies/$(companyId)) && 
          (get(/databases/$(database)/documents/companies/$(companyId)).data.ownerId == request.auth.uid || 
           get(/databases/$(database)/documents/companies/$(companyId)).data.createdBy == request.auth.uid))
@@ -49,9 +49,9 @@ service cloud.firestore {
     }
     
     function isCompanyAdmin(companyId) {
-      return isAuthenticated() && (
+      return isAuthenticated() && companyId != null && companyId != "" && (
         isSuperAdmin() || 
-        (userExists() && getUserData().companyId == companyId && (getUserData().role == 'Admin' || getUserData().role == 'Founder')) ||
+        (userExists() && getUserData().get('companyId', '') == companyId && (getUserData().get('role', '') == 'Admin' || getUserData().get('role', '') == 'Founder')) ||
         (exists(/databases/$(database)/documents/companies/$(companyId)) && 
          (get(/databases/$(database)/documents/companies/$(companyId)).data.ownerId == request.auth.uid || 
           get(/databases/$(database)/documents/companies/$(companyId)).data.createdBy == request.auth.uid))
