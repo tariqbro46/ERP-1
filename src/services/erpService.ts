@@ -181,6 +181,7 @@ export const erpService = {
         ...entry,
         voucher_id: vRef.id,
         companyId,
+        date: voucher.v_date, // Add date for easier reporting
         created_at: serverTimestamp()
       });
 
@@ -201,6 +202,7 @@ export const erpService = {
           ...i,
           voucher_id: vRef.id,
           companyId,
+          date: voucher.v_date,
           movement_type: movementType,
           created_at: serverTimestamp()
         });
@@ -219,17 +221,279 @@ export const erpService = {
     return vData;
   },
 
+  async updateUserSettings(uid: string, settings: any) {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      settings: {
+        ...(await getDoc(userRef)).data()?.settings || {},
+        ...settings,
+        updatedAt: new Date().toISOString()
+      }
+    });
+  },
+
+  async getVouchersByType(companyId: string, type: string, from: string, to: string) {
+    try {
+      const q = query(
+        collection(db, 'vouchers'),
+        where('companyId', '==', companyId),
+        where('v_type', '==', type),
+        where('v_date', '>=', from),
+        where('v_date', '<=', to),
+        orderBy('v_date', 'desc')
+      );
+      const snap = await getDocs(q);
+      const vouchers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      if (vouchers.length === 0) return [];
+
+      // Fetch entries for these vouchers
+      const voucherIds = vouchers.map(v => v.id);
+      const allEntries: any[] = [];
+      for (let i = 0; i < voucherIds.length; i += 30) {
+        const chunk = voucherIds.slice(i, i + 30);
+        const eSnap = await getDocs(query(
+          collection(db, 'voucher_entries'), 
+          where('voucher_id', 'in', chunk)
+        ));
+        allEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }
+
+      return vouchers.map(v => ({
+        ...v,
+        entries: allEntries.filter(e => e.voucher_id === v.id)
+      }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'vouchers');
+      return [];
+    }
+  },
+
+  async getVouchersByGroup(companyId: string, groupId: string, from: string, to: string) {
+    try {
+      // Get all groups to build hierarchy
+      const allGroups = await getCollection<any>('ledger_groups', companyId);
+      
+      const getChildGroupIds = (parentId: string): string[] => {
+        let ids = [parentId];
+        const children = allGroups.filter(g => g.parent_id === parentId);
+        children.forEach(child => {
+          ids = [...ids, ...getChildGroupIds(child.id)];
+        });
+        return ids;
+      };
+
+      const groupIds = getChildGroupIds(groupId);
+      
+      // Get all ledgers in these groups
+      const ledgers = await getCollection<any>('ledgers', companyId);
+      const groupLedgerIds = ledgers.filter(l => groupIds.includes(l.group_id)).map(l => l.id);
+      
+      if (groupLedgerIds.length === 0) return [];
+
+      // Fetch all vouchers in the date range for the company
+      const vQuery = query(
+        collection(db, 'vouchers'),
+        where('companyId', '==', companyId),
+        where('v_date', '>=', from),
+        where('v_date', '<=', to)
+      );
+      const vSnap = await getDocs(vQuery);
+      const allVouchersInRange = vSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+
+      if (allVouchersInRange.length === 0) return [];
+
+      // Find which vouchers have entries for our group ledgers
+      const voucherIds = allVouchersInRange.map(v => v.id);
+      const relevantVoucherIds = new Set<string>();
+
+      for (let i = 0; i < voucherIds.length; i += 30) {
+        const chunk = voucherIds.slice(i, i + 30);
+        const eSnap = await getDocs(query(
+          collection(db, 'voucher_entries'), 
+          where('voucher_id', 'in', chunk)
+        ));
+        
+        eSnap.docs.forEach(d => {
+          const entry = d.data();
+          if (groupLedgerIds.includes(entry.ledger_id)) {
+            relevantVoucherIds.add(entry.voucher_id);
+          }
+        });
+      }
+
+      const resultVouchers = allVouchersInRange
+        .filter(v => relevantVoucherIds.has(v.id))
+        .sort((a, b) => b.v_date.localeCompare(a.v_date));
+
+      if (resultVouchers.length === 0) return [];
+
+      // Fetch entries for the resulting vouchers to allow counterparty identification
+      const finalVoucherIds = resultVouchers.map(v => v.id);
+      const allEntries: any[] = [];
+      for (let i = 0; i < finalVoucherIds.length; i += 30) {
+        const chunk = finalVoucherIds.slice(i, i + 30);
+        const eSnap = await getDocs(query(
+          collection(db, 'voucher_entries'), 
+          where('voucher_id', 'in', chunk)
+        ));
+        allEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      }
+
+      return resultVouchers.map(v => ({
+        ...v,
+        entries: allEntries.filter(e => e.voucher_id === v.id)
+      }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'vouchers');
+      return [];
+    }
+  },
+
+  async getCashBankSummary(companyId: string, from: string, to: string) {
+    try {
+      const ledgers = await getCollection<any>('ledgers', companyId);
+      const cashBankLedgers = ledgers.filter(l => 
+        l.group_name?.includes('Cash') || 
+        l.group_name?.includes('Bank') ||
+        (l.nature === 'Asset' && (l.name.toLowerCase().includes('cash') || l.name.toLowerCase().includes('bank')))
+      );
+
+      if (cashBankLedgers.length === 0) return [];
+
+      const ledgerIds = cashBankLedgers.map(l => l.id);
+      
+      // Fetch all vouchers in the company
+      const vQuery = query(
+        collection(db, 'vouchers'),
+        where('companyId', '==', companyId)
+      );
+      const vSnap = await getDocs(vQuery);
+      const allVouchers = vSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+
+      const vouchersInRange = allVouchers.filter(v => v.v_date >= from && v.v_date <= to);
+      const vouchersBeforeRange = allVouchers.filter(v => v.v_date < from);
+
+      const vIdsInRange = vouchersInRange.map(v => v.id);
+      const vIdsBeforeRange = vouchersBeforeRange.map(v => v.id);
+
+      // Fetch entries in chunks
+      const entriesInRange: any[] = [];
+      for (let i = 0; i < vIdsInRange.length; i += 30) {
+        const chunk = vIdsInRange.slice(i, i + 30);
+        const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk)));
+        entriesInRange.push(...eSnap.docs.map(d => d.data()).filter((e: any) => ledgerIds.includes(e.ledger_id)));
+      }
+
+      const entriesBeforeRange: any[] = [];
+      for (let i = 0; i < vIdsBeforeRange.length; i += 30) {
+        const chunk = vIdsBeforeRange.slice(i, i + 30);
+        const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk)));
+        entriesBeforeRange.push(...eSnap.docs.map(d => d.data()).filter((e: any) => ledgerIds.includes(e.ledger_id)));
+      }
+
+      return cashBankLedgers.map(l => {
+        const ledgerOpEntries = entriesBeforeRange.filter((e: any) => e.ledger_id === l.id);
+        const ledgerEntries = entriesInRange.filter((e: any) => e.ledger_id === l.id);
+        
+        const openingFromEntries = ledgerOpEntries.reduce((sum, e) => sum + (e.debit || 0) - (e.credit || 0), 0);
+        const openingBalance = (l.opening_balance || 0) + openingFromEntries;
+        
+        const debit = ledgerEntries.reduce((sum, e) => sum + (e.debit || 0), 0);
+        const credit = ledgerEntries.reduce((sum, e) => sum + (e.credit || 0), 0);
+        const closingBalance = openingBalance + debit - credit;
+
+        return {
+          id: l.id,
+          name: l.name,
+          openingBalance,
+          debit,
+          credit,
+          closingBalance
+        };
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'vouchers');
+      return [];
+    }
+  },
+
+  async getLedgerBalancesByGroup(companyId: string, groupId: string) {
+    try {
+      const ledgers = await getCollection<any>('ledgers', companyId);
+      return ledgers.filter(l => l.group_id === groupId);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'ledgers');
+      return [];
+    }
+  },
+
+  async getCashBankVouchers(companyId: string, from: string, to: string) {
+    try {
+      const ledgers = await getCollection<any>('ledgers', companyId);
+      const cashBankLedgerIds = ledgers.filter(l => 
+        l.group_name?.includes('Cash') || 
+        l.group_name?.includes('Bank') ||
+        l.nature === 'Asset' && (l.name.toLowerCase().includes('cash') || l.name.toLowerCase().includes('bank'))
+      ).map(l => l.id);
+
+      if (cashBankLedgerIds.length === 0) return [];
+
+      const q = query(
+        collection(db, 'voucher_entries'),
+        where('companyId', '==', companyId),
+        where('ledger_id', 'in', cashBankLedgerIds.slice(0, 10)),
+        where('date', '>=', from),
+        where('date', '<=', to)
+      );
+      const snap = await getDocs(q);
+      const entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      const voucherIds = Array.from(new Set(entries.map((e: any) => e.voucher_id)));
+      if (voucherIds.length === 0) return [];
+
+      const vSnaps = await Promise.all(voucherIds.map(id => getDoc(doc(db, 'vouchers', id))));
+      return vSnaps.filter(s => s.exists()).map(s => ({ id: s.id, ...s.data() }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'voucher_entries');
+      return [];
+    }
+  },
   async getVoucherById(id: string): Promise<any> {
     const vSnap = await getDoc(doc(db, 'vouchers', id));
     if (!vSnap.exists()) throw new Error('Voucher not found');
     const voucher = vSnap.data();
     const companyId = voucher.companyId;
 
-    const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
-    const entries = eSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a: any, b: any) => (a.entry_index || 0) - (b.entry_index || 0));
+    const [eSnap, iSnap, ledgers, items, godowns] = await Promise.all([
+      getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId))),
+      getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId))),
+      this.getLedgers(companyId),
+      this.getItems(companyId),
+      this.getGodowns(companyId)
+    ]);
 
-    const iSnap = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
-    const inventory = iSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const entries = eSnap.docs.map(d => {
+      const data = d.data();
+      const ledger = ledgers.find(l => l.id === data.ledger_id);
+      return { 
+        id: d.id, 
+        ...data, 
+        ledger_name: ledger?.name || 'Unknown Ledger' 
+      };
+    }).sort((a: any, b: any) => (a.entry_index || 0) - (b.entry_index || 0));
+
+    const inventory = iSnap.docs.map(d => {
+      const data = d.data();
+      const item = items.find(i => i.id === data.item_id);
+      const godown = godowns.find(g => g.id === data.godown_id);
+      return { 
+        id: d.id, 
+        ...data, 
+        item_name: item?.name || 'Unknown Item',
+        godown_name: godown?.name || 'N/A'
+      };
+    });
 
     return { ...voucher, entries, inventory, id: vSnap.id };
   },
@@ -348,6 +612,7 @@ export const erpService = {
         ...entry,
         voucher_id: id,
         companyId: oldVoucher.companyId,
+        date: voucher.v_date || oldVoucher.v_date, // Add date for easier reporting
         created_at: serverTimestamp()
       });
 
@@ -543,8 +808,34 @@ export const erpService = {
     }
   },
 
+  async deleteUnit(id: string) {
+    try {
+      await deleteDoc(doc(db, 'units', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `units/${id}`);
+    }
+  },
+
+  async checkDuplicate(colName: string, companyId: string, field: string, value: string) {
+    try {
+      const q = query(
+        collection(db, colName),
+        where('companyId', '==', companyId),
+        where(field, '==', value)
+      );
+      const snap = await getDocs(q);
+      return !snap.empty;
+    } catch (error) {
+      console.error(`Error checking duplicate in ${colName}:`, error);
+      return false;
+    }
+  },
+
   async createLedgerGroup(companyId: string, group: any) {
     try {
+      const isDuplicate = await this.checkDuplicate('ledger_groups', companyId, 'name', group.name);
+      if (isDuplicate) throw new Error(`Ledger Group "${group.name}" already exists.`);
+
       const ref = doc(collection(db, 'ledger_groups'));
       const data = { ...group, id: ref.id, companyId };
       await setDoc(ref, data);
@@ -556,6 +847,9 @@ export const erpService = {
 
   async createVoucherType(companyId: string, type: any) {
     try {
+      const isDuplicate = await this.checkDuplicate('voucher_types', companyId, 'name', type.name);
+      if (isDuplicate) throw new Error(`Voucher Type "${type.name}" already exists.`);
+
       const ref = doc(collection(db, 'voucher_types'));
       const data = { ...type, id: ref.id, companyId };
       await setDoc(ref, data);
@@ -567,6 +861,9 @@ export const erpService = {
 
   async createStockCategory(companyId: string, category: any) {
     try {
+      const isDuplicate = await this.checkDuplicate('stock_categories', companyId, 'name', category.name);
+      if (isDuplicate) throw new Error(`Stock Category "${category.name}" already exists.`);
+
       const ref = doc(collection(db, 'stock_categories'));
       const data = { ...category, id: ref.id, companyId };
       await setDoc(ref, data);
@@ -578,6 +875,9 @@ export const erpService = {
 
   async createEmployeeGroup(companyId: string, group: any) {
     try {
+      const isDuplicate = await this.checkDuplicate('employee_groups', companyId, 'name', group.name);
+      if (isDuplicate) throw new Error(`Employee Group/Designation "${group.name}" already exists.`);
+
       const ref = doc(collection(db, 'employee_groups'));
       const data = { ...group, id: ref.id, companyId };
       await setDoc(ref, data);
@@ -589,6 +889,9 @@ export const erpService = {
 
   async createUnit(companyId: string, unit: any) {
     try {
+      const isDuplicate = await this.checkDuplicate('units', companyId, 'name', unit.name);
+      if (isDuplicate) throw new Error(`Unit "${unit.name}" already exists.`);
+
       const ref = doc(collection(db, 'units'));
       const data = { ...unit, id: ref.id, companyId };
       await setDoc(ref, data);
@@ -630,6 +933,9 @@ export const erpService = {
 
   async createLedger(companyId: string, ledger: any) {
     try {
+      const isDuplicate = await this.checkDuplicate('ledgers', companyId, 'name', ledger.name);
+      if (isDuplicate) throw new Error(`Ledger "${ledger.name}" already exists.`);
+
       const ref = doc(collection(db, 'ledgers'));
       const data = {
         ...ledger,
@@ -718,6 +1024,9 @@ export const erpService = {
   },
 
   async createItem(companyId: string, item: any) {
+    const isDuplicate = await this.checkDuplicate('items', companyId, 'name', item.name);
+    if (isDuplicate) throw new Error(`Stock Item "${item.name}" already exists.`);
+
     const ref = doc(collection(db, 'items'));
     const data = {
       ...item,
@@ -772,6 +1081,9 @@ export const erpService = {
   },
 
   async createGodown(companyId: string, godown: any) {
+    const isDuplicate = await this.checkDuplicate('godowns', companyId, 'name', godown.name);
+    if (isDuplicate) throw new Error(`Godown "${godown.name}" already exists.`);
+
     const ref = doc(collection(db, 'godowns'));
     const data = { ...godown, id: ref.id, companyId };
     await setDoc(ref, data);
@@ -792,6 +1104,9 @@ export const erpService = {
   },
 
   async createEmployee(companyId: string, employee: any) {
+    const isDuplicate = await this.checkDuplicate('employees', companyId, 'name', employee.name);
+    if (isDuplicate) throw new Error(`Employee "${employee.name}" already exists.`);
+
     const ref = doc(collection(db, 'employees'));
     const data = { ...employee, id: ref.id, companyId, createdAt: serverTimestamp() };
     await setDoc(ref, data);
@@ -907,9 +1222,6 @@ export const erpService = {
   },
 
   async getVoucherEntriesByDate(companyId: string, asOnDate: string): Promise<any[]> {
-    // We need to fetch vouchers first to filter by date, then get their entries
-    // Or we can denormalize v_date into voucher_entries.
-    // For now, let's fetch vouchers in range and then their entries.
     const vouchersQuery = query(
       collection(db, 'vouchers'),
       where('companyId', '==', companyId),
@@ -920,23 +1232,34 @@ export const erpService = {
     
     if (voucherIds.length === 0) return [];
     
-    // Firestore 'in' query limit is 10, so we might need to chunk or use a different approach
-    // For simplicity in this ERP, we'll fetch all entries for the company and filter in memory if needed,
-    // but better to filter by voucherIds if possible.
-    // Actually, let's just fetch all entries for the company and filter by voucher date if we had it there.
-    // Since we don't have v_date in entries, we'll fetch all and filter.
-    const entriesQuery = query(collection(db, 'voucher_entries'), where('companyId', '==', companyId));
+    // Fetch all entries for these vouchers
+    // Since we might have many vouchers, we'll fetch in chunks of 30 if using 'in'
+    // Or just fetch all entries for the company and filter? That's too much data.
+    // Let's fetch all accounting entries for the company first (might be large, but let's try)
+    const entriesQuery = query(
+      collection(db, 'accounting_entries'),
+      where('companyId', '==', companyId)
+    );
     const entriesSnap = await getDocs(entriesQuery);
+    
+    // Filter in memory by voucherId and date
     return entriesSnap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter((e: any) => voucherIds.includes(e.voucher_id));
+      .map(d => ({ id: d.id, ...d.data() } as any))
+      .filter(e => voucherIds.includes(e.voucher_id));
   },
 
-  async getInventoryEntriesByDate(companyId: string, endDate: string): Promise<any[]> {
+  async getInventoryEntriesGrouped(companyId: string): Promise<any[]> {
+    const q = query(collection(db, 'inventory_entries'), where('companyId', '==', companyId));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  async getInventoryEntriesByDate(companyId: string, startDate: string, endDate: string): Promise<any[]> {
     const q = query(
       collection(db, 'inventory_entries'),
       where('companyId', '==', companyId),
-      where('created_at', '<=', endDate + 'T23:59:59Z')
+      where('date', '>=', startDate),
+      where('date', '<=', endDate)
     );
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -951,17 +1274,24 @@ export const erpService = {
       where('v_date', '<=', endDate)
     );
     const vouchersSnap = await getDocs(vouchersQuery);
-    const vouchers = vouchersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const vouchers = vouchersSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
     
     if (vouchers.length === 0) return [];
     
-    // Fetch ALL entries for these vouchers
-    const [entriesSnap, invEntriesSnap] = await Promise.all([
-      getDocs(query(collection(db, 'voucher_entries'), where('companyId', '==', companyId))),
-      getDocs(query(collection(db, 'inventory_entries'), where('companyId', '==', companyId)))
-    ]);
-    const allEntries = entriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    const allInvEntries = invEntriesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const voucherIds = vouchers.map(v => v.id);
+    const allEntries: any[] = [];
+    const allInvEntries: any[] = [];
+
+    // Fetch entries in chunks to avoid "in" query limits if many vouchers
+    for (let i = 0; i < voucherIds.length; i += 30) {
+      const chunk = voucherIds.slice(i, i + 30);
+      const [eSnap, iSnap] = await Promise.all([
+        getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk))),
+        getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', 'in', chunk)))
+      ]);
+      allEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      allInvEntries.push(...iSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }
     
     // Filter vouchers that have an entry for the specific ledger
     const filteredVouchers = vouchers.filter((v: any) => 
@@ -973,7 +1303,7 @@ export const erpService = {
       ...v,
       voucher_entries: allEntries.filter((e: any) => e.voucher_id === v.id),
       inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id)
-    }));
+    })).sort((a, b) => a.v_date.localeCompare(b.v_date));
   },
 
   // Dashboard Stats
@@ -1048,12 +1378,26 @@ export const erpService = {
     
     if (vouchers.length === 0) return [];
 
-    // Fetch inventory for these vouchers to show item names
+    // Fetch entries and inventory for these vouchers
+    const voucherIds = vouchers.map(v => v.id);
+    const allAccEntries: any[] = [];
+    
+    // Chunk accounting entries fetch
+    for (let i = 0; i < voucherIds.length; i += 30) {
+      const chunk = voucherIds.slice(i, i + 30);
+      const eSnap = await getDocs(query(
+        collection(db, 'voucher_entries'), 
+        where('voucher_id', 'in', chunk)
+      ));
+      allAccEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }
+
     const invSnap = await getDocs(query(collection(db, 'inventory_entries'), where('companyId', '==', companyId)));
     const allInv = invSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     return vouchers.map(v => ({
       ...v,
+      entries: allAccEntries.filter((e: any) => e.voucher_id === v.id),
       item_names: (v as any).item_names || allInv.filter((i: any) => i.voucher_id === v.id).map((i: any) => i.item_name).filter(Boolean).join(', ')
     }));
   },

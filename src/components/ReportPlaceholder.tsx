@@ -12,7 +12,7 @@ export const ReportPlaceholder: React.FC<ReportPlaceholderProps> = ({ title }) =
   const navigate = useNavigate();
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6">
       <div className="flex items-center gap-4 mb-8">
         <button 
           onClick={() => navigate(-1)}

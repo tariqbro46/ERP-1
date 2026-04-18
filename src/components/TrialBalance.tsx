@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Printer, Download, Filter, Loader2 } from 'lucide-react';
+import { Search, Printer, Download, Filter, Loader2, ArrowLeft } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { printReport } from '../utils/printUtils';
-import { exportToCSV, exportToPDF } from '../utils/exportUtils';
+import { printReport, printUtils } from '../utils/printUtils';
+import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
+import { useNavigate } from 'react-router-dom';
+import { EditableHeader } from './EditableHeader';
 
 export function TrialBalance() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
   const settings = useSettings();
@@ -41,14 +44,11 @@ export function TrialBalance() {
   const totalCredit = filteredData.reduce((sum, l) => sum + (l.current_balance < 0 ? Math.abs(l.current_balance) : 0), 0);
 
   const handlePrint = () => {
-    const printData = filteredData.map(l => ({
-      particulars: l.name,
-      group: l.ledger_groups?.name,
-      debit: l.current_balance > 0 ? l.current_balance : 0,
-      credit: l.current_balance < 0 ? Math.abs(l.current_balance) : 0
-    }));
+    printUtils.printElement('trial-balance-report', 'Trial Balance Report');
+  };
 
-    printReport(t('reports.trialBalance'), printData, [t('common.particulars'), t('common.group'), t('reports.debit'), t('reports.credit')], settings);
+  const handleDownloadPDF = () => {
+    exportUtils.exportToPDF('trial-balance-report', 'Trial_Balance_Report');
   };
 
   const handleDownload = () => {
@@ -60,17 +60,6 @@ export function TrialBalance() {
     }));
 
     exportToCSV('Trial_Balance', t('reports.trialBalance'), exportData, [t('common.particulars'), t('common.group'), t('reports.debit'), t('reports.credit')], settings);
-  };
-
-  const handleDownloadPDF = () => {
-    const exportData = filteredData.map(l => ({
-      particulars: l.name,
-      group: l.ledger_groups?.name,
-      debit: l.current_balance > 0 ? l.current_balance : 0,
-      credit: l.current_balance < 0 ? Math.abs(l.current_balance) : 0
-    }));
-
-    exportToPDF('Trial_Balance', t('reports.trialBalance'), exportData, [t('common.particulars'), t('common.group'), t('reports.debit'), t('reports.credit')], settings);
   };
 
   if (loading) {
@@ -91,22 +80,17 @@ export function TrialBalance() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
-            {(settings.companyLogo || settings.systemLogo) && (
-              <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
-                <img 
-                  src={settings.companyLogo || settings.systemLogo} 
-                  alt="Logo" 
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            )}
-            <div>
-              <div className="flex items-baseline gap-4">
-                <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">{t('reports.trialBalance')}</h1>
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest">{settings.companyName} • {firstDay} to {lastDay}</p>
-              </div>
-            </div>
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <EditableHeader 
+              pageId="trial_balance"
+              defaultTitle={t('reports.trialBalance')}
+              defaultSubtitle={`${settings.companyName} • ${firstDay} to ${lastDay}`}
+            />
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
             <button 
@@ -154,7 +138,7 @@ export function TrialBalance() {
         </div>
 
         {/* Table/Cards */}
-        <div className="bg-card border border-border overflow-hidden">
+        <div id="trial-balance-report" className="bg-card border border-border overflow-hidden">
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
             {filteredData.map((ledger) => (
@@ -204,7 +188,11 @@ export function TrialBalance() {
               </thead>
               <tbody className="divide-y divide-border/50">
                 {filteredData.map((ledger, idx) => (
-                  <tr key={ledger.id} className="hover:bg-foreground/5 transition-colors group">
+                  <tr 
+                    key={ledger.id} 
+                    onClick={() => navigate(`/reports/ledger?ledgerId=${ledger.id}`)}
+                    className="hover:bg-foreground/5 transition-colors group cursor-pointer"
+                  >
                     <td className="px-6 py-3 text-foreground font-medium">{ledger.name}</td>
                     <td className="px-6 py-3 text-gray-500 uppercase text-[10px]">{ledger.ledger_groups?.name}</td>
                     <td className="px-6 py-3 text-right text-foreground font-mono">

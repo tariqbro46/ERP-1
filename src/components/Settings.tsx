@@ -59,13 +59,16 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     menuBarStyle,
     layoutWidth,
     sidebarDefaultExpanded,
+    showGoToShortcut,
+    showQuickActions,
     englishFont,
     banglaFont,
     notifications, 
     whatsappTemplates,
     features = [], 
     activePlan,
-    updateSettings 
+    updateSettings,
+    updateUserSettings
   } = useSettings();
   const { showNotification } = useNotification();
   const [activeTab, setActiveTab] = useState(initialTab || 'company');
@@ -116,6 +119,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground || 'default');
   const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle || 'default');
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded ?? true);
+  const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut ?? true);
+  const [localShowQuickActions, setLocalShowQuickActions] = useState(showQuickActions ?? true);
   const [localEnglishFont, setLocalEnglishFont] = useState(englishFont || 'Inter');
   const [localBanglaFont, setLocalBanglaFont] = useState(banglaFont || 'Hind Siliguri');
 
@@ -198,6 +203,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalGlassBackground(glassBackground || 'default');
     setLocalNotificationAnimationStyle(notificationAnimationStyle || 'default');
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded ?? true);
+    setLocalShowGoToShortcut(showGoToShortcut ?? true);
+    setLocalShowQuickActions(showQuickActions ?? true);
     setLocalEnglishFont(englishFont || 'Inter');
     setLocalBanglaFont(banglaFont || 'Hind Siliguri');
     setLocalMenuBarStyle(menuBarStyle || 'classic');
@@ -223,24 +230,31 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       printPhone: localPrintPhone,
       printEmail: localPrintEmail,
       printWebsite: localPrintWebsite,
-      menuBarStyle: localMenuBarStyle,
-      layoutWidth: localLayoutWidth,
       showRunningBalance: localShowRunningBalance,
       showMobileNav: localShowMobileNav,
       mobileBottomNavItems: localMobileBottomNavItems,
       reportLayout: localReportLayout,
-      dashboardDesign: localDashboardDesign,
-      uiStyle: localUIStyle,
-      glassBackground: localGlassBackground,
-      sidebarDefaultExpanded: localSidebarDefaultExpanded,
-      englishFont: localEnglishFont,
-      banglaFont: localBanglaFont,
-      notificationAnimationStyle: localNotificationAnimationStyle,
       financialYearStart: localFinancialYearStart,
       baseCurrencySymbol: localBaseCurrencySymbol,
       timezone: localTimezone
     });
     showNotification(notifications.settingsUpdated);
+  };
+
+  const handleSaveUI = () => {
+    updateUserSettings({
+      showQuickActions: localShowQuickActions,
+      menuBarStyle: localMenuBarStyle,
+      uiStyle: localUIStyle,
+      glassBackground: localGlassBackground,
+      dashboardDesign: localDashboardDesign,
+      englishFont: localEnglishFont,
+      banglaFont: localBanglaFont,
+      layoutWidth: localLayoutWidth,
+      sidebarDefaultExpanded: localSidebarDefaultExpanded,
+      notificationAnimationStyle: localNotificationAnimationStyle
+    });
+    showNotification('UI Customization saved successfully!');
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -672,7 +686,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                   <div className="flex justify-between items-center border-b border-border pb-2">
                     <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">{t('settings.uiCustomization')}</h3>
                     <button 
-                      onClick={handleSaveGeneral}
+                      onClick={handleSaveUI}
                       className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
                     >
                       <Save className="w-3 h-3" /> {t('settings.save')}
@@ -859,6 +873,27 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                           <div className={cn(
                             "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
                             localShowRunningBalance ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground uppercase">Show Quick Actions Bar</h4>
+                          <p className="text-[10px] text-gray-500">Enable/Disable the Quick Actions row on the Dashboard.</p>
+                        </div>
+                        <button 
+                          onClick={() => setLocalShowQuickActions(!localShowQuickActions)}
+                          className={cn(
+                            "w-10 h-5 rounded-full transition-colors relative",
+                            localShowQuickActions ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowQuickActions ? "right-1" : "left-1"
                           )} />
                         </button>
                       </div>

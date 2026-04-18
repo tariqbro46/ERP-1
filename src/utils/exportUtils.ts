@@ -59,7 +59,10 @@ export function exportToCSV(filename: string, title: string, data: any[], header
   document.body.removeChild(link);
 }
 
-export function exportToPDF(filename: string, title: string, data: any[], headers: string[], settings: any = {}) {
+export function exportToPDF(filename: string, title: string, data?: any[], headers?: string[], settings: any = {}) {
+  if (!data || !headers) {
+    return exportElementToPDF(filename, title);
+  }
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   
@@ -263,3 +266,30 @@ export function exportToPDF(filename: string, title: string, data: any[], header
 
   doc.save(`${filename}.pdf`);
 }
+
+export function exportElementToPDF(elementId: string, filename: string) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  const doc = new jsPDF();
+  doc.setFont('courier');
+  
+  doc.setFontSize(16);
+  doc.text(filename.replace(/_/g, ' ').toUpperCase(), 14, 20);
+  
+  autoTable(doc, {
+    html: `#${elementId} table`,
+    startY: 30,
+    theme: 'grid',
+    styles: { font: 'courier', fontSize: 8 },
+    headStyles: { fillColor: [240, 240, 240], textColor: 0 }
+  });
+
+  doc.save(`${filename}.pdf`);
+}
+
+export const exportUtils = {
+  exportToCSV,
+  exportToPDF,
+  exportElementToPDF
+};

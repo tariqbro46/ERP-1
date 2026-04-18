@@ -186,9 +186,9 @@ export function LedgerCreation() {
         showNotification(notifications.ledgerCreated);
       }
       navigate('/accounts');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving ledger:', err);
-      alert('Failed to save ledger. Please check your connection.');
+      alert(err.message || 'Failed to save ledger. Please check your connection.');
     } finally {
       setLoading(false);
     }

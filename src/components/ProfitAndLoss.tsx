@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Printer, Download, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, Printer, Download, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { printProfitAndLoss } from '../utils/printUtils';
-import { exportToCSV, exportToPDF } from '../utils/exportUtils';
+import { printProfitAndLoss, printUtils } from '../utils/printUtils';
+import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
+import { EditableHeader } from './EditableHeader';
+import { useNavigate } from 'react-router-dom';
 
 export function ProfitAndLoss() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
   const settings = useSettings();
@@ -44,7 +47,7 @@ export function ProfitAndLoss() {
         // Calculate closing stock based on movements up to endDate
         const [allItems, invEntries] = await Promise.all([
           erpService.getItems(user.companyId),
-          erpService.getInventoryEntriesByDate(user.companyId, endDate)
+          erpService.getInventoryEntriesByDate(user.companyId, '1900-01-01', endDate)
         ]);
 
         const itemStocks: Record<string, { qty: number, cost: number }> = {};
@@ -151,12 +154,11 @@ export function ProfitAndLoss() {
   const netProfit = (grossProfit + Math.abs(totalIndirectInc)) - totalIndirectExp;
 
   const handlePrint = () => {
-    printProfitAndLoss({
-      trading: tradingData,
-      pl: plData,
-      grossProfit,
-      netProfit
-    }, settings);
+    printUtils.printElement('pl-report', 'Profit & Loss Report');
+  };
+
+  const handleDownloadPDF = () => {
+    exportUtils.exportToPDF('pl-report', 'Profit_Loss_Report');
   };
 
   const handleDownload = () => {
@@ -181,28 +183,6 @@ export function ProfitAndLoss() {
     exportToCSV('Profit_And_Loss', 'Profit & Loss A/c', exportData, ['Particulars', 'Amount'], settings);
   };
 
-  const handleDownloadPDF = () => {
-    const exportData: any[] = [];
-    
-    // Trading Account
-    exportData.push({ particulars: 'TRADING ACCOUNT', amount: '' });
-    exportData.push({ particulars: 'Opening Stock', amount: tradingData.openingStock });
-    tradingData.purchaseGroups.forEach((g: any) => exportData.push({ particulars: g.name, amount: Math.abs(g.balance) }));
-    exportData.push({ particulars: 'Sales', amount: Math.abs(totalSales) });
-    exportData.push({ particulars: 'Closing Stock', amount: tradingData.closingStock });
-    exportData.push({ particulars: 'GROSS PROFIT', amount: grossProfit });
-    
-    exportData.push({ particulars: '', amount: '' }); // Spacer
-    
-    // P&L Account
-    exportData.push({ particulars: 'PROFIT & LOSS ACCOUNT', amount: '' });
-    plData.indirectExpenseGroups.forEach((g: any) => exportData.push({ particulars: g.name, amount: g.balance }));
-    plData.indirectIncomeGroups.forEach((g: any) => exportData.push({ particulars: g.name, amount: g.balance }));
-    exportData.push({ particulars: 'NET PROFIT', amount: netProfit });
-
-    exportToPDF('Profit_And_Loss', t('reports.profitAndLoss'), exportData, [t('common.particulars'), t('common.amount')], settings);
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background transition-colors">
@@ -211,10 +191,6 @@ export function ProfitAndLoss() {
     );
   }
 
-  const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
@@ -222,20 +198,17 @@ export function ProfitAndLoss() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex-1 w-full sm:max-w-md space-y-4">
             <div className="flex items-center gap-4">
-              {(settings.companyLogo || settings.systemLogo) && (
-                <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
-                  <img 
-                    src={settings.companyLogo || settings.systemLogo} 
-                    alt="Logo" 
-                    className="w-full h-full object-contain"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              )}
-              <div>
-                <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">{t('reports.profitAndLoss')}</h1>
-                <p className="text-[10px] text-gray-500 uppercase font-bold">{settings.companyName}</p>
-              </div>
+              <button 
+                onClick={() => navigate(-1)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </button>
+              <EditableHeader 
+                pageId="profit_loss"
+                defaultTitle={t('reports.profitAndLoss')}
+                defaultSubtitle={settings.companyName}
+              />
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
@@ -283,97 +256,133 @@ export function ProfitAndLoss() {
         </div>
 
         {/* Trading Account */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 border border-border bg-card divide-y lg:divide-y-0 lg:divide-x divide-border">
-          {/* Expenses Side */}
-          <div className="overflow-hidden">
-            <div className="px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('common.particulars')}</span>
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
-            </div>
-            <div className="min-h-[200px] lg:min-h-[300px] divide-y divide-border/50">
-              <div className="px-4 lg:px-6 py-3 flex justify-between text-sm text-gray-400">
-                <span>{t('reports.openingStock')}</span>
-                <span className="font-mono">{tradingData.openingStock.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+        <div id="pl-report" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 border border-border bg-card divide-y lg:divide-y-0 lg:divide-x divide-border">
+            {/* Expenses Side */}
+            <div className="overflow-hidden">
+              <div className="px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('common.particulars')}</span>
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
               </div>
-              {tradingData.purchaseGroups.map((group: any) => (
-                <div key={group.name}>
-                  <div onClick={() => toggleGroup(group.name)} className="px-4 lg:px-6 py-3 flex justify-between items-center cursor-pointer hover:bg-foreground/5 transition-colors">
-                    <div className="flex items-center gap-2">
-                      {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
-                      <span className="text-sm text-foreground">{group.name}</span>
+              <div className="min-h-[200px] lg:min-h-[300px] divide-y divide-border/50">
+                <div className="px-4 lg:px-6 py-3 flex justify-between text-sm text-gray-400">
+                  <span>{t('reports.openingStock')}</span>
+                  <span className="font-mono">{tradingData.openingStock.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                {tradingData.purchaseGroups.map((group: any) => (
+                  <div key={group.name}>
+                    <div onClick={() => toggleGroup(group.name)} className="px-4 lg:px-6 py-3 flex justify-between items-center cursor-pointer hover:bg-foreground/5 transition-colors">
+                      <div className="flex items-center gap-2">
+                        {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
+                        <span className="text-sm text-foreground">{group.name}</span>
+                      </div>
+                      <span className="text-sm text-foreground font-mono">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
-                    <span className="text-sm text-foreground font-mono">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    {expandedGroups.has(group.name) && (
+                      <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
+                        {group.ledgers.map((l: any) => (
+                          <div 
+                            key={l.id} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/reports/ledger?ledgerId=${l.id}`);
+                            }}
+                            className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
+                          >
+                            <span>{l.name}</span>
+                            <span className="font-mono">{Math.abs(l.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                ))}
+                {grossProfit > 0 && (
+                  <div className="px-4 lg:px-6 py-4 flex justify-between text-emerald-500 font-bold border-t border-border">
+                    <span className="uppercase text-[10px] tracking-widest">{t('reports.grossProfit')} c/o</span>
+                    <span className="font-mono">{grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Income Side */}
+            <div className="overflow-hidden">
+              <div className="px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('common.particulars')}</span>
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
+              </div>
+              <div className="min-h-[200px] lg:min-h-[300px] divide-y divide-border/50">
+                {tradingData.salesGroups.map((group: any) => (
+                  <div key={group.name}>
+                    <div onClick={() => toggleGroup(group.name)} className="px-4 lg:px-6 py-3 flex justify-between items-center cursor-pointer hover:bg-foreground/5 transition-colors">
+                      <div className="flex items-center gap-2">
+                        {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
+                        <span className="text-sm text-foreground">{group.name}</span>
+                      </div>
+                      <span className="text-sm text-foreground font-mono">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    {expandedGroups.has(group.name) && (
+                      <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
+                        {group.ledgers.map((l: any) => (
+                          <div 
+                            key={l.id} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/reports/ledger?ledgerId=${l.id}`);
+                            }}
+                            className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
+                          >
+                            <span>{l.name}</span>
+                            <span className="font-mono">{Math.abs(l.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div className="px-4 lg:px-6 py-3 flex justify-between text-sm text-gray-400">
+                  <span>{t('reports.closingStock')}</span>
+                  <span className="font-mono">{tradingData.closingStock.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                {grossProfit < 0 && (
+                  <div className="px-4 lg:px-6 py-4 flex justify-between text-rose-500 font-bold border-t border-border">
+                    <span className="uppercase text-[10px] tracking-widest">{t('reports.grossLoss')} c/o</span>
+                    <span className="font-mono">{Math.abs(grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* P&L Account */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 border border-border bg-card divide-y lg:divide-y-0 lg:divide-x divide-border mt-6">
+            <div className="divide-y divide-border/50">
+              {plData.indirectExpenseGroups.map((group: any) => (
+                <div key={group.name} className="px-4 lg:px-6 py-3 flex justify-between items-center">
+                  <span className="text-sm text-gray-400">{group.name}</span>
+                  <span className="text-sm text-foreground font-mono">{group.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
               ))}
-              {grossProfit > 0 && (
+              {netProfit > 0 && (
                 <div className="px-4 lg:px-6 py-4 flex justify-between text-emerald-500 font-bold border-t border-border">
-                  <span className="uppercase text-[10px] tracking-widest">{t('reports.grossProfit')} c/o</span>
-                  <span className="font-mono">{grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="uppercase text-[10px] tracking-widest">{t('reports.netProfit')}</span>
+                  <span className="font-mono">{netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Income Side */}
-          <div className="overflow-hidden">
-            <div className="px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('common.particulars')}</span>
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
-            </div>
-            <div className="min-h-[200px] lg:min-h-[300px] divide-y divide-border/50">
-              {tradingData.salesGroups.map((group: any) => (
-                <div key={group.name}>
-                  <div onClick={() => toggleGroup(group.name)} className="px-4 lg:px-6 py-3 flex justify-between items-center cursor-pointer hover:bg-foreground/5 transition-colors">
-                    <div className="flex items-center gap-2">
-                      {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
-                      <span className="text-sm text-foreground">{group.name}</span>
-                    </div>
-                    <span className="text-sm text-foreground font-mono">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                  </div>
-                </div>
-              ))}
+            <div className="divide-y divide-border/50">
               <div className="px-4 lg:px-6 py-3 flex justify-between text-sm text-gray-400">
-                <span>{t('reports.closingStock')}</span>
-                <span className="font-mono">{tradingData.closingStock.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span>{t('reports.grossProfit')} b/f</span>
+                <span className="font-mono">{grossProfit > 0 ? grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</span>
               </div>
-              {grossProfit < 0 && (
+              {netProfit < 0 && (
                 <div className="px-4 lg:px-6 py-4 flex justify-between text-rose-500 font-bold border-t border-border">
-                  <span className="uppercase text-[10px] tracking-widest">{t('reports.grossLoss')} c/o</span>
-                  <span className="font-mono">{Math.abs(grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="uppercase text-[10px] tracking-widest">{t('reports.netLoss')}</span>
+                  <span className="font-mono">{Math.abs(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                 </div>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* P&L Account */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 border border-border bg-card divide-y lg:divide-y-0 lg:divide-x divide-border mt-6">
-          <div className="divide-y divide-border/50">
-            {plData.indirectExpenseGroups.map((group: any) => (
-              <div key={group.name} className="px-4 lg:px-6 py-3 flex justify-between items-center">
-                <span className="text-sm text-gray-400">{group.name}</span>
-                <span className="text-sm text-foreground font-mono">{group.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-              </div>
-            ))}
-            {netProfit > 0 && (
-              <div className="px-4 lg:px-6 py-4 flex justify-between text-emerald-500 font-bold border-t border-border">
-                <span className="uppercase text-[10px] tracking-widest">{t('reports.netProfit')}</span>
-                <span className="font-mono">{netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-              </div>
-            )}
-          </div>
-          <div className="divide-y divide-border/50">
-            <div className="px-4 lg:px-6 py-3 flex justify-between text-sm text-gray-400">
-              <span>{t('reports.grossProfit')} b/f</span>
-              <span className="font-mono">{grossProfit > 0 ? grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</span>
-            </div>
-            {netProfit < 0 && (
-              <div className="px-4 lg:px-6 py-4 flex justify-between text-rose-500 font-bold border-t border-border">
-                <span className="uppercase text-[10px] tracking-widest">{t('reports.netLoss')}</span>
-                <span className="font-mono">{Math.abs(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-              </div>
-            )}
           </div>
         </div>
       </div>

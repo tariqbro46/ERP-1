@@ -85,13 +85,16 @@ interface SettingsContextType {
   statusOfflineText: string;
   statusErrorText: string;
   showGoToShortcut: boolean;
+  showQuickActions: boolean;
   whatsappTemplates: WhatsAppTemplates;
   notifications: NotificationSettings;
   features: FeatureSettings[];
   subscriptionPlans: SubscriptionPlan[];
   activePlan?: SubscriptionPlan;
+  userSettings: any;
   updateSettings: (newSettings: Partial<SettingsContextType>) => void;
   updateSystemSettings: (newSettings: any) => Promise<void>;
+  updateUserSettings: (newSettings: any) => Promise<void>;
 }
 
 const defaultSettings: SettingsContextType = {
@@ -147,6 +150,7 @@ const defaultSettings: SettingsContextType = {
   statusOfflineText: 'Status: Offline',
   statusErrorText: 'Database Error',
   showGoToShortcut: true,
+  showQuickActions: true,
   whatsappTemplates: {
     Sales: "*{{companyName}}*\nSales Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
     Purchase: "*{{companyName}}*\nPurchase Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
@@ -172,8 +176,10 @@ const defaultSettings: SettingsContextType = {
     { id: 'barcode', label: 'Enable Barcode Scanning', enabled: false },
   ],
   subscriptionPlans: [],
+  userSettings: {},
   updateSettings: () => {},
-  updateSystemSettings: async () => {}
+  updateSystemSettings: async () => {},
+  updateUserSettings: async () => {}
 };
 
 const SettingsContext = createContext<SettingsContextType>(defaultSettings);
@@ -181,6 +187,24 @@ const SettingsContext = createContext<SettingsContextType>(defaultSettings);
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [settings, setSettings] = useState<SettingsContextType>(defaultSettings);
+  const [userSettings, setUserSettings] = useState<any>({});
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setUserSettings({});
+      return;
+    }
+
+    const userRef = doc(db, 'users', user.uid);
+    const unsubscribeUser = onSnapshot(userRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setUserSettings(data.settings || {});
+      }
+    });
+
+    return () => unsubscribeUser();
+  }, [user?.uid]);
 
   useEffect(() => {
     // Listen to global system config
@@ -287,8 +311,24 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUserSettings = async (newSettings: any) => {
+    if (!user?.uid) return;
+    try {
+      await erpService.updateUserSettings(user.uid, newSettings);
+    } catch (err) {
+      console.error('Error updating user settings:', err);
+    }
+  };
+
   return (
-    <SettingsContext.Provider value={{ ...settings, updateSettings, updateSystemSettings }}>
+    <SettingsContext.Provider value={{ 
+      ...settings, 
+      ...userSettings,
+      userSettings,
+      updateSettings, 
+      updateSystemSettings, 
+      updateUserSettings 
+    }}>
       {children}
     </SettingsContext.Provider>
   );

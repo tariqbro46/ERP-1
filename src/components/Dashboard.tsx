@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { cn } from '../lib/utils';
 import { format, differenceInDays } from 'date-fns';
+import { EditableHeader } from './EditableHeader';
 
 const mockChartData = [
   { name: 'Jan', value: 4000 },
@@ -62,7 +63,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { companyName, financialYearStart, financialYearEnd, dashboardDesign, uiStyle } = useSettings();
+  const { companyName, financialYearStart, financialYearEnd, dashboardDesign, uiStyle, showQuickActions } = useSettings();
   const { isAdmin, user } = useAuth();
   const [loading, setLoading] = useState(true);
   
@@ -163,10 +164,11 @@ export function Dashboard() {
       <div className="p-4 lg:p-6 space-y-6 bg-[#f8f9fa] min-h-screen transition-colors font-sans">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-800">{t('dash.overview')}</h1>
-            <p className="text-sm text-gray-500 uppercase tracking-wider font-medium">{t('dash.financialSummary')} • {companyName}</p>
-          </div>
+          <EditableHeader 
+            pageId="dashboard"
+            defaultTitle={t('dash.overview')}
+            defaultSubtitle={`${t('dash.financialSummary')} • ${companyName}`}
+          />
           <div className="flex items-center gap-3">
             <button 
               onClick={() => window.location.reload()}
@@ -336,13 +338,11 @@ export function Dashboard() {
   return (
     <div className="p-4 lg:p-6 space-y-6 bg-background min-h-screen transition-colors">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-        <div className="flex items-baseline gap-4">
-          <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">
-            <span className="lg:hidden">{t('dash.overview')}</span>
-            <span className="hidden lg:inline">{t('dash.gatewayOf')} {companyName}</span>
-          </h1>
-          <p className="text-[10px] text-gray-500 font-mono uppercase tracking-widest">{t('dash.technicalOverview')} • {t('dash.financialYear')} {formatFY(periodStart, periodEnd)}</p>
-        </div>
+        <EditableHeader 
+          pageId="dashboard_main"
+          defaultTitle={`${t('dash.gatewayOf')} ${companyName}`}
+          defaultSubtitle={`${t('dash.technicalOverview')} • ${t('dash.financialYear')} ${formatFY(periodStart, periodEnd)}`}
+        />
         <div className="flex flex-col items-end sm:items-end gap-2 w-full sm:w-auto">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="flex-1">
@@ -462,70 +462,72 @@ export function Dashboard() {
       )}
 
       {/* Quick Actions */}
-      <div className="bg-card border border-border p-4">
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <h3 className="text-[11px] font-mono text-gray-500 uppercase tracking-widest hidden sm:block">{t('dash.quickActions')}</h3>
-          <div className="grid grid-cols-3 sm:flex flex-wrap gap-2 lg:gap-3 flex-1">
-            <button 
-              onClick={() => navigate('/vouchers/new')}
-              className={cn(
-                "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
-                uiStyle === 'UI/UX 2' 
-                  ? "bg-blue-600 border-blue-500 text-white hover:bg-blue-700" 
-                  : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
-              )}
-            >
-              <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.voucher')}</span>
-            </button>
-            <button 
-              onClick={() => navigate('/inventory/items/new')}
-              className={cn(
-                "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
-                uiStyle === 'UI/UX 2' 
-                  ? "bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-700" 
-                  : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
-              )}
-            >
-              <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.item')}</span>
-            </button>
-            <button 
-              onClick={() => navigate('/accounts/ledgers/new')}
-              className={cn(
-                "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
-                uiStyle === 'UI/UX 2' 
-                  ? "bg-amber-600 border-amber-500 text-white hover:bg-amber-700" 
-                  : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
-              )}
-            >
-              <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.ledger')}</span>
-            </button>
-            <button 
-              onClick={() => navigate('/inventory/godowns')}
-              className={cn(
-                "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
-                uiStyle === 'UI/UX 2' 
-                  ? "bg-rose-600 border-rose-500 text-white hover:bg-rose-700" 
-                  : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
-              )}
-            >
-              <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.godown')}</span>
-            </button>
-            {isAdmin && (
+      {showQuickActions && (
+        <div className="bg-card border border-border p-4">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <h3 className="text-[11px] font-mono text-gray-500 uppercase tracking-widest hidden sm:block">{t('dash.quickActions')}</h3>
+            <div className="grid grid-cols-3 sm:flex flex-wrap gap-2 lg:gap-3 flex-1">
               <button 
-                onClick={() => navigate('/users')}
+                onClick={() => navigate('/vouchers/new')}
                 className={cn(
                   "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
                   uiStyle === 'UI/UX 2' 
-                    ? "bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-700" 
-                    : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white"
+                    ? "bg-blue-600 border-blue-500 text-white hover:bg-blue-700" 
+                    : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
                 )}
               >
-                <Users className="w-3 h-3" /> <span className="text-center">{t('dash.users')}</span>
+                <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.voucher')}</span>
               </button>
-            )}
+              <button 
+                onClick={() => navigate('/inventory/items/new')}
+                className={cn(
+                  "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                  uiStyle === 'UI/UX 2' 
+                    ? "bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-700" 
+                    : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
+                )}
+              >
+                <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.item')}</span>
+              </button>
+              <button 
+                onClick={() => navigate('/accounts/ledgers/new')}
+                className={cn(
+                  "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                  uiStyle === 'UI/UX 2' 
+                    ? "bg-amber-600 border-amber-500 text-white hover:bg-amber-700" 
+                    : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
+                )}
+              >
+                <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.ledger')}</span>
+              </button>
+              <button 
+                onClick={() => navigate('/inventory/godowns')}
+                className={cn(
+                  "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                  uiStyle === 'UI/UX 2' 
+                    ? "bg-rose-600 border-rose-500 text-white hover:bg-rose-700" 
+                    : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
+                )}
+              >
+                <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.godown')}</span>
+              </button>
+              {isAdmin && (
+                <button 
+                  onClick={() => navigate('/users')}
+                  className={cn(
+                    "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                    uiStyle === 'UI/UX 2' 
+                      ? "bg-indigo-600 border-indigo-500 text-white hover:bg-indigo-700" 
+                      : "bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white"
+                  )}
+                >
+                  <Users className="w-3 h-3" /> <span className="text-center">{t('dash.users')}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className={cn(

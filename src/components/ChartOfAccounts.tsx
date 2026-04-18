@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ChevronRight, ChevronDown, Folder, FileText, Edit2, Search, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { EditableHeader } from './EditableHeader';
 
 export function ChartOfAccounts() {
   const navigate = useNavigate();
@@ -46,10 +47,11 @@ export function ChartOfAccounts() {
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div className="flex items-baseline gap-4">
-            <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">{t('accounts.chartOfAccounts')}</h1>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest">{t('accounts.hierarchy')}</p>
-          </div>
+          <EditableHeader 
+            pageId="chart_of_accounts"
+            defaultTitle={t('accounts.chartOfAccounts')}
+            defaultSubtitle={t('accounts.hierarchy')}
+          />
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-600" />
             <input 

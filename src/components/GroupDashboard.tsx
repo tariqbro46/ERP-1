@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { erpService } from '../services/erpService';
 import { MenuConfig } from '../types';
+import { EditableHeader } from './EditableHeader';
 
 export const GroupDashboard: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
@@ -47,15 +48,16 @@ export const GroupDashboard: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-1">
-          {group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey) : group.group}
-        </h1>
+        <EditableHeader 
+          pageId={`group_${groupId}`}
+          defaultTitle={group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey) : group.group}
+          defaultSubtitle="Quick access to all items in this section."
+        />
         {isSuperAdmin && (
-          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-[0.2em] mb-2">Hidden from sidebar</p>
+          <p className="text-[10px] uppercase font-bold text-gray-400 tracking-[0.2em] mt-2 mb-2">Hidden from sidebar</p>
         )}
-        <p className="text-muted-foreground">Quick access to all items in this section.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

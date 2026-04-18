@@ -15,7 +15,8 @@ import {
   Users,
   ArrowLeft
 } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import { EditableHeader } from './EditableHeader';
+const LucideIcons: any = { BookOpen, ClipboardList, Scale, TrendingUp, Package, Activity, DollarSign, AlertCircle, BarChart3, FileText, Users };
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion } from 'framer-motion';
@@ -47,16 +48,26 @@ export const ReportsMenu: React.FC = () => {
 
   const reportsGroup = menuConfig?.groups.find(g => g.id === 'group-reports' || g.group.toLowerCase() === 'reports');
 
-  if (!reportsGroup) {
-    return (
-      <div className="p-8 text-center">
-        <h2 className="text-xl font-bold text-foreground mb-2">{t('common.reportsGroupNotFound')}</h2>
-        <p className="text-muted-foreground">{t('common.configureReportsGroup')}</p>
-      </div>
-    );
-  }
+  const defaultItems = [
+    { id: 'rep-trial-balance', label: 'Trial Balance', labelKey: 'reports.trialBalance', to: '/reports/trial-balance', icon: 'Scale' },
+    { id: 'rep-daybook', label: 'Daybook', labelKey: 'daybook.title', to: '/reports/daybook', icon: 'ClipboardList' },
+    { id: 'rep-cash-flow', label: 'Cash Flow', labelKey: 'reports.cashFlow', to: '/reports/cash-flow', icon: 'DollarSign' },
+    { id: 'rep-funds-flow', label: 'Funds Flow', labelKey: 'reports.fundsFlow', to: '/reports/funds-flow', icon: 'Activity' },
+    { id: 'rep-pl', label: 'Profit & Loss', labelKey: 'reports.profitAndLoss', to: '/reports/pl', icon: 'TrendingUp' },
+    { id: 'rep-balance-sheet', label: 'Balance Sheet', labelKey: 'reports.balanceSheet', to: '/reports/balance-sheet', icon: 'Scale' },
+    { id: 'rep-ratios', label: 'Ratio Analysis', labelKey: 'reports.ratioAnalysis', to: '/reports/ratios', icon: 'Activity' },
+    { id: 'rep-stock-summary', label: 'Stock Summary', labelKey: 'reports.stockSummary', to: '/reports/stock', icon: 'Package' },
+    { id: 'rep-group-summary', label: 'Group Summary', labelKey: 'reports.groupSummary', to: '/reports/group-summary', icon: 'ClipboardList' },
+    { id: 'rep-group-voucher', label: 'Group Vouchers', labelKey: 'reports.groupVoucher', to: '/reports/group-voucher', icon: 'BookOpen' },
+    { id: 'rep-ledger-statement', label: 'Ledger Statement', labelKey: 'reports.ledgerStatement', to: '/reports/ledger', icon: 'FileText' },
+    { id: 'rep-sales-register', label: 'Sales Register', labelKey: 'reports.salesRegister', to: '/reports/sales-register', icon: 'FileText' },
+    { id: 'rep-purchase-register', label: 'Purchase Register', labelKey: 'reports.purchaseRegister', to: '/reports/purchase-register', icon: 'FileText' },
+    { id: 'rep-cash-bank', label: 'Cash/Bank Books', labelKey: 'reports.cashBankBooks', to: '/reports/cash-bank', icon: 'BookOpen', hidden: false }
+  ];
 
-  // Categorize items based on user request
+  const itemsToUse = reportsGroup?.items || defaultItems;
+
+  // Categorize items
   const categories = [
     {
       id: 'accounting',
@@ -102,24 +113,23 @@ export const ReportsMenu: React.FC = () => {
   ];
 
   const groupedReports = categories.reduce((acc, cat) => {
-    acc[cat.id] = reportsGroup.items.filter(item => cat.itemIds.includes(item.id));
+    acc[cat.id] = itemsToUse.filter(item => cat.itemIds.includes(item.id));
     return acc;
-  }, {} as Record<string, typeof reportsGroup.items>);
+  }, {} as Record<string, typeof itemsToUse>);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 lg:p-6 bg-background min-h-screen transition-colors">
       <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t('nav.reports')}</h1>
-          {isSuperAdmin && (
-            <p className="text-[10px] uppercase font-bold text-gray-400 tracking-[0.2em] mt-1">Hidden from sidebar</p>
-          )}
-          <p className="text-gray-500 mt-2">Comprehensive business insights and financial statements.</p>
+        <div className="flex items-center gap-4">
+          <Link to="/dashboard" className="p-2 hover:bg-foreground/5 rounded-full transition-colors text-foreground">
+            <ArrowLeft className="w-6 h-6" />
+          </Link>
+          <EditableHeader 
+            pageId="reports_menu"
+            defaultTitle={t('nav.reports')}
+            defaultSubtitle="Comprehensive business insights and financial statements."
+          />
         </div>
-        <Link to="/dashboard" className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

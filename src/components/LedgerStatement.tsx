@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Printer, Download, ArrowLeft, Calculator, FileText, Settings as SettingsIcon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { cn } from '../lib/utils';
+import { Search, Printer, Download, ArrowLeft, Calculator, FileText, Settings as SettingsIcon, Loader2 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { cn, formatCurrency } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { printReport } from '../utils/printUtils';
-import { exportToCSV, exportToPDF } from '../utils/exportUtils';
-import { QuickAdjustmentModal } from './QuickAdjustmentModal';
+import { printReport, printUtils } from '../utils/printUtils';
+import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
+import { EditableHeader } from './EditableHeader';
 import { ReportConfigModal } from './ReportConfigModal';
+import { QuickAdjustmentModal } from './QuickAdjustmentModal';
 import { ReportConfig } from '../types';
 
 const DEFAULT_CONFIG: ReportConfig = {
@@ -30,19 +31,18 @@ const DEFAULT_CONFIG: ReportConfig = {
 export function LedgerStatement() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useLanguage();
   const settings = useSettings();
   const [ledgers, setLedgers] = useState<any[]>([]);
-  const [selectedLedger, setSelectedLedger] = useState<string>('');
+  const [selectedLedger, setSelectedLedger] = useState<string>(searchParams.get('ledgerId') || '');
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [showLedgerList, setShowLedgerList] = useState(false);
   const [startDate, setStartDate] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-CA');
+    return searchParams.get('from') || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA');
   });
   const [endDate, setEndDate] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString('en-CA');
+    return searchParams.get('to') || new Date().toLocaleDateString('en-CA');
   });
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -72,7 +72,13 @@ export function LedgerStatement() {
         erpService.getUsersByCompany(user.companyId),
         erpService.getSettings(user.companyId)
       ]);
-      if (lData) setLedgers(lData);
+      if (lData) {
+        setLedgers(lData);
+        if (selectedLedger) {
+          const l = lData.find((l: any) => l.id === selectedLedger);
+          if (l) setLedgerSearch(l.name);
+        }
+      }
       setItems(iData);
       setGodowns(gData);
       setUsers(uData);
@@ -115,8 +121,6 @@ export function LedgerStatement() {
         
         let particulars = 'Self';
         if (otherEntries.length === 1) {
-          // We need to fetch the ledger name for otherEntries[0].ledger_id
-          // For now, we'll assume we can find it in our ledgers state
           const otherLedger = ledgers.find(l => l.id === otherEntries[0].ledger_id);
           particulars = otherLedger?.name || 'Unknown';
         } else if (otherEntries.length > 1) {
@@ -143,7 +147,7 @@ export function LedgerStatement() {
 
   useEffect(() => {
     fetchEntries();
-  }, [selectedLedger, startDate, endDate]);
+  }, [selectedLedger, startDate, endDate, ledgers]);
 
   const filteredLedgers = ledgers.filter(l => 
     l.name.toLowerCase().includes(ledgerSearch.toLowerCase())
@@ -161,136 +165,12 @@ export function LedgerStatement() {
   const totalCredit = entries.reduce((sum, e) => sum + (e.credit || 0), 0);
   let runningBalance = openingBalance;
 
-  const getLedgerName = (v: any) => {
-    const name = v.party_ledger_name || v.ledger_name || v.ledgers || v.particulars || v.v_type || 'Voucher';
-    const alias = v.alias || ''; 
-    
-    switch (config.ledgerDisplayName) {
-      case 'Alias (Name)':
-        return alias ? `${alias} (${name})` : name;
-      case 'Alias Only':
-        return alias || name;
-      case 'Name (Alias)':
-        return alias ? `${name} (${alias})` : name;
-      default:
-        return name;
-    }
-  };
-
   const handlePrint = () => {
-    if (!selectedLedger) return;
-    if (settings.reportLayout === 'Layout 2') {
-      handleFullPageView();
-      return;
-    }
-    const ledgerName = currentLedger?.name || 'Ledger';
-    
-    let rb = currentLedger?.opening_balance || 0;
-    const printData = [
-      {
-        date: '-',
-        vch_no: '-',
-        vch_type: 'Opening Balance',
-        debit: rb > 0 ? rb : 0,
-        credit: rb < 0 ? Math.abs(rb) : 0,
-        balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`
-      },
-      ...entries.map(e => {
-        rb += (e.debit || 0) - (e.credit || 0);
-        const rows = [{
-          date: e.vouchers?.v_date,
-          vch_no: e.vouchers?.v_no,
-          vch_type: `${e.vouchers?.v_type} - ${e.particulars}`,
-          debit: e.debit || 0,
-          credit: e.credit || 0,
-          balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`
-        }];
-
-        if (config.showNarration && e.vouchers?.narration) {
-          rows.push({ date: '', vch_no: '', vch_type: `(${e.vouchers.narration})`, debit: 0, credit: 0, balance: '' });
-        }
-
-        if (config.showEnteredBy) {
-          const creator = users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System';
-          rows.push({ date: '', vch_no: '', vch_type: `Entered by: ${creator}`, debit: 0, credit: 0, balance: '' });
-        }
-
-        if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
-          e.vouchers.inventory.forEach((item: any) => {
-            const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
-            let itemDetail = `  > ${itemName} (${item.qty} ${item.unit || ''} @ ${item.rate})`;
-            if (config.showStockDescriptions && item.description) {
-              itemDetail += `\n    Desc: ${item.description}`;
-            }
-            rows.push({
-              date: '',
-              vch_no: '',
-              vch_type: itemDetail,
-              debit: 0,
-              credit: 0,
-              balance: ''
-            });
-          });
-        }
-        return rows;
-      }).flat()
-    ];
-
-    const period = `Period: ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
-    printReport(`Ledger Statement: ${ledgerName}\n${period}`, printData, ['Date', 'Vch No', 'Vch Type', 'Debit', 'Credit', 'Balance'], settings);
+    printUtils.printElement('ledger-report', `Ledger Statement: ${currentLedger?.name || ''}`);
   };
 
   const handleDownload = () => {
-    if (!selectedLedger) return;
-    const ledgerName = currentLedger?.name || 'Ledger';
-    
-    let rb = currentLedger?.opening_balance || 0;
-    const exportData = [
-      {
-        date: '-',
-        particulars: 'Opening Balance',
-        vch_no: '-',
-        vch_type: '-',
-        debit: rb > 0 ? rb : 0,
-        credit: rb < 0 ? Math.abs(rb) : 0,
-        balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`
-      },
-      ...entries.map(e => {
-        rb += (e.debit || 0) - (e.credit || 0);
-        const rows = [{
-          date: e.vouchers?.v_date,
-          particulars: e.particulars,
-          vch_no: e.vouchers?.v_no,
-          vch_type: e.vouchers?.v_type,
-          debit: e.debit || 0,
-          credit: e.credit || 0,
-          balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`
-        }];
-
-        if (config.showNarration && e.vouchers?.narration) {
-          rows.push({ date: '', particulars: `(${e.vouchers.narration})`, vch_no: '', vch_type: '', debit: 0, credit: 0, balance: '' });
-        }
-
-        if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
-          e.vouchers.inventory.forEach((item: any) => {
-            const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
-            rows.push({
-              date: '',
-              particulars: `  - ${itemName} (${item.qty} @ ${item.rate})`,
-              vch_no: '',
-              vch_type: '',
-              debit: 0,
-              credit: 0,
-              balance: ''
-            });
-          });
-        }
-        return rows;
-      }).flat()
-    ];
-
-    const period = `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
-    exportToCSV(`Ledger_Statement_${ledgerName.replace(/ /g, '_')}`, `Ledger Statement: ${ledgerName} (${period})`, exportData, ['Date', 'Particulars', 'Vch No', 'Vch Type', 'Debit', 'Credit', 'Balance'], settings);
+    exportUtils.exportToPDF('ledger-report', `Ledger_Statement_${currentLedger?.name || 'Report'}`);
   };
 
   const handleDownloadPDF = () => {
@@ -815,20 +695,17 @@ export function LedgerStatement() {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
-            {(settings.companyLogo || settings.systemLogo) && (
-              <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
-                <img 
-                  src={settings.companyLogo || settings.systemLogo} 
-                  alt="Logo" 
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            )}
-            <div>
-              <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">{t('ledger.statement')}</h1>
-              <p className="text-[10px] text-gray-500 uppercase font-bold">{settings.companyName}</p>
-            </div>
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <EditableHeader 
+              pageId="ledger_statement"
+              defaultTitle={t('ledger.statement')}
+              defaultSubtitle={settings.companyName}
+            />
           </div>
           <button 
             onClick={() => setShowAdjustmentModal(true)}
@@ -964,7 +841,7 @@ export function LedgerStatement() {
           title={t('ledger.statement')}
         />
 
-        <div className={cn(
+        <div id="ledger-report" className={cn(
           "bg-card border border-border overflow-x-auto no-scrollbar relative",
           settings.reportLayout === 'Layout 2' && "bg-white text-black font-serif p-8 min-h-[800px] pb-32"
         )}>
@@ -1066,7 +943,7 @@ export function LedgerStatement() {
                                   settings.reportLayout === 'Layout 2' && "bg-white text-black hover:bg-gray-50",
                                   settings.reportLayout === 'Layout 2' && mainRowIsStripe && "bg-[#F3F4F6]"
                                 )}
-                                onClick={() => navigate(`/vouchers/edit/${e.id}`)}
+                                onClick={() => navigate(`/vouchers/view/${e.id}`)}
                               >
                                 <td className="px-6 py-4 whitespace-nowrap">{e.vouchers?.v_date}</td>
                                 <td className="px-6 py-4">

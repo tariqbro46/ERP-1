@@ -42,6 +42,7 @@ import { ItemCreation } from './components/ItemCreation';
 import { ItemMaster } from './components/ItemMaster';
 import { Daybook } from './components/Daybook';
 import { StockSummary } from './components/StockSummary';
+import { StockItemReport } from './components/StockItemReport';
 import { BalanceSheet } from './components/BalanceSheet';
 import { ProfitAndLoss } from './components/ProfitAndLoss';
 import { LedgerStatement } from './components/LedgerStatement';
@@ -70,8 +71,24 @@ import NotificationPage from './components/NotificationPage';
 import { AlterMaster } from './components/AlterMaster';
 import { ReportsMenu } from './components/ReportsMenu';
 import { NegativeReports } from './components/NegativeReports';
+import { CashFlow } from './components/CashFlow';
+import { FundsFlow } from './components/FundsFlow';
+import { Statistics } from './components/Statistics';
+import { AgeingAnalysis } from './components/AgeingAnalysis';
+import { StockQuery } from './components/StockQuery';
+import { MovementAnalysis } from './components/MovementAnalysis';
+import { RegisterReport } from './components/RegisterReport';
+import { GroupSummary } from './components/GroupSummary';
+import { GroupVoucher } from './components/GroupVoucher';
+import { CashBankBooks } from './components/CashBankBooks';
+import { UnitMaster } from './components/UnitMaster';
+import { InventoryOverview } from './components/InventoryOverview';
+import { StockGroupSummary } from './components/StockGroupSummary';
+import { StockCategorySummary } from './components/StockCategorySummary';
+import { InventoryBooks } from './components/InventoryBooks';
 import { ReportPlaceholder } from './components/ReportPlaceholder';
 import { GroupDashboard } from './components/GroupDashboard';
+import { VoucherDetail } from './components/VoucherDetail';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
@@ -1358,12 +1375,15 @@ function ProtectedRoute() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/vouchers/new" element={<VoucherEntry />} />
           <Route path="/vouchers/edit/:id" element={<VoucherEntry />} />
+          <Route path="/vouchers/view/:id" element={<VoucherDetail />} />
           <Route path="/accounts/ledgers/new" element={<LedgerCreation />} />
           <Route path="/accounts/ledgers/edit/:id" element={<LedgerCreation />} />
           <Route path="/inventory/items" element={<ItemMaster />} />
           <Route path="/inventory/items/new" element={<ItemCreation />} />
           <Route path="/inventory/items/edit/:id" element={<ItemCreation />} />
           <Route path="/inventory/godowns" element={<GodownMaster />} />
+          <Route path="/inventory/units" element={<UnitMaster />} />
+          <Route path="/inventory/overview" element={<InventoryOverview />} />
           <Route path="/employees" element={<EmployeeMaster />} />
           <Route path="/payroll" element={<PayrollManagement />} />
           <Route path="/notes" element={<Notes />} />
@@ -1372,15 +1392,12 @@ function ProtectedRoute() {
           <Route path="/group/:groupId" element={<GroupDashboard />} />
           <Route path="/reports" element={<ReportsMenu />} />
           <Route path="/reports/account-books" element={<ReportPlaceholder title="Account Books" />} />
-          <Route path="/reports/inventory-books" element={<ReportPlaceholder title="Inventory Books" />} />
-          <Route path="/reports/statement-of-inventory" element={<ReportPlaceholder title="Statement of Inventory" />} />
-          <Route path="/reports/payroll" element={<ReportPlaceholder title="Payroll Reports" />} />
-          <Route path="/reports/negative-ledger" element={<NegativeReports type="ledger" />} />
-          <Route path="/reports/negative-stock" element={<NegativeReports type="stock" />} />
-          <Route path="/reports/group-summary" element={<ReportPlaceholder title="Group Summary" />} />
-          <Route path="/reports/item-monthly" element={<ReportPlaceholder title="Item Monthly Summary" />} />
-          <Route path="/reports/movement" element={<ReportPlaceholder title="Movement Analysis" />} />
-          <Route path="/reports/stock-query" element={<ReportPlaceholder title="Stock Query" />} />
+          <Route path="/reports/inventory-books" element={<InventoryBooks />} />
+          <Route path="/reports/stock-group-summary" element={<StockGroupSummary />} />
+          <Route path="/reports/stock-category-summary" element={<StockCategorySummary />} />
+          <Route path="/reports/stock-transfer-register" element={<RegisterReport type="Stock Transfer" title="Stock Transfer Register" />} />
+          <Route path="/reports/physical-stock-register" element={<RegisterReport type="Physical Stock" title="Physical Stock Register" />} />
+          <Route path="/reports/stock-item" element={<StockItemReport />} />
           <Route path="/reports/daybook" element={<Daybook />} />
           <Route path="/reports/stock" element={<StockSummary />} />
           <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
@@ -1390,22 +1407,22 @@ function ProtectedRoute() {
           <Route path="/reports/financial-insights" element={<FinancialInsights />} />
           <Route path="/reports/ledger" element={<LedgerStatement />} />
           <Route path="/reports/sales-performance" element={<SalespersonReport />} />
-          <Route path="/reports/cash-flow" element={<ReportPlaceholder title="Cash Flow" />} />
-          <Route path="/reports/funds-flow" element={<ReportPlaceholder title="Funds Flow" />} />
-          <Route path="/reports/group-voucher" element={<ReportPlaceholder title="Group Voucher" />} />
-          <Route path="/reports/contra-register" element={<ReportPlaceholder title="Contra Register" />} />
-          <Route path="/reports/payment-register" element={<ReportPlaceholder title="Payment Register" />} />
-          <Route path="/reports/receipt-register" element={<ReportPlaceholder title="Receipt Register" />} />
-          <Route path="/reports/sales-register" element={<ReportPlaceholder title="Sales Register" />} />
-          <Route path="/reports/purchase-register" element={<ReportPlaceholder title="Purchase Register" />} />
-          <Route path="/reports/journal-register" element={<ReportPlaceholder title="Journal Register" />} />
-          <Route path="/reports/statistics" element={<ReportPlaceholder title="Statistics" />} />
-          <Route path="/reports/location" element={<ReportPlaceholder title="Location" />} />
-          <Route path="/reports/stock-group-summary" element={<ReportPlaceholder title="Stock Group Summary" />} />
-          <Route path="/reports/stock-category-summary" element={<ReportPlaceholder title="Stock Category Summary" />} />
-          <Route path="/reports/stock-transfer-register" element={<ReportPlaceholder title="Stock Transfer Register" />} />
-          <Route path="/reports/physical-stock-register" element={<ReportPlaceholder title="Physical Stock Register" />} />
-          <Route path="/reports/ageing-analysis" element={<ReportPlaceholder title="Ageing Analysis" />} />
+          <Route path="/reports/cash-flow" element={<CashFlow />} />
+          <Route path="/reports/funds-flow" element={<FundsFlow />} />
+          <Route path="/reports/statistics" element={<Statistics />} />
+          <Route path="/reports/ageing-analysis" element={<AgeingAnalysis />} />
+          <Route path="/reports/movement" element={<MovementAnalysis />} />
+          <Route path="/reports/stock-query" element={<StockQuery />} />
+          <Route path="/reports/group-summary" element={<GroupSummary />} />
+          <Route path="/reports/group-voucher" element={<GroupVoucher />} />
+          <Route path="/reports/contra-register" element={<RegisterReport type="Contra" title="Contra Register" />} />
+          <Route path="/reports/payment-register" element={<RegisterReport type="Payment" title="Payment Register" />} />
+          <Route path="/reports/receipt-register" element={<RegisterReport type="Receipt" title="Receipt Register" />} />
+          <Route path="/reports/sales-register" element={<RegisterReport type="Sales" title="Sales Register" />} />
+          <Route path="/reports/purchase-register" element={<RegisterReport type="Purchase" title="Purchase Register" />} />
+          <Route path="/reports/journal-register" element={<RegisterReport type="Journal" title="Journal Register" />} />
+          <Route path="/reports/negative-ledger" element={<NegativeReports type="ledger" />} />
+          <Route path="/reports/negative-stock" element={<NegativeReports type="stock" />} />
           <Route path="/reports/pay-slip" element={<ReportPlaceholder title="Pay Slip" />} />
           <Route path="/reports/pay-sheet" element={<ReportPlaceholder title="Pay Sheet" />} />
           <Route path="/reports/attendance-sheet" element={<ReportPlaceholder title="Attendance Sheet" />} />
@@ -1415,8 +1432,8 @@ function ProtectedRoute() {
           <Route path="/reports/attendance-register" element={<ReportPlaceholder title="Attendance Register" />} />
           <Route path="/reports/employee-profile" element={<ReportPlaceholder title="Employee Profile" />} />
           <Route path="/reports/employee-head-count" element={<ReportPlaceholder title="Employee Head Count" />} />
-          <Route path="/reports/cash-bank" element={<ReportPlaceholder title="Cash/Bank Books" />} />
-          <Route path="/reports/stock-item" element={<ReportPlaceholder title="Stock Item" />} />
+          <Route path="/reports/cash-bank" element={<CashBankBooks />} />
+          <Route path="/reports/stock-item" element={<StockItemReport />} />
           <Route path="/production/orders" element={<OrderManagement />} />
           <Route path="/production/orders/new" element={<OrderEntry />} />
           <Route path="/production/orders/edit/:id" element={<OrderEntry />} />

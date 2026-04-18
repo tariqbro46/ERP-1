@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Printer, Download, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, Printer, Download, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { printBalanceSheet } from '../utils/printUtils';
-import { exportToCSV, exportToPDF } from '../utils/exportUtils';
+import { printBalanceSheet, printUtils } from '../utils/printUtils';
+import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
+import { EditableHeader } from './EditableHeader';
+import { useNavigate } from 'react-router-dom';
 
 export function BalanceSheet() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
   const settings = useSettings();
@@ -30,7 +33,7 @@ export function BalanceSheet() {
           erpService.getLedgers(user.companyId),
           erpService.getVoucherEntriesByDate(user.companyId, asOnDate),
           erpService.getItems(user.companyId),
-          erpService.getInventoryEntriesByDate(user.companyId, asOnDate)
+          erpService.getInventoryEntriesByDate(user.companyId, '1900-01-01', asOnDate)
         ]);
 
         // Calculate Closing Stock
@@ -116,14 +119,11 @@ export function BalanceSheet() {
   const totalLiabilities = liabilityGroups.reduce((sum, g) => sum + g.balance, 0);
 
   const handlePrint = () => {
-    printBalanceSheet({
-      assets: assetGroups,
-      liabilities: liabilityGroups,
-      totalAssets: Math.abs(totalAssets),
-      totalLiabilities: Math.abs(totalLiabilities),
-      closingStock: 0, // Need to fetch this if needed
-      netProfit: 0 // Need to fetch this if needed
-    }, settings);
+    printUtils.printElement('balance-sheet-report', 'Balance Sheet Report');
+  };
+
+  const handleDownloadPDF = () => {
+    exportUtils.exportToPDF('balance-sheet-report', 'Balance_Sheet_Report');
   };
 
   const handleDownload = () => {
@@ -148,28 +148,6 @@ export function BalanceSheet() {
     exportToCSV('Balance_Sheet', 'Balance Sheet', exportData, ['Particulars', 'Amount'], settings);
   };
 
-  const handleDownloadPDF = () => {
-    const exportData: any[] = [];
-    
-    // Add Liabilities
-    exportData.push({ particulars: t('reports.liabilities').toUpperCase(), amount: '' });
-    liabilityGroups.forEach(g => {
-      exportData.push({ particulars: g.name, amount: Math.abs(g.balance) });
-    });
-    exportData.push({ particulars: t('reports.totalLiabilities').toUpperCase(), amount: Math.abs(totalLiabilities) });
-    
-    exportData.push({ particulars: '', amount: '' }); // Spacer
-    
-    // Add Assets
-    exportData.push({ particulars: t('reports.assets').toUpperCase(), amount: '' });
-    assetGroups.forEach(g => {
-      exportData.push({ particulars: g.name, amount: Math.abs(g.balance) });
-    });
-    exportData.push({ particulars: t('reports.totalAssets').toUpperCase(), amount: Math.abs(totalAssets) });
-
-    exportToPDF('Balance_Sheet', t('reports.balanceSheet'), exportData, [t('common.particulars'), t('common.amount')], settings);
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background transition-colors">
@@ -178,9 +156,6 @@ export function BalanceSheet() {
     );
   }
 
-  const now = new Date();
-  const displayDate = new Date(asOnDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
@@ -188,20 +163,17 @@ export function BalanceSheet() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex-1 w-full sm:max-w-md space-y-4">
             <div className="flex items-center gap-4">
-              {(settings.companyLogo || settings.systemLogo) && (
-                <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
-                  <img 
-                    src={settings.companyLogo || settings.systemLogo} 
-                    alt="Logo" 
-                    className="w-full h-full object-contain"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              )}
-              <div>
-                <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">{t('reports.balanceSheet')}</h1>
-                <p className="text-[10px] text-gray-500 uppercase font-bold">{settings.companyName}</p>
-              </div>
+              <button 
+                onClick={() => navigate(-1)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </button>
+              <EditableHeader 
+                pageId="balance_sheet"
+                defaultTitle={t('reports.balanceSheet')}
+                defaultSubtitle={settings.companyName}
+              />
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
@@ -239,7 +211,7 @@ export function BalanceSheet() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 border border-border bg-card divide-y lg:divide-y-0 lg:divide-x divide-border">
+        <div id="balance-sheet-report" className="grid grid-cols-1 lg:grid-cols-2 border border-border bg-card divide-y lg:divide-y-0 lg:divide-x divide-border">
           {/* Liabilities Side */}
           <div className="overflow-hidden">
             <div className="px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
@@ -262,7 +234,14 @@ export function BalanceSheet() {
                   {expandedGroups.has(group.name) && (
                     <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
                       {group.ledgers.map((l: any) => (
-                        <div key={l.id} className="flex justify-between text-[11px] text-gray-500">
+                        <div 
+                          key={l.id} 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/reports/ledger?ledgerId=${l.id}`);
+                          }}
+                          className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
+                        >
                           <span>{l.name}</span>
                           <span className="font-mono">{Math.abs(l.current_balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
@@ -300,7 +279,14 @@ export function BalanceSheet() {
                   {expandedGroups.has(group.name) && (
                     <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
                       {group.ledgers.map((l: any) => (
-                        <div key={l.id} className="flex justify-between text-[11px] text-gray-500">
+                        <div 
+                          key={l.id} 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/reports/ledger?ledgerId=${l.id}`);
+                          }}
+                          className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
+                        >
                           <span>{l.name}</span>
                           <span className="font-mono">{Math.abs(l.current_balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>

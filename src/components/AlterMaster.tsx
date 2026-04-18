@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { useNotification } from '../contexts/NotificationContext';
 import { Loader2, X } from 'lucide-react';
+import { EditableHeader } from './EditableHeader';
 
 interface MasterCategory {
   id: string;
@@ -242,7 +243,7 @@ export const AlterMaster: React.FC = () => {
   );
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           {selectedCategory && (
@@ -253,9 +254,17 @@ export const AlterMaster: React.FC = () => {
               <ArrowLeft className="w-6 h-6" />
             </button>
           )}
-          <h1 className="text-3xl font-bold text-gray-900">
-            {selectedCategory ? t(selectedCategory.labelKey) : t('common.alteration')}
-          </h1>
+          {selectedCategory ? (
+            <h1 className="text-3xl font-bold text-gray-900">
+              {t(selectedCategory.labelKey)}
+            </h1>
+          ) : (
+            <EditableHeader 
+              pageId="alter_master"
+              defaultTitle={t('common.alteration')}
+              defaultSubtitle="Modify your master data records"
+            />
+          )}
         </div>
         {selectedCategory && (
           <button

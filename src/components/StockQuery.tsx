@@ -1,0 +1,294 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Loader2, Search, Package, ShoppingCart, Tag, MapPin, TrendingUp, History } from 'lucide-react';
+import { erpService } from '../services/erpService';
+import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { formatCurrency, cn } from '../lib/utils';
+
+export function StockQuery() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { t } = useLanguage();
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [details, setDetails] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchItems() {
+      if (!user?.companyId) return;
+      try {
+        const stockItems = await erpService.getItems(user.companyId);
+        setItems(stockItems);
+        if (stockItems.length > 0) {
+          handleItemSelect(stockItems[0]);
+        }
+      } catch (err) {
+        console.error('Error fetching items:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchItems();
+  }, [user?.companyId]);
+
+  async function handleItemSelect(item: any) {
+    setSelectedItem(item);
+    setLoading(true);
+    try {
+      const allInvEntries = await erpService.getInventoryEntriesByDate(user!.companyId, '2020-01-01', '2030-12-31');
+      const itemEntries = allInvEntries
+        .filter((e: any) => e.item_id === item.id)
+        .sort((a: any, b: any) => {
+          const dateA = a.date || a.created_at?.toDate?.()?.toISOString() || '';
+          const dateB = b.date || b.created_at?.toDate?.()?.toISOString() || '';
+          return dateB.localeCompare(dateA);
+        });
+
+      const lastPurchase = itemEntries.find((e: any) => e.movement_type === 'Inward');
+      const lastSales = itemEntries.find((e: any) => e.movement_type === 'Outward');
+
+      // Group by godown
+      const godowns = await erpService.getGodowns(user!.companyId);
+      const stockByGodown = godowns.map((g: any) => {
+        const gEntries = itemEntries.filter((e: any) => e.godown_id === g.id);
+        const qty = gEntries.reduce((sum, e) => sum + (e.movement_type === 'Inward' ? (e.qty + (e.free_qty || 0)) : -(e.qty + (e.free_qty || 0))), 0);
+        return { name: g.name, qty };
+      }).filter(g => g.qty !== 0);
+
+      setDetails({
+        lastPurchase,
+        lastSales,
+        stockByGodown,
+        recentHistory: itemEntries.slice(0, 10)
+      });
+    } catch (err) {
+      console.error('Error fetching item details:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (loading && !selectedItem) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      <div className="flex items-center gap-4 mb-8">
+        <button 
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Stock Query</h1>
+          <p className="text-gray-500">Comprehensive view of a stock item</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Item List Sidebar */}
+        <div className="lg:col-span-1 space-y-4">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm flex flex-col h-[600px]">
+            <div className="p-4 border-b border-gray-200 bg-gray-50">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input 
+                  type="text"
+                  placeholder="Filter items..."
+                  className="pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-lg w-full focus:outline-none"
+                />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+              {items.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => handleItemSelect(item)}
+                  className={cn(
+                    "w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex flex-col",
+                    selectedItem?.id === item.id && "bg-primary/5 border-l-4 border-primary"
+                  )}
+                >
+                  <span className="font-medium text-gray-900 truncate">{item.name}</span>
+                  <span className="text-xs text-gray-500">Stock: {item.current_stock} {item.unit}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Item Details */}
+        <div className="lg:col-span-3 space-y-6">
+          {selectedItem && details ? (
+            <>
+              {/* Header Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-500">In Hand</span>
+                    <Package className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {selectedItem.current_stock} <span className="text-sm font-normal text-gray-500">{selectedItem.unit}</span>
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-500">Average Cost</span>
+                    <Tag className="w-5 h-5 text-green-500" />
+                  </div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {formatCurrency(selectedItem.avg_cost || 0)}
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-500">Stock Value</span>
+                    <TrendingUp className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {formatCurrency(selectedItem.current_stock * (selectedItem.avg_cost || 0))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Buying/Selling Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                  <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 font-semibold text-gray-900 flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4" />
+                    Last Purchase
+                  </div>
+                  <div className="p-6">
+                    {details.lastPurchase ? (
+                      <div className="space-y-4">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Date</span>
+                          <span className="font-medium">{details.lastPurchase.date || new Date(details.lastPurchase.created_at?.toDate?.() || 0).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Quantity</span>
+                          <span className="font-medium">{details.lastPurchase.qty} {selectedItem.unit}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Rate</span>
+                          <span className="font-medium">{formatCurrency(details.lastPurchase.rate)}</span>
+                        </div>
+                        <div className="pt-4 border-t border-gray-100 flex justify-between">
+                          <span className="text-gray-500">Ledger</span>
+                          <span className="font-medium text-primary">View Ledger</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-gray-500">No purchase history</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                  <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 font-semibold text-gray-900 flex items-center gap-2">
+                    <ShoppingCart className="w-4 h-4" />
+                    Last Sales
+                  </div>
+                  <div className="p-6">
+                    {details.lastSales ? (
+                      <div className="space-y-4">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Date</span>
+                          <span className="font-medium">{details.lastSales.date || new Date(details.lastSales.created_at?.toDate?.() || 0).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Quantity</span>
+                          <span className="font-medium">{details.lastSales.qty} {selectedItem.unit}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Rate</span>
+                          <span className="font-medium">{formatCurrency(details.lastSales.rate)}</span>
+                        </div>
+                        <div className="pt-4 border-t border-gray-100 flex justify-between">
+                          <span className="text-gray-500">Customer</span>
+                          <span className="font-medium text-primary">View Ledger</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-gray-500">No sales history</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Godown Wise Stock */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 font-semibold text-gray-900 flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Stock by Godown
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {details.stockByGodown.length > 0 ? details.stockByGodown.map((g: any, idx: number) => (
+                    <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                      <span className="text-gray-700">{g.name}</span>
+                      <span className="font-medium text-gray-900">{g.qty} {selectedItem.unit}</span>
+                    </div>
+                  )) : (
+                    <div className="px-6 py-8 text-center text-gray-500">No godown stock allocation</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Recent History */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 font-semibold text-gray-900 flex items-center gap-2">
+                  <History className="w-4 h-4" />
+                  Recent Movements
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500">
+                        <th className="px-6 py-3">Date</th>
+                        <th className="px-6 py-3">Type</th>
+                        <th className="px-6 py-3 text-right">Inward</th>
+                        <th className="px-6 py-3 text-right">Outward</th>
+                        <th className="px-6 py-3 text-right">Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {details.recentHistory.map((h: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="px-6 py-3 text-sm">{h.date || new Date(h.created_at?.toDate?.() || 0).toLocaleDateString()}</td>
+                          <td className="px-6 py-3">
+                            <span className={cn(
+                              "px-2 py-0.5 rounded-full text-[10px] uppercase font-bold",
+                              h.movement_type === 'Inward' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                            )}>
+                              {h.movement_type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-3 text-right">{h.movement_type === 'Inward' ? `${h.qty} ${selectedItem.unit}` : '-'}</td>
+                          <td className="px-6 py-3 text-right">{h.movement_type === 'Outward' ? `${h.qty} ${selectedItem.unit}` : '-'}</td>
+                          <td className="px-6 py-3 text-right">{formatCurrency(h.rate)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500 italic">
+              Select an item to view its query report
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

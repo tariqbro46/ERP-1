@@ -27,14 +27,15 @@ export function ItemCreation() {
   const [deleting, setDeleting] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
   const [units, setUnits] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [hasTransactions, setHasTransactions] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<any>({
     name: '',
     category: 'General Items',
+    category_id: '',
     part_no: '',
     description: '',
     unit_id: '',
@@ -67,11 +68,10 @@ export function ItemCreation() {
         }
         setUnits(uniqueUnits);
 
-        // Fetch unique categories
-        const iDataAll = await erpService.getItems(user.companyId);
-        if (iDataAll) {
-          const uniqueCats = Array.from(new Set(iDataAll.map(i => i.category).filter(Boolean)));
-          setCategories(uniqueCats as string[]);
+        // Fetch categories from database
+        const catsData = await erpService.getStockCategories(user.companyId);
+        if (catsData) {
+          setCategories(catsData);
         }
 
         if (isEdit) {
@@ -92,6 +92,7 @@ export function ItemCreation() {
             ...iData,
             name: iData.name || '',
             category: iData.category || 'General Items',
+            category_id: iData.category_id || '',
             part_no: iData.part_no || '',
             description: iData.description || '',
             unit_id: iData.unit_id || '',
@@ -141,9 +142,9 @@ export function ItemCreation() {
         showNotification(notifications.itemCreated);
       }
       navigate('/inventory/items');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving item:', err);
-      alert('Failed to save item. Please check your connection.');
+      alert(err.message || 'Failed to save item. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -226,17 +227,29 @@ export function ItemCreation() {
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        if (newCategory.trim()) {
-                          setCategories(prev => Array.from(new Set([...prev, newCategory.trim()])));
-                          setFormData({ ...formData, category: newCategory.trim() });
-                          setNewCategory('');
-                          setShowNewCategoryInput(false);
+                      onClick={async () => {
+                        if (newCategory.trim() && user?.companyId) {
+                          try {
+                            setLoading(true);
+                            const created = await erpService.createStockCategory(user.companyId, { name: newCategory.trim() });
+                            if (created) {
+                              setCategories(prev => [...prev, created]);
+                              setFormData({ ...formData, category: created.name, category_id: created.id });
+                              showNotification('New category created and selected');
+                            }
+                            setNewCategory('');
+                            setShowNewCategoryInput(false);
+                          } catch (err: any) {
+                            showNotification(err.message || 'Failed to create category', 'error');
+                          } finally {
+                            setLoading(false);
+                          }
                         }
                       }}
-                      className="px-4 bg-foreground text-background text-[10px] font-bold uppercase"
+                      className="px-4 bg-foreground text-background text-[10px] font-bold uppercase flex items-center justify-center min-w-[60px]"
+                      disabled={loading}
                     >
-                      {t('common.add')}
+                      {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : t('common.add')}
                     </button>
                     <button
                       type="button"
@@ -249,19 +262,24 @@ export function ItemCreation() {
                 ) : (
                   <div className="flex gap-2">
                     <select
-                      value={formData.category}
+                      value={formData.category_id || formData.category}
                       onChange={e => {
                         if (e.target.value === 'ADD_NEW') {
                           setShowNewCategoryInput(true);
                         } else {
-                          setFormData({ ...formData, category: e.target.value });
+                          const cat = categories.find(c => c.id === e.target.value || c.name === e.target.value);
+                          if (cat) {
+                            setFormData({ ...formData, category: cat.name, category_id: cat.id });
+                          } else {
+                            setFormData({ ...formData, category: e.target.value, category_id: '' });
+                          }
                         }
                       }}
                       className="flex-1 bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
                     >
                       <option value="General Items">{t('item.generalItems')}</option>
-                      {categories.filter(c => c !== 'General Items').map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
+                      {categories.filter(c => c.name !== 'General Items').map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
                       ))}
                       <option value="ADD_NEW" className="font-bold text-emerald-500">+ {t('item.addNewCategory')}</option>
                     </select>

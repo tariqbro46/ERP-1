@@ -128,6 +128,9 @@ export interface Item {
   opening_rate?: number;
   barcode?: string;
   category?: string;
+  category_id?: string;
+  group_id?: string;
+  group_name?: string;
   low_stock_threshold?: number;
   tax_percent?: number;
   scheme_qty?: number;

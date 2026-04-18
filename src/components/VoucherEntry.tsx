@@ -534,18 +534,49 @@ export function VoucherEntry() {
         }
       }
 
-      // Find a ledger that belongs to Sundry Debtors or Sundry Creditors
-      const isDebtorOrCreditor = (l: any) => 
-        ['Sundry Debtors', 'Sundry Creditors', 'Sundry Debtor', 'Sundry Creditor', 'Debtors', 'Creditors'].includes(l.group_name);
+      // Determine the primary "Party" or "Particulars" ledger name for reports
+      let partyLedgerName = '';
+      
+      if (vType === 'Sales' || vType === 'Purchase') {
+        partyLedgerName = ledgers.find(l => l.id === partyLedgerId)?.name || '';
+      } else if (vType === 'Payment' || vType === 'Receipt' || vType === 'Contra') {
+        // For Receipt/Payment/Contra, we ALWAYS prioritize the ledgers selected in the rows 
+        // (the "Particulars" table) as the primary report party.
+        const rowEntries = accEntries.filter(e => e.ledger_id && e.amount > 0);
+        
+        if (rowEntries.length === 1) {
+          partyLedgerName = ledgers.find(l => l.id === rowEntries[0].ledger_id)?.name || '';
+        } else if (rowEntries.length > 1) {
+          const names = rowEntries.map(e => ledgers.find(l => l.id === e.ledger_id)?.name).filter(Boolean);
+          partyLedgerName = names.length > 0 ? names.join(', ') : 'Multiple Ledgers';
+        } else {
+          // Fallback only if no rows have ledgers yet
+          partyLedgerName = ledgers.find(l => l.id === bankCashLedgerId)?.name || vType;
+        }
+      } else if (vType === 'Journal') {
+        const drEntries = accEntries.filter(e => e.type === 'Dr');
+        const crEntries = accEntries.filter(e => e.type === 'Cr');
+        if (drEntries.length === 1) {
+          partyLedgerName = ledgers.find(l => l.id === drEntries[0].ledger_id)?.name || '';
+        } else if (drEntries.length > 1) {
+          const names = drEntries.map(e => ledgers.find(l => l.id === e.ledger_id)?.name).filter(Boolean);
+          partyLedgerName = names.length > 0 ? names.join(', ') : 'Multiple Ledgers';
+        } else {
+          partyLedgerName = 'Journal';
+        }
+      }
+      
+      // If still empty, try legacy logic to find Debtors/Creditors if applicable
+      if (!partyLedgerName) {
+        const isDebtorOrCreditor = (l: any) => 
+          ['Sundry Debtors', 'Sundry Creditors', 'Sundry Debtor', 'Sundry Creditor', 'Debtors', 'Creditors'].includes(l.group_name);
 
-      const partyLedger = ledgers.find(l => 
-        (l.id === partyLedgerId || l.id === bankCashLedgerId || accEntries.some(e => e.ledger_id === l.id)) &&
-        isDebtorOrCreditor(l)
-      );
-
-      const partyLedgerName = (partyLedger?.name || 
-                             (isInventory ? '' : (ledgers.find(l => l.id === partyLedgerId)?.name || ledgers.find(l => l.id === bankCashLedgerId)?.name)) ||
-                             (accEntries[0]?.ledger_id ? ledgers.find(l => l.id === accEntries[0].ledger_id)?.name : '')) || '';
+        const partyLedger = ledgers.find(l => 
+          (l.id === partyLedgerId || l.id === bankCashLedgerId || accEntries.some(e => e.ledger_id === l.id)) &&
+          isDebtorOrCreditor(l)
+        );
+        partyLedgerName = partyLedger?.name || '';
+      }
 
       const itemNames = isInventory ? invEntries.map(i => items.find(item => item.id === i.item_id)?.name).filter(Boolean).join(', ') : '';
 

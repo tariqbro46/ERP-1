@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Printer, ArrowRight, Share2, MessageCircle, Mail, Settings as SettingsIcon } from 'lucide-react';
+import { Search, Filter, Download, Printer, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
+import { pdfService } from '../services/pdfService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { printReport } from '../utils/printUtils';
-import { exportToCSV, exportToPDF } from '../utils/exportUtils';
-import { pdfService } from '../services/pdfService';
-import { exportService } from '../services/exportService';
+import { printReport, printUtils } from '../utils/printUtils';
+import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
+import { EditableHeader } from './EditableHeader';
 import { ReportConfigModal } from './ReportConfigModal';
 import { ReportConfig } from '../types';
 
@@ -37,6 +37,7 @@ export function Daybook() {
   const { showNotification } = useNotification();
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ledgers, setLedgers] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [godowns, setGodowns] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -55,19 +56,21 @@ export function Daybook() {
     if (!user?.companyId) return;
     setLoading(true);
     try {
-      const [vData, iData, gData, uData, sData] = await Promise.all([
+      const [vData, iData, gData, uData, lData, sData] = await Promise.all([
         config.format === 'Detailed'
           ? erpService.getVouchersDetailedByDateRange(user.companyId, startDate, endDate)
           : erpService.getVouchersByDateRange(user.companyId, startDate, endDate),
         erpService.getItems(user.companyId),
         erpService.getGodowns(user.companyId),
         erpService.getUsersByCompany(user.companyId),
+        erpService.getLedgers(user.companyId),
         erpService.getSettings(user.companyId)
       ]);
 
       setItems(iData);
       setGodowns(gData);
       setUsers(uData);
+      setLedgers(lData);
       if (sData?.daybookConfig) setConfig(sData.daybookConfig);
 
       const processed = (vData || []).map(v => ({
@@ -135,7 +138,50 @@ export function Daybook() {
     }
   };
 
+  const getOtherPartyName = (v: any) => {
+    if (!v.entries || v.entries.length === 0) return null;
+
+    // For Receipt/Payment/Contra, find the ledger that isn't Cash/Bank
+    if (['Receipt', 'Payment', 'Contra'].includes(v.v_type)) {
+      const isBankCash = (l: any) => {
+        const name = l.name?.toLowerCase() || '';
+        const group = l.ledger_groups?.name?.toLowerCase() || l.group_name?.toLowerCase() || '';
+        return name.includes('cash') || name.includes('bank') || 
+               group.includes('cash') || group.includes('bank');
+      };
+
+      // First try to find entries that are NOT Cash/Bank
+      const otherEntries = v.entries.filter((e: any) => {
+        const ledger = ledgers.find(l => l.id === e.ledger_id);
+        return ledger && !isBankCash(ledger);
+      });
+
+      if (otherEntries.length === 1) {
+        return ledgers.find(l => l.id === otherEntries[0].ledger_id)?.name;
+      } else if (otherEntries.length > 1) {
+        return otherEntries.map((e: any) => ledgers.find(l => l.id === e.ledger_id)?.name).join(', ');
+      }
+    }
+
+    // For Sales/Purchase, usually the party is the one that's NOT the Sales/Purchase account
+    if (['Sales', 'Purchase'].includes(v.v_type)) {
+      const otherEntries = v.entries.filter((e: any) => {
+        const ledger = ledgers.find(l => l.id === e.ledger_id);
+        return ledger && !['Sales', 'Purchase', 'Sales Account', 'Purchase Account'].includes(ledger.name);
+      });
+      if (otherEntries.length > 0) {
+        return ledgers.find(l => l.id === otherEntries[0].ledger_id)?.name;
+      }
+    }
+
+    return null;
+  };
+
   const getLedgerName = (v: any) => {
+    // Try the calculated other party first (especially for detailed mode)
+    const otherParty = getOtherPartyName(v);
+    if (otherParty) return otherParty;
+
     const name = v.party_ledger_name || v.ledger_name || v.ledgers || (['Sales', 'Purchase'].includes(v.particulars) ? '' : v.particulars) || v.v_type || 'Voucher';
     const alias = v.alias || ''; 
     
@@ -152,44 +198,11 @@ export function Daybook() {
   };
 
   const handlePrint = () => {
-    const printData = vouchers.map(v => {
-      const rows = [{
-        date: v.v_date,
-        particulars: getLedgerName(v) + (config.format !== 'Detailed' && config.showInventoryDetails && v.item_names ? `\n(${v.item_names})` : ''),
-        vch_type: v.v_type,
-        vch_no: v.v_no,
-        amount: v.total_amount
-      }];
+    printUtils.printElement('daybook-report', 'Daybook Report');
+  };
 
-      if (config.showNarration && v.narration) {
-        rows.push({ date: '', particulars: `(${v.narration})`, vch_type: '', vch_no: '', amount: 0 });
-      }
-
-      if (config.showEnteredBy) {
-        const creator = users.find(u => u.uid === v.createdBy)?.displayName || 'System';
-        rows.push({ date: '', particulars: `Entered by: ${creator}`, vch_type: '', vch_no: '', amount: 0 });
-      }
-
-      if (config.format === 'Detailed' && v.inventory && v.inventory.length > 0) {
-        v.inventory.forEach((item: any) => {
-          const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
-          let itemDetail = `  > ${itemName} (${item.qty} ${item.unit_name || 'pcs'} @ ৳${item.rate.toLocaleString()})`;
-          if (config.showStockDescriptions && item.description) {
-            itemDetail += `\n    Desc: ${item.description}`;
-          }
-          rows.push({
-            date: '',
-            particulars: itemDetail,
-            vch_type: '',
-            vch_no: '',
-            amount: 0
-          });
-        });
-      }
-      return rows;
-    }).flat();
-
-    printReport('Daybook', printData, ['Date', 'Particulars', 'Vch Type', 'Vch No', 'Amount'], settings);
+  const handleDownloadPDF = () => {
+    exportUtils.exportToPDF('daybook-report', 'Daybook_Report');
   };
 
   const handleDownloadExcel = () => {
@@ -222,41 +235,8 @@ export function Daybook() {
       return rows;
     }).flat();
 
-    exportService.exportToExcel(exportData, `Daybook_${period.replace(/ /g, '_')}`, 'Daybook');
-  };
-
-  const handleDownloadPDF = () => {
-    const period = `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
-    const headers = [['Date', 'Particulars', 'Vch Type', 'Vch No', 'Amount']];
-    const body = vouchers.map(v => {
-      const rows = [[
-        v.v_date,
-        getLedgerName(v) + (config.format !== 'Detailed' && config.showInventoryDetails && v.item_names ? `\n(${v.item_names})` : ''),
-        v.v_type,
-        v.v_no,
-        v.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })
-      ]];
-
-      if (config.showNarration && v.narration) {
-        rows.push(['', `(${v.narration})`, '', '', '']);
-      }
-
-      if (config.format === 'Detailed' && v.inventory && v.inventory.length > 0) {
-        v.inventory.forEach((item: any) => {
-          const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
-          rows.push([
-            '',
-            `  > ${itemName} (${item.qty} @ ${item.rate})`,
-            '',
-            '',
-            ''
-          ]);
-        });
-      }
-      return rows;
-    }).flat();
-
-    exportService.exportToPDF(headers, body, `Daybook_${period.replace(/ /g, '_')}`, `Daybook Report (${period})`, settings);
+    const headers = ['Date', 'Particulars', 'Vch Type', 'Vch No', 'Amount'];
+    exportUtils.exportToCSV(`Daybook_${period.replace(/ /g, '_')}`, 'Daybook', exportData, headers, settings);
   };
 
   const handleShareWhatsApp = (v: any) => {
@@ -275,20 +255,17 @@ export function Daybook() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex-1 w-full sm:max-w-2xl space-y-4">
             <div className="flex items-center gap-4">
-              {(settings.companyLogo || settings.systemLogo) && (
-                <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
-                  <img 
-                    src={settings.companyLogo || settings.systemLogo} 
-                    alt="Logo" 
-                    className="w-full h-full object-contain"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-              )}
-              <div>
-                <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Daybook</h1>
-                <p className="text-[10px] text-gray-500 uppercase font-bold">{settings.companyName}</p>
-              </div>
+              <button 
+                onClick={() => navigate(-1)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </button>
+              <EditableHeader 
+                pageId="daybook"
+                defaultTitle="Daybook"
+                defaultSubtitle={settings.companyName}
+              />
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
@@ -352,7 +329,7 @@ export function Daybook() {
           title="Daybook"
         />
 
-        <div className="bg-card border border-border overflow-hidden">
+        <div id="daybook-report" className="bg-card border border-border overflow-hidden">
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
             {loading ? (
@@ -366,7 +343,7 @@ export function Daybook() {
                   "p-4 space-y-3 hover:bg-foreground/5 transition-colors cursor-pointer group",
                   config.enableStripeView && idx % 2 !== 0 && "bg-muted/30"
                 )}
-                onClick={() => navigate(`/vouchers/edit/${v.id}`)}
+                onClick={() => navigate(`/vouchers/view/${v.id}`)}
               >
                 <div className="flex justify-between items-start">
                   <span className="text-[10px] text-gray-500 uppercase font-mono">{v.v_date}</span>
@@ -423,9 +400,9 @@ export function Daybook() {
               </thead>
               <tbody className="text-foreground/80">
                 {loading ? (
-                  <tr><td colSpan={5} className="px-6 py-10 text-center text-gray-500">{t('daybook.loading')}</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-500">{t('daybook.loading')}</td></tr>
                 ) : vouchers.length === 0 ? (
-                  <tr><td colSpan={5} className="px-6 py-10 text-center text-gray-500">{t('daybook.noTransactionsPeriod')}</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-500">{t('daybook.noTransactionsPeriod')}</td></tr>
                 ) : vouchers.map((v, idx) => (
                   <React.Fragment key={v.id}>
                     <tr 
@@ -433,7 +410,7 @@ export function Daybook() {
                         "border-b border-border/50 hover:bg-foreground/5 cursor-pointer group transition-colors",
                         config.enableStripeView && idx % 2 !== 0 && "bg-muted/30"
                       )}
-                      onClick={() => navigate(`/vouchers/edit/${v.id}`)}
+                      onClick={() => navigate(`/vouchers/view/${v.id}`)}
                     >
                       <td className="px-4 lg:px-6 py-4 whitespace-nowrap">{v.v_date}</td>
                       <td className="px-4 lg:px-6 py-4">

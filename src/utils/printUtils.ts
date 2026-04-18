@@ -393,3 +393,54 @@ export function printReport(title: string, data: any[], columns: string[], setti
   printWindow.document.write(html);
   printWindow.document.close();
 }
+
+export function printElement(elementId: string, title: string) {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return;
+
+  const html = `
+    <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          body { font-family: 'Courier New', Courier, monospace; padding: 20px; color: #000; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; font-size: 11px; }
+          th { background-color: #f2f2f2; font-size: 12px; }
+          .text-right { text-align: right; }
+          .font-bold { font-weight: bold; }
+          .uppercase { text-transform: uppercase; }
+          .tracking-widest { letter-spacing: 0.1em; }
+          .bg-gray-50 { background-color: #f9fafb; }
+          .text-primary { color: #000; }
+          @media print {
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1 style="text-align: center; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 10px;">${title}</h1>
+        <div style="margin-bottom: 20px; text-align: right; font-size: 10px;">Date: ${new Date().toLocaleDateString()}</div>
+        ${element.innerHTML}
+      </body>
+    </html>
+  `;
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.onload = () => {
+    printWindow.print();
+    printWindow.close();
+  };
+}
+
+export const printUtils = {
+  printVoucher,
+  printProfitAndLoss,
+  printBalanceSheet,
+  printReport,
+  printElement
+};
