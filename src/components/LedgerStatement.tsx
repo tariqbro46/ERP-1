@@ -695,12 +695,6 @@ export function LedgerStatement() {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </button>
             <EditableHeader 
               pageId="ledger_statement"
               defaultTitle={t('ledger.statement')}

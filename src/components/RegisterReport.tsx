@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatCurrency } from '../lib/utils';
 import { EditableHeader } from './EditableHeader';
+import { ReportPrintHeader, ReportPrintFooter } from './ReportPrintHeader';
 import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
 
@@ -119,12 +120,6 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
     <div className="p-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
           <EditableHeader 
             pageId={`register_${type.toLowerCase()}`}
             defaultTitle={title}
@@ -179,7 +174,9 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
         </div>
       </div>
 
-      <div id="register-report" className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div id="register-report" className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm p-0 print:p-8 print:border-none print:shadow-none">
+        <ReportPrintHeader title={title} subtitle={`From ${new Date(dateRange.from).toLocaleDateString()} to ${new Date(dateRange.to).toLocaleDateString()}`} />
+        
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -239,6 +236,8 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
             )}
           </table>
         </div>
+
+        <ReportPrintFooter />
       </div>
     </div>
   );

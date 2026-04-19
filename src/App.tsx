@@ -42,6 +42,7 @@ import { ItemCreation } from './components/ItemCreation';
 import { ItemMaster } from './components/ItemMaster';
 import { Daybook } from './components/Daybook';
 import { StockSummary } from './components/StockSummary';
+import { LocationStockReport } from './components/LocationStockReport';
 import { StockItemReport } from './components/StockItemReport';
 import { BalanceSheet } from './components/BalanceSheet';
 import { ProfitAndLoss } from './components/ProfitAndLoss';
@@ -533,6 +534,21 @@ function Layout({ children }: { children: React.ReactNode }) {
   const renderMacOSMenu = () => (
     <div className="bg-background/80 backdrop-blur-md border-b border-border h-10 px-4 flex items-center justify-between hidden lg:flex fixed top-0 left-0 right-0 z-[60]">
       <div className="flex items-center gap-6">
+        {location.pathname !== '/dashboard' && (
+          <button 
+            onClick={() => {
+              if (window.history.length > 2) {
+                navigate(-1);
+              } else {
+                navigate('/dashboard');
+              }
+            }}
+            className="p-1 hover:bg-foreground/5 rounded-full transition-colors group flex items-center gap-1"
+            title={t('common.back')}
+          >
+            <LucideIcons.ArrowLeft className="w-4 h-4 text-gray-500 group-hover:text-foreground" />
+          </button>
+        )}
         <div className="flex items-center gap-2 mr-4">
           <div className="w-5 h-5 rounded-full flex items-center justify-center overflow-hidden">
             {companyLogo || systemLogo ? (
@@ -979,14 +995,21 @@ function Layout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
 
-              {/* Mobile Navigation / Menu Toggle */}
+              {/* Navigation / Menu Toggle */}
               {location.pathname !== '/dashboard' ? (
-                <div className="flex items-center gap-1 lg:hidden">
+                <div className="flex items-center gap-1">
                   <button 
-                    onClick={() => navigate(-1)}
-                    className="p-2 hover:bg-foreground/5 rounded-full transition-colors"
+                    onClick={() => {
+                      if (window.history.length > 2) {
+                        navigate(-1);
+                      } else {
+                        navigate('/dashboard');
+                      }
+                    }}
+                    className="p-2 hover:bg-foreground/5 rounded-full transition-colors group flex items-center gap-1"
+                    title={t('common.back')}
                   >
-                    <ChevronLeft className={cn("w-5 h-5", uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground")} />
+                    <LucideIcons.ArrowLeft className={cn("w-5 h-5", uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground")} />
                   </button>
                 </div>
               ) : (
@@ -1393,6 +1416,7 @@ function ProtectedRoute() {
           <Route path="/reports" element={<ReportsMenu />} />
           <Route path="/reports/account-books" element={<ReportPlaceholder title="Account Books" />} />
           <Route path="/reports/inventory-books" element={<InventoryBooks />} />
+          <Route path="/reports/location" element={<LocationStockReport />} />
           <Route path="/reports/stock-group-summary" element={<StockGroupSummary />} />
           <Route path="/reports/stock-category-summary" element={<StockCategorySummary />} />
           <Route path="/reports/stock-transfer-register" element={<RegisterReport type="Stock Transfer" title="Stock Transfer Register" />} />
@@ -1453,7 +1477,23 @@ function ProtectedRoute() {
           <Route path="/users" element={<UserManagement />} />
           <Route path="/founder" element={<FounderPanel />} />
           <Route path="/notifications" element={<NotificationPage />} />
-          <Route path="*" element={<div className="p-10 text-foreground font-mono">404 - Feature Not Implemented</div>} />
+          <Route path="*" element={
+            <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
+              <div className="w-24 h-24 bg-rose-500/10 rounded-3xl flex items-center justify-center mb-8">
+                <AlertCircle className="w-12 h-12 text-rose-500" />
+              </div>
+              <h1 className="text-4xl font-black text-foreground uppercase tracking-tighter mb-4">404 - Not Found</h1>
+              <p className="text-muted-foreground max-w-md mb-8 italic">
+                Path: <code className="bg-muted px-2 py-1 rounded">{window.location.pathname}</code>
+              </p>
+              <button 
+                onClick={() => window.location.href = '/'}
+                className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
+              >
+                Back to Home
+              </button>
+            </div>
+          } />
         </Routes>
       </ErrorBoundary>
     </Layout>

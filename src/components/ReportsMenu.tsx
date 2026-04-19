@@ -121,9 +121,6 @@ export const ReportsMenu: React.FC = () => {
     <div className="p-4 lg:p-6 bg-background min-h-screen transition-colors">
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to="/dashboard" className="p-2 hover:bg-foreground/5 rounded-full transition-colors text-foreground">
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
           <EditableHeader 
             pageId="reports_menu"
             defaultTitle={t('nav.reports')}

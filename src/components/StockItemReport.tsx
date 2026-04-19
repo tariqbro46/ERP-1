@@ -12,7 +12,13 @@ export function StockItemReport() {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
+
+  const filteredItems = items.filter(i => 
+    i.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (i.part_no || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
   const [monthlySummary, setMonthlySummary] = useState<any[]>([]);
 
   useEffect(() => {
@@ -90,8 +96,8 @@ export function StockItemReport() {
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Stock Item Monthly Summary</h1>
-          <p className="text-gray-500">Month-wise inward and outward movements</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('stockItem.title')}</h1>
+          <p className="text-gray-500">{t('stockItem.subtitle')}</p>
         </div>
       </div>
 
@@ -103,13 +109,15 @@ export function StockItemReport() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input 
                   type="text"
-                  placeholder="Filter items..."
+                  placeholder={t('stockItem.filterPlaceholder')}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
             <div className="flex-1 overflow-y-auto divide-y divide-gray-100 font-medium">
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => handleItemSelect(item)}
@@ -134,23 +142,23 @@ export function StockItemReport() {
                   <span className="font-bold text-gray-900 capitalize">{selectedItem.name}</span>
                 </div>
                 <div className="text-sm text-gray-500">
-                  Current Stock: <span className="font-bold text-primary">{selectedItem.current_stock} {selectedItem.unit}</span>
+                  {t('stockItem.currentStock')} <span className="font-bold text-primary">{selectedItem.current_stock} {selectedItem.unit}</span>
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500">
-                      <th rowSpan={2} className="px-6 py-4 border-r border-gray-100">Month</th>
-                      <th colSpan={2} className="px-6 py-2 text-center border-b border-gray-100 bg-green-50 text-green-700">Inward</th>
-                      <th colSpan={2} className="px-6 py-2 text-center border-b border-gray-100 bg-red-50 text-red-700">Outward</th>
-                      <th rowSpan={2} className="px-6 py-4 text-right">Net Qty</th>
+                      <th rowSpan={2} className="px-6 py-4 border-r border-gray-100">{t('stockItem.month')}</th>
+                      <th colSpan={2} className="px-6 py-2 text-center border-b border-gray-100 bg-green-50 text-green-700">{t('stockItem.inward')}</th>
+                      <th colSpan={2} className="px-6 py-2 text-center border-b border-gray-100 bg-red-50 text-red-700">{t('stockItem.outward')}</th>
+                      <th rowSpan={2} className="px-6 py-4 text-right">{t('stockItem.netQty')}</th>
                     </tr>
                     <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500">
-                      <th className="px-6 py-3 text-right">Quantity</th>
-                      <th className="px-6 py-3 text-right border-r border-gray-100">Value</th>
-                      <th className="px-6 py-3 text-right">Quantity</th>
-                      <th className="px-6 py-3 text-right">Value</th>
+                      <th className="px-6 py-3 text-right">{t('stockItem.qty')}</th>
+                      <th className="px-6 py-3 text-right border-r border-gray-100">{t('stockItem.val')}</th>
+                      <th className="px-6 py-3 text-right">{t('stockItem.qty')}</th>
+                      <th className="px-6 py-3 text-right">{t('stockItem.val')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -180,7 +188,7 @@ export function StockItemReport() {
                   </tbody>
                   <tfoot className="bg-gray-50 font-bold border-t border-gray-200">
                     <tr>
-                      <td className="px-6 py-4 border-r border-gray-100 uppercase text-[10px]">Total</td>
+                      <td className="px-6 py-4 border-r border-gray-100 uppercase text-[10px]">{t('common.total')}</td>
                       <td className="px-6 py-4 text-right">
                         {monthlySummary.reduce((sum, m) => sum + m.inwardQty, 0)} {selectedItem.unit}
                       </td>
@@ -203,7 +211,7 @@ export function StockItemReport() {
             </div>
           ) : (
              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500 italic">
-              Select an item to view monthly summary
+              {t('stockItem.selectPrompt')}
             </div>
           )}
         </div>

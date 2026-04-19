@@ -198,12 +198,6 @@ export function ProfitAndLoss() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex-1 w-full sm:max-w-md space-y-4">
             <div className="flex items-center gap-4">
-              <button 
-                onClick={() => navigate(-1)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <ArrowLeft className="w-6 h-6" />
-              </button>
               <EditableHeader 
                 pageId="profit_loss"
                 defaultTitle={t('reports.profitAndLoss')}

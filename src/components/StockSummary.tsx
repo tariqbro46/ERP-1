@@ -8,15 +8,17 @@ import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { ReportPrintHeader, ReportPrintFooter } from './ReportPrintHeader';
 
 export function StockSummary() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const settings = useSettings();
+  const location = window.history.state?.usr; // Simple way to get state if useLocation isn't available
   const { showNotification } = useNotification();
   const [items, setItems] = useState<any[]>([]);
   const [godowns, setGodowns] = useState<any[]>([]);
-  const [selectedGodown, setSelectedGodown] = useState<string>('');
+  const [selectedGodown, setSelectedGodown] = useState<string>(location?.godownId || '');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -159,6 +161,20 @@ export function StockSummary() {
   const now = new Date();
   const asOnDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 
+  const highlightText = (text: string, query: string) => {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return (
+      <>
+        {parts.map((part, i) => 
+          part.toLowerCase() === query.toLowerCase() 
+            ? <mark key={i} className="bg-amber-200 text-amber-900 border-b border-amber-500 rounded-sm px-0.5">{part}</mark> 
+            : part
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
       <div className="space-y-6">
@@ -274,7 +290,9 @@ export function StockSummary() {
         </div>
 
         {/* Table/Cards */}
-        <div className="bg-card border border-border overflow-hidden">
+        <div id="stock-summary-report" className="bg-card border border-border overflow-hidden p-0 print:p-8 print:border-none print:shadow-none bg-white">
+          <ReportPrintHeader title="Stock Summary" subtitle={selectedGodown ? `Location: ${godowns.find(g => g.id === selectedGodown)?.name}` : 'All Locations'} />
+          
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
             {filteredGroups.map(groupName => {
@@ -285,13 +303,13 @@ export function StockSummary() {
 
               return (
                 <div key={groupName} className="flex flex-col">
-                  <div 
-                    onClick={() => toggleGroup(groupName)}
-                    className="p-4 bg-foreground/5 flex justify-between items-center cursor-pointer"
+            <div className="p-4 bg-foreground/5 flex justify-between items-center cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
                       {isExpanded ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
-                      <span className="text-xs font-bold text-foreground uppercase tracking-tight">{groupName}</span>
+                      <span className="text-xs font-bold text-foreground uppercase tracking-tight">
+                        {highlightText(groupName, search)}
+                      </span>
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-gray-500 uppercase">{t('common.totalValue')}</p>
@@ -301,7 +319,9 @@ export function StockSummary() {
                   {isExpanded && groupItems.map(item => (
                     <div key={item.id} className="p-4 pl-8 border-t border-border/30 space-y-2">
                       <div className="flex justify-between items-start">
-                        <span className="text-xs text-foreground/80 italic">{item.name}</span>
+                        <span className="text-xs text-foreground/80 italic">
+                          {highlightText(item.name, search)}
+                        </span>
                         <span className="text-xs font-bold text-foreground font-mono">{item.displayStock} {item.units?.name}</span>
                       </div>
                       <div className="flex justify-between items-center text-[10px] text-gray-500 uppercase">
@@ -352,7 +372,9 @@ export function StockSummary() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             {isExpanded ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
-                            <span className="text-foreground font-bold uppercase tracking-tight">{groupName}</span>
+                            <span className="text-foreground font-bold uppercase tracking-tight">
+                              {highlightText(groupName, search)}
+                            </span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right text-foreground font-mono font-bold">
@@ -368,7 +390,7 @@ export function StockSummary() {
                       {isExpanded && groupItems.map(item => (
                         <tr key={item.id} className={cn("bg-foreground/[0.02] hover:bg-foreground/5 transition-colors", item.isLowStock && "bg-rose-500/5")}>
                           <td className="px-12 py-3 text-foreground/60 italic flex items-center gap-2">
-                            {item.name}
+                            {highlightText(item.name, search)}
                             {item.isLowStock && (
                               <span className="px-1.5 py-0.5 bg-rose-500 text-white text-[8px] font-bold uppercase rounded flex items-center gap-1">
                                 <AlertTriangle className="w-2 h-2" /> {t('stock.lowStock')}
@@ -411,6 +433,7 @@ export function StockSummary() {
               </tfoot>
             </table>
           </div>
+          <ReportPrintFooter />
         </div>
 
         {/* Stock Valuation Method Note */}

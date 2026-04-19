@@ -89,12 +89,6 @@ export function VoucherDetail() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border pb-6">
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-foreground/5 rounded-full transition-colors"
-            >
-              <ArrowLeft className="w-6 h-6 text-foreground" />
-            </button>
             <EditableHeader 
               pageId="voucher_detail"
               defaultTitle={`${voucher.v_type} Voucher`}

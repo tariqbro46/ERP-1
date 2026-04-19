@@ -7,6 +7,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { formatCurrency } from '../lib/utils';
 import { cn } from '../lib/utils';
 import { EditableHeader } from './EditableHeader';
+import { ReportPrintHeader, ReportPrintFooter } from './ReportPrintHeader';
 import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
 
@@ -212,7 +213,9 @@ export function GroupVoucher() {
             </div>
           </div>
 
-          <div id="group-voucher-report" className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+          <div id="group-voucher-report" className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm p-0 print:p-8 print:border-none print:shadow-none">
+            <ReportPrintHeader title="Group Voucher" subtitle={`${groups.find(g => g.id === selectedGroup)?.name} (From ${new Date(dateRange.from).toLocaleDateString()} to ${new Date(dateRange.to).toLocaleDateString()})`} />
+            
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -271,6 +274,8 @@ export function GroupVoucher() {
                 )}
               </table>
             </div>
+
+            <ReportPrintFooter />
           </div>
         </div>
       </div>

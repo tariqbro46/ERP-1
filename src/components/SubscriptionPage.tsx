@@ -215,7 +215,9 @@ export function SubscriptionPage() {
                 company?.subscriptionStatus === 'trial' ? "bg-amber-500/10 text-amber-500" :
                 "bg-rose-500/10 text-rose-500"
               )}>
-                {company?.subscriptionStatus || 'Inactive'}
+                {company?.subscriptionStatus === 'active' ? t('subscription.active') :
+                 company?.subscriptionStatus === 'trial' ? t('subscription.trial') :
+                 t('subscription.inactive')}
               </span>
             </div>
             
@@ -225,32 +227,36 @@ export function SubscriptionPage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-3xl font-black text-foreground uppercase tracking-tighter">
-                        {activePlan?.name || 'Free Plan'}
+                        {activePlan?.name || t('subscription.freePlan')}
                       </h3>
                       {activePlan && getTierIcon(activePlan.tier)}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {activePlan?.description || 'Basic access to essential ERP features.'}
+                      {activePlan?.description || t('subscription.freePlanDesc')}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
                     <div className="space-y-1">
                       <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{t('subscription.planType')}</p>
-                      <p className="text-sm font-bold text-foreground uppercase">{company?.planType || 'Free'}</p>
+                      <p className="text-sm font-bold text-foreground uppercase">
+                        {company?.planType === 'yearly' ? t('subscription.yearly') :
+                         company?.planType === 'monthly' ? t('subscription.monthly') :
+                         t('subscription.freePlan')}
+                      </p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{t('subscription.expiryDate')}</p>
                       <div className="flex items-center gap-2 text-sm font-bold text-foreground">
                         <Calendar className="w-4 h-4 text-primary" />
-                        {company?.expiryDate ? safeFormat(company.expiryDate, 'dd MMM yyyy') : 'No Expiry'}
+                        {company?.expiryDate ? safeFormat(company.expiryDate, 'dd MMM yyyy') : t('subscription.noExpiry')}
                       </div>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{t('subscription.price')}</p>
                       <p className="text-sm font-bold text-foreground">
                         {company?.planType === 'yearly' ? activePlan?.priceYearly : activePlan?.priceMonthly || 0} ৳
-                        <span className="text-[10px] text-muted-foreground font-normal ml-1">/{company?.planType === 'yearly' ? 'yr' : 'mo'}</span>
+                        <span className="text-[10px] text-muted-foreground font-normal ml-1">/{company?.planType === 'yearly' ? t('subscription.yearly').slice(0,2) : t('subscription.monthly').slice(0,2)}</span>
                       </p>
                     </div>
                   </div>
@@ -273,7 +279,7 @@ export function SubscriptionPage() {
                           <span key={fId} className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 border border-primary/20">
                             <Plus className="w-3.5 h-3.5" />
                             {feature?.label || fId}
-                            <span className="text-[8px] opacity-70">(Extra)</span>
+                            <span className="text-[8px] opacity-70">({t('subscription.extra')})</span>
                           </span>
                         );
                       })}
@@ -299,25 +305,25 @@ export function SubscriptionPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-muted/30">
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Order ID</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Plan</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Amount</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Date</th>
-                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Actions</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t('subscription.orderId')}</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t('subscription.plan')}</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t('subscription.amount')}</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t('subscription.status')}</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t('subscription.date')}</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t('subscription.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {loading ? (
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center text-sm text-muted-foreground italic">
-                        Loading orders...
+                        {t('subscription.loadingOrders')}
                       </td>
                     </tr>
                   ) : orders.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-6 py-12 text-center text-sm text-muted-foreground italic">
-                        No subscription orders found.
+                        {t('subscription.noOrders')}
                       </td>
                     </tr>
                   ) : (
@@ -353,7 +359,7 @@ export function SubscriptionPage() {
                             <button
                               onClick={() => handleDeleteOrder(order.id)}
                               className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
-                              title="Cancel Request"
+                              title={t('subscription.cancelRequest')}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -413,7 +419,7 @@ export function SubscriptionPage() {
                         "text-[9px] font-black tracking-widest",
                         isOverLimit ? "text-rose-500" : isNearLimit ? "text-amber-500" : "text-emerald-500"
                       )}>
-                        {limitVal === -1 ? 'UNLIMITED' : `${Math.round(percentage)}%`}
+                        {limitVal === -1 ? t('subscription.unlimited') : `${Math.round(percentage)}%`}
                       </span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -436,7 +442,7 @@ export function SubscriptionPage() {
               <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                 <p className="text-[9px] text-amber-600 font-medium leading-tight">
-                  You are currently on a trial plan. Upgrade to remove limits and unlock more features.
+                  {t('subscription.trialAlert')}
                 </p>
               </div>
             )}
@@ -452,10 +458,10 @@ export function SubscriptionPage() {
             </p>
             <div className="space-y-2">
               <button className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-                Contact Support
+                {t('subscription.contactSupport')}
               </button>
               <button className="w-full py-2.5 border border-primary/20 text-primary rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-primary/5 transition-all">
-                View Documentation
+                {t('subscription.viewDocumentation')}
               </button>
             </div>
           </div>
@@ -493,8 +499,8 @@ export function SubscriptionPage() {
                     <ArrowUpCircle className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-foreground">Upgrade Your Experience</h2>
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Choose the perfect plan for your growing business</p>
+                    <h2 className="text-xl font-bold text-foreground">{t('subscription.upgradeExperience')}</h2>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{t('subscription.choosePerfectPlan')}</p>
                   </div>
                 </div>
                 <button 
@@ -516,7 +522,7 @@ export function SubscriptionPage() {
                         billingCycle === 'monthly' ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      Monthly
+                      {t('subscription.monthly')}
                     </button>
                     <button
                       onClick={() => setBillingCycle('yearly')}
@@ -525,9 +531,9 @@ export function SubscriptionPage() {
                         billingCycle === 'yearly' ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                       )}
                     >
-                      Yearly
+                      {t('subscription.yearly')}
                       <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[7px] px-1.5 py-0.5 rounded-full font-black animate-bounce">
-                        SAVE 20%
+                        {t('subscription.savePercentage', { percent: 20 })}
                       </span>
                     </button>
                   </div>
@@ -553,12 +559,12 @@ export function SubscriptionPage() {
                       >
                         {plan.tier === 3 && (
                           <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">
-                            Most Popular
+                            {t('subscription.mostPopular')}
                           </div>
                         )}
                         {isCurrent && (
                           <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">
-                            Current Plan
+                            {t('subscription.currentPlan')}
                           </div>
                         )}
 
@@ -575,17 +581,17 @@ export function SubscriptionPage() {
                             <span className="text-3xl font-black text-foreground">
                               {billingCycle === 'monthly' ? plan.priceMonthly : plan.priceYearly} ৳
                             </span>
-                            <span className="text-[10px] text-muted-foreground font-bold uppercase">/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+                            <span className="text-[10px] text-muted-foreground font-bold uppercase">/{billingCycle === 'monthly' ? t('subscription.monthly').slice(0,2) : t('subscription.yearly').slice(0,2)}</span>
                           </div>
                           {billingCycle === 'yearly' && plan.priceMonthly > 0 && (
                             <p className="text-[9px] text-emerald-500 font-bold mt-1">
-                              Equivalent to {(plan.priceYearly / 12).toFixed(0)} ৳/mo
+                              {t('subscription.equivMo', { amount: (plan.priceYearly / 12).toFixed(0) })}
                             </p>
                           )}
                         </div>
 
                         <div className="flex-1 space-y-4 mb-8">
-                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border pb-2">What's included:</p>
+                          <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border pb-2">{t('subscription.whatsIncluded')}</p>
                           <ul className="space-y-3">
                             {plan.features.slice(0, 6).map(fId => {
                               const feature = AVAILABLE_FEATURES.find(af => af.id === fId);
@@ -598,7 +604,7 @@ export function SubscriptionPage() {
                             })}
                             {plan.features.length > 6 && (
                               <li className="text-[9px] text-primary font-bold uppercase tracking-widest pl-5">
-                                + {plan.features.length - 6} more features
+                                {t('subscription.moreFeatures', { count: plan.features.length - 6 })}
                               </li>
                             )}
                           </ul>
@@ -612,7 +618,7 @@ export function SubscriptionPage() {
                             isLowerTier ? "bg-muted text-muted-foreground" :
                             "bg-muted text-foreground hover:bg-foreground/5"
                           )}>
-                            {isCurrent ? 'Current Plan' : isLowerTier ? 'Lower Tier' : isSelected ? 'Selected' : 'Select Plan'}
+                            {isCurrent ? t('subscription.currentPlan') : isLowerTier ? t('subscription.lowerTier') : isSelected ? t('subscription.selected') : t('subscription.selectPlan')}
                           </div>
                         </div>
                       </div>
@@ -633,15 +639,15 @@ export function SubscriptionPage() {
                       </div>
                       <div>
                         <h4 className="text-xl font-black text-foreground uppercase tracking-tighter">
-                          Upgrade to {selectedPlan.name}
+                          {t('subscription.upgradeTo', { plan: selectedPlan.name })}
                         </h4>
                         <p className="text-xs text-muted-foreground">
-                          You are requesting an upgrade to the {selectedPlan.name} plan billed {billingCycle}.
+                          {t('subscription.upgradeRequestDesc', { plan: selectedPlan.name, cycle: billingCycle })}
                         </p>
                       </div>
                     </div>
                     <div className="text-right space-y-2">
-                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Total Amount Due</p>
+                      <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{t('subscription.totalAmountDue')}</p>
                       <p className="text-3xl font-black text-primary">
                         {billingCycle === 'monthly' ? selectedPlan.priceMonthly : selectedPlan.priceYearly} ৳
                       </p>
@@ -654,7 +660,7 @@ export function SubscriptionPage() {
                 <div className="flex items-center gap-3 text-muted-foreground">
                   <AlertCircle className="w-5 h-5" />
                   <p className="text-[10px] font-medium leading-relaxed max-w-md">
-                    By clicking "Submit Request", you agree to our terms of service. Our team will contact you for payment details to activate your new plan.
+                    {t('subscription.termsNotice')}
                   </p>
                 </div>
                 <div className="flex gap-4 w-full sm:w-auto">
@@ -662,7 +668,7 @@ export function SubscriptionPage() {
                     onClick={() => setIsUpgradeModalOpen(false)}
                     className="flex-1 sm:flex-none px-8 py-4 border border-border rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-card transition-all"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     disabled={!selectedPlan || isSubmitting}
@@ -679,7 +685,7 @@ export function SubscriptionPage() {
                     ) : (
                       <CheckCircle2 className="w-4 h-4" />
                     )}
-                    Submit Request
+                    {t('subscription.submitRequest')}
                   </button>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import * as LucideIcons from 'lucide-react';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
@@ -11,6 +11,7 @@ import { EditableHeader } from './EditableHeader';
 
 export const GroupDashboard: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const { isSuperAdmin } = useAuth();
   const [menuConfig, setMenuConfig] = React.useState<MenuConfig | null>(null);
@@ -49,7 +50,13 @@ export const GroupDashboard: React.FC = () => {
 
   return (
     <div className="p-6">
-      <div className="mb-8">
+      <div className="mb-8 flex items-center gap-4">
+        <button 
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-foreground/5 rounded-full transition-colors group lg:hidden"
+        >
+          <ArrowLeft className="w-6 h-6 text-foreground group-hover:text-primary transition-colors" />
+        </button>
         <EditableHeader 
           pageId={`group_${groupId}`}
           defaultTitle={group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey) : group.group}

@@ -17,45 +17,52 @@ export function InventoryBooks() {
   const navigate = useNavigate();
 
   const menuItems = [
+    {
+      id: 'location',
+      title: t('nav.location'),
+      description: t('invBooks.locationDesc'),
+      icon: Layers,
+      path: '/reports/location'
+    },
     { 
       id: 'stock-summary',
-      title: 'Stock Summary',
-      description: 'Overview of all stock items with current quantity and value',
+      title: t('nav.stock'),
+      description: t('invBooks.stockSummaryDesc'),
       icon: Package,
       path: '/reports/stock'
     },
     {
       id: 'stock-item',
-      title: 'Stock Item',
-      description: 'Monthly summary of transactions for a specific item',
+      title: t('nav.stockItem'),
+      description: t('invBooks.stockItemDesc'),
       icon: FileText,
       path: '/reports/stock-item'
     },
     {
       id: 'stock-group',
-      title: 'Stock Group Summary',
-      description: 'Stock status grouped by categories',
+      title: t('nav.stockGroupSummary'),
+      description: t('invBooks.stockGroupDesc'),
       icon: Layers,
       path: '/reports/stock-group-summary'
     },
     {
       id: 'stock-category',
-      title: 'Stock Category Summary',
-      description: 'Analysis of stock by defined categories',
+      title: t('nav.stockCategorySummary'),
+      description: t('invBooks.stockCategoryDesc'),
       icon: Tag,
       path: '/reports/stock-category-summary'
     },
     {
       id: 'stock-transfer',
-      title: 'Stock Transfer Register',
-      description: 'Record of internal stock transfers between godowns',
+      title: t('nav.stockTransferRegister'),
+      description: t('invBooks.stockTransferDesc'),
       icon: ArrowLeftRight,
       path: '/reports/stock-transfer-register'
     },
     {
       id: 'physical-stock',
-      title: 'Physical Stock Register',
-      description: 'History of physical stock adjustments and audits',
+      title: t('nav.physicalStockRegister'),
+      description: t('invBooks.physicalStockDesc'),
       icon: ClipboardCheck,
       path: '/reports/physical-stock-register'
     }
@@ -64,15 +71,9 @@ export function InventoryBooks() {
   return (
     <div className="p-6">
       <div className="flex items-center gap-4 mb-8">
-        <button 
-          onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inventory Books</h1>
-          <p className="text-gray-500">Dive deep into your stock records and movements</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('invBooks.title')}</h1>
+          <p className="text-gray-500">{t('invBooks.subtitle')}</p>
         </div>
       </div>
 
@@ -89,7 +90,7 @@ export function InventoryBooks() {
             <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
             <p className="text-gray-500 text-sm">{item.description}</p>
             <div className="mt-6 flex items-center text-sm font-semibold text-primary group-hover:gap-2 transition-all">
-              View Report
+              {t('invBooks.viewReport')}
               <ChevronRight className="w-4 h-4" />
             </div>
           </button>

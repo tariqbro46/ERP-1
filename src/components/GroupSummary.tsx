@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { formatCurrency, cn } from '../lib/utils';
 import { EditableHeader } from './EditableHeader';
+import { ReportPrintHeader, ReportPrintFooter } from './ReportPrintHeader';
 import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
 
@@ -148,7 +149,9 @@ export function GroupSummary() {
             </div>
           </div>
 
-          <div id="group-summary-report" className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+          <div id="group-summary-report" className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm p-0 print:p-8 print:border-none print:shadow-none">
+            <ReportPrintHeader title="Group Summary" subtitle={groups.find(g => g.id === selectedGroup)?.name} />
+            
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -200,6 +203,8 @@ export function GroupSummary() {
                 )}
               </table>
             </div>
+
+            <ReportPrintFooter />
           </div>
         </div>
       </div>
