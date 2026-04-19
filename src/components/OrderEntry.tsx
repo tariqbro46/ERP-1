@@ -231,28 +231,8 @@ export default function OrderEntry() {
           companyId: user.companyId
         } as any);
         showNotification('Order created successfully');
-        // Reset form for next entry
-        setFormData({
-          clientId: '',
-          clientName: '',
-          orderType: 'Production',
-          receivedBy: '',
-          items: [{
-            itemId: '',
-            itemName: '',
-            quantity: 0,
-            price: 0,
-            printDesign: '',
-            printType: 'Analog',
-            isDoubleSided: false
-          }],
-          deliveryDate: format(new Date(), 'yyyy-MM-dd'),
-          deliveryTime: '12:00',
-          deliveryLocation: '',
-          notes: '',
-          status: 'Pending'
-        });
       }
+      navigate(-1);
     } catch (err) {
       console.error('Error saving order:', err);
       showNotification('Failed to save order', 'error');

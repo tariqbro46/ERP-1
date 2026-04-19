@@ -86,17 +86,13 @@ export function GodownMaster() {
         });
       }
       showNotification(editingGodown ? t('godown.updateSuccess') : t('godown.saveSuccess'));
-      
-      if (editingGodown) {
-        setIsModalOpen(false);
-        setEditingGodown(null);
-      }
-      
+      setIsModalOpen(false);
       setName('');
       setLocation('');
       setContactPerson('');
       setPhoneNumber('');
       setDescription('');
+      setEditingGodown(null);
       fetchGodowns();
     } catch (err: any) {
       console.error('Error saving godown:', err);

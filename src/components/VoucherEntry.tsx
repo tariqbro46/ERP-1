@@ -671,9 +671,8 @@ export function VoucherEntry() {
           })) : []
         );
         showNotification(notifications.voucherSaved);
-        handleClearVoucher();
-        fetchNextNo();
       }
+      navigate(-1);
     } catch (err) {
       console.error('Error saving voucher:', err);
       showNotification('Failed to save voucher');
