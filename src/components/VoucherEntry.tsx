@@ -671,8 +671,9 @@ export function VoucherEntry() {
           })) : []
         );
         showNotification(notifications.voucherSaved);
+        handleClearVoucher();
+        fetchNextNo();
       }
-      navigate('/reports/daybook');
     } catch (err) {
       console.error('Error saving voucher:', err);
       showNotification('Failed to save voucher');

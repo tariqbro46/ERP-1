@@ -83,7 +83,9 @@ export function EmployeeMaster() {
         await erpService.createEmployee(user!.companyId, formData);
       }
       showNotification(editingEmployee ? t('employee.updateSuccess') : t('employee.createSuccess'));
-      setIsModalOpen(false);
+      if (editingEmployee) {
+        setIsModalOpen(false);
+      }
       resetForm();
       fetchEmployees();
     } catch (err: any) {

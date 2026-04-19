@@ -65,7 +65,11 @@ export function UnitMaster() {
       }
       
       showNotification(editingUnit ? 'Unit updated successfully' : 'Unit saved successfully');
-      setIsModalOpen(false);
+      
+      if (editingUnit) {
+        setIsModalOpen(false);
+      }
+      
       resetForm();
       fetchUnits();
     } catch (err: any) {

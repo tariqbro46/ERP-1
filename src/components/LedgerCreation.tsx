@@ -184,8 +184,35 @@ export function LedgerCreation() {
       } else {
         await erpService.createLedger(user!.companyId, { ...cleanData, opening_balance: finalOpeningBalance });
         showNotification(notifications.ledgerCreated);
+        // Reset form for next entry
+        setFormData({
+          name: '',
+          alias: '',
+          group_id: groups.length > 0 ? groups.find(g => g.name === 'Sundry Debtors')?.id || groups[0].id : '',
+          opening_balance: 0,
+          opening_balance_type: 'Dr',
+          mailing_name: '',
+          address: '',
+          division: '',
+          country: 'Bangladesh',
+          postal_code: '',
+          primary_mobile: '',
+          email: '',
+          website: '',
+          provide_contact_details: false,
+          contact_name: '',
+          contact_phone: '',
+          contact_email: '',
+          provide_bank_details: false,
+          bank_transaction_type: 'Cheque',
+          bank_account_no: '',
+          bank_code: '',
+          bank_name: '',
+          is_bill_wise: false,
+          vat_no: '',
+          credit_limit: 0,
+        });
       }
-      navigate('/accounts');
     } catch (err: any) {
       console.error('Error saving ledger:', err);
       alert(err.message || 'Failed to save ledger. Please check your connection.');

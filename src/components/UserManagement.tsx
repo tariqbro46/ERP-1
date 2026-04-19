@@ -90,7 +90,7 @@ export const UserManagement: React.FC = () => {
         ...newUser,
         companyId: user!.companyId
       });
-      setShowAddModal(false);
+      // Keeping modal open as per user request to stay on creation page
       setNewUser({ email: '', password: '', displayName: '', role: 'Staff', target_amount: 0 });
       fetchProfiles();
     } catch (err: any) {
