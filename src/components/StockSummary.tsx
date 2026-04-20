@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Package, Search, Printer, Download, ChevronDown, ChevronRight, Loader2, Filter, MapPin, Activity, AlertTriangle, X } from 'lucide-react';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
+import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
@@ -10,13 +11,14 @@ import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ReportPrintHeader, ReportPrintFooter } from './ReportPrintHeader';
+import * as printUtils from '../utils/printUtils';
 
 export function StockSummary() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const settings = useSettings();
   const location = useLocation();
-  const locationState = location.state;
+  const locationState = location.state as { godownId?: string; categoryId?: string } | null;
   const { showNotification } = useNotification();
   const [items, setItems] = useState<any[]>([]);
   const [godowns, setGodowns] = useState<any[]>([]);
@@ -173,7 +175,7 @@ export function StockSummary() {
   }
 
   const now = new Date();
-  const asOnDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const asOnDate = formatReportDate(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0], settings.dateFormat);
 
   const highlightText = (text: string, query: string) => {
     if (!query) return text;
@@ -217,7 +219,7 @@ export function StockSummary() {
             </div>
             <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
               <button 
-                onClick={() => window.print()}
+                onClick={() => printUtils.printElement('stock-summary-report', `Stock Summary`, settings)}
                 className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
               >
                 <Printer className="w-4 h-4" />
@@ -313,7 +315,13 @@ export function StockSummary() {
 
         {/* Table/Cards */}
         <div id="stock-summary-report" className="bg-card border border-border overflow-hidden p-0 print:p-8 print:border-none print:shadow-none bg-white">
-          <ReportPrintHeader title="Stock Summary" subtitle={selectedGodown ? `Location: ${godowns.find(g => g.id === selectedGodown)?.name}` : 'All Locations'} />
+          <ReportPrintHeader 
+            title="Stock Summary" 
+            subtitle={cn(
+              selectedGodown ? `Location: ${godowns.find(g => g.id === selectedGodown)?.name}` : 'All Locations',
+              selectedCategory ? ` | Category: ${activeCategoryName}` : ''
+            )} 
+          />
           
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">

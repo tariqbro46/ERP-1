@@ -5,7 +5,8 @@ import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, cn } from '../lib/utils';
+import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
 import { EditableHeader } from './EditableHeader';
@@ -147,7 +148,7 @@ export function VoucherDetail() {
                   </div>
                   <div className="flex justify-between gap-4">
                     <span className="uppercase tracking-widest">Date:</span>
-                    <span className="font-bold text-foreground">{new Date(voucher.v_date).toLocaleDateString()}</span>
+                    <span className="font-bold text-foreground">{formatReportDate(voucher.v_date, settings.dateFormat)}</span>
                   </div>
                 </div>
               </div>

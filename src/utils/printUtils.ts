@@ -19,10 +19,52 @@ const getSignatureHtml = (settings: any) => {
   `;
 };
 
+const executePrint = (html: string) => {
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document || iframe.contentDocument;
+  if (!doc) return;
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  const doPrint = () => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(() => {
+      if (document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+    }, 1000);
+  };
+
+  const images = doc.getElementsByTagName('img');
+  if (images.length > 0) {
+    let loaded = 0;
+    Array.from(images).forEach(img => {
+      img.onload = img.onerror = () => {
+        loaded++;
+        if (loaded === images.length) doPrint();
+      };
+    });
+    setTimeout(doPrint, 3000);
+  } else {
+    setTimeout(doPrint, 500);
+  }
+};
+
 const getHeaderHtml = (settings: any, title: string, subtitle?: string) => {
   const logoHtml = settings.companyLogo ? `
     <div class="logo-container" style="width: 80px; height: 80px; margin-right: 20px; flex-shrink: 0;">
-      <img src="${settings.companyLogo}" style="width: 100%; height: 100%; object-contain: contain;" referrerPolicy="no-referrer" />
+      <img src="${settings.companyLogo}" style="width: 100%; height: 100%; object-fit: contain;" referrerPolicy="no-referrer" />
     </div>
   ` : '';
 
@@ -166,9 +208,6 @@ export function printVoucher(voucher: any, settings: any = {}) {
 }
 
 export function printProfitAndLoss(data: any, settings: any = {}) {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
-
   const html = `
     <html>
       <head>
@@ -235,24 +274,14 @@ export function printProfitAndLoss(data: any, settings: any = {}) {
             </div>
           ` : ''}
         </div>
- 
-        <script>
-          window.onload = () => {
-            window.print();
-          };
-        </script>
       </body>
     </html>
   `;
 
-  printWindow.document.write(html);
-  printWindow.document.close();
+  executePrint(html);
 }
 
 export function printBalanceSheet(data: any, settings: any = {}) {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
-
   const html = `
     <html>
       <head>
@@ -307,24 +336,14 @@ export function printBalanceSheet(data: any, settings: any = {}) {
             </div>
           ` : ''}
         </div>
-        
-        <script>
-          window.onload = () => {
-            window.print();
-          };
-        </script>
       </body>
     </html>
   `;
 
-  printWindow.document.write(html);
-  printWindow.document.close();
+  executePrint(html);
 }
 
 export function printReport(title: string, data: any[], columns: string[], settings: any = {}) {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
-
   const html = `
     <html>
       <head>
@@ -380,61 +399,50 @@ export function printReport(title: string, data: any[], columns: string[], setti
             </div>
           ` : ''}
         </div>
-
-        <script>
-          window.onload = () => {
-            window.print();
-          };
-        </script>
       </body>
     </html>
   `;
 
-  printWindow.document.write(html);
-  printWindow.document.close();
+  executePrint(html);
 }
 
-export function printElement(elementId: string, title: string) {
+export function printElement(elementId: string, title: string, settings: any = {}) {
   const element = document.getElementById(elementId);
   if (!element) return;
-
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return;
 
   const html = `
     <html>
       <head>
         <title>${title}</title>
         <style>
-          body { font-family: 'Courier New', Courier, monospace; padding: 20px; color: #000; }
+          @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+          body { font-family: 'JetBrains Mono', Courier, monospace; padding: 20px; color: #000; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; font-size: 11px; }
-          th { background-color: #f2f2f2; font-size: 12px; }
+          th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; font-size: 10px; }
+          th { background-color: #f2f2f2; font-size: 11px; font-weight: bold; text-transform: uppercase; }
           .text-right { text-align: right; }
           .font-bold { font-weight: bold; }
           .uppercase { text-transform: uppercase; }
           .tracking-widest { letter-spacing: 0.1em; }
           .bg-gray-50 { background-color: #f9fafb; }
           .text-primary { color: #000; }
+          .no-scrollbar::-webkit-scrollbar { display: none; }
+          .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
           @media print {
             .no-print { display: none; }
+            @page { margin: 1cm; }
           }
         </style>
       </head>
       <body>
-        <h1 style="text-align: center; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 10px;">${title}</h1>
-        <div style="margin-bottom: 20px; text-align: right; font-size: 10px;">Date: ${new Date().toLocaleDateString()}</div>
+        ${getHeaderHtml(settings, title)}
         ${element.innerHTML}
+        ${getSignatureHtml(settings)}
       </body>
     </html>
   `;
 
-  printWindow.document.write(html);
-  printWindow.document.close();
-  printWindow.onload = () => {
-    printWindow.print();
-    printWindow.close();
-  };
+  executePrint(html);
 }
 
 export const printUtils = {

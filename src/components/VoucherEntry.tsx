@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, Printer, Loader2, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon, AlertCircle, Settings2 } from 'lucide-react';
+import { Plus, Trash2, Save, Printer, Loader2, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon, AlertCircle, Settings2, TrendingUp } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { SearchableSelect } from './SearchableSelect';
+import { DateInput } from './DateInput';
 import { QuickLedgerModal } from './QuickLedgerModal';
 import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
@@ -102,6 +103,24 @@ export function VoucherEntry() {
       setVType('Payment');
     }
   }, [isInventoryEnabled, vType]);
+  const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
+  const [itemStats, setItemStats] = useState<any>(null);
+
+  useEffect(() => {
+    async function fetchStats() {
+      if (focusedItemId && user?.companyId) {
+        try {
+          const stats = await erpService.getItemStats(focusedItemId, user.companyId);
+          setItemStats(stats);
+        } catch (err) {
+          console.error('Error fetching item stats:', err);
+        }
+      } else {
+        setItemStats(null);
+      }
+    }
+    fetchStats();
+  }, [focusedItemId, user?.companyId]);
   const [loading, setLoading] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [ledgers, setLedgers] = useState<any[]>([]);
@@ -826,13 +845,12 @@ export function VoucherEntry() {
               />
             </div>
             <div className="space-y-1 lg:space-y-2">
-              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.date')}</label>
-              <input 
-                type="date" 
+              <DateInput 
+                label={t('common.date')}
                 value={vDate || ''}
-                onChange={e => setVDate(e.target.value)}
+                onChange={setVDate}
                 tabIndex={3}
-                className="w-full bg-background border border-border text-foreground p-1.5 lg:p-2 text-xs lg:text-sm outline-none focus:border-foreground" 
+                className="w-full"
               />
             </div>
 
@@ -1106,7 +1124,9 @@ export function VoucherEntry() {
                               next[idx].unit = item?.unit_name || 'pcs';
                               setInvEntries(next);
                               fetchItemStock(val, entry.godown_id);
+                              setFocusedItemId(val);
                             }}
+                            onFocus={() => setFocusedItemId(entry.item_id)}
                             placeholder={t('voucher.selectItem')}
                             onQuickCreate={() => {
                               setPendingRowIdx(idx);
@@ -1151,15 +1171,14 @@ export function VoucherEntry() {
                       )}
                       {isExpiryEnabled && (
                         <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
-                          <input 
-                            type="date" 
-                            className="bg-transparent border border-border text-foreground outline-none w-full text-[10px] p-1 focus:border-foreground" 
+                          <DateInput 
                             value={entry.expiry_date || ''} 
-                            onChange={e => {
+                            onChange={val => {
                               const next = [...invEntries];
-                              next[idx].expiry_date = e.target.value;
+                              next[idx].expiry_date = val;
                               setInvEntries(next);
                             }} 
+                            className="w-full"
                           />
                         </td>
                       )}
@@ -1317,7 +1336,9 @@ export function VoucherEntry() {
                           next[idx].unit = item?.unit_name || 'pcs';
                           setInvEntries(next);
                           fetchItemStock(val, entry.godown_id);
+                          setFocusedItemId(val);
                         }}
+                        onFocus={() => setFocusedItemId(entry.item_id)}
                         placeholder={t('voucher.selectItem')}
                         onQuickCreate={() => {
                           setPendingRowIdx(idx);
@@ -1450,6 +1471,38 @@ export function VoucherEntry() {
                     </div>
                   </div>
                 ))}
+
+                {itemStats && focusedItemId && (
+                  <div className="mx-4 p-3 bg-foreground/5 border border-border text-[10px] space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex justify-between items-center text-gray-500 uppercase font-black tracking-tighter border-b border-border/50 pb-1">
+                      <span>Item Info: {items.find(i => i.id === focusedItemId)?.name}</span>
+                      <TrendingUp className="w-3 h-3" />
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="space-y-0.5">
+                        <span className="text-gray-400 block uppercase font-bold text-[8px]">Closing Stock</span>
+                        <span className="text-foreground font-black text-xs">
+                          {itemStats.currentStock} {items.find(i => i.id === focusedItemId)?.unit}
+                        </span>
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-gray-400 block uppercase font-bold text-[8px]">Standard Rate</span>
+                        <span className="text-foreground font-black text-xs">
+                          {baseCurrencySymbol} {((vType === 'Sales' ? items.find(i => i.id === focusedItemId)?.last_sale_rate : items.find(i => i.id === focusedItemId)?.last_purchase_rate) || items.find(i => i.id === focusedItemId)?.opening_rate || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-gray-400 block uppercase font-bold text-[8px]">Total Inward</span>
+                        <span className="text-emerald-500 font-black text-xs">{itemStats.totalInward || 0}</span>
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-gray-400 block uppercase font-bold text-[8px]">Total Outward</span>
+                        <span className="text-rose-500 font-black text-xs">{itemStats.totalOutward || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="p-4">
                   <button 
                     type="button"
@@ -1679,12 +1732,11 @@ export function VoucherEntry() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.instDate')}</label>
-                <input
-                  type="date"
+                <DateInput
+                  label={t('common.instDate')}
                   value={bankDetails.instrument_date}
-                  onChange={(e) => setBankDetails({ ...bankDetails, instrument_date: e.target.value })}
-                  className="w-full bg-background border border-border p-1.5 lg:p-2 text-xs outline-none focus:border-foreground font-medium"
+                  onChange={(val) => setBankDetails({ ...bankDetails, instrument_date: val })}
+                  className="w-full"
                 />
               </div>
               <div className="space-y-1">

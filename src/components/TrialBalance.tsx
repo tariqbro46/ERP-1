@@ -7,6 +7,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { printReport, printUtils } from '../utils/printUtils';
 import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
+import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { EditableHeader } from './EditableHeader';
 
@@ -71,8 +72,8 @@ export function TrialBalance() {
   }
 
   const now = new Date();
-  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const firstDay = formatReportDate(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0], settings.dateFormat);
+  const lastDay = formatReportDate(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0], settings.dateFormat);
 
   return (
     <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">

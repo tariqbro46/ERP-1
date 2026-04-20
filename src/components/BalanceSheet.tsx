@@ -7,6 +7,8 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { printBalanceSheet, printUtils } from '../utils/printUtils';
 import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
+import { DateInput } from './DateInput';
+import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { EditableHeader } from './EditableHeader';
 import { useNavigate } from 'react-router-dom';
 
@@ -171,12 +173,11 @@ export function BalanceSheet() {
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('reports.asOnDate')}</label>
-                <input 
-                  type="date" 
-                  value={asOnDate} 
-                  onChange={(e) => setAsOnDate(e.target.value)}
-                  className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground"
+                <DateInput
+                  label={t('reports.asOnDate')}
+                  value={asOnDate}
+                  onChange={setAsOnDate}
+                  className="w-full"
                 />
               </div>
             </div>

@@ -8,6 +8,8 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { printReport, printUtils } from '../utils/printUtils';
 import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
+import { DateInput } from './DateInput';
+import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { EditableHeader } from './EditableHeader';
 import { ReportConfigModal } from './ReportConfigModal';
 import { QuickAdjustmentModal } from './QuickAdjustmentModal';
@@ -75,7 +77,13 @@ export function LedgerStatement() {
       ]);
       if (lData) {
         setLedgers(lData);
-        if (selectedLedger) {
+        // Set selected ledger from URL if present
+        const urlLedgerId = searchParams.get('ledgerId');
+        if (urlLedgerId) {
+          setSelectedLedger(urlLedgerId);
+          const l = lData.find((l: any) => l.id === urlLedgerId);
+          if (l) setLedgerSearch(l.name);
+        } else if (selectedLedger) {
           const l = lData.find((l: any) => l.id === selectedLedger);
           if (l) setLedgerSearch(l.name);
         }
@@ -90,7 +98,7 @@ export function LedgerStatement() {
       }
     }
     fetchData();
-  }, [user?.companyId]);
+  }, [user?.companyId, searchParams]);
 
   const handleSaveConfig = async (newConfig: ReportConfig) => {
     if (!user?.companyId) return;
@@ -786,21 +794,19 @@ export function LedgerStatement() {
 
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('common.from')}</label>
-                <input 
-                  type="date" 
-                  value={startDate || ''} 
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground"
+                <DateInput
+                  label={t('common.from')}
+                  value={startDate}
+                  onChange={setStartDate}
+                  className="w-full"
                 />
               </div>
               <div className="flex-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('common.to')}</label>
-                <input 
-                  type="date" 
-                  value={endDate || ''} 
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground"
+                <DateInput
+                  label={t('common.to')}
+                  value={endDate}
+                  onChange={setEndDate}
+                  className="w-full"
                 />
               </div>
             </div>
@@ -883,7 +889,7 @@ export function LedgerStatement() {
                 </div>
                 
                 <div className="mt-4 text-xs font-bold">
-                  {new Date(startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')} to {new Date(endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')}
+                  {formatReportDate(startDate, settings.dateFormat)} to {formatReportDate(endDate, settings.dateFormat)}
                 </div>
               </div>
               <div className="absolute top-8 right-8 border border-black px-2 py-1 text-[10px]">Page 1</div>
@@ -932,7 +938,7 @@ export function LedgerStatement() {
                           settings.reportLayout === 'Layout 2' && "bg-white border-black text-black border",
                           settings.reportLayout === 'Layout 2' && openingBalanceRowIsStripe && "bg-[#F3F4F6]"
                         )}>
-                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{new Date(startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')}</td>
+                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{formatReportDate(startDate, settings.dateFormat)}</td>
                           <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{t('ledger.openingBalance')}</td>
                           <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>-</td>
                           <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>-</td>
@@ -969,7 +975,7 @@ export function LedgerStatement() {
                                 )}
                                 onClick={() => navigate(`/vouchers/view/${e.id}`)}
                               >
-                                <td className="px-6 py-4 whitespace-nowrap">{e.vouchers?.v_date}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">{formatReportDate(e.vouchers?.v_date, settings.dateFormat)}</td>
                                 <td className="px-6 py-4">
                                   <div className="flex flex-col">
                                     <span className="text-foreground font-bold">

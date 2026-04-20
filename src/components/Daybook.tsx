@@ -10,6 +10,8 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { printReport, printUtils } from '../utils/printUtils';
 import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
+import { DateInput } from './DateInput';
+import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { EditableHeader } from './EditableHeader';
 import { ReportConfigModal } from './ReportConfigModal';
 import { ReportConfig } from '../types';
@@ -270,21 +272,19 @@ export function Daybook() {
             </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('common.from')}</label>
-                <input 
-                  type="date" 
-                  value={startDate || ''} 
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground"
+                <DateInput
+                  label={t('common.from')}
+                  value={startDate}
+                  onChange={setStartDate}
+                  className="w-full"
                 />
               </div>
               <div className="flex-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('common.to')}</label>
-                <input 
-                  type="date" 
-                  value={endDate || ''} 
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground"
+                <DateInput
+                  label={t('common.to')}
+                  value={endDate}
+                  onChange={setEndDate}
+                  className="w-full"
                 />
               </div>
             </div>
@@ -413,7 +413,7 @@ export function Daybook() {
                       )}
                       onClick={() => navigate(`/vouchers/view/${v.id}`)}
                     >
-                      <td className="px-4 lg:px-6 py-4 whitespace-nowrap">{v.v_date}</td>
+                      <td className="px-4 lg:px-6 py-4 whitespace-nowrap">{formatReportDate(v.v_date, settings.dateFormat)}</td>
                       <td className="px-4 lg:px-6 py-4">
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2">

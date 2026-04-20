@@ -67,6 +67,7 @@ interface SettingsContextType {
   showRunningBalance: boolean;
   showMobileNav: boolean;
   mobileBottomNavItems: string[];
+  dateFormat: string;
   voucherHeaderCompact: boolean;
   voucherTableCompact: boolean;
   reportLayout: ReportLayout;
@@ -132,6 +133,7 @@ const defaultSettings: SettingsContextType = {
   showRunningBalance: true,
   showMobileNav: false,
   mobileBottomNavItems: ['Dashboard', 'Voucher Entry', 'Daybook', 'Settings (F11)'],
+  dateFormat: 'DD-MM-YYYY',
   voucherHeaderCompact: false,
   voucherTableCompact: false,
   reportLayout: 'Layout 2',

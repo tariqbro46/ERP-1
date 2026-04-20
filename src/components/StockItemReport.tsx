@@ -6,6 +6,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { formatCurrency, cn } from '../lib/utils';
+import { DateInput } from './DateInput';
+import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { exportToPDF } from '../utils/exportUtils';
 import { printElement } from '../utils/printUtils';
 
@@ -24,6 +26,7 @@ export function StockItemReport() {
   
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
+    // Default to Jan 1st of current year as requested
     return new Date(d.getFullYear(), 0, 1).toLocaleDateString('en-CA');
   });
   const [endDate, setEndDate] = useState(() => {
@@ -84,13 +87,29 @@ export function StockItemReport() {
     setLoading(true);
     try {
       const allInvEntries = await erpService.getCollection('inventory_entries', user!.companyId);
-      const start = new Date(from);
-      const end = new Date(to);
+      
+      // Parse dates consistently as local midnight to avoid timezone shifts
+      const parseLocal = (dateStr: string) => {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        return new Date(y, m - 1, d);
+      };
+
+      const start = parseLocal(from);
+      const end = parseLocal(to);
+      end.setHours(23, 59, 59, 999); // Include entire end day
       
       const itemEntries = allInvEntries.filter((e: any) => {
-        if (e.item_id !== item.id) return false;
-        const eDate = new Date(e.date || e.created_at?.toDate?.() || 0);
-        return eDate >= start && eDate <= end;
+        if (String(e.item_id) !== String(item.id)) return false;
+        
+        // Robust date parsing for YYYY-MM-DD or Timestamp
+        let dateObj: Date;
+        if (e.date && typeof e.date === 'string' && e.date.includes('-')) {
+          dateObj = parseLocal(e.date);
+        } else {
+          dateObj = new Date(e.date || e.created_at?.toDate?.() || 0);
+        }
+        
+        return dateObj >= start && dateObj <= end;
       });
 
       // Decide view type: if range < 90 days or specific dates requested, show daily
@@ -106,11 +125,11 @@ export function StockItemReport() {
           const dStr = curr.toLocaleDateString('en-CA');
           const dayEntries = itemEntries.filter(e => e.date === dStr);
           
-          const inward = dayEntries.filter((e: any) => e.movement_type === 'Inward');
-          const outward = dayEntries.filter((e: any) => e.movement_type === 'Outward');
+          const inward = dayEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'inward');
+          const outward = dayEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'outward');
 
           days.push({
-            label: curr.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+            label: curr.toISOString().split('T')[0],
             inwardQty: inward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0),
             inwardValue: inward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0),
             outwardQty: outward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0),
@@ -131,12 +150,19 @@ export function StockItemReport() {
           const year = curr.getFullYear();
           
           const mEntries = itemEntries.filter((e: any) => {
-            const date = new Date(e.date || e.created_at?.toDate?.() || 0);
-            return date.getMonth() === monthIdx && date.getFullYear() === year;
+            let dateObj: Date;
+            if (e.date && typeof e.date === 'string' && e.date.includes('-')) {
+              const [y, m, d] = e.date.split('-').map(Number);
+              dateObj = new Date(y, m - 1, d);
+            } else {
+              dateObj = new Date(e.date || e.created_at?.toDate?.() || 0);
+            }
+            // Ensure we compare against normalized month/year from local date
+            return dateObj.getMonth() === monthIdx && dateObj.getFullYear() === year;
           });
 
-          const inward = mEntries.filter((e: any) => e.movement_type === 'Inward');
-          const outward = mEntries.filter((e: any) => e.movement_type === 'Outward');
+          const inward = mEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'inward');
+          const outward = mEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'outward');
 
           summary.push({
             label: curr.toLocaleString('default', { month: 'short', year: 'numeric' }),
@@ -173,7 +199,7 @@ export function StockItemReport() {
 
   const handlePrint = () => {
     if (!selectedItem) return;
-    printElement('stock-item-report-table', `STOCK ITEM SUMMARY - ${selectedItem.name.toUpperCase()}`);
+    printElement('stock-item-report-table', `STOCK ITEM SUMMARY - ${selectedItem.name.toUpperCase()}`, settings);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -217,19 +243,16 @@ export function StockItemReport() {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              <input 
-                type="date"
+              <DateInput 
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-transparent text-sm font-bold focus:outline-none"
+                onChange={setStartDate}
+                className="w-32 py-1"
               />
-              <span className="text-gray-400">To</span>
-              <input 
-                type="date"
+              <span className="text-gray-400 font-bold uppercase text-[9px] px-2 italic">To</span>
+              <DateInput 
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-transparent text-sm font-bold focus:outline-none"
+                onChange={setEndDate}
+                className="w-32 py-1"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -322,15 +345,17 @@ export function StockItemReport() {
                   <tbody className="divide-y divide-gray-100">
                     {summaryData.map((row, idx) => (
                       <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-3 font-medium text-gray-900 border-r border-gray-100">{row.label}</td>
+                        <td className="px-6 py-3 font-medium text-gray-900 border-r border-gray-100">
+                          {viewType === 'daily' ? formatReportDate(row.label, settings.dateFormat) : row.label}
+                        </td>
                         <td className="px-6 py-3 text-right text-green-600">
-                          {row.inwardQty > 0 ? `${row.inwardQty} ${selectedItem.unitName}` : '-'}
+                          {row.inwardQty > 0 ? `${row.inwardQty} ${selectedItem.unitName || ''}` : '-'}
                         </td>
                         <td className="px-6 py-3 text-right text-green-700 border-r border-gray-100">
                           {row.inwardValue > 0 ? formatCurrency(row.inwardValue) : '-'}
                         </td>
                         <td className="px-6 py-3 text-right text-red-600">
-                          {row.outwardQty > 0 ? `${row.outwardQty} ${selectedItem.unitName}` : '-'}
+                          {row.outwardQty > 0 ? `${row.outwardQty} ${selectedItem.unitName || ''}` : '-'}
                         </td>
                         <td className="px-6 py-3 text-right text-red-700">
                           {row.outwardValue > 0 ? formatCurrency(row.outwardValue) : '-'}
@@ -339,7 +364,7 @@ export function StockItemReport() {
                           "px-6 py-3 text-right font-bold",
                           (row.inwardQty - row.outwardQty) >= 0 ? "text-green-600" : "text-red-600"
                         )}>
-                          {row.inwardQty - row.outwardQty !== 0 ? `${row.inwardQty - row.outwardQty} ${selectedItem.unitName}` : '-'}
+                          {row.inwardQty - row.outwardQty !== 0 ? `${row.inwardQty - row.outwardQty} ${selectedItem.unitName || ''}` : '-'}
                         </td>
                       </tr>
                     ))}
@@ -348,19 +373,19 @@ export function StockItemReport() {
                     <tr>
                       <td className="px-6 py-4 border-r border-gray-100 uppercase text-[10px]">{t('common.total')}</td>
                       <td className="px-6 py-4 text-right">
-                        {summaryData.reduce((sum, m) => sum + m.inwardQty, 0)} {selectedItem.unitName}
+                        {summaryData.reduce((sum, m) => sum + m.inwardQty, 0)} {selectedItem.unitName || ''}
                       </td>
                       <td className="px-6 py-4 text-right border-r border-gray-100">
                         {formatCurrency(summaryData.reduce((sum, m) => sum + m.inwardValue, 0))}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {summaryData.reduce((sum, m) => sum + m.outwardQty, 0)} {selectedItem.unitName}
+                        {summaryData.reduce((sum, m) => sum + m.outwardQty, 0)} {selectedItem.unitName || ''}
                       </td>
                       <td className="px-6 py-4 text-right">
                         {formatCurrency(summaryData.reduce((sum, m) => sum + m.outwardValue, 0))}
                       </td>
                       <td className="px-6 py-4 text-right text-primary">
-                      {summaryData.reduce((sum, m) => sum + (m.inwardQty - m.outwardQty), 0)} {selectedItem.unitName}
+                      {summaryData.reduce((sum, m) => sum + (m.inwardQty - m.outwardQty), 0)} {selectedItem.unitName || ''}
                       </td>
                     </tr>
                   </tfoot>

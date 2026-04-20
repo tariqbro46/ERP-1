@@ -19,6 +19,7 @@ interface SearchableSelectProps {
   disabled?: boolean;
   tabIndex?: number;
   allowCustom?: boolean;
+  onFocus?: () => void;
 }
 
 export function SearchableSelect({
@@ -31,7 +32,8 @@ export function SearchableSelect({
   quickCreateLabel = "Add New",
   disabled = false,
   tabIndex,
-  allowCustom = false
+  allowCustom = false,
+  onFocus
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,7 +41,18 @@ export function SearchableSelect({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const listRef = useRef<HTMLDivElement>(null);
+
   const selectedOption = options.find(opt => opt.id === value) || (allowCustom && value ? { id: value, name: value } : null);
+
+  useEffect(() => {
+    if (isOpen && activeIndex >= 0 && listRef.current) {
+      const activeElement = listRef.current.children[activeIndex] as HTMLElement;
+      if (activeElement) {
+        activeElement.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [activeIndex, isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -75,6 +88,7 @@ export function SearchableSelect({
     setSearchTerm(newVal);
     setIsOpen(true);
     setActiveIndex(-1);
+    if (onFocus) onFocus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -134,7 +148,10 @@ export function SearchableSelect({
           value={searchTerm}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setIsOpen(true);
+            if (onFocus) onFocus();
+          }}
           onBlur={handleBlur}
           disabled={disabled}
           placeholder={placeholder}
@@ -167,7 +184,7 @@ export function SearchableSelect({
 
       {isOpen && (searchTerm || filteredOptions.length > 0 || onQuickCreate || allowCustom) && (
         <div className="absolute z-50 w-full mt-1 bg-card border border-border shadow-xl max-h-64 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-          <div className="overflow-y-auto flex-1 no-scrollbar">
+          <div className="overflow-y-auto flex-1 no-scrollbar" ref={listRef}>
             {allowCustom && searchTerm && !options.find(o => o.name.toLowerCase() === searchTerm.toLowerCase()) && (
               <div
                 onMouseDown={(e) => e.preventDefault()}

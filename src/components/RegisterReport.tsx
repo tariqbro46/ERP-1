@@ -4,8 +4,11 @@ import { Search, Printer, Download, ArrowLeft, Loader2 } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, cn } from '../lib/utils';
+import { DateInput } from './DateInput';
+import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { EditableHeader } from './EditableHeader';
+import { useSettings } from '../contexts/SettingsContext';
 import { ReportPrintHeader, ReportPrintFooter } from './ReportPrintHeader';
 import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
@@ -18,6 +21,7 @@ interface RegisterReportProps {
 export function RegisterReport({ type, title }: RegisterReportProps) {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const settings = useSettings();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [vouchers, setVouchers] = useState<any[]>([]);
@@ -157,25 +161,23 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
             />
           </div>
           <div className="flex items-center gap-2">
-            <input
-              type="date"
+            <DateInput
               value={dateRange.from}
-              onChange={e => setDateRange({ ...dateRange, from: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm"
+              onChange={val => setDateRange({ ...dateRange, from: val })}
+              className="w-32"
             />
-            <span className="text-gray-500">to</span>
-            <input
-              type="date"
+            <span className="text-gray-500 font-bold uppercase text-[9px] px-1 italic">to</span>
+            <DateInput
               value={dateRange.to}
-              onChange={e => setDateRange({ ...dateRange, to: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm"
+              onChange={val => setDateRange({ ...dateRange, to: val })}
+              className="w-32"
             />
           </div>
         </div>
       </div>
 
       <div id="register-report" className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm p-0 print:p-8 print:border-none print:shadow-none">
-        <ReportPrintHeader title={title} subtitle={`From ${new Date(dateRange.from).toLocaleDateString()} to ${new Date(dateRange.to).toLocaleDateString()}`} />
+        <ReportPrintHeader title={title} subtitle={`From ${formatReportDate(dateRange.from, settings.dateFormat)} to ${formatReportDate(dateRange.to, settings.dateFormat)}`} />
         
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -202,7 +204,7 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
                   onClick={() => navigate(`/vouchers/view/${v.id}`)}
                 >
                   <td className="px-6 py-4 text-sm text-gray-600">
-                    {new Date(v.v_date).toLocaleDateString()}
+                    {formatReportDate(v.v_date, settings.dateFormat)}
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
                     {v.v_no}

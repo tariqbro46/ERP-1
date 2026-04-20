@@ -50,6 +50,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     showRunningBalance,
     showMobileNav,
     mobileBottomNavItems = [],
+    dateFormat,
     reportLayout,
     dashboardDesign,
     uiStyle,
@@ -104,6 +105,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localSignatureAlignment, setLocalSignatureAlignment] = useState(signatureAlignment || 'spread');
   const [localShowDeveloperContact, setLocalShowDeveloperContact] = useState(showDeveloperContact ?? true);
   const [localFinancialYearStart, setLocalFinancialYearStart] = useState(financialYearStart || '');
+  const [localDateFormat, setLocalDateFormat] = useState(dateFormat || 'DD-MM-YYYY');
   const [localBaseCurrencySymbol, setLocalBaseCurrencySymbol] = useState(baseCurrencySymbol || '৳');
   const [localTimezone, setLocalTimezone] = useState(timezone || 'UTC+06:00 (Dhaka)');
   const [localRefNoFormat, setLocalRefNoFormat] = useState(refNoFormat || 'SAL/{YEAR}/{NO}');
@@ -188,6 +190,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalSignatureAlignment(signatureAlignment || 'spread');
     setLocalShowDeveloperContact(showDeveloperContact ?? true);
     setLocalFinancialYearStart(financialYearStart || '');
+    setLocalDateFormat(dateFormat || 'DD-MM-YYYY');
     setLocalBaseCurrencySymbol(baseCurrencySymbol || '৳');
     setLocalTimezone(timezone || 'UTC+06:00 (Dhaka)');
     setLocalRefNoFormat(refNoFormat || 'SAL/{YEAR}/{NO}');
@@ -235,6 +238,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       mobileBottomNavItems: localMobileBottomNavItems,
       reportLayout: localReportLayout,
       financialYearStart: localFinancialYearStart,
+      dateFormat: localDateFormat,
       baseCurrencySymbol: localBaseCurrencySymbol,
       timezone: localTimezone
     });
@@ -644,6 +648,22 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         onChange={(e) => setLocalFinancialYearStart(e.target.value)}
                         className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase">System Date Format</label>
+                      <select 
+                        value={localDateFormat}
+                        onChange={(e) => setLocalDateFormat(e.target.value)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        <option value="DD-MM-YYYY">DD-MM-YYYY (e.g. 20-04-2026)</option>
+                        <option value="MM-DD-YYYY">MM-DD-YYYY (e.g. 04-20-2026)</option>
+                        <option value="YYYY-MM-DD">YYYY-MM-DD (e.g. 2026-04-20)</option>
+                        <option value="DD/MM/YYYY">DD/MM/YYYY (e.g. 20/04/2026)</option>
+                        <option value="MM/DD/YYYY">MM/DD/YYYY (e.g. 04/20/2026)</option>
+                        <option value="DD.MM.YYYY">DD.MM.YYYY (e.g. 20.04.2026)</option>
+                      </select>
+                      <p className="text-[9px] text-gray-500 uppercase italic">All date fields in the app will follow this format.</p>
                     </div>
                   </div>
                 </div>

@@ -1194,6 +1194,39 @@ export const erpService = {
     await deleteDoc(doc(db, 'loans', id));
   },
 
+  async getItemStats(itemId: string, companyId: string) {
+    try {
+      const item = await this.getItemById(itemId);
+      if (!item) return null;
+
+      const entriesRef = collection(db, 'inventory_entries');
+      const q = query(
+        entriesRef,
+        where('item_id', '==', itemId),
+        where('companyId', '==', companyId)
+      );
+      
+      const snap = await getDocs(q);
+      const entries = snap.docs.map(d => d.data());
+      
+      const inwardSummary = entries.filter(e => e.movement_type === 'Inward');
+      const outwardSummary = entries.filter(e => e.movement_type === 'Outward');
+      
+      const totalInward = inwardSummary.reduce((sum, e: any) => sum + (e.qty || 0) + (e.free_qty || 0), 0);
+      const totalOutward = outwardSummary.reduce((sum, e: any) => sum + (e.qty || 0) + (e.free_qty || 0), 0);
+      
+      return {
+        currentStock: (item.opening_qty || 0) + totalInward - totalOutward,
+        totalInward,
+        totalOutward,
+        lastRate: entries.length > 0 ? (entries[entries.length - 1] as any).rate : item.opening_rate
+      };
+    } catch (error) {
+      console.error('Error fetching item stats:', error);
+      return null;
+    }
+  },
+
   async recalculateItemStats(itemId: string, companyId?: string, itemData?: any) {
     try {
       const itemRef = doc(db, 'items', itemId);
