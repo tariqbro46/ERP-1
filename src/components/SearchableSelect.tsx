@@ -35,6 +35,7 @@ export function SearchableSelect({
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeIndex, setActiveIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -54,6 +55,7 @@ export function SearchableSelect({
   useEffect(() => {
     if (!isOpen) {
       setSearchTerm(selectedOption ? selectedOption.name : '');
+      setActiveIndex(-1);
     }
   }, [selectedOption, isOpen]);
 
@@ -65,12 +67,43 @@ export function SearchableSelect({
     onChange(id);
     setSearchTerm(name);
     setIsOpen(false);
+    setActiveIndex(-1);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newVal = e.target.value;
     setSearchTerm(newVal);
     setIsOpen(true);
+    setActiveIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        setIsOpen(true);
+      }
+      return;
+    }
+
+    const totalOptions = filteredOptions.length;
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev + 1 >= totalOptions ? 0 : prev + 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev - 1 < 0 ? totalOptions - 1 : prev - 1));
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && activeIndex < totalOptions) {
+        e.preventDefault();
+        handleSelect(filteredOptions[activeIndex].id, filteredOptions[activeIndex].name);
+      } else if (allowCustom && searchTerm) {
+        e.preventDefault();
+        handleSelect(searchTerm, searchTerm);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
   };
 
   const handleBlur = () => {
@@ -100,6 +133,7 @@ export function SearchableSelect({
           type="text"
           value={searchTerm}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           onFocus={() => setIsOpen(true)}
           onBlur={handleBlur}
           disabled={disabled}
@@ -145,18 +179,19 @@ export function SearchableSelect({
               </div>
             )}
             {filteredOptions.length > 0 ? (
-              filteredOptions.map(opt => (
+              filteredOptions.map((opt, idx) => (
                 <div
                   key={opt.id}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleSelect(opt.id, opt.name)}
+                  onMouseEnter={() => setActiveIndex(idx)}
                   className={cn(
                     "px-4 py-2.5 text-[10px] uppercase font-bold cursor-pointer transition-colors flex items-center justify-between",
-                    opt.id === value ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground"
+                    opt.id === value || activeIndex === idx ? "bg-primary/10 text-primary border-r-2 border-primary" : "hover:bg-muted text-foreground"
                   )}
                 >
                   <span>{opt.name}</span>
-                  {opt.id === value && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                  {(opt.id === value) && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
                 </div>
               ))
             ) : !allowCustom && (

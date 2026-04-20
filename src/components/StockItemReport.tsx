@@ -20,6 +20,7 @@ export function StockItemReport() {
   const [units, setUnits] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
   
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -79,6 +80,7 @@ export function StockItemReport() {
       unitName: allUnits.find(u => u.id === item.unit_id)?.name || item.unit || 'pcs'
     };
     setSelectedItem(itemWithUnit);
+    setActiveIndex(-1);
     setLoading(true);
     try {
       const allInvEntries = await erpService.getCollection('inventory_entries', user!.companyId);
@@ -174,6 +176,23 @@ export function StockItemReport() {
     printElement('stock-item-report-table', `STOCK ITEM SUMMARY - ${selectedItem.name.toUpperCase()}`);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (filteredItems.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev + 1 >= filteredItems.length ? 0 : prev + 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev - 1 < 0 ? filteredItems.length - 1 : prev - 1));
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && activeIndex < filteredItems.length) {
+        e.preventDefault();
+        handleItemSelect(filteredItems[activeIndex]);
+      }
+    }
+  };
+
   if (loading && !selectedItem) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -243,19 +262,24 @@ export function StockItemReport() {
                   type="text"
                   placeholder={t('stockItem.filterPlaceholder')}
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setActiveIndex(-1);
+                  }}
+                  onKeyDown={handleKeyDown}
                   className="pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 font-medium">
-              {filteredItems.map((item) => (
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 font-medium no-scrollbar">
+              {filteredItems.map((item, idx) => (
                 <button
                   key={item.id}
                   onClick={() => handleItemSelect(item)}
+                  onMouseEnter={() => setActiveIndex(idx)}
                   className={cn(
-                    "w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors capitalize",
-                    selectedItem?.id === item.id && "bg-primary/5 border-l-4 border-primary"
+                    "w-full px-4 py-3 text-left transition-colors capitalize",
+                    (selectedItem?.id === item.id || activeIndex === idx) ? "bg-primary/5 border-l-4 border-primary" : "hover:bg-gray-50"
                   )}
                 >
                   {item.name}
@@ -277,22 +301,22 @@ export function StockItemReport() {
                   {t('stockItem.currentStock')} <span className="font-bold text-primary">{selectedItem.current_stock} {selectedItem.unitName}</span>
                 </div>
               </div>
-              <div id="stock-item-report-table" className="overflow-x-auto print:p-8 overflow-y-auto max-h-[600px]">
+              <div id="stock-item-report-table" className="overflow-x-auto print:p-8 overflow-y-auto max-h-[600px] no-scrollbar">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500 sticky top-0 z-10">
-                      <th rowSpan={2} className="px-6 py-4 border-r border-gray-100 bg-gray-100">
+                    <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500 sticky top-0 z-10 h-10">
+                      <th rowSpan={2} className="px-6 py-0 border-r border-gray-100 bg-gray-100 align-middle">
                         {viewType === 'daily' ? 'Date' : t('stockItem.month')}
                       </th>
-                      <th colSpan={2} className="px-6 py-2 text-center border-b border-gray-100 bg-green-100 text-green-700">{t('stockItem.inward')}</th>
-                      <th colSpan={2} className="px-6 py-2 text-center border-b border-gray-100 bg-red-100 text-red-700">{t('stockItem.outward')}</th>
-                      <th rowSpan={2} className="px-6 py-4 text-right bg-gray-100">{t('stockItem.netQty')}</th>
+                      <th colSpan={2} className="px-6 py-1 text-center border-b border-gray-100 bg-green-100 text-green-700">{t('stockItem.inward')}</th>
+                      <th colSpan={2} className="px-6 py-1 text-center border-b border-gray-100 bg-red-100 text-red-700">{t('stockItem.outward')}</th>
+                      <th rowSpan={2} className="px-6 py-0 text-right bg-gray-100 align-middle">{t('stockItem.netQty')}</th>
                     </tr>
-                    <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500 sticky top-[49px] z-10">
-                      <th className="px-6 py-3 text-right bg-green-50">{t('stockItem.qty')}</th>
-                      <th className="px-6 py-3 text-right border-r border-gray-100 bg-green-50">{t('stockItem.val')}</th>
-                      <th className="px-6 py-3 text-right bg-red-50">{t('stockItem.qty')}</th>
-                      <th className="px-6 py-3 text-right bg-red-50">{t('stockItem.val')}</th>
+                    <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500 sticky top-[40px] z-10 h-10">
+                      <th className="px-6 py-0 text-right bg-green-50 align-middle">{t('stockItem.qty')}</th>
+                      <th className="px-6 py-0 text-right border-r border-gray-100 bg-green-50 align-middle">{t('stockItem.val')}</th>
+                      <th className="px-6 py-0 text-right bg-red-50 align-middle">{t('stockItem.qty')}</th>
+                      <th className="px-6 py-0 text-right bg-red-50 align-middle">{t('stockItem.val')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">

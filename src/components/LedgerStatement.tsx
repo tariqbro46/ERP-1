@@ -38,6 +38,7 @@ export function LedgerStatement() {
   const [selectedLedger, setSelectedLedger] = useState<string>(searchParams.get('ledgerId') || '');
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [showLedgerList, setShowLedgerList] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [startDate, setStartDate] = useState(() => {
     return searchParams.get('from') || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA');
   });
@@ -157,6 +158,29 @@ export function LedgerStatement() {
     setSelectedLedger(ledger.id);
     setLedgerSearch(ledger.name);
     setShowLedgerList(false);
+    setActiveIndex(-1);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showLedgerList) {
+      if (e.key === 'ArrowDown') setShowLedgerList(true);
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev + 1 >= filteredLedgers.length ? 0 : prev + 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev - 1 < 0 ? filteredLedgers.length - 1 : prev - 1));
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && activeIndex < filteredLedgers.length) {
+        e.preventDefault();
+        handleLedgerSelect(filteredLedgers[activeIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setShowLedgerList(false);
+    }
   };
 
   const currentLedger = ledgers.find(l => l.id === selectedLedger);
@@ -723,7 +747,9 @@ export function LedgerStatement() {
                   onChange={(e) => {
                     setLedgerSearch(e.target.value);
                     setShowLedgerList(true);
+                    setActiveIndex(-1);
                   }}
+                  onKeyDown={handleKeyDown}
                   onFocus={() => setShowLedgerList(true)}
                   className="w-full bg-card border border-border text-foreground pl-10 pr-4 py-3 text-sm outline-none focus:border-foreground transition-colors"
                 />
@@ -732,11 +758,15 @@ export function LedgerStatement() {
               {showLedgerList && ledgerSearch && (
                 <div className="absolute z-50 w-full mt-1 bg-card border border-border shadow-xl max-h-60 overflow-y-auto no-scrollbar">
                   {filteredLedgers.length > 0 ? (
-                    filteredLedgers.map(l => (
+                    filteredLedgers.map((l, idx) => (
                       <button
                         key={l.id}
                         onClick={() => handleLedgerSelect(l)}
-                        className="w-full text-left px-4 py-3 text-sm text-foreground hover:bg-foreground/5 border-b border-border/50 last:border-none transition-colors"
+                        onMouseEnter={() => setActiveIndex(idx)}
+                        className={cn(
+                          "w-full text-left px-4 py-3 text-sm text-foreground hover:bg-foreground/5 border-b border-border/50 last:border-none transition-colors",
+                          activeIndex === idx && "bg-foreground/10"
+                        )}
                       >
                         {l.name}
                       </button>
