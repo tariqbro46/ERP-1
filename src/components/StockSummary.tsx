@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Search, Printer, Download, ChevronDown, ChevronRight, Loader2, Filter, MapPin, Activity, AlertTriangle } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Package, Search, Printer, Download, ChevronDown, ChevronRight, Loader2, Filter, MapPin, Activity, AlertTriangle, X } from 'lucide-react';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,11 +15,14 @@ export function StockSummary() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const settings = useSettings();
-  const location = window.history.state?.usr; // Simple way to get state if useLocation isn't available
+  const location = useLocation();
+  const locationState = location.state;
   const { showNotification } = useNotification();
   const [items, setItems] = useState<any[]>([]);
   const [godowns, setGodowns] = useState<any[]>([]);
-  const [selectedGodown, setSelectedGodown] = useState<string>(location?.godownId || '');
+  const [stockCategories, setStockCategories] = useState<any[]>([]);
+  const [selectedGodown, setSelectedGodown] = useState<string>(locationState?.godownId || '');
+  const [selectedCategory, setSelectedCategory] = useState<string>(locationState?.categoryId || '');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -29,10 +33,11 @@ export function StockSummary() {
     async function fetchData() {
       if (!user?.companyId) return;
       try {
-        const [allItems, godownsRes, allInv] = await Promise.all([
+        const [allItems, godownsRes, allInv, catsRes] = await Promise.all([
           erpService.getItems(user.companyId),
           erpService.getGodowns(user.companyId),
-          erpService.getCollection('inventory_entries', user.companyId)
+          erpService.getCollection('inventory_entries', user.companyId),
+          erpService.getCollection('stock_categories', user.companyId)
         ]);
         
         // Calculate stock per item per godown if needed
@@ -40,6 +45,7 @@ export function StockSummary() {
         setInventory(allInv);
         setItems(allItems);
         setGodowns(godownsRes || []);
+        setStockCategories(catsRes || []);
         
         // Expand all groups by default
         const groups = new Set(allItems.map(i => i.category || 'General Items'));
@@ -98,6 +104,10 @@ export function StockSummary() {
     displayStock: getStockForGodown(item.id, selectedGodown),
     isLowStock: (getStockForGodown(item.id, null) <= (item.low_stock_threshold || 0)) && (item.low_stock_threshold > 0)
   })).filter(item => {
+    if (selectedCategory && item.category_id !== selectedCategory) {
+      if (selectedCategory === 'uncategorized' && item.category_id) return false;
+      if (selectedCategory !== 'uncategorized') return false;
+    }
     if (selectedGodown && item.displayStock === 0) return false;
     if (showLowStockOnly && !item.isLowStock) return false;
     return true;
@@ -123,6 +133,10 @@ export function StockSummary() {
   };
 
   const totalStockValue = processedItems.reduce((sum, item) => sum + (item.displayStock * (item.avg_cost || item.opening_rate || 0)), 0);
+
+  const activeCategoryName = selectedCategory === 'uncategorized' 
+    ? 'Uncategorized' 
+    : stockCategories.find(c => c.id === selectedCategory)?.name;
 
   const handleDownload = () => {
     const exportData = processedItems.map(item => ({
@@ -250,6 +264,14 @@ export function StockSummary() {
               />
             </div>
             <div className="flex flex-wrap items-center gap-4">
+              {selectedCategory && (
+                <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary px-3 py-1.5 text-[10px] font-bold uppercase rounded-lg">
+                  {activeCategoryName}
+                  <button onClick={() => setSelectedCategory('')} className="hover:text-amber-700">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <select
                   value={selectedGodown}

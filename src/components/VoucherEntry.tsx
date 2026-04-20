@@ -671,8 +671,26 @@ export function VoucherEntry() {
           })) : []
         );
         showNotification(notifications.voucherSaved);
+        if (!isEdit) {
+          // Reset all fields for new entry
+          setVDate(new Date().toLocaleDateString('en-CA'));
+          setRefNo('');
+          setNarration('');
+          setPartyLedgerId('');
+          setBankCashLedgerId('');
+          setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: vType === 'Payment' || vType === 'Receipt' ? (vType === 'Payment' ? 'Dr' : 'Cr') : 'Dr' }]);
+          setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, amount: 0, disc_percent: 0, tax_percent: 0, unit: '', batch_no: '', expiry_date: '' }]);
+          setGlobalDiscount(0);
+          setSalespersonId('');
+          setRefNo(''); // Will be auto-generated on next render or effect
+          // Fetch new ref no
+          const nextNo = await erpService.getNextVoucherNumber(user.companyId, vType);
+          setRefNo(nextNo);
+        }
       }
-      navigate(-1);
+      if (isEdit) {
+        navigate(-1);
+      }
     } catch (err) {
       console.error('Error saving voucher:', err);
       showNotification('Failed to save voucher');

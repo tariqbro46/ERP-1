@@ -140,8 +140,28 @@ export function ItemCreation() {
       } else {
         await erpService.createItem(user!.companyId, cleanData);
         showNotification(notifications.itemCreated);
+        // If not isEdit, stay on page and clear data
+        setFormData({
+          name: '',
+          category: formData.category,
+          category_id: formData.category_id,
+          part_no: '',
+          description: '',
+          unit_id: formData.unit_id,
+          opening_qty: 0,
+          opening_rate: 0,
+          has_batches: false,
+          has_expiry: false,
+          barcode: '',
+          low_stock_threshold: 0,
+          tax_percent: 0,
+          scheme_qty: 0,
+          scheme_free_qty: 0
+        });
       }
-      navigate(-1);
+      if (isEdit) {
+        navigate(-1);
+      }
     } catch (err: any) {
       console.error('Error saving item:', err);
       alert(err.message || 'Failed to save item. Please check your connection.');

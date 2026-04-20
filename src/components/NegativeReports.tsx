@@ -168,7 +168,7 @@ export const NegativeReports: React.FC<NegativeReportsProps> = ({ type }) => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button 
-                        onClick={() => navigate(type === 'ledger' ? `/reports/ledger?id=${item.id}` : `/inventory/items/edit/${item.id}`)}
+                        onClick={() => navigate(type === 'ledger' ? `/reports/ledger?ledgerId=${item.id}` : `/reports/stock-item?id=${item.id}`)}
                         className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                       >
                         View Details
