@@ -144,6 +144,12 @@ export function ItemCreation() {
       // Clean data for saving
       const { units: _u, id: _id, created_at: _ca, current_stock: _cs, avg_cost: _ac, ...cleanData } = formData as any;
       
+      // Ensure unit_name is included
+      const selectedUnit = units.find(u => u.id === formData.unit_id);
+      if (selectedUnit) {
+        cleanData.unit_name = selectedUnit.name;
+      }
+
       if (isEdit) {
         await erpService.updateItem(id!, cleanData);
         showNotification(notifications.itemCreated.replace('added', 'updated'));

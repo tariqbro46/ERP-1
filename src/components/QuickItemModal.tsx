@@ -56,10 +56,12 @@ export function QuickItemModal({ isOpen, onClose, onSuccess }: QuickItemModalPro
 
     setLoading(true);
     try {
+      const selectedUnit = units.find(u => u.id === formData.unit_id);
       const payload = {
         name: formData.name,
         category: showNewCategory ? formData.newCategoryName : formData.category,
         unit_id: formData.unit_id,
+        unit_name: selectedUnit?.name || 'pcs',
         opening_qty: formData.opening_qty,
         opening_rate: formData.opening_rate
       };

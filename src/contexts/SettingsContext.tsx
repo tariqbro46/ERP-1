@@ -36,6 +36,7 @@ interface SettingsContextType {
   companyName: string;
   companyLogo?: string;
   systemLogo?: string;
+  systemFavicon?: string;
   companyAddress: string;
   slogan: string;
   financialYearStart: string;
@@ -103,6 +104,7 @@ const defaultSettings: SettingsContextType = {
   companyName: 'TallyFlow ERP',
   companyLogo: '',
   systemLogo: '',
+  systemFavicon: '',
   companyAddress: 'Dhaka, Bangladesh',
   slogan: 'Enterprise ERP Solution',
   financialYearStart: '2024-04-01',
@@ -226,6 +228,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           englishFont: data.englishFont || prev.englishFont,
           banglaFont: data.banglaFont || prev.banglaFont,
           systemLogo: data.systemLogo || prev.systemLogo,
+          systemFavicon: data.systemFavicon || prev.systemFavicon,
           glassBackground: data.glassBackground || prev.glassBackground,
           notificationDuration: data.notificationDuration || prev.notificationDuration,
           notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle
@@ -294,6 +297,65 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       unsubscribePlans();
     };
   }, [user?.companyId]);
+
+  useEffect(() => {
+    if (settings.systemFavicon) {
+      const iconUrl = settings.systemFavicon;
+      
+      // Update favicon
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = iconUrl;
+
+      // Update apple-touch-icon
+      let appleIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement;
+      if (!appleIcon) {
+        appleIcon = document.createElement('link');
+        appleIcon.rel = 'apple-touch-icon';
+        document.getElementsByTagName('head')[0].appendChild(appleIcon);
+      }
+      appleIcon.href = iconUrl;
+
+      // Update Manifest dynamically for 'Add to home screen' support with custom icon
+      try {
+        const myManifest = {
+          "name": settings.companyName || "TallyFlow ERP",
+          "short_name": settings.companyName || "TallyFlow",
+          "description": settings.slogan || "Enterprise ERP Solution",
+          "start_url": window.location.origin,
+          "scope": window.location.origin,
+          "display": "standalone",
+          "theme_color": "#3b82f6",
+          "background_color": "#ffffff",
+          "icons": [
+            { "src": iconUrl, "sizes": "192x192", "type": "image/png", "purpose": "any" },
+            { "src": iconUrl, "sizes": "512x512", "type": "image/png", "purpose": "any" },
+            { "src": iconUrl, "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+            { "src": iconUrl, "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+          ]
+        };
+        const stringManifest = JSON.stringify(myManifest);
+        const blob = new Blob([stringManifest], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(blob);
+        
+        const manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+        if (manifestLink) {
+          manifestLink.href = manifestURL;
+        } else {
+          const newManifestLink = document.createElement('link');
+          newManifestLink.rel = 'manifest';
+          newManifestLink.href = manifestURL;
+          document.getElementsByTagName('head')[0].appendChild(newManifestLink);
+        }
+      } catch (err) {
+        console.error('Error updating dynamic manifest:', err);
+      }
+    }
+  }, [settings.systemFavicon, settings.companyName, settings.slogan]);
 
   const updateSettings = async (newSettings: Partial<SettingsContextType>) => {
     if (!user?.companyId) return;

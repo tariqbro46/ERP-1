@@ -126,6 +126,7 @@ export function VoucherEntry() {
   const [ledgers, setLedgers] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [godowns, setGodowns] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [salespersonId, setSalespersonId] = useState('');
   
@@ -411,16 +412,18 @@ export function VoucherEntry() {
 
   async function fetchData() {
     if (!user?.companyId) return;
-    const [lData, iData, gData, uData] = await Promise.all([
+    const [lData, iData, gData, uData, unitData] = await Promise.all([
       erpService.getLedgers(user.companyId),
       erpService.getItems(user.companyId),
       erpService.getGodowns(user.companyId),
-      erpService.getCompanyUsers(user.companyId)
+      erpService.getCompanyUsers(user.companyId),
+      erpService.getUnits(user.companyId)
     ]);
     setLedgers(lData);
     setItems(iData);
     setGodowns(gData);
     setUsers(uData);
+    setUnits(unitData || []);
   }
 
   const handleQuickLedgerSuccess = (newLedger: any) => {
@@ -1125,8 +1128,9 @@ export function VoucherEntry() {
                             onChange={(val) => {
                               const next = [...invEntries];
                               const item = items.find(i => i.id === val);
+                              const unitFromMaster = units.find(u => u.id === item?.unit_id)?.name;
                               next[idx].item_id = val;
-                              next[idx].unit = item?.unit_name || 'pcs';
+                              next[idx].unit = item?.unit_name || unitFromMaster || 'pcs';
                               setInvEntries(next);
                               fetchItemStock(val, entry.godown_id);
                               setFocusedItemId(val);
@@ -1337,8 +1341,9 @@ export function VoucherEntry() {
                         onChange={(val) => {
                           const next = [...invEntries];
                           const item = items.find(i => i.id === val);
+                          const unitFromMaster = units.find(u => u.id === item?.unit_id)?.name;
                           next[idx].item_id = val;
-                          next[idx].unit = item?.unit_name || 'pcs';
+                          next[idx].unit = item?.unit_name || unitFromMaster || 'pcs';
                           setInvEntries(next);
                           fetchItemStock(val, entry.godown_id);
                           setFocusedItemId(val);

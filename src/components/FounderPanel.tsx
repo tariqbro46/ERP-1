@@ -208,7 +208,7 @@ export default function FounderPanel() {
     { id: 'Settings', label: 'Settings', icon: Settings }
   ];
 
-  const { showGoToShortcut, appVersion, updateSettings, updateSystemSettings, uiStyle, glassBackground, statusOnlineText, statusOfflineText, statusErrorText, systemLogo, notificationDuration, notificationAnimationStyle } = useSettings();
+  const { showGoToShortcut, appVersion, updateSettings, updateSystemSettings, uiStyle, glassBackground, statusOnlineText, statusOfflineText, statusErrorText, systemLogo, systemFavicon, notificationDuration, notificationAnimationStyle } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
   const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground || 'default');
@@ -216,6 +216,7 @@ export default function FounderPanel() {
   const [localStatusOffline, setLocalStatusOffline] = useState(statusOfflineText || 'Status: Offline');
   const [localStatusError, setLocalStatusError] = useState(statusErrorText || 'Database Error');
   const [localSystemLogo, setLocalSystemLogo] = useState(systemLogo || '');
+  const [localSystemFavicon, setLocalSystemFavicon] = useState(systemFavicon || '');
   const [localNotificationDuration, setLocalNotificationDuration] = useState(notificationDuration || 5000);
   const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle || 'default');
   const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut ?? true);
@@ -247,6 +248,10 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalSystemLogo(systemLogo || '');
   }, [systemLogo]);
+
+  useEffect(() => {
+    setLocalSystemFavicon(systemFavicon || '');
+  }, [systemFavicon]);
 
   useEffect(() => {
     setLocalNotificationDuration(notificationDuration);
@@ -709,6 +714,21 @@ export default function FounderPanel() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setLocalSystemLogo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSystemFaviconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 512 * 1024) {
+        showNotification('Favicon size should be less than 512KB', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLocalSystemFavicon(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -2277,6 +2297,46 @@ export default function FounderPanel() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">App Favicon (Mobile App Icon)</label>
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-foreground/5 overflow-hidden rounded-lg">
+                    {localSystemFavicon ? (
+                      <img src={localSystemFavicon} alt="Favicon" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                    ) : (
+                      <Zap className="w-6 h-6 text-muted-foreground opacity-20" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex gap-2">
+                      <label className="flex-1 cursor-pointer bg-foreground/5 border border-border hover:bg-foreground/10 transition-all p-2 text-center rounded-lg">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Upload Favicon</span>
+                        <input type="file" accept="image/*" onChange={handleSystemFaviconUpload} className="hidden" />
+                      </label>
+                      {localSystemFavicon && (
+                        <button 
+                          onClick={() => setLocalSystemFavicon('')}
+                          className="p-2 border border-border text-rose-500 hover:bg-rose-500/10 transition-all rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Or set via URL</label>
+                      <input
+                        type="text"
+                        placeholder="https://example.com/favicon.png"
+                        value={localSystemFavicon}
+                        onChange={(e) => setLocalSystemFavicon(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <p className="text-[9px] text-muted-foreground uppercase">Set your application's favicon. This icon will appear in browser tabs and as the app icon when "Added to Home Screen" on mobile devices.</p>
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-4">
                 <button
                   onClick={async () => {
@@ -2287,6 +2347,7 @@ export default function FounderPanel() {
                         statusErrorText: localStatusError,
                         appVersion: localAppVersion,
                         systemLogo: localSystemLogo,
+                        systemFavicon: localSystemFavicon,
                         uiStyle: localUIStyle,
                         glassBackground: localGlassBackground,
                         notificationDuration: localNotificationDuration,
