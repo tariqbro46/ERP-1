@@ -818,11 +818,13 @@ export function VoucherEntry() {
                 value={vType}
                 onChange={e => {
                   setVType(e.target.value);
-                  setPartyLedgerId('');
-                  setSalesPurchaseLedgerId('');
-                  setBankCashLedgerId('');
-                  setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }]);
-                  setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
+                  if (!isEdit) {
+                    setPartyLedgerId('');
+                    setSalesPurchaseLedgerId('');
+                    setBankCashLedgerId('');
+                    setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }]);
+                    setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
+                  }
                 }}
                 tabIndex={1}
                 className={cn(
@@ -934,11 +936,13 @@ export function VoucherEntry() {
                 value={vType}
                 onChange={e => {
                   setVType(e.target.value);
-                  setPartyLedgerId('');
-                  setSalesPurchaseLedgerId('');
-                  setBankCashLedgerId('');
-                  setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }]);
-                  setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
+                  if (!isEdit) {
+                    setPartyLedgerId('');
+                    setSalesPurchaseLedgerId('');
+                    setBankCashLedgerId('');
+                    setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }]);
+                    setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
+                  }
                 }}
                 tabIndex={1}
                 className={cn(
