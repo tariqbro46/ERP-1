@@ -63,7 +63,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { companyName, financialYearStart, financialYearEnd, dashboardDesign, uiStyle, showQuickActions } = useSettings();
+  const { companyName, financialYearStart, financialYearEnd, dashboardDesign, uiStyle, showQuickActions, dashboardQuickActions = ['voucher', 'item', 'ledger', 'godown', 'users'] } = useSettings();
   const { isAdmin, user } = useAuth();
   const [loading, setLoading] = useState(true);
   
@@ -467,51 +467,59 @@ export function Dashboard() {
           <div className="flex flex-col md:flex-row md:items-center gap-4">
             <h3 className="text-[11px] font-mono text-gray-500 uppercase tracking-widest hidden sm:block">{t('dash.quickActions')}</h3>
             <div className="grid grid-cols-3 sm:flex flex-wrap gap-2 lg:gap-3 flex-1">
-              <button 
-                onClick={() => navigate('/vouchers/new')}
-                className={cn(
-                  "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
-                  uiStyle === 'UI/UX 2' 
-                    ? "bg-blue-600 border-blue-500 text-white hover:bg-blue-700" 
-                    : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
-                )}
-              >
-                <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.voucher')}</span>
-              </button>
-              <button 
-                onClick={() => navigate('/inventory/items/new')}
-                className={cn(
-                  "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
-                  uiStyle === 'UI/UX 2' 
-                    ? "bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-700" 
-                    : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
-                )}
-              >
-                <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.item')}</span>
-              </button>
-              <button 
-                onClick={() => navigate('/accounts/ledgers/new')}
-                className={cn(
-                  "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
-                  uiStyle === 'UI/UX 2' 
-                    ? "bg-amber-600 border-amber-500 text-white hover:bg-amber-700" 
-                    : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
-                )}
-              >
-                <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.ledger')}</span>
-              </button>
-              <button 
-                onClick={() => navigate('/inventory/godowns')}
-                className={cn(
-                  "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
-                  uiStyle === 'UI/UX 2' 
-                    ? "bg-rose-600 border-rose-500 text-white hover:bg-rose-700" 
-                    : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
-                )}
-              >
-                <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.godown')}</span>
-              </button>
-              {isAdmin && (
+              {dashboardQuickActions.includes('voucher') && (
+                <button 
+                  onClick={() => navigate('/vouchers/new')}
+                  className={cn(
+                    "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                    uiStyle === 'UI/UX 2' 
+                      ? "bg-blue-600 border-blue-500 text-white hover:bg-blue-700" 
+                      : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
+                  )}
+                >
+                  <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.voucher')}</span>
+                </button>
+              )}
+              {dashboardQuickActions.includes('item') && (
+                <button 
+                  onClick={() => navigate('/inventory/items/new')}
+                  className={cn(
+                    "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                    uiStyle === 'UI/UX 2' 
+                      ? "bg-emerald-600 border-emerald-500 text-white hover:bg-emerald-700" 
+                      : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
+                  )}
+                >
+                  <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.item')}</span>
+                </button>
+              )}
+              {dashboardQuickActions.includes('ledger') && (
+                <button 
+                  onClick={() => navigate('/accounts/ledgers/new')}
+                  className={cn(
+                    "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                    uiStyle === 'UI/UX 2' 
+                      ? "bg-amber-600 border-amber-500 text-white hover:bg-amber-700" 
+                      : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
+                  )}
+                >
+                  <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.ledger')}</span>
+                </button>
+              )}
+              {dashboardQuickActions.includes('godown') && (
+                <button 
+                  onClick={() => navigate('/inventory/godowns')}
+                  className={cn(
+                    "px-2 py-1.5 lg:px-4 lg:py-2 border text-[8px] lg:text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                    uiStyle === 'UI/UX 2' 
+                      ? "bg-rose-600 border-rose-500 text-white hover:bg-rose-700" 
+                      : "bg-foreground/5 border-border text-foreground hover:bg-foreground hover:text-background"
+                  )}
+                >
+                  <Plus className="w-3 h-3" /> <span className="text-center">{t('dash.godown')}</span>
+                </button>
+              )}
+              {isAdmin && dashboardQuickActions.includes('users') && (
                 <button 
                   onClick={() => navigate('/users')}
                   className={cn(

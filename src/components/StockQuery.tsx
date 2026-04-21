@@ -12,17 +12,35 @@ export function StockQuery() {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [details, setDetails] = useState<any>(null);
+  const [activeIndex, setActiveIndex] = useState(-1);
+
+  const filteredItems = items.filter(i => 
+    i.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (i.part_no || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   useEffect(() => {
     async function fetchItems() {
       if (!user?.companyId) return;
       try {
-        const stockItems = await erpService.getItems(user.companyId);
-        setItems(stockItems);
-        if (stockItems.length > 0) {
-          handleItemSelect(stockItems[0]);
+        const [stockItems, unitsRes] = await Promise.all([
+          erpService.getItems(user.companyId),
+          erpService.getCollection('units', user.companyId)
+        ]);
+        
+        const mappedItems = stockItems.map(item => ({
+          ...item,
+          unitName: unitsRes.find(u => u.id === item.unit_id)?.name || (item as any).unit || 'pcs'
+        }));
+
+        setItems(mappedItems);
+        setUnits(unitsRes);
+        if (mappedItems.length > 0) {
+          handleItemSelect(mappedItems[0]);
         }
       } catch (err) {
         console.error('Error fetching items:', err);
@@ -39,7 +57,7 @@ export function StockQuery() {
     try {
       const allInvEntries = await erpService.getInventoryEntriesByDate(user!.companyId, '2020-01-01', '2030-12-31');
       const itemEntries = allInvEntries
-        .filter((e: any) => e.item_id === item.id)
+        .filter((e: any) => String(e.item_id) === String(item.id))
         .sort((a: any, b: any) => {
           const dateA = a.date || a.created_at?.toDate?.()?.toISOString() || '';
           const dateB = b.date || b.created_at?.toDate?.()?.toISOString() || '';
@@ -69,6 +87,21 @@ export function StockQuery() {
       setLoading(false);
     }
   }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (filteredItems.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev + 1 >= filteredItems.length ? 0 : prev + 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev - 1 < 0 ? filteredItems.length - 1 : prev - 1));
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && activeIndex < filteredItems.length) {
+        handleItemSelect(filteredItems[activeIndex]);
+      }
+    }
+  };
 
   if (loading && !selectedItem) {
     return (
@@ -103,22 +136,29 @@ export function StockQuery() {
                 <input 
                   type="text"
                   placeholder="Filter items..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setActiveIndex(-1);
+                  }}
+                  onKeyDown={handleKeyDown}
                   className="pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-lg w-full focus:outline-none"
                 />
               </div>
             </div>
             <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
-              {items.map((item) => (
+              {filteredItems.map((item, idx) => (
                 <button
                   key={item.id}
                   onClick={() => handleItemSelect(item)}
+                  onMouseEnter={() => setActiveIndex(idx)}
                   className={cn(
-                    "w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex flex-col",
-                    selectedItem?.id === item.id && "bg-primary/5 border-l-4 border-primary"
+                    "w-full px-4 py-3 text-left transition-colors flex flex-col",
+                    (selectedItem?.id === item.id || activeIndex === idx) ? "bg-primary/5 border-l-4 border-primary" : "hover:bg-gray-50"
                   )}
                 >
                   <span className="font-medium text-gray-900 truncate">{item.name}</span>
-                  <span className="text-xs text-gray-500">Stock: {item.current_stock} {item.unit}</span>
+                  <span className="text-xs text-gray-500">Stock: {item.current_stock} {item.unitName}</span>
                 </button>
               ))}
             </div>
@@ -137,7 +177,7 @@ export function StockQuery() {
                     <Package className="w-5 h-5 text-primary" />
                   </div>
                   <div className="text-2xl font-bold text-gray-900">
-                    {selectedItem.current_stock} <span className="text-sm font-normal text-gray-500">{selectedItem.unit}</span>
+                    {selectedItem.current_stock} <span className="text-sm font-normal text-gray-500">{selectedItem.unitName}</span>
                   </div>
                 </div>
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -176,7 +216,7 @@ export function StockQuery() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">Quantity</span>
-                          <span className="font-medium">{details.lastPurchase.qty} {selectedItem.unit}</span>
+                          <span className="font-medium">{details.lastPurchase.qty} {selectedItem.unitName}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">Rate</span>
@@ -207,7 +247,7 @@ export function StockQuery() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">Quantity</span>
-                          <span className="font-medium">{details.lastSales.qty} {selectedItem.unit}</span>
+                          <span className="font-medium">{details.lastSales.qty} {selectedItem.unitName}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-500">Rate</span>
@@ -235,7 +275,7 @@ export function StockQuery() {
                   {details.stockByGodown.length > 0 ? details.stockByGodown.map((g: any, idx: number) => (
                     <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
                       <span className="text-gray-700">{g.name}</span>
-                      <span className="font-medium text-gray-900">{g.qty} {selectedItem.unit}</span>
+                      <span className="font-medium text-gray-900">{g.qty} {selectedItem.unitName}</span>
                     </div>
                   )) : (
                     <div className="px-6 py-8 text-center text-gray-500">No godown stock allocation</div>
@@ -272,8 +312,8 @@ export function StockQuery() {
                               {h.movement_type}
                             </span>
                           </td>
-                          <td className="px-6 py-3 text-right">{h.movement_type === 'Inward' ? `${h.qty} ${selectedItem.unit}` : '-'}</td>
-                          <td className="px-6 py-3 text-right">{h.movement_type === 'Outward' ? `${h.qty} ${selectedItem.unit}` : '-'}</td>
+                          <td className="px-6 py-3 text-right">{h.movement_type === 'Inward' ? `${h.qty} ${selectedItem.unitName}` : '-'}</td>
+                          <td className="px-6 py-3 text-right">{h.movement_type === 'Outward' ? `${h.qty} ${selectedItem.unitName}` : '-'}</td>
                           <td className="px-6 py-3 text-right">{formatCurrency(h.rate)}</td>
                         </tr>
                       ))}

@@ -62,6 +62,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     sidebarDefaultExpanded,
     showGoToShortcut,
     showQuickActions,
+    dashboardQuickActions = ['voucher', 'item', 'ledger', 'godown', 'users'],
     englishFont,
     banglaFont,
     notifications, 
@@ -123,6 +124,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded ?? true);
   const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut ?? true);
   const [localShowQuickActions, setLocalShowQuickActions] = useState(showQuickActions ?? true);
+  const [localDashboardQuickActions, setLocalDashboardQuickActions] = useState<string[]>(dashboardQuickActions || ['voucher', 'item', 'ledger', 'godown', 'users']);
   const [localEnglishFont, setLocalEnglishFont] = useState(englishFont || 'Inter');
   const [localBanglaFont, setLocalBanglaFont] = useState(banglaFont || 'Hind Siliguri');
 
@@ -208,6 +210,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded ?? true);
     setLocalShowGoToShortcut(showGoToShortcut ?? true);
     setLocalShowQuickActions(showQuickActions ?? true);
+    setLocalDashboardQuickActions(dashboardQuickActions || ['voucher', 'item', 'ledger', 'godown', 'users']);
     setLocalEnglishFont(englishFont || 'Inter');
     setLocalBanglaFont(banglaFont || 'Hind Siliguri');
     setLocalMenuBarStyle(menuBarStyle || 'classic');
@@ -248,6 +251,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const handleSaveUI = () => {
     updateUserSettings({
       showQuickActions: localShowQuickActions,
+      dashboardQuickActions: localDashboardQuickActions,
       menuBarStyle: localMenuBarStyle,
       uiStyle: localUIStyle,
       glassBackground: localGlassBackground,
@@ -917,6 +921,44 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                           )} />
                         </button>
                       </div>
+
+                      {localShowQuickActions && (
+                        <div className="p-4 bg-foreground/5 border-x border-b border-border space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <h4 className="text-[10px] font-bold text-foreground uppercase tracking-widest flex items-center gap-2">
+                            <Zap className="w-3 h-3 text-amber-500" />
+                            Select Dashboard Quick Actions
+                          </h4>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {[
+                              { id: 'voucher', label: t('dash.voucher') },
+                              { id: 'item', label: t('dash.item') },
+                              { id: 'ledger', label: t('dash.ledger') },
+                              { id: 'godown', label: t('dash.godown') },
+                              { id: 'users', label: t('dash.users') },
+                            ].map(action => (
+                              <button
+                                key={action.id}
+                                onClick={() => {
+                                  if (localDashboardQuickActions.includes(action.id)) {
+                                    setLocalDashboardQuickActions(prev => prev.filter(a => a !== action.id));
+                                  } else {
+                                    setLocalDashboardQuickActions(prev => [...prev, action.id]);
+                                  }
+                                }}
+                                className={cn(
+                                  "px-3 py-2 text-[9px] font-bold uppercase tracking-widest border transition-all flex items-center justify-between",
+                                  localDashboardQuickActions.includes(action.id)
+                                    ? "bg-foreground text-background border-foreground shadow-sm"
+                                    : "bg-background text-gray-500 border-border hover:border-gray-400"
+                                )}
+                              >
+                                <span>{action.label}</span>
+                                {localDashboardQuickActions.includes(action.id) && <CheckCircle2 className="w-3 h-3" />}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-2 md:col-span-2">

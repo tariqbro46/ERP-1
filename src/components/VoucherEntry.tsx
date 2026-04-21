@@ -139,7 +139,14 @@ export function VoucherEntry() {
   const [pendingField, setPendingField] = useState<'party' | 'sales' | 'account' | 'particulars' | null>(null);
   
   // Common Header Fields
-  const [vDate, setVDate] = useState(new Date().toISOString().split('T')[0]);
+  const [vDate, setVDate] = useState(() => {
+    return localStorage.getItem('lastVoucherDate') || new Date().toISOString().split('T')[0];
+  });
+
+  // Track sticky date
+  useEffect(() => {
+    localStorage.setItem('lastVoucherDate', vDate);
+  }, [vDate]);
   const [refNo, setRefNo] = useState('');
   const [partyLedgerId, setPartyLedgerId] = useState('');
   const [salesPurchaseLedgerId, setSalesPurchaseLedgerId] = useState('');
@@ -692,8 +699,6 @@ export function VoucherEntry() {
         showNotification(notifications.voucherSaved);
         if (!isEdit) {
           // Reset all fields for new entry
-          setVDate(new Date().toLocaleDateString('en-CA'));
-          setRefNo('');
           setNarration('');
           setPartyLedgerId('');
           setBankCashLedgerId('');

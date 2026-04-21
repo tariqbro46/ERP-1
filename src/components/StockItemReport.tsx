@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Loader2, Calendar, Search, Filter, History, Package, Printer, Download } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,7 +14,9 @@ import { printElement } from '../utils/printUtils';
 export function StockItemReport() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const locationState = location.state as { itemId?: string } | null;
   const { t } = useLanguage();
   const settings = useSettings();
   const [loading, setLoading] = useState(true);
@@ -52,9 +54,9 @@ export function StockItemReport() {
         setItems(stockItems);
         setUnits(unitsRes);
         
-        const forceId = searchParams.get('id');
+        const forceId = searchParams.get('id') || locationState?.itemId;
         if (forceId) {
-          const item = stockItems.find(i => i.id === forceId);
+          const item = stockItems.find(i => String(i.id) === String(forceId));
           if (item) {
             handleItemSelect(item, stockItems, unitsRes, startDate, endDate);
           }
@@ -98,6 +100,32 @@ export function StockItemReport() {
       const end = parseLocal(to);
       end.setHours(23, 59, 59, 999); // Include entire end day
       
+      // Calculate Opening Balance (sum of all entries before START date)
+      const openingEntries = allInvEntries.filter((e: any) => {
+        if (String(e.item_id) !== String(item.id)) return false;
+        let dateObj: Date;
+        if (e.date && typeof e.date === 'string' && e.date.includes('-')) {
+          dateObj = parseLocal(e.date);
+        } else {
+          dateObj = new Date(e.date || e.created_at?.toDate?.() || 0);
+        }
+        return dateObj < start;
+      });
+
+      // Include master opening_qty and opening_qty * opening_rate in the initial opening calculations
+      const initialQty = Number(item.opening_qty) || 0;
+      const initialValue = initialQty * (Number(item.opening_rate) || 0);
+
+      const openingBalance = openingEntries.reduce((sum, e) => {
+        const total = (e.qty || 0) + (e.free_qty || 0);
+        return sum + (e.movement_type === 'Inward' ? total : -total);
+      }, initialQty);
+
+      const openingValue = openingEntries.reduce((sum, e) => {
+        const val = (e.qty || 0) * (e.rate || 0);
+        return sum + (e.movement_type === 'Inward' ? val : -val);
+      }, initialValue);
+
       const itemEntries = allInvEntries.filter((e: any) => {
         if (String(e.item_id) !== String(item.id)) return false;
         
@@ -121,19 +149,57 @@ export function StockItemReport() {
         // Daily summary
         const days: any[] = [];
         let curr = new Date(start);
+        
+        // Helper to get YYYY-MM-DD from Date without timezone shift
+        const toYMD = (d: Date) => {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+
+        // Add Opening Row
+        days.push({
+          label: 'Opening Balance',
+          isOpening: true,
+          inwardQty: 0,
+          inwardValue: 0,
+          outwardQty: 0,
+          outwardValue: 0,
+          closingQty: openingBalance,
+          closingValue: openingValue
+        });
+
+        let runningQty = openingBalance;
+        let runningVal = openingValue;
+
         while (curr <= end) {
-          const dStr = curr.toLocaleDateString('en-CA');
-          const dayEntries = itemEntries.filter(e => e.date === dStr);
+          const targetStr = toYMD(curr);
+          const dayEntries = itemEntries.filter(e => {
+            if (e.date) return e.date === targetStr;
+            const ed = new Date(e.created_at?.toDate?.() || 0);
+            return toYMD(ed) === targetStr;
+          });
           
           const inward = dayEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'inward');
           const outward = dayEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'outward');
 
+          const inQty = inward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0);
+          const outQty = outward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0);
+          const inVal = inward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0);
+          const outVal = outward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0);
+
+          runningQty += (inQty - outQty);
+          runningVal += (inVal - outVal);
+
           days.push({
-            label: curr.toISOString().split('T')[0],
-            inwardQty: inward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0),
-            inwardValue: inward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0),
-            outwardQty: outward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0),
-            outwardValue: outward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0)
+            label: targetStr,
+            inwardQty: inQty,
+            inwardValue: inVal,
+            outwardQty: outQty,
+            outwardValue: outVal,
+            closingQty: runningQty,
+            closingValue: runningVal
           });
           curr.setDate(curr.getDate() + 1);
         }
@@ -145,6 +211,21 @@ export function StockItemReport() {
         let curr = new Date(start);
         curr.setDate(1); // start of month
         
+        // Add Opening Row
+        summary.push({
+          label: 'Opening Balance',
+          isOpening: true,
+          inwardQty: 0,
+          inwardValue: 0,
+          outwardQty: 0,
+          outwardValue: 0,
+          closingQty: openingBalance,
+          closingValue: openingValue
+        });
+
+        let runningQty = openingBalance;
+        let runningVal = openingValue;
+
         while (curr <= end) {
           const monthIdx = curr.getMonth();
           const year = curr.getFullYear();
@@ -164,12 +245,22 @@ export function StockItemReport() {
           const inward = mEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'inward');
           const outward = mEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'outward');
 
+          const inQty = inward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0);
+          const outQty = outward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0);
+          const inVal = inward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0);
+          const outVal = outward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0);
+
+          runningQty += (inQty - outQty);
+          runningVal += (inVal - outVal);
+
           summary.push({
             label: curr.toLocaleString('default', { month: 'short', year: 'numeric' }),
-            inwardQty: inward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0),
-            inwardValue: inward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0),
-            outwardQty: outward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0),
-            outwardValue: outward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0)
+            inwardQty: inQty,
+            inwardValue: inVal,
+            outwardQty: outQty,
+            outwardValue: outVal,
+            closingQty: runningQty,
+            closingValue: runningVal
           });
           
           curr.setMonth(curr.getMonth() + 1);
@@ -333,7 +424,7 @@ export function StockItemReport() {
                       </th>
                       <th colSpan={2} className="px-6 py-1 text-center border-b border-gray-100 bg-green-100 text-green-700">{t('stockItem.inward')}</th>
                       <th colSpan={2} className="px-6 py-1 text-center border-b border-gray-100 bg-red-100 text-red-700">{t('stockItem.outward')}</th>
-                      <th rowSpan={2} className="px-6 py-0 text-right bg-gray-100 align-middle">{t('stockItem.netQty')}</th>
+                      <th rowSpan={2} className="px-6 py-0 text-right bg-gray-100 align-middle">Closing Qty</th>
                     </tr>
                     <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500 sticky top-[40px] z-10 h-10">
                       <th className="px-6 py-0 text-right bg-green-50 align-middle">{t('stockItem.qty')}</th>
@@ -360,11 +451,8 @@ export function StockItemReport() {
                         <td className="px-6 py-3 text-right text-red-700">
                           {row.outwardValue > 0 ? formatCurrency(row.outwardValue) : '-'}
                         </td>
-                        <td className={cn(
-                          "px-6 py-3 text-right font-bold",
-                          (row.inwardQty - row.outwardQty) >= 0 ? "text-green-600" : "text-red-600"
-                        )}>
-                          {row.inwardQty - row.outwardQty !== 0 ? `${row.inwardQty - row.outwardQty} ${selectedItem.unitName || ''}` : '-'}
+                        <td className="px-6 py-3 text-right font-bold text-primary">
+                          {row.closingQty !== 0 ? `${row.closingQty} ${selectedItem.unitName || ''}` : row.isOpening ? `0 ${selectedItem.unitName || ''}` : '-'}
                         </td>
                       </tr>
                     ))}

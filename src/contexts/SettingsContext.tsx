@@ -87,6 +87,7 @@ interface SettingsContextType {
   statusErrorText: string;
   showGoToShortcut: boolean;
   showQuickActions: boolean;
+  dashboardQuickActions: string[];
   whatsappTemplates: WhatsAppTemplates;
   notifications: NotificationSettings;
   features: FeatureSettings[];
@@ -153,6 +154,7 @@ const defaultSettings: SettingsContextType = {
   statusErrorText: 'Database Error',
   showGoToShortcut: true,
   showQuickActions: true,
+  dashboardQuickActions: ['voucher', 'item', 'ledger', 'godown', 'users'],
   whatsappTemplates: {
     Sales: "*{{companyName}}*\nSales Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
     Purchase: "*{{companyName}}*\nPurchase Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",

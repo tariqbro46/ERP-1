@@ -70,6 +70,18 @@ export function DateInput({ value, onChange, className, placeholder, label, disa
             disabled && "opacity-50 cursor-not-allowed"
           )}
         />
+        {/* Native date picker trigger via hidden input */}
+        <input 
+          type="date"
+          className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-0 cursor-pointer z-10"
+          value={value}
+          onChange={(e) => {
+            if (e.target.value) {
+              onChange(e.target.value);
+            }
+          }}
+          disabled={disabled}
+        />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
           <Calendar className="w-3.5 h-3.5" />
         </div>
