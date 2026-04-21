@@ -62,7 +62,16 @@ export const ReportsMenu: React.FC = () => {
     { id: 'rep-ledger-statement', label: 'Ledger Statement', labelKey: 'reports.ledgerStatement', to: '/reports/ledger', icon: 'FileText' },
     { id: 'rep-sales-register', label: 'Sales Register', labelKey: 'reports.salesRegister', to: '/reports/sales-register', icon: 'FileText' },
     { id: 'rep-purchase-register', label: 'Purchase Register', labelKey: 'reports.purchaseRegister', to: '/reports/purchase-register', icon: 'FileText' },
-    { id: 'rep-cash-bank', label: 'Cash/Bank Books', labelKey: 'reports.cashBankBooks', to: '/reports/cash-bank', icon: 'BookOpen', hidden: false }
+    { id: 'rep-cash-bank', label: 'Cash/Bank Books', labelKey: 'reports.cashBankBooks', to: '/reports/cash-bank', icon: 'BookOpen', hidden: false },
+    { id: 'rep-pay-slip', label: 'Pay Slip', labelKey: 'reports.paySlip', to: '/reports/pay-slip', icon: 'FileText' },
+    { id: 'rep-pay-sheet', label: 'Pay Sheet', labelKey: 'reports.paySheet', to: '/reports/pay-sheet', icon: 'FileText' },
+    { id: 'rep-attendance-sheet', label: 'Attendance Sheet', labelKey: 'reports.attendanceSheet', to: '/reports/attendance-sheet', icon: 'FileText' },
+    { id: 'rep-payment-advice', label: 'Payment Advice', labelKey: 'reports.paymentAdvice', to: '/reports/payment-advice', icon: 'FileText' },
+    { id: 'rep-payroll-statement', label: 'Payroll Statement', labelKey: 'reports.payrollStatement', to: '/reports/payroll-statement', icon: 'FileText' },
+    { id: 'rep-payroll-register', label: 'Payroll Register', labelKey: 'reports.payrollRegister', to: '/reports/payroll-register', icon: 'FileText' },
+    { id: 'rep-attendance-register', label: 'Attendance Register', labelKey: 'reports.attendanceRegister', to: '/reports/attendance-register', icon: 'FileText' },
+    { id: 'rep-employee-profile', label: 'Employee Profile', labelKey: 'reports.employeeProfile', to: '/reports/employee-profile', icon: 'User' },
+    { id: 'rep-headcount', label: 'Employee Head Count', labelKey: 'reports.employeeHeadCount', to: '/reports/employee-head-count', icon: 'Users' }
   ];
 
   const itemsToUse = reportsGroup?.items || defaultItems;
@@ -99,7 +108,15 @@ export const ReportsMenu: React.FC = () => {
       titleKey: 'nav.payroll',
       icon: Users,
       itemIds: [
-        'rep-payroll'
+        'rep-pay-slip',
+        'rep-pay-sheet',
+        'rep-attendance-sheet',
+        'rep-payment-advice',
+        'rep-payroll-statement',
+        'rep-payroll-register',
+        'rep-attendance-register',
+        'rep-employee-profile',
+        'rep-headcount'
       ]
     },
     {

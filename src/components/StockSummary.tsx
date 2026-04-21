@@ -88,17 +88,27 @@ export function StockSummary() {
   };
 
   const getStockForGodown = (itemId: string, godownId: string | null) => {
+    const item = items.find(i => i.id === itemId);
+    const openingQty = item?.opening_qty || 0;
+    const openingAllocations = item?.opening_godowns || [];
+
     if (!godownId) {
-      const item = items.find(i => i.id === itemId);
       return item?.current_stock || 0;
     }
     
-    return inventory
+    // Calculate stock from transactions for this specific godown
+    const transactionStock = inventory
       .filter(inv => inv.item_id === itemId && inv.godown_id === godownId)
       .reduce((sum, inv) => {
-        const qty = Number(inv.qty) || 0;
+        const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
         return inv.movement_type === 'Inward' ? sum + qty : sum - qty;
       }, 0);
+
+    // Add opening allocation for this godown
+    const allocation = openingAllocations.find((a: any) => a.godown_id === godownId);
+    const allocatedQty = allocation ? Number(allocation.qty) || 0 : 0;
+
+    return transactionStock + allocatedQty;
   };
 
   const processedItems = items.map(item => ({
@@ -179,7 +189,9 @@ export function StockSummary() {
 
   const highlightText = (text: string, query: string) => {
     if (!query) return text;
-    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    // Escape regex special characters
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'));
     return (
       <>
         {parts.map((part, i) => 

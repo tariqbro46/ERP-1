@@ -49,36 +49,37 @@ export function MovementAnalysis() {
         allInvEntries.forEach(e => {
           const id = String(e.item_id);
           if (!entriesByItem[id]) entriesByItem[id] = [];
-          entriesByItem[id].push(e);
+          
+          let dateObj: Date;
+          if (e.date && typeof e.date === 'string' && e.date.includes('-')) {
+            const [y, m, d] = e.date.split('-').map(Number);
+            dateObj = new Date(y, m - 1, d);
+          } else {
+            dateObj = new Date(e.date || e.created_at?.toDate?.() || 0);
+          }
+          
+          entriesByItem[id].push({ ...e, dateObj });
         });
 
         const analysis = stockItems.map(item => {
-          const allItemEntries = entriesByItem[String(item.id)] || [];
+          const itemEntriesWithDates = entriesByItem[String(item.id)] || [];
           
-          const itemEntriesWithDates = allItemEntries.map(e => {
-            let dateObj: Date;
-            if (e.date && typeof e.date === 'string' && e.date.includes('-')) {
-              const [y, m, d] = e.date.split('-').map(Number);
-              dateObj = new Date(y, m - 1, d);
-            } else {
-              dateObj = new Date(e.date || e.created_at?.toDate?.() || 0);
-            }
-            return { ...e, dateObj };
-          });
-
           // Opening Balance (before dateRange.from)
           const openingEntries = itemEntriesWithDates.filter(e => e.dateObj < startDate);
           
           // Current Period Entries
           const currentPeriodEntries = itemEntriesWithDates.filter(e => e.dateObj >= startDate && e.dateObj <= endDate);
 
-          // Include master opening_qty in the total openingQty
+          // Include master opening_qty and allocated opening godown qty if any
           const masterOpeningQty = Number(item.opening_qty) || 0;
-          const historyOpeningQty = openingEntries.reduce((sum, e) => sum + (e.movement_type === 'Inward' ? (Number(e.qty) + (Number(e.free_qty) || 0)) : -(Number(e.qty) + (Number(e.free_qty) || 0))), 0);
+          const historyOpeningQty = openingEntries.reduce((sum, e) => {
+            const total = (Number(e.qty) || 0) + (Number(e.free_qty) || 0);
+            return sum + ((e.movement_type || e.m_type || '').toLowerCase() === 'inward' ? total : -total);
+          }, 0);
           const openingQty = masterOpeningQty + historyOpeningQty;
 
-          const inward = currentPeriodEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'inward');
-          const outward = currentPeriodEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'outward');
+          const inward = currentPeriodEntries.filter((e: any) => (e.movement_type || e.m_type || '').toLowerCase() === 'inward');
+          const outward = currentPeriodEntries.filter((e: any) => (e.movement_type || e.m_type || '').toLowerCase() === 'outward');
 
           const inwardQty = inward.reduce((sum, e) => sum + (Number(e.qty) || 0) + (Number(e.free_qty) || 0), 0);
           const outwardQty = outward.reduce((sum, e) => sum + (Number(e.qty) || 0) + (Number(e.free_qty) || 0), 0);
@@ -119,6 +120,21 @@ export function MovementAnalysis() {
     // If searching, show match even if no data. Otherwise only show items with values.
     return matchesCategory && (searchTerm ? matchesSearch : (matchesSearch && hasData));
   });
+
+  const highlightText = (text: string, query: string) => {
+    if (!query) return text;
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'));
+    return (
+      <>
+        {parts.map((part, i) => 
+          part.toLowerCase() === query.toLowerCase() 
+            ? <mark key={i} className="bg-amber-200 text-amber-900 border-b border-amber-500 rounded-sm px-0.5">{part}</mark> 
+            : part
+        )}
+      </>
+    );
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (filteredItems.length === 0) return;
@@ -236,8 +252,12 @@ export function MovementAnalysis() {
                 <tr key={idx} className={cn(
                   "hover:bg-gray-50 transition-colors capitalize",
                   activeIndex === idx && "bg-primary/5"
-                )}>
-                  <td className="px-6 py-4 font-medium text-gray-900 border-r border-gray-100">{item.name}</td>
+                )}
+                onClick={() => navigate('/reports/stock-item', { state: { itemId: item.id } })}
+                >
+                  <td className="px-6 py-4 font-medium text-gray-900 border-r border-gray-100 italic">
+                    {highlightText(item.name, searchTerm)}
+                  </td>
                   <td className="px-6 py-4 text-right border-r border-gray-100 font-bold text-gray-500">
                     {item.openingQty} {item.unitName}
                   </td>

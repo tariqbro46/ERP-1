@@ -58,6 +58,7 @@ import { FinancialInsights } from './components/FinancialInsights';
 import { GodownMaster } from './components/GodownMaster';
 import { EmployeeMaster } from './components/EmployeeMaster';
 import { PayrollManagement } from './components/PayrollManagement';
+import { PayrollReports } from './components/PayrollReports';
 import { UserManagement } from './components/UserManagement';
 import { CompanyManagement } from './components/CompanyManagement';
 import { SalespersonReport } from './components/SalespersonReport';
@@ -1449,15 +1450,15 @@ function ProtectedRoute() {
           <Route path="/reports/journal-register" element={<RegisterReport type="Journal" title="Journal Register" />} />
           <Route path="/reports/negative-ledger" element={<NegativeReports type="ledger" />} />
           <Route path="/reports/negative-stock" element={<NegativeReports type="stock" />} />
-          <Route path="/reports/pay-slip" element={<ReportPlaceholder title="Pay Slip" />} />
-          <Route path="/reports/pay-sheet" element={<ReportPlaceholder title="Pay Sheet" />} />
-          <Route path="/reports/attendance-sheet" element={<ReportPlaceholder title="Attendance Sheet" />} />
-          <Route path="/reports/payment-advice" element={<ReportPlaceholder title="Payment Advice" />} />
-          <Route path="/reports/payroll-statement" element={<ReportPlaceholder title="Payroll Statement" />} />
-          <Route path="/reports/payroll-register" element={<ReportPlaceholder title="Payroll Register" />} />
-          <Route path="/reports/attendance-register" element={<ReportPlaceholder title="Attendance Register" />} />
-          <Route path="/reports/employee-profile" element={<ReportPlaceholder title="Employee Profile" />} />
-          <Route path="/reports/employee-head-count" element={<ReportPlaceholder title="Employee Head Count" />} />
+          <Route path="/reports/pay-slip" element={<PayrollReports type="payslip" />} />
+          <Route path="/reports/pay-sheet" element={<PayrollReports type="paysheet" />} />
+          <Route path="/reports/attendance-sheet" element={<PayrollReports type="attendance_sheet" />} />
+          <Route path="/reports/payment-advice" element={<PayrollReports type="payment_advice" />} />
+          <Route path="/reports/payroll-statement" element={<PayrollReports type="payroll_statement" />} />
+          <Route path="/reports/payroll-register" element={<PayrollReports type="payroll_register" />} />
+          <Route path="/reports/attendance-register" element={<PayrollReports type="attendance_register" />} />
+          <Route path="/reports/employee-profile" element={<PayrollReports type="employee_profile" />} />
+          <Route path="/reports/employee-head-count" element={<PayrollReports type="headcount" />} />
           <Route path="/reports/cash-bank" element={<CashBankBooks />} />
           <Route path="/reports/stock-item" element={<StockItemReport />} />
           <Route path="/production/orders" element={<OrderManagement />} />

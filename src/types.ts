@@ -126,6 +126,7 @@ export interface Item {
   avg_cost: number;
   opening_qty?: number;
   opening_rate?: number;
+  opening_godowns?: { godown_id: string, qty: number }[];
   barcode?: string;
   category?: string;
   category_id?: string;

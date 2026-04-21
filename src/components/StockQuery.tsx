@@ -72,7 +72,12 @@ export function StockQuery() {
       const stockByGodown = godowns.map((g: any) => {
         const gEntries = itemEntries.filter((e: any) => e.godown_id === g.id);
         const qty = gEntries.reduce((sum, e) => sum + (e.movement_type === 'Inward' ? (e.qty + (e.free_qty || 0)) : -(e.qty + (e.free_qty || 0))), 0);
-        return { name: g.name, qty };
+        
+        // Add opening godown allocation if any
+        const openingAlloc = (item.opening_godowns || []).find((ag: any) => ag.godown_id === g.id);
+        const totalQty = qty + (openingAlloc ? Number(openingAlloc.qty) : 0);
+        
+        return { name: g.name, qty: totalQty };
       }).filter(g => g.qty !== 0);
 
       setDetails({

@@ -57,12 +57,21 @@ export function LocationStockReport() {
     const godownInv = inventory.filter(inv => inv.godown_id === godownId);
     let totalValue = 0;
 
-    // Group by item first to get net qty
+    // Group by item first to get net qty from transactions
     const itemTotals: Record<string, number> = {};
     godownInv.forEach(inv => {
-      const qty = Number(inv.qty) || 0;
+      const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
       const change = inv.movement_type === 'Inward' ? qty : -qty;
       itemTotals[inv.item_id] = (itemTotals[inv.item_id] || 0) + change;
+    });
+
+    // Add opening godown allocations
+    items.forEach(item => {
+      const allocation = (item.opening_godowns || []).find((a: any) => a.godown_id === godownId);
+      if (allocation) {
+        const qty = Number(allocation.qty) || 0;
+        itemTotals[item.id] = (itemTotals[item.id] || 0) + qty;
+      }
     });
 
     // Multiply by item rate (avg cost)
@@ -77,12 +86,21 @@ export function LocationStockReport() {
   };
 
   const calculateGodownQty = (godownId: string) => {
-    return inventory
+    // Transactional qty
+    const transactionQty = inventory
       .filter(inv => inv.godown_id === godownId)
       .reduce((sum, inv) => {
-        const qty = Number(inv.qty) || 0;
+        const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
         return inv.movement_type === 'Inward' ? sum + qty : sum - qty;
       }, 0);
+
+    // Opening allocations
+    const openingQty = items.reduce((sum, item) => {
+      const allocation = (item.opening_godowns || []).find((a: any) => a.godown_id === godownId);
+      return sum + (allocation ? Number(allocation.qty) || 0 : 0);
+    }, 0);
+
+    return transactionQty + openingQty;
   };
 
   const processedGodowns = godowns.map(g => ({

@@ -304,7 +304,7 @@ export function VoucherEntry() {
 
   useEffect(() => {
     if (!isEdit) {
-      fetchNextNo();
+      setRefNo(''); // Always start empty as requested
     }
   }, [vType]);
 

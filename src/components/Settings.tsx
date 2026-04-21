@@ -439,19 +439,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     </button>
                   </div>
                   <div className="grid grid-cols-1 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">{t('settings.referenceNoFormat')}</label>
-                      <input 
-                        type="text" 
-                        value={localRefNoFormat || ''} 
-                        onChange={(e) => setLocalRefNoFormat(e.target.value)}
-                        placeholder="e.g. SAL/{YEAR}/{NO}"
-                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
-                      />
-                      <p className="text-[9px] text-gray-500 uppercase">Use <span className="text-emerald-500 font-bold">{'{YEAR}'}</span> for current year and <span className="text-emerald-500 font-bold">{'{NO}'}</span> for sequence number.</p>
-                    </div>
-
-                    <div className="space-y-4 pt-4">
+                    <div className="space-y-4">
                       <h4 className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('settings.fieldVisibility')}</h4>
                       
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">

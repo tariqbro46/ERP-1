@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, ArrowLeft, Loader2, Package, Trash2, AlertTriangle } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Package, Trash2, AlertTriangle, MapPin } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
 import { useSubscription } from '../hooks/useSubscription';
+import { cn } from '../lib/utils';
 
 export function ItemCreation() {
   const navigate = useNavigate();
@@ -28,6 +29,8 @@ export function ItemCreation() {
   const [fetching, setFetching] = useState(isEdit);
   const [units, setUnits] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [godowns, setGodowns] = useState<any[]>([]);
+  const [showGodownAlloc, setShowGodownAlloc] = useState(false);
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategory, setNewCategory] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -74,6 +77,12 @@ export function ItemCreation() {
           setCategories(catsData);
         }
 
+        // Fetch godowns
+        const gData = await erpService.getGodowns(user.companyId);
+        if (gData) {
+          setGodowns(gData);
+        }
+
         if (isEdit) {
           const [iData, hasTx] = await Promise.all([
             erpService.getItemById(id!),
@@ -99,6 +108,7 @@ export function ItemCreation() {
             barcode: iData.barcode || '',
             opening_qty: iData.opening_qty || 0,
             opening_rate: iData.opening_rate || 0,
+            opening_godowns: iData.opening_godowns || [],
             low_stock_threshold: iData.low_stock_threshold || 0,
             tax_percent: iData.tax_percent || 0,
             scheme_qty: iData.scheme_qty || 0,
@@ -336,13 +346,35 @@ export function ItemCreation() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.openingQty')}</label>
-                <input
-                  type="number"
-                  value={formData.opening_qty ?? ''}
-                  onFocus={e => e.target.value === '0' && e.target.select()}
-                  onChange={e => setFormData({ ...formData, opening_qty: Number(e.target.value) })}
-                  className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={formData.opening_qty ?? ''}
+                    onFocus={e => e.target.value === '0' && e.target.select()}
+                    onChange={e => {
+                      const qty = Number(e.target.value);
+                      setFormData({ ...formData, opening_qty: qty });
+                      // If qty is 0, clear allocations
+                      if (qty === 0) setFormData(prev => ({ ...prev, opening_godowns: [] }));
+                    }}
+                    className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
+                  />
+                  {formData.opening_qty > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowGodownAlloc(true)}
+                      className={cn(
+                        "px-3 text-[10px] border font-bold uppercase tracking-widest transition-all",
+                        (formData.opening_godowns?.reduce((sum: number, g: any) => sum + (g.qty || 0), 0) === formData.opening_qty)
+                          ? "border-emerald-500 text-emerald-500 bg-emerald-500/10"
+                          : "border-rose-500 text-rose-500 bg-rose-500/10 animate-pulse"
+                      )}
+                      title={t('item.allocateGodown')}
+                    >
+                      <MapPin className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] text-gray-500 uppercase tracking-widest block">{t('item.openingRate')} ({baseCurrencySymbol})</label>
@@ -478,6 +510,117 @@ export function ItemCreation() {
           </div>
         </form>
       </div>
+
+      {/* Godown Allocation Modal */}
+      {showGodownAlloc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 text-mono">
+          <div className="bg-card border border-border w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-4 border-b border-border bg-foreground/5 flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Godown Allocation</h3>
+                <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-widest">
+                  Total Opening Quantity: <span className="text-foreground font-bold">{formData.opening_qty}</span>
+                </p>
+              </div>
+              <button onClick={() => setShowGodownAlloc(false)} className="text-gray-500 hover:text-foreground">
+                <Trash2 className="w-4 h-4 rotate-45" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="grid grid-cols-12 gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 pb-2 border-b border-border">
+                <div className="col-span-8">Godown</div>
+                <div className="col-span-4 text-right">Quantity</div>
+              </div>
+
+              {(formData.opening_godowns || []).map((alloc: any, idx: number) => (
+                <div key={idx} className="grid grid-cols-12 gap-4 items-center animate-in slide-in-from-left-2 duration-200">
+                  <div className="col-span-7">
+                    <select
+                      value={alloc.godown_id}
+                      onChange={e => {
+                        const newAlloc = [...(formData.opening_godowns || [])];
+                        newAlloc[idx].godown_id = e.target.value;
+                        setFormData({ ...formData, opening_godowns: newAlloc });
+                      }}
+                      className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground transition-colors"
+                    >
+                      <option value="">Select Godown</option>
+                      {godowns.map(g => (
+                        <option key={g.id} value={g.id}>{g.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-4">
+                    <input
+                      type="number"
+                      value={alloc.qty}
+                      onChange={e => {
+                        const newAlloc = [...(formData.opening_godowns || [])];
+                        newAlloc[idx].qty = Number(e.target.value);
+                        setFormData({ ...formData, opening_godowns: newAlloc });
+                      }}
+                      className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground transition-colors text-right"
+                    />
+                  </div>
+                  <div className="col-span-1 flex justify-end">
+                    <button
+                      onClick={() => {
+                        const newAlloc = (formData.opening_godowns || []).filter((_: any, i: number) => i !== idx);
+                        setFormData({ ...formData, opening_godowns: newAlloc });
+                      }}
+                      className="text-rose-500 hover:text-rose-600 p-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData({
+                    ...formData,
+                    opening_godowns: [...(formData.opening_godowns || []), { godown_id: '', qty: 0 }]
+                  });
+                }}
+                className="w-full py-2 border border-dashed border-border text-[10px] text-gray-500 uppercase tracking-widest hover:border-foreground/30 hover:text-foreground transition-all flex items-center justify-center gap-2"
+              >
+                <Package className="w-3 h-3" /> Add Godown
+              </button>
+
+              {/* Summary */}
+              <div className="mt-8 pt-4 border-t border-border space-y-2">
+                <div className="flex justify-between text-[11px] uppercase tracking-widest text-gray-500">
+                  <span>Allocated Qty:</span>
+                  <span className={cn(
+                    "font-bold",
+                    formData.opening_godowns?.reduce((sum: number, g: any) => sum + (g.qty || 0), 0) === formData.opening_qty
+                      ? "text-emerald-500"
+                      : "text-rose-500"
+                  )}>
+                    {formData.opening_godowns?.reduce((sum: number, g: any) => sum + (g.qty || 0), 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[11px] uppercase tracking-widest text-gray-400">
+                  <span>Balance to Allocate:</span>
+                  <span>{formData.opening_qty - (formData.opening_godowns?.reduce((sum: number, g: any) => sum + (g.qty || 0), 0) || 0)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border bg-foreground/5 flex justify-end gap-3">
+              <button
+                onClick={() => setShowGodownAlloc(false)}
+                className="px-8 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all"
+              >
+                Confirm Allocation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
