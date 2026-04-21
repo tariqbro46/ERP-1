@@ -4,7 +4,7 @@ import { ArrowLeft, Loader2, Package, Search, ChevronRight } from 'lucide-react'
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, formatNumber, cn } from '../lib/utils';
 
 export function StockGroupSummary() {
   const { user } = useAuth();
@@ -121,7 +121,7 @@ export function StockGroupSummary() {
             <div className="space-y-3 mb-6 flex-1">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Total Quantity</span>
-                <span className="font-bold text-gray-900">{group.totalQty}</span>
+                <span className="font-bold text-gray-900">{formatNumber(group.totalQty)}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Estimated Value</span>

@@ -10,7 +10,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { cn } from '../lib/utils';
+import { cn, formatNumber } from '../lib/utils';
 import { format, differenceInDays } from 'date-fns';
 import { EditableHeader } from './EditableHeader';
 
@@ -188,14 +188,14 @@ export function Dashboard() {
                 <CreditCard className="w-6 h-6 text-black/60" />
                 <p className="text-[10px] font-bold text-black/60 uppercase leading-tight">{t('dash.revenue')}</p>
               </div>
-              <span className="text-2xl font-light text-black/80">₹{revenue.toLocaleString()}</span>
+              <span className="text-2xl font-light text-black/80">৳ {formatNumber(revenue)}</span>
             </div>
             <div className="bg-[#34a853] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
               <div className="space-y-4">
                 <Activity className="w-6 h-6 text-white/60" />
                 <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dash.profit')}</p>
               </div>
-              <span className="text-2xl font-light text-white/90">₹{profit.toLocaleString()}</span>
+              <span className="text-2xl font-light text-white/90">৳ {formatNumber(profit)}</span>
             </div>
             <div className="bg-[#ea4335] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
               <div className="space-y-4">
@@ -209,7 +209,7 @@ export function Dashboard() {
                 <Package className="w-6 h-6 text-white/60" />
                 <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dash.stockValue')}</p>
               </div>
-              <span className="text-2xl font-light text-white/90">₹{stockValue.toLocaleString()}</span>
+              <span className="text-2xl font-light text-white/90">৳ {formatNumber(stockValue)}</span>
             </div>
           </div>
         </div>
@@ -307,7 +307,7 @@ export function Dashboard() {
                         {v.v_type}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">₹{v.total_amount?.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-right font-medium text-gray-900">৳ {formatNumber(v.total_amount)}</td>
                   </tr>
                 ))}
                 {recentVouchers.length === 0 && (
@@ -370,7 +370,7 @@ export function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
           title={t('dash.revenue')} 
-          value={`৳ ${stats.revenue.toLocaleString()}`} 
+          value={`৳ ${formatNumber(stats.revenue)}`} 
           change="+12.5%" 
           icon={Activity} 
           trend="up" 
@@ -380,7 +380,7 @@ export function Dashboard() {
         />
         <StatCard 
           title={t('dash.profit')} 
-          value={`৳ ${stats.profit.toLocaleString()}`} 
+          value={`৳ ${formatNumber(stats.profit)}`} 
           change="+5.2%" 
           icon={CreditCard} 
           trend="up" 
@@ -400,7 +400,7 @@ export function Dashboard() {
         />
         <StatCard 
           title={t('dash.stockValue')} 
-          value={`৳ ${Math.floor(stats.stockValue).toLocaleString()}`} 
+          value={`৳ ${formatNumber(stats.stockValue)}`} 
           change="-2.1%" 
           icon={Package} 
           trend="down" 
@@ -695,7 +695,7 @@ export function Dashboard() {
                     <span className="text-[9px] text-muted-foreground uppercase tracking-widest">{v.item_names}</span>
                   )}
                 </div>
-                <span className="text-sm font-bold text-foreground">৳ {v.total_amount.toLocaleString()}</span>
+                <span className="text-sm font-bold text-foreground">৳ {formatNumber(v.total_amount)}</span>
               </div>
             </div>
           ))}
@@ -733,7 +733,7 @@ export function Dashboard() {
                     </div>
                   </td>
                   <td className="px-4 py-3">{v.v_type}</td>
-                  <td className="px-4 py-3 text-right">৳ {v.total_amount.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right">৳ {formatNumber(v.total_amount)}</td>
                 </tr>
               ))}
               {recentVouchers.length === 0 && !loading && (

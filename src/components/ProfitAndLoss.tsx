@@ -8,6 +8,7 @@ import { printProfitAndLoss, printUtils } from '../utils/printUtils';
 import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
+import { formatNumber, cn } from '../lib/utils';
 import { EditableHeader } from './EditableHeader';
 import { useNavigate } from 'react-router-dom';
 

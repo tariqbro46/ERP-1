@@ -17,7 +17,7 @@ import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { EditableHeader } from './EditableHeader';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, formatNumber } from '../lib/utils';
 
 export function InventoryOverview() {
   const { user } = useAuth();
@@ -176,7 +176,7 @@ export function InventoryOverview() {
                   <div>
                     <p className="text-[9px] text-gray-400 uppercase tracking-widest">Quantity</p>
                     <p className="text-sm font-bold text-foreground">
-                      {item.current_stock} <span className="text-[10px] font-normal text-gray-500">{item.unit_name}</span>
+                      {formatNumber(item.current_stock)} <span className="text-[10px] font-normal text-gray-500">{item.unit_name}</span>
                     </p>
                   </div>
                   <div>
@@ -221,7 +221,7 @@ export function InventoryOverview() {
                         <span className={`text-sm font-bold ${
                           item.current_stock <= (item.reorder_level || 0) ? 'text-rose-500' : 'text-foreground'
                         }`}>
-                          {item.current_stock}
+                          {formatNumber(item.current_stock)}
                         </span>
                         <span className="text-[10px] text-gray-400">{item.unit_name}</span>
                       </div>

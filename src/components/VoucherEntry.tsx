@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, Printer, Loader2, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon, AlertCircle, Settings2, TrendingUp } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatNumber } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
@@ -196,7 +196,7 @@ export function VoucherEntry() {
   const formatBalance = (bal: number) => {
     const abs = Math.abs(bal);
     const type = bal >= 0 ? 'Dr' : 'Cr';
-    return `৳ ${abs.toLocaleString()} ${type}`;
+    return `৳ ${formatNumber(abs)} ${type}`;
   };
 
   // Inventory Entries (Sales/Purchase)
@@ -1297,7 +1297,7 @@ export function VoucherEntry() {
                           tabIndex={16 + idx * 10}
                           className="outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded block"
                         >
-                          {baseCurrencySymbol} {entry.amount.toLocaleString()}
+                          {baseCurrencySymbol} {formatNumber(entry.amount)}
                         </span>
                       </td>
                       <td className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}><button onClick={() => setInvEntries(invEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
@@ -1481,7 +1481,7 @@ export function VoucherEntry() {
 
                     <div className="flex justify-between items-center pt-2 border-t border-border/50">
                       <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.amount')}</span>
-                      <span className="text-sm text-foreground font-bold">{baseCurrencySymbol} {entry.amount.toLocaleString()}</span>
+                      <span className="text-sm text-foreground font-bold">{baseCurrencySymbol} {formatNumber(entry.amount)}</span>
                     </div>
                   </div>
                 ))}
@@ -1502,7 +1502,7 @@ export function VoucherEntry() {
                       <div className="space-y-0.5">
                         <span className="text-gray-400 block uppercase font-bold text-[8px]">Standard Rate</span>
                         <span className="text-foreground font-black text-xs">
-                          {baseCurrencySymbol} {((vType === 'Sales' ? items.find(i => i.id === focusedItemId)?.last_sale_rate : items.find(i => i.id === focusedItemId)?.last_purchase_rate) || items.find(i => i.id === focusedItemId)?.opening_rate || 0).toLocaleString()}
+                          {baseCurrencySymbol} {formatNumber((vType === 'Sales' ? items.find(i => i.id === focusedItemId)?.last_sale_rate : items.find(i => i.id === focusedItemId)?.last_purchase_rate) || items.find(i => i.id === focusedItemId)?.opening_rate || 0)}
                         </span>
                       </div>
                       <div className="space-y-0.5">
@@ -1810,12 +1810,12 @@ export function VoucherEntry() {
               <div className="text-right space-y-0.5 w-full">
                 {totalTaxAmount > 0 && (
                   <p className="text-[10px] text-emerald-500 font-bold">
-                    {t('common.tax')}: {currency} {totalTaxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {t('common.tax')}: {currency} {formatNumber(totalTaxAmount)}
                   </p>
                 )}
                 <p className="text-[8px] text-gray-500 uppercase tracking-widest">{t('common.totalAmount')}</p>
                 <p className="text-2xl lg:text-3xl text-foreground font-bold tracking-tighter">
-                  {currency} {finalTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  {currency} {formatNumber(finalTotal)}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 w-full lg:w-auto justify-end">
@@ -1893,7 +1893,7 @@ export function VoucherEntry() {
       {/* Validation Error Bar */}
       {!isBalanced() && (totalDebit > 0 || totalInvAmount > 0 || totalSingleAmount > 0) && (
         <div className="bg-rose-950/30 border-t border-rose-900/50 px-6 py-2 text-[9px] text-rose-400 uppercase tracking-widest text-center">
-          {isInventory ? 'Please select Party, Ledger and Items' : isSingleEntry ? 'Please select Account and Particulars' : `Voucher is not balanced. Difference: ৳ ${Math.abs(totalDebit - totalCredit).toLocaleString()}`}
+          {isInventory ? 'Please select Party, Ledger and Items' : isSingleEntry ? 'Please select Account and Particulars' : `Voucher is not balanced. Difference: ৳ ${formatNumber(Math.abs(totalDebit - totalCredit))}`}
         </div>
       )}
       

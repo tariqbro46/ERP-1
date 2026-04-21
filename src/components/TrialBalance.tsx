@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Printer, Download, Filter, Loader2, ArrowLeft } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
-import { cn } from '../lib/utils';
+import { cn, formatNumber } from '../lib/utils';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { printReport, printUtils } from '../utils/printUtils';
@@ -152,10 +152,10 @@ export function TrialBalance() {
                 </div>
                 <div className="flex justify-between items-center font-mono text-xs">
                   <div className="text-emerald-500">
-                    {ledger.current_balance > 0 ? `Dr ৳ ${ledger.current_balance.toLocaleString()}` : ''}
+                    {ledger.current_balance > 0 ? `Dr ৳ ${formatNumber(ledger.current_balance)}` : ''}
                   </div>
                   <div className="text-rose-500">
-                    {ledger.current_balance < 0 ? `Cr ৳ ${Math.abs(ledger.current_balance).toLocaleString()}` : ''}
+                    {ledger.current_balance < 0 ? `Cr ৳ ${formatNumber(Math.abs(ledger.current_balance))}` : ''}
                   </div>
                 </div>
               </div>
@@ -167,11 +167,11 @@ export function TrialBalance() {
             <div className="p-4 bg-foreground/10 space-y-2">
               <div className="flex justify-between items-center font-bold text-[10px] text-gray-500 uppercase tracking-widest">
                 <span>{t('reports.totalDebit')}</span>
-                <span className="text-foreground font-mono text-xs">৳ {totalDebit.toLocaleString()}</span>
+                <span className="text-foreground font-mono text-xs">৳ {formatNumber(totalDebit)}</span>
               </div>
               <div className="flex justify-between items-center font-bold text-[10px] text-gray-500 uppercase tracking-widest">
                 <span>{t('reports.totalCredit')}</span>
-                <span className="text-foreground font-mono text-xs">৳ {totalCredit.toLocaleString()}</span>
+                <span className="text-foreground font-mono text-xs">৳ {formatNumber(totalCredit)}</span>
               </div>
             </div>
           </div>
@@ -197,10 +197,10 @@ export function TrialBalance() {
                     <td className="px-6 py-3 text-foreground font-medium">{ledger.name}</td>
                     <td className="px-6 py-3 text-gray-500 uppercase text-[10px]">{ledger.ledger_groups?.name}</td>
                     <td className="px-6 py-3 text-right text-foreground font-mono">
-                      {ledger.current_balance > 0 ? ledger.current_balance.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
+                      {ledger.current_balance > 0 ? formatNumber(ledger.current_balance) : ''}
                     </td>
                     <td className="px-6 py-3 text-right text-foreground font-mono">
-                      {ledger.current_balance < 0 ? Math.abs(ledger.current_balance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
+                      {ledger.current_balance < 0 ? formatNumber(Math.abs(ledger.current_balance)) : ''}
                     </td>
                   </tr>
                 ))}
@@ -213,8 +213,8 @@ export function TrialBalance() {
               <tfoot className="bg-foreground/5 border-t border-border">
                 <tr className="font-bold text-foreground">
                   <td colSpan={2} className="px-6 py-4 text-right uppercase text-[10px] text-gray-500 tracking-widest">{t('common.grandTotal')}</td>
-                  <td className="px-6 py-4 text-right font-mono border-l border-border">৳ {totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                  <td className="px-6 py-4 text-right font-mono border-l border-border">৳ {totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                  <td className="px-6 py-4 text-right font-mono border-l border-border">৳ {formatNumber(totalDebit)}</td>
+                  <td className="px-6 py-4 text-right font-mono border-l border-border">৳ {formatNumber(totalCredit)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -225,7 +225,7 @@ export function TrialBalance() {
         {Math.abs(totalDebit - totalCredit) > 0.01 && (
           <div className="bg-rose-950/30 border border-rose-900/50 p-4 flex justify-between items-center">
             <span className="text-[10px] text-rose-400 uppercase tracking-widest font-bold">{t('reports.differenceInOpening')}</span>
-            <span className="text-sm text-rose-400 font-mono font-bold">৳ {Math.abs(totalDebit - totalCredit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+            <span className="text-sm text-rose-400 font-mono font-bold">৳ {formatNumber(Math.abs(totalDebit - totalCredit))}</span>
           </div>
         )}
       </div>

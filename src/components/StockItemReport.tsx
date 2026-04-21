@@ -5,7 +5,7 @@ import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, formatNumber, cn } from '../lib/utils';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { exportToPDF } from '../utils/exportUtils';
@@ -412,7 +412,7 @@ export function StockItemReport() {
                   <span className="font-bold text-gray-900 capitalize">{selectedItem.name}</span>
                 </div>
                 <div className="text-sm text-gray-500">
-                  {t('stockItem.currentStock')} <span className="font-bold text-primary">{selectedItem.current_stock} {selectedItem.unitName}</span>
+                  {t('stockItem.currentStock')} <span className="font-bold text-primary">{formatNumber(selectedItem.current_stock)} {selectedItem.unitName}</span>
                 </div>
               </div>
               <div id="stock-item-report-table" className="overflow-x-auto print:p-8 overflow-y-auto max-h-[600px] no-scrollbar">
@@ -440,19 +440,19 @@ export function StockItemReport() {
                           {viewType === 'daily' ? formatReportDate(row.label, settings.dateFormat) : row.label}
                         </td>
                         <td className="px-6 py-3 text-right text-green-600">
-                          {row.inwardQty > 0 ? `${row.inwardQty} ${selectedItem.unitName || ''}` : '-'}
+                          {row.inwardQty > 0 ? `${formatNumber(row.inwardQty)} ${selectedItem.unitName || ''}` : '-'}
                         </td>
                         <td className="px-6 py-3 text-right text-green-700 border-r border-gray-100">
                           {row.inwardValue > 0 ? formatCurrency(row.inwardValue) : '-'}
                         </td>
                         <td className="px-6 py-3 text-right text-red-600">
-                          {row.outwardQty > 0 ? `${row.outwardQty} ${selectedItem.unitName || ''}` : '-'}
+                          {row.outwardQty > 0 ? `${formatNumber(row.outwardQty)} ${selectedItem.unitName || ''}` : '-'}
                         </td>
                         <td className="px-6 py-3 text-right text-red-700">
                           {row.outwardValue > 0 ? formatCurrency(row.outwardValue) : '-'}
                         </td>
                         <td className="px-6 py-3 text-right font-bold text-primary">
-                          {row.closingQty !== 0 ? `${row.closingQty} ${selectedItem.unitName || ''}` : row.isOpening ? `0 ${selectedItem.unitName || ''}` : '-'}
+                          {row.closingQty !== 0 ? `${formatNumber(row.closingQty)} ${selectedItem.unitName || ''}` : row.isOpening ? `0.00 ${selectedItem.unitName || ''}` : '-'}
                         </td>
                       </tr>
                     ))}
@@ -461,19 +461,19 @@ export function StockItemReport() {
                     <tr>
                       <td className="px-6 py-4 border-r border-gray-100 uppercase text-[10px]">{t('common.total')}</td>
                       <td className="px-6 py-4 text-right">
-                        {summaryData.reduce((sum, m) => sum + m.inwardQty, 0)} {selectedItem.unitName || ''}
+                        {formatNumber(summaryData.reduce((sum, m) => sum + m.inwardQty, 0))} {selectedItem.unitName || ''}
                       </td>
                       <td className="px-6 py-4 text-right border-r border-gray-100">
                         {formatCurrency(summaryData.reduce((sum, m) => sum + m.inwardValue, 0))}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {summaryData.reduce((sum, m) => sum + m.outwardQty, 0)} {selectedItem.unitName || ''}
+                        {formatNumber(summaryData.reduce((sum, m) => sum + m.outwardQty, 0))} {selectedItem.unitName || ''}
                       </td>
                       <td className="px-6 py-4 text-right">
                         {formatCurrency(summaryData.reduce((sum, m) => sum + m.outwardValue, 0))}
                       </td>
                       <td className="px-6 py-4 text-right text-primary">
-                      {summaryData.reduce((sum, m) => sum + (m.inwardQty - m.outwardQty), 0)} {selectedItem.unitName || ''}
+                      {formatNumber(summaryData.reduce((sum, m) => sum + (m.inwardQty - m.outwardQty), 0))} {selectedItem.unitName || ''}
                       </td>
                     </tr>
                   </tfoot>

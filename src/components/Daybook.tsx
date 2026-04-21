@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, Printer, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '../lib/utils';
+import { cn, formatNumber } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { pdfService } from '../services/pdfService';
 import { useAuth } from '../contexts/AuthContext';
@@ -366,7 +366,7 @@ export function Daybook() {
                     )}
                     <span className="text-[10px] text-gray-500 font-mono">{v.v_no}</span>
                   </div>
-                  <span className="text-sm font-bold text-foreground font-mono">৳ {v.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span className="text-sm font-bold text-foreground font-mono">৳ {formatNumber(v.total_amount)}</span>
                 </div>
                 <div className="flex gap-2 pt-2 border-t border-border/20">
                   <button 
@@ -437,7 +437,7 @@ export function Daybook() {
                       </td>
                       <td className="px-4 lg:px-6 py-4 uppercase text-[10px] text-gray-500">{v.v_type}</td>
                       <td className="px-4 lg:px-6 py-4">{v.v_no}</td>
-                      <td className="px-4 lg:px-6 py-4 text-right text-foreground font-mono font-bold">৳ {v.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                      <td className="px-4 lg:px-6 py-4 text-right text-foreground font-mono font-bold">৳ {formatNumber(v.total_amount)}</td>
                       <td className="px-4 lg:px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <button 
@@ -486,13 +486,13 @@ export function Daybook() {
                                     </div>
                                   </td>
                                   <td className="py-1">{godowns.find(g => g.id === item.godown_id)?.name || '-'}</td>
-                                  <td className="py-1 text-right">{item.qty}</td>
-                                  <td className="py-1 text-right">{item.free_qty || 0}</td>
-                                  <td className="py-1 text-right">{item.rate.toLocaleString()}</td>
+                                  <td className="py-1 text-right">{formatNumber(item.qty)}</td>
+                                  <td className="py-1 text-right">{formatNumber(item.free_qty || 0)}</td>
+                                  <td className="py-1 text-right">{formatNumber(item.rate)}</td>
                                   <td className="py-1 text-center">{item.unit || 'pcs'}</td>
                                   <td className="py-1 text-right">{item.disc_percent || 0}%</td>
                                   <td className="py-1 text-right">{item.tax_percent || 0}%</td>
-                                  <td className="py-1 text-right font-bold text-foreground/70">{item.amount.toLocaleString()}</td>
+                                  <td className="py-1 text-right font-bold text-foreground/70">{formatNumber(item.amount)}</td>
                                 </tr>
                               ))}
                             </tbody>

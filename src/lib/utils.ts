@@ -12,3 +12,10 @@ export function formatCurrency(amount: number, symbol: string = '৳'): string {
   }).format(amount);
   return `${symbol}${formatted}`;
 }
+
+export function formatNumber(amount: number): string {
+  return new Intl.NumberFormat('en-BD', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount || 0);
+}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Printer, Download, ArrowLeft, Calculator, FileText, Settings as SettingsIcon, Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn, formatCurrency, formatNumber } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -330,9 +330,9 @@ export function LedgerStatement() {
           <td>Dr <b>Opening Balance</b></td>
           <td></td>
           <td></td>
-          <td style="text-align: right;"><b>${rb > 0 ? rb.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
-          <td style="text-align: right;">${rb < 0 ? Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
-          <td style="text-align: right;">${Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${rb >= 0 ? 'Dr' : 'Cr'}</td>
+          <td style="text-align: right;"><b>${rb > 0 ? formatNumber(rb) : ''}</b></td>
+          <td style="text-align: right;">${rb < 0 ? formatNumber(Math.abs(rb)) : ''}</td>
+          <td style="text-align: right;">${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}</td>
         </tr>`,
         ...entries.map(e => {
           rb += (e.debit || 0) - (e.credit || 0);
@@ -348,9 +348,9 @@ export function LedgerStatement() {
             </td>
             <td>${e.vouchers?.v_type}</td>
             <td>${e.vouchers?.v_no}</td>
-            <td style="text-align: right;">${e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
-            <td style="text-align: right;">${e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
-            <td style="text-align: right;">${config.showRunningBalance ? `${Math.abs(rb).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
+            <td style="text-align: right;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
+            <td style="text-align: right;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
+            <td style="text-align: right;">${config.showRunningBalance ? `${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
           </tr>`;
 
           if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
@@ -359,9 +359,9 @@ export function LedgerStatement() {
               return `
                 <div style="display: flex; font-size: 11px; margin-left: 40px; color: #000;">
                   <div style="width: 150px; text-align: right; padding-right: 20px;">${itemName}</div>
-                  <div style="width: 80px; text-align: right;">${item.qty.toLocaleString()} ${item.unit || 'Pcs'}</div>
-                  <div style="width: 100px; text-align: right;">${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}/Pcs</div>
-                  <div style="width: 100px; text-align: right;">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                  <div style="width: 80px; text-align: right;">${formatNumber(item.qty)} ${item.unit || 'Pcs'}</div>
+                  <div style="width: 100px; text-align: right;">${formatNumber(item.rate)}/Pcs</div>
+                  <div style="width: 100px; text-align: right;">${formatNumber(item.amount)}</div>
                 </div>
               `;
             }).join('');
@@ -395,8 +395,8 @@ export function LedgerStatement() {
           <td><b>${finalBalance >= 0 ? 'Cr' : 'Dr'} Closing Balance</b></td>
           <td></td>
           <td></td>
-          <td style="text-align: right;"><b>${finalBalance < 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
-          <td style="text-align: right;"><b>${finalBalance >= 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+          <td style="text-align: right;"><b>${finalBalance < 0 ? formatNumber(Math.abs(finalBalance)) : ''}</b></td>
+          <td style="text-align: right;"><b>${finalBalance >= 0 ? formatNumber(Math.abs(finalBalance)) : ''}</b></td>
           <td style="text-align: right;"></td>
         </tr>
         <tr class="total-row">
@@ -404,8 +404,8 @@ export function LedgerStatement() {
           <td></td>
           <td></td>
           <td></td>
-          <td style="text-align: right; border-top: 1px solid #000; border-bottom: 3px double #000;"><b>${(totalDebit + (finalBalance < 0 ? Math.abs(finalBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
-          <td style="text-align: right; border-top: 1px solid #000; border-bottom: 3px double #000;"><b>${(totalCredit + (finalBalance >= 0 ? Math.abs(finalBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
+          <td style="text-align: right; border-top: 1px solid #000; border-bottom: 3px double #000;"><b>${formatNumber(totalDebit + (finalBalance < 0 ? Math.abs(finalBalance) : 0))}</b></td>
+          <td style="text-align: right; border-top: 1px solid #000; border-bottom: 3px double #000;"><b>${formatNumber(totalCredit + (finalBalance >= 0 ? Math.abs(finalBalance) : 0))}</b></td>
           <td></td>
         </tr>
       `;
@@ -503,9 +503,9 @@ export function LedgerStatement() {
           <td style="padding: 2px 5px;"><b>Dr Opening Balance</b></td>
           <td style="padding: 2px 5px;"></td>
           <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px; text-align: right;">${(currentLedger?.opening_balance || 0) > 0 ? Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
-          <td style="padding: 2px 5px; text-align: right;">${(currentLedger?.opening_balance || 0) < 0 ? Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
-          ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right;">${Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${(currentLedger?.opening_balance || 0) >= 0 ? 'Dr' : 'Cr'}</td>` : ''}
+          <td style="padding: 2px 5px; text-align: right;">${(currentLedger?.opening_balance || 0) > 0 ? formatNumber(Math.abs(currentLedger?.opening_balance || 0)) : ''}</td>
+          <td style="padding: 2px 5px; text-align: right;">${(currentLedger?.opening_balance || 0) < 0 ? formatNumber(Math.abs(currentLedger?.opening_balance || 0)) : ''}</td>
+          ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right;">${formatNumber(Math.abs(currentLedger?.opening_balance || 0))} ${(currentLedger?.opening_balance || 0) >= 0 ? 'Dr' : 'Cr'}</td>` : ''}
         </tr>
       `;
 
@@ -535,8 +535,8 @@ export function LedgerStatement() {
                   </div>
                   ${config.showStockDescriptions && item.description ? `<div style="font-size: 9px; font-style: italic; color: #666;">${item.description}</div>` : ''}
                 </td>
-                <td style="padding: 1px 5px; font-size: 11px; text-align: right;">${item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                <td style="padding: 1px 5px; font-size: 11px; text-align: right;">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                <td style="padding: 1px 5px; font-size: 11px; text-align: right;">${formatNumber(item.rate)}</td>
+                <td style="padding: 1px 5px; font-size: 11px; text-align: right;">${formatNumber(item.amount)}</td>
                 <td></td>
                 <td></td>
                 ${config.showRunningBalance ? '<td></td>' : ''}
@@ -579,8 +579,8 @@ export function LedgerStatement() {
             </td>
             <td style="padding: 2px 5px;">${e.vouchers?.v_type}</td>
             <td style="padding: 2px 5px;">${e.vouchers?.v_no}</td>
-            <td style="padding: 2px 5px; text-align: right;">${e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
-            <td style="padding: 2px 5px; text-align: right;">${e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</td>
+            <td style="padding: 2px 5px; text-align: right;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
+            <td style="padding: 2px 5px; text-align: right;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
             ${config.showRunningBalance ? '<td style="padding: 2px 5px; text-align: right;"></td>' : ''}
           </tr>
           ${inventoryRows}

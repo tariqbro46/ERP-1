@@ -5,7 +5,7 @@ import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
-import { cn } from '../lib/utils';
+import { cn, formatNumber } from '../lib/utils';
 import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -227,7 +227,7 @@ export function StockSummary() {
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 w-full sm:w-auto">
             <div className="text-left sm:text-right">
               <p className="text-[9px] text-gray-500 uppercase tracking-widest">{t('common.totalValue')}</p>
-              <p className="text-lg lg:text-xl text-foreground font-bold">৳ {totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+              <p className="text-lg lg:text-xl text-foreground font-bold">৳ {formatNumber(totalStockValue)}</p>
             </div>
             <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
               <button 
@@ -355,7 +355,7 @@ export function StockSummary() {
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-gray-500 uppercase">{t('common.totalValue')}</p>
-                      <p className="text-xs font-bold text-foreground font-mono">৳ {groupValue.toLocaleString()}</p>
+                      <p className="text-xs font-bold text-foreground font-mono">৳ {formatNumber(groupValue)}</p>
                     </div>
                   </div>
                   {isExpanded && groupItems.map(item => (
@@ -364,11 +364,11 @@ export function StockSummary() {
                         <span className="text-xs text-foreground/80 italic">
                           {highlightText(item.name, search)}
                         </span>
-                        <span className="text-xs font-bold text-foreground font-mono">{item.displayStock} {item.units?.name}</span>
+                        <span className="text-xs font-bold text-foreground font-mono">{formatNumber(item.displayStock)} {item.units?.name}</span>
                       </div>
                       <div className="flex justify-between items-center text-[10px] text-gray-500 uppercase">
-                        <span>{t('common.avgRate')}: ৳ {(item.avg_cost || item.opening_rate || 0).toLocaleString()}</span>
-                        <span className="font-bold text-foreground/60">{t('common.value')}: ৳ {(item.displayStock * (item.avg_cost || item.opening_rate || 0)).toLocaleString()}</span>
+                        <span>{t('common.avgRate')}: ৳ {formatNumber(item.avg_cost || item.opening_rate || 0)}</span>
+                        <span className="font-bold text-foreground/60">{t('common.value')}: ৳ {formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))}</span>
                       </div>
                     </div>
                   ))}
@@ -388,14 +388,14 @@ export function StockSummary() {
           </div>
 
           {/* Desktop View: Table */}
-          <div className="hidden lg:block overflow-x-auto no-scrollbar">
-            <table className="w-full text-left text-xs min-w-[600px]">
-              <thead>
+          <div className="hidden lg:block overflow-x-auto no-scrollbar relative max-h-[calc(100vh-320px)]">
+            <table className="w-full text-left text-xs min-w-[600px] border-separate border-spacing-0">
+              <thead className="sticky top-0 z-20 bg-card">
                 <tr className="border-b border-border text-gray-500 uppercase bg-foreground/5">
-                  <th className="px-6 py-4 font-medium">{t('common.particulars')}</th>
-                  <th className="px-6 py-4 font-medium text-right w-48">{t('common.quantity')}</th>
-                  <th className="px-6 py-4 font-medium text-right w-48">{t('common.rate')} ({t('common.avgRate')})</th>
-                  <th className="px-6 py-4 font-medium text-right w-48">{t('common.value')} (৳)</th>
+                  <th className="px-6 py-4 font-medium border-b border-border bg-foreground/5">{t('common.particulars')}</th>
+                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border bg-foreground/5">{t('common.quantity')}</th>
+                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border bg-foreground/5">{t('common.rate')} ({t('common.avgRate')})</th>
+                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border bg-foreground/5">{t('common.value')} (৳)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -420,13 +420,13 @@ export function StockSummary() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right text-foreground font-mono font-bold">
-                          {groupQty.toLocaleString()}
+                          {formatNumber(groupQty)}
                         </td>
                         <td className="px-6 py-4 text-right text-gray-600">
                           -
                         </td>
                         <td className="px-6 py-4 text-right text-foreground font-mono font-bold">
-                          {groupValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          {formatNumber(groupValue)}
                         </td>
                       </tr>
                       {isExpanded && groupItems.map(item => (
@@ -439,15 +439,15 @@ export function StockSummary() {
                               </span>
                             )}
                           </td>
-                          <td className="px-6 py-3 text-right text-foreground/80 font-mono">
-                            {item.displayStock} <span className="text-[9px] text-gray-600 uppercase">{item.units?.name}</span>
-                          </td>
-                          <td className="px-6 py-3 text-right text-foreground/80 font-mono">
-                            {(item.avg_cost || item.opening_rate || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </td>
-                          <td className="px-6 py-3 text-right text-foreground/80 font-mono">
-                            {(item.displayStock * (item.avg_cost || item.opening_rate || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </td>
+                           <td className="px-6 py-3 text-right text-foreground/80 font-mono">
+                             {formatNumber(item.displayStock)} <span className="text-[9px] text-gray-600 uppercase">{item.units?.name}</span>
+                           </td>
+                           <td className="px-6 py-3 text-right text-foreground/80 font-mono">
+                             {formatNumber(item.avg_cost || item.opening_rate || 0)}
+                           </td>
+                           <td className="px-6 py-3 text-right text-foreground/80 font-mono">
+                             {formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))}
+                           </td>
                         </tr>
                       ))}
                     </React.Fragment>
@@ -463,13 +463,13 @@ export function StockSummary() {
                 <tr className="font-bold text-foreground">
                   <td className="px-6 py-4 uppercase text-[10px] text-gray-500 tracking-widest">{t('common.grandTotal')}</td>
                   <td className="px-6 py-4 text-right font-mono border-l border-border">
-                    {processedItems.reduce((sum, i) => sum + i.displayStock, 0).toLocaleString()}
+                    {formatNumber(processedItems.reduce((sum, i) => sum + i.displayStock, 0))}
                   </td>
                   <td className="px-6 py-4 text-right font-mono border-l border-border">
                     -
                   </td>
                   <td className="px-6 py-4 text-right font-mono border-l border-border">
-                    ৳ {totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    ৳ {formatNumber(totalStockValue)}
                   </td>
                 </tr>
               </tfoot>
