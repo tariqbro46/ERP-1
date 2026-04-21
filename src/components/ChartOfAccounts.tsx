@@ -38,13 +38,17 @@ export function ChartOfAccounts() {
     fetchData();
   }, [user?.companyId]);
 
+  const filteredLedgers = ledgers.filter(l => 
+    l.name.toLowerCase().includes(search.toLowerCase()) ||
+    (l.alias && l.alias.toLowerCase().includes(search.toLowerCase()))
+  );
+
   const filteredGroups = groups.filter(group => 
-    group.name.toLowerCase().includes(search.toLowerCase()) ||
-    ledgers.some(l => l.group_id === group.id && l.name.toLowerCase().includes(search.toLowerCase()))
+    search === '' ? true : filteredLedgers.some(l => l.group_id === group.id)
   );
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
+    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors text-[11px]">
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <EditableHeader 
@@ -60,6 +64,7 @@ export function ChartOfAccounts() {
               value={search || ''}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-card border border-border text-foreground pl-9 pr-4 py-2 text-[10px] outline-none focus:border-foreground transition-colors uppercase tracking-widest"
+              autoFocus
             />
           </div>
         </div>
@@ -72,44 +77,49 @@ export function ChartOfAccounts() {
             </div>
           ) : (
             <div className="space-y-8 min-w-[400px]">
-              {filteredGroups.map(group => (
-                <div key={group.id} className="space-y-3">
-                  <div className="flex items-center gap-2 text-foreground font-bold text-xs uppercase tracking-[0.15em] border-b border-border pb-2">
-                    <Folder className="w-3.5 h-3.5 text-amber-500" />
-                    {group.name}
-                    <span className="text-[8px] text-gray-600 font-normal ml-2 tracking-widest">({group.nature})</span>
-                  </div>
-                  <div className="ml-6 space-y-1 border-l border-border pl-6">
-                    {ledgers.filter(l => l.group_id === group.id).length === 0 ? (
-                      <div className="text-[9px] text-gray-700 italic uppercase tracking-widest py-1">{t('accounts.noLedgersInGroup')}</div>
-                    ) : (
-                      ledgers.filter(l => l.group_id === group.id).map(ledger => (
-                        <div key={ledger.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 sm:py-2 group hover:bg-foreground/5 px-2 -ml-2 transition-colors gap-2">
-                          <div className="flex items-center gap-3 text-gray-400 text-[11px] group-hover:text-foreground transition-colors">
-                            <FileText className="w-3 h-3 text-gray-600" />
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                              <span className="font-bold sm:font-normal">{ledger.name}</span>
-                              {ledger.alias && <span className="text-[9px] text-gray-700 italic">({ledger.alias})</span>}
+              {filteredGroups.map(group => {
+                const groupLedgers = filteredLedgers.filter(l => l.group_id === group.id);
+                if (search !== '' && groupLedgers.length === 0) return null;
+
+                return (
+                  <div key={group.id} className="space-y-3">
+                    <div className="flex items-center gap-2 text-foreground font-bold text-xs uppercase tracking-[0.15em] border-b border-border pb-2">
+                      <Folder className="w-3.5 h-3.5 text-amber-500" />
+                      {group.name}
+                      <span className="text-[8px] text-gray-600 font-normal ml-2 tracking-widest">({group.nature})</span>
+                    </div>
+                    <div className="ml-6 space-y-1 border-l border-border pl-6">
+                      {groupLedgers.length === 0 ? (
+                        <div className="text-[9px] text-gray-700 italic uppercase tracking-widest py-1">{t('accounts.noLedgersInGroup')}</div>
+                      ) : (
+                        groupLedgers.map(ledger => (
+                          <div key={ledger.id} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 sm:py-2 group hover:bg-foreground/5 px-2 -ml-2 transition-colors gap-2">
+                            <div className="flex items-center gap-3 text-gray-400 text-[11px] group-hover:text-foreground transition-colors">
+                              <FileText className="w-3 h-3 text-gray-600" />
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                                <span className="font-bold sm:font-normal">{ledger.name}</span>
+                                {ledger.alias && <span className="text-[9px] text-gray-700 italic">({ledger.alias})</span>}
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between sm:justify-end gap-6 pl-6 sm:pl-0">
+                              <div className="text-[10px] text-gray-500 font-mono">
+                                ৳ {ledger.current_balance?.toLocaleString() || 0}
+                              </div>
+                              <button 
+                                onClick={() => navigate(`/accounts/ledgers/edit/${ledger.id}`)}
+                                className="p-1.5 bg-card border border-border text-gray-600 hover:text-foreground hover:border-foreground transition-all sm:opacity-0 group-hover:opacity-100"
+                                title={t('ledger.edit')}
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between sm:justify-end gap-6 pl-6 sm:pl-0">
-                            <div className="text-[10px] text-gray-500 font-mono">
-                              ৳ {ledger.current_balance?.toLocaleString() || 0}
-                            </div>
-                            <button 
-                              onClick={() => navigate(`/accounts/ledgers/edit/${ledger.id}`)}
-                              className="p-1.5 bg-card border border-border text-gray-600 hover:text-foreground hover:border-foreground transition-all sm:opacity-0 group-hover:opacity-100"
-                              title={t('ledger.edit')}
-                            >
-                              <Edit2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
