@@ -221,7 +221,7 @@ export function LedgerStatement() {
       vch_type: '-',
       debit: rb > 0 ? rb : 0,
       credit: rb < 0 ? Math.abs(rb) : 0,
-      balance: `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}`,
+      balance: `${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}`,
       isShaded: config.enableStripeView && rowCounter % 2 !== 0
     });
     rowCounter++;
@@ -237,7 +237,7 @@ export function LedgerStatement() {
         vch_type: e.vouchers?.v_type || '-',
         debit: e.debit || 0,
         credit: e.credit || 0,
-        balance: config.showRunningBalance ? `${Math.abs(rb).toFixed(2)} ${rb >= 0 ? 'Dr' : 'Cr'}` : '',
+        balance: config.showRunningBalance ? `${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}` : '',
         isShaded: config.enableStripeView && rowCounter % 2 !== 0
       });
       rowCounter++;
@@ -301,7 +301,7 @@ export function LedgerStatement() {
       vch_type: '',
       debit: finalBalance < 0 ? Math.abs(finalBalance) : 0,
       credit: finalBalance >= 0 ? Math.abs(finalBalance) : 0,
-      balance: Math.abs(finalBalance).toFixed(2),
+      balance: formatNumber(Math.abs(finalBalance)),
       isShaded: false // Closing balance usually not shaded or special
     });
 
@@ -723,8 +723,9 @@ export function LedgerStatement() {
   };
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="space-y-6">
+    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+      {/* Fixed Header Section */}
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
             <EditableHeader 
@@ -862,19 +863,23 @@ export function LedgerStatement() {
             </button>
           </div>
         </div>
+      </div>
 
-        <ReportConfigModal 
-          isOpen={isConfigOpen}
-          onClose={() => setIsConfigOpen(false)}
-          config={config}
-          onSave={handleSaveConfig}
-          title={t('ledger.statement')}
-        />
+      <ReportConfigModal 
+        isOpen={isConfigOpen}
+        onClose={() => setIsConfigOpen(false)}
+        config={config}
+        onSave={handleSaveConfig}
+        title={t('ledger.statement')}
+      />
 
-        <div id="ledger-report" className={cn(
-          "bg-card border border-border overflow-x-auto no-scrollbar relative",
-          settings.reportLayout === 'Layout 2' && "bg-white text-black font-serif p-8 min-h-[800px] pb-32"
-        )}>
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+        <div className="p-4 lg:p-6 space-y-6">
+          <div id="ledger-report" className={cn(
+            "bg-card border border-border relative",
+            settings.reportLayout === 'Layout 2' && "bg-white text-black font-serif p-8 min-h-[800px] pb-32"
+          )}>
           {settings.reportLayout === 'Layout 2' && (
             <>
               <div className="text-center mb-8 border-b border-black pb-4">
@@ -896,22 +901,22 @@ export function LedgerStatement() {
             </>
           )}
           <table className={cn(
-            "w-full text-left text-xs min-w-[700px]",
+            "w-full text-left text-xs min-w-[700px] border-separate border-spacing-0",
             settings.reportLayout === 'Layout 2' ? "border-y border-black table-fixed" : ""
           )}>
-            <thead>
+            <thead className="sticky top-0 z-20 bg-card">
               <tr className={cn(
-                "border-b border-border text-gray-500 uppercase",
-                settings.reportLayout === 'Layout 2' && "border-black text-black font-bold"
+                "border-b border-border text-gray-500 uppercase bg-foreground/5",
+                settings.reportLayout === 'Layout 2' && "border-black text-black font-bold bg-white"
               )}>
-                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[12%]" : "w-[120px]")}>{t('common.date')}</th>
-                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[38%]" : "")}>{t('ledger.particulars')}</th>
-                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>{t('ledger.vchType')}</th>
-                <th className={cn("px-6 py-4 font-medium", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>{t('ledger.vchNo')}</th>
-                <th className={cn("px-6 py-4 font-medium text-right", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>{t('reports.debit')}</th>
-                <th className={cn("px-6 py-4 font-medium text-right", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>{t('reports.credit')}</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[12%] border-black" : "w-[120px]")}>{t('common.date')}</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[38%] border-black" : "")}>{t('ledger.particulars')}</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('ledger.vchType')}</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('ledger.vchNo')}</th>
+                <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('reports.debit')}</th>
+                <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('reports.credit')}</th>
                 {config.showRunningBalance && (
-                  <th className={cn("px-6 py-4 font-medium text-right", settings.reportLayout === 'Layout 2' ? "w-[10%]" : "")}>{t('ledger.runningBalance')}</th>
+                  <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('ledger.runningBalance')}</th>
                 )}
               </tr>
             </thead>
@@ -1137,5 +1142,6 @@ export function LedgerStatement() {
         />
       )}
     </div>
-  );
+  </div>
+);
 }

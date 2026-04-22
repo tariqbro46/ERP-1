@@ -36,10 +36,12 @@ export function TrialBalance() {
     fetchData();
   }, [user?.companyId]);
 
-  const filteredData = data.filter(l => 
-    l.name.toLowerCase().includes(search.toLowerCase()) ||
-    l.ledger_groups?.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredData = data
+    .filter(l => 
+      l.name.toLowerCase().includes(search.toLowerCase()) ||
+      l.ledger_groups?.name.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const totalDebit = filteredData.reduce((sum, l) => sum + (l.current_balance > 0 ? l.current_balance : 0), 0);
   const totalCredit = filteredData.reduce((sum, l) => sum + (l.current_balance < 0 ? Math.abs(l.current_balance) : 0), 0);
@@ -76,8 +78,9 @@ export function TrialBalance() {
   const lastDay = formatReportDate(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0], settings.dateFormat);
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="space-y-6">
+    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+      {/* Fixed Header Section */}
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
@@ -137,9 +140,13 @@ export function TrialBalance() {
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Table/Cards */}
-        <div id="trial-balance-report" className="bg-card border border-border overflow-hidden">
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+        <div className="p-4 lg:p-6 space-y-6">
+          {/* Table/Cards */}
+          <div id="trial-balance-report" className="bg-card border border-border overflow-hidden p-0">
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
             {filteredData.map((ledger) => (
@@ -177,14 +184,14 @@ export function TrialBalance() {
           </div>
 
           {/* Desktop View: Table */}
-          <div className="hidden lg:block overflow-x-auto no-scrollbar">
-            <table className="w-full text-left text-xs min-w-[600px]">
-              <thead>
+          <div className="hidden lg:block relative">
+            <table className="w-full text-left text-xs min-w-[600px] border-separate border-spacing-0">
+              <thead className="sticky top-0 z-20 bg-card">
                 <tr className="border-b border-border text-gray-500 uppercase bg-foreground/5">
-                  <th className="px-6 py-4 font-medium">{t('common.particulars')}</th>
-                  <th className="px-6 py-4 font-medium">{t('common.group')}</th>
-                  <th className="px-6 py-4 font-medium text-right w-48">{t('reports.debit')} (৳)</th>
-                  <th className="px-6 py-4 font-medium text-right w-48">{t('reports.credit')} (৳)</th>
+                  <th className="px-6 py-4 font-medium border-b border-border">{t('common.particulars')}</th>
+                  <th className="px-6 py-4 font-medium border-b border-border">{t('common.group')}</th>
+                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border">{t('reports.debit')} (৳)</th>
+                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border">{t('reports.credit')} (৳)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -230,5 +237,6 @@ export function TrialBalance() {
         )}
       </div>
     </div>
-  );
+  </div>
+);
 }

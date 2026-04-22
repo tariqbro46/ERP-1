@@ -108,7 +108,7 @@ export function LocationStockReport() {
     totalValue: calculateGodownValue(g.id),
     totalQty: calculateGodownQty(g.id)
   })).filter(g => g.name.toLowerCase().includes(search.toLowerCase()))
-     .sort((a, b) => b.totalValue - a.totalValue);
+     .sort((a, b) => a.name.localeCompare(b.name));
 
   const totalValue = processedGodowns.reduce((sum, g) => sum + g.totalValue, 0);
 
@@ -118,29 +118,35 @@ export function LocationStockReport() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex items-center justify-center h-full">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono">
-      <div className="space-y-6">
-        {/* Header */}
+    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+      {/* Fixed Header Section */}
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-foreground/5 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6 text-foreground" />
+            </button>
             <div className="flex flex-col">
               <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">{t('location.title')}</h1>
               <p className="text-[10px] text-gray-500 uppercase tracking-widest">{t('location.subtitle')}</p>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 w-full sm:w-auto">
             <div className="text-left sm:text-right">
               <p className="text-[9px] text-gray-500 uppercase tracking-widest">{t('location.totalAcross')}</p>
               <p className="text-lg lg:text-xl text-foreground font-bold">{formatCurrency(totalValue)}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto justify-end">
               <button 
                 onClick={handlePrint}
                 className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
@@ -161,68 +167,73 @@ export function LocationStockReport() {
               placeholder="Search locations..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-background border border-border text-foreground pl-10 pr-4 py-2 text-xs outline-none focus:border-foreground transition-colors"
+              className="w-full bg-background border border-border text-foreground pl-10 pr-4 py-2 text-xs outline-none focus:border-foreground transition-colors uppercase tracking-widest"
             />
           </div>
         </div>
+      </div>
 
-        {/* Report Content */}
-        <div id="location-report" className="bg-card border border-border overflow-hidden p-0 print:p-8 print:border-none print:shadow-none bg-white">
-          <ReportPrintHeader title={t('location.title')} subtitle={t('location.subtitle')} />
-          
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-border text-gray-500 uppercase bg-foreground/5">
-                <th className="px-6 py-4 font-medium">{t('common.particulars')}</th>
-                <th className="px-6 py-4 font-medium text-right">{t('location.netQty')}</th>
-                <th className="px-6 py-4 font-medium text-right">{t('location.closingValue')} (৳)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
-              {processedGodowns.map((godown) => (
-                <tr 
-                  key={godown.id}
-                  onClick={() => navigate('/reports/stock', { state: { godownId: godown.id } })}
-                  className="hover:bg-foreground/5 transition-colors cursor-pointer group"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-foreground/5 rounded-lg text-gray-400 group-hover:text-primary transition-colors">
-                        <MapPin className="w-4 h-4" />
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+        <div className="p-4 lg:p-6">
+          {/* Report Content */}
+          <div id="location-report" className="bg-card border border-border overflow-hidden p-0 print:p-8 print:border-none print:shadow-none bg-white">
+            <ReportPrintHeader title={t('location.title')} subtitle={t('location.subtitle')} />
+            
+            <table className="w-full text-left text-xs border-separate border-spacing-0">
+              <thead className="sticky top-0 z-10 bg-white">
+                <tr className="border-b border-border text-gray-500 uppercase bg-foreground/5 text-[10px] tracking-widest">
+                  <th className="px-6 py-4 font-bold border-b border-border">{t('common.particulars')}</th>
+                  <th className="px-6 py-4 font-bold text-right border-b border-border">{t('location.netQty')}</th>
+                  <th className="px-6 py-4 font-bold text-right border-b border-border">{t('location.closingValue')} (৳)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {processedGodowns.map((godown) => (
+                  <tr 
+                    key={godown.id}
+                    onClick={() => navigate('/reports/stock', { state: { godownId: godown.id } })}
+                    className="hover:bg-foreground/5 transition-colors cursor-pointer group"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-foreground/5 rounded-lg text-gray-400 group-hover:text-primary transition-colors">
+                          <MapPin className="w-4 h-4" />
+                        </div>
+                        <span className="text-foreground font-bold uppercase tracking-tight">{godown.name}</span>
                       </div>
-                      <span className="text-foreground font-bold uppercase tracking-tight">{godown.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right text-foreground font-mono">
-                    {godown.totalQty.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 text-right text-foreground font-mono font-bold">
-                    {formatCurrency(godown.totalValue)}
-                  </td>
-                </tr>
-              ))}
-              {processedGodowns.length === 0 && (
+                    </td>
+                    <td className="px-6 py-4 text-right text-foreground font-mono">
+                      {godown.totalQty.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-right text-foreground font-mono font-bold">
+                      {formatCurrency(godown.totalValue)}
+                    </td>
+                  </tr>
+                ))}
+                {processedGodowns.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="px-6 py-12 text-center text-gray-500 uppercase tracking-widest italic">
+                      {t('location.noLocations')}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              <tfoot className="bg-foreground/5 border-t-2 border-border font-bold text-foreground">
                 <tr>
-                  <td colSpan={3} className="px-6 py-12 text-center text-gray-500 uppercase tracking-widest italic">
-                    {t('location.noLocations')}
+                  <td className="px-6 py-4 uppercase text-[10px] text-gray-500 tracking-widest">{t('location.grandTotal')}</td>
+                  <td className="px-6 py-4 text-right font-mono border-l border-border">
+                    {processedGodowns.reduce((sum, g) => sum + g.totalQty, 0).toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 text-right font-mono border-l border-border text-lg">
+                    {formatCurrency(totalValue)}
                   </td>
                 </tr>
-              )}
-            </tbody>
-            <tfoot className="bg-foreground/5 border-t-2 border-border font-bold text-foreground">
-              <tr>
-                <td className="px-6 py-4 uppercase text-[10px] text-gray-500 tracking-widest">{t('location.grandTotal')}</td>
-                <td className="px-6 py-4 text-right font-mono border-l border-border">
-                  {processedGodowns.reduce((sum, g) => sum + g.totalQty, 0).toLocaleString()}
-                </td>
-                <td className="px-6 py-4 text-right font-mono border-l border-border text-lg">
-                  {formatCurrency(totalValue)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+              </tfoot>
+            </table>
 
-          <ReportPrintFooter />
+            <ReportPrintFooter />
+          </div>
         </div>
       </div>
     </div>

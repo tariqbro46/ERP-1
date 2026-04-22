@@ -73,10 +73,17 @@ export function CashBankBooks() {
     return acc;
   }, {});
 
-  const filteredGroups = Object.keys(groupedData).filter(group => 
-    group.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    groupedData[group].items.some((s: any) => s.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Sort items within each group alphabetically
+  Object.keys(groupedData).forEach(group => {
+    groupedData[group].items.sort((a: any, b: any) => a.name.localeCompare(b.name));
+  });
+
+  const filteredGroups = Object.keys(groupedData)
+    .filter(group => 
+      group.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      groupedData[group].items.some((s: any) => s.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+    .sort((a, b) => a.localeCompare(b)); // Sort groups alphabetically
 
   const grandTotals = summary.reduce((acc, s) => ({
     opening: acc.opening + s.openingBalance,
@@ -94,159 +101,167 @@ export function CashBankBooks() {
   };
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen transition-colors">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-foreground/5 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6 text-foreground" />
-          </button>
-          <EditableHeader 
-            pageId="cash_bank_books"
-            defaultTitle="Cash/Bank Books"
-            defaultSubtitle="Summary of all cash and bank ledger balances"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 bg-card border border-border hover:text-foreground hover:border-foreground transition-all"
-          >
-            <Printer className="w-4 h-4" />
-            {t('common.print')}
-          </button>
-          <button 
-            onClick={handleDownload}
-            className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-background bg-foreground hover:opacity-90 transition-all shadow-sm"
-          >
-            <Download className="w-4 h-4" />
-            {t('common.downloadPdf')}
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-card p-4 rounded-xl border border-border shadow-sm mb-6 transition-colors">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search by ledger group or name..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm text-foreground"
+    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+      {/* Fixed Header Section */}
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-foreground/5 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6 text-foreground" />
+            </button>
+            <EditableHeader 
+              pageId="cash_bank_books"
+              defaultTitle="Cash/Bank Books"
+              defaultSubtitle="Summary of all cash and bank ledger balances"
             />
           </div>
           <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={dateRange.from}
-              onChange={e => setDateRange({ ...dateRange, from: e.target.value })}
-              className="px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm text-foreground"
-            />
-            <span className="text-gray-500 text-xs uppercase font-bold tracking-widest">{t('common.to')}</span>
-            <input
-              type="date"
-              value={dateRange.to}
-              onChange={e => setDateRange({ ...dateRange, to: e.target.value })}
-              className="px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm text-foreground"
-            />
+            <button 
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 bg-card border border-border hover:text-foreground hover:border-foreground transition-all"
+            >
+              <Printer className="w-4 h-4" />
+              {t('common.print')}
+            </button>
+            <button 
+              onClick={handleDownload}
+              className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-background bg-foreground hover:opacity-90 transition-all shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              {t('common.downloadPdf')}
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-card p-4 rounded-xl border border-border shadow-sm transition-colors">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search by ledger group or name..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm text-foreground"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={dateRange.from}
+                onChange={e => setDateRange({ ...dateRange, from: e.target.value })}
+                className="px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm text-foreground"
+              />
+              <span className="text-gray-500 text-xs uppercase font-bold tracking-widest">{t('common.to')}</span>
+              <input
+                type="date"
+                value={dateRange.to}
+                onChange={e => setDateRange({ ...dateRange, to: e.target.value })}
+                className="px-3 py-2 bg-background border border-border rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm text-foreground"
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      <div id="cash-bank-report" className="bg-card rounded-xl border border-border overflow-hidden shadow-sm transition-colors">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse font-mono">
-            <thead>
-              <tr className="bg-foreground/5 border-b border-border">
-                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Particulars</th>
-                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Opening Balance</th>
-                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Debit</th>
-                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Credit</th>
-                <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Closing Balance</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
-                  </td>
-                </tr>
-              ) : filteredGroups.length > 0 ? filteredGroups.map((group) => (
-                <React.Fragment key={group}>
-                  {/* Group Row */}
-                  <tr 
-                    className="bg-foreground/[0.02] hover:bg-foreground/[0.04] transition-colors cursor-pointer group"
-                    onClick={() => toggleGroup(group)}
-                  >
-                    <td className="px-6 py-4 text-sm font-bold text-foreground flex items-center gap-2">
-                      <div className={cn("w-4 h-4 flex items-center justify-center transition-transform", expandedGroups.has(group) ? "rotate-90" : "")}>
-                        <ChevronRight className="w-3 h-3" />
-                      </div>
-                      {group}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-foreground text-right">
-                      {formatCurrency(groupedData[group].opening)}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-green-600 text-right">
-                      {formatCurrency(groupedData[group].debit)}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-red-600 text-right">
-                      {formatCurrency(groupedData[group].credit)}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-bold text-primary text-right">
-                      {formatCurrency(groupedData[group].closing)}
-                    </td>
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+        <div className="p-4 lg:p-6">
+          <div id="cash-bank-report" className="bg-card rounded-xl border border-border overflow-hidden shadow-sm transition-colors">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse font-mono border-separate border-spacing-0">
+                <thead className="sticky top-0 z-10 bg-card">
+                  <tr className="bg-foreground/5 border-b border-border">
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b border-border">Particulars</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right border-b border-border">Opening Balance</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right border-b border-border">Debit</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right border-b border-border">Credit</th>
+                    <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right border-b border-border">Closing Balance</th>
                   </tr>
-                  {/* Ledger Rows */}
-                  {expandedGroups.has(group) && groupedData[group].items.map((s: any) => (
-                    <tr 
-                      key={s.id} 
-                      className="hover:bg-foreground/5 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/reports/ledger?ledgerId=${s.id}&from=${dateRange.from}&to=${dateRange.to}`)}
-                    >
-                      <td className="px-12 py-3 text-sm text-gray-600 italic">
-                        {s.name}
-                      </td>
-                      <td className="px-6 py-3 text-xs text-gray-500 text-right">
-                        {formatCurrency(s.openingBalance)}
-                      </td>
-                      <td className="px-6 py-3 text-xs text-green-500 text-right">
-                        {formatCurrency(s.debit)}
-                      </td>
-                      <td className="px-6 py-3 text-xs text-red-500 text-right">
-                        {formatCurrency(s.credit)}
-                      </td>
-                      <td className="px-6 py-3 text-xs font-medium text-gray-700 text-right">
-                        {formatCurrency(s.closingBalance)}
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center">
+                        <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
                       </td>
                     </tr>
-                  ))}
-                </React.Fragment>
-              )) : (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500 lowercase tracking-widest text-[10px]">
-                    No cash or bank ledgers found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {!loading && summary.length > 0 && (
-              <tfoot>
-                <tr className="bg-foreground/5 font-bold border-t-2 border-border">
-                  <td className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500">Grand Total</td>
-                  <td className="px-6 py-4 text-right text-foreground text-sm">{formatCurrency(grandTotals.opening)}</td>
-                  <td className="px-6 py-4 text-right text-green-600 text-sm">{formatCurrency(grandTotals.debit)}</td>
-                  <td className="px-6 py-4 text-right text-red-600 text-sm">{formatCurrency(grandTotals.credit)}</td>
-                  <td className="px-6 py-4 text-right text-primary text-sm">{formatCurrency(grandTotals.closing)}</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
+                  ) : filteredGroups.length > 0 ? filteredGroups.map((group) => (
+                    <React.Fragment key={group}>
+                      {/* Group Row */}
+                      <tr 
+                        className="bg-foreground/[0.02] hover:bg-foreground/[0.04] transition-colors cursor-pointer group"
+                        onClick={() => toggleGroup(group)}
+                      >
+                        <td className="px-6 py-4 text-sm font-bold text-foreground flex items-center gap-2">
+                          <div className={cn("w-4 h-4 flex items-center justify-center transition-transform", expandedGroups.has(group) ? "rotate-90" : "")}>
+                            <ChevronRight className="w-3 h-3" />
+                          </div>
+                          {group}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-bold text-foreground text-right border-x border-transparent">
+                          {formatCurrency(groupedData[group].opening)}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-bold text-green-600 text-right border-x border-transparent">
+                          {formatCurrency(groupedData[group].debit)}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-bold text-red-600 text-right border-x border-transparent">
+                          {formatCurrency(groupedData[group].credit)}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-bold text-primary text-right border-x border-transparent">
+                          {formatCurrency(groupedData[group].closing)}
+                        </td>
+                      </tr>
+                      {/* Ledger Rows */}
+                      {expandedGroups.has(group) && groupedData[group].items.map((s: any) => (
+                        <tr 
+                          key={s.id} 
+                          className="hover:bg-foreground/5 transition-colors cursor-pointer"
+                          onClick={() => navigate(`/reports/ledger?ledgerId=${s.id}&from=${dateRange.from}&to=${dateRange.to}`)}
+                        >
+                          <td className="px-12 py-3 text-sm text-gray-600 italic">
+                            {s.name}
+                          </td>
+                          <td className="px-6 py-3 text-xs text-gray-500 text-right">
+                            {formatCurrency(s.openingBalance)}
+                          </td>
+                          <td className="px-6 py-3 text-xs text-green-500 text-right">
+                            {formatCurrency(s.debit)}
+                          </td>
+                          <td className="px-6 py-3 text-xs text-red-500 text-right">
+                            {formatCurrency(s.credit)}
+                          </td>
+                          <td className="px-6 py-3 text-xs font-medium text-gray-700 text-right">
+                            {formatCurrency(s.closingBalance)}
+                          </td>
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  )) : (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500 lowercase tracking-widest text-[10px]">
+                        No cash or bank ledgers found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                {!loading && summary.length > 0 && (
+                  <tfoot className="sticky bottom-0 bg-card border-t-2 border-border shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
+                    <tr className="bg-foreground/5 font-bold">
+                      <td className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500">Grand Total</td>
+                      <td className="px-6 py-4 text-right text-foreground text-sm">{formatCurrency(grandTotals.opening)}</td>
+                      <td className="px-6 py-4 text-right text-green-600 text-sm">{formatCurrency(grandTotals.debit)}</td>
+                      <td className="px-6 py-4 text-right text-red-600 text-sm">{formatCurrency(grandTotals.credit)}</td>
+                      <td className="px-6 py-4 text-right text-primary text-sm">{formatCurrency(grandTotals.closing)}</td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Package, Search, Edit2, Plus, Loader2, Filter, List, Grid, Activity } from 'lucide-react';
+import { Package, Search, Edit2, Plus, Loader2, Filter, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { cn, formatNumber } from '../lib/utils';
 
 export function ItemMaster() {
   const navigate = useNavigate();
@@ -66,18 +67,20 @@ export function ItemMaster() {
 
   const categories = ['All', ...Array.from(new Set(items.map(i => i.category)))];
 
-  const filteredItems = items.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
-                         item.part_no?.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredItems = items
+    .filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
+                           item.part_no?.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="space-y-6">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+      {/* Fixed Header Section */}
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <h1 className="text-2xl font-mono text-foreground uppercase tracking-tighter">{t('item.title')}</h1>
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex gap-4">
@@ -140,8 +143,10 @@ export function ItemMaster() {
             {t('item.totalItems')}: {filteredItems.length}
           </div>
         </div>
+      </div>
 
-        {/* Items Table/Cards */}
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-6">
         <div className="bg-card border border-border overflow-hidden">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -176,8 +181,8 @@ export function ItemMaster() {
                     <div className="flex justify-between items-end">
                       <div className="space-y-1">
                         <p className="text-[8px] text-gray-500 uppercase tracking-widest">{t('item.partNo')}: {item.part_no || '---'}</p>
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">{t('item.openingQty')}: {item.opening_qty} @ ৳ {item.opening_rate}</p>
-                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">{t('item.avgCost')}: ৳ {item.avg_cost?.toLocaleString()}</p>
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">{t('item.openingQty')}: {formatNumber(item.opening_qty)} @ ৳ {formatNumber(item.opening_rate)}</p>
+                        <p className="text-[8px] text-gray-500 uppercase tracking-widest">{t('item.avgCost')}: ৳ {formatNumber(item.avg_cost)}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-[9px] text-gray-500 uppercase tracking-widest">{t('item.currentStock')}</p>
@@ -185,7 +190,7 @@ export function ItemMaster() {
                           "text-sm font-bold font-mono",
                           item.current_stock > 0 ? "text-emerald-500" : "text-rose-500"
                         )}>
-                          {item.current_stock?.toLocaleString()} <span className="text-[10px] uppercase">{item.units?.name}</span>
+                          {formatNumber(item.current_stock)} <span className="text-[10px] uppercase">{item.units?.name}</span>
                         </p>
                       </div>
                     </div>
@@ -194,19 +199,19 @@ export function ItemMaster() {
               </div>
 
               {/* Desktop View: Table */}
-              <div className="hidden md:block overflow-x-auto no-scrollbar">
-                <table className="w-full text-left border-collapse min-w-[800px]">
-                  <thead className="bg-foreground/5 border-b border-border">
-                    <tr>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">{t('item.name')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">{t('item.category')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">{t('item.partNo')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">{t('item.unit')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.openingQty')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.openingRate')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.currentStock')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.avgCost')}</th>
-                      <th className="px-6 py-4 text-right w-20"></th>
+              <div className="hidden md:block relative">
+                <table className="w-full text-left border-collapse min-w-[800px] border-separate border-spacing-0">
+                  <thead className="sticky top-0 z-20 bg-card">
+                    <tr className="bg-foreground/5 border-b border-border">
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.name')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.category')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.partNo')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.unit')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.openingQty')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.openingRate')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.currentStock')}</th>
+                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.avgCost')}</th>
+                      <th className="px-6 py-4 text-right w-20 border-b border-border"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
@@ -235,21 +240,21 @@ export function ItemMaster() {
                           {item.units?.name}
                         </td>
                         <td className="px-6 py-4 text-right text-[10px] text-gray-500 font-mono">
-                          {item.opening_qty?.toLocaleString() || '0'}
+                          {formatNumber(item.opening_qty)}
                         </td>
                         <td className="px-6 py-4 text-right text-[10px] text-gray-500 font-mono">
-                          ৳ {item.opening_rate?.toLocaleString() || '0.00'}
+                          ৳ {formatNumber(item.opening_rate)}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <p className={cn(
                             "text-[11px] font-bold font-mono",
                             item.current_stock > 0 ? "text-emerald-500" : "text-rose-500"
                           )}>
-                            {item.current_stock?.toLocaleString()}
+                            {formatNumber(item.current_stock)}
                           </p>
                         </td>
                         <td className="px-6 py-4 text-right text-[11px] text-gray-400 font-mono">
-                          ৳ {item.avg_cost?.toLocaleString()}
+                          ৳ {formatNumber(item.avg_cost)}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button 
@@ -267,16 +272,16 @@ export function ItemMaster() {
               </div>
             </>
           ) : (
-            <div className="overflow-x-auto no-scrollbar">
-              <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead className="bg-foreground/5 border-b border-border">
-                  <tr>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">{t('item.name')}</th>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold">{t('item.category')}</th>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.standardPrice')}</th>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.wholesalePrice')}</th>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right">{t('item.retailPrice')}</th>
-                    <th className="px-6 py-4 text-right w-20"></th>
+            <div className="relative">
+              <table className="w-full text-left border-collapse min-w-[800px] border-separate border-spacing-0">
+                <thead className="sticky top-0 z-20 bg-card">
+                  <tr className="bg-foreground/5 border-b border-border">
+                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.name')}</th>
+                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.category')}</th>
+                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.standardPrice')}</th>
+                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.wholesalePrice')}</th>
+                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.retailPrice')}</th>
+                    <th className="px-6 py-4 text-right w-20 border-b border-border"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
@@ -292,13 +297,13 @@ export function ItemMaster() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right text-[11px] font-mono">
-                        ৳ {item.standard_price?.toLocaleString() || '0.00'}
+                        ৳ {formatNumber(item.standard_price)}
                       </td>
                       <td className="px-6 py-4 text-right text-[11px] font-mono text-blue-500">
-                        ৳ {(item.standard_price * 0.9)?.toLocaleString() || '0.00'}
+                        ৳ {formatNumber(item.standard_price * 0.9)}
                       </td>
                       <td className="px-6 py-4 text-right text-[11px] font-mono text-emerald-500">
-                        ৳ {(item.standard_price * 1.1)?.toLocaleString() || '0.00'}
+                        ৳ {formatNumber(item.standard_price * 1.1)}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button className="text-blue-500 text-[10px] uppercase font-bold hover:underline">{t('common.update')}</button>
@@ -313,8 +318,4 @@ export function ItemMaster() {
       </div>
     </div>
   );
-}
-
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(' ');
 }

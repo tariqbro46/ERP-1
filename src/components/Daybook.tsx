@@ -259,8 +259,9 @@ export function Daybook() {
   };
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="space-y-6">
+    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+      {/* Fixed Header Section */}
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex-1 w-full sm:max-w-2xl space-y-4">
             <div className="flex items-center gap-4">
@@ -321,16 +322,20 @@ export function Daybook() {
             </button>
           </div>
         </div>
+      </div>
 
-        <ReportConfigModal 
-          isOpen={isConfigOpen}
-          onClose={() => setIsConfigOpen(false)}
-          config={config}
-          onSave={handleSaveConfig}
-          title="Daybook"
-        />
+      <ReportConfigModal 
+        isOpen={isConfigOpen}
+        onClose={() => setIsConfigOpen(false)}
+        config={config}
+        onSave={handleSaveConfig}
+        title="Daybook"
+      />
 
-        <div id="daybook-report" className="bg-card border border-border overflow-hidden">
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+        <div className="p-4 lg:p-6 space-y-6">
+          <div id="daybook-report" className="bg-card border border-border overflow-hidden">
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
             {loading ? (
@@ -387,16 +392,16 @@ export function Daybook() {
           </div>
 
           {/* Desktop View: Table */}
-          <div className="hidden lg:block overflow-x-auto no-scrollbar">
-            <table className="w-full text-left text-xs min-w-[700px] lg:min-w-0">
-              <thead>
-                <tr className="border-b border-border text-gray-500 uppercase">
-                  <th className="px-4 lg:px-6 py-4 font-medium">{t('common.date')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium">{t('common.particulars')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase">{t('common.vchType')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase">{t('common.vchNo')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right">{t('common.amount')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right">{t('common.share')}</th>
+          <div className="hidden lg:block relative">
+            <table className="w-full text-left text-xs min-w-[700px] lg:min-w-0 border-separate border-spacing-0">
+              <thead className="sticky top-0 z-20 bg-card">
+                <tr className="border-b border-border text-gray-500 uppercase bg-foreground/5">
+                  <th className="px-4 lg:px-6 py-4 font-medium border-b border-border">{t('common.date')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium border-b border-border">{t('common.particulars')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border">{t('common.vchType')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border">{t('common.vchNo')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right border-b border-border">{t('common.amount')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right border-b border-border">{t('common.share')}</th>
                 </tr>
               </thead>
               <tbody className="text-foreground/80">
@@ -508,5 +513,6 @@ export function Daybook() {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

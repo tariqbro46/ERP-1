@@ -816,16 +816,7 @@ export function VoucherEntry() {
               </div>
               <select
                 value={vType}
-                onChange={e => {
-                  setVType(e.target.value);
-                  if (!isEdit) {
-                    setPartyLedgerId('');
-                    setSalesPurchaseLedgerId('');
-                    setBankCashLedgerId('');
-                    setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }]);
-                    setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
-                  }
-                }}
+                onChange={e => setVType(e.target.value)}
                 tabIndex={1}
                 className={cn(
                   "w-full bg-background border border-border p-1.5 text-xs outline-none focus:border-foreground font-bold uppercase",
@@ -934,16 +925,7 @@ export function VoucherEntry() {
               </div>
               <select
                 value={vType}
-                onChange={e => {
-                  setVType(e.target.value);
-                  if (!isEdit) {
-                    setPartyLedgerId('');
-                    setSalesPurchaseLedgerId('');
-                    setBankCashLedgerId('');
-                    setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }]);
-                    setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
-                  }
-                }}
+                onChange={e => setVType(e.target.value)}
                 tabIndex={1}
                 className={cn(
                   "w-full bg-background border border-border p-1.5 lg:p-2 text-xs lg:text-sm outline-none focus:border-foreground font-bold uppercase",

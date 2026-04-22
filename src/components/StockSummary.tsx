@@ -123,7 +123,7 @@ export function StockSummary() {
     if (selectedGodown && item.displayStock === 0) return false;
     if (showLowStockOnly && !item.isLowStock) return false;
     return true;
-  });
+  }).sort((a, b) => a.name.localeCompare(b.name));
 
   const groupedItems: Record<string, any[]> = {};
   processedItems.forEach(item => {
@@ -132,10 +132,12 @@ export function StockSummary() {
     groupedItems[group].push(item);
   });
 
-  const filteredGroups = Object.keys(groupedItems).filter(group => 
-    group.toLowerCase().includes(search.toLowerCase()) ||
-    groupedItems[group].some(item => item.name.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredGroups = Object.keys(groupedItems)
+    .filter(group => 
+      group.toLowerCase().includes(search.toLowerCase()) ||
+      groupedItems[group].some(item => item.name.toLowerCase().includes(search.toLowerCase()))
+    )
+    .sort((a, b) => a.localeCompare(b));
 
   const toggleGroup = (group: string) => {
     const newSet = new Set(expandedGroups);
@@ -204,9 +206,9 @@ export function StockSummary() {
   };
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="space-y-6">
-        {/* Header */}
+    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+      {/* Fixed Header Section */}
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
             {(settings.companyLogo || settings.systemLogo) && (
@@ -324,9 +326,13 @@ export function StockSummary() {
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Table/Cards */}
-        <div id="stock-summary-report" className="bg-card border border-border overflow-hidden p-0 print:p-8 print:border-none print:shadow-none bg-white">
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+        <div className="p-4 lg:p-6 space-y-6">
+          {/* Table/Cards */}
+          <div id="stock-summary-report" className="bg-card border border-border overflow-hidden p-0 print:p-8 print:border-none print:shadow-none bg-white">
           <ReportPrintHeader 
             title="Stock Summary" 
             subtitle={cn(
@@ -382,13 +388,13 @@ export function StockSummary() {
             <div className="p-4 bg-foreground/10 flex justify-between items-center font-bold">
               <span className="text-[10px] text-gray-500 uppercase tracking-widest">{t('common.grandTotal')}</span>
               <div className="text-right">
-                <p className="text-sm text-foreground font-mono">৳ {totalStockValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm text-foreground font-mono">৳ {formatNumber(totalStockValue)}</p>
               </div>
             </div>
           </div>
 
           {/* Desktop View: Table */}
-          <div className="hidden lg:block overflow-x-auto no-scrollbar relative max-h-[calc(100vh-320px)]">
+          <div className="hidden lg:block relative">
             <table className="w-full text-left text-xs min-w-[600px] border-separate border-spacing-0">
               <thead className="sticky top-0 z-20 bg-card">
                 <tr className="border-b border-border text-gray-500 uppercase bg-foreground/5">
@@ -491,6 +497,7 @@ export function StockSummary() {
         onSuccess={handleQuickItemSuccess}
       />
     </div>
-  );
+  </div>
+);
 }
 

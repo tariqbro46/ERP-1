@@ -5,7 +5,7 @@ import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, formatNumber, cn } from '../lib/utils';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
@@ -224,13 +224,13 @@ export function VoucherDetail() {
                       {item.godown_name && <div className="text-[9px] text-gray-500 mt-1">Location: {item.godown_name}</div>}
                     </div>
                     <div className="col-span-2 text-right font-mono">
-                      {item.qty} {item.unit}
+                      {formatNumber(item.qty)} {item.unit}
                     </div>
                     <div className="col-span-2 text-right font-mono">
-                      {item.rate.toFixed(2)}
+                      {formatNumber(item.rate)}
                     </div>
                     <div className="col-span-2 text-right font-mono">
-                      {(item.qty * item.rate).toFixed(2)}
+                      {formatNumber(item.qty * item.rate)}
                     </div>
                   </div>
                 ))}
@@ -250,7 +250,7 @@ export function VoucherDetail() {
             {/* Amount in words (simplified mockup) */}
             <div className="pt-8 text-[10px] text-gray-400">
               <span className="uppercase tracking-widest block mb-1">Amount in words:</span>
-              <span className="text-foreground font-bold italic">Taka {voucher.total_amount.toLocaleString()} only</span>
+              <span className="text-foreground font-bold italic">Taka {formatNumber(voucher.total_amount)} only</span>
             </div>
 
             {/* User Info */}

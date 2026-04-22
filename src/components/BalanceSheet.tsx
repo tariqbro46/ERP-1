@@ -94,12 +94,12 @@ export function BalanceSheet() {
         setAssetGroups([
           ...gList.filter(g => g.nature === 'Asset'),
           { name: t('reports.closingStock'), balance: closingStockValue, ledgers: [], isSystem: true }
-        ]);
+        ].sort((a, b) => a.name.localeCompare(b.name)));
 
         setLiabilityGroups([
           ...gList.filter(g => g.nature === 'Liability'),
           { name: t('reports.profitAndLoss'), balance: -netProfit, ledgers: [], isSystem: true }
-        ]);
+        ].sort((a, b) => a.name.localeCompare(b.name)));
 
       } catch (err) {
         console.error('Error fetching balance sheet:', err);
@@ -159,12 +159,18 @@ export function BalanceSheet() {
   }
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="space-y-6">
-        {/* Header */}
+    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+      {/* Fixed Header Section */}
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex-1 w-full sm:max-w-md space-y-4">
             <div className="flex items-center gap-4">
+              <button 
+                onClick={() => navigate(-1)}
+                className="p-2 hover:bg-foreground/5 rounded-full transition-colors"
+              >
+                <ArrowLeft className="w-6 h-6 text-foreground" />
+              </button>
               <EditableHeader 
                 pageId="balance_sheet"
                 defaultTitle={t('reports.balanceSheet')}
@@ -205,106 +211,111 @@ export function BalanceSheet() {
             </button>
           </div>
         </div>
+      </div>
 
-        <div id="balance-sheet-report" className="grid grid-cols-1 lg:grid-cols-2 border border-border bg-card divide-y lg:divide-y-0 lg:divide-x divide-border">
-          {/* Liabilities Side */}
-          <div className="overflow-hidden">
-            <div className="px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('reports.liabilities')}</span>
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
-            </div>
-            <div className="min-h-[300px] lg:min-h-[500px] divide-y divide-border/50">
-              {liabilityGroups.map(group => (
-                <div key={group.name} className="group">
-                  <div 
-                    onClick={() => toggleGroup(group.name)}
-                    className="px-4 lg:px-6 py-3 flex justify-between items-center cursor-pointer hover:bg-foreground/5 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
-                      <span className="text-sm text-foreground font-medium">{group.name}</span>
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+        <div className="p-4 lg:p-6 space-y-6">
+          <div id="balance-sheet-report" className="grid grid-cols-1 lg:grid-cols-2 border border-border bg-card divide-y lg:divide-y-0 lg:divide-x divide-border relative">
+            {/* Liabilities Side */}
+            <div className="relative">
+              <div className="sticky top-0 z-10 px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('reports.liabilities')}</span>
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
+              </div>
+              <div className="min-h-[300px] lg:min-h-[500px] divide-y divide-border/50">
+                {liabilityGroups.map(group => (
+                  <div key={group.name} className="group">
+                    <div 
+                      onClick={() => toggleGroup(group.name)}
+                      className="px-4 lg:px-6 py-3 flex justify-between items-center cursor-pointer hover:bg-foreground/5 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
+                        <span className="text-sm text-foreground font-medium">{group.name}</span>
+                      </div>
+                      <span className="text-sm text-foreground font-mono">{formatNumber(Math.abs(group.balance))}</span>
                     </div>
-                    <span className="text-sm text-foreground font-mono">{formatNumber(Math.abs(group.balance))}</span>
+                    {expandedGroups.has(group.name) && (
+                      <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
+                        {group.ledgers.sort((a: any, b: any) => a.name.localeCompare(b.name)).map((l: any) => (
+                          <div 
+                            key={l.id} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/reports/ledger?ledgerId=${l.id}`);
+                            }}
+                            className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
+                          >
+                            <span>{l.name}</span>
+                            <span className="font-mono">{formatNumber(Math.abs(l.current_balance))}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {expandedGroups.has(group.name) && (
-                    <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
-                      {group.ledgers.map((l: any) => (
-                        <div 
-                          key={l.id} 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/reports/ledger?ledgerId=${l.id}`);
-                          }}
-                          className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
-                        >
-                          <span>{l.name}</span>
-                          <span className="font-mono">{formatNumber(Math.abs(l.current_balance))}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
+              <div className="px-4 lg:px-6 py-4 bg-foreground/5 border-t border-border flex justify-between font-bold text-foreground">
+                <span className="uppercase text-[10px] tracking-widest">{t('reports.totalLiabilities')}</span>
+                <span className="font-mono">৳ {formatNumber(Math.abs(totalLiabilities))}</span>
+              </div>
             </div>
-            <div className="px-4 lg:px-6 py-4 bg-foreground/5 border-t border-border flex justify-between font-bold text-foreground">
-              <span className="uppercase text-[10px] tracking-widest">{t('reports.totalLiabilities')}</span>
-              <span className="font-mono">৳ {formatNumber(Math.abs(totalLiabilities))}</span>
+
+            {/* Assets Side */}
+            <div className="relative">
+              <div className="sticky top-0 z-10 px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('reports.assets')}</span>
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
+              </div>
+              <div className="min-h-[300px] lg:min-h-[500px] divide-y divide-border/50">
+                {assetGroups.map(group => (
+                  <div key={group.name} className="group">
+                    <div 
+                      onClick={() => toggleGroup(group.name)}
+                      className="px-4 lg:px-6 py-3 flex justify-between items-center cursor-pointer hover:bg-foreground/5 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
+                        <span className="text-sm text-foreground font-medium">{group.name}</span>
+                      </div>
+                      <span className="text-sm text-foreground font-mono">{formatNumber(Math.abs(group.balance))}</span>
+                    </div>
+                    {expandedGroups.has(group.name) && (
+                      <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
+                        {group.ledgers.sort((a: any, b: any) => a.name.localeCompare(b.name)).map((l: any) => (
+                          <div 
+                            key={l.id} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/reports/ledger?ledgerId=${l.id}`);
+                            }}
+                            className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
+                          >
+                            <span>{l.name}</span>
+                            <span className="font-mono">{formatNumber(Math.abs(l.current_balance))}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="px-4 lg:px-6 py-4 bg-foreground/5 border-t border-border flex justify-between font-bold text-foreground">
+                <span className="uppercase text-[10px] tracking-widest">{t('reports.totalAssets')}</span>
+                <span className="font-mono">৳ {formatNumber(Math.abs(totalAssets))}</span>
+              </div>
             </div>
           </div>
 
-          {/* Assets Side */}
-          <div className="overflow-hidden">
-            <div className="px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('reports.assets')}</span>
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
+          {/* Difference Check */}
+          {Math.abs(totalAssets - Math.abs(totalLiabilities)) > 0.01 && (
+            <div className="bg-rose-950/30 border border-rose-900/50 p-4 flex justify-between items-center">
+              <span className="text-[10px] text-rose-400 uppercase tracking-widest font-bold">{t('reports.differenceInOpening')}</span>
+              <span className="text-sm text-rose-400 font-mono font-bold">৳ {formatNumber(Math.abs(totalAssets - Math.abs(totalLiabilities)))}</span>
             </div>
-            <div className="min-h-[300px] lg:min-h-[500px] divide-y divide-border/50">
-              {assetGroups.map(group => (
-                <div key={group.name} className="group">
-                  <div 
-                    onClick={() => toggleGroup(group.name)}
-                    className="px-4 lg:px-6 py-3 flex justify-between items-center cursor-pointer hover:bg-foreground/5 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
-                      <span className="text-sm text-foreground font-medium">{group.name}</span>
-                    </div>
-                    <span className="text-sm text-foreground font-mono">{formatNumber(Math.abs(group.balance))}</span>
-                  </div>
-                  {expandedGroups.has(group.name) && (
-                    <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
-                      {group.ledgers.map((l: any) => (
-                        <div 
-                          key={l.id} 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/reports/ledger?ledgerId=${l.id}`);
-                          }}
-                          className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
-                        >
-                          <span>{l.name}</span>
-                          <span className="font-mono">{formatNumber(Math.abs(l.current_balance))}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="px-4 lg:px-6 py-4 bg-foreground/5 border-t border-border flex justify-between font-bold text-foreground">
-              <span className="uppercase text-[10px] tracking-widest">{t('reports.totalAssets')}</span>
-              <span className="font-mono">৳ {formatNumber(Math.abs(totalAssets))}</span>
-            </div>
-          </div>
+          )}
         </div>
-
-        {/* Difference Check */}
-        {Math.abs(totalAssets - Math.abs(totalLiabilities)) > 0.01 && (
-          <div className="bg-rose-950/30 border border-rose-900/50 p-4 flex justify-between items-center">
-            <span className="text-[10px] text-rose-400 uppercase tracking-widest font-bold">{t('reports.differenceInOpening')}</span>
-            <span className="text-sm text-rose-400 font-mono font-bold">৳ {formatNumber(Math.abs(totalAssets - Math.abs(totalLiabilities)))}</span>
-          </div>
-        )}
       </div>
     </div>
   );
