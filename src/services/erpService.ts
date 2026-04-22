@@ -436,6 +436,59 @@ export const erpService = {
     }
   },
 
+  async getGroupSummary(companyId: string, groupId: string, from: string, to: string) {
+    try {
+      const allLedgers = await getCollection<any>('ledgers', companyId);
+      const groupLedgers = allLedgers.filter(l => l.group_id === groupId);
+      
+      if (groupLedgers.length === 0) return [];
+      
+      const ledgerIds = groupLedgers.map(l => l.id);
+      
+      // Fetch all entries for these ledgers up to 'to' date
+      const entries: any[] = [];
+      
+      // Process in chunks of 30 because of Firestore 'in' query limit
+      for (let i = 0; i < ledgerIds.length; i += 30) {
+        const chunk = ledgerIds.slice(i, i + 30);
+        const q = query(
+          collection(db, 'voucher_entries'),
+          where('companyId', '==', companyId),
+          where('ledger_id', 'in', chunk),
+          where('date', '<=', to)
+        );
+        const snap = await getDocs(q);
+        entries.push(...snap.docs.map(d => d.data()));
+      }
+      
+      return groupLedgers.map(l => {
+        const ledgerEntries = entries.filter(e => e.ledger_id === l.id);
+        const openingEntries = ledgerEntries.filter(e => e.date < from);
+        const periodEntries = ledgerEntries.filter(e => e.date >= from && e.date <= to);
+        
+        const openingBalance = (l.opening_balance || 0) + 
+          openingEntries.reduce((sum, e) => sum + (e.debit || 0) - (e.credit || 0), 0);
+        
+        const debit = periodEntries.reduce((sum, e) => sum + (e.debit || 0), 0);
+        const credit = periodEntries.reduce((sum, e) => sum + (e.credit || 0), 0);
+        
+        const closingBalance = openingBalance + debit - credit;
+        
+        return {
+          ...l,
+          openingBalance,
+          debit,
+          credit,
+          closingBalance,
+          current_balance: closingBalance // For compatibility with existing UI
+        };
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'groupSummary');
+      return [];
+    }
+  },
+
   async getCashBankVouchers(companyId: string, from: string, to: string) {
     try {
       const ledgers = await getCollection<any>('ledgers', companyId);

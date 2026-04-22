@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Printer, Download, ArrowLeft, Loader2, ChevronRight } from 'lucide-react';
+import { Search, Printer, Download, ArrowLeft, Loader2, ChevronRight, Calendar } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -9,6 +9,7 @@ import { EditableHeader } from './EditableHeader';
 import { ReportPrintHeader, ReportPrintFooter } from './ReportPrintHeader';
 import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
+import { DateInput } from './DateInput';
 
 export function GroupSummary() {
   const { user } = useAuth();
@@ -19,6 +20,8 @@ export function GroupSummary() {
   const [selectedGroup, setSelectedGroup] = useState<string>('');
   const [ledgers, setLedgers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'));
+  const [endDate, setEndDate] = useState(new Date().toLocaleDateString('en-CA'));
 
   useEffect(() => {
     async function fetchGroups() {
@@ -43,7 +46,7 @@ export function GroupSummary() {
       if (!user?.companyId || !selectedGroup) return;
       setLoading(true);
       try {
-        const data = await erpService.getLedgerBalancesByGroup(user.companyId, selectedGroup);
+        const data = await erpService.getGroupSummary(user.companyId, selectedGroup, startDate, endDate);
         setLedgers(data);
       } catch (err) {
         console.error('Error fetching ledgers:', err);
@@ -52,15 +55,17 @@ export function GroupSummary() {
       }
     }
     fetchLedgers();
-  }, [user?.companyId, selectedGroup]);
+  }, [user?.companyId, selectedGroup, startDate, endDate]);
 
   const filteredLedgers = ledgers
     .filter(l => l.current_balance !== 0)
     .filter(l => l.name.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const totalDebit = filteredLedgers.reduce((sum, l) => sum + (l.current_balance > 0 ? l.current_balance : 0), 0);
-  const totalCredit = filteredLedgers.reduce((sum, l) => sum + (l.current_balance < 0 ? Math.abs(l.current_balance) : 0), 0);
+  const totalDebit = filteredLedgers.reduce((sum, l) => sum + (l.debit || 0), 0);
+  const totalCredit = filteredLedgers.reduce((sum, l) => sum + (l.credit || 0), 0);
+  const totalClosingDebit = filteredLedgers.reduce((sum, l) => sum + (l.current_balance > 0 ? l.current_balance : 0), 0);
+  const totalClosingCredit = filteredLedgers.reduce((sum, l) => sum + (l.current_balance < 0 ? Math.abs(l.current_balance) : 0), 0);
 
   const handlePrint = () => {
     printUtils.printElement('group-summary-report', 'Group Summary Report');
@@ -93,24 +98,40 @@ export function GroupSummary() {
             <EditableHeader 
               pageId="group_summary"
               defaultTitle="Group Summary"
-              defaultSubtitle="Summary of ledger balances by group"
+              defaultSubtitle={`${groups.find(g => g.id === selectedGroup)?.name || ''} (${startDate} to ${endDate})`}
             />
           </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase text-gray-700 bg-card border border-border transition-colors grow sm:grow-0 justify-center"
-            >
-              <Printer className="w-4 h-4" />
-              {t('common.print')}
-            </button>
-            <button 
-              onClick={handleDownload}
-              className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase text-white bg-primary transition-colors grow sm:grow-0 justify-center"
-            >
-              <Download className="w-4 h-4" />
-              {t('common.downloadPdf')}
-            </button>
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <div className="flex items-center gap-2">
+              <DateInput
+                label="From"
+                value={startDate}
+                onChange={setStartDate}
+                className="w-32"
+              />
+              <DateInput
+                label="To"
+                value={endDate}
+                onChange={setEndDate}
+                className="w-32"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={handlePrint}
+                className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase text-gray-700 bg-card border border-border transition-colors grow sm:grow-0 justify-center"
+              >
+                <Printer className="w-4 h-4" />
+                {t('common.print')}
+              </button>
+              <button 
+                onClick={handleDownload}
+                className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase text-white bg-primary transition-colors grow sm:grow-0 justify-center"
+              >
+                <Download className="w-4 h-4" />
+                {t('common.downloadPdf')}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -164,8 +185,10 @@ export function GroupSummary() {
                     <thead className="sticky top-0 z-10 bg-white">
                       <tr className="bg-foreground/5 border-b border-border">
                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-foreground border-b border-border">Ledger Name</th>
+                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-foreground text-right border-b border-border">Opening</th>
                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-foreground text-right border-b border-border">Debit</th>
                         <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-foreground text-right border-b border-border">Credit</th>
+                        <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-foreground text-right border-b border-border">Closing</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
@@ -185,15 +208,21 @@ export function GroupSummary() {
                             {l.name}
                           </td>
                           <td className="px-6 py-4 text-[11px] text-foreground font-mono text-right">
-                            {l.current_balance > 0 ? formatCurrency(l.current_balance) : ''}
+                            {l.openingBalance !== 0 ? formatCurrency(l.openingBalance) : '-'}
                           </td>
-                          <td className="px-6 py-4 text-[11px] text-foreground font-mono text-right">
-                            {l.current_balance < 0 ? formatCurrency(Math.abs(l.current_balance)) : ''}
+                          <td className="px-6 py-4 text-[11px] text-green-600 font-mono text-right">
+                            {l.debit !== 0 ? formatCurrency(l.debit) : '-'}
+                          </td>
+                          <td className="px-6 py-4 text-[11px] text-red-600 font-mono text-right">
+                            {l.credit !== 0 ? formatCurrency(l.credit) : '-'}
+                          </td>
+                          <td className="px-6 py-4 text-[11px] text-primary font-bold font-mono text-right">
+                            {formatCurrency(l.closingBalance)}
                           </td>
                         </tr>
                       )) : (
                         <tr>
-                          <td colSpan={3} className="px-6 py-12 text-center text-gray-500 uppercase text-[10px] tracking-widest">
+                          <td colSpan={5} className="px-6 py-12 text-center text-gray-500 uppercase text-[10px] tracking-widest">
                             No ledgers found in this group.
                           </td>
                         </tr>
@@ -203,8 +232,14 @@ export function GroupSummary() {
                       <tfoot className="sticky bottom-0 bg-white border-t-2 border-border/100">
                         <tr className="bg-foreground/5 font-bold">
                           <td className="px-6 py-4 text-right text-[10px] uppercase tracking-widest text-foreground">Grand Total</td>
-                          <td className="px-6 py-4 text-right text-primary font-mono">{formatCurrency(totalDebit)}</td>
-                          <td className="px-6 py-4 text-right text-primary font-mono">{formatCurrency(totalCredit)}</td>
+                          <td className="px-6 py-4 text-right text-foreground font-mono">
+                            {formatCurrency(filteredLedgers.reduce((sum, l) => sum + (l.openingBalance || 0), 0))}
+                          </td>
+                          <td className="px-6 py-4 text-right text-green-600 font-mono">{formatCurrency(totalDebit)}</td>
+                          <td className="px-6 py-4 text-right text-red-600 font-mono">{formatCurrency(totalCredit)}</td>
+                          <td className="px-6 py-4 text-right text-primary font-mono">
+                            {formatCurrency(filteredLedgers.reduce((sum, l) => sum + (l.closingBalance || 0), 0))}
+                          </td>
                         </tr>
                       </tfoot>
                     )}
