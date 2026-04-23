@@ -390,6 +390,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'employee.bankBranch': 'Bank Branch',
     'employee.bankAccount': 'Account Number',
     'employee.bankRouting': 'Routing Number',
+    'employee.fatherName': "Father's Name",
+    'employee.motherName': "Mother's Name",
     'employee.emergencyContact': 'Emergency Contact',
     'employee.emergencyRelation': 'Relation',
     'employee.emergencyPhone': 'Emergency Phone',

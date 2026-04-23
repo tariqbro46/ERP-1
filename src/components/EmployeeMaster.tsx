@@ -39,6 +39,8 @@ export function EmployeeMaster() {
     bankBranch: '',
     bankAccountNumber: '',
     bankRoutingNumber: '',
+    fatherName: '',
+    motherName: '',
     emergencyContactName: '',
     emergencyContactRelation: '',
     emergencyContactPhone: '',
@@ -111,6 +113,8 @@ export function EmployeeMaster() {
       bankBranch: '',
       bankAccountNumber: '',
       bankRoutingNumber: '',
+      fatherName: '',
+      motherName: '',
       emergencyContactName: '',
       emergencyContactRelation: '',
       emergencyContactPhone: '',
@@ -199,6 +203,8 @@ export function EmployeeMaster() {
                           bankBranch: emp.bankBranch || '',
                           bankAccountNumber: emp.bankAccountNumber || '',
                           bankRoutingNumber: emp.bankRoutingNumber || '',
+                          fatherName: emp.fatherName || '',
+                          motherName: emp.motherName || '',
                           emergencyContactName: emp.emergencyContactName || '',
                           emergencyContactRelation: emp.emergencyContactRelation || '',
                           emergencyContactPhone: emp.emergencyContactPhone || '',
@@ -371,6 +377,26 @@ export function EmployeeMaster() {
               {/* Identification */}
               <div className="space-y-4">
                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 border-b border-emerald-500/20 pb-1">{t('employee.identification')}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                  <div className="space-y-2">
+                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('employee.fatherName')}</label>
+                    <input 
+                      type="text" 
+                      value={formData.fatherName}
+                      onChange={e => setFormData({ ...formData, fatherName: e.target.value })}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('employee.motherName')}</label>
+                    <input 
+                      type="text" 
+                      value={formData.motherName}
+                      onChange={e => setFormData({ ...formData, motherName: e.target.value })}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                    />
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('employee.nidNumber')}</label>

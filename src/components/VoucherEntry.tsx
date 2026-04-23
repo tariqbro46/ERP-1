@@ -1126,7 +1126,7 @@ export function VoucherEntry() {
                               next[idx].item_id = val;
                               setConsumptionEntries(next);
                             }} 
-                            tabIndex={100 + idx}
+                            tabIndex={100 + idx * 10}
                           />
                         </td>
                         <td className="px-1 py-1">
@@ -1138,7 +1138,7 @@ export function VoucherEntry() {
                               next[idx].godown_id = val;
                               setConsumptionEntries(next);
                             }} 
-                            tabIndex={101 + idx}
+                            tabIndex={101 + idx * 10}
                           />
                         </td>
                         <td className="px-1 py-1 w-20">
@@ -1147,7 +1147,7 @@ export function VoucherEntry() {
                             next[idx].qty = Number(val.target.value);
                             next[idx].amount = next[idx].qty * (next[idx].rate || 0);
                             setConsumptionEntries(next);
-                          }} tabIndex={102 + idx} />
+                          }} tabIndex={102 + idx * 10} />
                         </td>
                         <td className="px-1 py-1 w-24">
                           <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.rate || ''} onChange={val => {
@@ -1155,7 +1155,7 @@ export function VoucherEntry() {
                             next[idx].rate = Number(val.target.value);
                             next[idx].amount = (next[idx].qty || 0) * next[idx].rate;
                             setConsumptionEntries(next);
-                          }} tabIndex={103 + idx} />
+                          }} tabIndex={103 + idx * 10} />
                         </td>
                         <td className="px-1 py-1 w-24 text-right font-bold text-[10px]">{formatNumber(e.amount)}</td>
                         <td className="px-1 py-1 text-center">
@@ -1203,7 +1203,7 @@ export function VoucherEntry() {
                               next[idx].item_id = val;
                               setProductionEntries(next);
                             }} 
-                            tabIndex={200 + idx}
+                            tabIndex={500 + idx * 10}
                           />
                         </td>
                         <td className="px-1 py-1">
@@ -1215,7 +1215,7 @@ export function VoucherEntry() {
                               next[idx].godown_id = val;
                               setProductionEntries(next);
                             }} 
-                            tabIndex={201 + idx}
+                            tabIndex={501 + idx * 10}
                           />
                         </td>
                         <td className="px-1 py-1 w-20">
@@ -1224,7 +1224,7 @@ export function VoucherEntry() {
                             next[idx].qty = Number(val.target.value);
                             next[idx].amount = next[idx].qty * (next[idx].rate || 0);
                             setProductionEntries(next);
-                          }} tabIndex={202 + idx} />
+                          }} tabIndex={502 + idx * 10} />
                         </td>
                         <td className="px-1 py-1 w-24">
                           <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.rate || ''} onChange={val => {
@@ -1232,7 +1232,7 @@ export function VoucherEntry() {
                             next[idx].rate = Number(val.target.value);
                             next[idx].amount = (next[idx].qty || 0) * next[idx].rate;
                             setProductionEntries(next);
-                          }} tabIndex={203 + idx} />
+                          }} tabIndex={503 + idx * 10} />
                         </td>
                         <td className="px-1 py-1 w-24 text-right font-bold text-[10px]">{formatNumber(e.amount)}</td>
                         <td className="px-1 py-1 text-center">
@@ -1738,11 +1738,12 @@ export function VoucherEntry() {
                           }}
                           placeholder={t('voucher.selectParticulars')}
                           onQuickCreate={() => openQuickLedger('', 'particulars', idx)}
+                          tabIndex={100 + idx * 10}
                         />
                       </div>
                     </td>
                     <td className={cn("w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
-                      <input type="number" className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.amount ?? ''} onFocus={e => e.target.value === '0' && e.target.select()} onChange={e => {
+                      <input type="number" tabIndex={101 + idx * 10} className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.amount ?? ''} onFocus={e => e.target.value === '0' && e.target.select()} onChange={e => {
                         const next = [...accEntries];
                         next[idx].amount = Number(e.target.value);
                         setAccEntries(next);
@@ -1789,6 +1790,7 @@ export function VoucherEntry() {
                     <td className={cn("w-20", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <select 
                         value={entry.type}
+                        tabIndex={100 + idx * 10}
                         onChange={e => {
                           const next = [...accEntries];
                           next[idx].type = e.target.value;
@@ -1814,6 +1816,7 @@ export function VoucherEntry() {
                           }}
                           placeholder="Select Particulars..."
                           onQuickCreate={() => openQuickLedger('', 'particulars', idx)}
+                          tabIndex={101 + idx * 10}
                         />
                       </div>
                     </td>
@@ -1821,6 +1824,7 @@ export function VoucherEntry() {
                       <input 
                         type="number" 
                         disabled={entry.type === 'Cr'}
+                        tabIndex={102 + idx * 10}
                         className={cn(
                           "bg-transparent border-none text-foreground outline-none w-full text-right",
                           entry.type === 'Cr' && "opacity-20"
@@ -1838,6 +1842,7 @@ export function VoucherEntry() {
                       <input 
                         type="number" 
                         disabled={entry.type === 'Dr'}
+                        tabIndex={103 + idx * 10}
                         className={cn(
                           "bg-transparent border-none text-foreground outline-none w-full text-right",
                           entry.type === 'Dr' && "opacity-20"
