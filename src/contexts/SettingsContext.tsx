@@ -67,6 +67,7 @@ interface SettingsContextType {
   showTaxPercent: boolean;
   showCurrency: boolean;
   showExRate: boolean;
+  showSalesperson: boolean;
   showRunningBalance: boolean;
   showMobileNav: boolean;
   mobileBottomNavItems: string[];
@@ -137,6 +138,7 @@ const defaultSettings: SettingsContextType = {
   showTaxPercent: true,
   showCurrency: true,
   showExRate: true,
+  showSalesperson: true,
   showRunningBalance: true,
   showMobileNav: false,
   mobileBottomNavItems: ['Dashboard', 'Voucher Entry', 'Daybook', 'Settings (F11)'],

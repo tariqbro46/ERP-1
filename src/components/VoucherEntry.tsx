@@ -100,6 +100,7 @@ export function VoucherEntry() {
     showTaxPercent, 
     showCurrency = true,
     showExRate = true,
+    showSalesperson = true,
     updateSettings, 
     voucherHeaderCompact, 
     voucherTableCompact 
@@ -377,7 +378,8 @@ export function VoucherEntry() {
       }
 
       if (v.v_type === 'Sales' || v.v_type === 'Purchase' || v.v_type === 'Physical Stock') {
-        // ... (existing logic for simple inventory)
+        setPartyLedgerId(v.party_ledger_id || (v.entries?.length > 0 ? v.entries[0].ledger_id : ''));
+        setSalesPurchaseLedgerId(v.sales_purchase_ledger_id || (v.entries?.length > 1 ? v.entries[1].ledger_id : ''));
         const inv = v.inventory.map((i: any) => ({
           item_id: i.item_id || '',
           godown_id: i.godown_id || '',
@@ -670,7 +672,9 @@ export function VoucherEntry() {
         discount_type: globalDiscountType,
         currency,
         exchange_rate: exchangeRate,
-        salesperson_id: salespersonId
+        salesperson_id: salespersonId,
+        party_ledger_id: partyLedgerId,
+        sales_purchase_ledger_id: salesPurchaseLedgerId
       };
 
       if (showBankDetails && bankDetails) {
@@ -1090,7 +1094,11 @@ export function VoucherEntry() {
     
                 {/* Slot 3: Salesperson / Received by / Provided by */}
                 {(vType === 'Sales' || vType === 'Purchase' || vType === 'Payment' || vType === 'Receipt') ? (
-                  <div className={cn("space-y-1 lg:space-y-2 col-span-1", (vType === 'Payment' || vType === 'Receipt') ? "lg:col-span-2" : "lg:col-span-1")}>
+                  <div className={cn(
+                    "space-y-1 lg:space-y-2 col-span-1", 
+                    (vType === 'Payment' || vType === 'Receipt') ? "lg:col-span-2" : "lg:col-span-1",
+                    !showSalesperson && "opacity-40 pointer-events-none"
+                  )}>
                     <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">
                       {vType === 'Sales' ? t('common.salesperson') : (vType === 'Payment' ? t('common.providedBy') : t('common.receivedBy'))}
                     </label>
@@ -2164,6 +2172,11 @@ export function VoucherEntry() {
                   label={t('voucher.barcodeScanning')} 
                   enabled={isBarcodeEnabled} 
                   onChange={() => toggleFeature('barcode')} 
+                />
+                <Toggle 
+                  label="Show Salesperson/Received by" 
+                  enabled={showSalesperson} 
+                  onChange={() => updateSettings({ showSalesperson: !showSalesperson })} 
                 />
               </div>
 
