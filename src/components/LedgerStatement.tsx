@@ -723,7 +723,7 @@ export function LedgerStatement() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+    <div className="flex flex-col h-screen bg-background transition-colors overflow-hidden">
       {/* Fixed Header Section */}
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-4 gap-4">
@@ -878,7 +878,7 @@ export function LedgerStatement() {
         <div className="p-4 lg:p-6 space-y-6">
           <div id="ledger-report" className={cn(
             "bg-card border border-border relative",
-            settings.reportLayout === 'Layout 2' && "bg-white text-black font-serif p-8 min-h-[800px] pb-32"
+            settings.reportLayout === 'Layout 2' && "bg-white text-black p-8 min-h-[800px] pb-32"
           )}>
           {settings.reportLayout === 'Layout 2' && (
             <>
@@ -990,10 +990,10 @@ export function LedgerStatement() {
                                 </td>
                                 <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_type}</td>
                                 <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_no}</td>
-                                <td className="px-6 py-4 text-right font-mono">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                                <td className="px-6 py-4 text-right font-mono">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                <td className="px-6 py-4 text-right">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                <td className="px-6 py-4 text-right">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
                                 {config.showRunningBalance && (
-                                  <td className="px-6 py-4 text-right text-foreground font-bold font-mono">
+                                  <td className="px-6 py-4 text-right text-foreground font-bold">
                                     {settings.reportLayout !== 'Layout 2' ? (
                                       <>
                                         {Math.abs(currentBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currentBalance >= 0 ? 'Dr' : 'Cr'}

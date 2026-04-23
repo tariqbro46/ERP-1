@@ -259,7 +259,7 @@ export function Daybook() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+    <div className="flex flex-col h-screen bg-background transition-colors overflow-hidden">
       {/* Fixed Header Section */}
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
@@ -352,7 +352,7 @@ export function Daybook() {
                 onClick={() => navigate(`/vouchers/view/${v.id}`)}
               >
                 <div className="flex justify-between items-start">
-                  <span className="text-[10px] text-gray-500 uppercase font-mono">{v.v_date}</span>
+                  <span className="text-[10px] text-gray-500 uppercase">{v.v_date}</span>
                   <span className="text-[10px] font-bold text-emerald-500 uppercase bg-emerald-500/10 px-2 py-0.5 rounded">{v.v_type}</span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -369,9 +369,9 @@ export function Daybook() {
                     {config.showEnteredBy && (
                       <span className="text-[8px] text-gray-400 uppercase">{t('common.providedBy')}: {users.find(u => u.uid === v.createdBy)?.displayName || 'System'}</span>
                     )}
-                    <span className="text-[10px] text-gray-500 font-mono">{v.v_no}</span>
+                    <span className="text-[10px] text-gray-500">{v.v_no}</span>
                   </div>
-                  <span className="text-sm font-bold text-foreground font-mono">৳ {formatNumber(v.total_amount)}</span>
+                  <span className="text-sm font-bold text-foreground">৳ {formatNumber(v.total_amount)}</span>
                 </div>
                 <div className="flex gap-2 pt-2 border-t border-border/20">
                   <button 
@@ -442,7 +442,7 @@ export function Daybook() {
                       </td>
                       <td className="px-4 lg:px-6 py-4 uppercase text-[10px] text-gray-500">{v.v_type}</td>
                       <td className="px-4 lg:px-6 py-4">{v.v_no}</td>
-                      <td className="px-4 lg:px-6 py-4 text-right text-foreground font-mono font-bold">৳ {formatNumber(v.total_amount)}</td>
+                      <td className="px-4 lg:px-6 py-4 text-right text-foreground font-bold">৳ {formatNumber(v.total_amount)}</td>
                       <td className="px-4 lg:px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <button 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Save, Printer, Loader2, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon, AlertCircle, Settings2, TrendingUp } from 'lucide-react';
 import { cn, formatNumber } from '../lib/utils';
 import { erpService } from '../services/erpService';
@@ -142,6 +142,24 @@ export function VoucherEntry() {
     fetchStats();
   }, [focusedItemId, user?.companyId]);
   const [loading, setLoading] = useState(false);
+  const refNoInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus logic
+  const focusRefNo = () => {
+    setTimeout(() => {
+      refNoInputRef.current?.focus();
+    }, 100);
+  };
+
+  useEffect(() => {
+    focusRefNo();
+  }, [vType]);
+
+  useEffect(() => {
+    if (!loading && !isEdit) {
+      focusRefNo();
+    }
+  }, [loading]);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [ledgers, setLedgers] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
@@ -317,6 +335,7 @@ export function VoucherEntry() {
     setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: vType === 'Sales' ? 'Outward' : 'Inward' }]);
     setIsClearModalOpen(false);
     showNotification('Voucher cleared successfully', 'success');
+    focusRefNo();
   };
 
   async function fetchNextNo() {
@@ -827,8 +846,8 @@ export function VoucherEntry() {
   };
 
   return (
-    <div className="bg-background min-h-screen font-mono transition-colors">
-      <div className="bg-card overflow-hidden flex flex-col h-auto lg:h-screen">
+    <div className="bg-background h-screen flex flex-col overflow-hidden font-mono transition-colors">
+      <div className="bg-card flex flex-col flex-1 overflow-hidden">
         {/* Voucher Header Section */}
         <div className={cn(
           "border-b border-border bg-foreground/5 shrink-0",
@@ -869,6 +888,7 @@ export function VoucherEntry() {
             <div className="space-y-1 lg:space-y-2">
               <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.referenceNo')}</label>
               <input 
+                ref={refNoInputRef}
                 type="text" 
                 value={refNo || ''}
                 onChange={e => setRefNo(e.target.value)}
@@ -1094,7 +1114,7 @@ export function VoucherEntry() {
         </div>
 
         {/* Main Entry Table */}
-        <div className={cn("lg:flex-1 lg:overflow-y-auto overflow-x-auto no-scrollbar border-b border-border", voucherTableCompact && "p-0.5")}>
+        <div className={cn("lg:flex-1 lg:overflow-y-auto no-scrollbar overflow-x-auto border-b border-border", voucherTableCompact && "p-0.5")}>
           {isStockJournal ? (
             <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-border min-h-[400px]">
               {/* Source (Consumption) */}

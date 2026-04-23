@@ -117,6 +117,12 @@ export function SearchableSelect({
         e.preventDefault();
         handleSelect(searchTerm, searchTerm);
       }
+    } else if (e.key === 'Tab') {
+      if (isOpen && activeIndex >= 0 && filteredOptions.length > 0) {
+        // e.preventDefault(); // Don't prevent default, we want to move to next field AFTER selection
+        onChange(filteredOptions[activeIndex].id);
+        setIsOpen(false);
+      }
     } else if (e.key === 'Escape') {
       setIsOpen(false);
     }

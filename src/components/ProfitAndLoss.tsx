@@ -195,7 +195,7 @@ export function ProfitAndLoss() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+    <div className="flex flex-col h-full bg-background transition-colors overflow-hidden">
       {/* Fixed Header Section */}
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
@@ -271,7 +271,7 @@ export function ProfitAndLoss() {
                 <div className="min-h-[200px] lg:min-h-[300px] divide-y divide-border/50">
                   <div className="px-4 lg:px-6 py-3 flex justify-between text-sm text-gray-400 font-bold uppercase tracking-widest text-[10px]">
                     <span>{t('reports.openingStock')}</span>
-                    <span className="font-mono">{tradingData.openingStock.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="">{tradingData.openingStock.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                   {tradingData.purchaseGroups.map((group: any) => (
                     <div key={group.name}>
@@ -280,7 +280,7 @@ export function ProfitAndLoss() {
                           {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
                           <span className="text-sm text-foreground uppercase tracking-tight">{group.name}</span>
                         </div>
-                        <span className="text-sm text-foreground font-mono">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        <span className="text-sm text-foreground">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                       </div>
                       {expandedGroups.has(group.name) && (
                         <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
@@ -294,7 +294,7 @@ export function ProfitAndLoss() {
                               className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
                             >
                               <span>{l.name}</span>
-                              <span className="font-mono">{Math.abs(l.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              <span className="">{Math.abs(l.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                           ))}
                         </div>
@@ -304,7 +304,7 @@ export function ProfitAndLoss() {
                   {grossProfit > 0 && (
                     <div className="px-4 lg:px-6 py-4 flex justify-between text-emerald-500 font-bold border-t border-border bg-emerald-500/5">
                       <span className="uppercase text-[10px] tracking-widest">{t('reports.grossProfit')} c/o</span>
-                      <span className="font-mono">{grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="">{grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
                 </div>
@@ -324,7 +324,7 @@ export function ProfitAndLoss() {
                           {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
                           <span className="text-sm text-foreground uppercase tracking-tight">{group.name}</span>
                         </div>
-                        <span className="text-sm text-foreground font-mono">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                        <span className="text-sm text-foreground">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                       </div>
                       {expandedGroups.has(group.name) && (
                         <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
@@ -338,7 +338,7 @@ export function ProfitAndLoss() {
                               className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
                             >
                               <span>{l.name}</span>
-                              <span className="font-mono">{Math.abs(l.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              <span className="">{Math.abs(l.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                           ))}
                         </div>
@@ -347,12 +347,12 @@ export function ProfitAndLoss() {
                   ))}
                   <div className="px-4 lg:px-6 py-3 flex justify-between text-sm text-gray-400 font-bold uppercase tracking-widest text-[10px]">
                     <span>{t('reports.closingStock')}</span>
-                    <span className="font-mono">{tradingData.closingStock.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="">{tradingData.closingStock.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                   {grossProfit < 0 && (
                     <div className="px-4 lg:px-6 py-4 flex justify-between text-rose-500 font-bold border-t border-border bg-rose-500/5">
                       <span className="uppercase text-[10px] tracking-widest">{t('reports.grossLoss')} c/o</span>
-                      <span className="font-mono">{Math.abs(grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="">{Math.abs(grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                   )}
                 </div>
@@ -365,31 +365,31 @@ export function ProfitAndLoss() {
                 {plData.indirectExpenseGroups.map((group: any) => (
                   <div key={group.name} className="px-4 lg:px-6 py-3 flex justify-between items-center hover:bg-foreground/5 transition-colors">
                     <span className="text-sm text-gray-500 uppercase tracking-tight">{group.name}</span>
-                    <span className="text-sm text-foreground font-mono">{group.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="text-sm text-foreground">{group.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                 ))}
                 {netProfit > 0 && (
                   <div className="px-4 lg:px-6 py-4 flex justify-between text-emerald-500 font-bold border-t border-border bg-emerald-500/10">
                     <span className="uppercase text-[10px] tracking-widest">{t('reports.netProfit')}</span>
-                    <span className="font-mono">{netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="">{netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                 )}
               </div>
               <div className="divide-y divide-border/50 bg-foreground/5">
                 <div className="px-4 lg:px-6 py-3 flex justify-between text-sm text-gray-500 font-bold uppercase tracking-widest text-[10px]">
                   <span>{t('reports.grossProfit')} b/f</span>
-                  <span className="font-mono">{grossProfit > 0 ? grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</span>
+                  <span className="">{grossProfit > 0 ? grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</span>
                 </div>
                 {plData.indirectIncomeGroups.map((group: any) => (
                   <div key={group.name} className="px-4 lg:px-6 py-3 flex justify-between items-center hover:bg-foreground/5 transition-colors bg-card">
                     <span className="text-sm text-gray-500 uppercase tracking-tight">{group.name}</span>
-                    <span className="text-sm text-foreground font-mono">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="text-sm text-foreground">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                 ))}
                 {netProfit < 0 && (
                   <div className="px-4 lg:px-6 py-4 flex justify-between text-rose-500 font-bold border-t border-border bg-rose-500/10">
                     <span className="uppercase text-[10px] tracking-widest">{t('reports.netLoss')}</span>
-                    <span className="font-mono">{Math.abs(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span className="">{Math.abs(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                   </div>
                 )}
               </div>

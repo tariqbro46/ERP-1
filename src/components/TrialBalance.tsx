@@ -78,7 +78,7 @@ export function TrialBalance() {
   const lastDay = formatReportDate(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0], settings.dateFormat);
 
   return (
-    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+    <div className="flex flex-col h-full bg-background transition-colors overflow-hidden">
       {/* Fixed Header Section */}
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         {/* Header */}
@@ -157,7 +157,7 @@ export function TrialBalance() {
                     {ledger.ledger_groups?.name}
                   </span>
                 </div>
-                <div className="flex justify-between items-center font-mono text-xs">
+                <div className="flex justify-between items-center text-xs">
                   <div className="text-emerald-500">
                     {ledger.current_balance > 0 ? `Dr ৳ ${formatNumber(ledger.current_balance)}` : ''}
                   </div>
@@ -174,11 +174,11 @@ export function TrialBalance() {
             <div className="p-4 bg-foreground/10 space-y-2">
               <div className="flex justify-between items-center font-bold text-[10px] text-gray-500 uppercase tracking-widest">
                 <span>{t('reports.totalDebit')}</span>
-                <span className="text-foreground font-mono text-xs">৳ {formatNumber(totalDebit)}</span>
+                <span className="text-foreground text-xs">৳ {formatNumber(totalDebit)}</span>
               </div>
               <div className="flex justify-between items-center font-bold text-[10px] text-gray-500 uppercase tracking-widest">
                 <span>{t('reports.totalCredit')}</span>
-                <span className="text-foreground font-mono text-xs">৳ {formatNumber(totalCredit)}</span>
+                <span className="text-foreground text-xs">৳ {formatNumber(totalCredit)}</span>
               </div>
             </div>
           </div>
@@ -203,10 +203,10 @@ export function TrialBalance() {
                   >
                     <td className="px-6 py-3 text-foreground font-medium">{ledger.name}</td>
                     <td className="px-6 py-3 text-gray-500 uppercase text-[10px]">{ledger.ledger_groups?.name}</td>
-                    <td className="px-6 py-3 text-right text-foreground font-mono">
+                    <td className="px-6 py-3 text-right text-foreground">
                       {ledger.current_balance > 0 ? formatNumber(ledger.current_balance) : ''}
                     </td>
-                    <td className="px-6 py-3 text-right text-foreground font-mono">
+                    <td className="px-6 py-3 text-right text-foreground">
                       {ledger.current_balance < 0 ? formatNumber(Math.abs(ledger.current_balance)) : ''}
                     </td>
                   </tr>
@@ -220,8 +220,8 @@ export function TrialBalance() {
               <tfoot className="bg-foreground/5 border-t border-border">
                 <tr className="font-bold text-foreground">
                   <td colSpan={2} className="px-6 py-4 text-right uppercase text-[10px] text-gray-500 tracking-widest">{t('common.grandTotal')}</td>
-                  <td className="px-6 py-4 text-right font-mono border-l border-border">৳ {formatNumber(totalDebit)}</td>
-                  <td className="px-6 py-4 text-right font-mono border-l border-border">৳ {formatNumber(totalCredit)}</td>
+                  <td className="px-6 py-4 text-right border-l border-border">৳ {formatNumber(totalDebit)}</td>
+                  <td className="px-6 py-4 text-right border-l border-border">৳ {formatNumber(totalCredit)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -232,7 +232,7 @@ export function TrialBalance() {
         {Math.abs(totalDebit - totalCredit) > 0.01 && (
           <div className="bg-rose-950/30 border border-rose-900/50 p-4 flex justify-between items-center">
             <span className="text-[10px] text-rose-400 uppercase tracking-widest font-bold">{t('reports.differenceInOpening')}</span>
-            <span className="text-sm text-rose-400 font-mono font-bold">৳ {formatNumber(Math.abs(totalDebit - totalCredit))}</span>
+            <span className="text-sm text-rose-400 font-bold">৳ {formatNumber(Math.abs(totalDebit - totalCredit))}</span>
           </div>
         )}
       </div>

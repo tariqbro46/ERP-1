@@ -159,7 +159,7 @@ export function BalanceSheet() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+    <div className="flex flex-col h-full bg-background transition-colors overflow-hidden">
       {/* Fixed Header Section */}
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
@@ -234,7 +234,7 @@ export function BalanceSheet() {
                         {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
                         <span className="text-sm text-foreground font-medium">{group.name}</span>
                       </div>
-                      <span className="text-sm text-foreground font-mono">{formatNumber(Math.abs(group.balance))}</span>
+                      <span className="text-sm text-foreground">{formatNumber(Math.abs(group.balance))}</span>
                     </div>
                     {expandedGroups.has(group.name) && (
                       <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
@@ -248,7 +248,7 @@ export function BalanceSheet() {
                             className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
                           >
                             <span>{l.name}</span>
-                            <span className="font-mono">{formatNumber(Math.abs(l.current_balance))}</span>
+                            <span className="">{formatNumber(Math.abs(l.current_balance))}</span>
                           </div>
                         ))}
                       </div>
@@ -258,7 +258,7 @@ export function BalanceSheet() {
               </div>
               <div className="px-4 lg:px-6 py-4 bg-foreground/5 border-t border-border flex justify-between font-bold text-foreground">
                 <span className="uppercase text-[10px] tracking-widest">{t('reports.totalLiabilities')}</span>
-                <span className="font-mono">৳ {formatNumber(Math.abs(totalLiabilities))}</span>
+                <span className="">৳ {formatNumber(Math.abs(totalLiabilities))}</span>
               </div>
             </div>
 
@@ -279,7 +279,7 @@ export function BalanceSheet() {
                         {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
                         <span className="text-sm text-foreground font-medium">{group.name}</span>
                       </div>
-                      <span className="text-sm text-foreground font-mono">{formatNumber(Math.abs(group.balance))}</span>
+                      <span className="text-sm text-foreground">{formatNumber(Math.abs(group.balance))}</span>
                     </div>
                     {expandedGroups.has(group.name) && (
                       <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
@@ -293,7 +293,7 @@ export function BalanceSheet() {
                             className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
                           >
                             <span>{l.name}</span>
-                            <span className="font-mono">{formatNumber(Math.abs(l.current_balance))}</span>
+                            <span className="">{formatNumber(Math.abs(l.current_balance))}</span>
                           </div>
                         ))}
                       </div>
@@ -303,7 +303,7 @@ export function BalanceSheet() {
               </div>
               <div className="px-4 lg:px-6 py-4 bg-foreground/5 border-t border-border flex justify-between font-bold text-foreground">
                 <span className="uppercase text-[10px] tracking-widest">{t('reports.totalAssets')}</span>
-                <span className="font-mono">৳ {formatNumber(Math.abs(totalAssets))}</span>
+                <span className="">৳ {formatNumber(Math.abs(totalAssets))}</span>
               </div>
             </div>
           </div>
@@ -312,7 +312,7 @@ export function BalanceSheet() {
           {Math.abs(totalAssets - Math.abs(totalLiabilities)) > 0.01 && (
             <div className="bg-rose-950/30 border border-rose-900/50 p-4 flex justify-between items-center">
               <span className="text-[10px] text-rose-400 uppercase tracking-widest font-bold">{t('reports.differenceInOpening')}</span>
-              <span className="text-sm text-rose-400 font-mono font-bold">৳ {formatNumber(Math.abs(totalAssets - Math.abs(totalLiabilities)))}</span>
+              <span className="text-sm text-rose-400 font-bold">৳ {formatNumber(Math.abs(totalAssets - Math.abs(totalLiabilities)))}</span>
             </div>
           )}
         </div>
