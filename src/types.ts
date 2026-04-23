@@ -1,4 +1,4 @@
-export type VoucherType = 'Sales' | 'Purchase' | 'Payment' | 'Receipt' | 'Contra' | 'Journal' | 'Credit Note' | 'Debit Note';
+export type VoucherType = 'Sales' | 'Purchase' | 'Payment' | 'Receipt' | 'Contra' | 'Journal' | 'Credit Note' | 'Debit Note' | 'Physical Stock' | 'Stock Journal';
 export type UserRole = 'Founder' | 'Marketing Manager' | 'Admin' | 'Manager' | 'Staff';
 
 export interface Company {
@@ -113,6 +113,7 @@ export interface InventoryEntry {
   batch_no?: string;
   expiry_date?: string;
   godown_id?: string;
+  entry_type?: 'Consumption' | 'Production';
 }
 
 export interface Item {
@@ -153,7 +154,31 @@ export interface Employee {
   phone?: string; // Alias for contactNumber if needed
   email?: string;
   address?: string;
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'On Leave';
+  fatherName?: string;
+  motherName?: string;
+  bloodGroup?: string;
+  nidNumber?: string;
+  passportNo?: string;
+  drivingLicense?: string;
+  presentAddress?: string;
+  permanentAddress?: string;
+  bankName?: string;
+  bankBranch?: string;
+  bankAccountNumber?: string;
+  bankRoutingNumber?: string;
+  emergencyContactName?: string;
+  emergencyContactRelation?: string;
+  emergencyContactPhone?: string;
+  emergencyContact2Name?: string;
+  emergencyContact2Relation?: string;
+  emergencyContact2Phone?: string;
+  emergencyContact3Name?: string;
+  emergencyContact3Relation?: string;
+  emergencyContact3Phone?: string;
+  joining_date?: string; // Standard format from firebase
+  photo?: string;
+  role?: string;
   createdAt: any;
   updatedAt?: any;
 }

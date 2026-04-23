@@ -224,7 +224,7 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
       case 'attendance_register':
         const isAttendance = reportType.includes('attendance');
         return (
-          <div className="bg-card border border-border overflow-x-auto shadow-sm print:border-2 print:border-foreground">
+          <div className="overflow-x-auto shadow-sm print:border-2 print:border-foreground">
             <table className="w-full text-left border-separate border-spacing-0 min-w-[1000px]">
               <thead className="sticky top-0 z-30">
                 <tr className="shadow-sm">
@@ -304,99 +304,149 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
 
       case 'employee_profile':
         if (!selectedEmployee) return (
-          <div className="py-20 text-center border border-dashed border-border uppercase text-[10px] tracking-widest text-gray-400">
+          <div className="py-20 text-center uppercase text-[10px] tracking-widest text-gray-400">
             Select an employee to view profile
           </div>
         );
 
-        const renderField = (label: string, value: any) => (
-          <div className="space-y-1">
-            <p className="text-[9px] text-gray-400 uppercase tracking-widest font-bold">{label}</p>
-            <p className="text-xs font-bold uppercase text-foreground">
-              {value && value.toString().trim() !== '' ? value : 'N/A'}
+        const renderInfoField = (label: string, value: any, icon?: React.ReactNode) => (
+          <div className="flex flex-col gap-1 p-3 bg-card border border-border/50 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2">
+              {icon && <div className="text-primary">{icon}</div>}
+              <p className="text-[9px] text-gray-400 uppercase tracking-widest font-bold">{label}</p>
+            </div>
+            <p className="text-xs font-bold uppercase text-foreground truncate">
+              {value !== undefined && value !== null && value.toString().trim() !== '' ? value : 'N/A'}
             </p>
           </div>
         );
 
         return (
-          <div className="bg-card border border-border p-8 space-y-12 shadow-sm print:border-2 print:border-foreground">
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-8 border-b border-border pb-10">
-              <div className="w-32 h-32 bg-foreground/5 rounded-2xl flex items-center justify-center border border-border overflow-hidden shrink-0 shadow-sm">
-                <User className="w-16 h-16 text-gray-300" />
+          <div className="min-h-screen bg-background print:bg-white">
+            {/* Header / Cover Area */}
+            <div className="relative h-48 lg:h-64 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 overflow-hidden print:hidden">
+              <div className="absolute inset-0 opacity-20 pointer-events-none">
+                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent"></div>
               </div>
-              <div className="flex-1 text-center md:text-left space-y-2">
-                <div className="inline-block px-3 py-1 bg-emerald-500/10 text-emerald-600 text-[9px] font-bold uppercase tracking-widest rounded-full mb-2">
-                  {selectedEmployee.status || 'N/A'} Employee
+              <div className="absolute bottom-0 left-0 right-0 p-8 flex flex-col md:flex-row items-center md:items-end gap-6 translate-y-12">
+                <div className="w-32 h-32 lg:w-40 lg:h-40 bg-card rounded-full border-4 border-background overflow-hidden shadow-2xl relative z-10 shrink-0">
+                  {selectedEmployee.photo ? (
+                    <img src={selectedEmployee.photo} alt={selectedEmployee.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="w-full h-full bg-foreground flex items-center justify-center">
+                      <User className="w-16 h-16 lg:w-20 lg:h-20 text-background opacity-20" />
+                    </div>
+                  )}
                 </div>
-                <h2 className="text-3xl font-bold uppercase tracking-tighter text-foreground">{selectedEmployee.name || 'N/A'}</h2>
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">{selectedEmployee.designation || 'N/A'}</p>
-                <div className="flex flex-wrap justify-center md:justify-start gap-6 mt-4">
-                  <div className="flex items-center gap-2 text-gray-400">
-                    <Users className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">{selectedEmployee.department || 'N/A'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-400">
-                    <Calendar className="w-4 h-4" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest font-mono text-foreground">Joined: {selectedEmployee.joining_date || 'N/A'}</span>
+                <div className="flex-1 text-center md:text-left mb-4 z-10">
+                  <h2 className="text-3xl lg:text-4xl font-black text-white uppercase tracking-tighter drop-shadow-lg">{selectedEmployee.name || 'N/A'}</h2>
+                  <p className="text-[10px] lg:text-xs font-bold text-primary-foreground/80 uppercase tracking-[0.3em] mt-1">{selectedEmployee.designation || 'N/A'}</p>
+                </div>
+                <div className="mb-4 z-10 flex gap-2">
+                   <div className={cn(
+                    "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg",
+                    selectedEmployee.status === 'Active' ? "bg-emerald-500 text-white" : "bg-amber-500 text-white"
+                  )}>
+                    {selectedEmployee.status || 'Active'}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-12">
-              <div className="space-y-6">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary border-b border-border pb-2">Personnel Information</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  {renderField('Blood Group', selectedEmployee.bloodGroup)}
-                  {renderField('NID Number', selectedEmployee.nidNumber)}
-                  {renderField('Driving License', selectedEmployee.drivingLicense)}
-                  {renderField('Passport Number', selectedEmployee.passportNo)}
-                  {renderField('Base Salary', selectedEmployee.salary ? `${baseCurrencySymbol}${selectedEmployee.salary}` : 'N/A')}
-                </div>
+            {/* Print Only Header */}
+            <div className="hidden print:flex items-center gap-8 mb-10 border-b-2 border-foreground pb-8">
+              <div className="w-32 h-32 bg-gray-100 rounded-2xl flex items-center justify-center border-2 border-foreground overflow-hidden">
+                {selectedEmployee.photo ? (
+                  <img src={selectedEmployee.photo} alt={selectedEmployee.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <User className="w-16 h-16 text-gray-300" />
+                )}
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-black uppercase tracking-tight">{selectedEmployee.name || 'N/A'}</h2>
+                <p className="text-sm font-bold uppercase tracking-widest text-gray-600">{selectedEmployee.designation || 'N/A'}</p>
+                <p className="text-xs uppercase font-bold tracking-widest">ID: {selectedEmployee.id}</p>
+              </div>
+            </div>
+
+            <div className="pt-20 lg:pt-24 px-4 lg:px-8 pb-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Left Column: Essential Stats */}
+              <div className="space-y-8">
+                <section className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary border-l-4 border-primary pl-3">Personnel Summary</h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    {renderInfoField('Employee ID', selectedEmployee.id, <FileText className="w-3 h-3" />)}
+                    {renderInfoField('Joining Date', selectedEmployee.joining_date, <Calendar className="w-3 h-3" />)}
+                    {renderInfoField('Department', selectedEmployee.department, <Users className="w-3 h-3" />)}
+                    {renderInfoField('Base Salary', selectedEmployee.salary ? `${baseCurrencySymbol}${selectedEmployee.salary}` : 'N/A', <DollarSign className="w-3 h-3" />)}
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary border-l-4 border-primary pl-3">Identifiers</h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    {renderInfoField('NID Number', selectedEmployee.nidNumber)}
+                    {renderInfoField('Blood Group', selectedEmployee.bloodGroup)}
+                    {renderInfoField('Driving License', selectedEmployee.drivingLicense)}
+                    {renderInfoField('Passport Number', selectedEmployee.passportNo)}
+                  </div>
+                </section>
               </div>
 
-              <div className="space-y-6">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary border-b border-border pb-2">Contact Information</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  {renderField('Phone Number', selectedEmployee.phone)}
-                  {renderField('Email Address', selectedEmployee.email)}
-                  {renderField('Present Address', selectedEmployee.presentAddress)}
-                  {renderField('Permanent Address', selectedEmployee.permanentAddress)}
-                </div>
-              </div>
+              {/* Middle Column: Details */}
+              <div className="lg:col-span-2 space-y-8">
+                <section className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary border-l-4 border-primary pl-3">Contact Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderInfoField('Primary Phone', selectedEmployee.phone)}
+                    {renderInfoField('Email Address', selectedEmployee.email)}
+                    <div className="md:col-span-2">
+                       {renderInfoField('Present Address', selectedEmployee.presentAddress)}
+                    </div>
+                    <div className="md:col-span-2">
+                       {renderInfoField('Permanent Address', selectedEmployee.permanentAddress)}
+                    </div>
+                  </div>
+                </section>
 
-              <div className="space-y-6">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary border-b border-border pb-2">Banking Details</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  {renderField('Bank Name', selectedEmployee.bankName)}
-                  {renderField('Branch Name', selectedEmployee.bankBranch)}
-                  {renderField('Account Number', selectedEmployee.bankAccountNumber)}
-                  {renderField('Routing Number', selectedEmployee.bankRoutingNumber)}
-                </div>
-              </div>
+                <section className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary border-l-4 border-primary pl-3">Banking Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-foreground/5 p-6 border border-border/50 rounded-2xl">
+                    {renderInfoField('Bank Name', selectedEmployee.bankName)}
+                    {renderInfoField('Branch Name', selectedEmployee.bankBranch)}
+                    {renderInfoField('Account Number', selectedEmployee.bankAccountNumber)}
+                    {renderInfoField('Routing Number', selectedEmployee.bankRoutingNumber)}
+                  </div>
+                </section>
 
-              <div className="col-span-full space-y-6">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary border-b border-border pb-2">Emergency Contacts</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="p-4 bg-foreground/5 border border-border rounded-lg space-y-3">
-                    <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest border-b border-border/50 pb-1">Primary Contact</p>
-                    {renderField('Name', selectedEmployee.emergencyContactName)}
-                    {renderField('Relation', selectedEmployee.emergencyContactRelation)}
-                    {renderField('Phone', selectedEmployee.emergencyContactPhone)}
+                <section className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary border-l-4 border-primary pl-3">Emergency & Family</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderInfoField('Father\'s Name', selectedEmployee.fatherName)}
+                    {renderInfoField('Mother\'s Name', selectedEmployee.motherName)}
                   </div>
-                  <div className="p-4 bg-foreground/5 border border-border rounded-lg space-y-3">
-                    <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest border-b border-border/50 pb-1">Secondary Contact</p>
-                    {renderField('Name', selectedEmployee.emergencyContact2Name)}
-                    {renderField('Relation', selectedEmployee.emergencyContact2Relation)}
-                    {renderField('Phone', selectedEmployee.emergencyContact2Phone)}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                    <div className="p-4 bg-card border border-border rounded-xl space-y-3 shadow-sm">
+                      <p className="text-[8px] text-primary uppercase font-black tracking-widest border-b border-primary/20 pb-1">Emergency 1</p>
+                      {renderInfoField('Name', selectedEmployee.emergencyContactName)}
+                      {renderInfoField('Relation', selectedEmployee.emergencyContactRelation)}
+                      {renderInfoField('Phone', selectedEmployee.emergencyContactPhone)}
+                    </div>
+                    <div className="p-4 bg-card border border-border rounded-xl space-y-3 shadow-sm">
+                      <p className="text-[8px] text-primary uppercase font-black tracking-widest border-b border-primary/20 pb-1">Emergency 2</p>
+                      {renderInfoField('Name', selectedEmployee.emergencyContact2Name)}
+                      {renderInfoField('Relation', selectedEmployee.emergencyContact2Relation)}
+                      {renderInfoField('Phone', selectedEmployee.emergencyContact2Phone)}
+                    </div>
+                    <div className="p-4 bg-card border border-border rounded-xl space-y-3 shadow-sm">
+                      <p className="text-[8px] text-primary uppercase font-black tracking-widest border-b border-primary/20 pb-1">Emergency 3</p>
+                      {renderInfoField('Name', selectedEmployee.emergencyContact3Name)}
+                      {renderInfoField('Relation', selectedEmployee.emergencyContact3Relation)}
+                      {renderInfoField('Phone', selectedEmployee.emergencyContact3Phone)}
+                    </div>
                   </div>
-                  <div className="p-4 bg-foreground/5 border border-border rounded-lg space-y-3">
-                    <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest border-b border-border/50 pb-1">Tertiary Contact</p>
-                    {renderField('Name', selectedEmployee.emergencyContact3Name)}
-                    {renderField('Relation', selectedEmployee.emergencyContact3Relation)}
-                    {renderField('Phone', selectedEmployee.emergencyContact3Phone)}
-                  </div>
-                </div>
+                </section>
               </div>
             </div>
           </div>
@@ -490,18 +540,18 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
     <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
       {renderReportHeader()}
 
-      <div className="flex-1 overflow-y-auto no-print">
-        <div className="px-4 lg:px-6 pb-4 lg:pb-6">
+      <div className="flex-1 overflow-y-auto no-scrollbar no-print">
+        <div className="px-4 lg:px-6 py-4 lg:py-6">
           <div className="space-y-6">
             {renderOfficialHeader()}
-            <div>
+            <div className="bg-card border border-border">
               {renderContent()}
             </div>
           </div>
         </div>
       </div>
       
-      <div className="hidden print:block">
+      <div className="hidden print:block h-full overflow-visible">
         <div className="p-8">
           {renderOfficialHeader()}
           {renderContent()}

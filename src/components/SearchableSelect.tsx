@@ -20,6 +20,7 @@ interface SearchableSelectProps {
   tabIndex?: number;
   allowCustom?: boolean;
   onFocus?: () => void;
+  compact?: boolean;
 }
 
 export function SearchableSelect({
@@ -33,7 +34,8 @@ export function SearchableSelect({
   disabled = false,
   tabIndex,
   allowCustom = false,
-  onFocus
+  onFocus,
+  compact = false
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -157,8 +159,8 @@ export function SearchableSelect({
           placeholder={placeholder}
           tabIndex={tabIndex}
           className={cn(
-            "w-full bg-background border border-border p-2.5 pl-9 pr-10 text-xs transition-all outline-none uppercase tracking-widest font-bold",
-            "focus:border-primary focus:ring-1 focus:ring-primary/20",
+            "w-full bg-background border border-border text-xs transition-all outline-none uppercase tracking-widest font-bold",
+            compact ? "p-1 pl-7 pr-8" : "p-2.5 pl-9 pr-10",
             isOpen ? "border-primary ring-1 ring-primary/20" : "hover:border-primary/50",
             disabled && "opacity-50 cursor-not-allowed"
           )}

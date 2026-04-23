@@ -65,6 +65,8 @@ interface SettingsContextType {
   showFreeQty: boolean;
   showDiscPercent: boolean;
   showTaxPercent: boolean;
+  showCurrency: boolean;
+  showExRate: boolean;
   showRunningBalance: boolean;
   showMobileNav: boolean;
   mobileBottomNavItems: string[];
@@ -133,6 +135,8 @@ const defaultSettings: SettingsContextType = {
   showFreeQty: true,
   showDiscPercent: true,
   showTaxPercent: true,
+  showCurrency: true,
+  showExRate: true,
   showRunningBalance: true,
   showMobileNav: false,
   mobileBottomNavItems: ['Dashboard', 'Voucher Entry', 'Daybook', 'Settings (F11)'],

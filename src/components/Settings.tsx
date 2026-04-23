@@ -47,6 +47,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     showFreeQty,
     showDiscPercent,
     showTaxPercent,
+    showCurrency,
+    showExRate,
     showRunningBalance,
     showMobileNav,
     mobileBottomNavItems = [],
@@ -113,6 +115,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localShowFreeQty, setLocalShowFreeQty] = useState(showFreeQty ?? true);
   const [localShowDiscPercent, setLocalShowDiscPercent] = useState(showDiscPercent ?? true);
   const [localShowTaxPercent, setLocalShowTaxPercent] = useState(showTaxPercent ?? true);
+  const [localShowCurrency, setLocalShowCurrency] = useState(showCurrency ?? true);
+  const [localShowExRate, setLocalShowExRate] = useState(showExRate ?? true);
   const [localShowRunningBalance, setLocalShowRunningBalance] = useState(showRunningBalance ?? true);
   const [localShowMobileNav, setLocalShowMobileNav] = useState(showMobileNav ?? false);
   const [localMobileBottomNavItems, setLocalMobileBottomNavItems] = useState<string[]>(mobileBottomNavItems || []);
@@ -199,6 +203,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalShowFreeQty(showFreeQty ?? true);
     setLocalShowDiscPercent(showDiscPercent ?? true);
     setLocalShowTaxPercent(showTaxPercent ?? true);
+    setLocalShowCurrency(showCurrency ?? true);
+    setLocalShowExRate(showExRate ?? true);
     setLocalShowRunningBalance(showRunningBalance ?? true);
     setLocalShowMobileNav(showMobileNav ?? false);
     setLocalMobileBottomNavItems(mobileBottomNavItems || []);
@@ -309,7 +315,9 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       refNoFormat: localRefNoFormat,
       showFreeQty: localShowFreeQty,
       showDiscPercent: localShowDiscPercent,
-      showTaxPercent: localShowTaxPercent
+      showTaxPercent: localShowTaxPercent,
+      showCurrency: localShowCurrency,
+      showExRate: localShowExRate
     });
     showNotification(notifications.settingsUpdated);
   };
@@ -495,6 +503,44 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                           <div className={cn(
                             "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
                             localShowTaxPercent ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground uppercase">Show Currency</h4>
+                          <p className="text-[10px] text-gray-500">Enable/Disable Currency selection in vouchers.</p>
+                        </div>
+                        <button 
+                          onClick={() => setLocalShowCurrency(!localShowCurrency)}
+                          className={cn(
+                            "w-10 h-5 rounded-full transition-colors relative",
+                            localShowCurrency ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowCurrency ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground uppercase">Show Exchange Rate</h4>
+                          <p className="text-[10px] text-gray-500">Enable/Disable Exchange Rate field in vouchers.</p>
+                        </div>
+                        <button 
+                          onClick={() => setLocalShowExRate(!localShowExRate)}
+                          className={cn(
+                            "w-10 h-5 rounded-full transition-colors relative",
+                            localShowExRate ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowExRate ? "right-1" : "left-1"
                           )} />
                         </button>
                       </div>

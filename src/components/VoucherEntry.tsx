@@ -43,6 +43,8 @@ const getVoucherColor = (type: string) => {
     case 'Receipt': return 'text-amber-500';
     case 'Contra': return 'text-indigo-500';
     case 'Journal': return 'text-purple-500';
+    case 'Physical Stock': return 'text-orange-500';
+    case 'Stock Journal': return 'text-cyan-500';
     default: return 'text-emerald-500';
   }
 };
@@ -55,6 +57,8 @@ const getVoucherBgColor = (type: string) => {
     case 'Receipt': return 'bg-amber-500';
     case 'Contra': return 'bg-indigo-500';
     case 'Journal': return 'bg-purple-500';
+    case 'Physical Stock': return 'bg-orange-500';
+    case 'Stock Journal': return 'bg-cyan-500';
     default: return 'bg-emerald-500';
   }
 };
@@ -67,6 +71,8 @@ const getVoucherHoverBgColor = (type: string) => {
     case 'Receipt': return 'hover:bg-amber-600';
     case 'Contra': return 'hover:bg-indigo-600';
     case 'Journal': return 'hover:bg-purple-600';
+    case 'Physical Stock': return 'hover:bg-orange-600';
+    case 'Stock Journal': return 'hover:bg-cyan-600';
     default: return 'hover:bg-emerald-600';
   }
 };
@@ -83,7 +89,21 @@ export function VoucherEntry() {
   const isEdit = !!id;
   const { showNotification } = useNotification();
   const settings = useSettings();
-  const { notifications, features = [], companyName, baseCurrencySymbol = '৳', refNoFormat, showFreeQty, showDiscPercent, showTaxPercent, updateSettings, voucherHeaderCompact, voucherTableCompact } = settings;
+  const { 
+    notifications, 
+    features = [], 
+    companyName, 
+    baseCurrencySymbol = '৳', 
+    refNoFormat, 
+    showFreeQty, 
+    showDiscPercent, 
+    showTaxPercent, 
+    showCurrency = true,
+    showExRate = true,
+    updateSettings, 
+    voucherHeaderCompact, 
+    voucherTableCompact 
+  } = settings;
   const [vType, setVType] = useState('Sales');
 
   const toggleFeature = (id: string) => {
@@ -201,7 +221,15 @@ export function VoucherEntry() {
 
   // Inventory Entries (Sales/Purchase)
   const [invEntries, setInvEntries] = useState([
-    { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }
+    { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: 'Inward' }
+  ]);
+
+  // Stock Journal specific entries
+  const [consumptionEntries, setConsumptionEntries] = useState<any[]>([
+    { item_id: '', godown_id: '', qty: 0, rate: 0, amount: 0, unit: 'pcs', entry_type: 'Consumption' }
+  ]);
+  const [productionEntries, setProductionEntries] = useState<any[]>([
+    { item_id: '', godown_id: '', qty: 0, rate: 0, amount: 0, unit: 'pcs', entry_type: 'Production' }
   ]);
 
   // Accounting Entries (Journal/Payment/Receipt/Contra)
@@ -227,8 +255,6 @@ export function VoucherEntry() {
       fetchVoucher();
     } else if (location.state?.orderData) {
       handleOrderConversion(location.state.orderData);
-    } else {
-      fetchNextNo();
     }
   }, [id, location.state]);
 
@@ -252,7 +278,8 @@ export function VoucherEntry() {
         amount: (item.quantity || 0) * (item.price || 0),
         unit: 'pcs',
         batch_no: '',
-        expiry_date: ''
+        expiry_date: '',
+        entry_type: vType === 'Sales' ? 'Outward' : 'Inward'
       }));
       setInvEntries(newInvEntries);
     } else {
@@ -268,11 +295,10 @@ export function VoucherEntry() {
         amount: (order.quantity || 0) * (order.price || 0),
         unit: 'pcs',
         batch_no: '',
-        expiry_date: ''
+        expiry_date: '',
+        entry_type: vType === 'Sales' ? 'Outward' : 'Inward'
       }]);
     }
-    
-    fetchNextNo();
   };
 
   const handleClearVoucher = () => {
@@ -288,7 +314,7 @@ export function VoucherEntry() {
     setExchangeRate(1);
     setSalespersonId('');
     setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }]);
-    setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
+    setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: vType === 'Sales' ? 'Outward' : 'Inward' }]);
     setIsClearModalOpen(false);
     showNotification('Voucher cleared successfully', 'success');
   };
@@ -331,21 +357,8 @@ export function VoucherEntry() {
         });
       }
 
-      if (v.v_type === 'Sales' || v.v_type === 'Purchase') {
-        // Identify party and sales/purchase ledger based on debit/credit
-        // Sales: Party Dr (debit > 0), Sales Cr (credit > 0)
-        // Purchase: Purchase Dr (debit > 0), Party Cr (credit > 0)
-        let partyEntry, spEntry;
-        if (v.v_type === 'Sales') {
-          partyEntry = v.entries.find((e: any) => e.debit > 0);
-          spEntry = v.entries.find((e: any) => e.credit > 0);
-        } else {
-          partyEntry = v.entries.find((e: any) => e.credit > 0);
-          spEntry = v.entries.find((e: any) => e.debit > 0);
-        }
-        
-        setPartyLedgerId(partyEntry?.ledger_id || '');
-        setSalesPurchaseLedgerId(spEntry?.ledger_id || '');
+      if (v.v_type === 'Sales' || v.v_type === 'Purchase' || v.v_type === 'Physical Stock') {
+        // ... (existing logic for simple inventory)
         const inv = v.inventory.map((i: any) => ({
           item_id: i.item_id || '',
           godown_id: i.godown_id || '',
@@ -357,9 +370,21 @@ export function VoucherEntry() {
           batch_no: i.batch_no || '',
           expiry_date: i.expiry_date || '',
           amount: i.amount || 0,
+          unit: i.unit_name || 'pcs',
+          entry_type: i.entry_type
+        }));
+        setInvEntries(inv.length > 0 ? inv : [{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: v.v_type === 'Sales' ? 'Outward' : 'Inward' }]);
+      } else if (v.v_type === 'Stock Journal') {
+        const consumption = v.inventory.filter((i: any) => i.entry_type === 'Consumption').map((i: any) => ({
+          ...i,
           unit: i.unit_name || 'pcs'
         }));
-        setInvEntries(inv.length > 0 ? inv : [{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }]);
+        const production = v.inventory.filter((i: any) => i.entry_type === 'Production').map((i: any) => ({
+          ...i,
+          unit: i.unit_name || 'pcs'
+        }));
+        setConsumptionEntries(consumption.length > 0 ? consumption : [{ item_id: '', godown_id: '', qty: 0, rate: 0, amount: 0, unit: 'pcs', entry_type: 'Consumption' }]);
+        setProductionEntries(production.length > 0 ? production : [{ item_id: '', godown_id: '', qty: 0, rate: 0, amount: 0, unit: 'pcs', entry_type: 'Production' }]);
       } else if (v.v_type === 'Journal') {
         // For Journal, we might have a party tagged in the first entry if it's a specific type
         setPartyLedgerId(v.entries[0]?.ledger_id || '');
@@ -459,7 +484,9 @@ export function VoucherEntry() {
     setIsQuickLedgerOpen(true);
   };
 
-  const isInventory = vType === 'Sales' || vType === 'Purchase';
+  const isPhysicalStock = vType === 'Physical Stock';
+  const isInventory = vType === 'Sales' || vType === 'Purchase' || isPhysicalStock;
+  const isStockJournal = vType === 'Stock Journal';
   const isSingleEntry = vType === 'Payment' || vType === 'Receipt' || vType === 'Contra';
   const isJournal = vType === 'Journal';
 
@@ -486,10 +513,10 @@ export function VoucherEntry() {
         const last = invEntries[invEntries.length - 1];
         if (!last.item_id) {
           const next = [...invEntries];
-          next[invEntries.length - 1] = newItem;
+          next[invEntries.length - 1] = { ...newItem, entry_type: vType === 'Sales' ? 'Outward' : 'Inward' };
           setInvEntries(next);
         } else {
-          setInvEntries([...invEntries, newItem]);
+          setInvEntries([...invEntries, { ...newItem, entry_type: vType === 'Sales' ? 'Outward' : 'Inward' }]);
         }
         setBarcodeInput('');
         showNotification(`Added ${data.name}`);
@@ -607,7 +634,7 @@ export function VoucherEntry() {
         partyLedgerName = partyLedger?.name || '';
       }
 
-      const itemNames = isInventory ? invEntries.map(i => items.find(item => item.id === i.item_id)?.name).filter(Boolean).join(', ') : '';
+      const itemNames = isInventory ? invEntries.map(i => items.find(item => item.id === i.item_id)?.name).filter(Boolean).join(', ') : (isStockJournal ? [...consumptionEntries, ...productionEntries].map(i => items.find(item => item.id === i.item_id)?.name).filter(Boolean).join(', ') : '');
 
       const voucher: any = {
         v_no: refNo,
@@ -683,8 +710,12 @@ export function VoucherEntry() {
           isInventory ? invEntries.map(i => ({ 
             ...i, 
             item_name: items.find(item => item.id === i.item_id)?.name,
-            m_type: vType === 'Sales' ? 'Outward' : 'Inward' 
-          })) : []
+            m_type: vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward' 
+          })) : (isStockJournal ? [...consumptionEntries.map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
+            ...i,
+            item_name: items.find(item => item.id === i.item_id)?.name,
+            m_type: i.entry_type === 'Consumption' ? 'Outward' : 'Inward'
+          })) : [])
         );
         showNotification('Voucher updated successfully');
       } else {
@@ -696,8 +727,12 @@ export function VoucherEntry() {
           isInventory ? invEntries.map(i => ({ 
             ...i, 
             item_name: items.find(item => item.id === i.item_id)?.name,
-            m_type: vType === 'Sales' ? 'Outward' : 'Inward' 
-          })) : []
+            m_type: vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward' 
+          })) : (isStockJournal ? [...consumptionEntries.map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
+            ...i,
+            item_name: items.find(item => item.id === i.item_id)?.name,
+            m_type: i.entry_type === 'Consumption' ? 'Outward' : 'Inward'
+          })) : [])
         );
         showNotification(notifications.voucherSaved);
         if (!isEdit) {
@@ -706,13 +741,10 @@ export function VoucherEntry() {
           setPartyLedgerId('');
           setBankCashLedgerId('');
           setAccEntries([{ ledger_id: '', debit: 0, credit: 0, amount: 0, type: vType === 'Payment' || vType === 'Receipt' ? (vType === 'Payment' ? 'Dr' : 'Cr') : 'Dr' }]);
-          setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, amount: 0, disc_percent: 0, tax_percent: 0, unit: '', batch_no: '', expiry_date: '' }]);
+          setInvEntries([{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, amount: 0, disc_percent: 0, tax_percent: 0, unit: '', batch_no: '', expiry_date: '', entry_type: vType === 'Sales' ? 'Outward' : 'Inward' }]);
           setGlobalDiscount(0);
           setSalespersonId('');
-          setRefNo(''); // Will be auto-generated on next render or effect
-          // Fetch new ref no
-          const nextNo = await erpService.getNextVoucherNumber(user.companyId, vType);
-          setRefNo(nextNo);
+          setRefNo(''); 
         }
       }
       if (isEdit) {
@@ -795,8 +827,8 @@ export function VoucherEntry() {
   };
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="bg-card border border-border overflow-hidden flex flex-col h-auto lg:h-[calc(100vh-2rem)]">
+    <div className="bg-background min-h-screen font-mono transition-colors">
+      <div className="bg-card overflow-hidden flex flex-col h-auto lg:h-screen">
         {/* Voucher Header Section */}
         <div className={cn(
           "border-b border-border bg-foreground/5 shrink-0",
@@ -841,7 +873,7 @@ export function VoucherEntry() {
                 value={refNo || ''}
                 onChange={e => setRefNo(e.target.value)}
                 placeholder="e.g. REF-001"
-                tabIndex={2}
+                tabIndex={1}
                 className="w-full bg-background border border-border text-foreground p-1.5 lg:p-2 text-xs lg:text-sm outline-none focus:border-foreground" 
               />
             </div>
@@ -850,26 +882,27 @@ export function VoucherEntry() {
                 label={t('common.date')}
                 value={vDate || ''}
                 onChange={setVDate}
-                tabIndex={3}
+                tabIndex={2}
                 className="w-full"
               />
             </div>
 
             {isMultiCurrencyEnabled ? (
               <>
-                <div className="space-y-1 lg:space-y-2">
+                <div className={cn("space-y-1 lg:space-y-2 transition-opacity", !showCurrency && "opacity-40 pointer-events-none")}>
                   <div className="flex items-center h-4">
                     <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.currency')}</label>
                   </div>
                   <select
                     value={currency}
+                    disabled={!showCurrency}
                     onChange={e => {
                       if (e.target.value !== baseCurrencySymbol) {
                         if (!checkLimit('multiCurrency')) return;
                       }
                       setCurrency(e.target.value);
                     }}
-                    tabIndex={4}
+                    tabIndex={showCurrency ? 3 : -1}
                     className="w-full bg-background border border-border text-foreground p-1.5 lg:p-2 text-xs lg:text-sm outline-none focus:border-foreground"
                   >
                     <option value="BDT">BDT (৳)</option>
@@ -878,7 +911,7 @@ export function VoucherEntry() {
                     <option value="INR">INR (₹)</option>
                   </select>
                 </div>
-                <div className="space-y-1 lg:space-y-2">
+                <div className={cn("space-y-1 lg:space-y-2 transition-opacity", !showExRate && "opacity-40 pointer-events-none")}>
                   <div className="flex items-center gap-2 h-4">
                     <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.exchangeRate')}</label>
                     <div className="group relative">
@@ -892,6 +925,7 @@ export function VoucherEntry() {
                     type="number"
                     step="0.0001"
                     value={exchangeRate}
+                    disabled={!showExRate}
                     onChange={e => {
                       const val = Number(e.target.value);
                       if (val !== 1) {
@@ -900,7 +934,7 @@ export function VoucherEntry() {
                       setExchangeRate(val);
                     }}
                     onFocus={e => e.target.value === '0' && e.target.select()}
-                    tabIndex={5}
+                    tabIndex={showExRate ? 4 : -1}
                     className="w-full bg-background border border-border text-foreground p-1.5 lg:p-2 text-xs lg:text-sm outline-none focus:border-foreground"
                   />
                 </div>
@@ -926,14 +960,14 @@ export function VoucherEntry() {
               <select
                 value={vType}
                 onChange={e => setVType(e.target.value)}
-                tabIndex={1}
+                tabIndex={5}
                 className={cn(
                   "w-full bg-background border border-border p-1.5 lg:p-2 text-xs lg:text-sm outline-none focus:border-foreground font-bold uppercase",
                   getVoucherColor(vType)
                 )}
               >
-                {['Sales', 'Purchase', 'Payment', 'Receipt', 'Contra', 'Journal']
-                  .filter(type => isInventoryEnabled || (type !== 'Sales' && type !== 'Purchase'))
+                {['Sales', 'Purchase', 'Payment', 'Receipt', 'Contra', 'Journal', 'Physical Stock', 'Stock Journal']
+                  .filter(type => isInventoryEnabled || (type !== 'Sales' && type !== 'Purchase' && type !== 'Physical Stock' && type !== 'Stock Journal'))
                   .map(type => (
                     <option key={type} value={type}>{type}</option>
                   ))}
@@ -941,131 +975,289 @@ export function VoucherEntry() {
             </div>
           </div>
 
-          {/* Row 2: Party A/c Name, Sales Ledger, Salesperson/Received by/Provided by */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 lg:gap-6">
-            {/* Slot 1: Party A/c Name or Account (Bank/Cash) */}
-            {(isInventory || isJournal) ? (
-              <div className="space-y-1 lg:space-y-2 col-span-2 lg:col-span-3">
-                <div className="flex justify-between items-center">
-                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.partyName')}</label>
-                  <button 
-                    type="button" 
-                    onClick={() => openQuickLedger('Sundry', 'party')}
-                    className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
-                  >
-                    <PlusCircle className="w-2 h-2" /> {t('common.quick')}
-                  </button>
-                </div>
-                <SearchableSelect
-                  options={ledgers}
-                  value={partyLedgerId}
-                  onChange={setPartyLedgerId}
-                  placeholder={t('voucher.selectParty')}
-                  onQuickCreate={() => openQuickLedger('Sundry', 'party')}
-                  tabIndex={6}
-                />
-                {partyLedgerId && balances[partyLedgerId] !== undefined && (
-                  <p className="text-[9px] text-gray-500 uppercase mt-1">
-                    {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[partyLedgerId])}</span>
-                  </p>
+            {/* Row 2: Party A/c Name, Sales Ledger, Salesperson/Received by/Provided by */}
+            {!isPhysicalStock && !isStockJournal && (
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 lg:gap-6">
+                {/* Slot 1: Party A/c Name or Account (Bank/Cash) */}
+                {(isInventory || isJournal) ? (
+                  <div className="space-y-1 lg:space-y-2 col-span-2 lg:col-span-3">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.partyName')}</label>
+                      <button 
+                        type="button" 
+                        onClick={() => openQuickLedger('Sundry', 'party')}
+                        className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
+                      >
+                        <PlusCircle className="w-2 h-2" /> {t('common.quick')}
+                      </button>
+                    </div>
+                    <SearchableSelect
+                      options={ledgers}
+                      value={partyLedgerId}
+                      onChange={setPartyLedgerId}
+                      placeholder={t('voucher.selectParty')}
+                      onQuickCreate={() => openQuickLedger('Sundry', 'party')}
+                      tabIndex={6}
+                    />
+                    {partyLedgerId && balances[partyLedgerId] !== undefined && (
+                      <p className="text-[9px] text-gray-500 uppercase mt-1">
+                        {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[partyLedgerId])}</span>
+                      </p>
+                    )}
+                  </div>
+                ) : isSingleEntry ? (
+                  <div className="space-y-1 lg:space-y-2 col-span-2 lg:col-span-3">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.account')}</label>
+                      <button 
+                        type="button" 
+                        onClick={() => openQuickLedger('Bank', 'account')}
+                        className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
+                      >
+                        <PlusCircle className="w-2 h-2" /> {t('common.quick')}
+                      </button>
+                    </div>
+                    <SearchableSelect
+                      options={ledgers.filter(l => l.ledger_groups?.name.includes('Bank') || l.ledger_groups?.name.includes('Cash'))}
+                      value={bankCashLedgerId}
+                      onChange={setBankCashLedgerId}
+                      placeholder={t('voucher.selectAccount')}
+                      onQuickCreate={() => openQuickLedger('Bank', 'account')}
+                      tabIndex={6}
+                    />
+                    {bankCashLedgerId && balances[bankCashLedgerId] !== undefined && (
+                      <p className="text-[9px] text-gray-500 uppercase mt-1">
+                        {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[bankCashLedgerId])}</span>
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="hidden lg:block lg:col-span-3"></div>
+                )}
+    
+                {/* Slot 2: Sales/Purchase Ledger */}
+                {isInventory ? (
+                  <div className="space-y-1 lg:space-y-2 col-span-1 lg:col-span-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">
+                        {vType === 'Sales' ? t('common.salesLedger') : t('common.purchaseLedger')}
+                      </label>
+                      <button 
+                        type="button" 
+                        onClick={() => openQuickLedger(vType, 'sales')}
+                        className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
+                      >
+                        <PlusCircle className="w-2 h-2" /> {t('common.quick')}
+                      </button>
+                    </div>
+                    <SearchableSelect
+                      options={ledgers.filter(l => l.ledger_groups?.name.includes(vType))}
+                      value={salesPurchaseLedgerId}
+                      onChange={setSalesPurchaseLedgerId}
+                      placeholder={vType === 'Sales' ? t('common.salesLedger') : t('common.purchaseLedger')}
+                      onQuickCreate={() => openQuickLedger(vType, 'sales')}
+                      tabIndex={7}
+                    />
+                    {salesPurchaseLedgerId && balances[salesPurchaseLedgerId] !== undefined && (
+                      <p className="text-[9px] text-gray-500 uppercase mt-1">
+                        {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[salesPurchaseLedgerId])}</span>
+                      </p>
+                    )}
+                  </div>
+                ) : (vType !== 'Payment' && vType !== 'Receipt') ? (
+                  <div className="hidden lg:block lg:col-span-1"></div>
+                ) : null}
+    
+                {/* Slot 3: Salesperson / Received by / Provided by */}
+                {(vType === 'Sales' || vType === 'Purchase' || vType === 'Payment' || vType === 'Receipt') ? (
+                  <div className={cn("space-y-1 lg:space-y-2 col-span-1", (vType === 'Payment' || vType === 'Receipt') ? "lg:col-span-2" : "lg:col-span-1")}>
+                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">
+                      {vType === 'Sales' ? t('common.salesperson') : (vType === 'Payment' ? t('common.providedBy') : t('common.receivedBy'))}
+                    </label>
+                    <select
+                      value={salespersonId}
+                      onChange={e => setSalespersonId(e.target.value)}
+                      tabIndex={8}
+                      className="w-full bg-background border border-border text-foreground p-1.5 lg:p-2 text-xs lg:text-sm outline-none focus:border-foreground"
+                    >
+                      <option value="">{t('common.select')} {vType === 'Sales' ? t('common.salesperson') : (vType === 'Payment' ? t('common.providedBy') : t('common.receivedBy'))}...</option>
+                      {users.map(u => (
+                        <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="hidden lg:block lg:col-span-1"></div>
                 )}
               </div>
-            ) : isSingleEntry ? (
-              <div className="space-y-1 lg:space-y-2 col-span-2 lg:col-span-3">
-                <div className="flex justify-between items-center">
-                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.account')}</label>
-                  <button 
-                    type="button" 
-                    onClick={() => openQuickLedger('Bank', 'account')}
-                    className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
-                  >
-                    <PlusCircle className="w-2 h-2" /> {t('common.quick')}
-                  </button>
-                </div>
-                <SearchableSelect
-                  options={ledgers.filter(l => l.ledger_groups?.name.includes('Bank') || l.ledger_groups?.name.includes('Cash'))}
-                  value={bankCashLedgerId}
-                  onChange={setBankCashLedgerId}
-                  placeholder={t('voucher.selectAccount')}
-                  onQuickCreate={() => openQuickLedger('Bank', 'account')}
-                  tabIndex={6}
-                />
-                {bankCashLedgerId && balances[bankCashLedgerId] !== undefined && (
-                  <p className="text-[9px] text-gray-500 uppercase mt-1">
-                    {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[bankCashLedgerId])}</span>
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="hidden lg:block lg:col-span-3"></div>
             )}
-
-            {/* Slot 2: Sales/Purchase Ledger */}
-            {isInventory ? (
-              <div className="space-y-1 lg:space-y-2 col-span-1 lg:col-span-1">
-                <div className="flex justify-between items-center">
-                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">
-                    {vType === 'Sales' ? t('common.salesLedger') : t('common.purchaseLedger')}
-                  </label>
-                  <button 
-                    type="button" 
-                    onClick={() => openQuickLedger(vType, 'sales')}
-                    className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
-                  >
-                    <PlusCircle className="w-2 h-2" /> {t('common.quick')}
-                  </button>
-                </div>
-                <SearchableSelect
-                  options={ledgers.filter(l => l.ledger_groups?.name.includes(vType))}
-                  value={salesPurchaseLedgerId}
-                  onChange={setSalesPurchaseLedgerId}
-                  placeholder={vType === 'Sales' ? t('common.salesLedger') : t('common.purchaseLedger')}
-                  onQuickCreate={() => openQuickLedger(vType, 'sales')}
-                  tabIndex={7}
-                />
-                {salesPurchaseLedgerId && balances[salesPurchaseLedgerId] !== undefined && (
-                  <p className="text-[9px] text-gray-500 uppercase mt-1">
-                    {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[salesPurchaseLedgerId])}</span>
-                  </p>
-                )}
-              </div>
-            ) : (vType !== 'Payment' && vType !== 'Receipt') ? (
-              <div className="hidden lg:block lg:col-span-1"></div>
-            ) : null}
-
-            {/* Slot 3: Salesperson / Received by / Provided by */}
-            {(vType === 'Sales' || vType === 'Purchase' || vType === 'Payment' || vType === 'Receipt') ? (
-              <div className={cn("space-y-1 lg:space-y-2 col-span-1", (vType === 'Payment' || vType === 'Receipt') ? "lg:col-span-2" : "lg:col-span-1")}>
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">
-                  {vType === 'Sales' ? t('common.salesperson') : (vType === 'Payment' ? t('common.providedBy') : t('common.receivedBy'))}
-                </label>
-                <select
-                  value={salespersonId}
-                  onChange={e => setSalespersonId(e.target.value)}
-                  tabIndex={5}
-                  className="w-full bg-background border border-border text-foreground p-1.5 lg:p-2 text-xs lg:text-sm outline-none focus:border-foreground"
-                >
-                  <option value="">{t('common.select')} {vType === 'Sales' ? t('common.salesperson') : (vType === 'Payment' ? t('common.providedBy') : t('common.receivedBy'))}...</option>
-                  {users.map(u => (
-                    <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div className="hidden lg:block lg:col-span-1"></div>
-            )}
-          </div>
         </div>
 
         {/* Main Entry Table */}
         <div className={cn("lg:flex-1 lg:overflow-y-auto overflow-x-auto no-scrollbar border-b border-border", voucherTableCompact && "p-0.5")}>
-          {isInventory ? (
+          {isStockJournal ? (
+            <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-border min-h-[400px]">
+              {/* Source (Consumption) */}
+              <div className="flex-1 p-2 lg:p-4 space-y-4">
+                <div className="flex items-center gap-2 border-b border-border pb-2">
+                  <div className="w-1 h-3 bg-rose-500 rounded-full" />
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-rose-500">Source (Consumption)</h4>
+                </div>
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-foreground/5 text-gray-500 uppercase text-[8px]">
+                    <tr>
+                      <th className="px-2 py-2 border-b border-border tracking-wider text-left min-w-[15ch]">Item Name</th>
+                      <th className="px-2 py-2 border-b border-border tracking-wider text-left w-[25ch]">Godown</th>
+                      <th className="px-2 py-2 border-b border-border tracking-wider text-right w-16">Qty</th>
+                      <th className="px-2 py-2 border-b border-border tracking-wider text-right w-20">Rate</th>
+                      <th className="px-2 py-2 border-b border-border tracking-wider text-right w-20">Amount</th>
+                      <th className="px-2 py-2 border-b border-border w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {consumptionEntries.map((e, idx) => (
+                      <tr key={idx} className="group hover:bg-foreground/5">
+                        <td className="px-1 py-1">
+                          <SearchableSelect 
+                            options={items} 
+                            value={e.item_id} 
+                            onChange={(val) => {
+                              const next = [...consumptionEntries];
+                              next[idx].item_id = val;
+                              setConsumptionEntries(next);
+                            }} 
+                            tabIndex={100 + idx}
+                          />
+                        </td>
+                        <td className="px-1 py-1">
+                          <SearchableSelect 
+                            options={godowns} 
+                            value={e.godown_id} 
+                            onChange={(val) => {
+                              const next = [...consumptionEntries];
+                              next[idx].godown_id = val;
+                              setConsumptionEntries(next);
+                            }} 
+                            tabIndex={101 + idx}
+                          />
+                        </td>
+                        <td className="px-1 py-1 w-20">
+                          <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.qty || ''} onChange={val => {
+                            const next = [...consumptionEntries];
+                            next[idx].qty = Number(val.target.value);
+                            next[idx].amount = next[idx].qty * (next[idx].rate || 0);
+                            setConsumptionEntries(next);
+                          }} tabIndex={102 + idx} />
+                        </td>
+                        <td className="px-1 py-1 w-24">
+                          <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.rate || ''} onChange={val => {
+                            const next = [...consumptionEntries];
+                            next[idx].rate = Number(val.target.value);
+                            next[idx].amount = (next[idx].qty || 0) * next[idx].rate;
+                            setConsumptionEntries(next);
+                          }} tabIndex={103 + idx} />
+                        </td>
+                        <td className="px-1 py-1 w-24 text-right font-bold text-[10px]">{formatNumber(e.amount)}</td>
+                        <td className="px-1 py-1 text-center">
+                          <button onClick={() => setConsumptionEntries(consumptionEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-500/50 group-hover:text-rose-500" /></button>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t border-border/50">
+                      <td colSpan={6} className="p-2">
+                        <button onClick={() => setConsumptionEntries([...consumptionEntries, { item_id: '', godown_id: '', qty: 0, rate: 0, amount: 0, unit: 'pcs', entry_type: 'Consumption' }])} className="text-[8px] font-bold text-rose-500 uppercase tracking-widest flex items-center gap-1 hover:underline">
+                          <PlusCircle className="w-2 h-2" /> Add Item
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Destination (Production) */}
+              <div className="flex-1 p-2 lg:p-4 space-y-4">
+                <div className="flex items-center gap-2 border-b border-border pb-2">
+                  <div className="w-1 h-3 bg-emerald-500 rounded-full" />
+                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">Destination (Production)</h4>
+                </div>
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-foreground/5 text-gray-500 uppercase text-[8px]">
+                    <tr>
+                      <th className="px-2 py-2 border-b border-border tracking-wider text-left min-w-[15ch]">Item Name</th>
+                      <th className="px-2 py-2 border-b border-border tracking-wider text-left w-[25ch]">Godown</th>
+                      <th className="px-2 py-2 border-b border-border tracking-wider text-right w-16">Qty</th>
+                      <th className="px-2 py-2 border-b border-border tracking-wider text-right w-20">Rate</th>
+                      <th className="px-2 py-2 border-b border-border tracking-wider text-right w-20">Amount</th>
+                      <th className="px-2 py-2 border-b border-border w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {productionEntries.map((e, idx) => (
+                      <tr key={idx} className="group hover:bg-foreground/5">
+                        <td className="px-1 py-1">
+                          <SearchableSelect 
+                            options={items} 
+                            value={e.item_id} 
+                            onChange={(val) => {
+                              const next = [...productionEntries];
+                              next[idx].item_id = val;
+                              setProductionEntries(next);
+                            }} 
+                            tabIndex={200 + idx}
+                          />
+                        </td>
+                        <td className="px-1 py-1">
+                          <SearchableSelect 
+                            options={godowns} 
+                            value={e.godown_id} 
+                            onChange={(val) => {
+                              const next = [...productionEntries];
+                              next[idx].godown_id = val;
+                              setProductionEntries(next);
+                            }} 
+                            tabIndex={201 + idx}
+                          />
+                        </td>
+                        <td className="px-1 py-1 w-20">
+                          <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.qty || ''} onChange={val => {
+                            const next = [...productionEntries];
+                            next[idx].qty = Number(val.target.value);
+                            next[idx].amount = next[idx].qty * (next[idx].rate || 0);
+                            setProductionEntries(next);
+                          }} tabIndex={202 + idx} />
+                        </td>
+                        <td className="px-1 py-1 w-24">
+                          <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.rate || ''} onChange={val => {
+                            const next = [...productionEntries];
+                            next[idx].rate = Number(val.target.value);
+                            next[idx].amount = (next[idx].qty || 0) * next[idx].rate;
+                            setProductionEntries(next);
+                          }} tabIndex={203 + idx} />
+                        </td>
+                        <td className="px-1 py-1 w-24 text-right font-bold text-[10px]">{formatNumber(e.amount)}</td>
+                        <td className="px-1 py-1 text-center">
+                          <button onClick={() => setProductionEntries(productionEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-emerald-500/50 group-hover:text-emerald-500" /></button>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t border-border/50">
+                      <td colSpan={6} className="p-2">
+                        <button onClick={() => setProductionEntries([...productionEntries, { item_id: '', godown_id: '', qty: 0, rate: 0, amount: 0, unit: 'pcs', entry_type: 'Production' }])} className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1 hover:underline">
+                          <PlusCircle className="w-2 h-2" /> Add Item
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : isInventory ? (
             <div className="min-w-full">
               {/* Desktop Table Header */}
               <table className="w-full text-left text-xs border-collapse hidden lg:table">
                 <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px]">
                   <tr>
-                    <th className={cn("border-b border-border min-w-[35ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>
+                    <th className={cn("border-b border-border min-w-[16ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>
                       <div className="flex justify-between items-center">
                         <span>{t('common.itemName')}</span>
                         <button 
@@ -1080,33 +1272,37 @@ export function VoucherEntry() {
                         </button>
                       </div>
                     </th>
-                    <th className={cn("border-b border-border w-[22ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.godown')}</th>
-                    {isBatchEnabled && (
+                    <th className={cn("border-b border-border w-[40ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.godown')}</th>
+                    {isBatchEnabled && !isPhysicalStock && (
                       <th className={cn("border-b border-border text-left w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.batch')}</th>
                     )}
-                    {isExpiryEnabled && (
+                    {isExpiryEnabled && !isPhysicalStock && (
                       <th className={cn("border-b border-border text-left w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.expiry')}</th>
                     )}
                     <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.quantity')}</th>
-                    {showFreeQty && (
+                    {showFreeQty && !isPhysicalStock && (
                       <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.free')}</th>
                     )}
-                    <th className={cn("border-b border-border text-right w-40", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.rate')}</th>
-                    <th className={cn("border-b border-border text-center w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.per')}</th>
-                    {showDiscPercent && (
-                      <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.discPercent')}</th>
+                    {!isPhysicalStock && (
+                      <>
+                        <th className={cn("border-b border-border text-right w-40", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.rate')}</th>
+                        <th className={cn("border-b border-border text-center w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.per')}</th>
+                        {showDiscPercent && (
+                          <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.discPercent')}</th>
+                        )}
+                        {isTaxEnabled && showTaxPercent && (
+                          <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.taxPercent')}</th>
+                        )}
+                        <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.amount')}</th>
+                      </>
                     )}
-                    {isTaxEnabled && showTaxPercent && (
-                      <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.taxPercent')}</th>
-                    )}
-                    <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.amount')}</th>
                     <th className={cn("border-b border-border w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {invEntries.map((entry, idx) => (
                     <tr key={idx} className="group hover:bg-foreground/5">
-                      <td className={cn("min-w-[35ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                      <td className={cn("min-w-[16ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                         <div className="flex flex-col gap-1">
                           <SearchableSelect
                             options={items}
@@ -1127,7 +1323,7 @@ export function VoucherEntry() {
                               setPendingRowIdx(idx);
                               setIsQuickItemOpen(true);
                             }}
-                            tabIndex={8 + idx * 10}
+                            tabIndex={9 + idx * 10}
                           />
                           {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
                             <p className="text-[8px] text-gray-500 uppercase">
@@ -1136,7 +1332,7 @@ export function VoucherEntry() {
                           )}
                         </div>
                       </td>
-                      <td className={cn("w-[22ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                      <td className={cn("w-[30ch] lg:w-[40ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                         <SearchableSelect
                           options={godowns}
                           value={entry.godown_id}
@@ -1146,10 +1342,10 @@ export function VoucherEntry() {
                             setInvEntries(next);
                           }}
                           placeholder={t('voucher.selectGodown')}
-                          tabIndex={9 + idx * 10}
+                          tabIndex={10 + idx * 10}
                         />
                       </td>
-                      {isBatchEnabled && (
+                      {isBatchEnabled && !isPhysicalStock && (
                         <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                           <input 
                             type="text" 
@@ -1164,7 +1360,7 @@ export function VoucherEntry() {
                           />
                         </td>
                       )}
-                      {isExpiryEnabled && (
+                      {isExpiryEnabled && !isPhysicalStock && (
                         <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                           <DateInput 
                             value={entry.expiry_date || ''} 
@@ -1180,7 +1376,7 @@ export function VoucherEntry() {
                       <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                         <input 
                           type="number" 
-                          tabIndex={10 + idx * 10}
+                          tabIndex={11 + idx * 10}
                           className="bg-transparent border-none text-foreground outline-none w-full text-right" 
                           value={entry.qty ?? ''} 
                           onFocus={e => e.target.value === '0' && e.target.select()}
@@ -1201,11 +1397,11 @@ export function VoucherEntry() {
                           }} 
                         />
                       </td>
-                      {showFreeQty && (
+                      {showFreeQty && !isPhysicalStock && (
                         <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                           <input 
                             type="number" 
-                            tabIndex={11 + idx * 10}
+                            tabIndex={12 + idx * 10}
                             className="bg-transparent border-none text-foreground outline-none w-full text-right text-emerald-500 font-bold" 
                             value={entry.free_qty ?? ''} 
                             onFocus={e => e.target.value === '0' && e.target.select()}
@@ -1217,81 +1413,85 @@ export function VoucherEntry() {
                           />
                         </td>
                       )}
-                      <td className={cn("w-40", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
-                        <input 
-                          type="number" 
-                          tabIndex={12 + idx * 10}
-                          className="bg-transparent border-none text-foreground outline-none w-full text-right" 
-                          value={entry.rate ?? ''} 
-                          onFocus={e => e.target.value === '0' && e.target.select()}
-                          onChange={e => {
-                            const next = [...invEntries];
-                            next[idx].rate = Number(e.target.value);
-                            next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
-                            setInvEntries(next);
-                          }} 
-                        />
-                      </td>
-                      <td className={cn("text-center text-gray-500 uppercase text-[10px] w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
-                        <span 
-                          tabIndex={13 + idx * 10}
-                          className="outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded"
-                        >
-                          {entry.unit}
-                        </span>
-                      </td>
-                      {showDiscPercent && (
-                        <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
-                          <input 
-                            type="number" 
-                            tabIndex={14 + idx * 10}
-                            className="bg-transparent border-none text-foreground outline-none w-full text-right" 
-                            value={entry.disc_percent ?? ''} 
-                            onFocus={e => e.target.value === '0' && e.target.select()}
-                            onChange={e => {
-                              const next = [...invEntries];
-                              next[idx].disc_percent = Number(e.target.value);
-                              next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
-                              setInvEntries(next);
-                            }} 
-                          />
-                        </td>
+                      {!isPhysicalStock && (
+                        <>
+                          <td className={cn("w-40", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                            <input 
+                              type="number" 
+                              tabIndex={13 + idx * 10}
+                              className="bg-transparent border-none text-foreground outline-none w-full text-right" 
+                              value={entry.rate ?? ''} 
+                              onFocus={e => e.target.value === '0' && e.target.select()}
+                              onChange={e => {
+                                const next = [...invEntries];
+                                next[idx].rate = Number(e.target.value);
+                                next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
+                                setInvEntries(next);
+                              }} 
+                            />
+                          </td>
+                          <td className={cn("text-center text-gray-500 uppercase text-[10px] w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                            <span 
+                              tabIndex={14 + idx * 10}
+                              className="outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded"
+                            >
+                              {entry.unit}
+                            </span>
+                          </td>
+                          {showDiscPercent && (
+                            <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                              <input 
+                                type="number" 
+                                tabIndex={15 + idx * 10}
+                                className="bg-transparent border-none text-foreground outline-none w-full text-right" 
+                                value={entry.disc_percent ?? ''} 
+                                onFocus={e => e.target.value === '0' && e.target.select()}
+                                onChange={e => {
+                                  const next = [...invEntries];
+                                  next[idx].disc_percent = Number(e.target.value);
+                                  next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
+                                  setInvEntries(next);
+                                }} 
+                              />
+                            </td>
+                          )}
+                          {isTaxEnabled && showTaxPercent && (
+                            <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                              <input 
+                                type="number" 
+                                tabIndex={16 + idx * 10}
+                                className="bg-transparent border border-border text-foreground outline-none w-full text-right p-1 focus:border-foreground" 
+                                value={entry.tax_percent ?? ''} 
+                                onFocus={e => e.target.value === '0' && e.target.select()}
+                                onChange={e => {
+                                  const next = [...invEntries];
+                                  next[idx].tax_percent = Number(e.target.value);
+                                  next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
+                                  setInvEntries(next);
+                                }} 
+                              />
+                            </td>
+                          )}
+                          <td className={cn("text-right text-foreground font-bold w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                            <span 
+                              tabIndex={17 + idx * 10}
+                              className="outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded block"
+                            >
+                              {baseCurrencySymbol} {formatNumber(entry.amount)}
+                            </span>
+                          </td>
+                        </>
                       )}
-                      {isTaxEnabled && showTaxPercent && (
-                        <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
-                          <input 
-                            type="number" 
-                            tabIndex={15 + idx * 10}
-                            className="bg-transparent border border-border text-foreground outline-none w-full text-right p-1 focus:border-foreground" 
-                            value={entry.tax_percent ?? ''} 
-                            onFocus={e => e.target.value === '0' && e.target.select()}
-                            onChange={e => {
-                              const next = [...invEntries];
-                              next[idx].tax_percent = Number(e.target.value);
-                              next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
-                              setInvEntries(next);
-                            }} 
-                          />
-                        </td>
-                      )}
-                      <td className={cn("text-right text-foreground font-bold w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
-                        <span 
-                          tabIndex={16 + idx * 10}
-                          className="outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded block"
-                        >
-                          {baseCurrencySymbol} {formatNumber(entry.amount)}
-                        </span>
-                      </td>
                       <td className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}><button onClick={() => setInvEntries(invEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
                     </tr>
                   ))}
                   {/* ADD ITEM Button Row */}
                   <tr className="border-t border-border/50">
-                    <td colSpan={isTaxEnabled ? 10 : 9} className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <td colSpan={15} className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <div className="flex justify-end">
                         <button 
                           type="button"
-                          onClick={() => setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }])}
+                          onClick={() => setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward' }])}
                           tabIndex={500}
                           className={cn(
                             "px-4 py-1.5 text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
@@ -1502,7 +1702,7 @@ export function VoucherEntry() {
                 <div className="p-4">
                   <button 
                     type="button"
-                    onClick={() => setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '' }])}
+                    onClick={() => setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: vType === 'Sales' ? 'Outward' : 'Inward' }])}
                     className={cn(
                       "w-full py-3 text-black text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm",
                       getVoucherBgColor(vType),
@@ -1759,7 +1959,7 @@ export function VoucherEntry() {
               <textarea
                 value={narration || ''}
                 onChange={e => setNarration(e.target.value)}
-                tabIndex={501}
+                tabIndex={1000}
                 className="w-full bg-background border border-border text-foreground p-2 text-xs outline-none focus:border-foreground transition-colors h-16 lg:h-20 resize-none"
                 placeholder={t('common.narration')}
               />
@@ -1774,14 +1974,14 @@ export function VoucherEntry() {
                     value={globalDiscount ?? ''} 
                     onFocus={e => e.target.value === '0' && e.target.select()}
                     onChange={e => setGlobalDiscount(Number(e.target.value))}
-                    tabIndex={502}
+                    tabIndex={1001}
                     className="w-24 bg-transparent border-none text-right text-lg outline-none font-bold"
                     placeholder="0"
                   />
                   <select 
                     value={globalDiscountType}
                     onChange={e => setGlobalDiscountType(e.target.value as 'fixed' | 'percent')}
-                    tabIndex={503}
+                    tabIndex={1002}
                     className="bg-transparent border-none text-xs outline-none font-bold text-gray-500"
                   >
                     <option value="fixed">{baseCurrencySymbol} {t('common.taka')}</option>
@@ -1844,7 +2044,7 @@ export function VoucherEntry() {
                   type="button"
                   onClick={handleDownloadPDF}
                   disabled={loading || !isBalanced()}
-                  tabIndex={504}
+                  tabIndex={1003}
                   className="flex-1 lg:flex-none px-6 lg:px-8 py-2 border border-border text-[10px] text-gray-500 uppercase tracking-widest hover:text-foreground transition-colors disabled:opacity-50"
                 >
                   {t('common.print')}
@@ -1859,7 +2059,7 @@ export function VoucherEntry() {
                 <button
                   onClick={handleSave}
                   disabled={!isBalanced() || loading}
-                  tabIndex={505}
+                  tabIndex={1004}
                   className={cn(
                     "flex-1 lg:flex-none px-8 lg:px-12 py-2 text-[10px] font-bold uppercase tracking-widest transition-all",
                     isBalanced() ? "bg-foreground text-background hover:opacity-90 shadow-lg" : "bg-border text-gray-600 cursor-not-allowed"
@@ -1958,6 +2158,16 @@ export function VoucherEntry() {
                   label={t('voucher.showTaxPercent')} 
                   enabled={showTaxPercent} 
                   onChange={() => updateSettings({ showTaxPercent: !showTaxPercent })} 
+                />
+                <Toggle 
+                  label="Show Currency" 
+                  enabled={showCurrency} 
+                  onChange={() => updateSettings({ showCurrency: !showCurrency })} 
+                />
+                <Toggle 
+                  label="Show Exchange Rate" 
+                  enabled={showExRate} 
+                  onChange={() => updateSettings({ showExRate: !showExRate })} 
                 />
                 <Toggle 
                   label={t('voucher.enableMultiCurrency')} 
