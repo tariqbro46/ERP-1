@@ -17,16 +17,22 @@ import {
   MessageSquare,
   Mail,
   Table as TableIcon,
-  LayoutGrid
+  LayoutGrid,
+  Check,
+  X,
+  Settings as SettingsIcon,
+  Fingerprint,
+  Gift,
+  RotateCcw
 } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { cn } from '../lib/utils';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, differenceInDays } from 'date-fns';
 
-type Tab = 'salary' | 'advance' | 'loan' | 'bulk';
+type Tab = 'salary' | 'advance' | 'loan' | 'bulk' | 'attendance' | 'payheads' | 'bonus';
 
 export function PayrollManagement() {
   const { user } = useAuth();
@@ -39,13 +45,31 @@ export function PayrollManagement() {
   const [salarySheets, setSalarySheets] = useState<any[]>([]);
   const [advances, setAdvances] = useState<any[]>([]);
   const [loans, setLoans] = useState<any[]>([]);
+  const [attendance, setAttendance] = useState<any[]>([]);
+  const [payHeads, setPayHeads] = useState<any[]>([]);
+  const [salaryStructures, setSalaryStructures] = useState<any[]>([]);
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [bonusType, setBonusType] = useState('Eid-ul-Fitr');
+  const [bonusCalculationBasis, setBonusCalculationBasis] = useState<'Full' | 'Half' | 'Pro-rata'>('Full');
+  const [bonusAppliedDate, setBonusAppliedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeDate, setActiveDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   // Form states
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [month, setMonth] = useState(format(new Date(), 'yyyy-MM'));
+  
+  // Pay Head form
+  const [payHeadName, setPayHeadName] = useState('');
+  const [payHeadType, setPayHeadType] = useState<'Earning' | 'Deduction'>('Earning');
+  const [payHeadCalc, setPayHeadCalc] = useState<'Fixed' | 'On Attendance' | 'Percentage'>('Fixed');
+  
+  // Salary Structure form
+  const [structureAmount, setStructureAmount] = useState('');
+  const [selectedPayHeadId, setSelectedPayHeadId] = useState('');
+
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [status, setStatus] = useState('Pending');
@@ -101,16 +125,22 @@ export function PayrollManagement() {
   async function fetchData() {
     setLoading(true);
     try {
-      const [empData, salaryData, advanceData, loanData] = await Promise.all([
+      const [empData, salaryData, advanceData, loanData, attendanceData, payHeadsData, structureData] = await Promise.all([
         erpService.getEmployees(user!.companyId),
         erpService.getSalarySheets(user!.companyId),
         erpService.getAdvances(user!.companyId),
-        erpService.getLoans(user!.companyId)
+        erpService.getLoans(user!.companyId),
+        erpService.getAttendance(user!.companyId),
+        erpService.getPayHeads(user!.companyId),
+        erpService.getSalaryStructures(user!.companyId)
       ]);
       setEmployees(empData);
       setSalarySheets(salaryData);
       setAdvances(advanceData);
       setLoans(loanData);
+      setAttendance(attendanceData);
+      setPayHeads(payHeadsData);
+      setSalaryStructures(structureData);
     } catch (err: any) {
       console.error('Error fetching payroll data:', err);
       showNotification('Failed to load payroll data', 'error');
@@ -118,6 +148,192 @@ export function PayrollManagement() {
       setLoading(false);
     }
   }
+
+  const handleAttendanceSubmit = async (employeeId: string, status: any) => {
+    setLoading(true);
+    try {
+      const existing = attendance.find(a => a.employeeId === employeeId && a.date === activeDate);
+      
+      if (status === 'Clear' && existing) {
+        await erpService.deleteAttendance(existing.id);
+        showNotification('Attendance cleared');
+      } else if (status !== 'Clear') {
+        const employee = employees.find(e => e.id === employeeId);
+        const data = {
+          employeeId,
+          employeeName: employee?.name || 'Unknown',
+          date: activeDate,
+          status,
+          overtimeHours: 0
+        };
+
+        if (existing) {
+          await erpService.updateAttendance(existing.id, data);
+        } else {
+          await erpService.createAttendance(user!.companyId, data);
+        }
+      }
+      fetchData();
+    } catch (err) {
+      showNotification('Failed to update attendance', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateBonus = (emp: any, festivalDate: string, basis: string) => {
+    const salary = parseFloat(emp.salary || emp.basicSalary || '0');
+    const joiningDate = new Date(emp.joiningDate);
+    const targetDate = new Date(festivalDate);
+    
+    // Total days served up to festival
+    const daysServed = differenceInDays(targetDate, joiningDate);
+    
+    let baseBonus = salary; // Default is full salary
+    if (basis === 'Half') baseBonus = salary / 2;
+
+    if (daysServed >= 365) {
+      return baseBonus;
+    } else if (daysServed > 0) {
+      // Pro-rata: (Bonus/2) * (Tenure/365) as per user's specific request
+      // Note: User mentioned (total bonus/2 eid * tenure) - assuming they mean half of yearly bonus pool
+      const proRataAmount = (baseBonus) * (daysServed / 365);
+      return parseFloat(proRataAmount.toFixed(2));
+    }
+    return 0;
+  };
+
+  const generateBonuses = async () => {
+    setLoading(true);
+    try {
+      const batch = employees.map(emp => {
+        const bonusAmount = calculateBonus(emp, bonusAppliedDate, bonusCalculationBasis);
+        if (bonusAmount <= 0) return null;
+
+        return {
+          companyId: user!.companyId,
+          employeeId: emp.id,
+          employeeName: emp.name,
+          month: format(new Date(bonusAppliedDate), 'yyyy-MM'),
+          basicSalary: parseFloat(emp.salary || 0),
+          allowances: bonusAmount,
+          deductions: 0,
+          advanceDeduction: 0,
+          loanDeduction: 0,
+          netSalary: bonusAmount,
+          paymentStatus: 'Pending',
+          type: 'Bonus',
+          bonusType: bonusType,
+          paymentDate: bonusAppliedDate,
+          createdAt: new Date()
+        };
+      }).filter(Boolean);
+
+      for (const b of batch as any[]) {
+        await erpService.createSalarySheet(user!.companyId, b);
+      }
+      
+      showNotification(`${batch.length} Bonuses generated successfully`);
+      setActiveTab('salary');
+      fetchData();
+    } catch (err) {
+      showNotification('Failed to generate bonuses', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePayHeadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const data = {
+        name: payHeadName,
+        type: payHeadType,
+        calculationType: payHeadCalc
+      };
+
+      if (editingItem) {
+        await erpService.updatePayHead(editingItem.id, data);
+      } else {
+        await erpService.createPayHead(user!.companyId, data);
+      }
+      showNotification('Pay Head saved');
+      setIsModalOpen(false);
+      fetchData();
+    } catch (err) {
+      showNotification('Failed to save Pay Head', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStructureSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const payHead = payHeads.find(p => p.id === selectedPayHeadId);
+      const data = {
+        employeeId: selectedEmployeeId,
+        payHeadId: selectedPayHeadId,
+        payHeadName: payHead?.name || '',
+        amount: parseFloat(structureAmount)
+      };
+
+      await erpService.createSalaryStructure(user!.companyId, data);
+      showNotification('Salary Structure updated');
+      setIsModalOpen(false);
+      fetchData();
+    } catch (err) {
+      showNotification('Failed to update structure', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateEmployeeSalaryForMonth = (empId: string, targetMonth: string) => {
+    const structures = salaryStructures.filter(s => s.employeeId === empId);
+    const empAttendance = attendance.filter(a => {
+      return a.employeeId === empId && a.date.startsWith(targetMonth);
+    });
+
+    const monthStart = startOfMonth(new Date(targetMonth + '-01'));
+    const monthEnd = endOfMonth(monthStart);
+    const totalDaysInMonth = monthEnd.getDate();
+
+    const presentDays = empAttendance.filter(a => a.status === 'Present').length;
+    const leaveDays = empAttendance.filter(a => a.status === 'Leave').length;
+    const holidayDays = empAttendance.filter(a => a.status === 'Holiday').length;
+    
+    // Effective days for calculation (Paid days)
+    const paidDays = presentDays + leaveDays + holidayDays;
+
+    let earnings = 0;
+    let deductionsVal = 0;
+
+    structures.forEach(s => {
+      const payHead = payHeads.find(p => p.id === s.payHeadId);
+      if (!payHead) return;
+
+      let calculatedAmount = s.amount;
+      if (payHead.calculationType === 'On Attendance') {
+        calculatedAmount = (s.amount / totalDaysInMonth) * paidDays;
+      }
+
+      if (payHead.type === 'Earning') {
+        earnings += calculatedAmount;
+      } else {
+        deductionsVal += calculatedAmount;
+      }
+    });
+
+    return {
+      earnings: parseFloat(earnings.toFixed(2)),
+      deductions: parseFloat(deductionsVal.toFixed(2)),
+      paidDays,
+      totalDays: totalDaysInMonth
+    };
+  };
 
   const handleSalarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -425,23 +641,63 @@ export function PayrollManagement() {
             >
               Loans
             </button>
+            <button 
+              onClick={() => setActiveTab('attendance')}
+              className={cn(
+                "px-6 py-3 text-[10px] font-bold uppercase tracking-widest transition-all border-b-2 whitespace-nowrap",
+                activeTab === 'attendance' ? "border-foreground text-foreground" : "border-transparent text-gray-500 hover:text-foreground"
+              )}
+            >
+              Attendance
+            </button>
+            <button 
+              onClick={() => setActiveTab('payheads')}
+              className={cn(
+                "px-6 py-3 text-[10px] font-bold uppercase tracking-widest transition-all border-b-2 whitespace-nowrap",
+                activeTab === 'payheads' ? "border-foreground text-foreground" : "border-transparent text-gray-500 hover:text-foreground"
+              )}
+            >
+              Pay Heads & Structure
+            </button>
+            <button 
+              onClick={() => setActiveTab('bonus')}
+              className={cn(
+                "px-6 py-3 text-[10px] font-bold uppercase tracking-widest transition-all border-b-2 whitespace-nowrap",
+                activeTab === 'bonus' ? "border-foreground text-foreground" : "border-transparent text-gray-500 hover:text-foreground"
+              )}
+            >
+              Festival Bonus
+            </button>
           </div>
           
           <div className="flex flex-col items-end gap-2 pb-2 md:pb-0">
-            <div className="flex items-center gap-2">
-              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Select Month</label>
-              <input 
-                type="month" 
-                value={month}
-                onChange={e => setMonth(e.target.value)}
-                className="bg-background border border-border text-foreground p-1.5 text-xs outline-none focus:border-foreground"
-              />
-            </div>
+            {activeTab === 'attendance' ? (
+              <div className="flex items-center gap-2">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Select Date</label>
+                <input 
+                  type="date" 
+                  value={activeDate}
+                  onChange={e => setActiveDate(e.target.value)}
+                  className="bg-background border border-border text-foreground p-1.5 text-xs outline-none focus:border-foreground"
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Select Month</label>
+                <input 
+                  type="month" 
+                  value={month}
+                  onChange={e => setMonth(e.target.value)}
+                  className="bg-background border border-border text-foreground p-1.5 text-xs outline-none focus:border-foreground"
+                />
+              </div>
+            )}
             <button 
               onClick={() => setActiveTab(activeTab === 'bulk' ? 'salary' : 'bulk')}
               className={cn(
                 "w-full sm:w-auto px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border border-border",
-                activeTab === 'bulk' ? "bg-foreground text-background" : "bg-card text-foreground hover:bg-foreground/5"
+                activeTab === 'bulk' ? "bg-foreground text-background" : "bg-card text-foreground hover:bg-foreground/5",
+                (activeTab === 'attendance' || activeTab === 'payheads' || activeTab === 'bonus') && "hidden"
               )}
             >
               {activeTab === 'bulk' ? <LayoutGrid className="w-3 h-3" /> : <TableIcon className="w-3 h-3" />}
@@ -453,6 +709,270 @@ export function PayrollManagement() {
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+          </div>
+        ) : activeTab === 'attendance' ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {employees.map(emp => {
+                const record = attendance.find(a => a.employeeId === emp.id && a.date === activeDate);
+                return (
+                  <div key={emp.id} className="bg-card border border-border p-4 flex justify-between items-center group">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-tight">{emp.name}</h4>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest">{emp.designation}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleAttendanceSubmit(emp.id, 'Present')}
+                        className={cn(
+                          "p-2 border transition-all",
+                          record?.status === 'Present' ? "bg-emerald-500 border-emerald-500 text-white" : "border-border text-gray-400 hover:border-emerald-500 hover:text-emerald-500"
+                        )}
+                        title="Mark Present"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleAttendanceSubmit(emp.id, 'Absent')}
+                        className={cn(
+                          "p-2 border transition-all",
+                          record?.status === 'Absent' ? "bg-rose-500 border-rose-500 text-white" : "border-border text-gray-400 hover:border-rose-500 hover:text-rose-500"
+                        )}
+                        title="Mark Absent"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleAttendanceSubmit(emp.id, 'Leave')}
+                        className={cn(
+                          "p-2 border transition-all",
+                          record?.status === 'Leave' ? "bg-amber-500 border-amber-500 text-white" : "border-border text-gray-400 hover:border-amber-500 hover:text-amber-500"
+                        )}
+                        title="Mark Leave"
+                      >
+                        <Clock className="w-4 h-4" />
+                      </button>
+                      {record && (
+                        <button 
+                          onClick={() => handleAttendanceSubmit(emp.id, 'Clear')}
+                          className="p-2 border border-border text-gray-400 hover:border-foreground hover:text-foreground transition-all"
+                          title="Reset"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : activeTab === 'bonus' ? (
+          <div className="max-w-4xl mx-auto space-y-8 bg-card border border-border p-8">
+            <div className="flex items-center gap-4 border-b border-border pb-6">
+              <div className="p-3 bg-primary/10 text-primary rounded-full">
+                <Gift className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold uppercase tracking-tight">Festival Bonus Generator</h3>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">Calculate and generate bonuses based on tenure and festival dates.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Bonus Type</label>
+                <select 
+                  value={bonusType}
+                  onChange={e => setBonusType(e.target.value)}
+                  className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                >
+                  <option value="Eid-ul-Fitr">Eid-ul-Fitr</option>
+                  <option value="Eid-ul-Adha">Eid-ul-Adha</option>
+                  <option value="Pohela Boishak">Pohela Boishak</option>
+                  <option value="Special Bonus">Special Bonus</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Festival Date</label>
+                <input 
+                  type="date" 
+                  value={bonusAppliedDate}
+                  onChange={e => setBonusAppliedDate(e.target.value)}
+                  className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Calculation Basis</label>
+                <select 
+                  value={bonusCalculationBasis}
+                  onChange={e => setBonusCalculationBasis(e.target.value as any)}
+                  className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                >
+                  <option value="Full">Full Salary</option>
+                  <option value="Half">Half Salary</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-foreground/5 p-4 space-y-4">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest border-b border-border/50 pb-2">Calculation Rules</h4>
+              <ul className="space-y-2">
+                <li className="text-[10px] text-gray-600 flex items-center gap-2">
+                  <Check className="w-3 h-3 text-emerald-500" /> Employees with 1+ year tenure receive the full basis amount.
+                </li>
+                <li className="text-[10px] text-gray-600 flex items-center gap-2">
+                  <Check className="w-3 h-3 text-emerald-500" /> Employees with less than 1 year receive a pro-rated amount based on days served.
+                </li>
+                <li className="text-[10px] text-gray-600 flex items-center gap-2">
+                  <Clock className="w-3 h-3 text-amber-500" /> Pro-rata formula: Basis × (Tenure in Days / 365).
+                </li>
+              </ul>
+            </div>
+
+            <div className="overflow-x-auto border border-border">
+              <table className="w-full text-left text-xs uppercase tracking-tight">
+                <thead className="bg-foreground/5 border-b border-border">
+                  <tr>
+                    <th className="p-3 font-bold">Employee</th>
+                    <th className="p-3 font-bold">Joining Date</th>
+                    <th className="p-3 font-bold">Tenure (Days)</th>
+                    <th className="p-3 font-bold text-right">Estimated Bonus</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {employees.map(emp => {
+                    const bonus = calculateBonus(emp, bonusAppliedDate, bonusCalculationBasis);
+                    const tenureDays = differenceInDays(new Date(bonusAppliedDate), new Date(emp.joiningDate));
+                    return (
+                      <tr key={emp.id} className="hover:bg-foreground/5 transition-colors">
+                        <td className="p-3">
+                          <span className="font-bold block">{emp.name}</span>
+                          <span className="text-[9px] text-gray-500">{emp.designation}</span>
+                        </td>
+                        <td className="p-3 font-mono">{emp.joiningDate}</td>
+                        <td className="p-3 font-mono">
+                          <span className={cn(tenureDays < 365 ? "text-amber-500" : "text-emerald-500")}>
+                            {tenureDays} Days
+                          </span>
+                        </td>
+                        <td className="p-3 text-right font-bold">৳{bonus}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="pt-6 border-t border-border flex justify-between items-center">
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">
+                Total Employees: {employees.length}
+              </p>
+              <button 
+                onClick={generateBonuses}
+                disabled={loading}
+                className="px-8 py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2 disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Gift className="w-3 h-3" />}
+                Generate & Post Bonuses
+              </button>
+            </div>
+          </div>
+        ) : activeTab === 'payheads' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-4 space-y-6">
+              <div className="flex justify-between items-center border-b border-border pb-2">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
+                  <SettingsIcon className="w-3 h-3" /> Pay Heads
+                </h3>
+                <button 
+                  onClick={() => {
+                    setEditingItem(null);
+                    setSelectedEmployeeId(''); // Fixed: Reset selected employee
+                    setPayHeadName('');
+                    setPayHeadType('Earning');
+                    setPayHeadCalc('Fixed');
+                    setIsModalOpen(true);
+                  }}
+                  className="text-[9px] font-bold uppercase tracking-widest text-primary hover:underline flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" /> Add Head
+                </button>
+              </div>
+              <div className="space-y-2">
+                {payHeads.map(ph => (
+                  <div key={ph.id} className="bg-card border border-border p-3 flex justify-between items-center group">
+                    <div>
+                      <p className="text-xs font-bold uppercase">{ph.name}</p>
+                      <p className="text-[9px] text-gray-500 uppercase tracking-widest">{ph.type} | {ph.calculationType}</p>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => {
+                          setEditingItem(ph);
+                          setPayHeadName(ph.name);
+                          setPayHeadType(ph.type);
+                          setPayHeadCalc(ph.calculationType);
+                          setIsModalOpen(true);
+                        }}
+                        className="p-1 hover:bg-foreground/10 rounded"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="lg:col-span-8 space-y-6">
+              <div className="flex justify-between items-center border-b border-border pb-2">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-foreground flex items-center gap-2">
+                  <Fingerprint className="w-3 h-3" /> Employee Salary Structure
+                </h3>
+              </div>
+              <div className="bg-card border border-border divide-y divide-border">
+                {employees.map(emp => (
+                  <div key={emp.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold uppercase truncate">{emp.name}</h4>
+                      <p className="text-[9px] text-gray-500 uppercase tracking-widest">{emp.designation}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {salaryStructures.filter(s => s.employeeId === emp.id).map(struct => (
+                        <div key={struct.id} className="bg-foreground/5 border border-border px-2 py-1 rounded flex items-center gap-2 group/struct">
+                          <span className="text-[9px] font-bold uppercase text-gray-500">{struct.payHeadName}:</span>
+                          <span className="text-[9px] font-bold tracking-tight">৳{struct.amount}</span>
+                          <button 
+                            onClick={async () => {
+                              if (confirm('Remove this pay head?')) {
+                                await erpService.deleteDocCustom('salary_structures', struct.id);
+                                fetchData();
+                              }
+                            }}
+                            className="text-rose-500 opacity-0 group-hover/struct:opacity-100 transition-opacity"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                      <button 
+                        onClick={() => {
+                          setSelectedEmployeeId(emp.id);
+                          setSelectedPayHeadId('');
+                          setStructureAmount('');
+                          setEditingItem(null);
+                          setIsModalOpen(true);
+                        }}
+                        className="px-2 py-1 border border-dashed border-gray-400 text-[9px] font-bold uppercase text-gray-400 hover:text-foreground hover:border-foreground transition-all"
+                      >
+                        + Add Component
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         ) : activeTab === 'bulk' ? (
           <div className="space-y-4">
@@ -746,30 +1266,120 @@ export function PayrollManagement() {
           <div className="bg-card border border-border w-full max-w-md overflow-hidden shadow-2xl my-auto md:my-8">
             <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-foreground/5 sticky top-0 z-10 backdrop-blur-sm">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">
-                {editingItem ? 'Edit' : 'Create New'} {activeTab === 'salary' || activeTab === 'bulk' ? 'Salary Sheet' : activeTab === 'advance' ? 'Advance' : 'Loan'}
+                {activeTab === 'payheads' 
+                  ? (editingItem ? 'Edit Pay Head' : (selectedEmployeeId ? 'Add Salary Component' : 'Create Pay Head'))
+                  : `Create New ${activeTab === 'salary' || activeTab === 'bulk' ? 'Salary Sheet' : activeTab === 'advance' ? 'Advance' : activeTab === 'loan' ? 'Loan' : 'Entry'}`
+                }
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-foreground">
+              <button 
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setSelectedEmployeeId('');
+                  setEditingItem(null);
+                }} 
+                className="text-gray-500 hover:text-foreground"
+              >
                 <Plus className="w-4 h-4 rotate-45" />
               </button>
             </div>
             <form 
-              onSubmit={activeTab === 'salary' || activeTab === 'bulk' ? handleSalarySubmit : activeTab === 'advance' ? handleAdvanceSubmit : handleLoanSubmit} 
+              onSubmit={
+                activeTab === 'payheads' 
+                  ? (selectedEmployeeId ? handleStructureSubmit : handlePayHeadSubmit) // Simplified logic
+                  : activeTab === 'salary' || activeTab === 'bulk' 
+                    ? handleSalarySubmit 
+                    : activeTab === 'advance' 
+                      ? handleAdvanceSubmit 
+                      : handleLoanSubmit
+              } 
               className="p-6 space-y-4"
             >
-              <div className="space-y-2">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Select Employee</label>
-                <select 
-                  value={selectedEmployeeId}
-                  onChange={e => setSelectedEmployeeId(e.target.value)}
-                  className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
-                  required
-                >
-                  <option value="">Select Employee</option>
-                  {employees.map(emp => (
-                    <option key={emp.id} value={emp.id}>{emp.name} ({emp.designation})</option>
-                  ))}
-                </select>
-              </div>
+              {activeTab === 'payheads' && !selectedEmployeeId && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Pay Head Name</label>
+                    <input 
+                      type="text" 
+                      value={payHeadName}
+                      onChange={e => setPayHeadName(e.target.value)}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                      placeholder="e.g. Basic Salary, HRA, Medical"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Type</label>
+                      <select 
+                        value={payHeadType}
+                        onChange={e => setPayHeadType(e.target.value as any)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                      >
+                        <option value="Earning">Earning</option>
+                        <option value="Deduction">Deduction</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Calculation</label>
+                      <select 
+                        value={payHeadCalc}
+                        onChange={e => setPayHeadCalc(e.target.value as any)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                      >
+                        <option value="Fixed">Fixed Amount</option>
+                        <option value="On Attendance">Based on Attendance</option>
+                      </select>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'payheads' && selectedEmployeeId && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Select Pay Head</label>
+                    <select 
+                      value={selectedPayHeadId}
+                      onChange={e => setSelectedPayHeadId(e.target.value)}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                      required
+                    >
+                      <option value="">Select component</option>
+                      {payHeads.map(ph => (
+                        <option key={ph.id} value={ph.id}>{ph.name} ({ph.type})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Amount (৳)</label>
+                    <input 
+                      type="number" 
+                      value={structureAmount}
+                      onChange={e => setStructureAmount(e.target.value)}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                      placeholder="Enter monthly amount"
+                      required
+                    />
+                  </div>
+                </>
+              )}
+
+              {activeTab !== 'payheads' && (
+                <div className="space-y-2">
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Select Employee</label>
+                  <select 
+                    value={selectedEmployeeId}
+                    onChange={e => setSelectedEmployeeId(e.target.value)}
+                    className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+                    required
+                  >
+                    <option value="">Select Employee</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.name} ({emp.designation})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {(activeTab === 'salary' || activeTab === 'bulk') && (
                 <>
@@ -963,10 +1573,20 @@ export function PayrollManagement() {
               <div className="pt-4">
                 <button 
                   type="submit"
-                  disabled={loading || !selectedEmployeeId}
+                  disabled={loading || (activeTab !== 'payheads' && !selectedEmployeeId)}
                   className="w-full py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50"
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `Save ${activeTab === 'salary' || activeTab === 'bulk' ? 'Salary Sheet' : activeTab === 'advance' ? 'Advance' : 'Loan'}`}
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                  ) : activeTab === 'payheads' ? (
+                    selectedEmployeeId ? 'Save Salary Structure' : 'Save Pay Head'
+                  ) : activeTab === 'salary' || activeTab === 'bulk' ? (
+                    'Save Salary Sheet'
+                  ) : activeTab === 'advance' ? (
+                    'Save Advance'
+                  ) : (
+                    'Save Loan'
+                  )}
                 </button>
               </div>
             </form>

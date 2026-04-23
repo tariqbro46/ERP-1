@@ -173,6 +173,39 @@ export interface AppNotification {
   createdAt: any;
 }
 
+export interface Attendance {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  employeeName: string;
+  date: string;
+  status: 'Present' | 'Absent' | 'Leave' | 'Half Day' | 'Holiday';
+  overtimeHours: number;
+  notes?: string;
+  createdAt: any;
+}
+
+export interface PayHead {
+  id: string;
+  companyId: string;
+  name: string;
+  type: 'Earning' | 'Deduction';
+  calculationType: 'Fixed' | 'On Attendance' | 'Percentage';
+  basePayHeadId?: string; // For percentage calculation
+  percentage?: number;
+  createdAt: any;
+}
+
+export interface SalaryStructure {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  payHeadId: string;
+  payHeadName: string;
+  amount: number;
+  createdAt: any;
+}
+
 export interface SalarySheet {
   id: string;
   companyId: string;
@@ -189,6 +222,8 @@ export interface SalarySheet {
   paymentDate?: string;
   paymentMethod?: string;
   voucherId?: string; // Reference to the payment voucher
+  type?: 'Salary' | 'Bonus';
+  bonusType?: string; // Eid-ul-Fitr, Eid-ul-Adha, etc.
   createdAt: any;
 }
 

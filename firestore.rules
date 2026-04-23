@@ -235,6 +235,27 @@ service cloud.firestore {
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
+
+    match /pay_heads/{id} {
+      allow read: if isCompanyMember(resource.data.companyId);
+      allow create: if isCompanyAdmin(request.resource.data.companyId);
+      allow update: if isCompanyAdmin(request.resource.data.companyId);
+      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+    }
+
+    match /salary_structures/{id} {
+      allow read: if isCompanyMember(resource.data.companyId);
+      allow create: if isCompanyAdmin(request.resource.data.companyId);
+      allow update: if isCompanyAdmin(request.resource.data.companyId);
+      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+    }
+
+    match /attendance/{id} {
+      allow read: if isCompanyMember(resource.data.companyId);
+      allow create: if isCompanyMember(request.resource.data.companyId);
+      allow update: if isCompanyMember(request.resource.data.companyId);
+      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+    }
     
     match /orders/{id} {
       allow read: if isCompanyMember(resource.data.companyId) && (hasPermission('orders') || isCompanyAdmin(resource.data.companyId));

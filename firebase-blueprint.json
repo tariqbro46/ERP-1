@@ -181,6 +181,46 @@
       },
       "required": ["name", "companyId"]
     },
+    "PayHead": {
+      "title": "Pay Head",
+      "description": "Definition of a salary component (e.g., Basic, HRA, PF).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Earning", "Deduction"] },
+        "calculationType": { "type": "string", "enum": ["Fixed", "On Attendance", "Percentage"] },
+        "companyId": { "type": "string" }
+      },
+      "required": ["name", "type", "calculationType", "companyId"]
+    },
+    "SalaryStructure": {
+      "title": "Salary Structure",
+      "description": "Links pay heads to an employee with specific values.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "payHeadId": { "type": "string" },
+        "amount": { "type": "number" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["employeeId", "payHeadId", "amount", "companyId"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Daily attendance record for an employee.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Present", "Absent", "Leave", "Half Day", "Holiday"] },
+        "overtimeHours": { "type": "number" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["employeeId", "date", "status", "companyId"]
+    },
     "SalarySheet": {
       "title": "Salary Sheet",
       "description": "Monthly salary record for an employee.",
@@ -487,6 +527,18 @@
     "/employees/{id}": {
       "schema": "Employee",
       "description": "Collection of employees."
+    },
+    "/pay_heads/{id}": {
+      "schema": "PayHead",
+      "description": "Definition of salary components."
+    },
+    "/salary_structures/{id}": {
+      "schema": "SalaryStructure",
+      "description": "Links pay heads to employees."
+    },
+    "/attendance/{id}": {
+      "schema": "Attendance",
+      "description": "Daily attendance records."
     },
     "/salary_sheets/{id}": {
       "schema": "SalarySheet",

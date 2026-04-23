@@ -133,7 +133,13 @@ async function getCollection<T = any>(colName: string, companyId: string): Promi
 }
 
 export const erpService = {
-  getCollection,
+  async getCollection(colName: string, companyId: string) {
+    return getCollection(colName, companyId);
+  },
+
+  async deleteDocCustom(colName: string, id: string) {
+    await deleteDoc(doc(db, colName, id));
+  },
 
   async logActivity(companyId: string, userId: string, action: string, details: string, entity_type?: string, entity_id?: string) {
     try {
@@ -1205,6 +1211,73 @@ export const erpService = {
 
   async deleteSalarySheet(id: string) {
     await deleteDoc(doc(db, 'salary_sheets', id));
+  },
+
+  // Pay Heads
+  async getPayHeads(companyId: string) {
+    return this.getCollection('pay_heads', companyId);
+  },
+  async createPayHead(companyId: string, data: any) {
+    const ref = doc(collection(db, 'pay_heads'));
+    const docData = { ...data, id: ref.id, companyId, createdAt: serverTimestamp() };
+    await setDoc(ref, docData);
+    return docData;
+  },
+  async updatePayHead(id: string, data: any) {
+    await updateDoc(doc(db, 'pay_heads', id), { ...data, updatedAt: serverTimestamp() });
+  },
+
+  // Salary Structures
+  async getSalaryStructures(companyId: string, employeeId?: string) {
+    if (employeeId) {
+      const q = query(
+        collection(db, 'salary_structures'),
+        where('companyId', '==', companyId),
+        where('employeeId', '==', employeeId)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    return this.getCollection('salary_structures', companyId);
+  },
+  async createSalaryStructure(companyId: string, data: any) {
+    const ref = doc(collection(db, 'salary_structures'));
+    const docData = { ...data, id: ref.id, companyId, createdAt: serverTimestamp() };
+    await setDoc(ref, docData);
+    return docData;
+  },
+  async updateSalaryStructure(id: string, data: any) {
+    await updateDoc(doc(db, 'salary_structures', id), { ...data, updatedAt: serverTimestamp() });
+  },
+
+  // Attendance
+  async getAttendance(companyId: string, startDate?: string, endDate?: string) {
+    let q = query(collection(db, 'attendance'), where('companyId', '==', companyId));
+    if (startDate && endDate) {
+      q = query(q, where('date', '>=', startDate), where('date', '<=', endDate));
+    }
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+  async createAttendance(companyId: string, data: any) {
+    const ref = doc(collection(db, 'attendance'));
+    const docData = { ...data, id: ref.id, companyId, createdAt: serverTimestamp() };
+    await setDoc(ref, docData);
+    return docData;
+  },
+  async bulkCreateAttendance(companyId: string, records: any[]) {
+    const batch = writeBatch(db);
+    records.forEach(r => {
+      const ref = doc(collection(db, 'attendance'));
+      batch.set(ref, { ...r, id: ref.id, companyId, createdAt: serverTimestamp() });
+    });
+    await batch.commit();
+  },
+  async updateAttendance(id: string, data: any) {
+    await updateDoc(doc(db, 'attendance', id), { ...data, updatedAt: serverTimestamp() });
+  },
+  async deleteAttendance(id: string) {
+    await deleteDoc(doc(db, 'attendance', id));
   },
 
   // Advances

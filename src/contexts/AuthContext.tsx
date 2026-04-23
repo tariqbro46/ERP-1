@@ -75,6 +75,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userRef = doc(db, 'users', fUser.uid);
         unsubProfile = onSnapshot(userRef, async (docSnap) => {
           try {
+            // Unsubscribe existing company listener if any before setting up a new one
+            if (unsubCompany) {
+              unsubCompany();
+              unsubCompany = null;
+            }
+
             if (docSnap.exists()) {
               const userData = docSnap.data() as Profile;
               setUser(userData);

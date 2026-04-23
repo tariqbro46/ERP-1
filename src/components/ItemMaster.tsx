@@ -145,9 +145,13 @@ export function ItemMaster() {
         </div>
       </div>
 
+      {/* Fixed spacer to prevent the "jump" when scrolling starts */}
+      <div className="flex-none h-4 lg:h-6 bg-background z-20" />
+
       {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-6">
-        <div className="bg-card border border-border overflow-hidden">
+      <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div className="px-4 lg:px-6 pb-4 lg:pb-6">
+          <div className="bg-card border border-border">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="w-6 h-6 text-foreground animate-spin" />
@@ -199,25 +203,25 @@ export function ItemMaster() {
               </div>
 
               {/* Desktop View: Table */}
-              <div className="hidden md:block relative">
-                <table className="w-full text-left border-collapse min-w-[800px] border-separate border-spacing-0">
-                  <thead className="sticky top-0 z-20 bg-card">
-                    <tr className="bg-foreground/5 border-b border-border">
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.name')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.category')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.partNo')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.unit')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.openingQty')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.openingRate')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.currentStock')}</th>
-                      <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.avgCost')}</th>
-                      <th className="px-6 py-4 text-right w-20 border-b border-border"></th>
+              <div className="hidden md:block">
+                <table className="w-full text-left border-separate border-spacing-0 min-w-[800px] table-fixed">
+                  <thead className="sticky top-0 z-30">
+                    <tr className="shadow-sm">
+                      <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border w-[25%]">{t('item.name')}</th>
+                      <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border w-[12%]">{t('item.category')}</th>
+                      <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border w-[12%]">{t('item.partNo')}</th>
+                      <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border w-[8%]">{t('item.unit')}</th>
+                      <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border w-[10%]">{t('item.openingQty')}</th>
+                      <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border w-[10%]">{t('item.openingRate')}</th>
+                      <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border w-[12%]">{t('item.currentStock')}</th>
+                      <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border w-[10%]">{t('item.avgCost')}</th>
+                      <th className="bg-card px-6 py-4 text-right w-[5%] border-b border-border"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/50">
+                  <tbody className="">
                     {filteredItems.map(item => (
                       <tr key={item.id} className="group hover:bg-foreground/5 transition-colors">
-                        <td className="px-6 py-4">
+                        <td className="px-6 py-4 border-b border-border/50">
                           <div className="flex items-center gap-3">
                             <div className="p-2 bg-foreground/5 border border-border group-hover:border-foreground/30 transition-colors">
                               <Package className="w-4 h-4 text-gray-400 group-hover:text-foreground" />
@@ -272,22 +276,22 @@ export function ItemMaster() {
               </div>
             </>
           ) : (
-            <div className="relative">
-              <table className="w-full text-left border-collapse min-w-[800px] border-separate border-spacing-0">
-                <thead className="sticky top-0 z-20 bg-card">
-                  <tr className="bg-foreground/5 border-b border-border">
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.name')}</th>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.category')}</th>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.standardPrice')}</th>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.wholesalePrice')}</th>
-                    <th className="px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.retailPrice')}</th>
-                    <th className="px-6 py-4 text-right w-20 border-b border-border"></th>
+            <div className="hidden md:block">
+              <table className="w-full text-left border-separate border-spacing-0 min-w-[800px]">
+                <thead className="sticky top-0 z-30">
+                  <tr className="shadow-sm">
+                    <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.name')}</th>
+                    <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold border-b border-border">{t('item.category')}</th>
+                    <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.standardPrice')}</th>
+                    <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.wholesalePrice')}</th>
+                    <th className="bg-card px-6 py-4 text-[9px] text-gray-500 uppercase tracking-widest font-bold text-right border-b border-border">{t('item.retailPrice')}</th>
+                    <th className="bg-card px-6 py-4 text-right w-20 border-b border-border"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/50">
+                <tbody className="">
                   {filteredItems.map(item => (
                     <tr key={item.id} className="group hover:bg-foreground/5 transition-colors">
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 border-b border-border/50">
                         <p className="text-[11px] text-foreground font-bold uppercase tracking-wider">{item.name}</p>
                         <p className="text-[8px] text-gray-600 mt-0.5">SKU: {item.barcode || '---'}</p>
                       </td>
@@ -317,5 +321,6 @@ export function ItemMaster() {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

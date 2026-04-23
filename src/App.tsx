@@ -930,7 +930,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div 
-      className="flex h-screen h-[100dvh] bg-background text-foreground overflow-hidden transition-colors duration-300 relative"
+      className="flex h-screen h-[100dvh] bg-background text-foreground overflow-hidden relative"
       data-ui-style={uiStyle}
       data-glass-bg={glassBackground}
     >
@@ -1218,12 +1218,16 @@ function Layout({ children }: { children: React.ReactNode }) {
         {menuBarStyle === 'macos' && renderMacOSMenu()}
 
         <div ref={scrollRef} className={cn(
-          "flex-1 overflow-y-auto overflow-x-auto no-scrollbar pb-16 lg:pb-0",
+          "flex-1 no-scrollbar pb-16 lg:pb-0 flex flex-col min-h-0",
+          (location.pathname === '/dashboard' || location.pathname.startsWith('/reports/') || location.pathname === '/daybook' || location.pathname.startsWith('/inventory/')) 
+            ? "overflow-hidden" 
+            : "overflow-y-auto overflow-x-auto",
           menuBarStyle === 'macos' && "pt-10"
         )}>
           <div className={cn(
-            "w-full mx-auto",
-            layoutWidth === 'constrained' ? "max-w-7xl" : "max-w-full"
+            "w-full mx-auto flex-1 flex flex-col min-h-0",
+            layoutWidth === 'constrained' ? "max-w-7xl" : "max-w-full",
+            (location.pathname === '/dashboard' || location.pathname.startsWith('/reports/') || location.pathname === '/daybook' || location.pathname.startsWith('/inventory/')) && "h-full"
           )}>
             {children}
           </div>

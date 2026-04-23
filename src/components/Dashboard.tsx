@@ -161,28 +161,32 @@ export function Dashboard() {
     const { revenue, profit, activeLedgers, stockValue, chartData } = stats;
 
     return (
-      <div className="p-4 lg:p-6 space-y-6 bg-[#f8f9fa] min-h-screen transition-colors font-sans">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <EditableHeader 
-            pageId="dashboard"
-            defaultTitle={t('dash.overview')}
-            defaultSubtitle={`${t('dash.financialSummary')} • ${companyName}`}
-          />
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => window.location.reload()}
-              className="text-[11px] font-bold text-gray-500 uppercase hover:text-gray-800 transition-colors"
-            >
-              {t('common.refresh')}
-            </button>
+      <div className="flex flex-col h-full bg-[#f8f9fa] transition-colors font-sans overflow-hidden">
+        {/* Fixed Header Section */}
+        <div className="flex-none bg-white border-b border-gray-100 shadow-sm px-4 lg:px-6 py-4 z-30">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <EditableHeader 
+              pageId="dashboard"
+              defaultTitle={t('dash.overview')}
+              defaultSubtitle={`${t('dash.financialSummary')} • ${companyName}`}
+            />
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => window.location.reload()}
+                className="text-[11px] font-bold text-gray-500 uppercase hover:text-gray-800 transition-colors"
+              >
+                {t('common.refresh')}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Metric Cards Section */}
-        <div className="space-y-4">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('dash.kpi')}</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Scrollable Content Section */}
+        <div className="flex-1 overflow-y-auto no-scrollbar p-4 lg:p-6 space-y-6">
+          {/* Metric Cards Section */}
+          <div className="space-y-4">
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('dash.kpi')}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-[#ffbf00] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
               <div className="space-y-4">
                 <CreditCard className="w-6 h-6 text-black/60" />
@@ -319,9 +323,10 @@ export function Dashboard() {
             </table>
           </div>
         </div>
+      </div>
 
-        {/* Footer Info */}
-        <div className="bg-[#0078d4] p-2 text-white text-[10px] font-medium flex justify-between items-center px-4">
+      {/* Footer Info */}
+        <div className="flex-none bg-[#0078d4] p-2 text-white text-[10px] font-medium flex justify-between items-center px-4">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-3 h-3" />
             <span>{t('dash.financialYear')}: {formatFY(financialYearStart, financialYearEnd)} • {t('dash.systemStatus')}: {t('dash.online')}</span>
@@ -336,38 +341,43 @@ export function Dashboard() {
   }
 
   return (
-    <div className="p-4 lg:p-6 space-y-6 bg-background min-h-screen transition-colors">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-        <EditableHeader 
-          pageId="dashboard_main"
-          defaultTitle={`${t('dash.gatewayOf')} ${companyName}`}
-          defaultSubtitle={`${t('dash.technicalOverview')} • ${t('dash.financialYear')} ${formatFY(periodStart, periodEnd)}`}
-        />
-        <div className="flex flex-col items-end sm:items-end gap-2 w-full sm:w-auto">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="flex-1">
-              <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('dash.from')}</label>
-              <input 
-                type="date" 
-                value={periodStart || ''} 
-                onChange={(e) => setPeriodStart(e.target.value)}
-                className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('dash.to')}</label>
-              <input 
-                type="date" 
-                value={periodEnd || ''} 
-                onChange={(e) => setPeriodEnd(e.target.value)}
-                className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground"
-              />
+    <div className="flex flex-col h-full bg-background transition-colors font-mono overflow-hidden">
+      {/* Fixed Header Section */}
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 z-30">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+          <EditableHeader 
+            pageId="dashboard_main"
+            defaultTitle={`${t('dash.gatewayOf')} ${companyName}`}
+            defaultSubtitle={`${t('dash.technicalOverview')} • ${t('dash.financialYear')} ${formatFY(periodStart, periodEnd)}`}
+          />
+          <div className="flex flex-col items-end sm:items-end gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="flex-1">
+                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('dash.from')}</label>
+                <input 
+                  type="date" 
+                  value={periodStart || ''} 
+                  onChange={(e) => setPeriodStart(e.target.value)}
+                  className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('dash.to')}</label>
+                <input 
+                  type="date" 
+                  value={periodEnd || ''} 
+                  onChange={(e) => setPeriodEnd(e.target.value)}
+                  className="w-full bg-card border border-border text-foreground text-[10px] p-2 outline-none focus:border-foreground"
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-4 lg:p-6 space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
           title={t('dash.revenue')} 
           value={`৳ ${formatNumber(stats.revenue)}`} 
@@ -753,6 +763,7 @@ export function Dashboard() {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
 

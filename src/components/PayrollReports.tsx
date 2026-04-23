@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -21,7 +21,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { formatCurrency, cn } from '../lib/utils';
-import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 
 type PayrollReportType = 
   | 'payslip' 
@@ -50,10 +50,6 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState<any[]>([]);
   const [salarySheets, setSalarySheets] = useState<any[]>([]);
-  const [advances, setAdvances] = useState<any[]>([]);
-  const [loans, setLoans] = useState<any[]>([]);
-  const [attendance, setAttendance] = useState<any[]>([]);
-  
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
@@ -67,18 +63,12 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
   async function fetchData() {
     setLoading(true);
     try {
-      const [empData, salaryData, advanceData, loanData] = await Promise.all([
+      const [empData, salaryData] = await Promise.all([
         erpService.getEmployees(user!.companyId),
-        erpService.getSalarySheets(user!.companyId),
-        erpService.getAdvances(user!.companyId),
-        erpService.getLoans(user!.companyId)
+        erpService.getSalarySheets(user!.companyId)
       ]);
       setEmployees(empData);
       setSalarySheets(salaryData);
-      setAdvances(advanceData);
-      setLoans(loanData);
-      // Attendance data would come from another collection, assuming it's empty for now
-      setAttendance([]);
     } catch (err) {
       console.error('Error fetching payroll reports data:', err);
     } finally {
@@ -90,65 +80,76 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
     window.print();
   };
 
-  const filteredEmployees = employees.filter(emp => 
+  const filteredEmployees = useMemo(() => employees.filter(emp => 
     emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.id.includes(searchTerm)
-  );
+  ), [employees, searchTerm]);
 
-  const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
-  const monthSheets = salarySheets.filter(s => s.month === selectedMonth);
+  const totalSalary = useMemo(() => employees.reduce((sum, emp) => sum + (Number(emp.salary) || 0), 0), [employees]);
+  const selectedEmployee = useMemo(() => employees.find(e => e.id === selectedEmployeeId), [employees, selectedEmployeeId]);
+  const monthSheets = useMemo(() => salarySheets.filter(s => s.month === selectedMonth), [salarySheets, selectedMonth]);
 
   const renderReportHeader = () => (
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border pb-6 mb-6 no-print">
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-foreground/5 rounded-full transition-all">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-xl font-bold uppercase tracking-tighter text-foreground">
-            {reportType.replace(/_/g, ' ')}
-          </h1>
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">
-            Payroll & Personnel Information System
-          </p>
+    <div className="flex-none bg-background border-b border-border shadow-sm no-print px-4 lg:px-6 py-4 z-40">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate(-1)} className="p-2 hover:bg-foreground/5 rounded-full transition-all">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold uppercase tracking-tighter text-foreground">
+              {reportType.replace(/_/g, ' ')}
+            </h1>
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">
+              Payroll & Personnel Information System
+            </p>
+          </div>
         </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-        {(reportType !== 'employee_profile' && reportType !== 'headcount') && (
-          <div className="flex items-center gap-2 bg-card border border-border p-1 pl-3 rounded shadow-sm flex-1 md:flex-initial">
-            <Calendar className="w-3 h-3 text-gray-400" />
-            <input 
-              type="month" 
-              value={selectedMonth}
-              onChange={e => setSelectedMonth(e.target.value)}
-              className="bg-transparent border-none text-xs outline-none text-foreground uppercase font-bold pr-2"
-            />
-          </div>
-        )}
-        
-        {reportType === 'employee_profile' && (
-          <div className="flex-1 md:w-64">
-            <select
-              value={selectedEmployeeId}
-              onChange={e => setSelectedEmployeeId(e.target.value)}
-              className="w-full bg-card border border-border text-foreground p-2 text-xs outline-none focus:border-foreground"
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {(reportType !== 'employee_profile' && reportType !== 'headcount') && (
+            <div className="flex items-center gap-2 bg-card border border-border p-1 pl-3 rounded shadow-sm flex-1 md:flex-initial">
+              <Calendar className="w-3 h-3 text-gray-400" />
+              <input 
+                type="month" 
+                value={selectedMonth}
+                onChange={e => setSelectedMonth(e.target.value)}
+                className="bg-transparent border-none text-xs outline-none text-foreground uppercase font-bold pr-2"
+              />
+            </div>
+          )}
+          
+          {reportType === 'employee_profile' && (
+            <div className="flex-1 md:w-64">
+              <select
+                value={selectedEmployeeId}
+                onChange={e => setSelectedEmployeeId(e.target.value)}
+                className="w-full bg-card border border-border text-foreground p-2 text-xs outline-none focus:border-foreground"
+              >
+                <option value="">Select Employee</option>
+                {employees.map(emp => (
+                  <option key={emp.id} value={emp.id}>{emp.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+  
+          <div className="flex gap-2 w-full md:w-auto border-l border-border md:pl-3">
+            <button 
+              onClick={handlePrint} 
+              className="p-2.5 bg-foreground text-background hover:opacity-90 rounded transition-all shadow-sm"
+              title="Print Report"
             >
-              <option value="">Select Employee</option>
-              {employees.map(emp => (
-                <option key={emp.id} value={emp.id}>{emp.name}</option>
-              ))}
-            </select>
+              <Printer className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={handlePrint}
+              className="p-2.5 bg-card border border-border text-foreground hover:bg-foreground/5 rounded transition-all shadow-sm"
+              title="Download PDF"
+            >
+              <Download className="w-4 h-4" />
+            </button>
           </div>
-        )}
-
-        <div className="flex gap-2 w-full md:w-auto border-l border-border md:pl-3">
-          <button onClick={handlePrint} className="p-2.5 bg-foreground text-background hover:opacity-90 rounded transition-all shadow-sm">
-            <Printer className="w-4 h-4" />
-          </button>
-          <button className="p-2.5 bg-card border border-border text-foreground hover:bg-foreground/5 rounded transition-all shadow-sm">
-            <Download className="w-4 h-4" />
-          </button>
         </div>
       </div>
     </div>
@@ -157,7 +158,7 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
   const renderOfficialHeader = () => (
     <div className="hidden print:block text-center mb-8 border-b-2 border-foreground pb-4">
       <h1 className="text-2xl font-bold uppercase tracking-tight">{settings?.companyName || 'ERP SYSTEM'}</h1>
-      <p className="text-[10px] uppercase tracking-widest mt-1">{settings?.companyAddress || 'Company Address Address Address'}</p>
+      <p className="text-[10px] uppercase tracking-widest mt-1">{settings?.companyAddress || 'Company Address'}</p>
       <div className="flex justify-center gap-4 mt-2 text-[10px] uppercase font-bold">
         <span>Phone: {settings?.printPhone || 'N/A'}</span>
         <span>Email: {settings?.printEmail || 'N/A'}</span>
@@ -166,7 +167,7 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
         {reportType.replace(/_/g, ' ')}
       </h2>
       <p className="text-xs mt-2 uppercase tracking-widest font-bold">
-        {reportType !== 'employee_profile' && reportType !== 'headcount' ? `Month: ${format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}` : ''}
+        {reportType !== 'employee_profile' && reportType !== 'headcount' && selectedMonth ? `Month: ${format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}` : ''}
       </p>
     </div>
   );
@@ -224,26 +225,25 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
         const isAttendance = reportType.includes('attendance');
         return (
           <div className="bg-card border border-border overflow-x-auto shadow-sm print:border-2 print:border-foreground">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
-              <thead>
-                <tr className="bg-foreground/5 border-b border-border">
-                  <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Employee</th>
+            <table className="w-full text-left border-separate border-spacing-0 min-w-[1000px]">
+              <thead className="sticky top-0 z-30">
+                <tr className="shadow-sm">
+                  <th className="bg-card p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b border-border">Employee</th>
                   {isAttendance ? (
-                    // 31 days for attendance
                     Array.from({ length: 31 }, (_, i) => (
-                      <th key={i} className="p-1 text-[8px] font-bold uppercase text-center border-l border-border/50 text-gray-400 w-6">{i + 1}</th>
+                      <th key={i} className="bg-card p-1 text-[8px] font-bold uppercase text-center border-l border-border/50 text-gray-400 w-6 border-b border-border">{i + 1}</th>
                     ))
                   ) : (
                     <>
-                      <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Basic</th>
-                      <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Allowances</th>
-                      <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Deductions</th>
-                      <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Advance/Loan</th>
-                      <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right">Net Payable</th>
-                      <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">Status</th>
+                      <th className="bg-card p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right border-b border-border">Basic</th>
+                      <th className="bg-card p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right border-b border-border">Allowances</th>
+                      <th className="bg-card p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right border-b border-border">Deductions</th>
+                      <th className="bg-card p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right border-b border-border">Advance/Loan</th>
+                      <th className="bg-card p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right border-b border-border">Net Payable</th>
+                      <th className="bg-card p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b border-border">Status</th>
                     </>
                   )}
-                  <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 print:hidden text-right">Signature</th>
+                  <th className="bg-card p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 print:hidden text-right border-b border-border">Signature</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border text-xs">
@@ -302,73 +302,6 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
           </div>
         );
 
-      case 'payment_advice':
-        return (
-          <div className="space-y-8">
-            <div className="bg-card border border-border p-8 shadow-sm">
-              <div className="max-w-3xl mx-auto space-y-6">
-                <div className="flex justify-between border-b border-border pb-4">
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">Ref No:</p>
-                    <p className="text-xs font-bold font-mono">PA/{format(new Date(), 'yyyy/MM/dd')}/001</p>
-                  </div>
-                  <div className="text-right space-y-1">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">Date:</p>
-                    <p className="text-xs font-bold font-mono">{format(new Date(), 'dd-MM-yyyy')}</p>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">To,</p>
-                    <p className="text-sm font-bold uppercase">The Branch Manager</p>
-                    <p className="text-xs text-gray-500 font-bold uppercase">Corporate Bank Bangladesh</p>
-                  </div>
-                  
-                  <p className="text-sm font-bold uppercase mt-6 mb-4">Subject: DISBURSEMENT OF MONTHLY SALARIES FOR {format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}</p>
-                  
-                  <div className="text-sm space-y-4 leading-relaxed text-gray-700">
-                    <p>Dear Sir,</p>
-                    <p>We kindly request you to debit our Corporate Current Account No. <span className="font-bold text-foreground">XXXX-XXXX-XXXX-XX</span> and credit the respective bank accounts of our employees as per the list attached below for their monthly salary of {format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}.</p>
-                  </div>
-                </div>
-
-                <div className="overflow-hidden border border-border mt-8">
-                  <table className="w-full text-[10px] border-collapse">
-                    <thead>
-                      <tr className="bg-foreground/5 border-b border-border">
-                        <th className="p-3 text-left font-bold uppercase tracking-widest">Employee Name</th>
-                        <th className="p-3 text-left font-bold uppercase tracking-widest">Account Number</th>
-                        <th className="p-3 text-right font-bold uppercase tracking-widest">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {monthSheets.filter(s => s.paymentStatus === 'Paid' || s.paymentStatus === 'Pending').map(s => (
-                        <tr key={s.id}>
-                          <td className="p-3 uppercase font-bold">{s.employeeName}</td>
-                          <td className="p-3 font-mono">XXXX-XXXX-XXXX-XX</td>
-                          <td className="p-3 text-right font-mono font-bold">{formatCurrency(s.netSalary, baseCurrencySymbol)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="bg-foreground/5 border-t border-border font-bold">
-                      <tr>
-                        <td colSpan={2} className="p-3 uppercase tracking-widest text-[11px]">Total Disbursement</td>
-                        <td className="p-3 text-right font-mono text-[11px]">{formatCurrency(monthSheets.reduce((sum, s) => sum + (s.netSalary || 0), 0), baseCurrencySymbol)}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-
-                <div className="pt-20 grid grid-cols-2 gap-20 text-[10px] font-bold uppercase tracking-widest text-center">
-                  <div className="border-t border-black pt-2">Manager Finance</div>
-                  <div className="border-t border-black pt-2">Authorized Director</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
       case 'employee_profile':
         if (!selectedEmployee) return (
           <div className="py-20 text-center border border-dashed border-border uppercase text-[10px] tracking-widest text-gray-400">
@@ -376,71 +309,95 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
           </div>
         );
 
+        const renderField = (label: string, value: any) => (
+          <div className="space-y-1">
+            <p className="text-[9px] text-gray-400 uppercase tracking-widest font-bold">{label}</p>
+            <p className="text-xs font-bold uppercase text-foreground">
+              {value && value.toString().trim() !== '' ? value : 'N/A'}
+            </p>
+          </div>
+        );
+
         return (
-          <div className="bg-card border border-border p-8 space-y-10 shadow-sm print:border-2 print:border-foreground">
-            {/* Header with Background */}
-            <div className="relative group">
-              <div className="aspect-[21/9] bg-foreground/5 border border-border rounded-lg flex items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-24 h-24 bg-foreground/10 rounded-full flex items-center justify-center border-4 border-background overflow-hidden">
-                    <User className="w-12 h-12 text-gray-400" />
+          <div className="bg-card border border-border p-8 space-y-12 shadow-sm print:border-2 print:border-foreground">
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-8 border-b border-border pb-10">
+              <div className="w-32 h-32 bg-foreground/5 rounded-2xl flex items-center justify-center border border-border overflow-hidden shrink-0 shadow-sm">
+                <User className="w-16 h-16 text-gray-300" />
+              </div>
+              <div className="flex-1 text-center md:text-left space-y-2">
+                <div className="inline-block px-3 py-1 bg-emerald-500/10 text-emerald-600 text-[9px] font-bold uppercase tracking-widest rounded-full mb-2">
+                  {selectedEmployee.status || 'N/A'} Employee
+                </div>
+                <h2 className="text-3xl font-bold uppercase tracking-tighter text-foreground">{selectedEmployee.name || 'N/A'}</h2>
+                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">{selectedEmployee.designation || 'N/A'}</p>
+                <div className="flex flex-wrap justify-center md:justify-start gap-6 mt-4">
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <Users className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">{selectedEmployee.department || 'N/A'}</span>
                   </div>
-                  <div className="text-center">
-                    <h2 className="text-xl font-bold uppercase tracking-tight">{selectedEmployee.name}</h2>
-                    <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">{selectedEmployee.designation}</p>
+                  <div className="flex items-center gap-2 text-gray-400">
+                    <Calendar className="w-4 h-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest font-mono text-foreground">Joined: {selectedEmployee.joining_date || 'N/A'}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-12">
               <div className="space-y-6">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 border-b border-border pb-2">Employment Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><p className="text-[9px] text-gray-500 uppercase tracking-widest">Employee ID</p><p className="text-xs font-bold uppercase">{selectedEmployee.id}</p></div>
-                  <div><p className="text-[9px] text-gray-500 uppercase tracking-widest">Department</p><p className="text-xs font-bold uppercase">{selectedEmployee.department}</p></div>
-                  <div><p className="text-[9px] text-gray-500 uppercase tracking-widest">Joining Date</p><p className="text-xs font-bold uppercase">{selectedEmployee.joining_date}</p></div>
-                  <div><p className="text-[9px] text-gray-500 uppercase tracking-widest">Status</p><p className="text-xs font-bold text-emerald-500 uppercase">{selectedEmployee.status}</p></div>
-                  <div><p className="text-[9px] text-gray-500 uppercase tracking-widest">Basic Salary</p><p className="text-xs font-bold uppercase">{formatCurrency(selectedEmployee.salary, baseCurrencySymbol)}</p></div>
-                </div>
-
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 border-b border-border pb-2 mt-12">Contact Information</h3>
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary border-b border-border pb-2">Personnel Information</h3>
                 <div className="grid grid-cols-1 gap-4">
-                  <div><p className="text-[9px] text-gray-500 uppercase tracking-widest">Phone</p><p className="text-xs font-bold uppercase">{selectedEmployee.phone}</p></div>
-                  <div><p className="text-[9px] text-gray-500 uppercase tracking-widest">Email</p><p className="text-xs font-bold">{selectedEmployee.email || 'N/A'}</p></div>
-                  <div><p className="text-[9px] text-gray-500 uppercase tracking-widest">Present Address</p><p className="text-xs text-gray-600 uppercase leading-relaxed">{selectedEmployee.presentAddress || 'N/A'}</p></div>
+                  {renderField('Blood Group', selectedEmployee.bloodGroup)}
+                  {renderField('NID Number', selectedEmployee.nidNumber)}
+                  {renderField('Driving License', selectedEmployee.drivingLicense)}
+                  {renderField('Passport Number', selectedEmployee.passportNo)}
+                  {renderField('Base Salary', selectedEmployee.salary ? `${baseCurrencySymbol}${selectedEmployee.salary}` : 'N/A')}
                 </div>
               </div>
 
               <div className="space-y-6">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 border-b border-border pb-2">Identification</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><p className="text-[9px] text-gray-500 uppercase tracking-widest">NID Number</p><p className="text-xs font-bold uppercase">{selectedEmployee.nidNumber || 'N/A'}</p></div>
-                  <div><p className="text-[9px] text-gray-500 uppercase tracking-widest">Blood Group</p><p className="text-xs font-bold uppercase">{selectedEmployee.bloodGroup || 'N/A'}</p></div>
-                  <div className="col-span-2"><p className="text-[9px] text-gray-500 uppercase tracking-widest">Passport No</p><p className="text-xs font-bold uppercase">{selectedEmployee.passportNo || 'N/A'}</p></div>
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary border-b border-border pb-2">Contact Information</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {renderField('Phone Number', selectedEmployee.phone)}
+                  {renderField('Email Address', selectedEmployee.email)}
+                  {renderField('Present Address', selectedEmployee.presentAddress)}
+                  {renderField('Permanent Address', selectedEmployee.permanentAddress)}
                 </div>
+              </div>
 
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 border-b border-border pb-2 mt-12">Emerency Contact</h3>
-                <div className="p-4 bg-foreground/5 border border-border rounded-lg space-y-3">
-                  <div className="flex justify-between items-center text-[10px] font-bold uppercase">
-                    <span className="text-gray-500">Contact Person:</span>
-                    <span>{selectedEmployee.emergencyContactName || 'N/A'}</span>
+              <div className="space-y-6">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary border-b border-border pb-2">Banking Details</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {renderField('Bank Name', selectedEmployee.bankName)}
+                  {renderField('Branch Name', selectedEmployee.bankBranch)}
+                  {renderField('Account Number', selectedEmployee.bankAccountNumber)}
+                  {renderField('Routing Number', selectedEmployee.bankRoutingNumber)}
+                </div>
+              </div>
+
+              <div className="col-span-full space-y-6">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary border-b border-border pb-2">Emergency Contacts</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="p-4 bg-foreground/5 border border-border rounded-lg space-y-3">
+                    <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest border-b border-border/50 pb-1">Primary Contact</p>
+                    {renderField('Name', selectedEmployee.emergencyContactName)}
+                    {renderField('Relation', selectedEmployee.emergencyContactRelation)}
+                    {renderField('Phone', selectedEmployee.emergencyContactPhone)}
                   </div>
-                  <div className="flex justify-between items-center text-[10px] font-bold uppercase">
-                    <span className="text-gray-500">Relationship:</span>
-                    <span>{selectedEmployee.emergencyContactRelation || 'N/A'}</span>
+                  <div className="p-4 bg-foreground/5 border border-border rounded-lg space-y-3">
+                    <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest border-b border-border/50 pb-1">Secondary Contact</p>
+                    {renderField('Name', selectedEmployee.emergencyContact2Name)}
+                    {renderField('Relation', selectedEmployee.emergencyContact2Relation)}
+                    {renderField('Phone', selectedEmployee.emergencyContact2Phone)}
                   </div>
-                  <div className="flex justify-between items-center text-[10px] font-bold uppercase">
-                    <span className="text-gray-500">Phone:</span>
-                    <span className="text-emerald-500">{selectedEmployee.emergencyContactPhone || 'N/A'}</span>
+                  <div className="p-4 bg-foreground/5 border border-border rounded-lg space-y-3">
+                    <p className="text-[9px] text-gray-500 uppercase font-bold tracking-widest border-b border-border/50 pb-1">Tertiary Contact</p>
+                    {renderField('Name', selectedEmployee.emergencyContact3Name)}
+                    {renderField('Relation', selectedEmployee.emergencyContact3Relation)}
+                    {renderField('Phone', selectedEmployee.emergencyContact3Phone)}
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="pt-20 pb-4 flex justify-end gap-10 text-[10px] uppercase font-bold tracking-widest print:hidden">
-              <button onClick={() => navigate('/payroll')} className="px-6 py-2 bg-foreground/5 hover:bg-foreground/10 text-foreground transition-all">Back to List</button>
-              <button onClick={handlePrint} className="px-6 py-2 bg-foreground text-background hover:opacity-90 transition-all">Download PDF</button>
             </div>
           </div>
         );
@@ -448,7 +405,6 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
       case 'headcount':
         const activeCount = employees.filter(e => e.status === 'Active').length;
         const leaveCount = employees.filter(e => e.status === 'On Leave').length;
-        const totalSalary = employees.reduce((sum, e) => sum + (parseFloat(e.salary) || 0), 0);
 
         return (
           <div className="space-y-8">
@@ -470,50 +426,45 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
               ))}
             </div>
 
-            <div className="bg-card border border-border shadow-sm">
-              <div className="p-4 border-b border-border bg-foreground/5">
-                <h3 className="text-xs font-bold uppercase tracking-widest">Employee Roster</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-foreground/5 border-b border-border">
-                      <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">#</th>
-                      <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Name</th>
-                      <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Designation</th>
-                      <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 text-right">Base Salary</th>
-                      <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Joined</th>
-                      <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</th>
+            <div className="bg-card border border-border shadow-sm overflow-x-auto">
+              <table className="w-full text-left border-separate border-spacing-0 min-w-[1000px]">
+                <thead className="sticky top-0 z-30">
+                  <tr className="bg-card shadow-sm">
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b border-border bg-card">#</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b border-border bg-card">Name</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b border-border bg-card">Designation</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b border-border bg-card text-right">Base Salary</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b border-border bg-card">Joined</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b border-border bg-card">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border text-xs">
+                  {employees.map((emp, idx) => (
+                    <tr key={emp.id} className="hover:bg-foreground/5 transition-colors">
+                      <td className="p-4 text-gray-400">{idx + 1}</td>
+                      <td className="p-4 uppercase font-bold tracking-tight">{emp.name}</td>
+                      <td className="p-4 uppercase text-[10px] text-gray-500 font-bold">{emp.designation}</td>
+                      <td className="p-4 text-right font-mono">{formatCurrency(emp.salary, baseCurrencySymbol)}</td>
+                      <td className="p-4 font-mono text-[10px]">{emp.joining_date}</td>
+                      <td className="p-4">
+                        <span className={cn(
+                          "text-[8px] font-bold uppercase px-2 py-0.5 rounded-full",
+                          emp.status === 'Active' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
+                        )}>
+                          {emp.status}
+                        </span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border text-xs">
-                    {employees.map((emp, idx) => (
-                      <tr key={emp.id} className="hover:bg-foreground/5 transition-colors">
-                        <td className="p-4 text-gray-400">{idx + 1}</td>
-                        <td className="p-4 uppercase font-bold tracking-tight">{emp.name}</td>
-                        <td className="p-4 uppercase text-[10px] text-gray-500 font-bold">{emp.designation}</td>
-                        <td className="p-4 text-right font-mono">{formatCurrency(emp.salary, baseCurrencySymbol)}</td>
-                        <td className="p-4 font-mono text-[10px]">{emp.joining_date}</td>
-                        <td className="p-4">
-                          <span className={cn(
-                            "text-[8px] font-bold uppercase px-2 py-0.5 rounded-full",
-                            emp.status === 'Active' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
-                          )}>
-                            {emp.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-foreground/5 font-bold border-t border-border">
-                    <tr>
-                      <td colSpan={3} className="p-4 uppercase tracking-widest text-[10px]">Grand Total Payroll Liability</td>
-                      <td className="p-4 text-right font-mono text-sm">{formatCurrency(totalSalary, baseCurrencySymbol)}</td>
-                      <td colSpan={2}></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+                <tfoot className="bg-foreground/5 font-bold border-t border-border">
+                  <tr>
+                    <td colSpan={3} className="p-4 uppercase tracking-widest text-[10px]">Grand Total Payroll Liability</td>
+                    <td className="p-4 text-right font-mono text-sm">{formatCurrency(totalSalary, baseCurrencySymbol)}</td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
         );
@@ -536,11 +487,23 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
   );
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="max-w-[1400px] mx-auto">
-        {renderReportHeader()}
-        {renderOfficialHeader()}
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full">
+    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+      {renderReportHeader()}
+
+      <div className="flex-1 overflow-y-auto no-print">
+        <div className="px-4 lg:px-6 pb-4 lg:pb-6">
+          <div className="space-y-6">
+            {renderOfficialHeader()}
+            <div>
+              {renderContent()}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="hidden print:block">
+        <div className="p-8">
+          {renderOfficialHeader()}
           {renderContent()}
         </div>
       </div>
