@@ -575,7 +575,14 @@ export function VoucherEntry() {
   const finalTotal = calculateFinalTotal(isInventory ? totalInvAmount : (isSingleEntry ? totalSingleAmount : totalDebit));
 
   const isBalanced = () => {
-    if (isInventory) return partyLedgerId && salesPurchaseLedgerId && invEntries.every(i => i.item_id && i.qty > 0);
+    if (isInventory) {
+      if (isPhysicalStock) return invEntries.every(i => i.item_id && i.qty > 0);
+      return partyLedgerId && salesPurchaseLedgerId && invEntries.every(i => i.item_id && i.qty > 0);
+    }
+    if (isStockJournal) {
+      return consumptionEntries.every(e => e.item_id && e.qty > 0) && 
+             productionEntries.every(e => e.item_id && e.qty > 0);
+    }
     if (isSingleEntry) return bankCashLedgerId && accEntries.some(e => e.ledger_id && e.amount > 0);
     if (isJournal) return Math.abs(totalDebit - totalCredit) < 0.01 && totalDebit > 0;
     return false;
@@ -872,14 +879,14 @@ export function VoucherEntry() {
               <select
                 value={vType}
                 onChange={e => setVType(e.target.value)}
-                tabIndex={1}
+                tabIndex={10}
                 className={cn(
                   "w-full bg-background border border-border p-1.5 text-xs outline-none focus:border-foreground font-bold uppercase",
                   getVoucherColor(vType)
                 )}
               >
-                {['Sales', 'Purchase', 'Payment', 'Receipt', 'Contra', 'Journal']
-                  .filter(type => isInventoryEnabled || (type !== 'Sales' && type !== 'Purchase'))
+                {['Sales', 'Purchase', 'Payment', 'Receipt', 'Contra', 'Journal', 'Physical Stock', 'Stock Journal']
+                  .filter(type => isInventoryEnabled || (type !== 'Sales' && type !== 'Purchase' && type !== 'Physical Stock' && type !== 'Stock Journal'))
                   .map(type => (
                     <option key={type} value={type}>{type}</option>
                   ))}
@@ -898,6 +905,7 @@ export function VoucherEntry() {
                 onChange={e => setRefNo(e.target.value)}
                 placeholder="e.g. REF-001"
                 tabIndex={1}
+                autoFocus
                 className="w-full bg-background border border-border text-foreground p-1.5 lg:p-2 text-xs lg:text-sm outline-none focus:border-foreground" 
               />
             </div>
@@ -1122,7 +1130,7 @@ export function VoucherEntry() {
         </div>
 
         {/* Main Entry Table */}
-        <div className={cn("lg:flex-1 lg:overflow-y-auto no-scrollbar overflow-x-auto border-b border-border", voucherTableCompact && "p-0.5")}>
+        <div className={cn("flex-1 overflow-y-auto overflow-x-auto border-b border-border", voucherTableCompact && "p-0.5")}>
           {isStockJournal ? (
             <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-border min-h-[400px]">
               {/* Source (Consumption) */}

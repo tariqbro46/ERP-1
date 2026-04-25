@@ -274,16 +274,36 @@ export function exportElementToPDF(elementId: string, filename: string) {
   const doc = new jsPDF();
   doc.setFont('courier');
   
-  doc.setFontSize(16);
-  doc.text(filename.replace(/_/g, ' ').toUpperCase(), 14, 20);
+  doc.setFontSize(14);
+  const title = filename.replace(/_/g, ' ').toUpperCase();
+  doc.text(title, 14, 20);
   
-  autoTable(doc, {
-    html: `#${elementId} table`,
-    startY: 30,
-    theme: 'grid',
-    styles: { font: 'courier', fontSize: 8 },
-    headStyles: { fillColor: [240, 240, 240], textColor: 0 }
-  });
+  let currentY = 30;
+
+  // Find all tables and export them sequentially
+  const tables = element.querySelectorAll('table');
+  if (tables.length > 0) {
+    tables.forEach((table, index) => {
+      autoTable(doc, {
+        html: table,
+        startY: currentY,
+        theme: 'grid',
+        styles: { font: 'courier', fontSize: 7, cellPadding: 1.5 },
+        headStyles: { fillColor: [240, 240, 240], textColor: 0 },
+        margin: { left: 10, right: 10 }
+      });
+      // @ts-ignore - finalY is added by autoTable
+      currentY = (doc as any).lastAutoTable.finalY + 10;
+      
+      // If we are getting close to the bottom, start a new page (autoTable does this automatically mostly, 
+      // but we need to track if we need to add a spacer)
+    });
+  } else {
+    // If no tables, just export text content as a fallback
+    doc.setFontSize(10);
+    const textLines = doc.splitTextToSize(element.innerText, 180);
+    doc.text(textLines, 14, 30);
+  }
 
   doc.save(`${filename}.pdf`);
 }

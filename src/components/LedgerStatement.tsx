@@ -874,7 +874,7 @@ export function LedgerStatement() {
       />
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+      <div className="flex-1 overflow-y-auto p-0">
         <div className="p-4 lg:p-6 space-y-6">
           <div id="ledger-report" className={cn(
             "bg-card border border-border relative",

@@ -41,6 +41,8 @@ export function StockItemReport() {
   );
   
   const [summaryData, setSummaryData] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [viewMode, setViewMode] = useState<'summary' | 'transactions'>('summary');
   const [viewType, setViewType] = useState<'monthly' | 'daily'>('monthly');
 
   useEffect(() => {
@@ -88,8 +90,15 @@ export function StockItemReport() {
     setActiveIndex(-1);
     setLoading(true);
     try {
-      const allInvEntries = await erpService.getCollection('inventory_entries', user!.companyId);
+      const [allInvEntries, allVouchers] = await Promise.all([
+        erpService.getCollection('inventory_entries', user!.companyId),
+        erpService.getCollection('vouchers', user!.companyId)
+      ]);
       
+      const voucherMap = allVouchers.reduce((acc: any, v: any) => {
+        acc[v.id] = v;
+        return acc;
+      }, {});
       // Parse dates consistently as local midnight to avoid timezone shifts
       const parseLocal = (dateStr: string) => {
         const [y, m, d] = dateStr.split('-').map(Number);
@@ -267,6 +276,24 @@ export function StockItemReport() {
         }
         setSummaryData(summary);
       }
+
+      // Prepare raw transactions
+      const detailedTransactions = itemEntries.map((e: any) => {
+        const v = voucherMap[e.voucher_id] || {};
+        return {
+          ...e,
+          v_no: v.v_no || 'N/A',
+          v_type: v.v_type || 'N/A',
+          party_name: v.particulars || v.party_ledger_name || 'N/A',
+          v_id: v.id
+        };
+      }).sort((a, b) => {
+        const dateA = a.date || (a.created_at?.toDate?.() || 0);
+        const dateB = b.date || (b.created_at?.toDate?.() || 0);
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+      });
+      setTransactions(detailedTransactions);
+
     } catch (err) {
       console.error('Error calculating summary:', err);
     } finally {
@@ -328,9 +355,28 @@ export function StockItemReport() {
           <ArrowLeft className="w-6 h-6" />
         </button>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
-          <div>
+          <div className="flex flex-col">
             <h1 className="text-3xl font-bold text-gray-900">{t('stockItem.title')}</h1>
-            <p className="text-gray-500">{t('stockItem.subtitle')}</p>
+            <div className="flex items-center gap-1 mt-1">
+              <button 
+                onClick={() => setViewMode('summary')}
+                className={cn(
+                  "px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md transition-all",
+                  viewMode === 'summary' ? "bg-primary text-white" : "text-gray-500 hover:bg-gray-100"
+                )}
+              >
+                Summary
+              </button>
+              <button 
+                onClick={() => setViewMode('transactions')}
+                className={cn(
+                  "px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md transition-all",
+                  viewMode === 'transactions' ? "bg-primary text-white" : "text-gray-500 hover:bg-gray-100"
+                )}
+              >
+                Transactions
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
@@ -415,69 +461,128 @@ export function StockItemReport() {
                   {t('stockItem.currentStock')} <span className="font-bold text-primary">{formatNumber(selectedItem.current_stock)} {selectedItem.unitName}</span>
                 </div>
               </div>
+              
               <div id="stock-item-report-table" className="overflow-x-auto print:p-8 overflow-y-auto max-h-[600px] no-scrollbar">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500 sticky top-0 z-10 h-10">
-                      <th rowSpan={2} className="px-6 py-0 border-r border-gray-100 bg-gray-100 align-middle">
-                        {viewType === 'daily' ? 'Date' : t('stockItem.month')}
-                      </th>
-                      <th colSpan={2} className="px-6 py-1 text-center border-b border-gray-100 bg-green-100 text-green-700">{t('stockItem.inward')}</th>
-                      <th colSpan={2} className="px-6 py-1 text-center border-b border-gray-100 bg-red-100 text-red-700">{t('stockItem.outward')}</th>
-                      <th rowSpan={2} className="px-6 py-0 text-right bg-gray-100 align-middle">Closing Qty</th>
-                    </tr>
-                    <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500 sticky top-[40px] z-10 h-10">
-                      <th className="px-6 py-0 text-right bg-green-50 align-middle">{t('stockItem.qty')}</th>
-                      <th className="px-6 py-0 text-right border-r border-gray-100 bg-green-50 align-middle">{t('stockItem.val')}</th>
-                      <th className="px-6 py-0 text-right bg-red-50 align-middle">{t('stockItem.qty')}</th>
-                      <th className="px-6 py-0 text-right bg-red-50 align-middle">{t('stockItem.val')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {summaryData.map((row, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-3 font-medium text-gray-900 border-r border-gray-100">
-                          {viewType === 'daily' ? formatReportDate(row.label, settings.dateFormat) : row.label}
+                {viewMode === 'summary' ? (
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500 sticky top-0 z-10 h-10">
+                        <th rowSpan={2} className="px-6 py-0 border-r border-gray-100 bg-gray-100 align-middle">
+                          {viewType === 'daily' ? 'Date' : t('stockItem.month')}
+                        </th>
+                        <th colSpan={2} className="px-6 py-1 text-center border-b border-gray-100 bg-green-100 text-green-700">{t('stockItem.inward')}</th>
+                        <th colSpan={2} className="px-6 py-1 text-center border-b border-gray-100 bg-red-100 text-red-700">{t('stockItem.outward')}</th>
+                        <th rowSpan={2} className="px-6 py-0 text-right bg-gray-100 align-middle">Closing Qty</th>
+                      </tr>
+                      <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500 sticky top-[40px] z-10 h-10">
+                        <th className="px-6 py-0 text-right bg-green-50 align-middle">{t('stockItem.qty')}</th>
+                        <th className="px-6 py-0 text-right border-r border-gray-100 bg-green-50 align-middle">{t('stockItem.val')}</th>
+                        <th className="px-6 py-0 text-right bg-red-50 align-middle">{t('stockItem.qty')}</th>
+                        <th className="px-6 py-0 text-right bg-red-50 align-middle">{t('stockItem.val')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {summaryData.map((row, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-3 font-medium text-gray-900 border-r border-gray-100">
+                            {viewType === 'daily' ? formatReportDate(row.label, settings.dateFormat) : row.label}
+                          </td>
+                          <td className="px-6 py-3 text-right text-green-600">
+                            {row.inwardQty > 0 ? `${formatNumber(row.inwardQty)} ${selectedItem.unitName || ''}` : '-'}
+                          </td>
+                          <td className="px-6 py-3 text-right text-green-700 border-r border-gray-100">
+                            {row.inwardValue > 0 ? formatCurrency(row.inwardValue) : '-'}
+                          </td>
+                          <td className="px-6 py-3 text-right text-red-600">
+                            {row.outwardQty > 0 ? `${formatNumber(row.outwardQty)} ${selectedItem.unitName || ''}` : '-'}
+                          </td>
+                          <td className="px-6 py-3 text-right text-red-700">
+                            {row.outwardValue > 0 ? formatCurrency(row.outwardValue) : '-'}
+                          </td>
+                          <td className="px-6 py-3 text-right font-bold text-primary">
+                            {row.closingQty !== 0 ? `${formatNumber(row.closingQty)} ${selectedItem.unitName || ''}` : row.isOpening ? `0.00 ${selectedItem.unitName || ''}` : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-gray-50 font-bold border-t border-gray-200 sticky bottom-0">
+                      <tr>
+                        <td className="px-6 py-4 border-r border-gray-100 uppercase text-[10px]">{t('common.total')}</td>
+                        <td className="px-6 py-4 text-right">
+                          {formatNumber(summaryData.reduce((sum, m) => sum + m.inwardQty, 0))} {selectedItem.unitName || ''}
                         </td>
-                        <td className="px-6 py-3 text-right text-green-600">
-                          {row.inwardQty > 0 ? `${formatNumber(row.inwardQty)} ${selectedItem.unitName || ''}` : '-'}
+                        <td className="px-6 py-4 text-right border-r border-gray-100">
+                          {formatCurrency(summaryData.reduce((sum, m) => sum + m.inwardValue, 0))}
                         </td>
-                        <td className="px-6 py-3 text-right text-green-700 border-r border-gray-100">
-                          {row.inwardValue > 0 ? formatCurrency(row.inwardValue) : '-'}
+                        <td className="px-6 py-4 text-right">
+                          {formatNumber(summaryData.reduce((sum, m) => sum + m.outwardQty, 0))} {selectedItem.unitName || ''}
                         </td>
-                        <td className="px-6 py-3 text-right text-red-600">
-                          {row.outwardQty > 0 ? `${formatNumber(row.outwardQty)} ${selectedItem.unitName || ''}` : '-'}
+                        <td className="px-6 py-4 text-right">
+                          {formatCurrency(summaryData.reduce((sum, m) => sum + m.outwardValue, 0))}
                         </td>
-                        <td className="px-6 py-3 text-right text-red-700">
-                          {row.outwardValue > 0 ? formatCurrency(row.outwardValue) : '-'}
-                        </td>
-                        <td className="px-6 py-3 text-right font-bold text-primary">
-                          {row.closingQty !== 0 ? `${formatNumber(row.closingQty)} ${selectedItem.unitName || ''}` : row.isOpening ? `0.00 ${selectedItem.unitName || ''}` : '-'}
+                        <td className="px-6 py-4 text-right text-primary">
+                        {formatNumber(summaryData.reduce((sum, m) => sum + (m.inwardQty - m.outwardQty), 0))} {selectedItem.unitName || ''}
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-gray-50 font-bold border-t border-gray-200 sticky bottom-0">
-                    <tr>
-                      <td className="px-6 py-4 border-r border-gray-100 uppercase text-[10px]">{t('common.total')}</td>
-                      <td className="px-6 py-4 text-right">
-                        {formatNumber(summaryData.reduce((sum, m) => sum + m.inwardQty, 0))} {selectedItem.unitName || ''}
-                      </td>
-                      <td className="px-6 py-4 text-right border-r border-gray-100">
-                        {formatCurrency(summaryData.reduce((sum, m) => sum + m.inwardValue, 0))}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {formatNumber(summaryData.reduce((sum, m) => sum + m.outwardQty, 0))} {selectedItem.unitName || ''}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {formatCurrency(summaryData.reduce((sum, m) => sum + m.outwardValue, 0))}
-                      </td>
-                      <td className="px-6 py-4 text-right text-primary">
-                      {formatNumber(summaryData.reduce((sum, m) => sum + (m.inwardQty - m.outwardQty), 0))} {selectedItem.unitName || ''}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+                    </tfoot>
+                  </table>
+                ) : (
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500 sticky top-0 z-10 h-10">
+                        <th className="px-6 py-2">Date</th>
+                        <th className="px-6 py-2">Type</th>
+                        <th className="px-6 py-2">Vch No</th>
+                        <th className="px-6 py-2">Particulars</th>
+                        <th className="px-6 py-2 text-right">Qty</th>
+                        <th className="px-6 py-2 text-right">Rate</th>
+                        <th className="px-6 py-2 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {transactions.length > 0 ? (
+                        transactions.map((tx, idx) => (
+                          <tr 
+                            key={idx} 
+                            onClick={() => tx.v_id && navigate('/vouchers', { state: { editId: tx.v_id } })}
+                            className="hover:bg-primary/5 transition-colors cursor-pointer group"
+                          >
+                            <td className="px-6 py-3 text-sm text-gray-900 group-hover:text-primary">
+                              {formatReportDate(tx.date || tx.created_at?.toDate?.() || '', settings.dateFormat)}
+                            </td>
+                            <td className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-gray-500">
+                              {tx.v_type}
+                            </td>
+                            <td className="px-6 py-3 text-sm text-gray-600">
+                              {tx.v_no}
+                            </td>
+                            <td className="px-6 py-3 text-sm font-medium text-gray-900 capitalize">
+                              {tx.party_name}
+                            </td>
+                            <td className={cn(
+                              "px-6 py-3 text-sm text-right font-bold",
+                              tx.movement_type === 'Inward' ? "text-green-600" : "text-red-600"
+                            )}>
+                              {formatNumber(tx.qty + (tx.free_qty || 0))} {selectedItem.unitName}
+                            </td>
+                            <td className="px-6 py-3 text-sm text-right text-gray-600">
+                              {formatCurrency(tx.rate)}
+                            </td>
+                            <td className="px-6 py-3 text-sm text-right font-bold text-gray-900">
+                              {formatCurrency(tx.qty * tx.rate)}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-12 text-center text-gray-400 italic">
+                            No transactions found for this period.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           ) : (

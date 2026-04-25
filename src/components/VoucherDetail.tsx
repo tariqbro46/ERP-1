@@ -85,7 +85,7 @@ export function VoucherDetail() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto no-scrollbar bg-background transition-colors">
+    <div className="flex-1 overflow-y-auto bg-background transition-colors">
       <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border pb-6">

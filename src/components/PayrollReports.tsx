@@ -23,6 +23,9 @@ import { useSettings } from '../contexts/SettingsContext';
 import { formatCurrency, cn } from '../lib/utils';
 import { format } from 'date-fns';
 
+import { printUtils } from '../utils/printUtils';
+import { exportUtils } from '../utils/exportUtils';
+
 type PayrollReportType = 
   | 'payslip' 
   | 'paysheet' 
@@ -77,7 +80,11 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
   }
 
   const handlePrint = () => {
-    window.print();
+    printUtils.printElement('payroll-report', reportType.replace(/_/g, ' '), settings);
+  };
+
+  const handleDownload = () => {
+    exportUtils.exportElementToPDF('payroll-report', reportType.replace(/_/g, ' '));
   };
 
   const filteredEmployees = useMemo(() => employees.filter(emp => 
@@ -143,7 +150,7 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
               <Printer className="w-4 h-4" />
             </button>
             <button 
-              onClick={handlePrint}
+              onClick={handleDownload}
               className="p-2.5 bg-card border border-border text-foreground hover:bg-foreground/5 rounded transition-all shadow-sm"
               title="Download PDF"
             >
@@ -540,11 +547,11 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
     <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
       {renderReportHeader()}
 
-      <div className="flex-1 overflow-y-auto no-scrollbar no-print">
+      <div className="flex-1 overflow-y-auto no-print">
         <div className="px-4 lg:px-6 py-4 lg:py-6">
           <div className="space-y-6">
             {renderOfficialHeader()}
-            <div className="bg-card border border-border">
+            <div id="payroll-report" className="bg-card border border-border">
               {renderContent()}
             </div>
           </div>
