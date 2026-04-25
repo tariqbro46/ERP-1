@@ -104,11 +104,9 @@ export function StockSummary() {
         return inv.movement_type === 'Inward' ? sum + qty : sum - qty;
       }, 0);
 
-    // Add opening allocation for this godown
-    const allocation = openingAllocations.find((a: any) => a.godown_id === godownId);
-    const allocatedQty = allocation ? Number(allocation.qty) || 0 : 0;
-
-    return transactionStock + allocatedQty;
+    // Use Global Opening Balance as starting point for specific godown as requested
+    // Logic: Global Opening + Godown-specific transactions
+    return transactionStock + openingQty;
   };
 
   const processedItems = items.map(item => ({
@@ -124,6 +122,13 @@ export function StockSummary() {
     if (showLowStockOnly && !item.isLowStock) return false;
     return true;
   }).sort((a, b) => a.name.localeCompare(b.name));
+
+  const formatQty = (qty: number, unitName?: string) => {
+    if (qty === 0) return '0.00';
+    const isPcs = unitName?.toLowerCase() === 'pcs';
+    if (isPcs) return Math.round(qty).toString();
+    return formatNumber(qty);
+  };
 
   const groupedItems: Record<string, any[]> = {};
   processedItems.forEach(item => {
@@ -370,7 +375,7 @@ export function StockSummary() {
                         <span className="text-xs text-foreground/80 italic">
                           {highlightText(item.name, search)}
                         </span>
-                        <span className="text-xs font-bold text-foreground font-mono">{formatNumber(item.displayStock)} {item.units?.name}</span>
+                        <span className="text-xs font-bold text-foreground font-mono">{formatQty(item.displayStock, item.units?.name)}</span>
                       </div>
                       <div className="flex justify-between items-center text-[10px] text-gray-500 uppercase">
                         <span>{t('common.avgRate')}: ৳ {formatNumber(item.avg_cost || item.opening_rate || 0)}</span>
@@ -446,7 +451,7 @@ export function StockSummary() {
                             )}
                           </td>
                            <td className="px-6 py-3 text-right text-foreground/80 font-mono">
-                             {formatNumber(item.displayStock)} <span className="text-[9px] text-gray-600 uppercase">{item.units?.name}</span>
+                             {formatQty(item.displayStock, item.units?.name)}
                            </td>
                            <td className="px-6 py-3 text-right text-foreground/80 font-mono">
                              {formatNumber(item.avg_cost || item.opening_rate || 0)}

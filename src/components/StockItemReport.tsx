@@ -22,9 +22,13 @@ export function StockItemReport() {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
+  const [godowns, setGodowns] = useState<any[]>([]);
+  const [selectedGodown, setSelectedGodown] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [openingBalance, setOpeningBalance] = useState(0);
+  const [openingValue, setOpeningValue] = useState(0);
   
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -49,12 +53,14 @@ export function StockItemReport() {
     async function fetchData() {
       if (!user?.companyId) return;
       try {
-        const [stockItems, unitsRes] = await Promise.all([
+        const [stockItems, unitsRes, godownsRes] = await Promise.all([
           erpService.getItems(user.companyId),
-          erpService.getCollection('units', user.companyId)
+          erpService.getCollection('units', user.companyId),
+          erpService.getGodowns(user.companyId)
         ]);
         setItems(stockItems);
         setUnits(unitsRes);
+        setGodowns(godownsRes || []);
         
         const forceId = searchParams.get('id') || locationState?.itemId;
         if (forceId) {
@@ -74,12 +80,12 @@ export function StockItemReport() {
     fetchData();
   }, [user?.companyId]);
 
-  // Handle date change
+  // Handle filter change
   useEffect(() => {
     if (selectedItem) {
       handleItemSelect(selectedItem, items, units, startDate, endDate);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, selectedGodown]);
 
   async function handleItemSelect(item: any, allItems: any[] = items, allUnits: any[] = units, from: string = startDate, to: string = endDate) {
     const itemWithUnit = {
@@ -112,6 +118,7 @@ export function StockItemReport() {
       // Calculate Opening Balance (sum of all entries before START date)
       const openingEntries = allInvEntries.filter((e: any) => {
         if (String(e.item_id) !== String(item.id)) return false;
+        if (selectedGodown && e.godown_id !== selectedGodown) return false;
         let dateObj: Date;
         if (e.date && typeof e.date === 'string' && e.date.includes('-')) {
           dateObj = parseLocal(e.date);
@@ -122,6 +129,7 @@ export function StockItemReport() {
       });
 
       // Include master opening_qty and opening_qty * opening_rate in the initial opening calculations
+      // User specifically requested: (Global Opening + Filtered transactions)
       const initialQty = Number(item.opening_qty) || 0;
       const initialValue = initialQty * (Number(item.opening_rate) || 0);
 
@@ -135,8 +143,12 @@ export function StockItemReport() {
         return sum + (e.movement_type === 'Inward' ? val : -val);
       }, initialValue);
 
+      setOpeningBalance(openingBalance);
+      setOpeningValue(openingValue);
+
       const itemEntries = allInvEntries.filter((e: any) => {
         if (String(e.item_id) !== String(item.id)) return false;
+        if (selectedGodown && e.godown_id !== selectedGodown) return false;
         
         // Robust date parsing for YYYY-MM-DD or Timestamp
         let dateObj: Date;
@@ -277,21 +289,36 @@ export function StockItemReport() {
         setSummaryData(summary);
       }
 
+      const openingBalanceRow = {
+        date: from,
+        v_type: 'Opening',
+        v_no: '-',
+        party_name: 'Opening Balance',
+        qty: openingBalance,
+        rate: openingBalance > 0 ? openingValue / openingBalance : 0,
+        amount: openingValue,
+        movement_type: 'Inward',
+        isOpening: true
+      };
+
       // Prepare raw transactions
-      const detailedTransactions = itemEntries.map((e: any) => {
-        const v = voucherMap[e.voucher_id] || {};
-        return {
-          ...e,
-          v_no: v.v_no || 'N/A',
-          v_type: v.v_type || 'N/A',
-          party_name: v.particulars || v.party_ledger_name || 'N/A',
-          v_id: v.id
-        };
-      }).sort((a, b) => {
-        const dateA = a.date || (a.created_at?.toDate?.() || 0);
-        const dateB = b.date || (b.created_at?.toDate?.() || 0);
-        return new Date(dateB).getTime() - new Date(dateA).getTime();
-      });
+      const detailedTransactions = [
+        openingBalanceRow,
+        ...itemEntries.map((e: any) => {
+          const v = voucherMap[e.voucher_id] || {};
+          return {
+            ...e,
+            v_no: v.v_no || 'N/A',
+            v_type: v.v_type || 'N/A',
+            party_name: v.particulars || v.party_ledger_name || 'N/A',
+            v_id: v.id
+          };
+        }).sort((a, b) => {
+          const dateA = a.date || (a.created_at?.toDate?.() || 0);
+          const dateB = b.date || (b.created_at?.toDate?.() || 0);
+          return new Date(dateB).getTime() - new Date(dateA).getTime();
+        })
+      ];
       setTransactions(detailedTransactions);
 
     } catch (err) {
@@ -301,23 +328,89 @@ export function StockItemReport() {
     }
   }
 
+  const formatQty = (qty: number) => {
+    if (qty === 0) return '-';
+    const isPcs = selectedItem?.unitName?.toLowerCase() === 'pcs';
+    if (isPcs) return Math.round(qty).toString();
+    return formatNumber(qty);
+  };
+
   const handleDownloadPDF = () => {
     if (!selectedItem) return;
-    const exportData = summaryData.map(m => ({
-      label: m.label,
-      inward_qty: `${m.inwardQty} ${selectedItem.unitName}`,
-      inward_val: m.inwardValue,
-      outward_qty: `${m.outwardQty} ${selectedItem.unitName}`,
-      outward_val: m.outwardValue,
-      net_qty: `${m.inwardQty - m.outwardQty} ${selectedItem.unitName}`
-    }));
 
-    exportToPDF(`Stock_Item_${selectedItem.name}`, `Stock Item ${viewType === 'daily' ? 'Daily' : 'Monthly'} Summary: ${selectedItem.name}`, exportData, [viewType === 'daily' ? 'Date' : 'Month', 'Inward Qty', 'Inward Val', 'Outward Qty', 'Outward Val', 'Net Qty'], settings);
+    if (viewMode === 'summary') {
+      const unit = selectedItem.unitName || 'Qty';
+      const label = viewType === 'daily' ? 'Date' : 'Month';
+      
+      const exportData = [
+        {
+          [label.toLowerCase()]: 'Opening Balance',
+          [`inward_(${unit.toLowerCase()})`]: '',
+          'inward_val': '',
+          [`outward_(${unit.toLowerCase()})`]: '',
+          'outward_val': '',
+          [`closing_(${unit.toLowerCase()})`]: formatQty(openingBalance)
+        },
+        ...summaryData.map(m => {
+          const row: any = {};
+          row[label.toLowerCase()] = viewType === 'daily' ? formatReportDate(m.label, settings.dateFormat) : m.label;
+          row[`inward_(${unit.toLowerCase()})`] = formatQty(m.inwardQty);
+          row['inward_val'] = m.inwardValue;
+          row[`outward_(${unit.toLowerCase()})`] = formatQty(m.outwardQty);
+          row['outward_val'] = m.outwardValue;
+          row[`closing_(${unit.toLowerCase()})`] = formatQty(m.closingQty);
+          return row;
+        })
+      ];
+
+      exportToPDF(
+        `Stock_Item_${selectedItem.name}_Summary`, 
+        `Stock Item ${viewType === 'daily' ? 'Daily' : 'Monthly'} Summary: ${selectedItem.name}`, 
+        exportData, 
+        [label, `Inward (${unit})`, 'Inward Val', `Outward (${unit})`, 'Outward Val', `Closing (${unit})`], 
+        settings
+      );
+    } else {
+      const unit = selectedItem.unitName || 'Qty';
+      const exportData = [
+        {
+          'date': 'Opening Balance',
+          'type': '',
+          'vch_no': '',
+          'particulars': '',
+          [`qty_(${unit.toLowerCase()})`]: formatQty(openingBalance),
+          'rate': '',
+          'amount': formatCurrency(openingValue)
+        },
+        ...transactions.map(tx => {
+          const row: any = {};
+          row['date'] = formatReportDate(tx.date || tx.created_at?.toDate?.() || '', settings.dateFormat);
+          row['type'] = tx.v_type;
+          row['vch_no'] = tx.v_no;
+          row['particulars'] = tx.party_name;
+          row[`qty_(${unit.toLowerCase()})`] = formatQty(tx.qty + (tx.free_qty || 0));
+          row['rate'] = tx.rate;
+          row['amount'] = tx.qty * tx.rate;
+          return row;
+        })
+      ];
+
+      exportToPDF(
+        `Stock_Item_${selectedItem.name}_Transactions`, 
+        `Stock Item Transactions: ${selectedItem.name}`, 
+        exportData, 
+        ['Date', 'Type', 'Vch No', 'Particulars', `Qty (${unit})`, 'Rate', 'Amount'], 
+        settings
+      );
+    }
   };
 
   const handlePrint = () => {
     if (!selectedItem) return;
-    printElement('stock-item-report-table', `STOCK ITEM SUMMARY - ${selectedItem.name.toUpperCase()}`, settings);
+    const title = viewMode === 'summary' 
+      ? `STOCK ITEM SUMMARY - ${selectedItem.name.toUpperCase()}`
+      : `STOCK ITEM TRANSACTIONS - ${selectedItem.name.toUpperCase()}`;
+    printElement('stock-item-report-table', title, settings);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -379,6 +472,19 @@ export function StockItemReport() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+              <Filter className="w-4 h-4 text-gray-400" />
+              <select
+                value={selectedGodown}
+                onChange={(e) => setSelectedGodown(e.target.value)}
+                className="bg-transparent border-none text-xs font-bold text-gray-900 outline-none focus:ring-0"
+              >
+                <option value="">All Godowns</option>
+                {godowns.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
               <DateInput 
                 value={startDate}
@@ -470,9 +576,9 @@ export function StockItemReport() {
                         <th rowSpan={2} className="px-6 py-0 border-r border-gray-100 bg-gray-100 align-middle">
                           {viewType === 'daily' ? 'Date' : t('stockItem.month')}
                         </th>
-                        <th colSpan={2} className="px-6 py-1 text-center border-b border-gray-100 bg-green-100 text-green-700">{t('stockItem.inward')}</th>
-                        <th colSpan={2} className="px-6 py-1 text-center border-b border-gray-100 bg-red-100 text-red-700">{t('stockItem.outward')}</th>
-                        <th rowSpan={2} className="px-6 py-0 text-right bg-gray-100 align-middle">Closing Qty</th>
+                        <th colSpan={2} className="px-6 py-1 text-center border-b border-gray-100 bg-green-100 text-green-700">{t('stockItem.inward')} ({selectedItem.unitName})</th>
+                        <th colSpan={2} className="px-6 py-1 text-center border-b border-gray-100 bg-red-100 text-red-700">{t('stockItem.outward')} ({selectedItem.unitName})</th>
+                        <th rowSpan={2} className="px-6 py-0 text-right bg-gray-100 align-middle">Closing ({selectedItem.unitName})</th>
                       </tr>
                       <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500 sticky top-[40px] z-10 h-10">
                         <th className="px-6 py-0 text-right bg-green-50 align-middle">{t('stockItem.qty')}</th>
@@ -482,25 +588,37 @@ export function StockItemReport() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
+                      <tr className="bg-gray-50/50 italic">
+                        <td className="px-6 py-3 font-medium text-gray-500 border-r border-gray-100">
+                          Opening Balance
+                        </td>
+                        <td className="px-6 py-3 text-right">-</td>
+                        <td className="px-6 py-3 text-right border-r border-gray-100">-</td>
+                        <td className="px-6 py-3 text-right">-</td>
+                        <td className="px-6 py-3 text-right">-</td>
+                        <td className="px-6 py-3 text-right font-bold text-gray-400">
+                          {formatQty(openingBalance)}
+                        </td>
+                      </tr>
                       {summaryData.map((row, idx) => (
                         <tr key={idx} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-3 font-medium text-gray-900 border-r border-gray-100">
                             {viewType === 'daily' ? formatReportDate(row.label, settings.dateFormat) : row.label}
                           </td>
                           <td className="px-6 py-3 text-right text-green-600">
-                            {row.inwardQty > 0 ? `${formatNumber(row.inwardQty)} ${selectedItem.unitName || ''}` : '-'}
+                            {formatQty(row.inwardQty)}
                           </td>
                           <td className="px-6 py-3 text-right text-green-700 border-r border-gray-100">
                             {row.inwardValue > 0 ? formatCurrency(row.inwardValue) : '-'}
                           </td>
                           <td className="px-6 py-3 text-right text-red-600">
-                            {row.outwardQty > 0 ? `${formatNumber(row.outwardQty)} ${selectedItem.unitName || ''}` : '-'}
+                            {formatQty(row.outwardQty)}
                           </td>
                           <td className="px-6 py-3 text-right text-red-700">
                             {row.outwardValue > 0 ? formatCurrency(row.outwardValue) : '-'}
                           </td>
                           <td className="px-6 py-3 text-right font-bold text-primary">
-                            {row.closingQty !== 0 ? `${formatNumber(row.closingQty)} ${selectedItem.unitName || ''}` : row.isOpening ? `0.00 ${selectedItem.unitName || ''}` : '-'}
+                            {formatQty(row.closingQty)}
                           </td>
                         </tr>
                       ))}
@@ -509,19 +627,19 @@ export function StockItemReport() {
                       <tr>
                         <td className="px-6 py-4 border-r border-gray-100 uppercase text-[10px]">{t('common.total')}</td>
                         <td className="px-6 py-4 text-right">
-                          {formatNumber(summaryData.reduce((sum, m) => sum + m.inwardQty, 0))} {selectedItem.unitName || ''}
+                          {formatQty(summaryData.reduce((sum, m) => sum + m.inwardQty, 0))}
                         </td>
                         <td className="px-6 py-4 text-right border-r border-gray-100">
                           {formatCurrency(summaryData.reduce((sum, m) => sum + m.inwardValue, 0))}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          {formatNumber(summaryData.reduce((sum, m) => sum + m.outwardQty, 0))} {selectedItem.unitName || ''}
+                          {formatQty(summaryData.reduce((sum, m) => sum + m.outwardQty, 0))}
                         </td>
                         <td className="px-6 py-4 text-right">
                           {formatCurrency(summaryData.reduce((sum, m) => sum + m.outwardValue, 0))}
                         </td>
                         <td className="px-6 py-4 text-right text-primary">
-                        {formatNumber(summaryData.reduce((sum, m) => sum + (m.inwardQty - m.outwardQty), 0))} {selectedItem.unitName || ''}
+                          {formatQty(summaryData.reduce((sum, m) => sum + (m.inwardQty - m.outwardQty), 0))}
                         </td>
                       </tr>
                     </tfoot>
@@ -534,14 +652,26 @@ export function StockItemReport() {
                         <th className="px-6 py-2">Type</th>
                         <th className="px-6 py-2">Vch No</th>
                         <th className="px-6 py-2">Particulars</th>
-                        <th className="px-6 py-2 text-right">Qty</th>
+                        <th className="px-6 py-2 text-right">Qty ({selectedItem.unitName})</th>
                         <th className="px-6 py-2 text-right">Rate</th>
                         <th className="px-6 py-2 text-right">Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {transactions.length > 0 ? (
-                        transactions.map((tx, idx) => (
+                        <>
+                          <tr className="bg-gray-50/50 italic border-b border-gray-100">
+                            <td className="px-6 py-3 text-sm text-gray-500 font-medium">Opening Balance</td>
+                            <td colSpan={3}></td>
+                            <td className="px-6 py-3 text-sm text-right font-bold text-gray-400 italic">
+                              {formatQty(openingBalance)}
+                            </td>
+                            <td></td>
+                            <td className="px-6 py-3 text-sm text-right font-bold text-gray-400 italic">
+                              {formatCurrency(openingValue)}
+                            </td>
+                          </tr>
+                          {transactions.map((tx, idx) => (
                           <tr 
                             key={idx} 
                             onClick={() => tx.v_id && navigate('/vouchers', { state: { editId: tx.v_id } })}
@@ -563,7 +693,7 @@ export function StockItemReport() {
                               "px-6 py-3 text-sm text-right font-bold",
                               tx.movement_type === 'Inward' ? "text-green-600" : "text-red-600"
                             )}>
-                              {formatNumber(tx.qty + (tx.free_qty || 0))} {selectedItem.unitName}
+                              {formatQty(tx.qty + (tx.free_qty || 0))}
                             </td>
                             <td className="px-6 py-3 text-sm text-right text-gray-600">
                               {formatCurrency(tx.rate)}
@@ -572,7 +702,8 @@ export function StockItemReport() {
                               {formatCurrency(tx.qty * tx.rate)}
                             </td>
                           </tr>
-                        ))
+                          ))}
+                        </>
                       ) : (
                         <tr>
                           <td colSpan={7} className="px-6 py-12 text-center text-gray-400 italic">
