@@ -6,16 +6,34 @@ import { cn } from '../lib/utils';
 import { erpService } from '../services/erpService';
 
 import { useSubscription } from '../hooks/useSubscription';
+import { APP_FEATURES } from '../constants/features';
 
 export const UserManagement: React.FC = () => {
-  const { isAdmin, isSuperAdmin, user } = useAuth();
+  const { isAdmin, isSuperAdmin, user, rolePermissions } = useAuth();
   const { uiStyle } = useSettings();
-  const { checkLimit } = useSubscription();
+  const { checkLimit, isFeatureEnabled } = useSubscription();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'users' | 'permissions'>('users');
   const [searchTerm, setSearchTerm] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  
+  // Permissions State
+  const [localRolePermissions, setLocalRolePermissions] = useState<Record<string, string[]>>({});
+  const [savingPermissions, setSavingPermissions] = useState(false);
+
+  useEffect(() => {
+    if (rolePermissions) {
+      setLocalRolePermissions(rolePermissions);
+    } else {
+      // Initialize with defaults if none exist
+      setLocalRolePermissions({
+        'Staff': ['acc_reports_view', 'inv_reports_view'],
+        'Manager': ['acc_masters_create', 'acc_vouchers_create', 'acc_reports_view', 'acc_reports_financial', 'inv_masters_create', 'inv_vouchers_create', 'inv_reports_view']
+      });
+    }
+  }, [rolePermissions]);
   
   // Add User Form
   const [newUser, setNewUser] = useState({
@@ -131,6 +149,36 @@ export const UserManagement: React.FC = () => {
     }
   };
 
+  const handleSavePermissions = async () => {
+    if (!user?.companyId) return;
+    
+    if (!checkLimit('rolePermissions')) {
+      return;
+    }
+
+    setSavingPermissions(true);
+    try {
+      await erpService.updateRolePermissions(user.companyId, localRolePermissions);
+      alert('Permissions saved successfully');
+    } catch (err) {
+      console.error('Error saving permissions:', err);
+      alert('Failed to save permissions');
+    } finally {
+      setSavingPermissions(false);
+    }
+  };
+
+  const togglePermission = (role: string, featureId: string) => {
+    setLocalRolePermissions(prev => {
+      const current = prev[role] || [];
+      if (current.includes(featureId)) {
+        return { ...prev, [role]: current.filter(id => id !== featureId) };
+      } else {
+        return { ...prev, [role]: [...current, featureId] };
+      }
+    });
+  };
+
   const filteredProfiles = profiles.filter(p => 
     p.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -157,6 +205,27 @@ export const UserManagement: React.FC = () => {
             User Management
           </h1>
           
+          <div className="flex bg-foreground/5 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveTab('users')}
+              className={cn(
+                "px-4 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-md transition-all",
+                activeTab === 'users' ? "bg-background text-foreground shadow-sm" : "text-gray-500 hover:text-foreground"
+              )}
+            >
+              Users
+            </button>
+            <button
+              onClick={() => setActiveTab('permissions')}
+              className={cn(
+                "px-4 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-md transition-all",
+                activeTab === 'permissions' ? "bg-background text-foreground shadow-sm" : "text-gray-500 hover:text-foreground"
+              )}
+            >
+              Permissions
+            </button>
+          </div>
+
           <button
             onClick={() => setShowAddModal(true)}
             className={cn(
@@ -207,141 +276,221 @@ export const UserManagement: React.FC = () => {
         "bg-card border border-border rounded-xl overflow-hidden shadow-sm",
         uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
       )}>
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className={cn(
-              "border-b border-border",
-              uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-foreground/5"
-            )}>
-              <th className={cn(
-                "px-6 py-4 text-[10px] uppercase tracking-widest font-mono",
-                uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
-              )}>User / Email</th>
-              <th className={cn(
-                "px-6 py-4 text-[10px] uppercase tracking-widest font-mono",
-                uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
-              )}>Current Role</th>
-              <th className={cn(
-                "px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-right",
-                uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
-              )}>Sales Target</th>
-              <th className={cn(
-                "px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-right",
-                uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
-              )}>Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {loading ? (
-              <tr>
-                <td colSpan={3} className="px-6 py-12 text-center">
-                  <Loader2 className="w-6 h-6 text-gray-500 animate-spin mx-auto" />
-                </td>
+        {activeTab === 'users' ? (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className={cn(
+                "border-b border-border",
+                uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-foreground/5"
+              )}>
+                <th className={cn(
+                  "px-6 py-4 text-[10px] uppercase tracking-widest font-mono",
+                  uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+                )}>User / Email</th>
+                <th className={cn(
+                  "px-6 py-4 text-[10px] uppercase tracking-widest font-mono",
+                  uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+                )}>Current Role</th>
+                <th className={cn(
+                  "px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-right",
+                  uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+                )}>Sales Target</th>
+                <th className={cn(
+                  "px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-right",
+                  uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+                )}>Actions</th>
               </tr>
-            ) : filteredProfiles.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="px-6 py-12 text-center text-gray-500 text-xs font-mono">
-                  No users found matching your search.
-                </td>
-              </tr>
-            ) : (
-              filteredProfiles.map((profile) => (
-                <tr key={profile.uid} className="hover:bg-foreground/[0.02] transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-foreground font-bold text-xs">
-                        {profile.displayName?.[0]?.toUpperCase() || profile.email?.[0]?.toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm text-foreground font-medium">{profile.displayName || 'No Name'}</p>
-                        <p className="text-[10px] text-gray-500 font-mono">{profile.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className={cn(
-                      "inline-flex items-center gap-1.5 px-2 py-1 rounded text-[9px] uppercase font-bold tracking-wider",
-                      profile.role === 'Admin' ? "bg-amber-500/10 text-amber-500" :
-                      profile.role === 'Manager' ? "bg-emerald-500/10 text-emerald-500" :
-                      profile.role === 'Founder' ? "bg-primary/10 text-primary" :
-                      profile.role === 'Marketing Manager' ? "bg-indigo-500/10 text-indigo-500" :
-                      "bg-gray-500/10 text-gray-500"
-                    )}>
-                      {profile.role === 'Admin' ? <ShieldAlert className="w-3 h-3" /> :
-                       profile.role === 'Manager' ? <ShieldCheck className="w-3 h-3" /> :
-                       profile.role === 'Founder' ? <ShieldCheck className="w-3 h-3" /> :
-                       <Shield className="w-3 h-3" />}
-                      {profile.role}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <input
-                      type="number"
-                      defaultValue={profile.target_amount || 0}
-                      onFocus={e => e.target.value === '0' && e.target.select()}
-                      onBlur={async (e) => {
-                        const val = Number(e.target.value);
-                        if (val !== profile.target_amount) {
-                          try {
-                            await erpService.updateTargetAmount(profile.uid, val);
-                            setProfiles(profiles.map(p => p.uid === profile.uid ? { ...p, target_amount: val } : p));
-                          } catch (err) {
-                            console.error('Error updating target:', err);
-                          }
-                        }
-                      }}
-                      className="w-24 bg-background border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-indigo-500 text-right"
-                    />
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-3">
-                      {updatingId === profile.uid ? (
-                        <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
-                      ) : (
-                        <>
-                          <select
-                            value={profile.role}
-                            onChange={(e) => updateRole(profile.uid, e.target.value as UserRole)}
-                            disabled={profile.uid === user?.uid}
-                            className="bg-background border border-border rounded px-2 py-1 text-[10px] text-foreground/60 focus:outline-none focus:border-foreground/20 disabled:opacity-50"
-                          >
-                            <option value="Staff">Staff</option>
-                            <option value="Manager">Manager</option>
-                            <option value="Admin">Admin</option>
-                            {isSuperAdmin && (
-                              <>
-                                <option value="Marketing Manager">Marketing Manager</option>
-                                <option value="Founder">Founder</option>
-                              </>
-                            )}
-                          </select>
-                          
-                          <button
-                            onClick={() => handleResetPassword(profile.uid, profile.email)}
-                            disabled={resetLoading}
-                            title="Send Reset Email"
-                            className="p-1.5 text-gray-400 hover:text-indigo-500 transition-colors disabled:opacity-30"
-                          >
-                            {resetLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
-                          </button>
-
-                          <button
-                            onClick={() => handleDeleteUser(profile.uid)}
-                            disabled={profile.uid === user?.uid}
-                            title="Delete User"
-                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-30"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {loading ? (
+                <tr>
+                  <td colSpan={3} className="px-6 py-12 text-center">
+                    <Loader2 className="w-6 h-6 text-gray-500 animate-spin mx-auto" />
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : filteredProfiles.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-6 py-12 text-center text-gray-500 text-xs font-mono">
+                    No users found matching your search.
+                  </td>
+                </tr>
+              ) : (
+                filteredProfiles.map((profile) => (
+                  <tr key={profile.uid} className="hover:bg-foreground/[0.02] transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-foreground font-bold text-xs">
+                          {profile.displayName?.[0]?.toUpperCase() || profile.email?.[0]?.toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm text-foreground font-medium">{profile.displayName || 'No Name'}</p>
+                          <p className="text-[10px] text-gray-500 font-mono">{profile.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className={cn(
+                        "inline-flex items-center gap-1.5 px-2 py-1 rounded text-[9px] uppercase font-bold tracking-wider",
+                        profile.role === 'Admin' ? "bg-amber-500/10 text-amber-500" :
+                        profile.role === 'Manager' ? "bg-emerald-500/10 text-emerald-500" :
+                        profile.role === 'Founder' ? "bg-primary/10 text-primary" :
+                        profile.role === 'Marketing Manager' ? "bg-indigo-500/10 text-indigo-500" :
+                        "bg-gray-500/10 text-gray-500"
+                      )}>
+                        {profile.role === 'Admin' ? <ShieldAlert className="w-3 h-3" /> :
+                        profile.role === 'Manager' ? <ShieldCheck className="w-3 h-3" /> :
+                        profile.role === 'Founder' ? <ShieldCheck className="w-3 h-3" /> :
+                        <Shield className="w-3 h-3" />}
+                        {profile.role}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <input
+                        type="number"
+                        defaultValue={profile.target_amount || 0}
+                        onFocus={e => e.target.value === '0' && e.target.select()}
+                        onBlur={async (e) => {
+                          const val = Number(e.target.value);
+                          if (val !== profile.target_amount) {
+                            try {
+                              await erpService.updateTargetAmount(profile.uid, val);
+                              setProfiles(profiles.map(p => p.uid === profile.uid ? { ...p, target_amount: val } : p));
+                            } catch (err) {
+                              console.error('Error updating target:', err);
+                            }
+                          }
+                        }}
+                        className="w-24 bg-background border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-indigo-500 text-right"
+                      />
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        {updatingId === profile.uid ? (
+                          <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
+                        ) : (
+                          <>
+                            <select
+                              value={profile.role}
+                              onChange={(e) => updateRole(profile.uid, e.target.value as UserRole)}
+                              disabled={profile.uid === user?.uid}
+                              className="bg-background border border-border rounded px-2 py-1 text-[10px] text-foreground/60 focus:outline-none focus:border-foreground/20 disabled:opacity-50"
+                            >
+                              <option value="Staff">Staff</option>
+                              <option value="Manager">Manager</option>
+                              <option value="Admin">Admin</option>
+                              {isSuperAdmin && (
+                                <>
+                                  <option value="Marketing Manager">Marketing Manager</option>
+                                  <option value="Founder">Founder</option>
+                                </>
+                              )}
+                            </select>
+                            
+                            <button
+                              onClick={() => handleResetPassword(profile.uid, profile.email)}
+                              disabled={resetLoading}
+                              title="Send Reset Email"
+                              className="p-1.5 text-gray-400 hover:text-indigo-500 transition-colors disabled:opacity-30"
+                            >
+                              {resetLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                            </button>
+  
+                            <button
+                              onClick={() => handleDeleteUser(profile.uid)}
+                              disabled={profile.uid === user?.uid}
+                              title="Delete User"
+                              className="p-1.5 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-30"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        ) : (
+          <div className="p-0 overflow-x-auto">
+            <div className="p-6 border-b border-border bg-foreground/5 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Role Permissions</h3>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">
+                  Define which features each role can access within the application.
+                </p>
+              </div>
+              <button
+                onClick={handleSavePermissions}
+                disabled={savingPermissions}
+                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-indigo-600/20 disabled:opacity-50 flex items-center transition-all"
+              >
+                {savingPermissions ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : "Save Changes"}
+              </button>
+            </div>
+
+            <div className="min-w-[800px]">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-foreground/[0.02] border-b border-border">
+                    <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 w-1/4">Feature</th>
+                    {['Staff', 'Manager', 'Admin'].map(role => (
+                      <th key={role} className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 text-center">
+                        {role}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {APP_FEATURES.map(category => (
+                    <React.Fragment key={category.id}>
+                      <tr className="bg-background">
+                        <td colSpan={4} className="px-6 py-3">
+                          <h4 className="text-[9px] font-bold uppercase tracking-[0.2em] text-indigo-500">{category.label}</h4>
+                        </td>
+                      </tr>
+                      {category.features.map(feature => {
+                        const isSubscribed = !feature.subscriptionFeatureId || isFeatureEnabled(feature.subscriptionFeatureId);
+                        return (
+                          <tr key={feature.id} className={cn(
+                            "hover:bg-foreground/[0.01] transition-colors",
+                            !isSubscribed && "opacity-40 grayscale-[0.5]"
+                          )}>
+                            <td className="px-6 py-4">
+                              <div className="space-y-1">
+                                <p className="text-[11px] font-bold text-foreground">{feature.label}</p>
+                                {feature.description && (
+                                  <p className="text-[9px] text-gray-500 leading-none">{feature.description}</p>
+                                )}
+                                {!isSubscribed && (
+                                  <span className="inline-block text-[8px] font-bold text-amber-600 uppercase tracking-tighter bg-amber-500/10 px-1 rounded mt-1">
+                                    Requires Plan Upgrade
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            {['Staff', 'Manager', 'Admin'].map(role => (
+                              <td key={role} className="px-6 py-4 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={localRolePermissions[role]?.includes(feature.id) || role === 'Admin'}
+                                  onChange={() => isSubscribed && togglePermission(role, feature.id)}
+                                  disabled={!isSubscribed || role === 'Admin'}
+                                  className="w-4 h-4 rounded border-border text-indigo-600 focus:ring-indigo-500 disabled:opacity-30 cursor-pointer"
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add User Modal */}

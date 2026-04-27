@@ -202,6 +202,7 @@ export function VoucherEntry() {
   const [globalDiscountType, setGlobalDiscountType] = useState<'fixed' | 'percent'>('fixed');
   const [currency, setCurrency] = useState(baseCurrencySymbol);
   const [exchangeRate, setExchangeRate] = useState(1);
+  const [autoSerialNo, setAutoSerialNo] = useState<number | null>(null);
   const [itemStocks, setItemStocks] = useState<Record<string, number>>({});
   const [balances, setBalances] = useState<Record<string, number>>({});
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -350,10 +351,15 @@ export function VoucherEntry() {
   }
 
   useEffect(() => {
-    if (!isEdit) {
+    if (!isEdit && user?.companyId) {
+      async function fetchSerial() {
+        const next = await erpService.getNextAutoSerialNo(user!.companyId, vType);
+        setAutoSerialNo(next);
+      }
+      fetchSerial();
       setRefNo(''); // Always start empty as requested
     }
-  }, [vType]);
+  }, [vType, isEdit, user?.companyId]);
 
   async function fetchVoucher() {
     setLoading(true);
@@ -368,6 +374,7 @@ export function VoucherEntry() {
       setCurrency(v.currency || baseCurrencySymbol);
       setExchangeRate(v.exchange_rate || 1);
       setSalespersonId(v.salesperson_id || '');
+      setAutoSerialNo(v.auto_serial_no || null);
       if (v.bank_details) {
         setBankDetails({
           transaction_type: v.bank_details.transaction_type || 'Cheque',
@@ -392,7 +399,7 @@ export function VoucherEntry() {
           expiry_date: i.expiry_date || '',
           amount: i.amount || 0,
           unit: i.unit_name || 'pcs',
-          entry_type: i.entry_type
+          entry_type: i.entry_type || (v.v_type === 'Sales' || v.v_type === 'Physical Stock' ? 'Outward' : 'Inward')
         }));
         setInvEntries(inv.length > 0 ? inv : [{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: v.v_type === 'Sales' ? 'Outward' : 'Inward' }]);
       } else if (v.v_type === 'Stock Journal') {
@@ -739,6 +746,7 @@ export function VoucherEntry() {
           finalAccEntries, 
           isInventory ? invEntries.map(i => ({ 
             ...i, 
+            entry_type: i.entry_type || (vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward'),
             item_name: items.find(item => item.id === i.item_id)?.name,
             m_type: vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward' 
           })) : (isStockJournal ? [...consumptionEntries.map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
@@ -756,6 +764,7 @@ export function VoucherEntry() {
           finalAccEntries, 
           isInventory ? invEntries.map(i => ({ 
             ...i, 
+            entry_type: i.entry_type || (vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward'),
             item_name: items.find(item => item.id === i.item_id)?.name,
             m_type: vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward' 
           })) : (isStockJournal ? [...consumptionEntries.map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
@@ -897,7 +906,14 @@ export function VoucherEntry() {
           {/* Row 1: Reference No., Date, Currency, Ex. Rate, Voucher Type (Desktop) */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 lg:gap-6">
             <div className="space-y-1 lg:space-y-2">
-              <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.referenceNo')}</label>
+              <div className="flex justify-between items-center">
+                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.referenceNo')}</label>
+                {autoSerialNo !== null && (
+                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded italic">
+                    Auto S# {autoSerialNo}
+                  </span>
+                )}
+              </div>
               <input 
                 ref={refNoInputRef}
                 type="text" 

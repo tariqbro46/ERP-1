@@ -22,6 +22,10 @@ import {
 } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
 import { 
+  Feature,
+  FeatureCategory
+} from '../constants/features';
+import { 
   Company, 
   Ledger, 
   Voucher, 
@@ -157,6 +161,45 @@ export const erpService = {
     }
   },
 
+  async getNextAutoSerialNo(companyId: string, vType: string): Promise<number> {
+    try {
+      const q = query(
+        collection(db, 'vouchers'),
+        where('companyId', '==', companyId),
+        where('v_type', '==', vType)
+      );
+      const snap = await getDocs(q);
+      return snap.size + 1;
+    } catch (error) {
+      console.error('Error fetching next auto serial:', error);
+      return 1;
+    }
+  },
+
+  async getVoucherSerials(companyId: string): Promise<Record<string, number>> {
+    try {
+      const q = query(
+        collection(db, 'vouchers'),
+        where('companyId', '==', companyId),
+        orderBy('createdAt', 'asc')
+      );
+      const snap = await getDocs(q);
+      const typeCounters: Record<string, number> = {};
+      const serialMap: Record<string, number> = {};
+      
+      snap.docs.forEach(doc => {
+        const data = doc.data();
+        const type = data.v_type;
+        typeCounters[type] = (typeCounters[type] || 0) + 1;
+        serialMap[doc.id] = typeCounters[type];
+      });
+      return serialMap;
+    } catch (error) {
+      console.error('Error fetching voucher serials:', error);
+      return {};
+    }
+  },
+
   // Vouchers
   async createVoucher(companyId: string, userId: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
     const batch = writeBatch(db);
@@ -175,25 +218,25 @@ export const erpService = {
 
     // 1. Create Voucher Header
     const vRef = doc(collection(db, 'vouchers'));
-    const vData = {
+    const vData = cleanData({
       ...voucher,
       id: vRef.id,
       companyId,
       createdBy: userId,
       createdAt: serverTimestamp()
-    };
+    });
     batch.set(vRef, vData);
 
     // 2. Create Accounting Entries
     for (const entry of entries) {
       const eRef = doc(collection(db, 'voucher_entries'));
-      batch.set(eRef, {
+      batch.set(eRef, cleanData({
         ...entry,
         voucher_id: vRef.id,
         companyId,
         date: voucher.v_date, // Add date for easier reporting
         created_at: serverTimestamp()
-      });
+      }));
 
       // Update Ledger Balance
       if (entry.ledger_id && existingLedgers.has(entry.ledger_id)) {
@@ -208,14 +251,14 @@ export const erpService = {
       for (const i of inventoryEntries) {
         const iRef = doc(collection(db, 'inventory_entries'));
         const movementType = i.movement_type || i.m_type || (voucher.v_type === 'Sales' ? 'Outward' : 'Inward');
-        batch.set(iRef, {
+        batch.set(iRef, cleanData({
           ...i,
           voucher_id: vRef.id,
           companyId,
           date: voucher.v_date,
           movement_type: movementType,
           created_at: serverTimestamp()
-        });
+        }));
 
         // Update Item Stats
         if (i.item_id && existingItems.has(i.item_id)) {
@@ -244,16 +287,22 @@ export const erpService = {
 
   async getVouchersByType(companyId: string, type: string, from: string, to: string) {
     try {
-      const q = query(
-        collection(db, 'vouchers'),
-        where('companyId', '==', companyId),
-        where('v_type', '==', type),
-        where('v_date', '>=', from),
-        where('v_date', '<=', to),
-        orderBy('v_date', 'desc')
-      );
-      const snap = await getDocs(q);
-      const vouchers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const [snap, serialMap] = await Promise.all([
+        getDocs(query(
+          collection(db, 'vouchers'),
+          where('companyId', '==', companyId),
+          where('v_type', '==', type),
+          where('v_date', '>=', from),
+          where('v_date', '<=', to),
+          orderBy('v_date', 'desc')
+        )),
+        this.getVoucherSerials(companyId)
+      ]);
+      const vouchers = snap.docs.map(d => ({ 
+        id: d.id, 
+        ...(d.data() as any),
+        auto_serial_no: serialMap[d.id] || 0
+      }));
       
       if (vouchers.length === 0) return [];
 
@@ -532,12 +581,13 @@ export const erpService = {
     const voucher = vSnap.data();
     const companyId = voucher.companyId;
 
-    const [eSnap, iSnap, ledgers, items, godowns] = await Promise.all([
+    const [eSnap, iSnap, ledgers, items, godowns, serialMap] = await Promise.all([
       getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId))),
       getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId))),
       this.getLedgers(companyId),
       this.getItems(companyId),
-      this.getGodowns(companyId)
+      this.getGodowns(companyId),
+      this.getVoucherSerials(companyId)
     ]);
 
     const entries = eSnap.docs.map(d => {
@@ -562,7 +612,7 @@ export const erpService = {
       };
     });
 
-    return { ...voucher, entries, inventory, id: vSnap.id };
+    return { ...voucher, entries, inventory, id: vSnap.id, auto_serial_no: serialMap[vSnap.id] || 0 };
   },
 
   async deleteVoucher(id: string) {
@@ -667,21 +717,21 @@ export const erpService = {
 
     // 4. Update Voucher Header
     const vRef = doc(db, 'vouchers', id);
-    batch.update(vRef, {
+    batch.update(vRef, cleanData({
       ...voucher,
       updated_at: serverTimestamp()
-    });
+    }));
 
     // 5. Create New Accounting Entries
     for (const entry of entries) {
       const eRef = doc(collection(db, 'voucher_entries'));
-      batch.set(eRef, {
+      batch.set(eRef, cleanData({
         ...entry,
         voucher_id: id,
         companyId: oldVoucher.companyId,
         date: voucher.v_date || oldVoucher.v_date, // Add date for easier reporting
         created_at: serverTimestamp()
-      });
+      }));
 
       // Update Ledger Balance
       if (entry.ledger_id && existingLedgers.has(entry.ledger_id)) {
@@ -696,13 +746,13 @@ export const erpService = {
       for (const i of inventoryEntries) {
         const iRef = doc(collection(db, 'inventory_entries'));
         const movementType = i.movement_type || i.m_type || (voucher.v_type === 'Sales' ? 'Outward' : 'Inward');
-        batch.set(iRef, {
+        batch.set(iRef, cleanData({
           ...i,
           voucher_id: id,
           companyId: oldVoucher.companyId,
           movement_type: movementType,
           created_at: serverTimestamp()
-        });
+        }));
 
         // Update Item Stats
         if (i.item_id && existingItems.has(i.item_id)) {
@@ -809,7 +859,7 @@ export const erpService = {
     const results: any[] = [];
     for (const v of defaults) {
       const ref = doc(collection(db, 'voucher_types'));
-      const data = { ...v, id: ref.id, companyId };
+      const data = cleanData({ ...v, id: ref.id, companyId });
       batch.set(ref, data);
       results.push(data);
     }
@@ -908,7 +958,7 @@ export const erpService = {
       if (isDuplicate) throw new Error(`Ledger Group "${group.name}" already exists.`);
 
       const ref = doc(collection(db, 'ledger_groups'));
-      const data = { ...group, id: ref.id, companyId };
+      const data = cleanData({ ...group, id: ref.id, companyId });
       await setDoc(ref, data);
       return data;
     } catch (error) {
@@ -922,7 +972,7 @@ export const erpService = {
       if (isDuplicate) throw new Error(`Voucher Type "${type.name}" already exists.`);
 
       const ref = doc(collection(db, 'voucher_types'));
-      const data = { ...type, id: ref.id, companyId };
+      const data = cleanData({ ...type, id: ref.id, companyId });
       await setDoc(ref, data);
       return data;
     } catch (error) {
@@ -936,7 +986,7 @@ export const erpService = {
       if (isDuplicate) throw new Error(`Stock Category "${category.name}" already exists.`);
 
       const ref = doc(collection(db, 'stock_categories'));
-      const data = { ...category, id: ref.id, companyId };
+      const data = cleanData({ ...category, id: ref.id, companyId });
       await setDoc(ref, data);
       return data;
     } catch (error) {
@@ -950,7 +1000,7 @@ export const erpService = {
       if (isDuplicate) throw new Error(`Employee Group/Designation "${group.name}" already exists.`);
 
       const ref = doc(collection(db, 'employee_groups'));
-      const data = { ...group, id: ref.id, companyId };
+      const data = cleanData({ ...group, id: ref.id, companyId });
       await setDoc(ref, data);
       return data;
     } catch (error) {
@@ -964,7 +1014,7 @@ export const erpService = {
       if (isDuplicate) throw new Error(`Unit "${unit.name}" already exists.`);
 
       const ref = doc(collection(db, 'units'));
-      const data = { ...unit, id: ref.id, companyId };
+      const data = cleanData({ ...unit, id: ref.id, companyId });
       await setDoc(ref, data);
       return data;
     } catch (error) {
@@ -994,7 +1044,7 @@ export const erpService = {
     const results: any[] = [];
     for (const g of defaultGroups) {
       const ref = doc(collection(db, 'ledger_groups'));
-      const data = { ...g, id: ref.id, companyId };
+      const data = cleanData({ ...g, id: ref.id, companyId });
       batch.set(ref, data);
       results.push(data);
     }
@@ -1008,12 +1058,12 @@ export const erpService = {
       if (isDuplicate) throw new Error(`Ledger "${ledger.name}" already exists.`);
 
       const ref = doc(collection(db, 'ledgers'));
-      const data = {
+      const data = cleanData({
         ...ledger,
         id: ref.id,
         companyId,
         current_balance: ledger.opening_balance || 0
-      };
+      });
       await setDoc(ref, data);
       return data;
     } catch (error) {
@@ -1082,7 +1132,7 @@ export const erpService = {
     const results: any[] = [];
     for (const u of defaults) {
       const ref = doc(collection(db, 'units'));
-      const data = { ...u, id: ref.id, companyId };
+      const data = cleanData({ ...u, id: ref.id, companyId });
       batch.set(ref, data);
       results.push(data);
     }
@@ -1099,7 +1149,7 @@ export const erpService = {
     if (isDuplicate) throw new Error(`Stock Item "${item.name}" already exists.`);
 
     const ref = doc(collection(db, 'items'));
-    const data = {
+    const data = cleanData({
       ...item,
       id: ref.id,
       companyId,
@@ -1107,7 +1157,7 @@ export const erpService = {
       opening_rate: Number(item.opening_rate) || 0,
       current_stock: Number(item.opening_qty) || 0,
       avg_cost: Number(item.opening_rate) || 0
-    };
+    });
     await setDoc(ref, data);
     // Ensure stats are perfectly calculated from the start - pass data to avoid redundant getDoc
     await this.recalculateItemStats(ref.id, companyId, data);
@@ -1157,7 +1207,7 @@ export const erpService = {
     if (isDuplicate) throw new Error(`Godown "${godown.name}" already exists.`);
 
     const ref = doc(collection(db, 'godowns'));
-    const data = { ...godown, id: ref.id, companyId };
+    const data = cleanData({ ...godown, id: ref.id, companyId });
     await setDoc(ref, data);
     return data;
   },
@@ -1180,7 +1230,7 @@ export const erpService = {
     if (isDuplicate) throw new Error(`Employee "${employee.name}" already exists.`);
 
     const ref = doc(collection(db, 'employees'));
-    const data = { ...employee, id: ref.id, companyId, createdAt: serverTimestamp() };
+    const data = cleanData({ ...employee, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, data);
     return data;
   },
@@ -1200,7 +1250,7 @@ export const erpService = {
 
   async createSalarySheet(companyId: string, data: any) {
     const ref = doc(collection(db, 'salary_sheets'));
-    const docData = { ...data, id: ref.id, companyId, createdAt: serverTimestamp() };
+    const docData = cleanData({ ...data, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, docData);
     return docData;
   },
@@ -1219,7 +1269,7 @@ export const erpService = {
   },
   async createPayHead(companyId: string, data: any) {
     const ref = doc(collection(db, 'pay_heads'));
-    const docData = { ...data, id: ref.id, companyId, createdAt: serverTimestamp() };
+    const docData = cleanData({ ...data, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, docData);
     return docData;
   },
@@ -1242,7 +1292,7 @@ export const erpService = {
   },
   async createSalaryStructure(companyId: string, data: any) {
     const ref = doc(collection(db, 'salary_structures'));
-    const docData = { ...data, id: ref.id, companyId, createdAt: serverTimestamp() };
+    const docData = cleanData({ ...data, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, docData);
     return docData;
   },
@@ -1261,7 +1311,7 @@ export const erpService = {
   },
   async createAttendance(companyId: string, data: any) {
     const ref = doc(collection(db, 'attendance'));
-    const docData = { ...data, id: ref.id, companyId, createdAt: serverTimestamp() };
+    const docData = cleanData({ ...data, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, docData);
     return docData;
   },
@@ -1269,7 +1319,7 @@ export const erpService = {
     const batch = writeBatch(db);
     records.forEach(r => {
       const ref = doc(collection(db, 'attendance'));
-      batch.set(ref, { ...r, id: ref.id, companyId, createdAt: serverTimestamp() });
+      batch.set(ref, cleanData({ ...r, id: ref.id, companyId, createdAt: serverTimestamp() }));
     });
     await batch.commit();
   },
@@ -1287,7 +1337,7 @@ export const erpService = {
 
   async createAdvance(companyId: string, data: any) {
     const ref = doc(collection(db, 'advances'));
-    const docData = { ...data, id: ref.id, companyId, createdAt: serverTimestamp() };
+    const docData = cleanData({ ...data, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, docData);
     return docData;
   },
@@ -1307,7 +1357,7 @@ export const erpService = {
 
   async createLoan(companyId: string, data: any) {
     const ref = doc(collection(db, 'loans'));
-    const docData = { ...data, id: ref.id, companyId, createdAt: serverTimestamp() };
+    const docData = cleanData({ ...data, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, docData);
     return docData;
   },
@@ -1452,15 +1502,20 @@ export const erpService = {
   },
 
   async getVoucherWithEntries(companyId: string, ledgerId: string, startDate: string, endDate: string): Promise<any[]> {
-    // Fetch vouchers in range
-    const vouchersQuery = query(
-      collection(db, 'vouchers'),
-      where('companyId', '==', companyId),
-      where('v_date', '>=', startDate),
-      where('v_date', '<=', endDate)
-    );
-    const vouchersSnap = await getDocs(vouchersQuery);
-    const vouchers = vouchersSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    const [vouchersSnap, serialMap] = await Promise.all([
+      getDocs(query(
+        collection(db, 'vouchers'),
+        where('companyId', '==', companyId),
+        where('v_date', '>=', startDate),
+        where('v_date', '<=', endDate)
+      )),
+      this.getVoucherSerials(companyId)
+    ]);
+    const vouchers = vouchersSnap.docs.map(d => ({ 
+      id: d.id, 
+      ...(d.data() as any),
+      auto_serial_no: serialMap[d.id] || 0
+    }));
     
     if (vouchers.length === 0) return [];
     
@@ -1502,8 +1557,10 @@ export const erpService = {
       ]);
 
       const vDocs = vouchers.docs.map(d => d.data());
-      const revenue = vDocs.filter(v => v.v_type === 'Sales').reduce((sum, v) => sum + (v.total_amount || 0), 0);
-      const expenses = vDocs.filter(v => v.v_type === 'Payment').reduce((sum, v) => sum + (v.total_amount || 0), 0);
+      const sales = vDocs.filter(v => v.v_type === 'Sales').reduce((sum, v) => sum + (v.total_amount || 0), 0);
+      const purchase = vDocs.filter(v => v.v_type === 'Purchase').reduce((sum, v) => sum + (v.total_amount || 0), 0);
+      const payment = vDocs.filter(v => v.v_type === 'Payment').reduce((sum, v) => sum + (v.total_amount || 0), 0);
+      const receipt = vDocs.filter(v => v.v_type === 'Receipt').reduce((sum, v) => sum + (v.total_amount || 0), 0);
       const stockValue = items.reduce((sum: number, i: any) => sum + (i.current_stock * i.avg_cost), 0);
       
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -1516,15 +1573,19 @@ export const erpService = {
       });
 
       return { 
-        revenue, 
-        profit: revenue - expenses, 
+        revenue: sales, 
+        profit: sales - (purchase + payment), 
+        sales,
+        purchase,
+        payment,
+        receipt,
         activeLedgers: ledgers.length, 
         stockValue, 
         chartData 
       };
     } catch (err) {
       console.error('Error getting dashboard stats:', err);
-      return { revenue: 0, profit: 0, activeLedgers: 0, stockValue: 0, chartData: [] };
+      return { revenue: 0, profit: 0, sales: 0, purchase: 0, payment: 0, receipt: 0, activeLedgers: 0, stockValue: 0, chartData: [] };
     }
   },
 
@@ -1568,15 +1629,22 @@ export const erpService = {
 
   async getVouchersByDateRange(companyId: string, startDate: string, endDate: string): Promise<any[]> {
     try {
-      const q = query(
-        collection(db, 'vouchers'),
-        where('companyId', '==', companyId),
-        where('v_date', '>=', startDate),
-        where('v_date', '<=', endDate),
-        orderBy('v_date', 'desc')
-      );
-      const snapshot = await getDocs(q);
-      const vouchers = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+      const [vSnap, serialMap] = await Promise.all([
+        getDocs(query(
+          collection(db, 'vouchers'),
+          where('companyId', '==', companyId),
+          where('v_date', '>=', startDate),
+          where('v_date', '<=', endDate),
+          orderBy('v_date', 'desc')
+        )),
+        this.getVoucherSerials(companyId)
+      ]);
+
+      const vouchers = vSnap.docs.map(doc => ({ 
+        id: doc.id, 
+        ...(doc.data() as any),
+        auto_serial_no: serialMap[doc.id] || 0
+      }));
       
       if (vouchers.length === 0) return [];
 
@@ -1688,7 +1756,7 @@ export const erpService = {
       const uid = userCredential.user.uid;
 
       // Create the user profile in Firestore
-      await setDoc(doc(db, 'users', uid), {
+      await setDoc(doc(db, 'users', uid), cleanData({
         uid,
         email: data.email,
         displayName: data.displayName,
@@ -1696,17 +1764,39 @@ export const erpService = {
         companyId: data.companyId,
         target_amount: data.target_amount || 0,
         createdAt: serverTimestamp(),
-      });
+      }));
 
       // Sign out from the secondary instance immediately
       await signOut(secondaryAuth);
 
       return { uid };
     } catch (error: any) {
+      // Log the full error for debugging
       console.error('Error in adminAddUser:', error);
-      if (error.code === 'auth/email-already-in-use') {
+
+      // Map Firebase Auth errors to user-friendly messages
+      if (error.code === 'auth/email-already-in-use' || 
+          error.message?.includes('auth/email-already-in-use') ||
+          error.code === 'auth/account-exists-with-different-credential') {
         throw new Error('This email address is already in use by another account.');
       }
+
+      if (error.code === 'auth/invalid-email' || error.message?.includes('auth/invalid-email')) {
+        throw new Error('Please enter a valid email address.');
+      }
+
+      if (error.code === 'auth/weak-password' || error.message?.includes('auth/weak-password')) {
+        throw new Error('The password is too weak. Please use at least 6 characters.');
+      }
+
+      // Handle Firestore permission errors
+      if (error.code === 'permission-denied' || 
+          error.message?.toLowerCase().includes('permission') || 
+          error.message?.includes('insufficient permissions')) {
+        handleFirestoreError(error, OperationType.WRITE, 'users');
+      }
+
+      // Generic fallback
       throw new Error(error.message || 'Failed to add user');
     }
   },
@@ -1796,7 +1886,7 @@ export const erpService = {
   async createCompany(userId: string, companyData: any) {
     try {
       const ref = doc(collection(db, 'companies'));
-      const data = {
+      const data = cleanData({
         ...companyData,
         id: ref.id,
         createdBy: userId,
@@ -1806,7 +1896,7 @@ export const erpService = {
         subscriptionStatus: 'Trial',
         plan: 'Standard',
         expiryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 15 days trial
-      };
+      });
       await setDoc(ref, data);
       
       // Update user's current companyId
@@ -1827,10 +1917,10 @@ export const erpService = {
       if (companyId === 'placeholder') return { id: companyId, ...data };
       
       const ref = doc(db, 'companies', companyId);
-      await setDoc(ref, {
+      await setDoc(ref, cleanData({
         ...data,
         updatedAt: serverTimestamp()
-      }, { merge: true });
+      }), { merge: true });
       return { id: companyId, ...data };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `companies/${companyId}`);
@@ -1974,7 +2064,7 @@ export const erpService = {
   async updateSettings(companyId: string, settings: any) {
     try {
       const ref = doc(db, 'settings', companyId);
-      await setDoc(ref, { ...settings, companyId }, { merge: true });
+      await setDoc(ref, cleanData({ ...settings, companyId }), { merge: true });
 
       // If companyName, companyAddress, phone, email, or website is updated, also update the main company document
       if (settings.companyName || settings.companyAddress || settings.printPhone || settings.printEmail || settings.printWebsite) {
@@ -1990,11 +2080,33 @@ export const erpService = {
           if (settings.printWebsite) companyUpdates.website = settings.printWebsite;
           
           // Use setDoc with merge: true to avoid "No document to update" error if company doc is missing
-          await setDoc(companyRef, companyUpdates, { merge: true });
+          await setDoc(companyRef, cleanData(companyUpdates), { merge: true });
         }
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `settings/${companyId}`);
+    }
+  },
+
+  async getRolePermissions(companyId: string): Promise<Record<string, string[]> | null> {
+    try {
+      if (!companyId) return null;
+      const ref = doc(db, 'settings', companyId, 'config', 'role_permissions');
+      const snap = await getDoc(ref);
+      return snap.exists() ? snap.data() as Record<string, string[]> : null;
+    } catch (error) {
+      console.error('Error fetching role permissions:', error);
+      return null;
+    }
+  },
+
+  async updateRolePermissions(companyId: string, permissions: Record<string, string[]>) {
+    try {
+      if (!companyId) return;
+      const ref = doc(db, 'settings', companyId, 'config', 'role_permissions');
+      await setDoc(ref, cleanData({ ...permissions, updatedAt: serverTimestamp() }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `settings/${companyId}/config/role_permissions`);
     }
   },
 
@@ -2022,7 +2134,7 @@ export const erpService = {
 
   async updateSystemConfig(config: any) {
     try {
-      await setDoc(doc(db, 'system', 'config'), config, { merge: true });
+      await setDoc(doc(db, 'system', 'config'), cleanData(config), { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'system/config');
     }
@@ -2146,12 +2258,12 @@ export const erpService = {
   async createNotification(notification: Partial<AppNotification>) {
     try {
       const ref = doc(collection(db, 'notifications'));
-      const data = {
+      const data = cleanData({
         ...notification,
         id: ref.id,
         createdAt: serverTimestamp(),
         status: notification.status || 'draft'
-      };
+      });
       await setDoc(ref, data);
       return data;
     } catch (error) {
@@ -2227,7 +2339,7 @@ export const erpService = {
   async createOrder(order: Partial<PrintingOrder>) {
     try {
       const ref = doc(collection(db, 'orders'));
-      const data = {
+      const data = cleanData({
         ...order,
         id: ref.id,
         createdAt: serverTimestamp(),
@@ -2235,7 +2347,7 @@ export const erpService = {
         status: order.status || 'Pending',
         isConvertedToFinishGoods: false,
         isConvertedToSalesVoucher: false
-      };
+      });
       await setDoc(ref, data);
       return data;
     } catch (error) {
@@ -2282,7 +2394,7 @@ export const erpService = {
           const rawItemSnap = await getDoc(doc(db, 'items', item.itemId));
           const rawItemData = rawItemSnap.data() as Item;
           
-          batch.set(newRef, {
+          batch.set(newRef, cleanData({
             id: newRef.id,
             companyId,
             name: finishGoodName,
@@ -2292,7 +2404,7 @@ export const erpService = {
             avg_cost: rawItemData?.avg_cost || 0,
             category: 'Finish Goods',
             createdAt: serverTimestamp()
-          });
+          }));
         }
       }
 
@@ -2612,6 +2724,17 @@ export const erpService = {
       await deleteDoc(doc(db, 'subscription_orders', id));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `subscription_orders/${id}`);
+    }
+  },
+  async updateFeaturesConfig(categories: FeatureCategory[]): Promise<void> {
+    try {
+      const cleanedData = cleanData({ categories });
+      await setDoc(doc(db, 'system', 'features'), {
+        ...cleanedData,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'system/features');
     }
   }
 };

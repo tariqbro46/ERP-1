@@ -170,7 +170,7 @@ export function CashBankBooks() {
       {/* Scrollable Content Section */}
       <div className="flex-1 overflow-y-auto no-scrollbar p-0">
         <div className="p-4 lg:p-6">
-          <div id="cash-bank-report" className="bg-card rounded-xl border border-border overflow-hidden shadow-sm transition-colors">
+          <div id="cash-bank-report" className="bg-card rounded-xl border border-border shadow-sm transition-colors">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse font-mono border-separate border-spacing-0">
                 <thead className="sticky top-0 z-10 bg-card">

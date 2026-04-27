@@ -93,6 +93,11 @@ service cloud.firestore {
       allow read: if isCompanyMember(companyId);
       allow write: if isCompanyAdmin(companyId);
       allow delete: if isSuperAdmin() || isCompanyAdmin(companyId);
+
+      match /{configPath=**} {
+        allow read: if isCompanyMember(companyId);
+        allow write: if isCompanyAdmin(companyId);
+      }
     }
 
     // Companies
@@ -115,7 +120,11 @@ service cloud.firestore {
         isSuperAdmin() || 
         (userExists() && getUserData().companyId == resource.data.companyId)
       );
-      allow create: if isAuthenticated() && request.auth.uid == uid;
+      allow create: if isAuthenticated() && (
+        request.auth.uid == uid || 
+        isSuperAdmin() || 
+        (request.resource != null && isCompanyAdmin(request.resource.data.companyId))
+      );
       allow update: if isAuthenticated() && (
         request.auth.uid == uid || 
         (userExists() && isCompanyAdmin(resource.data.companyId))

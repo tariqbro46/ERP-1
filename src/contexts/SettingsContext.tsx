@@ -4,6 +4,7 @@ import { erpService } from '../services/erpService';
 import { doc, onSnapshot, collection } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { SubscriptionPlan } from '../types';
+import { FeatureCategory, APP_FEATURES } from '../constants/features';
 
 interface NotificationSettings {
   voucherSaved: string;
@@ -92,14 +93,17 @@ interface SettingsContextType {
   showGoToShortcut: boolean;
   showQuickActions: boolean;
   dashboardQuickActions: string[];
+  dashboardCards: string[];
   whatsappTemplates: WhatsAppTemplates;
   notifications: NotificationSettings;
   features: FeatureSettings[];
+  appFeatures: FeatureCategory[];
   subscriptionPlans: SubscriptionPlan[];
   activePlan?: SubscriptionPlan;
   userSettings: any;
   updateSettings: (newSettings: Partial<SettingsContextType>) => void;
   updateSystemSettings: (newSettings: any) => Promise<void>;
+  updateFeaturesSettings: (newFeatures: FeatureCategory[]) => Promise<void>;
   updateUserSettings: (newSettings: any) => Promise<void>;
 }
 
@@ -163,6 +167,7 @@ const defaultSettings: SettingsContextType = {
   showGoToShortcut: true,
   showQuickActions: true,
   dashboardQuickActions: ['voucher', 'item', 'ledger', 'godown', 'users'],
+  dashboardCards: ['revenue', 'profit', 'ledgers', 'stock'],
   whatsappTemplates: {
     Sales: "*{{companyName}}*\nSales Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
     Purchase: "*{{companyName}}*\nPurchase Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
@@ -175,22 +180,13 @@ const defaultSettings: SettingsContextType = {
     itemCreated: 'Stock item added to inventory.',
     settingsUpdated: 'System settings updated.'
   },
-  features: [
-    { id: 'inv', label: 'Maintain Accounts with Inventory', enabled: true },
-    { id: 'bill', label: 'Enable Bill-wise Entry', enabled: true },
-    { id: 'cost', label: 'Enable Cost Centers', enabled: false },
-    { id: 'int', label: 'Enable Interest Calculation', enabled: true },
-    { id: 'godown', label: 'Maintain Multiple Godowns', enabled: true },
-    { id: 'cat', label: 'Maintain Stock Categories', enabled: true },
-    { id: 'batch', label: 'Maintain Stock Batches', enabled: false },
-    { id: 'expiry', label: 'Track Expiry Dates', enabled: false },
-    { id: 'tax', label: 'Enable Tax % in Vouchers', enabled: true },
-    { id: 'barcode', label: 'Enable Barcode Scanning', enabled: false },
-  ],
+  features: [],
+  appFeatures: [],
   subscriptionPlans: [],
   userSettings: {},
   updateSettings: () => {},
   updateSystemSettings: async () => {},
+  updateFeaturesSettings: async () => {},
   updateUserSettings: async () => {}
 };
 
@@ -213,6 +209,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         const data = snap.data();
         setUserSettings(data.settings || {});
       }
+    }, (error) => {
+      console.error("User settings snapshot error:", error);
     });
 
     return () => unsubscribeUser();
@@ -251,8 +249,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setSettings(prev => ({ ...prev, subscriptionPlans: plans }));
     }, (error) => {
       console.error("Subscription plans snapshot error:", error);
-      console.error("Error details:", JSON.stringify(error, null, 2));
-      console.error("Current User:", auth.currentUser?.uid, auth.currentUser?.email);
+    });
+
+    // Listen to app features config
+    const featuresRef = doc(db, 'system', 'features');
+    const unsubscribeFeatures = onSnapshot(featuresRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setSettings(prev => ({ ...prev, appFeatures: data.categories || APP_FEATURES }));
+      } else {
+        setSettings(prev => ({ ...prev, appFeatures: APP_FEATURES }));
+      }
+    }, (error) => {
+      console.error("Features configuration snapshot error:", error);
+      setSettings(prev => ({ ...prev, appFeatures: APP_FEATURES }));
     });
 
     if (!user?.companyId) {
@@ -264,11 +274,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         statusErrorText: prev.statusErrorText,
         appVersion: prev.appVersion,
         updateSettings: prev.updateSettings,
-        updateSystemSettings: prev.updateSystemSettings
+        updateSystemSettings: prev.updateSystemSettings,
+        updateFeaturesSettings: prev.updateFeaturesSettings,
+        appFeatures: prev.appFeatures,
+        subscriptionPlans: prev.subscriptionPlans
       }));
       return () => {
         unsubscribeSystem();
         unsubscribePlans();
+        unsubscribeFeatures();
       };
     }
 
@@ -279,7 +293,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           ...prev, 
           ...snap.data(), 
           updateSettings: prev.updateSettings,
-          updateSystemSettings: prev.updateSystemSettings
+          updateSystemSettings: prev.updateSystemSettings,
+          updateFeaturesSettings: prev.updateFeaturesSettings,
+          appFeatures: prev.appFeatures,
+          subscriptionPlans: prev.subscriptionPlans
         }));
       } else {
         // If no settings exist for this company, use defaults (but keep system settings)
@@ -290,7 +307,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           statusErrorText: prev.statusErrorText,
           appVersion: prev.appVersion,
           updateSettings: prev.updateSettings,
-          updateSystemSettings: prev.updateSystemSettings
+          updateSystemSettings: prev.updateSystemSettings,
+          updateFeaturesSettings: prev.updateFeaturesSettings,
+          appFeatures: prev.appFeatures,
+          subscriptionPlans: prev.subscriptionPlans
         }));
       }
     }, (error) => {
@@ -301,6 +321,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       unsubscribe();
       unsubscribeSystem();
       unsubscribePlans();
+      unsubscribeFeatures();
     };
   }, [user?.companyId]);
 
@@ -380,6 +401,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       await erpService.updateSystemConfig(newSettings);
     } catch (err) {
       console.error('Error updating system settings:', err);
+    }
+  };
+
+  const updateFeaturesSettings = async (newFeatures: FeatureCategory[]) => {
+    try {
+      await erpService.updateFeaturesConfig(newFeatures);
+    } catch (err) {
+      console.error('Error updating features settings:', err);
     }
   };
 

@@ -32,7 +32,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 export function SubscriptionPage() {
   const { company, user, isAdmin } = useAuth();
-  const { subscriptionPlans } = useSettings();
+  const { subscriptionPlans, appFeatures } = useSettings();
   const { t } = useLanguage();
   const [orders, setOrders] = useState<SubscriptionOrder[]>([]);
   const [usageStats, setUsageStats] = useState<Record<string, number>>({});
@@ -263,24 +263,39 @@ export function SubscriptionPage() {
 
                   <div className="space-y-3">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">{t('subscription.featuresIncluded')}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {activePlan?.features.map(fId => {
-                        const feature = AVAILABLE_FEATURES.find(af => af.id === fId);
+                    <div className="space-y-6">
+                      {appFeatures.map(category => {
+                        const filteredFeatures = category.features.filter(f => activePlan?.features.includes(f.id));
+                        if (filteredFeatures.length === 0) return null;
+                        
                         return (
-                          <span key={fId} className="px-3 py-1.5 bg-muted rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 border border-border/50">
-                            {feature?.icon && <feature.icon className="w-3.5 h-3.5 text-primary" />}
-                            {feature?.label || fId}
-                          </span>
-                        );
-                      })}
-                      {company?.extraFeatures?.map(fId => {
-                        const feature = AVAILABLE_FEATURES.find(af => af.id === fId);
-                        return (
-                          <span key={fId} className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 border border-primary/20">
-                            <Plus className="w-3.5 h-3.5" />
-                            {feature?.label || fId}
-                            <span className="text-[8px] opacity-70">({t('subscription.extra')})</span>
-                          </span>
+                          <div key={category.id} className="space-y-3">
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest border-b border-border/30 pb-1">{category.label}</p>
+                            <div className="flex flex-wrap gap-2">
+                              {filteredFeatures.map(feature => {
+                                const limitText = activePlan?.featureLimits?.[feature.id];
+                                return (
+                                  <div 
+                                    key={feature.id} 
+                                    className="group relative px-3 py-1.5 bg-muted rounded-lg text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 border border-border/50 hover:border-primary/30 transition-all"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                                    <span>{feature.label}</span>
+                                    {limitText && <span className="text-[9px] opacity-70">({limitText})</span>}
+                                    
+                                    {feature.description && (
+                                      <div className="ml-1 opacity-40 hover:opacity-100 transition-opacity">
+                                        <Info className="w-3 h-3 cursor-help" />
+                                        <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-popover text-popover-foreground text-[9px] font-medium leading-relaxed rounded-lg shadow-xl border border-border opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-10">
+                                          {feature.description}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
@@ -592,22 +607,42 @@ export function SubscriptionPage() {
 
                         <div className="flex-1 space-y-4 mb-8">
                           <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border pb-2">{t('subscription.whatsIncluded')}</p>
-                          <ul className="space-y-3">
-                            {plan.features.slice(0, 6).map(fId => {
-                              const feature = AVAILABLE_FEATURES.find(af => af.id === fId);
+                          <div className="space-y-4 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                            {appFeatures.map(category => {
+                              const filteredFeatures = category.features.filter(f => plan.features.includes(f.id));
+                              if (filteredFeatures.length === 0) return null;
+
                               return (
-                                <li key={fId} className="flex items-start gap-2 text-[10px] font-medium text-foreground/80">
-                                  <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
-                                  <span>{feature?.label || fId}</span>
-                                </li>
+                                <div key={category.id} className="space-y-2">
+                                  <p className="text-[8px] text-muted-foreground uppercase font-black tracking-widest opacity-50">{category.label}</p>
+                                  <ul className="space-y-2">
+                                    {filteredFeatures.map(feature => {
+                                      const limitText = plan.featureLimits?.[feature.id];
+                                      return (
+                                        <li key={feature.id} className="flex items-start gap-2 text-[10px] font-medium text-foreground/80 group/feat relative">
+                                          <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
+                                          <div className="flex flex-col">
+                                            <div className="flex items-center gap-1.5 leading-tight">
+                                              <span>{feature.label}</span>
+                                              {feature.description && (
+                                                <div className="relative inline-block opacity-40 hover:opacity-100 transition-opacity">
+                                                  <Info className="w-2.5 h-2.5 cursor-help" />
+                                                  <div className="absolute bottom-full left-0 mb-2 w-40 p-2 bg-popover text-popover-foreground text-[8px] font-normal leading-relaxed rounded shadow-xl border border-border opacity-0 group-hover/feat:opacity-100 pointer-events-none transition-all z-20">
+                                                    {feature.description}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                            {limitText && <span className="text-[8px] mt-0.5 text-primary font-bold">({limitText})</span>}
+                                          </div>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </div>
                               );
                             })}
-                            {plan.features.length > 6 && (
-                              <li className="text-[9px] text-primary font-bold uppercase tracking-widest pl-5">
-                                {t('subscription.moreFeatures', { count: plan.features.length - 6 })}
-                              </li>
-                            )}
-                          </ul>
+                          </div>
                         </div>
 
                         <div className="mt-auto">

@@ -233,7 +233,7 @@ export function LedgerStatement() {
       exportData.push({
         date: formatDate(e.vouchers?.v_date),
         particulars: e.particulars,
-        vch_no: e.vouchers?.v_no || '-',
+        vch_no: `${e.vouchers?.v_no || '-'}${e.vouchers?.auto_serial_no ? ` / S#${e.vouchers.auto_serial_no}` : ''}`,
         vch_type: e.vouchers?.v_type || '-',
         debit: e.debit || 0,
         credit: e.credit || 0,
@@ -347,7 +347,7 @@ export function LedgerStatement() {
               ${config.showNarration && e.vouchers?.narration ? `<div style="font-size: 10px; font-style: italic; margin-left: 10px;">(${e.vouchers.narration})</div>` : ''}
             </td>
             <td>${e.vouchers?.v_type}</td>
-            <td>${e.vouchers?.v_no}</td>
+            <td>${e.vouchers?.v_no}${e.vouchers?.auto_serial_no ? ` / S#${e.vouchers.auto_serial_no}` : ''}</td>
             <td style="text-align: right;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
             <td style="text-align: right;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
             <td style="text-align: right;">${config.showRunningBalance ? `${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
@@ -578,7 +578,7 @@ export function LedgerStatement() {
               <div>Dr <b>${e.particulars}</b></div>
             </td>
             <td style="padding: 2px 5px;">${e.vouchers?.v_type}</td>
-            <td style="padding: 2px 5px;">${e.vouchers?.v_no}</td>
+            <td style="padding: 2px 5px;">${e.vouchers?.v_no}${e.vouchers?.auto_serial_no ? ` / S#${e.vouchers.auto_serial_no}` : ''}</td>
             <td style="padding: 2px 5px; text-align: right;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
             <td style="padding: 2px 5px; text-align: right;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
             ${config.showRunningBalance ? '<td style="padding: 2px 5px; text-align: right;"></td>' : ''}
@@ -989,7 +989,9 @@ export function LedgerStatement() {
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_type}</td>
-                                <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_no}</td>
+                                <td className="px-6 py-4 uppercase text-[10px] text-gray-500">
+                                  {e.vouchers?.v_no}{e.vouchers?.auto_serial_no ? ` / S#${e.vouchers.auto_serial_no}` : ''}
+                                </td>
                                 <td className="px-6 py-4 text-right">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
                                 <td className="px-6 py-4 text-right">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
                                 {config.showRunningBalance && (

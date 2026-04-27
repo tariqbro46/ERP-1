@@ -65,6 +65,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     showGoToShortcut,
     showQuickActions,
     dashboardQuickActions = ['voucher', 'item', 'ledger', 'godown', 'users'],
+    dashboardCards = ['revenue', 'profit', 'ledgers', 'stock'],
     englishFont,
     banglaFont,
     notifications, 
@@ -129,6 +130,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut ?? true);
   const [localShowQuickActions, setLocalShowQuickActions] = useState(showQuickActions ?? true);
   const [localDashboardQuickActions, setLocalDashboardQuickActions] = useState<string[]>(dashboardQuickActions || ['voucher', 'item', 'ledger', 'godown', 'users']);
+  const [localDashboardCards, setLocalDashboardCards] = useState<string[]>(dashboardCards || ['revenue', 'profit', 'ledgers', 'stock']);
   const [localEnglishFont, setLocalEnglishFont] = useState(englishFont || 'Inter');
   const [localBanglaFont, setLocalBanglaFont] = useState(banglaFont || 'Hind Siliguri');
 
@@ -217,6 +219,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalShowGoToShortcut(showGoToShortcut ?? true);
     setLocalShowQuickActions(showQuickActions ?? true);
     setLocalDashboardQuickActions(dashboardQuickActions || ['voucher', 'item', 'ledger', 'godown', 'users']);
+    setLocalDashboardCards(dashboardCards || ['revenue', 'profit', 'ledgers', 'stock']);
     setLocalEnglishFont(englishFont || 'Inter');
     setLocalBanglaFont(banglaFont || 'Hind Siliguri');
     setLocalMenuBarStyle(menuBarStyle || 'classic');
@@ -258,6 +261,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     updateUserSettings({
       showQuickActions: localShowQuickActions,
       dashboardQuickActions: localDashboardQuickActions,
+      dashboardCards: localDashboardCards,
       menuBarStyle: localMenuBarStyle,
       uiStyle: localUIStyle,
       glassBackground: localGlassBackground,
@@ -993,6 +997,56 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                           </div>
                         </div>
                       )}
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <div className="p-4 bg-foreground/5 border border-border space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-[10px] font-bold text-foreground uppercase tracking-widest flex items-center gap-2">
+                            <LayoutDashboard className="w-3 h-3 text-blue-500" />
+                            Dashboard Metric Cards (Max 5)
+                          </h4>
+                          <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                            {localDashboardCards.length}/5 Selected
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 italic mb-2">Select up to 5 metrics to display in a single row on your dashboard.</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {[
+                            { id: 'sales', label: t('dash.sales') || 'Sales' },
+                            { id: 'purchase', label: t('dash.purchase') || 'Purchase' },
+                            { id: 'payment', label: t('dash.payment') || 'Payment' },
+                            { id: 'receipt', label: t('dash.receipt') || 'Receipt' },
+                            { id: 'revenue', label: t('dash.revenue') || 'Total Revenue' },
+                            { id: 'profit', label: t('dash.profit') || 'Net Profit' },
+                            { id: 'ledgers', label: t('dash.activeLedgers') || 'Active Ledgers' },
+                            { id: 'stock', label: t('dash.stockValue') || 'Stock Value' },
+                          ].map(card => (
+                            <button
+                              key={card.id}
+                              disabled={!localDashboardCards.includes(card.id) && localDashboardCards.length >= 5}
+                              onClick={() => {
+                                if (localDashboardCards.includes(card.id)) {
+                                  setLocalDashboardCards(prev => prev.filter(c => c !== card.id));
+                                } else {
+                                  if (localDashboardCards.length < 5) {
+                                    setLocalDashboardCards(prev => [...prev, card.id]);
+                                  }
+                                }
+                              }}
+                              className={cn(
+                                "px-3 py-2 text-[9px] font-bold uppercase tracking-widest border transition-all flex items-center justify-between",
+                                localDashboardCards.includes(card.id)
+                                  ? "bg-foreground text-background border-foreground shadow-sm"
+                                  : "bg-background text-gray-500 border-border hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                              )}
+                            >
+                              <span>{card.label}</span>
+                              {localDashboardCards.includes(card.id) && <CheckCircle2 className="w-3 h-3" />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-2 md:col-span-2">

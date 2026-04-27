@@ -101,8 +101,23 @@ export function StockItemReport() {
         erpService.getCollection('vouchers', user!.companyId)
       ]);
       
+      // Calculate Auto Serial Numbers
+      const sortedVouchers = [...allVouchers].sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        if (timeA !== timeB) return timeA - timeB;
+        return a.id.localeCompare(b.id);
+      });
+
+      const typeCounters: Record<string, number> = {};
+      const serialMap: Record<string, number> = {};
+      sortedVouchers.forEach(v => {
+        typeCounters[v.v_type] = (typeCounters[v.v_type] || 0) + 1;
+        serialMap[v.id] = typeCounters[v.v_type];
+      });
+
       const voucherMap = allVouchers.reduce((acc: any, v: any) => {
-        acc[v.id] = v;
+        acc[v.id] = { ...v, auto_serial_no: serialMap[v.id] };
         return acc;
       }, {});
       // Parse dates consistently as local midnight to avoid timezone shifts
@@ -386,7 +401,7 @@ export function StockItemReport() {
           const row: any = {};
           row['date'] = formatReportDate(tx.date || tx.created_at?.toDate?.() || '', settings.dateFormat);
           row['type'] = tx.v_type;
-          row['vch_no'] = tx.v_no;
+          row['vch_no'] = `${tx.v_no}${tx.auto_serial_no ? ` / S#${tx.auto_serial_no}` : ''}`;
           row['particulars'] = tx.party_name;
           row[`qty_(${unit.toLowerCase()})`] = formatQty(tx.qty + (tx.free_qty || 0));
           row['rate'] = tx.rate;
@@ -557,7 +572,7 @@ export function StockItemReport() {
 
         <div className="lg:col-span-3">
           {selectedItem ? (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
               <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Package className="w-5 h-5 text-primary" />
@@ -684,7 +699,7 @@ export function StockItemReport() {
                               {tx.v_type}
                             </td>
                             <td className="px-6 py-3 text-sm text-gray-600">
-                              {tx.v_no}
+                              {tx.v_no}{tx.auto_serial_no ? ` / S#${tx.auto_serial_no}` : ''}
                             </td>
                             <td className="px-6 py-3 text-sm font-medium text-gray-900 capitalize">
                               {tx.party_name}

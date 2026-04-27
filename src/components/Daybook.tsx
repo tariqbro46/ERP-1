@@ -106,10 +106,13 @@ export function Daybook() {
         sorted.sort((a, b) => a.total_amount - b.total_amount);
         break;
       case 'Voucher Number (Ascending)':
-        sorted.sort((a, b) => (a.v_no || '').localeCompare(b.v_no || '', undefined, { numeric: true }));
+        sorted.sort((a, b) => (a.v_no || '').localeCompare(a.v_no || '', undefined, { numeric: true }));
         break;
       case 'Voucher Number (Descending)':
         sorted.sort((a, b) => (b.v_no || '').localeCompare(a.v_no || '', undefined, { numeric: true }));
+        break;
+      case 'Auto Serial No':
+        sorted.sort((a, b) => (a.auto_serial_no || 0) - (b.auto_serial_no || 0));
         break;
       case 'In Sequence of entry':
         sorted.sort((a, b) => {
@@ -119,7 +122,24 @@ export function Daybook() {
         });
         break;
       default:
-        sorted.sort((a, b) => new Date(a.v_date).getTime() - new Date(b.v_date).getTime());
+        // Default Sort: Type Order (Payment, Receipt, Sales, Purchase) then Auto Serial No
+        const typeOrder: Record<string, number> = {
+          'Payment': 1,
+          'Receipt': 2,
+          'Sales': 3,
+          'Purchase': 4
+        };
+        sorted.sort((a, b) => {
+          const dateA = new Date(a.v_date).getTime();
+          const dateB = new Date(b.v_date).getTime();
+          if (dateA !== dateB) return dateA - dateB;
+
+          const orderA = typeOrder[a.v_type] || 99;
+          const orderB = typeOrder[b.v_type] || 99;
+          if (orderA !== orderB) return orderA - orderB;
+          
+          return (a.auto_serial_no || 0) - (b.auto_serial_no || 0);
+        });
     }
     return sorted;
   };
@@ -335,7 +355,7 @@ export function Daybook() {
       {/* Scrollable Content Section */}
       <div className="flex-1 overflow-y-auto no-scrollbar p-0">
         <div className="p-4 lg:p-6 space-y-6">
-          <div id="daybook-report" className="bg-card border border-border overflow-hidden">
+          <div id="daybook-report" className="bg-card border border-border">
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
             {loading ? (
@@ -369,7 +389,7 @@ export function Daybook() {
                     {config.showEnteredBy && (
                       <span className="text-[8px] text-gray-400 uppercase">{t('common.providedBy')}: {users.find(u => u.uid === v.createdBy)?.displayName || 'System'}</span>
                     )}
-                    <span className="text-[10px] text-gray-500">{v.v_no}</span>
+                    <span className="text-[10px] text-gray-500">{v.v_no}{v.auto_serial_no ? ` / S#${v.auto_serial_no}` : ''}</span>
                   </div>
                   <span className="text-sm font-bold text-foreground">৳ {formatNumber(v.total_amount)}</span>
                 </div>
@@ -441,7 +461,7 @@ export function Daybook() {
                         </div>
                       </td>
                       <td className="px-4 lg:px-6 py-4 uppercase text-[10px] text-gray-500">{v.v_type}</td>
-                      <td className="px-4 lg:px-6 py-4">{v.v_no}</td>
+                      <td className="px-4 lg:px-6 py-4">{v.v_no}{v.auto_serial_no ? ` / S#${v.auto_serial_no}` : ''}</td>
                       <td className="px-4 lg:px-6 py-4 text-right text-foreground font-bold">৳ {formatNumber(v.total_amount)}</td>
                       <td className="px-4 lg:px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">

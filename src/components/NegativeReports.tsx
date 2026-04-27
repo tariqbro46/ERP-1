@@ -103,7 +103,7 @@ export const NegativeReports: React.FC<NegativeReportsProps> = ({ type }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
         <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -122,19 +122,19 @@ export const NegativeReports: React.FC<NegativeReportsProps> = ({ type }) => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
+          <table className="w-full text-left border-collapse border-separate border-spacing-0">
+            <thead className="sticky top-0 z-10 bg-gray-50">
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">
                   {type === 'ledger' ? t('ledger.name') : t('item.name')}
                 </th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">
                   {type === 'ledger' ? t('ledger.group') : t('item.category')}
                 </th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right border-b border-border">
                   {type === 'ledger' ? t('common.amount') : t('common.quantity')}
                 </th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center border-b border-border">
                   {t('common.actions')}
                 </th>
               </tr>

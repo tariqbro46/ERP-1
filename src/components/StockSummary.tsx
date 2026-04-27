@@ -337,7 +337,7 @@ export function StockSummary() {
       <div className="flex-1 overflow-y-auto no-scrollbar p-0">
         <div className="p-4 lg:p-6 space-y-6">
           {/* Table/Cards */}
-          <div id="stock-summary-report" className="bg-card border border-border overflow-hidden p-0 print:p-8 print:border-none print:shadow-none bg-white">
+          <div id="stock-summary-report" className="bg-card border border-border p-0 print:p-8 print:border-none print:shadow-none bg-white">
           <ReportPrintHeader 
             title="Stock Summary" 
             subtitle={cn(

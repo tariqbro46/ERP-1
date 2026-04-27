@@ -340,7 +340,7 @@ export interface ReportConfig {
   showEnteredBy: boolean;
   showRunningBalance: boolean;
   ledgerDisplayName: 'Alias (Name)' | 'Alias Only' | 'Name (Alias)' | 'Name Only';
-  sortingMethod: 'Alphabetical (A to Z)' | 'Alphabetical (Z to A)' | 'Amount (Decreasing)' | 'Amount (Increasing)' | 'Default' | 'In Sequence of entry' | 'Voucher Number (Ascending)' | 'Voucher Number (Descending)' | 'Voucher Number (Sequence of A - Z)' | 'Voucher Number (Sequence of Z - A)';
+  sortingMethod: 'Alphabetical (A to Z)' | 'Alphabetical (Z to A)' | 'Amount (Decreasing)' | 'Amount (Increasing)' | 'Default' | 'Auto Serial No' | 'In Sequence of entry' | 'Voucher Number (Ascending)' | 'Voucher Number (Descending)' | 'Voucher Number (Sequence of A - Z)' | 'Voucher Number (Sequence of Z - A)';
   enableStripeView: boolean;
 }
 
@@ -388,6 +388,7 @@ export interface SubscriptionPlan {
     value: number;
   };
   features: string[]; // List of feature IDs
+  featureLimits?: Record<string, string>; // Maps feature ID to limit description text (e.g., "up to 5 godowns")
   limits: {
     vouchers: number; // -1 for unlimited
     items: number;

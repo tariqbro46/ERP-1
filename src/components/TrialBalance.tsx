@@ -146,7 +146,7 @@ export function TrialBalance() {
       <div className="flex-1 overflow-y-auto no-scrollbar p-0">
         <div className="p-4 lg:p-6 space-y-6">
           {/* Table/Cards */}
-          <div id="trial-balance-report" className="bg-card border border-border overflow-hidden p-0">
+          <div id="trial-balance-report" className="bg-card border border-border p-0">
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
             {filteredData.map((ledger) => (

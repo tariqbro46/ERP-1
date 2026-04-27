@@ -13,11 +13,13 @@ import {
   FileText,
   TrendingUp,
   Activity,
-  Globe
+  Globe,
+  Info
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useSiteContent } from '../../hooks/useSiteContent';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useSettings } from '../../contexts/SettingsContext';
 
 const DEFAULT_CONTENT = {
   title: "Powerful Features for Modern Enterprises",
@@ -47,6 +49,7 @@ const DEFAULT_CONTENT = {
 
 export const Features = () => {
   const { t } = useLanguage();
+  const { appFeatures } = useSettings();
   const DEFAULT_CONTENT = {
     title: t('features.title'),
     titleColor: "#1e293b",
@@ -188,28 +191,45 @@ export const Features = () => {
             ))}
           </div>
 
-          {/* Grid of smaller features */}
           {content.showMore && (
             <div className="py-24 border-t border-border">
               <div className="text-center mb-16">
                 <h2 className="text-3xl font-bold mb-4" style={{ color: content.titleColor }}>{content.moreTitle}</h2>
                 <p style={{ color: content.subtitleColor }}>{content.moreSubtitle}</p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                {[
-                  { icon: Shield, title: t('features.extra1Title'), desc: t('features.extra1Desc') },
-                  { icon: Zap, title: t('features.extra2Title'), desc: t('features.extra2Desc') },
-                  { icon: Printer, title: t('features.extra3Title'), desc: t('features.extra3Desc') },
-                  { icon: Globe, title: t('features.extra4Title'), desc: t('features.extra4Desc') },
-                  { icon: Activity, title: t('features.extra5Title'), desc: t('features.extra5Desc') },
-                  { icon: TrendingUp, title: t('features.extra6Title'), desc: t('features.extra6Desc') },
-                  { icon: FileText, title: t('features.extra7Title'), desc: t('features.extra7Desc') },
-                  { icon: Users, title: t('features.extra8Title'), desc: t('features.extra8Desc') }
-                ].map((item, i) => (
-                  <div key={i} className="p-6 border border-border rounded-2xl" style={{ backgroundColor: content.cardBgColor }}>
-                    <item.icon className="w-6 h-6 text-primary mb-4" />
-                    <h3 className="font-bold mb-2" style={{ color: content.cardTitleColor }}>{item.title}</h3>
-                    <p className="text-xs leading-relaxed" style={{ color: content.cardDescColor }}>{item.desc}</p>
+              <div className="space-y-16">
+                {appFeatures.map((category) => (
+                  <div key={category.id} className="space-y-6">
+                    <div className="flex items-center gap-4">
+                      <div className="h-[1px] flex-1 bg-border/50" />
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 whitespace-nowrap">
+                        {category.label}
+                      </h3>
+                      <div className="h-[1px] flex-1 bg-border/50" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {category.features.map((feature) => (
+                        <div 
+                          key={feature.id} 
+                          className="group relative p-6 border border-border rounded-2xl hover:border-primary/50 transition-all hover:translate-y-[-4px]" 
+                          style={{ backgroundColor: content.cardBgColor }}
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <Zap className="w-5 h-5 text-primary opacity-50" />
+                            {feature.description && (
+                              <div className="relative group/info">
+                                <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors" />
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-popover text-popover-foreground text-[10px] font-medium leading-relaxed rounded-xl shadow-2xl border border-border opacity-0 group-hover/info:opacity-100 pointer-events-none transition-all z-10">
+                                  {feature.description}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <h4 className="text-sm font-bold mb-1 uppercase tracking-wider" style={{ color: content.cardTitleColor }}>{feature.label}</h4>
+                          <span className="text-[8px] font-mono text-muted-foreground uppercase opacity-40">Feature ID: {feature.id}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>

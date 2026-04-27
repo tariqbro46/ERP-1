@@ -177,7 +177,7 @@ export function GroupSummary() {
                 </div>
               </div>
 
-              <div id="group-summary-report" className="bg-white rounded-xl border border-border overflow-hidden shadow-sm p-0 print:p-8 print:border-none print:shadow-none min-h-[400px]">
+              <div id="group-summary-report" className="bg-white rounded-xl border border-border shadow-sm p-0 print:p-8 print:border-none print:shadow-none min-h-[400px]">
                 <ReportPrintHeader title="Group Summary" subtitle={groups.find(g => g.id === selectedGroup)?.name} />
                 
                 <div className="overflow-x-auto">

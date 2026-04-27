@@ -1,18 +1,20 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { useSubscription } from '../hooks/useSubscription';
 import { ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface FeatureGuardProps {
-  featureId: string;
+  feature?: string;
+  permission?: string;
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }
 
-export const FeatureGuard: React.FC<FeatureGuardProps> = ({ featureId, children, fallback }) => {
-  const { company, isSuperAdmin } = useAuth();
-  const { subscriptionPlans } = useSettings();
+export const FeatureGuard: React.FC<FeatureGuardProps> = ({ feature, permission, children, fallback }) => {
+  const { company, isSuperAdmin, hasPermission } = useAuth();
+  const { isFeatureEnabled, activePlan } = useSubscription();
 
   // Super admins have access to everything
   if (isSuperAdmin) {
@@ -23,17 +25,19 @@ export const FeatureGuard: React.FC<FeatureGuardProps> = ({ featureId, children,
     return null;
   }
 
-  // Find the company's plan
-  const plan = subscriptionPlans.find(p => p.id === company.planId);
+  // 1. Check Role-based permissions first (HIDE if no permission)
+  if (permission && !hasPermission(permission)) {
+    return null;
+  }
 
-  // Check if feature is in plan or granted as extra
-  const hasAccess = (plan && plan.features.includes(featureId)) || 
-                    (company.extraFeatures?.includes(featureId));
+  // 2. Check Subscription Feature (NUDGE if not subscribed but has permission)
+  const isSubscribed = !feature || isFeatureEnabled(feature);
 
-  if (hasAccess) {
+  if (isSubscribed) {
     return <>{children}</>;
   }
 
+  // If they have the role permission but NOT the subscription, show the blurred/upgrade UI
   if (fallback) {
     return <>{fallback}</>;
   }
@@ -46,7 +50,7 @@ export const FeatureGuard: React.FC<FeatureGuardProps> = ({ featureId, children,
       <div className="space-y-3">
         <h3 className="text-lg font-bold uppercase tracking-widest text-foreground">Premium Feature</h3>
         <p className="text-xs text-muted-foreground uppercase tracking-widest leading-relaxed">
-          This feature is not included in your current <span className="text-primary font-bold">{plan?.name || 'Free'}</span> plan. 
+          This feature is not included in your current <span className="text-primary font-bold">{activePlan?.name || 'Free'}</span> plan. 
           Upgrade your subscription to unlock this and many other powerful tools.
         </p>
       </div>

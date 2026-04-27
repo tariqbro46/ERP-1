@@ -38,6 +38,7 @@ export interface CompanyData {
 interface AuthContextType {
   user: Profile | null;
   company: CompanyData | null;
+  rolePermissions: Record<string, string[]> | null;
   firebaseUser: FirebaseUser | null;
   logout: () => Promise<void>;
   loading: boolean;
@@ -45,6 +46,7 @@ interface AuthContextType {
   isFounder: boolean;
   isMarketingManager: boolean;
   isSuperAdmin: boolean;
+  hasPermission: (featureId: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,6 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [user, setUser] = useState<Profile | null>(null);
   const [company, setCompany] = useState<CompanyData | null>(null);
+  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]> | null>(null);
   const [loading, setLoading] = useState(true);
 
   const isFounder = user?.role === 'Founder' || firebaseUser?.email?.toLowerCase() === 'sapientman46@gmail.com';
@@ -60,26 +63,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isSuperAdmin = isFounder || isMarketingManager;
   const isAdmin = user?.role === 'Admin' || isSuperAdmin;
 
+  const hasPermission = (featureId: string) => {
+    if (isSuperAdmin || isAdmin) return true;
+    if (!user) return false;
+    
+    // Check if role has permission in the company settings
+    if (rolePermissions && rolePermissions[user.role]) {
+      if (rolePermissions[user.role].includes(featureId)) return true;
+    }
+    
+    // Fallback to explicit user permissions if any
+    return user.permissions?.includes(featureId) || false;
+  };
+
   useEffect(() => {
     let unsubProfile: (() => void) | null = null;
     let unsubCompany: (() => void) | null = null;
+    let unsubPermissions: (() => void) | null = null;
 
     const unsubscribe = onAuthStateChanged(auth, async (fUser) => {
       setFirebaseUser(fUser);
       
       if (unsubProfile) unsubProfile();
       if (unsubCompany) unsubCompany();
+      if (unsubPermissions) unsubPermissions();
 
       if (fUser) {
         // Listen to user profile changes
         const userRef = doc(db, 'users', fUser.uid);
         unsubProfile = onSnapshot(userRef, async (docSnap) => {
           try {
-            // Unsubscribe existing company listener if any before setting up a new one
-            if (unsubCompany) {
-              unsubCompany();
-              unsubCompany = null;
-            }
+            // Unsubscribe existing listeners if any before setting up new ones
+            if (unsubCompany) { unsubCompany(); unsubCompany = null; }
+            if (unsubPermissions) { unsubPermissions(); unsubPermissions = null; }
 
             if (docSnap.exists()) {
               const userData = docSnap.data() as Profile;
@@ -99,9 +115,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   console.error("Company snapshot error:", err);
                   setLoading(false);
                 });
+
+                // Listen to role permissions
+                const permsRef = doc(db, 'settings', userData.companyId, 'config', 'role_permissions');
+                unsubPermissions = onSnapshot(permsRef, (permsSnap) => {
+                  if (permsSnap.exists()) {
+                    setRolePermissions(permsSnap.data() as Record<string, string[]>);
+                  } else {
+                    setRolePermissions(null);
+                  }
+                }, (error) => {
+                  console.error("Permissions snapshot error:", error);
+                  // We don't necessarily want to block the whole app if permissions fail to load,
+                  // but we should log it.
+                });
               } else {
                 console.warn("User profile exists but companyId is missing");
                 setCompany(null);
+                setRolePermissions(null);
                 setLoading(false);
               }
 
@@ -181,6 +212,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       unsubscribe();
       if (unsubProfile) unsubProfile();
       if (unsubCompany) unsubCompany();
+      if (unsubPermissions) unsubPermissions();
     };
   }, []);
 
@@ -192,13 +224,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider value={{ 
       user, 
       company,
+      rolePermissions,
       firebaseUser, 
       logout, 
       loading, 
       isAdmin,
       isFounder,
       isMarketingManager,
-      isSuperAdmin
+      isSuperAdmin,
+      hasPermission
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,63 +1,75 @@
-import { 
-  Package, 
-  Users, 
-  Printer, 
-  BarChart3, 
-  Bell, 
-  StickyNote, 
-  Search, 
-  Settings, 
-  FileText, 
-  MessageSquare, 
-  ClipboardList, 
-  MapPin, 
-  ListTree, 
-  BookOpen, 
-  PieChart, 
-  Activity, 
-  Cpu, 
-  Shield, 
-  Building2, 
-  Scale, 
-  TrendingUp, 
-  CreditCard 
-} from 'lucide-react';
+export interface Feature {
+  id: string;
+  label: string;
+  description?: string;
+  subscriptionFeatureId?: string; // The feature ID in the subscription plan (e.g., 'inv', 'pay', 'ord')
+}
 
-export const AVAILABLE_FEATURES = [
-  { id: 'inv', label: 'Inventory Management', icon: Package },
-  { id: 'payroll', label: 'Payroll & Employees', icon: Users },
-  { id: 'production', label: 'Production & Orders', icon: Printer },
-  { id: 'insights', label: 'Financial Insights', icon: BarChart3 },
-  { id: 'notifications', label: 'System Notifications', icon: Bell },
-  { id: 'notes', label: 'Sticky Notes', icon: StickyNote },
-  { id: 'search', label: 'Global Search', icon: Search },
-  { id: 'ui_custom', label: 'UI Customization', icon: Settings },
-  { id: 'report_layout', label: 'Report Layout Style', icon: FileText },
-  { id: 'popup_notif', label: 'Popup Notifications', icon: Bell },
-  { id: 'whatsapp_temp', label: 'WhatsApp Templates', icon: MessageSquare },
-  { id: 'voucher_entry', label: 'Voucher Entry', icon: ClipboardList },
-  { id: 'godowns', label: 'Godown Management', icon: MapPin },
-  { id: 'employee_master', label: 'Employee Master', icon: Users },
-  { id: 'chart_accounts', label: 'Chart of Accounts', icon: ListTree },
-  { id: 'item_master', label: 'Item Master', icon: Package },
-  { id: 'daybook', label: 'Daybook Reports', icon: BookOpen },
-  { id: 'financial_reports', label: 'Financial Reports (BS/PL/TB)', icon: BarChart3 },
-  { id: 'ratio_analysis', label: 'Ratio Analysis', icon: PieChart },
-  { id: 'sales_perf', label: 'Sales Performance', icon: Activity },
-  { id: 'voucher_settings', label: 'Voucher Settings', icon: Settings },
-  { id: 'print_settings', label: 'Print Settings', icon: Printer },
-  { id: 'f11_features', label: 'F11 Features', icon: Cpu },
-  { id: 'security', label: 'Security Settings', icon: Shield },
-  { id: 'utilities', label: 'System Utilities', icon: Settings },
-  { id: 'company_mgmt', label: 'Company Management', icon: Building2 },
-  { id: 'user_mgmt', label: 'User Management', icon: Users },
-  { id: 'ledger_statement', label: 'Ledger Statement', icon: ClipboardList },
-  { id: 'stock_summary', label: 'Stock Summary', icon: Package },
-  { id: 'trial_balance', label: 'Trial Balance', icon: ClipboardList },
-  { id: 'balance_sheet', label: 'Balance Sheet', icon: Scale },
-  { id: 'profit_loss', label: 'Profit & Loss', icon: TrendingUp },
-  { id: 'order_mgmt', label: 'Order Management', icon: Printer },
-  { id: 'machine_mgmt', label: 'Machine Management', icon: Cpu },
-  { id: 'production_reports', label: 'Production Reports', icon: BarChart3 },
-  { id: 'subscription', label: 'Subscription Management', icon: CreditCard }
+export interface FeatureCategory {
+  id: string;
+  label: string;
+  features: Feature[];
+}
+
+export const APP_FEATURES: FeatureCategory[] = [
+  {
+    id: 'accounts',
+    label: 'Accounts & Finance',
+    features: [
+      { id: 'acc_masters_create', label: 'Create Masters (Ledger/Group)', description: 'Allow creating new ledgers and groups' },
+      { id: 'acc_masters_alter', label: 'Alter/Delete Masters', description: 'Allow modifying or deleting existing ledgers and groups' },
+      { id: 'acc_vouchers_create', label: 'Create Vouchers', description: 'Allow entry of Payment, Receipt, Journal, etc.' },
+      { id: 'acc_vouchers_alter', label: 'Alter/Delete Vouchers', description: 'Allow modifying or deleting existing vouchers' },
+      { id: 'acc_reports_view', label: 'View Reports', description: 'Daybook, Trial Balance, Ledger Statements' },
+      { id: 'acc_reports_financial', label: 'Financial Statements', description: 'Balance Sheet, Profit & Loss' },
+    ]
+  },
+  {
+    id: 'inventory',
+    label: 'Inventory Management',
+    features: [
+      { id: 'inv_masters_create', label: 'Create Inventory Masters', description: 'Stock Items, Units, Godowns', subscriptionFeatureId: 'inv' },
+      { id: 'inv_masters_alter', label: 'Alter Inventory Masters', description: 'Modify Stock Items, Godowns', subscriptionFeatureId: 'inv' },
+      { id: 'inv_vouchers_create', label: 'Inventory Transactions', description: 'Stock Journal, Physical Stock', subscriptionFeatureId: 'inv' },
+      { id: 'inv_reports_view', label: 'Inventory Reports', description: 'Stock Summary, Item Reports, Movement Analysis', subscriptionFeatureId: 'inv' },
+    ]
+  },
+  {
+    id: 'payroll',
+    label: 'Payroll & HRM',
+    features: [
+      { id: 'pay_masters', label: 'Employee & Payhead Management', description: 'Manage Employees, Pay Heads, Salary Structures', subscriptionFeatureId: 'pay' },
+      { id: 'pay_transactions', label: 'Attendance & Salary Processing', description: 'Process Monthly Salaries and Attendance', subscriptionFeatureId: 'pay' },
+      { id: 'pay_reports', label: 'Payroll Reports', description: 'Salary Sheets, Pay Slips', subscriptionFeatureId: 'pay' },
+    ]
+  },
+  {
+    id: 'orders',
+    label: 'Order Management',
+    features: [
+      { id: 'ord_create', label: 'Create Orders', description: 'Receive new printing/sales orders', subscriptionFeatureId: 'ord' },
+      { id: 'ord_process', label: 'Process Orders', description: 'Status updates and order tracking', subscriptionFeatureId: 'ord' },
+      { id: 'ord_reports', label: 'Order Reports', description: 'Order books and register', subscriptionFeatureId: 'ord' },
+    ]
+  },
+  {
+    id: 'production',
+    label: 'Manufacturing & Machines',
+    features: [
+      { id: 'mac_manage', label: 'Machine Management', description: 'Manage printing machines and status', subscriptionFeatureId: 'mac' },
+      { id: 'mac_production', label: 'Production Entry', description: 'Convert orders to finished goods', subscriptionFeatureId: 'mac' },
+    ]
+  },
+  {
+    id: 'adv_analytics',
+    label: 'Advanced Analytics',
+    features: [
+      { id: 'ana_ratio', label: 'Ratio Analysis', description: 'Financial performance ratios', subscriptionFeatureId: 'adv_reports' },
+      { id: 'ana_cashflow', label: 'Cash & Funds Flow', description: 'View flow statements', subscriptionFeatureId: 'adv_reports' },
+      { id: 'ana_ageing', label: 'Ageing Analysis', description: 'Stock ageing reports', subscriptionFeatureId: 'adv_reports' },
+      { id: 'ana_insights', label: 'AI Financial Insights', description: 'Generate AI-driven business insights', subscriptionFeatureId: 'insights' },
+    ]
+  }
 ];
+
+export const AVAILABLE_FEATURES = APP_FEATURES.flatMap(cat => cat.features);

@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, Clock, Hammer, CheckCircle2, ListTodo } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, Clock, Hammer, CheckCircle2, ListTodo, TrendingUp } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -63,9 +63,22 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { companyName, financialYearStart, financialYearEnd, dashboardDesign, uiStyle, showQuickActions, dashboardQuickActions = ['voucher', 'item', 'ledger', 'godown', 'users'] } = useSettings();
+  const { companyName, financialYearStart, financialYearEnd, dashboardDesign, uiStyle, showQuickActions, dashboardQuickActions = ['voucher', 'item', 'ledger', 'godown', 'users'], dashboardCards = ['revenue', 'profit', 'ledgers', 'stock'] } = useSettings();
   const { isAdmin, user } = useAuth();
   const [loading, setLoading] = useState(true);
+  
+  const cardConfigs: Record<string, any> = {
+    sales: { title: t('dash.sales') || 'Sales', key: 'sales', icon: Activity, color: 'bg-blue-600' },
+    purchase: { title: t('dash.purchase') || 'Purchase', key: 'purchase', icon: Package, color: 'bg-amber-600' },
+    payment: { title: t('dash.payment') || 'Payment', key: 'payment', icon: CreditCard, color: 'bg-rose-600' },
+    receipt: { title: t('dash.receipt') || 'Receipt', key: 'receipt', icon: CreditCard, color: 'bg-emerald-600' },
+    revenue: { title: t('dash.revenue') || 'Total Revenue', key: 'revenue', icon: Activity, color: 'bg-blue-600' },
+    profit: { title: t('dash.profit') || 'Net Profit', key: 'profit', icon: TrendingUp, color: 'bg-emerald-600' },
+    ledgers: { title: t('dash.activeLedgers') || 'Active Ledgers', key: 'activeLedgers', icon: Users, color: 'bg-indigo-600' },
+    stock: { title: t('dash.stockValue') || 'Stock Value', key: 'stockValue', icon: Package, color: 'bg-orange-600' },
+  };
+
+  const selectedCards = dashboardCards.slice(0, 5).map(id => cardConfigs[id]).filter(Boolean);
   
   // Default to current month
   const getDefaultPeriod = () => {
@@ -94,6 +107,10 @@ export function Dashboard() {
   const [stats, setStats] = useState({
     revenue: 0,
     profit: 0,
+    sales: 0,
+    purchase: 0,
+    payment: 0,
+    receipt: 0,
     activeLedgers: 0,
     stockValue: 0,
     chartData: [] as any[]
@@ -186,37 +203,23 @@ export function Dashboard() {
           {/* Metric Cards Section */}
           <div className="space-y-4">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('dash.kpi')}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-[#ffbf00] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
-              <div className="space-y-4">
-                <CreditCard className="w-6 h-6 text-black/60" />
-                <p className="text-[10px] font-bold text-black/60 uppercase leading-tight">{t('dash.revenue')}</p>
-              </div>
-              <span className="text-2xl font-light text-black/80">৳ {formatNumber(revenue)}</span>
-            </div>
-            <div className="bg-[#34a853] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
-              <div className="space-y-4">
-                <Activity className="w-6 h-6 text-white/60" />
-                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dash.profit')}</p>
-              </div>
-              <span className="text-2xl font-light text-white/90">৳ {formatNumber(profit)}</span>
-            </div>
-            <div className="bg-[#ea4335] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
-              <div className="space-y-4">
-                <Users className="w-6 h-6 text-white/60" />
-                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dash.activeLedgers')}</p>
-              </div>
-              <span className="text-3xl font-light text-white/90">{activeLedgers}</span>
-            </div>
-            <div className="bg-[#e91e63] p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer">
-              <div className="space-y-4">
-                <Package className="w-6 h-6 text-white/60" />
-                <p className="text-[10px] font-bold text-white/60 uppercase leading-tight">{t('dash.stockValue')}</p>
-              </div>
-              <span className="text-2xl font-light text-white/90">৳ {formatNumber(stockValue)}</span>
+            <div className={cn(
+              "grid gap-4",
+              selectedCards.length === 5 ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+            )}>
+              {selectedCards.map((card: any) => (
+                <div key={card.key} className={cn("p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer", card.color || "bg-blue-600")}>
+                  <div className="space-y-4">
+                    <card.icon className={cn("w-6 h-6", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/60" : "text-white/60")} />
+                    <p className={cn("text-[10px] font-bold uppercase leading-tight", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/60" : "text-white/60")}>{card.title}</p>
+                  </div>
+                  <span className={cn("text-2xl font-light", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/80" : "text-white/90")}>
+                    {card.key === 'activeLedgers' ? stats[card.key as keyof typeof stats] : `৳ ${formatNumber(stats[card.key as keyof typeof stats] as number)}`}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -377,48 +380,22 @@ export function Dashboard() {
 
       {/* Scrollable Content Section */}
       <div className="flex-1 overflow-y-auto no-scrollbar p-4 lg:p-6 space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          title={t('dash.revenue')} 
-          value={`৳ ${formatNumber(stats.revenue)}`} 
-          change="+12.5%" 
-          icon={Activity} 
-          trend="up" 
-          loading={loading}
-          color="bg-blue-600"
-          uiStyle={uiStyle}
-        />
-        <StatCard 
-          title={t('dash.profit')} 
-          value={`৳ ${formatNumber(stats.profit)}`} 
-          change="+5.2%" 
-          icon={CreditCard} 
-          trend="up" 
-          loading={loading}
-          color="bg-emerald-600"
-          uiStyle={uiStyle}
-        />
-        <StatCard 
-          title={t('dash.activeLedgers')} 
-          value={stats.activeLedgers?.toString() || '0'} 
-          change="+3" 
-          icon={Users} 
-          trend="up" 
-          loading={loading}
-          color="bg-amber-600"
-          uiStyle={uiStyle}
-        />
-        <StatCard 
-          title={t('dash.stockValue')} 
-          value={`৳ ${formatNumber(stats.stockValue)}`} 
-          change="-2.1%" 
-          icon={Package} 
-          trend="down" 
-          loading={loading}
-          color="bg-rose-600"
-          uiStyle={uiStyle}
-        />
-      </div>
+        <div className={cn(
+          "grid gap-4",
+          selectedCards.length === 5 ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+        )}>
+          {selectedCards.map((card: any) => (
+            <StatCard 
+              key={card.key}
+              title={card.title} 
+              value={['activeLedgers'].includes(card.key) ? stats[card.key as keyof typeof stats] : `৳ ${formatNumber(stats[card.key as keyof typeof stats] as number)}`} 
+              icon={card.icon} 
+              loading={loading}
+              color={card.color}
+              uiStyle={uiStyle}
+            />
+          ))}
+        </div>
 
       {/* Subscription Status Widget - Only show if access is disabled */}
       {company && company.isAccessEnabled === false && (

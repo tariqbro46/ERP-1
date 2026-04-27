@@ -227,24 +227,24 @@ export function MovementAnalysis() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
+          <table className="w-full text-left border-collapse border-separate border-spacing-0">
+            <thead className="sticky top-0 z-10 bg-gray-100">
               <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500">
-                <th rowSpan={2} className="px-6 py-4 border-r border-gray-200">Item Name</th>
-                <th rowSpan={2} className="px-6 py-4 border-r border-gray-200 bg-gray-50">Opening Qty</th>
+                <th rowSpan={2} className="px-6 py-4 border-r border-gray-200 border-b border-gray-200">Item Name</th>
+                <th rowSpan={2} className="px-6 py-4 border-r border-gray-200 bg-gray-50 border-b border-gray-200">Opening Qty</th>
                 <th colSpan={3} className="px-6 py-2 text-center border-b border-gray-200 bg-green-50 text-green-700">Inward (Purchase/Return)</th>
                 <th colSpan={3} className="px-6 py-2 text-center border-b border-gray-200 bg-red-50 text-red-700">Outward (Sales/Return)</th>
-                <th rowSpan={2} className="px-6 py-4 border-l border-gray-200 bg-blue-50 text-blue-700">Closing Qty</th>
+                <th rowSpan={2} className="px-6 py-4 border-l border-gray-200 bg-blue-50 text-blue-700 border-b border-gray-200">Closing Qty</th>
               </tr>
               <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500">
-                <th className="px-6 py-3 text-right">Quantity</th>
-                <th className="px-6 py-3 text-right">Avg Rate</th>
-                <th className="px-6 py-3 text-right border-r border-gray-200">Value</th>
-                <th className="px-6 py-3 text-right">Quantity</th>
-                <th className="px-6 py-3 text-right">Avg Rate</th>
-                <th className="px-6 py-3 text-right">Value</th>
+                <th className="px-6 py-3 text-right border-b border-gray-200">Quantity</th>
+                <th className="px-6 py-3 text-right border-b border-gray-200">Avg Rate</th>
+                <th className="px-6 py-3 text-right border-r border-gray-200 border-b border-gray-200">Value</th>
+                <th className="px-6 py-3 text-right border-b border-gray-200">Quantity</th>
+                <th className="px-6 py-3 text-right border-b border-gray-200">Avg Rate</th>
+                <th className="px-6 py-3 text-right border-b border-gray-200">Value</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">

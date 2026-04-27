@@ -176,18 +176,18 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
         </div>
       </div>
 
-      <div id="register-report" className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm p-0 print:p-8 print:border-none print:shadow-none">
+      <div id="register-report" className="bg-white rounded-xl border border-gray-200 shadow-sm p-0 print:p-8 print:border-none print:shadow-none">
         <ReportPrintHeader title={title} subtitle={`From ${formatReportDate(dateRange.from, settings.dateFormat)} to ${formatReportDate(dateRange.to, settings.dateFormat)}`} />
         
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
+          <table className="w-full text-left border-collapse border-separate border-spacing-0">
+            <thead className="sticky top-0 z-10 bg-gray-50">
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900">Date</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900">Voucher No</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900">Particulars</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900">Voucher Type</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">Amount</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-900 border-b border-gray-200">Date</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-900 border-b border-gray-200">Voucher No</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-900 border-b border-gray-200">Particulars</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-900 border-b border-gray-200">Voucher Type</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-900 text-right border-b border-gray-200">Amount</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -207,7 +207,7 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
                     {formatReportDate(v.v_date, settings.dateFormat)}
                   </td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {v.v_no}
+                    {v.v_no}{v.auto_serial_no ? ` / S#${v.auto_serial_no}` : ''}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     <div className="font-medium text-gray-900">{getCounterpartyName(v)}</div>

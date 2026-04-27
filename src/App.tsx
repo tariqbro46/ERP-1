@@ -99,8 +99,10 @@ import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { Login, Register } from './components/Auth';
 import { useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, PAGE_TITLES, DASHBOARD_ITEM } from './constants/navigation';
+import { FeatureGuard } from './components/FeatureGuard';
 import { erpService } from './services/erpService';
 import { MenuConfig } from './types';
+import { useSubscription } from './hooks/useSubscription';
 
 import { Home } from './pages/landing/Home';
 import { Features } from './pages/landing/Features';
@@ -193,7 +195,8 @@ function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
-  const { user, company, logout, isAdmin, isSuperAdmin } = useAuth();
+  const { user, company, logout, isAdmin, isSuperAdmin, hasPermission } = useAuth();
+  const { isFeatureEnabled } = useSubscription();
   const { 
     companyName, 
     companyLogo,
@@ -405,8 +408,17 @@ function Layout({ children }: { children: React.ReactNode }) {
 
         {menuGroups.map((group) => {
           if (group.hidden) return null;
-          const isEnabled = group.items.some(item => !item.feature || features.find(f => f.id === item.feature)?.enabled !== false);
-          if (!isEnabled) return null;
+          
+          // Check if at least one item in the group is visible to the user
+          const visibleItems = group.items.filter((item: any) => {
+            if (item.hidden) return false;
+            if (item.adminOnly && !isAdmin) return false;
+            if (item.superAdminOnly && !isSuperAdmin) return false;
+            if (item.permission && !hasPermission(item.permission)) return false;
+            return true;
+          });
+
+          if (visibleItems.length === 0) return null;
 
           return (
             <SidebarGroup 
@@ -416,20 +428,18 @@ function Layout({ children }: { children: React.ReactNode }) {
               onToggle={() => toggleGroup(group.group)}
               to={group.to}
             >
-              {group.items.map((item: any) => {
-                if (item.hidden) return null;
-                if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
-                if (item.adminOnly && !isAdmin) return null;
-                if (item.superAdminOnly && !isSuperAdmin) return null;
-                if (item.permission && (!user?.permissions || !user.permissions.includes(item.permission)) && !isAdmin && !isSuperAdmin) return null;
+              {visibleItems.map((item: any) => {
+                const isSubscribed = !item.feature || isFeatureEnabled(item.feature);
+                
                 return (
-                  <SidebarItem 
-                    key={item.id}
-                    to={item.to} 
-                    icon={item.icon} 
-                    label={isSidebarCollapsed ? "" : (item.labelKey && t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.label)} 
-                    active={location.pathname === item.to} 
-                  />
+                  <div key={item.id} className={cn(!isSubscribed && "opacity-50 grayscale-[0.5]")}>
+                    <SidebarItem 
+                      to={item.to} 
+                      icon={item.icon} 
+                      label={isSidebarCollapsed ? "" : (item.labelKey && t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.label)} 
+                      active={location.pathname === item.to} 
+                    />
+                  </div>
                 );
               })}
             </SidebarGroup>
@@ -501,10 +511,12 @@ function Layout({ children }: { children: React.ReactNode }) {
             </Link>
           ) : (
             menuGroups.find(g => g.group === activeRibbonTab)?.items.map((item: any) => {
-              if (item.feature && features.find(f => f.id === item.feature)?.enabled === false) return null;
+              if (item.hidden) return null;
               if (item.adminOnly && !isAdmin) return null;
               if (item.superAdminOnly && !isSuperAdmin) return null;
-              if (item.permission && (!user?.permissions || !user.permissions.includes(item.permission)) && !isAdmin && !isSuperAdmin) return null;
+              if (item.permission && !hasPermission(item.permission)) return null;
+
+              const isSubscribed = !item.feature || isFeatureEnabled(item.feature);
               
               return (
                 <Link
@@ -512,7 +524,8 @@ function Layout({ children }: { children: React.ReactNode }) {
                   to={item.to}
                   className={cn(
                     "flex flex-col items-center gap-1 min-w-[70px] p-1.5 rounded hover:bg-foreground/5 transition-all group",
-                    location.pathname === item.to ? "bg-foreground/5" : ""
+                    location.pathname === item.to ? "bg-foreground/5" : "",
+                    !isSubscribed && "opacity-40 grayscale-[0.5]"
                   )}
                 >
                   <item.icon className={cn(
@@ -1402,74 +1415,72 @@ function ProtectedRoute() {
     <Layout>
       <ErrorBoundary>
         <Routes>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/vouchers/new" element={<VoucherEntry />} />
-          <Route path="/vouchers/edit/:id" element={<VoucherEntry />} />
-          <Route path="/vouchers/view/:id" element={<VoucherDetail />} />
-          <Route path="/accounts/ledgers/new" element={<LedgerCreation />} />
-          <Route path="/accounts/ledgers/edit/:id" element={<LedgerCreation />} />
-          <Route path="/inventory/items" element={<ItemMaster />} />
-          <Route path="/inventory/items/new" element={<ItemCreation />} />
-          <Route path="/inventory/items/edit/:id" element={<ItemCreation />} />
-          <Route path="/inventory/godowns" element={<GodownMaster />} />
-          <Route path="/inventory/units" element={<UnitMaster />} />
-          <Route path="/inventory/overview" element={<InventoryOverview />} />
-          <Route path="/employees" element={<EmployeeMaster />} />
-          <Route path="/payroll" element={<PayrollManagement />} />
+          <Route path="/dashboard" element={<FeatureGuard permission="ana_dashboard"><Dashboard /></FeatureGuard>} />
+          <Route path="/vouchers/new" element={<FeatureGuard permission="acc_vouchers_create"><VoucherEntry /></FeatureGuard>} />
+          <Route path="/vouchers/edit/:id" element={<FeatureGuard permission="acc_vouchers_alter"><VoucherEntry /></FeatureGuard>} />
+          <Route path="/vouchers/view/:id" element={<FeatureGuard permission="acc_reports_view"><VoucherDetail /></FeatureGuard>} />
+          <Route path="/accounts/ledgers/new" element={<FeatureGuard permission="acc_masters_create"><LedgerCreation /></FeatureGuard>} />
+          <Route path="/accounts/ledgers/edit/:id" element={<FeatureGuard permission="acc_masters_alter"><LedgerCreation /></FeatureGuard>} />
+          <Route path="/inventory/items" element={<FeatureGuard feature="inv" permission="inv_masters_view"><ItemMaster /></FeatureGuard>} />
+          <Route path="/inventory/items/new" element={<FeatureGuard feature="inv" permission="inv_masters_create"><ItemCreation /></FeatureGuard>} />
+          <Route path="/inventory/items/edit/:id" element={<FeatureGuard feature="inv" permission="inv_masters_alter"><ItemCreation /></FeatureGuard>} />
+          <Route path="/inventory/godowns" element={<FeatureGuard feature="inv" permission="inv_masters_view"><GodownMaster /></FeatureGuard>} />
+          <Route path="/inventory/units" element={<FeatureGuard feature="inv" permission="inv_masters_view"><UnitMaster /></FeatureGuard>} />
+          <Route path="/employees" element={<FeatureGuard permission="pay_masters"><EmployeeMaster /></FeatureGuard>} />
+          <Route path="/payroll" element={<FeatureGuard feature="pay" permission="pay_transactions"><PayrollManagement /></FeatureGuard>} />
+          <Route path="/reports/daybook" element={<FeatureGuard permission="acc_reports_view"><Daybook /></FeatureGuard>} />
+          <Route path="/reports/stock" element={<FeatureGuard feature="inv" permission="inv_reports_view"><StockSummary /></FeatureGuard>} />
+          <Route path="/reports/balance-sheet" element={<FeatureGuard permission="acc_reports_financial"><BalanceSheet /></FeatureGuard>} />
+          <Route path="/reports/pl" element={<FeatureGuard permission="acc_reports_financial"><ProfitAndLoss /></FeatureGuard>} />
+          <Route path="/reports/ratios" element={<FeatureGuard feature="adv_reports" permission="ana_ratio"><RatioAnalysis /></FeatureGuard>} />
+          <Route path="/reports/financial-insights" element={<FeatureGuard feature="insights" permission="ana_insights"><FinancialInsights /></FeatureGuard>} />
+          <Route path="/production/orders" element={<FeatureGuard feature="ord" permission="ord_view"><OrderManagement /></FeatureGuard>} />
+          <Route path="/production/machines" element={<FeatureGuard feature="mac" permission="mac_manage"><MachineManagement /></FeatureGuard>} />
+          <Route path="/production/orders/new" element={<FeatureGuard feature="ord" permission="ord_create"><OrderEntry /></FeatureGuard>} />
+          <Route path="/production/orders/edit/:id" element={<FeatureGuard feature="ord" permission="ord_alter"><OrderEntry /></FeatureGuard>} />
+          <Route path="/production/reports" element={<FeatureGuard feature="ord" permission="ord_reports"><OrderReports /></FeatureGuard>} />
+          <Route path="/reports/ledger" element={<FeatureGuard permission="acc_reports_view"><LedgerStatement /></FeatureGuard>} />
+          <Route path="/reports/cash-bank" element={<FeatureGuard permission="acc_reports_view"><CashBankBooks /></FeatureGuard>} />
+          <Route path="/reports/trial-balance" element={<FeatureGuard permission="acc_reports_view"><TrialBalance /></FeatureGuard>} />
+          <Route path="/reports/stock-item" element={<FeatureGuard feature="inv" permission="inv_reports_view"><StockItemReport /></FeatureGuard>} />
+          <Route path="/reports/location" element={<FeatureGuard feature="inv" permission="inv_reports_view"><LocationStockReport /></FeatureGuard>} />
+          <Route path="/reports/stock-group-summary" element={<FeatureGuard feature="inv" permission="inv_reports_view"><StockGroupSummary /></FeatureGuard>} />
+          <Route path="/reports/stock-category-summary" element={<FeatureGuard feature="inv" permission="inv_reports_view"><StockCategorySummary /></FeatureGuard>} />
+          <Route path="/reports/stock-transfer-register" element={<FeatureGuard feature="inv" permission="inv_reports_view"><RegisterReport type="Stock Transfer" title="Stock Transfer Register" /></FeatureGuard>} />
+          <Route path="/reports/physical-stock-register" element={<FeatureGuard feature="inv" permission="inv_reports_view"><RegisterReport type="Physical Stock" title="Physical Stock Register" /></FeatureGuard>} />
+          <Route path="/reports/contra-register" element={<FeatureGuard permission="acc_reports_view"><RegisterReport type="Contra" title="Contra Register" /></FeatureGuard>} />
+          <Route path="/reports/payment-register" element={<FeatureGuard permission="acc_reports_view"><RegisterReport type="Payment" title="Payment Register" /></FeatureGuard>} />
+          <Route path="/reports/receipt-register" element={<FeatureGuard permission="acc_reports_view"><RegisterReport type="Receipt" title="Receipt Register" /></FeatureGuard>} />
+          <Route path="/reports/sales-register" element={<FeatureGuard permission="acc_reports_view"><RegisterReport type="Sales" title="Sales Register" /></FeatureGuard>} />
+          <Route path="/reports/purchase-register" element={<FeatureGuard permission="acc_reports_view"><RegisterReport type="Purchase" title="Purchase Register" /></FeatureGuard>} />
+          <Route path="/reports/journal-register" element={<FeatureGuard permission="acc_reports_view"><RegisterReport type="Journal" title="Journal Register" /></FeatureGuard>} />
+          <Route path="/reports/negative-ledger" element={<FeatureGuard permission="acc_reports_view"><NegativeReports type="ledger" /></FeatureGuard>} />
+          <Route path="/reports/negative-stock" element={<FeatureGuard feature="inv" permission="inv_reports_view"><NegativeReports type="stock" /></FeatureGuard>} />
+          <Route path="/reports/pay-slip" element={<FeatureGuard feature="pay" permission="pay_transactions"><PayrollReports type="payslip" /></FeatureGuard>} />
+          <Route path="/reports/pay-sheet" element={<FeatureGuard feature="pay" permission="pay_transactions"><PayrollReports type="paysheet" /></FeatureGuard>} />
+          <Route path="/reports/attendance-sheet" element={<FeatureGuard feature="pay" permission="pay_transactions"><PayrollReports type="attendance_sheet" /></FeatureGuard>} />
+          <Route path="/reports/payment-advice" element={<FeatureGuard feature="pay" permission="pay_transactions"><PayrollReports type="payment_advice" /></FeatureGuard>} />
+          <Route path="/reports/payroll-statement" element={<FeatureGuard feature="pay" permission="pay_transactions"><PayrollReports type="payroll_statement" /></FeatureGuard>} />
+          <Route path="/reports/payroll-register" element={<FeatureGuard feature="pay" permission="pay_transactions"><PayrollReports type="payroll_register" /></FeatureGuard>} />
+          <Route path="/reports/attendance-register" element={<FeatureGuard feature="pay" permission="pay_transactions"><PayrollReports type="attendance_register" /></FeatureGuard>} />
+          <Route path="/reports/employee-profile" element={<FeatureGuard feature="pay" permission="pay_masters"><PayrollReports type="employee_profile" /></FeatureGuard>} />
+          <Route path="/reports/employee-head-count" element={<FeatureGuard feature="pay" permission="pay_masters"><PayrollReports type="headcount" /></FeatureGuard>} />
+          <Route path="/reports/cash-flow" element={<FeatureGuard feature="adv_reports" permission="ana_cashflow"><CashFlow /></FeatureGuard>} />
+          <Route path="/reports/funds-flow" element={<FeatureGuard feature="adv_reports" permission="ana_cashflow"><FundsFlow /></FeatureGuard>} />
+          <Route path="/reports/ageing-analysis" element={<FeatureGuard feature="inv" permission="ana_ageing"><AgeingAnalysis /></FeatureGuard>} />
+          <Route path="/reports/movement" element={<FeatureGuard feature="inv" permission="inv_reports_view"><MovementAnalysis /></FeatureGuard>} />
+          <Route path="/reports/stock-query" element={<FeatureGuard feature="inv" permission="inv_reports_view"><StockQuery /></FeatureGuard>} />
+          <Route path="/reports/group-summary" element={<FeatureGuard permission="acc_reports_view"><GroupSummary /></FeatureGuard>} />
+          <Route path="/reports/group-voucher" element={<FeatureGuard permission="acc_reports_view"><GroupVoucher /></FeatureGuard>} />
+          <Route path="/reports/sales-performance" element={<FeatureGuard permission="pay_masters"><SalespersonReport /></FeatureGuard>} />
+          <Route path="/reports/statistics" element={<FeatureGuard permission="ana_dashboard"><Statistics /></FeatureGuard>} />
+          <Route path="/reports" element={<ReportsMenu />} />
+          <Route path="/reports/inventory-books" element={<FeatureGuard feature="inv"><InventoryBooks /></FeatureGuard>} />
+          <Route path="/reports/account-books" element={<ReportPlaceholder title="Account Books" />} />
+          <Route path="/alter" element={<FeatureGuard permission="acc_masters_alter"><AlterMaster /></FeatureGuard>} />
+          <Route path="/group/:groupId" element={<GroupDashboard />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/subscription" element={<SubscriptionPage />} />
-          <Route path="/alter" element={<AlterMaster />} />
-          <Route path="/group/:groupId" element={<GroupDashboard />} />
-          <Route path="/reports" element={<ReportsMenu />} />
-          <Route path="/reports/account-books" element={<ReportPlaceholder title="Account Books" />} />
-          <Route path="/reports/inventory-books" element={<InventoryBooks />} />
-          <Route path="/reports/location" element={<LocationStockReport />} />
-          <Route path="/reports/stock-group-summary" element={<StockGroupSummary />} />
-          <Route path="/reports/stock-category-summary" element={<StockCategorySummary />} />
-          <Route path="/reports/stock-transfer-register" element={<RegisterReport type="Stock Transfer" title="Stock Transfer Register" />} />
-          <Route path="/reports/physical-stock-register" element={<RegisterReport type="Physical Stock" title="Physical Stock Register" />} />
-          <Route path="/reports/stock-item" element={<StockItemReport />} />
-          <Route path="/reports/daybook" element={<Daybook />} />
-          <Route path="/reports/stock" element={<StockSummary />} />
-          <Route path="/reports/balance-sheet" element={<BalanceSheet />} />
-          <Route path="/reports/trial-balance" element={<TrialBalance />} />
-          <Route path="/reports/pl" element={<ProfitAndLoss />} />
-          <Route path="/reports/ratios" element={<RatioAnalysis />} />
-          <Route path="/reports/financial-insights" element={<FinancialInsights />} />
-          <Route path="/reports/ledger" element={<LedgerStatement />} />
-          <Route path="/reports/sales-performance" element={<SalespersonReport />} />
-          <Route path="/reports/cash-flow" element={<CashFlow />} />
-          <Route path="/reports/funds-flow" element={<FundsFlow />} />
-          <Route path="/reports/statistics" element={<Statistics />} />
-          <Route path="/reports/ageing-analysis" element={<AgeingAnalysis />} />
-          <Route path="/reports/movement" element={<MovementAnalysis />} />
-          <Route path="/reports/stock-query" element={<StockQuery />} />
-          <Route path="/reports/group-summary" element={<GroupSummary />} />
-          <Route path="/reports/group-voucher" element={<GroupVoucher />} />
-          <Route path="/reports/contra-register" element={<RegisterReport type="Contra" title="Contra Register" />} />
-          <Route path="/reports/payment-register" element={<RegisterReport type="Payment" title="Payment Register" />} />
-          <Route path="/reports/receipt-register" element={<RegisterReport type="Receipt" title="Receipt Register" />} />
-          <Route path="/reports/sales-register" element={<RegisterReport type="Sales" title="Sales Register" />} />
-          <Route path="/reports/purchase-register" element={<RegisterReport type="Purchase" title="Purchase Register" />} />
-          <Route path="/reports/journal-register" element={<RegisterReport type="Journal" title="Journal Register" />} />
-          <Route path="/reports/negative-ledger" element={<NegativeReports type="ledger" />} />
-          <Route path="/reports/negative-stock" element={<NegativeReports type="stock" />} />
-          <Route path="/reports/pay-slip" element={<PayrollReports type="payslip" />} />
-          <Route path="/reports/pay-sheet" element={<PayrollReports type="paysheet" />} />
-          <Route path="/reports/attendance-sheet" element={<PayrollReports type="attendance_sheet" />} />
-          <Route path="/reports/payment-advice" element={<PayrollReports type="payment_advice" />} />
-          <Route path="/reports/payroll-statement" element={<PayrollReports type="payroll_statement" />} />
-          <Route path="/reports/payroll-register" element={<PayrollReports type="payroll_register" />} />
-          <Route path="/reports/attendance-register" element={<PayrollReports type="attendance_register" />} />
-          <Route path="/reports/employee-profile" element={<PayrollReports type="employee_profile" />} />
-          <Route path="/reports/employee-head-count" element={<PayrollReports type="headcount" />} />
-          <Route path="/reports/cash-bank" element={<CashBankBooks />} />
-          <Route path="/reports/stock-item" element={<StockItemReport />} />
-          <Route path="/production/orders" element={<OrderManagement />} />
-          <Route path="/production/orders/new" element={<OrderEntry />} />
-          <Route path="/production/orders/edit/:id" element={<OrderEntry />} />
-          <Route path="/production/machines" element={<MachineManagement />} />
-          <Route path="/production/reports" element={<OrderReports />} />
           <Route path="/accounts" element={<ChartOfAccounts />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/settings/company" element={<Settings activeTab="company" />} />

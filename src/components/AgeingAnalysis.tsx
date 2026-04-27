@@ -124,17 +124,17 @@ export function AgeingAnalysis() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
+          <table className="w-full text-left border-collapse border-separate border-spacing-0">
+            <thead className="sticky top-0 z-10 bg-gray-50">
               <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500">
-                <th className="px-6 py-4">Item Name</th>
-                <th className="px-6 py-4 text-right">Total Qty</th>
+                <th className="px-6 py-4 border-b border-gray-200">Item Name</th>
+                <th className="px-6 py-4 text-right border-b border-gray-200">Total Qty</th>
                 {intervals.map((int, idx) => (
-                  <th key={idx} className="px-6 py-4 text-right whitespace-nowrap">{int.label}</th>
+                  <th key={idx} className="px-6 py-4 text-right whitespace-nowrap border-b border-gray-200">{int.label}</th>
                 ))}
-                <th className="px-6 py-4 text-right">Value</th>
+                <th className="px-6 py-4 text-right border-b border-gray-200">Value</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
