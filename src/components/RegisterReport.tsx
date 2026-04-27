@@ -121,125 +121,138 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <EditableHeader 
-            pageId={`register_${type.toLowerCase()}`}
-            defaultTitle={title}
-            defaultSubtitle={`List of all ${type} vouchers`}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Printer className="w-4 h-4" />
-            {t('common.print')}
-          </button>
-          <button 
-            onClick={handleDownload}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            {t('common.downloadPdf')}
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by voucher no, party name or narration..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="p-6 pb-4 shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <EditableHeader 
+              pageId={`register_${type.toLowerCase()}`}
+              defaultTitle={title}
+              defaultSubtitle={`List of all ${type} vouchers`}
             />
           </div>
           <div className="flex items-center gap-2">
-            <DateInput
-              value={dateRange.from}
-              onChange={val => setDateRange({ ...dateRange, from: val })}
-              className="w-32"
-            />
-            <span className="text-gray-500 font-bold uppercase text-[9px] px-1 italic">to</span>
-            <DateInput
-              value={dateRange.to}
-              onChange={val => setDateRange({ ...dateRange, to: val })}
-              className="w-32"
-            />
+            <button 
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Printer className="w-4 h-4" />
+              {t('common.print')}
+            </button>
+            <button 
+              onClick={handleDownload}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              {t('common.downloadPdf')}
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by voucher no, party name or narration..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <DateInput
+                value={dateRange.from}
+                onChange={val => setDateRange({ ...dateRange, from: val })}
+                className="w-32"
+              />
+              <span className="text-gray-500 font-bold uppercase text-[9px] px-1 italic">to</span>
+              <DateInput
+                value={dateRange.to}
+                onChange={val => setDateRange({ ...dateRange, to: val })}
+                className="w-32"
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      <div id="register-report" className="bg-white rounded-xl border border-gray-200 shadow-sm p-0 print:p-8 print:border-none print:shadow-none">
-        <ReportPrintHeader title={title} subtitle={`From ${formatReportDate(dateRange.from, settings.dateFormat)} to ${formatReportDate(dateRange.to, settings.dateFormat)}`} />
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse border-separate border-spacing-0">
-            <thead className="sticky top-0 z-10 bg-gray-50">
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 border-b border-gray-200">Date</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 border-b border-gray-200">Voucher No</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 border-b border-gray-200">Particulars</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 border-b border-gray-200">Voucher Type</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-900 text-right border-b border-gray-200">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
-                  </td>
+      <div className="flex-1 overflow-hidden p-6 pt-0">
+        <div id="register-report" className="h-full bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col min-h-0 print:p-8 print:border-none print:shadow-none">
+          <div className="shrink-0">
+            <ReportPrintHeader title={title} subtitle={`From ${formatReportDate(dateRange.from, settings.dateFormat)} to ${formatReportDate(dateRange.to, settings.dateFormat)}`} />
+          </div>
+          
+          <div className="flex-1 overflow-auto no-scrollbar">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
+                <tr className="border-b border-gray-200">
+                  <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Date</th>
+                  <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Voucher No</th>
+                  <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Particulars</th>
+                  <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Voucher Type</th>
+                  <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 text-right">Amount</th>
                 </tr>
-              ) : filteredVouchers.length > 0 ? filteredVouchers.map((v) => (
-                <tr 
-                  key={v.id} 
-                  className="hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/vouchers/view/${v.id}`)}
-                >
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {formatReportDate(v.v_date, settings.dateFormat)}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {v.v_no}{v.auto_serial_no ? ` / S#${v.auto_serial_no}` : ''}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    <div className="font-medium text-gray-900">{getCounterpartyName(v)}</div>
-                    {v.narration && <div className="text-xs text-gray-400 mt-1 italic line-clamp-1">{v.narration}</div>}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {v.v_type}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-bold text-gray-900 text-right">
-                    {formatCurrency(v.total_amount)}
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                    No vouchers found for the selected period.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {filteredVouchers.length > 0 && (
-              <tfoot>
-                <tr className="bg-gray-50 font-bold">
-                  <td colSpan={4} className="px-6 py-4 text-right text-gray-900">Total</td>
-                  <td className="px-6 py-4 text-right text-primary">{formatCurrency(totalAmount)}</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
+                    </td>
+                  </tr>
+                ) : filteredVouchers.length > 0 ? filteredVouchers.map((v) => (
+                  <tr 
+                    key={v.id} 
+                    className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                    onClick={() => navigate(`/vouchers/view/${v.id}`)}
+                  >
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {formatReportDate(v.v_date, settings.dateFormat)}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      {v.v_no}{v.auto_serial_no ? ` / S#${v.auto_serial_no}` : ''}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      <div className="font-medium text-gray-900 group-hover:text-primary transition-colors">{getCounterpartyName(v)}</div>
+                      {v.narration && <div className="text-xs text-gray-400 mt-1 italic line-clamp-1">{v.narration}</div>}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {v.v_type}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-gray-900 text-right">
+                      {formatCurrency(v.total_amount)}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                      No vouchers found for the selected period.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
-        <ReportPrintFooter />
+          {filteredVouchers.length > 0 && (
+            <div className="shrink-0 bg-gray-50 p-6 flex justify-between items-center font-bold border-t border-gray-200">
+              <span className="text-gray-900 uppercase tracking-widest text-[10px] font-mono">Total</span>
+              <span className="text-primary text-lg">{formatCurrency(totalAmount)}</span>
+            </div>
+          )}
+
+          <div className="print:block hidden">
+            <ReportPrintFooter />
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -98,6 +98,67 @@
   color: #ffffff;
 }
 
+/* Modern Scrollbars & Sticky Headers for Tables */
+[data-scrolling-tables="true"] {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+
+[data-scrolling-tables="true"]::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+[data-scrolling-tables="true"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-scrolling-tables="true"]::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 10px;
+}
+
+[data-scrolling-tables="true"]::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--primary), black 20%);
+}
+
+[data-scrolling-tables="true"] table thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: var(--background);
+}
+
+[data-scrolling-tables="true"] .overflow-x-auto,
+[data-scrolling-tables="true"] .overflow-y-auto,
+[data-scrolling-tables="true"] .overflow-auto,
+[data-scrolling-tables="true"] .overflow-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+
+[data-scrolling-tables="true"] .overflow-x-auto::-webkit-scrollbar,
+[data-scrolling-tables="true"] .overflow-y-auto::-webkit-scrollbar,
+[data-scrolling-tables="true"] .overflow-auto::-webkit-scrollbar,
+[data-scrolling-tables="true"] .overflow-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+[data-scrolling-tables="true"] .overflow-x-auto::-webkit-scrollbar-thumb,
+[data-scrolling-tables="true"] .overflow-y-auto::-webkit-scrollbar-thumb,
+[data-scrolling-tables="true"] .overflow-auto::-webkit-scrollbar-thumb,
+[data-scrolling-tables="true"] .overflow-scroll::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 10px;
+}
+
+/* Glassmorphism Scrollbar sync */
+.glass-morphism::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+}
+
 @layer base {
   html, body {
     margin: 0;

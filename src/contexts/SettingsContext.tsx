@@ -91,6 +91,7 @@ interface SettingsContextType {
   statusOfflineText: string;
   statusErrorText: string;
   showGoToShortcut: boolean;
+  showScrollingBar: boolean;
   showQuickActions: boolean;
   dashboardQuickActions: string[];
   dashboardCards: string[];
@@ -154,6 +155,7 @@ const defaultSettings: SettingsContextType = {
   menuBarStyle: 'classic',
   layoutWidth: 'constrained',
   sidebarDefaultExpanded: true,
+  showScrollingBar: false,
   uiStyle: 'UI/UX 1',
   glassBackground: 'default',
   notificationDuration: 5000,

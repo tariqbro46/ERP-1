@@ -127,130 +127,134 @@ export function CashFlow() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Cash Flow Statement</h1>
-            <p className="text-gray-500">Summary of cash inflows and outflows</p>
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="p-6 pb-4 shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Cash Flow Statement</h1>
+              <p className="text-gray-500">Summary of cash inflows and outflows</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              <Printer className="w-4 h-4" />
+              {t('common.print')}
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors">
+              <Download className="w-4 h-4" />
+              {t('common.downloadPdf')}
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <Printer className="w-4 h-4" />
-            {t('common.print')}
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors">
-            <Download className="w-4 h-4" />
-            {t('common.downloadPdf')}
-          </button>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-500">Opening Balance</span>
+              <DollarSign className="w-5 h-5 text-gray-400" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{formatCurrency(openingBalance)}</div>
+          </div>
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-500">Net Cash Flow</span>
+              {netCashFlow >= 0 ? <TrendingUp className="w-5 h-5 text-green-500" /> : <TrendingDown className="w-5 h-5 text-red-500" />}
+            </div>
+            <div className={cn("text-2xl font-bold", netCashFlow >= 0 ? "text-green-600" : "text-red-600")}>
+              {formatCurrency(netCashFlow)}
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-500">Closing Balance</span>
+              <DollarSign className="w-5 h-5 text-primary" />
+            </div>
+            <div className="text-2xl font-bold text-gray-900">{formatCurrency(closingBalance)}</div>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-500">Opening Balance</span>
-            <DollarSign className="w-5 h-5 text-gray-400" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900">{formatCurrency(openingBalance)}</div>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-500">Net Cash Flow</span>
-            {netCashFlow >= 0 ? <TrendingUp className="w-5 h-5 text-green-500" /> : <TrendingDown className="w-5 h-5 text-red-500" />}
-          </div>
-          <div className={cn("text-2xl font-bold", netCashFlow >= 0 ? "text-green-600" : "text-red-600")}>
-            {formatCurrency(netCashFlow)}
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-500">Closing Balance</span>
-            <DollarSign className="w-5 h-5 text-primary" />
-          </div>
-          <div className="text-2xl font-bold text-gray-900">{formatCurrency(closingBalance)}</div>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        {/* Operating Activities */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h3 className="font-semibold text-gray-900">Cash Flow from Operating Activities</h3>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {operatingActivities.length > 0 ? operatingActivities.map((item, idx) => (
-              <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                <span className="text-gray-700">{item.name}</span>
-                <span className={cn("font-medium", item.amount >= 0 ? "text-green-600" : "text-red-600")}>
-                  {formatCurrency(item.amount)}
+      <div className="flex-1 overflow-y-auto p-6 pt-0 no-scrollbar">
+        <div className="space-y-6">
+          {/* Operating Activities */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
+              <h3 className="font-semibold text-gray-900">Cash Flow from Operating Activities</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {operatingActivities.length > 0 ? operatingActivities.map((item, idx) => (
+                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                  <span className="text-gray-700">{item.name}</span>
+                  <span className={cn("font-medium", item.amount >= 0 ? "text-green-600" : "text-red-600")}>
+                    {formatCurrency(item.amount)}
+                  </span>
+                </div>
+              )) : (
+                <div className="px-6 py-8 text-center text-gray-500">No operating activities found</div>
+              )}
+              <div className="px-6 py-4 bg-gray-50 flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-gray-200">
+                <span>Net Cash from Operating Activities</span>
+                <span className={totalOperating >= 0 ? "text-green-600" : "text-red-600"}>
+                  {formatCurrency(totalOperating)}
                 </span>
               </div>
-            )) : (
-              <div className="px-6 py-8 text-center text-gray-500">No operating activities found</div>
-            )}
-            <div className="px-6 py-4 bg-gray-50 flex justify-between items-center font-bold">
-              <span>Net Cash from Operating Activities</span>
-              <span className={totalOperating >= 0 ? "text-green-600" : "text-red-600"}>
-                {formatCurrency(totalOperating)}
-              </span>
             </div>
           </div>
-        </div>
 
-        {/* Investing Activities */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h3 className="font-semibold text-gray-900">Cash Flow from Investing Activities</h3>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {investingActivities.length > 0 ? investingActivities.map((item, idx) => (
-              <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                <span className="text-gray-700">{item.name}</span>
-                <span className={cn("font-medium", item.amount >= 0 ? "text-green-600" : "text-red-600")}>
-                  {formatCurrency(item.amount)}
+          {/* Investing Activities */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
+              <h3 className="font-semibold text-gray-900">Cash Flow from Investing Activities</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {investingActivities.length > 0 ? investingActivities.map((item, idx) => (
+                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                  <span className="text-gray-700">{item.name}</span>
+                  <span className={cn("font-medium", item.amount >= 0 ? "text-green-600" : "text-red-600")}>
+                    {formatCurrency(item.amount)}
+                  </span>
+                </div>
+              )) : (
+                <div className="px-6 py-8 text-center text-gray-500">No investing activities found</div>
+              )}
+              <div className="px-6 py-4 bg-gray-50 flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-gray-200">
+                <span>Net Cash from Investing Activities</span>
+                <span className={totalInvesting >= 0 ? "text-green-600" : "text-red-600"}>
+                  {formatCurrency(totalInvesting)}
                 </span>
               </div>
-            )) : (
-              <div className="px-6 py-8 text-center text-gray-500">No investing activities found</div>
-            )}
-            <div className="px-6 py-4 bg-gray-50 flex justify-between items-center font-bold">
-              <span>Net Cash from Investing Activities</span>
-              <span className={totalInvesting >= 0 ? "text-green-600" : "text-red-600"}>
-                {formatCurrency(totalInvesting)}
-              </span>
             </div>
           </div>
-        </div>
 
-        {/* Financing Activities */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-            <h3 className="font-semibold text-gray-900">Cash Flow from Financing Activities</h3>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {financingActivities.length > 0 ? financingActivities.map((item, idx) => (
-              <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                <span className="text-gray-700">{item.name}</span>
-                <span className={cn("font-medium", item.amount >= 0 ? "text-green-600" : "text-red-600")}>
-                  {formatCurrency(item.amount)}
+          {/* Financing Activities */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
+              <h3 className="font-semibold text-gray-900">Cash Flow from Financing Activities</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {financingActivities.length > 0 ? financingActivities.map((item, idx) => (
+                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                  <span className="text-gray-700">{item.name}</span>
+                  <span className={cn("font-medium", item.amount >= 0 ? "text-green-600" : "text-red-600")}>
+                    {formatCurrency(item.amount)}
+                  </span>
+                </div>
+              )) : (
+                <div className="px-6 py-8 text-center text-gray-500">No financing activities found</div>
+              )}
+              <div className="px-6 py-4 bg-gray-50 flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-gray-200">
+                <span>Net Cash from Financing Activities</span>
+                <span className={totalFinancing >= 0 ? "text-green-600" : "text-red-600"}>
+                  {formatCurrency(totalFinancing)}
                 </span>
               </div>
-            )) : (
-              <div className="px-6 py-8 text-center text-gray-500">No financing activities found</div>
-            )}
-            <div className="px-6 py-4 bg-gray-50 flex justify-between items-center font-bold">
-              <span>Net Cash from Financing Activities</span>
-              <span className={totalFinancing >= 0 ? "text-green-600" : "text-red-600"}>
-                {formatCurrency(totalFinancing)}
-              </span>
             </div>
           </div>
         </div>

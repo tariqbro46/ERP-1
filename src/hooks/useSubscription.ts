@@ -52,20 +52,38 @@ export function useSubscription() {
     if (company?.extraFeatures?.includes(featureId)) return true;
     
     if (!activePlan) return true;
+
+    const planFeatures = activePlan.features || [];
     
     // 1. Direct match (e.g., 'pay' or 'pay_masters')
-    if (activePlan.features.includes(featureId)) return true;
+    if (planFeatures.includes(featureId)) return true;
     
     // 2. If featureId is a broad ID (like 'pay'), check if any granular ID that maps to this broad ID is enabled in the plan
     const granularIdsForBroadId = AVAILABLE_FEATURES
       .filter(f => f.subscriptionFeatureId === featureId)
       .map(f => f.id);
       
-    if (granularIdsForBroadId.some(gid => activePlan.features.includes(gid))) return true;
+    if (granularIdsForBroadId.some(gid => planFeatures.includes(gid))) return true;
 
     // 3. If featureId is a granular ID (like 'pay_masters'), check if its broad ID ('pay') is enabled in the plan
     const featureProfile = AVAILABLE_FEATURES.find(f => f.id === featureId);
-    if (featureProfile?.subscriptionFeatureId && activePlan.features.includes(featureProfile.subscriptionFeatureId)) return true;
+    if (featureProfile?.subscriptionFeatureId && planFeatures.includes(featureProfile.subscriptionFeatureId)) return true;
+
+    // 4. Special case: If it's a Gold or Platinum plan, grant broad access to modules if they aren't explicitly excluded
+    // This is a safety net for the user's specific issue
+    if (activePlan.tier >= 3) {
+      const payrollFeatures = ['pay', 'pay_masters', 'pay_transactions', 'pay_reports'];
+      if (payrollFeatures.includes(featureId)) return true;
+
+      const orderFeatures = ['ord', 'ord_create', 'ord_process', 'ord_reports'];
+      if (orderFeatures.includes(featureId)) return true;
+
+      const machineFeatures = ['mac', 'mac_manage', 'mac_production'];
+      if (machineFeatures.includes(featureId)) return true;
+
+      const analyticsFeatures = ['adv_reports', 'ana_ratio', 'ana_cashflow', 'ana_ageing', 'insights'];
+      if (analyticsFeatures.includes(featureId)) return true;
+    }
 
     return false;
   };

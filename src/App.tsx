@@ -215,6 +215,7 @@ function Layout({ children }: { children: React.ReactNode }) {
     appVersion = 'v1.0.1',
     statusOnlineText = 'Status: Online',
     showGoToShortcut = true,
+    showScrollingBar = false,
     subscriptionPlans = [],
     updateSettings
   } = useSettings();
@@ -1230,11 +1231,11 @@ function Layout({ children }: { children: React.ReactNode }) {
         {menuBarStyle === 'ribbon' && renderRibbonMenu()}
         {menuBarStyle === 'macos' && renderMacOSMenu()}
 
-        <div ref={scrollRef} className={cn(
-          "flex-1 no-scrollbar pb-16 lg:pb-0 flex flex-col min-h-0",
-          (location.pathname === '/dashboard' || location.pathname.startsWith('/reports/') || location.pathname === '/daybook' || location.pathname.startsWith('/inventory/') || location.pathname.startsWith('/vouchers/')) 
-            ? "overflow-hidden" 
-            : "overflow-y-auto overflow-x-auto",
+        <div ref={scrollRef} 
+        data-scrolling-tables={showScrollingBar}
+        className={cn(
+          "flex-1 pb-16 lg:pb-0 flex flex-col min-h-0 overflow-hidden",
+          !showScrollingBar && "no-scrollbar",
           menuBarStyle === 'macos' && "pt-10"
         )}>
           <div className={cn(

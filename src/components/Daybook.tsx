@@ -279,7 +279,7 @@ export function Daybook() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background transition-colors overflow-hidden">
+    <div className="flex flex-col h-full bg-background transition-colors overflow-hidden">
       {/* Fixed Header Section */}
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">

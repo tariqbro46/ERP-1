@@ -98,86 +98,95 @@ export function AgeingAnalysis() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Ageing Analysis</h1>
-            <p className="text-gray-500">Inventory age summary based on inward movements</p>
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="p-6 pb-4 shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Ageing Analysis</h1>
+              <p className="text-gray-500">Inventory age summary based on inward movements</p>
+            </div>
           </div>
-        </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input 
-            type="text"
-            placeholder="Search items..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 w-full md:w-64"
-          />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input 
+              type="text"
+              placeholder="Search items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 w-full md:w-64"
+            />
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse border-separate border-spacing-0">
-            <thead className="sticky top-0 z-10 bg-gray-50">
-              <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500">
-                <th className="px-6 py-4 border-b border-gray-200">Item Name</th>
-                <th className="px-6 py-4 text-right border-b border-gray-200">Total Qty</th>
-                {intervals.map((int, idx) => (
-                  <th key={idx} className="px-6 py-4 text-right whitespace-nowrap border-b border-gray-200">{int.label}</th>
-                ))}
-                <th className="px-6 py-4 text-right border-b border-gray-200">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredItems.length > 0 ? filteredItems.map((item, idx) => (
-                <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
-                  <td className="px-6 py-4 text-right font-bold text-gray-900">
-                    {item.current_stock} {item.unit}
+      <div className="flex-1 overflow-hidden p-6 pt-0">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm h-full flex flex-col min-h-0">
+          <div className="flex-1 overflow-auto no-scrollbar">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
+                <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500">
+                  <th className="px-6 py-4">Item Name</th>
+                  <th className="px-6 py-4 text-right">Total Qty</th>
+                  {intervals.map((int, idx) => (
+                    <th key={idx} className="px-6 py-4 text-right whitespace-nowrap">{int.label}</th>
+                  ))}
+                  <th className="px-6 py-4 text-right">Value</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredItems.length > 0 ? filteredItems.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
+                    <td className="px-6 py-4 text-right font-bold text-gray-900">
+                      {item.current_stock} {item.unit}
+                    </td>
+                    {item.ageing.map((qty: number, iidx: number) => (
+                      <td key={iidx} className={cn("px-6 py-4 text-right", qty > 0 ? "text-gray-900" : "text-gray-300")}>
+                        {qty > 0 ? qty : '-'}
+                      </td>
+                    ))}
+                    <td className="px-6 py-4 text-right font-medium text-primary">
+                      {formatCurrency(item.current_stock * (item.avg_cost || 0))}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={intervals.length + 3} className="px-6 py-12 text-center text-gray-500">
+                      No positive stock items found for analysis
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="shrink-0 bg-gray-50 font-bold border-t border-gray-200 sticky bottom-0 z-10">
+            <table className="w-full text-left border-collapse">
+              <tfoot>
+                <tr className="text-sm">
+                  <td className="px-6 py-4">Grand Total</td>
+                  <td className="px-6 py-4 text-right">
+                    {filteredItems.reduce((sum, i) => sum + i.current_stock, 0)}
                   </td>
-                  {item.ageing.map((qty: number, iidx: number) => (
-                    <td key={iidx} className={cn("px-6 py-4 text-right", qty > 0 ? "text-gray-900" : "text-gray-300")}>
-                      {qty > 0 ? qty : '-'}
+                  {intervals.map((_, idx) => (
+                    <td key={idx} className="px-6 py-4 text-right">
+                      {filteredItems.reduce((sum, i) => sum + i.ageing[idx], 0)}
                     </td>
                   ))}
-                  <td className="px-6 py-4 text-right font-medium text-primary">
-                    {formatCurrency(item.current_stock * (item.avg_cost || 0))}
+                  <td className="px-6 py-4 text-right text-primary">
+                    {formatCurrency(filteredItems.reduce((sum, i) => sum + (i.current_stock * (i.avg_cost || 0)), 0))}
                   </td>
                 </tr>
-              )) : (
-                <tr>
-                  <td colSpan={intervals.length + 3} className="px-6 py-12 text-center text-gray-500">
-                    No positive stock items found for analysis
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            <tfoot className="bg-gray-50 font-bold border-t border-gray-200">
-              <tr>
-                <td className="px-6 py-4">Grand Total</td>
-                <td className="px-6 py-4 text-right">
-                  {filteredItems.reduce((sum, i) => sum + i.current_stock, 0)}
-                </td>
-                {intervals.map((_, idx) => (
-                  <td key={idx} className="px-6 py-4 text-right">
-                    {filteredItems.reduce((sum, i) => sum + i.ageing[idx], 0)}
-                  </td>
-                ))}
-                <td className="px-6 py-4 text-right text-primary">
-                  {formatCurrency(filteredItems.reduce((sum, i) => sum + (i.current_stock * (i.avg_cost || 0)), 0))}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+              </tfoot>
+            </table>
+          </div>
         </div>
       </div>
     </div>

@@ -125,46 +125,78 @@ export function GroupVoucher() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <EditableHeader 
-            pageId="group_voucher"
-            defaultTitle="Group Voucher"
-            defaultSubtitle="List of vouchers for all ledgers in a group"
-          />
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="p-6 pb-4 shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <EditableHeader 
+              pageId="group_voucher"
+              defaultTitle="Group Voucher"
+              defaultSubtitle="List of vouchers for all ledgers in a group"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Printer className="w-4 h-4" />
+              {t('common.print')}
+            </button>
+            <button 
+              onClick={handleDownload}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              {t('common.downloadPdf')}
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Printer className="w-4 h-4" />
-            {t('common.print')}
-          </button>
-          <button 
-            onClick={handleDownload}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            {t('common.downloadPdf')}
-          </button>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by voucher no or party name..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={dateRange.from}
+                onChange={e => setDateRange({ ...dateRange, from: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm"
+              />
+              <span className="text-gray-500 text-xs font-bold uppercase">to</span>
+              <input
+                type="date"
+                value={dateRange.to}
+                onChange={e => setDateRange({ ...dateRange, to: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 font-semibold text-gray-900">
+      <div className="flex-1 overflow-hidden p-6 pt-0">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
+          <div className="lg:col-span-1 flex flex-col min-h-0 bg-white rounded-xl border border-gray-200 shadow-sm">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 font-bold text-[10px] uppercase tracking-widest text-gray-500 shrink-0">
               Select Group
             </div>
-            <div className="max-h-[600px] overflow-y-auto divide-y divide-gray-100">
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 no-scrollbar">
               {groups.map(group => (
                 <button
                   key={group.id}
@@ -180,102 +212,75 @@ export function GroupVoucher() {
               ))}
             </div>
           </div>
-        </div>
 
-        <div className="lg:col-span-3">
-          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by voucher no or party name..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                />
+          <div className="lg:col-span-3 flex flex-col min-h-0">
+            <div id="group-voucher-report" className="flex-1 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm flex flex-col min-h-0 print:p-8 print:border-none print:shadow-none">
+              <div className="shrink-0">
+                <ReportPrintHeader title="Group Voucher" subtitle={`${groups.find(g => g.id === selectedGroup)?.name} (From ${new Date(dateRange.from).toLocaleDateString()} to ${new Date(dateRange.to).toLocaleDateString()})`} />
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={dateRange.from}
-                  onChange={e => setDateRange({ ...dateRange, from: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm"
-                />
-                <span className="text-gray-500">to</span>
-                <input
-                  type="date"
-                  value={dateRange.to}
-                  onChange={e => setDateRange({ ...dateRange, to: e.target.value })}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none text-sm"
-                />
+              
+              <div className="flex-1 overflow-auto no-scrollbar">
+                <table className="w-full text-left border-collapse">
+                  <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
+                    <tr className="border-b border-gray-200">
+                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Date</th>
+                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Voucher No</th>
+                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Particulars</th>
+                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Voucher Type</th>
+                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-12 text-center">
+                          <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
+                        </td>
+                      </tr>
+                    ) : filteredVouchers.length > 0 ? filteredVouchers.map((v) => (
+                      <tr 
+                        key={v.id} 
+                        className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                        onClick={() => navigate(`/vouchers/view/${v.id}`)}
+                      >
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {new Date(v.v_date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                          {v.v_no}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 font-medium group-hover:text-primary transition-colors">
+                          {getCounterpartyName(v)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {v.v_type}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-bold text-gray-900 text-right">
+                          {formatCurrency(v.total_amount)}
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                          No vouchers found for this group in the selected period.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredVouchers.length > 0 && (
+                <div className="shrink-0 bg-gray-50 p-6 flex justify-between items-center font-bold border-t border-gray-200">
+                  <span className="text-gray-900 uppercase tracking-widest text-[10px] font-mono">Total</span>
+                  <span className="text-primary text-lg">{formatCurrency(totalAmount)}</span>
+                </div>
+              )}
+
+              <div className="print:block hidden">
+                <ReportPrintFooter />
               </div>
             </div>
-          </div>
-
-          <div id="group-voucher-report" className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm p-0 print:p-8 print:border-none print:shadow-none">
-            <ReportPrintHeader title="Group Voucher" subtitle={`${groups.find(g => g.id === selectedGroup)?.name} (From ${new Date(dateRange.from).toLocaleDateString()} to ${new Date(dateRange.to).toLocaleDateString()})`} />
-            
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-6 py-4 text-sm font-semibold text-gray-900">Date</th>
-                    <th className="px-6 py-4 text-sm font-semibold text-gray-900">Voucher No</th>
-                    <th className="px-6 py-4 text-sm font-semibold text-gray-900">Particulars</th>
-                    <th className="px-6 py-4 text-sm font-semibold text-gray-900">Voucher Type</th>
-                    <th className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {loading ? (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center">
-                        <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
-                      </td>
-                    </tr>
-                  ) : filteredVouchers.length > 0 ? filteredVouchers.map((v) => (
-                    <tr 
-                      key={v.id} 
-                      className="hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/vouchers/view/${v.id}`)}
-                    >
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {new Date(v.v_date).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                        {v.v_no}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 font-medium">
-                        {getCounterpartyName(v)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {v.v_type}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-bold text-gray-900 text-right">
-                        {formatCurrency(v.total_amount)}
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                        No vouchers found for this group in the selected period.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-                {filteredVouchers.length > 0 && (
-                  <tfoot>
-                    <tr className="bg-gray-50 font-bold">
-                      <td colSpan={4} className="px-6 py-4 text-right text-gray-900">Total</td>
-                      <td className="px-6 py-4 text-right text-primary">{formatCurrency(totalAmount)}</td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-
-            <ReportPrintFooter />
           </div>
         </div>
       </div>

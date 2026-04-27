@@ -63,6 +63,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     layoutWidth,
     sidebarDefaultExpanded,
     showGoToShortcut,
+    showScrollingBar,
     showQuickActions,
     dashboardQuickActions = ['voucher', 'item', 'ledger', 'godown', 'users'],
     dashboardCards = ['revenue', 'profit', 'ledgers', 'stock'],
@@ -127,6 +128,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground || 'default');
   const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle || 'default');
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded ?? true);
+  const [localShowScrollingBar, setLocalShowScrollingBar] = useState(showScrollingBar ?? false);
   const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut ?? true);
   const [localShowQuickActions, setLocalShowQuickActions] = useState(showQuickActions ?? true);
   const [localDashboardQuickActions, setLocalDashboardQuickActions] = useState<string[]>(dashboardQuickActions || ['voucher', 'item', 'ledger', 'godown', 'users']);
@@ -216,6 +218,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalGlassBackground(glassBackground || 'default');
     setLocalNotificationAnimationStyle(notificationAnimationStyle || 'default');
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded ?? true);
+    setLocalShowScrollingBar(showScrollingBar ?? false);
     setLocalShowGoToShortcut(showGoToShortcut ?? true);
     setLocalShowQuickActions(showQuickActions ?? true);
     setLocalDashboardQuickActions(dashboardQuickActions || ['voucher', 'item', 'ledger', 'godown', 'users']);
@@ -270,6 +273,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       banglaFont: localBanglaFont,
       layoutWidth: localLayoutWidth,
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
+      showScrollingBar: localShowScrollingBar,
       notificationAnimationStyle: localNotificationAnimationStyle
     });
     showNotification('UI Customization saved successfully!');
@@ -1124,6 +1128,25 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     </div>
 
                     <div className="space-y-2">
+                      <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground uppercase">Show Scrolling Bar</h4>
+                          <p className="text-[10px] text-gray-500">Enable modern scrollbars on all data tables.</p>
+                        </div>
+                        <button 
+                          onClick={() => setLocalShowScrollingBar(!localShowScrollingBar)}
+                          className={cn(
+                            "w-10 h-5 rounded-full transition-colors relative",
+                            localShowScrollingBar ? "bg-emerald-500" : "bg-gray-600"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                            localShowScrollingBar ? "right-1" : "left-1"
+                          )} />
+                        </button>
+                      </div>
+
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
                         <div>
                           <h4 className="text-xs font-bold text-foreground uppercase">Sidebar Default Expanded</h4>

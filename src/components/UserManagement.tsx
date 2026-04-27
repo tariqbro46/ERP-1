@@ -397,11 +397,9 @@ export const UserManagement: React.FC = () => {
                               <option value="Staff">Staff</option>
                               <option value="Manager">Manager</option>
                               <option value="Admin">Admin</option>
+                              <option value="Marketing Manager">Marketing Manager</option>
                               {isSuperAdmin && (
-                                <>
-                                  <option value="Marketing Manager">Marketing Manager</option>
-                                  <option value="Founder">Founder</option>
-                                </>
+                                <option value="Founder">Founder</option>
                               )}
                             </select>
                             
@@ -454,7 +452,7 @@ export const UserManagement: React.FC = () => {
                 <thead>
                   <tr className="bg-foreground/[0.02] border-b border-border">
                     <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 w-1/4">Feature</th>
-                    {['Staff', 'Manager', 'Admin'].map(role => (
+                    {['Staff', 'Manager', 'Admin', 'Marketing Manager'].map(role => (
                       <th key={role} className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 text-center">
                         {role}
                       </th>
@@ -465,12 +463,12 @@ export const UserManagement: React.FC = () => {
                   {APP_FEATURES.map(category => (
                     <React.Fragment key={category.id}>
                       <tr className="bg-background">
-                        <td colSpan={4} className="px-6 py-3">
+                        <td colSpan={5} className="px-6 py-3">
                           <h4 className="text-[9px] font-bold uppercase tracking-[0.2em] text-indigo-500">{category.label}</h4>
                         </td>
                       </tr>
                       {category.features.map(feature => {
-                        const isSubscribed = !feature.subscriptionFeatureId || isFeatureEnabled(feature.subscriptionFeatureId);
+                        const isSubscribed = !feature.subscriptionFeatureId || isFeatureEnabled(feature.id);
                         return (
                           <tr key={feature.id} className={cn(
                             "hover:bg-foreground/[0.01] transition-colors",
@@ -489,7 +487,7 @@ export const UserManagement: React.FC = () => {
                                 )}
                               </div>
                             </td>
-                            {['Staff', 'Manager', 'Admin'].map(role => (
+                            {['Staff', 'Manager', 'Admin', 'Marketing Manager'].map(role => (
                               <td key={role} className="px-6 py-4 text-center">
                                 <input
                                   type="checkbox"
@@ -579,11 +577,9 @@ export const UserManagement: React.FC = () => {
                   <option value="Staff">Staff</option>
                   <option value="Manager">Manager</option>
                   <option value="Admin">Admin</option>
+                  <option value="Marketing Manager">Marketing Manager</option>
                   {isSuperAdmin && (
-                    <>
-                      <option value="Marketing Manager">Marketing Manager</option>
-                      <option value="Founder">Founder</option>
-                    </>
+                    <option value="Founder">Founder</option>
                   )}
                 </select>
               </div>
