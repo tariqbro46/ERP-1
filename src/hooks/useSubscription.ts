@@ -1,6 +1,7 @@
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { AVAILABLE_FEATURES } from '../constants/features';
 
 export function useSubscription() {
   const { company } = useAuth();
@@ -51,7 +52,22 @@ export function useSubscription() {
     if (company?.extraFeatures?.includes(featureId)) return true;
     
     if (!activePlan) return true;
-    return activePlan.features.includes(featureId);
+    
+    // 1. Direct match (e.g., 'pay' or 'pay_masters')
+    if (activePlan.features.includes(featureId)) return true;
+    
+    // 2. If featureId is a broad ID (like 'pay'), check if any granular ID that maps to this broad ID is enabled in the plan
+    const granularIdsForBroadId = AVAILABLE_FEATURES
+      .filter(f => f.subscriptionFeatureId === featureId)
+      .map(f => f.id);
+      
+    if (granularIdsForBroadId.some(gid => activePlan.features.includes(gid))) return true;
+
+    // 3. If featureId is a granular ID (like 'pay_masters'), check if its broad ID ('pay') is enabled in the plan
+    const featureProfile = AVAILABLE_FEATURES.find(f => f.id === featureId);
+    if (featureProfile?.subscriptionFeatureId && activePlan.features.includes(featureProfile.subscriptionFeatureId)) return true;
+
+    return false;
   };
 
   return {

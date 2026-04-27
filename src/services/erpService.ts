@@ -89,7 +89,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
       emailVerified: auth.currentUser?.emailVerified,
       isAnonymous: auth.currentUser?.isAnonymous,
       tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
         providerId: provider.providerId,
         displayName: provider.displayName,
         email: provider.email,
@@ -1809,7 +1809,7 @@ export const erpService = {
       return { success: true };
     } catch (error: any) {
       console.error('Error in adminDeleteUser:', error);
-      throw new Error(error.message || 'Failed to delete user');
+      handleFirestoreError(error, OperationType.DELETE, `users/${uid}`);
     }
   },
 

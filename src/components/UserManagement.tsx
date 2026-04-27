@@ -44,8 +44,8 @@ export const UserManagement: React.FC = () => {
     target_amount: 0
   });
   const [addLoading, setAddLoading] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [resettingId, setResettingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.companyId) {
@@ -123,29 +123,48 @@ export const UserManagement: React.FC = () => {
       alert("You cannot delete yourself.");
       return;
     }
-    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+    
+    if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+      return;
+    }
     
     setUpdatingId(uid);
     try {
       await erpService.adminDeleteUser(uid);
-      setProfiles(profiles.filter(p => p.uid !== uid));
+      setProfiles(prev => prev.filter(p => p.uid !== uid));
+      alert('User deleted successfully.');
     } catch (err: any) {
-      alert(err.message || 'Failed to delete user');
+      console.error('Detailed delete error:', err);
+      try {
+        const errInfo = JSON.parse(err.message);
+        alert(`Failed to delete user: ${errInfo.error || 'Permission Denied'}`);
+      } catch {
+        alert(`Failed to delete user: ${err.message || 'Unknown error'}`);
+      }
     } finally {
       setUpdatingId(null);
     }
   };
 
   const handleResetPassword = async (uid: string, email: string) => {
-    if (!window.confirm(`Send a password reset email to ${email}?`)) return;
-    setResetLoading(true);
+    if (!email) {
+      alert("User email is missing. Cannot send reset link.");
+      return;
+    }
+
+    if (!window.confirm(`Send password reset link to ${email}?`)) {
+      return;
+    }
+    
+    setResettingId(uid);
     try {
       await erpService.adminResetPassword(uid, email);
-      alert('Password reset email sent successfully');
+      alert(`Password reset link has been sent to ${email}`);
     } catch (err: any) {
-      alert(err.message || 'Failed to send reset email');
+      console.error('Password reset error:', err);
+      alert(`Failed to send reset email: ${err.message || 'Unknown error'}`);
     } finally {
-      setResetLoading(false);
+      setResettingId(null);
     }
   };
 
@@ -304,13 +323,13 @@ export const UserManagement: React.FC = () => {
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-12 text-center">
+                  <td colSpan={4} className="px-6 py-12 text-center">
                     <Loader2 className="w-6 h-6 text-gray-500 animate-spin mx-auto" />
                   </td>
                 </tr>
               ) : filteredProfiles.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-12 text-center text-gray-500 text-xs font-mono">
+                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500 text-xs font-mono">
                     No users found matching your search.
                   </td>
                 </tr>
@@ -388,11 +407,11 @@ export const UserManagement: React.FC = () => {
                             
                             <button
                               onClick={() => handleResetPassword(profile.uid, profile.email)}
-                              disabled={resetLoading}
+                              disabled={resettingId === profile.uid}
                               title="Send Reset Email"
                               className="p-1.5 text-gray-400 hover:text-indigo-500 transition-colors disabled:opacity-30"
                             >
-                              {resetLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
+                              {resettingId === profile.uid ? <Loader2 className="w-4 h-4 animate-spin" /> : <Key className="w-4 h-4" />}
                             </button>
   
                             <button
