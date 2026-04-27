@@ -181,14 +181,14 @@ export function CashFlow() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 pt-0 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-6 pt-0">
         <div className="space-y-6">
           {/* Operating Activities */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
-              <h3 className="font-semibold text-gray-900">Cash Flow from Operating Activities</h3>
+          <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-border bg-background sticky top-0 z-10 shadow-sm">
+              <h3 className="font-semibold text-foreground uppercase tracking-widest text-[10px]">Cash Flow from Operating Activities</h3>
             </div>
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border">
               {operatingActivities.length > 0 ? operatingActivities.map((item, idx) => (
                 <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
                   <span className="text-gray-700">{item.name}</span>
@@ -199,9 +199,9 @@ export function CashFlow() {
               )) : (
                 <div className="px-6 py-8 text-center text-gray-500">No operating activities found</div>
               )}
-              <div className="px-6 py-4 bg-gray-50 flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-gray-200">
+              <div className="px-6 py-4 bg-background flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-border shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
                 <span>Net Cash from Operating Activities</span>
-                <span className={totalOperating >= 0 ? "text-green-600" : "text-red-600"}>
+                <span className={totalOperating >= 0 ? "text-emerald-600" : "text-rose-600"}>
                   {formatCurrency(totalOperating)}
                 </span>
               </div>
@@ -209,24 +209,24 @@ export function CashFlow() {
           </div>
 
           {/* Investing Activities */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
-              <h3 className="font-semibold text-gray-900">Cash Flow from Investing Activities</h3>
+          <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-border bg-background sticky top-0 z-10 shadow-sm">
+              <h3 className="font-semibold text-foreground uppercase tracking-widest text-[10px]">Cash Flow from Investing Activities</h3>
             </div>
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border">
               {investingActivities.length > 0 ? investingActivities.map((item, idx) => (
-                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                  <span className="text-gray-700">{item.name}</span>
-                  <span className={cn("font-medium", item.amount >= 0 ? "text-green-600" : "text-red-600")}>
+                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-foreground/5 transition-colors">
+                  <span className="text-foreground/80">{item.name}</span>
+                  <span className={cn("font-medium", item.amount >= 0 ? "text-emerald-600" : "text-rose-600")}>
                     {formatCurrency(item.amount)}
                   </span>
                 </div>
               )) : (
                 <div className="px-6 py-8 text-center text-gray-500">No investing activities found</div>
               )}
-              <div className="px-6 py-4 bg-gray-50 flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-gray-200">
+              <div className="px-6 py-4 bg-background flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-border shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
                 <span>Net Cash from Investing Activities</span>
-                <span className={totalInvesting >= 0 ? "text-green-600" : "text-red-600"}>
+                <span className={totalInvesting >= 0 ? "text-emerald-600" : "text-rose-600"}>
                   {formatCurrency(totalInvesting)}
                 </span>
               </div>
@@ -234,24 +234,24 @@ export function CashFlow() {
           </div>
 
           {/* Financing Activities */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
-              <h3 className="font-semibold text-gray-900">Cash Flow from Financing Activities</h3>
+          <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-border bg-background sticky top-0 z-10 shadow-sm">
+              <h3 className="font-semibold text-foreground uppercase tracking-widest text-[10px]">Cash Flow from Financing Activities</h3>
             </div>
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border">
               {financingActivities.length > 0 ? financingActivities.map((item, idx) => (
-                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                  <span className="text-gray-700">{item.name}</span>
-                  <span className={cn("font-medium", item.amount >= 0 ? "text-green-600" : "text-red-600")}>
+                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-foreground/5 transition-colors">
+                  <span className="text-foreground/80">{item.name}</span>
+                  <span className={cn("font-medium", item.amount >= 0 ? "text-emerald-600" : "text-rose-600")}>
                     {formatCurrency(item.amount)}
                   </span>
                 </div>
               )) : (
                 <div className="px-6 py-8 text-center text-gray-500">No financing activities found</div>
               )}
-              <div className="px-6 py-4 bg-gray-50 flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-gray-200">
+              <div className="px-6 py-4 bg-background flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-border shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
                 <span>Net Cash from Financing Activities</span>
-                <span className={totalFinancing >= 0 ? "text-green-600" : "text-red-600"}>
+                <span className={totalFinancing >= 0 ? "text-emerald-600" : "text-rose-600"}>
                   {formatCurrency(totalFinancing)}
                 </span>
               </div>

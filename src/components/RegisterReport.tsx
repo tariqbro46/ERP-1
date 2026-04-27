@@ -185,15 +185,15 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
       </div>
 
       <div className="flex-1 overflow-hidden p-6 pt-0">
-        <div id="register-report" className="h-full bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col min-h-0 print:p-8 print:border-none print:shadow-none">
+        <div id="register-report" className="h-full bg-background rounded-xl border border-border shadow-sm flex flex-col min-h-0 print:p-8 print:border-none print:shadow-none">
           <div className="shrink-0">
             <ReportPrintHeader title={title} subtitle={`From ${formatReportDate(dateRange.from, settings.dateFormat)} to ${formatReportDate(dateRange.to, settings.dateFormat)}`} />
           </div>
           
-          <div className="flex-1 overflow-auto no-scrollbar">
+          <div className="flex-1 overflow-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
-                <tr className="border-b border-gray-200">
+              <thead className="sticky top-0 z-20 bg-background shadow-sm">
+                <tr className="border-b border-border">
                   <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Date</th>
                   <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Voucher No</th>
                   <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Particulars</th>

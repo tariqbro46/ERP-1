@@ -765,7 +765,7 @@ export function LedgerStatement() {
               </div>
               
               {showLedgerList && ledgerSearch && (
-                <div className="absolute z-50 w-full mt-1 bg-card border border-border shadow-xl max-h-60 overflow-y-auto no-scrollbar">
+                <div className="absolute z-50 w-full mt-1 bg-card border border-border shadow-xl max-h-60 overflow-y-auto">
                   {filteredLedgers.length > 0 ? (
                     filteredLedgers.map((l, idx) => (
                       <button
@@ -904,7 +904,7 @@ export function LedgerStatement() {
             "w-full text-left text-xs min-w-[700px] border-separate border-spacing-0",
             settings.reportLayout === 'Layout 2' ? "border-y border-black table-fixed" : ""
           )}>
-            <thead className="sticky top-0 z-20 bg-card">
+            <thead className="sticky top-0 z-20 bg-background shadow-sm">
               <tr className={cn(
                 "border-b border-border text-gray-500 uppercase bg-foreground/5",
                 settings.reportLayout === 'Layout 2' && "border-black text-black font-bold bg-white"

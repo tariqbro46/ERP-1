@@ -192,17 +192,17 @@ export function GroupVoucher() {
 
       <div className="flex-1 overflow-hidden p-6 pt-0">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
-          <div className="lg:col-span-1 flex flex-col min-h-0 bg-white rounded-xl border border-gray-200 shadow-sm">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 font-bold text-[10px] uppercase tracking-widest text-gray-500 shrink-0">
+          <div className="lg:col-span-1 flex flex-col min-h-0 bg-background rounded-xl border border-border shadow-sm">
+            <div className="px-4 py-3 border-b border-border bg-background/50 backdrop-blur-sm font-bold text-[10px] uppercase tracking-widest text-gray-500 shrink-0">
               Select Group
             </div>
-            <div className="flex-1 overflow-y-auto divide-y divide-gray-100 no-scrollbar">
+            <div className="flex-1 overflow-y-auto divide-y divide-border">
               {groups.map(group => (
                 <button
                   key={group.id}
                   onClick={() => setSelectedGroup(group.id)}
                   className={cn(
-                    "w-full px-4 py-3 text-left text-sm transition-colors flex items-center justify-between hover:bg-gray-50",
+                    "w-full px-4 py-3 text-left text-sm transition-colors flex items-center justify-between hover:bg-foreground/5",
                     selectedGroup === group.id ? "bg-primary/5 text-primary font-semibold" : "text-gray-600"
                   )}
                 >
@@ -214,15 +214,15 @@ export function GroupVoucher() {
           </div>
 
           <div className="lg:col-span-3 flex flex-col min-h-0">
-            <div id="group-voucher-report" className="flex-1 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm flex flex-col min-h-0 print:p-8 print:border-none print:shadow-none">
+            <div id="group-voucher-report" className="flex-1 bg-background rounded-xl border border-border overflow-hidden shadow-sm flex flex-col min-h-0 print:p-8 print:border-none print:shadow-none">
               <div className="shrink-0">
                 <ReportPrintHeader title="Group Voucher" subtitle={`${groups.find(g => g.id === selectedGroup)?.name} (From ${new Date(dateRange.from).toLocaleDateString()} to ${new Date(dateRange.to).toLocaleDateString()})`} />
               </div>
               
-              <div className="flex-1 overflow-auto no-scrollbar">
+              <div className="flex-1 overflow-auto">
                 <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
-                    <tr className="border-b border-gray-200">
+                  <thead className="sticky top-0 z-20 bg-background shadow-sm">
+                    <tr className="border-b border-border">
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Date</th>
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Voucher No</th>
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Particulars</th>

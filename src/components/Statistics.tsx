@@ -137,20 +137,20 @@ export function Statistics() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 pt-0 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-6 pt-0">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="space-y-6">
             {sections.map((section, idx) => (
-              <div key={idx} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center gap-2 sticky top-0 z-10">
+              <div key={idx} className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
+                <div className="px-6 py-4 border-b border-border bg-background flex items-center gap-2 sticky top-0 z-10 shadow-sm">
                   <section.icon className="w-5 h-5 text-primary" />
-                  <h3 className="font-semibold text-gray-900">{section.title}</h3>
+                  <h3 className="font-semibold text-foreground uppercase tracking-widest text-[10px]">{section.title}</h3>
                 </div>
-                <div className="divide-y divide-gray-100">
+                <div className="divide-y divide-border">
                   {section.items.map((item, iidx) => (
-                    <div key={iidx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                      <span className="text-gray-700">{item.label}</span>
-                      <span className="font-bold text-gray-900">{item.value}</span>
+                    <div key={iidx} className="px-6 py-3 flex justify-between items-center hover:bg-foreground/5 transition-colors">
+                      <span className="text-foreground/70">{item.label}</span>
+                      <span className="font-bold text-foreground">{item.value}</span>
                     </div>
                   ))}
                 </div>
@@ -158,23 +158,23 @@ export function Statistics() {
             ))}
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm h-fit">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center gap-2 sticky top-0 z-10">
+          <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm h-fit">
+            <div className="px-6 py-4 border-b border-border bg-background flex items-center gap-2 sticky top-0 z-10 shadow-sm">
               <BarChart2 className="w-5 h-5 text-primary" />
-              <h3 className="font-semibold text-gray-900">Vouchers Count</h3>
+              <h3 className="font-semibold text-foreground uppercase tracking-widest text-[10px]">Vouchers Count</h3>
             </div>
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border">
               {Object.keys(stats.vouchersByType).length > 0 ? Object.entries(stats.vouchersByType).map(([type, count]) => (
-                <div key={type} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                  <span className="text-gray-700">{type}</span>
-                  <span className="font-bold text-gray-900">{count as number}</span>
+                <div key={type} className="px-6 py-3 flex justify-between items-center hover:bg-foreground/5 transition-colors">
+                  <span className="text-foreground/70">{type}</span>
+                  <span className="font-bold text-foreground">{count as number}</span>
                 </div>
               )) : (
                 <div className="px-6 py-8 text-center text-gray-500">No vouchers recorded</div>
               )}
-              <div className="px-6 py-4 bg-gray-50 flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-gray-200">
-                <span>Total</span>
-                <span>{stats.counts.vouchers}</span>
+              <div className="px-6 py-4 bg-background flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-border shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
+                <span className="uppercase tracking-widest text-[10px] font-mono">Total</span>
+                <span className="text-primary text-xl font-black">{stats.counts.vouchers}</span>
               </div>
             </div>
           </div>

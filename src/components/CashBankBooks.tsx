@@ -168,12 +168,12 @@ export function CashBankBooks() {
       </div>
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+      <div className="flex-1 overflow-y-auto p-0">
         <div className="p-4 lg:p-6">
-          <div id="cash-bank-report" className="bg-card rounded-xl border border-border shadow-sm transition-colors">
+          <div id="cash-bank-report" className="bg-card rounded-xl border border-border shadow-sm transition-colors overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse font-mono border-separate border-spacing-0">
-                <thead className="sticky top-0 z-10 bg-card">
+                <thead className="sticky top-0 z-10 bg-background shadow-sm">
                   <tr className="bg-foreground/5 border-b border-border">
                     <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 border-b border-border">Particulars</th>
                     <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-gray-500 text-right border-b border-border">Opening Balance</th>
@@ -249,8 +249,8 @@ export function CashBankBooks() {
                   )}
                 </tbody>
                 {!loading && summary.length > 0 && (
-                  <tfoot className="sticky bottom-0 bg-card border-t-2 border-border shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
-                    <tr className="bg-foreground/5 font-bold">
+                  <tfoot className="sticky bottom-0 bg-background border-t-2 border-border shadow-[0_-2px_4px_rgba(0,0,0,0.05)] z-20">
+                    <tr className="bg-background font-bold">
                       <td className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500">Grand Total</td>
                       <td className="px-6 py-4 text-right text-foreground text-sm">{formatCurrency(grandTotals.opening)}</td>
                       <td className="px-6 py-4 text-right text-green-600 text-sm">{formatCurrency(grandTotals.debit)}</td>

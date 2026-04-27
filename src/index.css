@@ -145,6 +145,16 @@
   height: 6px;
 }
 
+/* Hide scrollbars when the setting is OFF */
+[data-scrolling-tables="false"] *::-webkit-scrollbar {
+  display: none !important;
+}
+
+[data-scrolling-tables="false"] * {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
 [data-scrolling-tables="true"] .overflow-x-auto::-webkit-scrollbar-thumb,
 [data-scrolling-tables="true"] .overflow-y-auto::-webkit-scrollbar-thumb,
 [data-scrolling-tables="true"] .overflow-auto::-webkit-scrollbar-thumb,

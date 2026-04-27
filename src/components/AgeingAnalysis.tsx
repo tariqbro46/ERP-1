@@ -127,11 +127,11 @@ export function AgeingAnalysis() {
       </div>
 
       <div className="flex-1 overflow-hidden p-6 pt-0">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm h-full flex flex-col min-h-0">
-          <div className="flex-1 overflow-auto no-scrollbar">
+        <div className="bg-background rounded-xl border border-border shadow-sm h-full flex flex-col min-h-0">
+          <div className="flex-1 overflow-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 z-20 bg-gray-50 shadow-sm">
-                <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500">
+              <thead className="sticky top-0 z-20 bg-background shadow-sm">
+                <tr className="bg-background border-b border-border text-[10px] uppercase font-bold tracking-widest text-foreground/50">
                   <th className="px-6 py-4">Item Name</th>
                   <th className="px-6 py-4 text-right">Total Qty</th>
                   {intervals.map((int, idx) => (
@@ -140,7 +140,7 @@ export function AgeingAnalysis() {
                   <th className="px-6 py-4 text-right">Value</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border">
                 {filteredItems.length > 0 ? filteredItems.map((item, idx) => (
                   <tr key={idx} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
@@ -167,11 +167,11 @@ export function AgeingAnalysis() {
             </table>
           </div>
 
-          <div className="shrink-0 bg-gray-50 font-bold border-t border-gray-200 sticky bottom-0 z-10">
+          <div className="shrink-0 bg-background font-bold border-t border-border sticky bottom-0 z-10 shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
             <table className="w-full text-left border-collapse">
               <tfoot>
-                <tr className="text-sm">
-                  <td className="px-6 py-4">Grand Total</td>
+                <tr className="text-sm text-foreground">
+                  <td className="px-6 py-4 uppercase tracking-widest text-[10px] font-mono">Grand Total</td>
                   <td className="px-6 py-4 text-right">
                     {filteredItems.reduce((sum, i) => sum + i.current_stock, 0)}
                   </td>

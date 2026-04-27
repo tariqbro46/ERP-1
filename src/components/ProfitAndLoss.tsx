@@ -258,13 +258,13 @@ export function ProfitAndLoss() {
       </div>
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+      <div className="flex-1 overflow-y-auto p-0">
         <div id="pl-report" className="p-4 lg:p-6 space-y-6">
           <div className="border border-border bg-card">
             <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border">
               {/* Expenses Side */}
               <div className="relative">
-                <div className="sticky top-0 z-10 px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
+                <div className="sticky top-0 z-20 px-4 lg:px-6 py-3 bg-background shadow-sm border-b border-border flex justify-between">
                   <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('common.particulars')}</span>
                   <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
                 </div>
@@ -312,7 +312,7 @@ export function ProfitAndLoss() {
 
               {/* Income Side */}
               <div className="relative">
-                <div className="sticky top-0 z-10 px-4 lg:px-6 py-3 bg-foreground/5 border-b border-border flex justify-between">
+                <div className="sticky top-0 z-20 px-4 lg:px-6 py-3 bg-background shadow-sm border-b border-border flex justify-between">
                   <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('common.particulars')}</span>
                   <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
                 </div>

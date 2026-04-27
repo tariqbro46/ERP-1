@@ -143,7 +143,7 @@ export function TrialBalance() {
       </div>
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+      <div className="flex-1 overflow-y-auto p-0">
         <div className="p-4 lg:p-6 space-y-6">
           {/* Table/Cards */}
           <div id="trial-balance-report" className="bg-card border border-border p-0">
@@ -186,8 +186,8 @@ export function TrialBalance() {
           {/* Desktop View: Table */}
           <div className="hidden lg:block relative">
             <table className="w-full text-left text-xs min-w-[600px] border-separate border-spacing-0">
-              <thead className="sticky top-0 z-20 bg-card">
-                <tr className="border-b border-border text-gray-500 uppercase bg-foreground/5">
+              <thead className="sticky top-0 z-20 bg-background shadow-sm">
+                <tr className="text-gray-500 uppercase bg-foreground/5">
                   <th className="px-6 py-4 font-medium border-b border-border">{t('common.particulars')}</th>
                   <th className="px-6 py-4 font-medium border-b border-border">{t('common.group')}</th>
                   <th className="px-6 py-4 font-medium text-right w-48 border-b border-border">{t('reports.debit')} (৳)</th>

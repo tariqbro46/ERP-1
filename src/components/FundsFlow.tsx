@@ -115,99 +115,103 @@ export function FundsFlow() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Funds Flow Statement</h1>
-            <p className="text-gray-500">Analysis of changes in financial position</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <Printer className="w-4 h-4" />
-            {t('common.print')}
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors">
-            <Download className="w-4 h-4" />
-            {t('common.downloadPdf')}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Sources of Funds */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200 bg-blue-50 flex items-center gap-2">
-            <PlusCircle className="w-5 h-5 text-blue-600" />
-            <h3 className="font-semibold text-blue-900">Sources of Funds</h3>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {sources.length > 0 ? sources.map((item, idx) => (
-              <div key={idx} className="px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                <span className="text-gray-700">{item.name}</span>
-                <span className="font-medium text-gray-900">{formatCurrency(item.amount)}</span>
-              </div>
-            )) : (
-              <div className="px-6 py-8 text-center text-gray-500">No sources found</div>
-            )}
-            <div className="px-6 py-4 bg-blue-50 flex justify-between items-center font-bold text-blue-900">
-              <span>Total Sources</span>
-              <span>{formatCurrency(totalSources)}</span>
+    <div className="h-full flex flex-col bg-background font-mono transition-colors overflow-hidden">
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-foreground/5 rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Funds Flow Statement</h1>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest">Analysis of changes in financial position</p>
             </div>
           </div>
-        </div>
-
-        {/* Applications of Funds */}
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200 bg-orange-50 flex items-center gap-2">
-            <MinusCircle className="w-5 h-5 text-orange-600" />
-            <h3 className="font-semibold text-orange-900">Applications of Funds</h3>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {applications.length > 0 ? applications.map((item, idx) => (
-              <div key={idx} className="px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                <span className="text-gray-700">{item.name}</span>
-                <span className="font-medium text-gray-900">{formatCurrency(item.amount)}</span>
-              </div>
-            )) : (
-              <div className="px-6 py-8 text-center text-gray-500">No applications found</div>
-            )}
-            <div className="px-6 py-4 bg-orange-50 flex justify-between items-center font-bold text-orange-900">
-              <span>Total Applications</span>
-              <span>{formatCurrency(totalApplications)}</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <button className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 bg-background border border-border rounded-lg hover:bg-foreground/5 transition-colors">
+              <Printer className="w-4 h-4" />
+              {t('common.print')}
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white bg-foreground rounded-lg hover:opacity-90 transition-colors">
+              <Download className="w-4 h-4" />
+              {t('common.downloadPdf')}
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="mt-8 bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className={cn(
-            "p-3 rounded-full",
-            workingCapitalChange >= 0 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
-          )}>
-            <Wallet className="w-6 h-6" />
+      <div className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Sources of Funds */}
+          <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-border bg-blue-500/5 flex items-center gap-2 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
+              <PlusCircle className="w-4 h-4 text-blue-600" />
+              <h3 className="font-bold text-blue-600 uppercase tracking-widest text-[10px]">Sources of Funds</h3>
+            </div>
+            <div className="divide-y divide-border">
+              {sources.length > 0 ? sources.map((item, idx) => (
+                <div key={idx} className="px-6 py-4 flex justify-between items-center hover:bg-foreground/5 transition-colors">
+                  <span className="text-foreground/70 text-sm">{item.name}</span>
+                  <span className="font-bold text-foreground font-mono">{formatCurrency(item.amount)}</span>
+                </div>
+              )) : (
+                <div className="px-6 py-8 text-center text-gray-500 text-sm">No sources found</div>
+              )}
+              <div className="px-6 py-4 bg-blue-500/10 flex justify-between items-center font-bold text-blue-700 uppercase tracking-wider text-[10px] sticky bottom-0 border-t-2 border-blue-200">
+                <span>Total Sources</span>
+                <span className="text-sm font-mono">{formatCurrency(totalSources)}</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <h4 className="text-sm font-medium text-gray-500">Net Change in Working Capital</h4>
-            <p className={cn(
-              "text-2xl font-bold",
-              workingCapitalChange >= 0 ? "text-green-600" : "text-red-600"
+
+          {/* Applications of Funds */}
+          <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
+            <div className="px-6 py-4 border-b border-border bg-rose-500/5 flex items-center gap-2 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
+              <MinusCircle className="w-4 h-4 text-rose-600" />
+              <h3 className="font-bold text-rose-600 uppercase tracking-widest text-[10px]">Applications of Funds</h3>
+            </div>
+            <div className="divide-y divide-border">
+              {applications.length > 0 ? applications.map((item, idx) => (
+                <div key={idx} className="px-6 py-4 flex justify-between items-center hover:bg-foreground/5 transition-colors">
+                  <span className="text-foreground/70 text-sm">{item.name}</span>
+                  <span className="font-bold text-foreground font-mono">{formatCurrency(item.amount)}</span>
+                </div>
+              )) : (
+                <div className="px-6 py-8 text-center text-gray-500 text-sm">No applications found</div>
+              )}
+              <div className="px-6 py-4 bg-rose-500/10 flex justify-between items-center font-bold text-rose-700 uppercase tracking-wider text-[10px] sticky bottom-0 border-t-2 border-rose-200">
+                <span>Total Applications</span>
+                <span className="text-sm font-mono">{formatCurrency(totalApplications)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 bg-background p-6 rounded-xl border border-border shadow-md flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className={cn(
+              "p-4 rounded-full shadow-inner",
+              workingCapitalChange >= 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
             )}>
-              {workingCapitalChange >= 0 ? 'Increase of ' : 'Decrease of '}
-              {formatCurrency(Math.abs(workingCapitalChange))}
-            </p>
+              <Wallet className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Net Change in Working Capital</h4>
+              <p className={cn(
+                "text-2xl font-bold font-mono tracking-tight",
+                workingCapitalChange >= 0 ? "text-emerald-600" : "text-rose-600"
+              )}>
+                {workingCapitalChange >= 0 ? 'Increase of ' : 'Decrease of '}
+                {formatCurrency(Math.abs(workingCapitalChange))}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="text-sm text-gray-500 max-w-xs text-right">
-          This represents the net change in current assets and current liabilities during the period.
+          <div className="text-[10px] text-gray-400 max-w-xs text-right uppercase leading-relaxed font-bold tracking-tighter">
+            This represents the net change in current assets and current liabilities during the period.
+          </div>
         </div>
       </div>
     </div>
