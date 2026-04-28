@@ -8,7 +8,7 @@ import { AppNotification } from '../types';
 import { format } from 'date-fns';
 import { cn } from '../lib/utils';
 
-export default function NotificationCenter() {
+export default function NotificationCenter({ position = 'top' }: { position?: 'top' | 'bottom' }) {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -56,8 +56,6 @@ export default function NotificationCenter() {
     if (!user) return;
     try {
       await erpService.markNotificationAsRead(id, user.uid);
-      // Update local state for immediate feedback if needed, 
-      // but subscribeToNotifications will handle it
     } catch (error) {
       console.error('Error marking as read:', error);
     }
@@ -126,117 +124,156 @@ export default function NotificationCenter() {
         {isOpen && (
           <>
             <div 
-              className="fixed inset-0 z-40" 
+              className="fixed inset-0 z-[105]" 
               onClick={() => setIsOpen(false)} 
             />
             <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              initial={{ opacity: 0, y: position === 'top' ? 10 : -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              className="fixed sm:absolute top-16 sm:top-auto right-4 sm:right-0 mt-2 w-[calc(100vw-32px)] sm:w-96 bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden"
+              exit={{ opacity: 0, y: position === 'top' ? 10 : -10, scale: 0.95 }}
+              className={cn(
+                "absolute right-0 w-[calc(100vw-32px)] sm:w-[450px] z-[110] filter drop-shadow-2xl",
+                position === 'top' ? "top-[calc(100%+8px)] origin-top-right" : "bottom-[calc(100%+8px)] origin-bottom-right"
+              )}
             >
-              <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">Notifications</h3>
-                  {unreadCount > 0 && (
-                    <span className="px-1.5 py-0.5 text-[10px] bg-rose-500 text-white rounded-full font-bold">
-                      {unreadCount}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link 
-                    to="/notifications" 
-                    onClick={() => setIsOpen(false)}
-                    className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline"
-                  >
-                    View All
-                  </Link>
-                  <button 
-                    onClick={() => setIsOpen(false)}
-                    className="p-1 hover:bg-foreground/5 rounded-md transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="max-h-[400px] overflow-y-auto divide-y divide-border">
-                {loading ? (
-                  <div className="p-8 text-center">
-                    <Clock className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Loading...</p>
+              <div className={cn(
+                "absolute right-3.5 w-3 h-3 bg-card border-border rotate-45 z-[111] hidden sm:block",
+                position === 'top' 
+                  ? "top-0 -mt-1.5 border-l border-t shadow-[-1px_-1px_1px_rgba(0,0,0,0.02)]" 
+                  : "bottom-0 -mb-1.5 border-r border-b shadow-[1px_1px_1px_rgba(0,0,0,0.02)]"
+              )} />
+              
+              <div className="relative z-[110] flex flex-col h-full bg-card/95 backdrop-blur-md border border-border rounded-2xl overflow-hidden shadow-2xl ring-1 ring-black/5">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-muted/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Bell className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-foreground uppercase tracking-widest font-mono">Notifications</h3>
+                      <p className="text-[9px] text-muted-foreground uppercase tracking-tighter">System Updates & Alerts</p>
+                    </div>
                   </div>
-                ) : notifications.length > 0 ? (
-                  notifications.map((n) => {
-                    const isRead = n.readBy?.includes(user?.uid || '');
-                    return (
-                      <div 
-                        key={n.id} 
-                        onClick={() => setSelectedNotification(n)}
-                        className={cn(
-                          "p-4 hover:bg-muted/30 transition-colors group cursor-pointer relative",
-                          !isRead && "bg-primary/5"
-                        )}
-                      >
-                        {!isRead && (
-                          <div className="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-full" />
-                        )}
-                        <div className="flex gap-3">
-                          <div className="mt-0.5">
-                            {getIcon(n.type)}
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <h4 className={cn("text-xs font-bold text-foreground", !isRead && "text-primary")}>{n.title}</h4>
-                              <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-2">
+                    {unreadCount > 0 && (
+                      <span className="px-2 py-0.5 text-[9px] bg-primary text-white rounded-full font-bold font-mono">
+                        {unreadCount} New
+                      </span>
+                    )}
+                    <button 
+                      onClick={() => setIsOpen(false)}
+                      className="p-1.5 hover:bg-foreground/5 rounded-full transition-colors text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="max-h-[500px] overflow-y-auto divide-y divide-border/30 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+                  {loading ? (
+                    <div className="p-20 text-center">
+                      <Activity className="w-6 h-6 animate-spin text-primary/30 mx-auto mb-4" />
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">Fetching Updates...</p>
+                    </div>
+                  ) : notifications.length > 0 ? (
+                    notifications.map((n) => {
+                      const isRead = n.readBy?.includes(user?.uid || '');
+                      return (
+                        <div 
+                          key={n.id} 
+                          onClick={() => setSelectedNotification(n)}
+                          className={cn(
+                            "group p-4 hover:bg-muted/30 transition-all cursor-pointer relative",
+                            !isRead ? "bg-primary/[0.02]" : "opacity-80"
+                          )}
+                        >
+                          {!isRead && (
+                            <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-primary rounded-r-full shadow-[0_0_8px_rgba(var(--primary),0.5)]" />
+                          )}
+                          <div className="flex gap-4">
+                            <div className={cn(
+                              "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-border/40 transition-transform group-hover:scale-105",
+                              !isRead ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                            )}>
+                              {getIcon(n.type)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 mb-1.5">
+                                <h4 className={cn(
+                                  "text-[12px] font-bold tracking-tight line-clamp-1",
+                                  !isRead ? "text-foreground" : "text-muted-foreground"
+                                )}>
+                                  {n.title}
+                                </h4>
                                 {isSuperAdmin && (
                                   <button 
                                     onClick={(e) => handleDelete(e, n.id)}
-                                    className="p-1 opacity-0 group-hover:opacity-100 text-rose-500 hover:bg-rose-500/10 rounded transition-all"
+                                    className="opacity-0 group-hover:opacity-100 p-1 text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 rounded-md transition-all"
                                   >
-                                    <Trash2 className="w-3 h-3" />
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 )}
                               </div>
-                            </div>
-                            <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
-                              {n.message}
-                            </p>
-                            <div className="flex items-center justify-between pt-1">
-                              <p className="text-[9px] text-muted-foreground">
-                                {n.sentAt ? format(n.sentAt, 'dd MMM, HH:mm') : format(n.createdAt, 'dd MMM, HH:mm')}
+                              <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2 mb-3">
+                                {n.message}
                               </p>
-                              <button
-                                onClick={(e) => isRead ? handleMarkAsUnread(e, n.id) : handleMarkAsRead(e, n.id)}
-                                className="text-[9px] font-bold text-primary hover:underline"
-                              >
-                                {isRead ? 'Mark as unread' : 'Mark as read'}
-                              </button>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground/50 font-medium">
+                                  <Clock className="w-3 h-3" />
+                                  {n.sentAt ? format(n.sentAt, 'dd MMM, HH:mm') : format(n.createdAt, 'dd MMM, HH:mm')}
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      isRead ? handleMarkAsUnread(e, n.id) : handleMarkAsRead(e, n.id);
+                                    }}
+                                    className="text-[10px] font-bold text-primary hover:text-primary/70 transition-colors uppercase tracking-widest font-mono"
+                                  >
+                                    {isRead ? 'Mark Unread' : 'Mark Read'}
+                                  </button>
+                                  <Link 
+                                    to="/notifications" 
+                                    onClick={() => setIsOpen(false)}
+                                    className="text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest font-mono"
+                                  >
+                                    Details
+                                  </Link>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-24 text-center">
+                      <div className="w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center mx-auto mb-6 border border-border/40">
+                        <Bell className="w-8 h-8 text-muted-foreground/10" />
                       </div>
-                    );
-                  })
-                ) : (
-                  <div className="p-12 text-center">
-                    <Bell className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-20" />
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">No new notifications</p>
-                  </div>
-                )}
-              </div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold font-mono">Inbox is Empty</p>
+                      <p className="text-[9px] text-muted-foreground/60 mt-1 uppercase tracking-tighter">Everything looks good!</p>
+                    </div>
+                  )}
+                </div>
 
-              {notifications.length > 0 && (
-                <div className="p-2 border-t border-border bg-muted/10">
+                <div className="p-4 border-t border-border bg-muted/20 flex gap-2">
                   <button 
                     onClick={fetchNotifications}
-                    className="w-full py-2 text-[10px] font-bold text-primary uppercase tracking-widest hover:bg-primary/5 rounded-lg transition-colors"
+                    className="flex-1 h-10 flex items-center justify-center gap-2 text-[10px] font-bold text-foreground hover:bg-foreground/[0.03] rounded-lg border border-border transition-all font-mono uppercase tracking-widest active:scale-95"
                   >
+                    <Activity className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
                     Refresh
                   </button>
+                  <Link 
+                    to="/notifications"
+                    onClick={() => setIsOpen(false)}
+                    className="px-4 h-10 flex items-center justify-center gap-2 text-[10px] font-bold text-primary bg-primary/5 hover:bg-primary/10 rounded-lg border border-primary/20 transition-all font-mono uppercase tracking-widest"
+                  >
+                    All
+                  </Link>
                 </div>
-              )}
+              </div>
             </motion.div>
           </>
         )}

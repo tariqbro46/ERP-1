@@ -677,7 +677,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           </button>
 
           {isProfileDropdownOpen && (
-            <div className="absolute top-full right-0 mt-1 w-56 bg-card border border-border shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="absolute top-full right-0 mt-1 w-56 bg-card border border-border shadow-2xl z-[110] py-2 animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="px-4 py-3 border-b border-border mb-2">
                 <p className="text-[10px] font-bold text-foreground uppercase tracking-widest truncate">{user?.displayName || 'User'}</p>
                 <p className="text-[9px] text-gray-500 truncate">{user?.email}</p>
@@ -891,7 +891,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         )}
         
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-xl border border-border/50 h-14 px-2 rounded-2xl flex items-center gap-1 shadow-2xl z-50 hidden lg:flex">
-          <NotificationCenter />
+          <NotificationCenter position="bottom" />
           <div className="w-[1px] h-6 bg-border mx-2" />
           <button 
             onClick={() => setIsWinStartOpen(!isWinStartOpen)}
@@ -971,10 +971,10 @@ function Layout({ children }: { children: React.ReactNode }) {
       {(menuBarStyle === 'classic' || isSidebarOpen) && renderClassicSidebar()}
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden w-full">
+      <main className="flex-1 flex flex-col w-full">
         {menuBarStyle !== 'macos' && (
           <header className={cn(
-            "h-14 border-b border-border bg-background flex items-center px-4 lg:px-6 relative transition-colors",
+            "h-14 border-b border-border bg-background flex items-center px-4 lg:px-6 sticky top-0 z-[100] transition-colors",
             uiStyle === 'UI/UX 2' && "bg-blue-600 border-blue-700 text-white"
           )}>
             <div className="flex items-center gap-3 lg:gap-4 z-10">
@@ -1137,7 +1137,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                 </button>
 
                 {isProfileDropdownOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-56 bg-card border border-border shadow-2xl z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute top-full right-0 mt-2 w-56 bg-card border border-border shadow-2xl z-[110] py-2 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-3 border-b border-border mb-2">
                       <p className="text-[10px] font-bold text-foreground uppercase tracking-widest truncate">{user?.displayName || t('common.user')}</p>
                       <p className="text-[9px] text-gray-500 truncate">{user?.email}</p>
