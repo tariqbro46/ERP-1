@@ -163,16 +163,46 @@ export const erpService = {
 
   async getNextAutoSerialNo(companyId: string, vType: string): Promise<number> {
     try {
-      const q = query(
+      // First try to get the max auto_serial_no stored in documents
+      const qMax = query(
+        collection(db, 'vouchers'),
+        where('companyId', '==', companyId),
+        where('v_type', '==', vType),
+        orderBy('auto_serial_no', 'desc'),
+        limit(1)
+      );
+      const snapMax = await getDocs(qMax);
+      
+      if (!snapMax.empty) {
+        const lastSerial = snapMax.docs[0].data().auto_serial_no;
+        if (typeof lastSerial === 'number') {
+          return lastSerial + 1;
+        }
+      }
+
+      // Fallback: If no auto_serial_no found (legacy records), use count
+      // This is still needed for transitions but we limit it to handle the immediate request
+      const qCount = query(
         collection(db, 'vouchers'),
         where('companyId', '==', companyId),
         where('v_type', '==', vType)
       );
-      const snap = await getDocs(q);
+      const snap = await getDocs(qCount);
       return snap.size + 1;
     } catch (error) {
       console.error('Error fetching next auto serial:', error);
-      return 1;
+      // If orderBy fails because index is missing or field doesn't exist yet, fallback to size
+      try {
+        const qCount = query(
+          collection(db, 'vouchers'),
+          where('companyId', '==', companyId),
+          where('v_type', '==', vType)
+        );
+        const snap = await getDocs(qCount);
+        return snap.size + 1;
+      } catch (e) {
+        return 1;
+      }
     }
   },
 
@@ -181,6 +211,7 @@ export const erpService = {
       const q = query(
         collection(db, 'vouchers'),
         where('companyId', '==', companyId),
+        orderBy('v_date', 'asc'),
         orderBy('createdAt', 'asc')
       );
       const snap = await getDocs(q);
@@ -301,7 +332,7 @@ export const erpService = {
       const vouchers = snap.docs.map(d => ({ 
         id: d.id, 
         ...(d.data() as any),
-        auto_serial_no: serialMap[d.id] || 0
+        auto_serial_no: d.data().auto_serial_no || serialMap[d.id] || 0
       }));
       
       if (vouchers.length === 0) return [];
@@ -612,7 +643,7 @@ export const erpService = {
       };
     });
 
-    return { ...voucher, entries, inventory, id: vSnap.id, auto_serial_no: serialMap[vSnap.id] || 0 };
+    return { ...voucher, entries, inventory, id: vSnap.id, auto_serial_no: voucher.auto_serial_no || serialMap[vSnap.id] || 0 };
   },
 
   async deleteVoucher(id: string) {
@@ -1511,11 +1542,14 @@ export const erpService = {
       )),
       this.getVoucherSerials(companyId)
     ]);
-    const vouchers = vouchersSnap.docs.map(d => ({ 
-      id: d.id, 
-      ...(d.data() as any),
-      auto_serial_no: serialMap[d.id] || 0
-    }));
+    const vouchers = vouchersSnap.docs.map(d => {
+      const data = d.data() as any;
+      return { 
+        id: d.id, 
+        ...data,
+        auto_serial_no: data.auto_serial_no || serialMap[d.id] || 0
+      };
+    });
     
     if (vouchers.length === 0) return [];
     
@@ -1640,11 +1674,14 @@ export const erpService = {
         this.getVoucherSerials(companyId)
       ]);
 
-      const vouchers = vSnap.docs.map(doc => ({ 
-        id: doc.id, 
-        ...(doc.data() as any),
-        auto_serial_no: serialMap[doc.id] || 0
-      }));
+      const vouchers = vSnap.docs.map(doc => {
+        const data = doc.data() as any;
+        return { 
+          id: doc.id, 
+          ...data,
+          auto_serial_no: data.auto_serial_no || serialMap[doc.id] || 0
+        };
+      });
       
       if (vouchers.length === 0) return [];
 

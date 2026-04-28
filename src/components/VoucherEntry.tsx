@@ -687,6 +687,7 @@ export function VoucherEntry() {
         currency,
         exchange_rate: exchangeRate,
         salesperson_id: salespersonId,
+        auto_serial_no: autoSerialNo,
         party_ledger_id: partyLedgerId,
         sales_purchase_ledger_id: salesPurchaseLedgerId
       };
@@ -784,6 +785,9 @@ export function VoucherEntry() {
           setGlobalDiscount(0);
           setSalespersonId('');
           setRefNo(''); 
+          // Refresh serial number
+          const nextSerial = await erpService.getNextAutoSerialNo(user.companyId, vType);
+          setAutoSerialNo(nextSerial);
         }
       }
       if (isEdit) {
