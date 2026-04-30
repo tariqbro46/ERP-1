@@ -79,9 +79,10 @@ export function RatioAnalysis() {
   }
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
+    <div className="flex flex-col min-h-full bg-background font-mono transition-colors">
+      {/* Sticky Header Section */}
+      <div className="sticky top-0 bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 z-30">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div className="flex items-center gap-4">
             {(settings.companyLogo || settings.systemLogo) && (
               <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
@@ -123,6 +124,9 @@ export function RatioAnalysis() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="p-4 lg:p-6 space-y-6">
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <RatioCard 

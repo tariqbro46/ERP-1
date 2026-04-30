@@ -84,9 +84,9 @@ export function GroupSummary() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+    <div className="flex flex-col min-h-full bg-background font-mono transition-colors">
       {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+      <div className="sticky top-0 bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button 
@@ -141,7 +141,7 @@ export function GroupSummary() {
         <div className="p-4 lg:p-6">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-1">
-              <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden sticky top-0">
+              <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden sticky top-20">
                 <div className="px-4 py-3 border-b border-border bg-foreground/5 font-bold uppercase tracking-widest text-[10px] text-foreground">
                   Select Group
                 </div>

@@ -159,9 +159,9 @@ export function BalanceSheet() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background transition-colors overflow-hidden">
+    <div className="flex flex-col min-h-full bg-background transition-colors">
       {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex-1 w-full sm:max-w-md space-y-4">
             <div className="flex items-center gap-4">
@@ -214,12 +214,12 @@ export function BalanceSheet() {
       </div>
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto p-0">
-        <div className="p-4 lg:p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+        <div className="p-4 lg:p-6 space-y-6 pb-20">
           <div id="balance-sheet-report" className="grid grid-cols-1 lg:grid-cols-2 border border-border bg-card divide-y lg:divide-y-0 lg:divide-x divide-border relative">
             {/* Liabilities Side */}
             <div className="relative">
-              <div className="sticky top-0 z-20 px-4 lg:px-6 py-3 bg-background shadow-sm border-b border-border flex justify-between">
+              <div className="sticky top-0 z-20 px-4 lg:px-6 py-3 bg-muted/90 backdrop-blur-sm shadow-sm border-b border-border flex justify-between">
                 <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('reports.liabilities')}</span>
                 <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
               </div>
@@ -264,7 +264,7 @@ export function BalanceSheet() {
 
             {/* Assets Side */}
             <div className="relative">
-              <div className="sticky top-0 z-20 px-4 lg:px-6 py-3 bg-background shadow-sm border-b border-border flex justify-between">
+              <div className="sticky top-0 z-20 px-4 lg:px-6 py-3 bg-muted/90 backdrop-blur-sm shadow-sm border-b border-border flex justify-between">
                 <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('reports.assets')}</span>
                 <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
               </div>

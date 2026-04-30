@@ -191,27 +191,29 @@ export function OrderManagement() {
   };
 
   return (
-    <div className="p-4 lg:p-8 bg-background min-h-screen font-mono">
-      {/* Header Section */}
-      <div className="flex items-center justify-between gap-6 mb-12 border-b border-border pb-8">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3 text-primary mb-1">
-            <Printer className="w-5 h-5" />
-            <span className="text-[10px] uppercase tracking-[0.3em] font-bold">{t('production.productionControl')}</span>
+    <div className="flex flex-col min-h-full bg-background transition-colors">
+      <div className="sticky top-0 z-[40] bg-background border-b border-border shadow-sm p-4 lg:p-8">
+        <div className="flex items-center justify-between gap-6">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3 text-primary mb-1">
+              <Printer className="w-5 h-5" />
+              <span className="text-[10px] uppercase tracking-[0.3em] font-bold">{t('production.productionControl')}</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tighter text-foreground uppercase">{t('nav.orderManagement')}</h1>
           </div>
-          <h1 className="text-2xl md:text-4xl font-bold tracking-tighter text-foreground uppercase">{t('nav.orderManagement')}</h1>
+          
+          <button 
+            onClick={handleNewOrder}
+            className="px-4 md:px-6 py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            {t('production.newOrder')}
+          </button>
         </div>
-        
-        <button 
-          onClick={handleNewOrder}
-          className="px-4 md:px-6 py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          {t('production.newOrder')}
-        </button>
       </div>
 
-      {/* Machine Status Bar */}
+      <div className="flex-1 p-4 lg:p-8">
+        {/* Machine Status Bar */}
       <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 mb-12">
         {machines.map(machine => (
           <div key={machine.id} className="bg-card border border-border p-4 relative overflow-hidden group">
@@ -291,8 +293,8 @@ export function OrderManagement() {
       ) : viewMode === 'list' ? (
         <div className="border border-border bg-card overflow-x-auto no-scrollbar">
           <div className="min-w-[800px] lg:min-w-full">
-              <div className="grid grid-cols-12 gap-2 p-3 border-b border-border bg-muted/50 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                <div className="col-span-4">Client / Item / Design</div>
+            <div className="grid grid-cols-12 gap-2 p-3 border-b border-border bg-muted/95 backdrop-blur-sm text-[9px] font-bold uppercase tracking-widest text-muted-foreground sticky top-[108px] sm:top-[124px] lg:top-[112px] z-20">
+              <div className="col-span-4">Client / Item / Design</div>
                 <div className="col-span-1 text-center">Qty</div>
                 <div className="col-span-2 text-center">Print Type</div>
                 <div className="col-span-2 text-center">Delivery</div>
@@ -494,6 +496,7 @@ export function OrderManagement() {
       )}
 
       {/* Order Modal removed as we use full page entry for multi-item support */}
+      </div>
     </div>
   );
 }

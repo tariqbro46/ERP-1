@@ -211,9 +211,9 @@ export function StockSummary() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+    <div className="flex flex-col min-h-full bg-background font-mono transition-colors">
       {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
             {(settings.companyLogo || settings.systemLogo) && (
@@ -334,8 +334,8 @@ export function StockSummary() {
       </div>
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto p-0">
-        <div className="p-4 lg:p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+        <div className="p-4 lg:p-6 space-y-6 pb-20">
           {/* Table/Cards */}
           <div id="stock-summary-report" className="bg-card border border-border p-0 print:p-8 print:border-none print:shadow-none bg-white">
           <ReportPrintHeader 
@@ -401,12 +401,12 @@ export function StockSummary() {
           {/* Desktop View: Table */}
           <div className="hidden lg:block relative h-full">
             <table className="w-full text-left text-xs min-w-[600px] border-separate border-spacing-0">
-              <thead className="sticky top-0 z-20 bg-background shadow-sm">
-                <tr className="text-gray-500 uppercase">
-                  <th className="px-6 py-4 font-medium border-b border-border bg-foreground/5">{t('common.particulars')}</th>
-                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border bg-foreground/5">{t('common.quantity')}</th>
-                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border bg-foreground/5">{t('common.rate')} ({t('common.avgRate')})</th>
-                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border bg-foreground/5">{t('common.value')} (৳)</th>
+              <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-sm shadow-sm">
+                <tr className="text-gray-500 uppercase text-[9px] font-bold tracking-widest">
+                  <th className="px-6 py-4 font-medium border-b border-border sticky top-0">{t('common.particulars')}</th>
+                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border sticky top-0">{t('common.quantity')}</th>
+                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border sticky top-0">{t('common.rate')} ({t('common.avgRate')})</th>
+                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border sticky top-0">{t('common.value')} (৳)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">

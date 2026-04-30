@@ -279,9 +279,9 @@ export function Daybook() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background transition-colors overflow-hidden">
+    <div className="flex flex-col min-h-full bg-background transition-colors">
       {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex-1 w-full sm:max-w-2xl space-y-4">
             <div className="flex items-center gap-4">
@@ -353,8 +353,8 @@ export function Daybook() {
       />
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto p-0">
-        <div className="p-4 lg:p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+        <div className="p-4 lg:p-6 space-y-6 pb-20">
           <div id="daybook-report" className="bg-card border border-border">
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
@@ -414,14 +414,14 @@ export function Daybook() {
           {/* Desktop View: Table */}
           <div className="hidden lg:block relative h-full">
             <table className="w-full text-left text-xs min-w-[700px] lg:min-w-0 border-separate border-spacing-0">
-              <thead className="sticky top-0 z-20 bg-background shadow-sm">
-                <tr className="text-gray-500 uppercase bg-foreground/5">
-                  <th className="px-4 lg:px-6 py-4 font-medium border-b border-border">{t('common.date')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium border-b border-border">{t('common.particulars')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border">{t('common.vchType')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border">{t('common.vchNo')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right border-b border-border">{t('common.amount')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right border-b border-border">{t('common.share')}</th>
+              <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-sm shadow-sm">
+                <tr className="text-gray-500 uppercase text-[9px] font-bold tracking-widest">
+                  <th className="px-4 lg:px-6 py-4 font-medium border-b border-border sticky top-0">{t('common.date')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium border-b border-border sticky top-0">{t('common.particulars')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0">{t('common.vchType')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0">{t('common.vchNo')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right border-b border-border sticky top-0">{t('common.amount')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right border-b border-border sticky top-0">{t('common.share')}</th>
                 </tr>
               </thead>
               <tbody className="text-foreground/80">

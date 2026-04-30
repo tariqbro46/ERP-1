@@ -101,9 +101,9 @@ export function CashBankBooks() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">
+    <div className="flex flex-col min-h-full bg-background font-mono transition-colors">
       {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+      <div className="sticky top-0 bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button 
@@ -168,7 +168,7 @@ export function CashBankBooks() {
       </div>
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto p-0">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
         <div className="p-4 lg:p-6">
           <div id="cash-bank-report" className="bg-card rounded-xl border border-border shadow-sm transition-colors overflow-hidden">
             <div className="overflow-x-auto">

@@ -161,48 +161,51 @@ export const erpService = {
     }
   },
 
-  async getNextAutoSerialNo(companyId: string, vType: string): Promise<number> {
+  async getNextAutoSerialNo(companyId: string, vType: string, skipIncrement = true): Promise<number> {
     try {
-      // First try to get the max auto_serial_no stored in documents
-      const qMax = query(
-        collection(db, 'vouchers'),
-        where('companyId', '==', companyId),
-        where('v_type', '==', vType),
-        orderBy('auto_serial_no', 'desc'),
-        limit(1)
-      );
-      const snapMax = await getDocs(qMax);
+      const counterRef = doc(db, 'counters', `${companyId}_voucher_${vType.toLowerCase().replace(/\s+/g, '_')}`);
+      const counterSnap = await getDoc(counterRef);
       
-      if (!snapMax.empty) {
-        const lastSerial = snapMax.docs[0].data().auto_serial_no;
-        if (typeof lastSerial === 'number') {
+      if (counterSnap.exists()) {
+        const lastSerial = counterSnap.data().lastSerial || 0;
+        if (!skipIncrement) {
+          await updateDoc(counterRef, { lastSerial: increment(1) });
           return lastSerial + 1;
         }
-      }
-
-      // Fallback: If no auto_serial_no found (legacy records), use count
-      // This is still needed for transitions but we limit it to handle the immediate request
-      const qCount = query(
-        collection(db, 'vouchers'),
-        where('companyId', '==', companyId),
-        where('v_type', '==', vType)
-      );
-      const snap = await getDocs(qCount);
-      return snap.size + 1;
-    } catch (error) {
-      console.error('Error fetching next auto serial:', error);
-      // If orderBy fails because index is missing or field doesn't exist yet, fallback to size
-      try {
-        const qCount = query(
+        return lastSerial + 1;
+      } else {
+        // Fallback to finding max serial if counter doc doesn't exist yet
+        const qMax = query(
           collection(db, 'vouchers'),
           where('companyId', '==', companyId),
-          where('v_type', '==', vType)
+          where('v_type', '==', vType),
+          orderBy('auto_serial_no', 'desc'),
+          limit(1)
         );
-        const snap = await getDocs(qCount);
-        return snap.size + 1;
-      } catch (e) {
-        return 1;
+        const snapMax = await getDocs(qMax);
+        let startSerial = 0;
+        if (!snapMax.empty) {
+          startSerial = snapMax.docs[0].data().auto_serial_no || 0;
+        } else {
+          // Absolute fallback: count
+          const qCount = query(
+            collection(db, 'vouchers'),
+            where('companyId', '==', companyId),
+            where('v_type', '==', vType)
+          );
+          const snap = await getDocs(qCount);
+          startSerial = snap.size;
+        }
+        
+        const nextSerial = startSerial + 1;
+        if (!skipIncrement) {
+          await setDoc(counterRef, { lastSerial: nextSerial });
+        }
+        return nextSerial;
       }
+    } catch (error) {
+      console.error('Error fetching next auto serial:', error);
+      return 1;
     }
   },
 
@@ -247,12 +250,16 @@ export const erpService = {
     const existingLedgers = new Set(ledgerSnaps.filter(s => s.exists()).map(s => s.id));
     const existingItems = new Set(itemSnaps.filter(s => s.exists()).map(s => s.id));
 
+    // Always get a new Auto Serial No for new vouchers to ensure sequential integrity
+    const autoSerialNo = await this.getNextAutoSerialNo(companyId, voucher.v_type, false);
+
     // 1. Create Voucher Header
     const vRef = doc(collection(db, 'vouchers'));
     const vData = cleanData({
       ...voucher,
       id: vRef.id,
       companyId,
+      auto_serial_no: autoSerialNo,
       createdBy: userId,
       createdAt: serverTimestamp()
     });
@@ -325,7 +332,8 @@ export const erpService = {
           where('v_type', '==', type),
           where('v_date', '>=', from),
           where('v_date', '<=', to),
-          orderBy('v_date', 'desc')
+          orderBy('v_date', 'asc'),
+          orderBy('createdAt', 'asc')
         )),
         this.getVoucherSerials(companyId)
       ]);
@@ -416,7 +424,11 @@ export const erpService = {
 
       const resultVouchers = allVouchersInRange
         .filter(v => relevantVoucherIds.has(v.id))
-        .sort((a, b) => b.v_date.localeCompare(a.v_date));
+        .sort((a, b) => {
+          const dateComp = a.v_date.localeCompare(b.v_date);
+          if (dateComp !== 0) return dateComp;
+          return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+        });
 
       if (resultVouchers.length === 0) return [];
 
@@ -1578,37 +1590,62 @@ export const erpService = {
       ...v,
       voucher_entries: allEntries.filter((e: any) => e.voucher_id === v.id),
       inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id)
-    })).sort((a, b) => a.v_date.localeCompare(b.v_date));
+    })).sort((a, b) => {
+      const dateComp = a.v_date.localeCompare(b.v_date);
+      if (dateComp !== 0) return dateComp;
+      return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+    });
   },
 
   // Dashboard Stats
-  async getDashboardStats(companyId: string) {
+  async getDashboardStats(companyId: string, fromDate?: string, toDate?: string) {
     try {
-      const [vouchers, items, ledgers] = await Promise.all([
-        getDocs(query(collection(db, 'vouchers'), where('companyId', '==', companyId))),
+      let q = query(
+        collection(db, 'vouchers'), 
+        where('companyId', '==', companyId)
+      );
+
+      const [vouchersSnap, items, ledgers] = await Promise.all([
+        getDocs(q),
         this.getItems(companyId),
         this.getLedgers(companyId)
       ]);
 
-      const vDocs = vouchers.docs.map(d => d.data());
+      let vDocs = vouchersSnap.docs.map(d => d.data());
+      
+      // Strict date filtering
+      if (fromDate || toDate) {
+        vDocs = vDocs.filter(v => {
+          const vDate = v.v_date;
+          if (!vDate) return false;
+          const trimmedVDate = vDate.trim();
+          if (fromDate && trimmedVDate < fromDate) return false;
+          if (toDate && trimmedVDate > toDate) return false;
+          return true;
+        });
+      }
+
       const sales = vDocs.filter(v => v.v_type === 'Sales').reduce((sum, v) => sum + (v.total_amount || 0), 0);
       const purchase = vDocs.filter(v => v.v_type === 'Purchase').reduce((sum, v) => sum + (v.total_amount || 0), 0);
       const payment = vDocs.filter(v => v.v_type === 'Payment').reduce((sum, v) => sum + (v.total_amount || 0), 0);
       const receipt = vDocs.filter(v => v.v_type === 'Receipt').reduce((sum, v) => sum + (v.total_amount || 0), 0);
-      const stockValue = items.reduce((sum: number, i: any) => sum + (i.current_stock * i.avg_cost), 0);
+      const stockValue = items.reduce((sum: number, i: any) => sum + (i.current_stock * (i.avg_cost || i.purchase_price || 0)), 0);
       
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const chartData = months.map(m => ({ name: m, value: 0 }));
       
       vDocs.filter(v => v.v_type === 'Sales').forEach(v => {
-        const date = v.v_date instanceof Timestamp ? v.v_date.toDate() : new Date(v.v_date);
-        const month = date.getMonth();
-        chartData[month].value += (v.total_amount || 0);
+        const dateString = v.v_date;
+        const date = new Date(dateString);
+        if (!isNaN(date.getTime())) {
+          const month = date.getMonth();
+          chartData[month].value += (v.total_amount || 0);
+        }
       });
 
       return { 
         revenue: sales, 
-        profit: sales - (purchase + payment), 
+        profit: sales - purchase, // Simplified for dashboard
         sales,
         purchase,
         payment,
@@ -1669,7 +1706,8 @@ export const erpService = {
           where('companyId', '==', companyId),
           where('v_date', '>=', startDate),
           where('v_date', '<=', endDate),
-          orderBy('v_date', 'desc')
+          orderBy('v_date', 'asc'),
+          orderBy('createdAt', 'asc')
         )),
         this.getVoucherSerials(companyId)
       ]);

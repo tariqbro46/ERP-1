@@ -584,9 +584,9 @@ export function PayrollManagement() {
   };
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-4 gap-4">
+    <div className="flex flex-col min-h-full bg-background transition-colors min-h-0">
+      <div className="sticky top-0 z-[40] bg-background border-b border-border shadow-sm p-4 lg:p-6 space-y-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Payroll Management</h1>
           {activeTab !== 'bulk' && (
             <button 
@@ -612,7 +612,7 @@ export function PayrollManagement() {
         </div>
 
         {/* Tabs */}
-        <div className="flex flex-col md:flex-row justify-between items-center border-b border-border gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex overflow-x-auto no-scrollbar w-full md:w-auto">
             <button 
               onClick={() => setActiveTab('salary')}
@@ -670,7 +670,7 @@ export function PayrollManagement() {
             </button>
           </div>
           
-          <div className="flex flex-col items-end gap-2 pb-2 md:pb-0">
+          <div className="flex flex-col items-end gap-2">
             {activeTab === 'attendance' ? (
               <div className="flex items-center gap-2">
                 <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Select Date</label>
@@ -705,7 +705,9 @@ export function PayrollManagement() {
             </button>
           </div>
         </div>
+      </div>
 
+      <div className="flex-1 p-4 lg:p-6 transition-colors min-h-0">
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400" />

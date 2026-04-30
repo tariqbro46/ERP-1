@@ -213,113 +213,105 @@ export const UserManagement: React.FC = () => {
   }
 
   return (
-    <div className={cn("p-4 lg:p-8 transition-colors", uiStyle === 'UI/UX 2' && "bg-slate-50 min-h-screen")}>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center justify-between w-full md:w-auto gap-4">
-          <h1 className={cn(
-            "text-2xl font-bold tracking-tight flex items-center gap-3",
-            uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
-          )}>
-            <Users className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-amber-500")} />
-            User Management
-          </h1>
+    <div className={cn("flex flex-col min-h-full transition-colors", uiStyle === 'UI/UX 2' && "bg-slate-50")}>
+      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border shadow-sm px-4 lg:px-8 py-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center justify-between w-full lg:w-auto gap-4">
+            <h1 className={cn(
+              "text-xl lg:text-2xl font-bold tracking-tight flex items-center gap-3",
+              uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+            )}>
+              <Users className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-amber-500")} />
+              User Management
+            </h1>
+            
+            <div className="flex bg-foreground/5 p-1 rounded-lg">
+              <button
+                onClick={() => setActiveTab('users')}
+                className={cn(
+                  "px-3 py-1 lg:px-4 lg:py-1.5 text-[9px] lg:text-[10px] uppercase tracking-widest font-bold rounded-md transition-all",
+                  activeTab === 'users' ? "bg-background text-foreground shadow-sm" : "text-gray-500 hover:text-foreground"
+                )}
+              >
+                Users
+              </button>
+              <button
+                onClick={() => setActiveTab('permissions')}
+                className={cn(
+                  "px-3 py-1 lg:px-4 lg:py-1.5 text-[9px] lg:text-[10px] uppercase tracking-widest font-bold rounded-md transition-all",
+                  activeTab === 'permissions' ? "bg-background text-foreground shadow-sm" : "text-gray-500 hover:text-foreground"
+                )}
+              >
+                Permissions
+              </button>
+            </div>
+          </div>
           
-          <div className="flex bg-foreground/5 p-1 rounded-lg">
+          <div className="flex items-center gap-4 w-full lg:w-auto">
+            <div className={cn(
+              "relative w-full lg:w-64",
+              uiStyle === 'UI/UX 2' ? "bg-white shadow-sm border-blue-100" : ""
+            )}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={searchTerm || ''}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={cn(
+                  "w-full bg-card border border-border rounded-lg py-2 pl-10 pr-4 text-foreground text-xs focus:outline-none transition-colors",
+                  uiStyle === 'UI/UX 2' ? "focus:border-blue-600" : "focus:border-foreground/20"
+                )}
+              />
+            </div>
             <button
-              onClick={() => setActiveTab('users')}
+              onClick={() => setShowAddModal(true)}
               className={cn(
-                "px-4 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-md transition-all",
-                activeTab === 'users' ? "bg-background text-foreground shadow-sm" : "text-gray-500 hover:text-foreground"
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all shadow-md whitespace-nowrap",
+                uiStyle === 'UI/UX 2' 
+                  ? "bg-blue-600 text-white hover:bg-blue-700" 
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white"
               )}
             >
-              Users
-            </button>
-            <button
-              onClick={() => setActiveTab('permissions')}
-              className={cn(
-                "px-4 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-md transition-all",
-                activeTab === 'permissions' ? "bg-background text-foreground shadow-sm" : "text-gray-500 hover:text-foreground"
-              )}
-            >
-              Permissions
+              <UserPlus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add New User</span>
+              <span className="sm:hidden">Add User</span>
             </button>
           </div>
-
-          <button
-            onClick={() => setShowAddModal(true)}
-            className={cn(
-              "md:hidden flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-semibold transition-all shadow-md whitespace-nowrap",
-              uiStyle === 'UI/UX 2' 
-                ? "bg-blue-600 text-white hover:bg-blue-700" 
-                : "bg-indigo-600 hover:bg-indigo-700 text-white"
-            )}
-          >
-            <UserPlus className="w-4 h-4" />
-            Add User
-          </button>
-        </div>
-        
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className={cn(
-            "relative w-full md:w-64",
-            uiStyle === 'UI/UX 2' ? "bg-white shadow-sm border-blue-100" : ""
-          )}>
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchTerm || ''}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={cn(
-                "w-full bg-card border border-border rounded-lg py-2 pl-10 pr-4 text-foreground text-xs focus:outline-none transition-colors",
-                uiStyle === 'UI/UX 2' ? "focus:border-blue-600" : "focus:border-foreground/20"
-              )}
-            />
-          </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className={cn(
-              "hidden md:flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all shadow-md",
-              uiStyle === 'UI/UX 2' 
-                ? "bg-blue-600 text-white hover:bg-blue-700" 
-                : "bg-indigo-600 hover:bg-indigo-700 text-white"
-            )}
-          >
-            <UserPlus className="w-4 h-4" />
-            Add New User
-          </button>
         </div>
       </div>
 
-      <div className={cn(
-        "bg-card border border-border rounded-xl overflow-hidden shadow-sm",
-        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
-      )}>
-        {activeTab === 'users' ? (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className={cn(
-                "border-b border-border",
-                uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-foreground/5"
-              )}>
-                <th className={cn(
-                  "px-6 py-4 text-[10px] uppercase tracking-widest font-mono",
-                  uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
-                )}>User / Email</th>
-                <th className={cn(
-                  "px-6 py-4 text-[10px] uppercase tracking-widest font-mono",
-                  uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
-                )}>Current Role</th>
-                <th className={cn(
-                  "px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-right",
-                  uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
-                )}>Sales Target</th>
-                <th className={cn(
-                  "px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-right",
-                  uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
-                )}>Actions</th>
-              </tr>
-            </thead>
+      <div className="flex-1 p-4 lg:p-8">
+        <div className={cn(
+          "bg-card border border-border rounded-xl overflow-visible shadow-sm",
+          uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+        )}>
+          {activeTab === 'users' ? (
+            <div className="overflow-x-auto no-scrollbar">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className={cn(
+                    "border-b border-border sticky top-[108px] sm:top-[128px] lg:top-[88px] z-20",
+                    uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-card shadow-sm"
+                  )}>
+                    <th className={cn(
+                      "px-6 py-4 text-[10px] uppercase tracking-widest font-mono",
+                      uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+                    )}>User / Email</th>
+                    <th className={cn(
+                      "px-6 py-4 text-[10px] uppercase tracking-widest font-mono",
+                      uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+                    )}>Current Role</th>
+                    <th className={cn(
+                      "px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-right",
+                      uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+                    )}>Sales Target</th>
+                    <th className={cn(
+                      "px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-right",
+                      uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+                    )}>Actions</th>
+                  </tr>
+                </thead>
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
@@ -429,7 +421,8 @@ export const UserManagement: React.FC = () => {
               )}
             </tbody>
           </table>
-        ) : (
+        </div>
+      ) : (
           <div className="p-0 overflow-x-auto">
             <div className="p-6 border-b border-border bg-foreground/5 flex items-center justify-between">
               <div>
@@ -625,6 +618,7 @@ export const UserManagement: React.FC = () => {
             </p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

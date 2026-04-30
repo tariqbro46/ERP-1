@@ -19,14 +19,45 @@ export function TrialBalance() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [startDate, setStartDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-CA');
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString('en-CA');
+  });
 
   useEffect(() => {
     async function fetchData() {
       if (!user?.companyId) return;
+      setLoading(true);
       try {
-        const ledgers = await erpService.getLedgers(user.companyId);
-        // Group by nature or just list all ledgers with their balances
-        setData(ledgers);
+        const [ledgers, vouchers] = await Promise.all([
+          erpService.getLedgers(user.companyId),
+          erpService.getVoucherEntriesByDateRange(user.companyId, '1900-01-01', endDate)
+        ]);
+
+        // Calculate balances for each ledger
+        const ledgerBalances = ledgers.map(l => {
+          const entriesBeforeStart = vouchers.filter(e => e.ledger_id === l.id && e.v_date < startDate);
+          const entriesInRange = vouchers.filter(e => e.ledger_id === l.id && e.v_date >= startDate && e.v_date <= endDate);
+          
+          const openingBalance = (l.opening_balance || 0) + entriesBeforeStart.reduce((sum, e) => sum + (e.debit - e.credit), 0);
+          const periodDebit = entriesInRange.reduce((sum, e) => sum + e.debit, 0);
+          const periodCredit = entriesInRange.reduce((sum, e) => sum + e.credit, 0);
+          const closingBalance = openingBalance + periodDebit - periodCredit;
+
+          return {
+            ...l,
+            openingBalance,
+            periodDebit,
+            periodCredit,
+            closingBalance
+          };
+        });
+
+        setData(ledgerBalances);
       } catch (err) {
         console.error('Error fetching trial balance:', err);
       } finally {
@@ -34,7 +65,7 @@ export function TrialBalance() {
       }
     }
     fetchData();
-  }, [user?.companyId]);
+  }, [user?.companyId, startDate, endDate]);
 
   const filteredData = data
     .filter(l => 
@@ -43,8 +74,8 @@ export function TrialBalance() {
     )
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const totalDebit = filteredData.reduce((sum, l) => sum + (l.current_balance > 0 ? l.current_balance : 0), 0);
-  const totalCredit = filteredData.reduce((sum, l) => sum + (l.current_balance < 0 ? Math.abs(l.current_balance) : 0), 0);
+  const totalDebit = filteredData.reduce((sum, l) => sum + (l.closingBalance > 0 ? l.closingBalance : 0), 0);
+  const totalCredit = filteredData.reduce((sum, l) => sum + (l.closingBalance < 0 ? Math.abs(l.closingBalance) : 0), 0);
 
   const handlePrint = () => {
     printUtils.printElement('trial-balance-report', 'Trial Balance Report');
@@ -78,23 +109,43 @@ export function TrialBalance() {
   const lastDay = formatReportDate(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0], settings.dateFormat);
 
   return (
-    <div className="flex flex-col h-full bg-background transition-colors overflow-hidden">
-      {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+    <div className="flex flex-col min-h-full bg-background transition-colors">
+      {/* Sticky Header Section */}
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-[40]">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </button>
-            <EditableHeader 
-              pageId="trial_balance"
-              defaultTitle={t('reports.trialBalance')}
-              defaultSubtitle={`${settings.companyName} • ${firstDay} to ${lastDay}`}
-            />
+          <div className="flex-1 w-full sm:max-w-2xl space-y-4">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => navigate(-1)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </button>
+              <EditableHeader 
+                pageId="trial_balance"
+                defaultTitle={t('reports.trialBalance')}
+                defaultSubtitle={settings.companyName}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <DateInput
+                  label={t('common.from')}
+                  value={startDate}
+                  onChange={setStartDate}
+                  className="w-full"
+                />
+              </div>
+              <div className="flex-1">
+                <DateInput
+                  label={t('common.to')}
+                  value={endDate}
+                  onChange={setEndDate}
+                  className="w-full"
+                />
+              </div>
+            </div>
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
             <button 
@@ -141,10 +192,10 @@ export function TrialBalance() {
           </div>
         </div>
       </div>
-
-      {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto p-0">
-        <div className="p-4 lg:p-6 space-y-6">
+      
+      {/* Content Section */}
+      <div className="flex-1 p-0 overflow-y-auto no-scrollbar">
+        <div className="p-4 lg:p-6 space-y-6 pb-20">
           {/* Table/Cards */}
           <div id="trial-balance-report" className="bg-card border border-border p-0">
           {/* Mobile View: Cards */}
@@ -159,10 +210,10 @@ export function TrialBalance() {
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <div className="text-emerald-500">
-                    {ledger.current_balance > 0 ? `Dr ৳ ${formatNumber(ledger.current_balance)}` : ''}
+                    {ledger.closingBalance > 0 ? `Dr ৳ ${formatNumber(ledger.closingBalance)}` : ''}
                   </div>
                   <div className="text-rose-500">
-                    {ledger.current_balance < 0 ? `Cr ৳ ${formatNumber(Math.abs(ledger.current_balance))}` : ''}
+                    {ledger.closingBalance < 0 ? `Cr ৳ ${formatNumber(Math.abs(ledger.closingBalance))}` : ''}
                   </div>
                 </div>
               </div>
@@ -182,16 +233,16 @@ export function TrialBalance() {
               </div>
             </div>
           </div>
-
+ 
           {/* Desktop View: Table */}
           <div className="hidden lg:block relative">
             <table className="w-full text-left text-xs min-w-[600px] border-separate border-spacing-0">
-              <thead className="sticky top-0 z-20 bg-background shadow-sm">
-                <tr className="text-gray-500 uppercase bg-foreground/5">
-                  <th className="px-6 py-4 font-medium border-b border-border">{t('common.particulars')}</th>
-                  <th className="px-6 py-4 font-medium border-b border-border">{t('common.group')}</th>
-                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border">{t('reports.debit')} (৳)</th>
-                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border">{t('reports.credit')} (৳)</th>
+              <thead className="sticky top-0 z-20 bg-card shadow-sm shadow-black/5">
+                <tr className="text-gray-500 uppercase bg-muted/50 text-[10px] tracking-widest">
+                  <th className="px-6 py-4 font-medium border-b border-border sticky top-0">{t('common.particulars')}</th>
+                  <th className="px-6 py-4 font-medium border-b border-border sticky top-0">{t('common.group')}</th>
+                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border sticky top-0">{t('reports.debit')} (৳)</th>
+                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border sticky top-0">{t('reports.credit')} (৳)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -204,10 +255,10 @@ export function TrialBalance() {
                     <td className="px-6 py-3 text-foreground font-medium">{ledger.name}</td>
                     <td className="px-6 py-3 text-gray-500 uppercase text-[10px]">{ledger.ledger_groups?.name}</td>
                     <td className="px-6 py-3 text-right text-foreground">
-                      {ledger.current_balance > 0 ? formatNumber(ledger.current_balance) : ''}
+                      {ledger.closingBalance > 0 ? formatNumber(ledger.closingBalance) : ''}
                     </td>
                     <td className="px-6 py-3 text-right text-foreground">
-                      {ledger.current_balance < 0 ? formatNumber(Math.abs(ledger.current_balance)) : ''}
+                      {ledger.closingBalance < 0 ? formatNumber(Math.abs(ledger.closingBalance)) : ''}
                     </td>
                   </tr>
                 ))}

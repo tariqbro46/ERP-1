@@ -870,11 +870,11 @@ export function VoucherEntry() {
   };
 
   return (
-    <div className="bg-background h-screen flex flex-col overflow-hidden font-mono transition-colors">
-      <div className="bg-card flex flex-col flex-1 overflow-hidden">
+    <div className="bg-background min-h-full flex flex-col font-mono transition-colors">
+      <div className="bg-card flex flex-col flex-1">
         {/* Voucher Header Section */}
         <div className={cn(
-          "border-b border-border bg-foreground/5 shrink-0",
+          "border-b border-border bg-foreground/5 shrink-0 sticky top-0 z-40 shadow-sm",
           voucherHeaderCompact ? "p-2 lg:p-3 space-y-3" : "p-2 lg:p-6 space-y-3 lg:space-y-6"
         )}>
           {/* Row 0: Voucher Type (Mobile only at top) */}
@@ -1150,7 +1150,7 @@ export function VoucherEntry() {
         </div>
 
         {/* Main Entry Table */}
-        <div className={cn("flex-1 overflow-y-auto overflow-x-auto border-b border-border", voucherTableCompact && "p-0.5")}>
+        <div className={cn("flex-1 overflow-y-auto no-scrollbar overflow-x-auto border-b border-border", voucherTableCompact && "p-0.5")}>
           {isStockJournal ? (
             <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-border min-h-[400px]">
               {/* Source (Consumption) */}

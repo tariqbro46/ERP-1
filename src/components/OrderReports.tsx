@@ -134,95 +134,99 @@ export default function OrderReports() {
   };
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2 border-b border-border pb-2">
-        <div className="flex items-center gap-4">
-          {(settings.companyLogo || settings.systemLogo) && (
-            <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
-              <img 
-                src={settings.companyLogo || settings.systemLogo} 
-                alt="Logo" 
-                className="w-full h-full object-contain"
-                referrerPolicy="no-referrer"
-              />
+    <div className="flex flex-col min-h-full bg-background transition-colors min-h-0">
+      <div className="sticky top-0 z-[40] bg-background border-b border-border shadow-sm p-4 lg:p-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4 pb-4 border-b border-border">
+          <div className="flex items-center gap-4">
+            {(settings.companyLogo || settings.systemLogo) && (
+              <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
+                <img 
+                  src={settings.companyLogo || settings.systemLogo} 
+                  alt="Logo" 
+                  className="w-full h-full object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            )}
+            <div className="space-y-1">
+              <div className="flex items-center gap-3 text-primary mb-1">
+                <BarChart3 className="w-5 h-5" />
+                <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-foreground">Analytics</span>
+              </div>
+              <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Production Reports</h1>
+              <p className="text-[10px] text-gray-500 uppercase font-bold">{settings.companyName}</p>
             </div>
-          )}
-          <div className="space-y-1">
-            <div className="flex items-center gap-3 text-primary mb-1">
-              <BarChart3 className="w-5 h-5" />
-              <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-foreground">Analytics</span>
-            </div>
-            <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">Production Reports</h1>
-            <p className="text-[10px] text-gray-500 uppercase font-bold">{settings.companyName}</p>
+          </div>
+          <div className="flex w-full md:w-auto justify-end gap-2">
+            <button 
+              onClick={() => window.print()}
+              className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
+            >
+              <Printer className="w-3 h-3" />
+              Print
+            </button>
+            <button 
+              onClick={exportToPDF}
+              className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
+            >
+              <Download className="w-3 h-3" />
+              PDF
+            </button>
           </div>
         </div>
-        <div className="flex w-full md:w-auto justify-end">
-          <button 
-            onClick={() => window.print()}
-            className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
-          >
-            <FileText className="w-3 h-3" />
-            Full Page View
-          </button>
+
+        {/* Filters */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 bg-muted/30 p-4 border border-border">
+          <div className="relative lg:col-span-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input 
+              type="text"
+              placeholder="FILTER BY CLIENT, ITEM, DESIGN..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-background border border-border py-2 pl-10 pr-4 text-[10px] uppercase tracking-widest outline-none focus:border-primary"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <input 
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+              className="flex-1 bg-background border border-border py-2 px-3 text-[10px] outline-none focus:border-primary"
+            />
+            <span className="text-muted-foreground text-[10px]">TO</span>
+            <input 
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+              className="flex-1 bg-background border border-border py-2 px-3 text-[10px] outline-none focus:border-primary"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4 bg-muted/30 p-4 border border-border">
-        <div className="relative lg:col-span-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input 
-            type="text"
-            placeholder="FILTER BY CLIENT, ITEM, DESIGN..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-background border border-border py-2 pl-10 pr-4 text-[10px] uppercase tracking-widest outline-none focus:border-primary"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-muted-foreground" />
-          <input 
-            type="date"
-            value={dateRange.start}
-            onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-            className="flex-1 bg-background border border-border py-2 px-3 text-[10px] outline-none focus:border-primary"
-          />
-          <span className="text-muted-foreground text-[10px]">TO</span>
-          <input 
-            type="date"
-            value={dateRange.end}
-            onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-            className="flex-1 bg-background border border-border py-2 px-3 text-[10px] outline-none focus:border-primary"
-          />
-        </div>
-        <button 
-          onClick={exportToPDF}
-          className="flex items-center justify-center gap-2 px-6 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
-        >
-          <FileText className="w-4 h-4" />
-          Export PDF
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <BarChart3 className="w-8 h-8 text-primary animate-pulse" />
-        </div>
-      ) : (
-        <div className="border border-border bg-card overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr className="bg-muted/50 text-[10px] font-bold uppercase tracking-widest text-muted-foreground border-b border-border">
-                <th className="p-4">Client Name (Ledger)</th>
-                <th className="p-4">Raw Item/Bag</th>
-                <th className="p-4">Print Design Needed</th>
-                <th className="p-4 text-center">Total Qty</th>
-                <th className="p-4 text-center">Orders</th>
-                <th className="p-4 text-right">Last Order</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {sortedReport.map((row, idx) => (
+      <div className="flex-1 p-4 lg:p-6 min-h-0">
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <BarChart3 className="w-8 h-8 text-primary animate-pulse" />
+          </div>
+        ) : (
+          <div className="border border-border bg-card">
+            <div className="overflow-x-auto no-scrollbar">
+              <table className="w-full text-left border-collapse min-w-[800px] border-separate border-spacing-0">
+                <thead>
+                  <tr className="bg-muted text-[10px] font-bold uppercase tracking-widest text-muted-foreground sticky top-[188px] lg:top-[164px] z-20 shadow-sm">
+                    <th className="p-4 border-b border-border">Client Name (Ledger)</th>
+                    <th className="p-4 border-b border-border">Raw Item/Bag</th>
+                    <th className="p-4 border-b border-border">Print Design Needed</th>
+                    <th className="p-4 text-center border-b border-border">Total Qty</th>
+                    <th className="p-4 text-center border-b border-border">Orders</th>
+                    <th className="p-4 text-right border-b border-border">Last Order</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {sortedReport.map((row, idx) => (
                 <tr key={idx} className="hover:bg-muted/20 transition-colors group">
                   <td className="p-4">
                     <div className="flex items-center gap-2">
@@ -263,7 +267,9 @@ export default function OrderReports() {
             </tbody>
           </table>
         </div>
-      )}
+      </div>
+    )}
+      </div>
     </div>
   );
 }

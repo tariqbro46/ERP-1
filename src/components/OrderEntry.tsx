@@ -242,10 +242,10 @@ export default function OrderEntry() {
   };
 
   return (
-    <div className="p-4 lg:p-8 bg-background min-h-screen font-mono">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8 border-b border-border pb-6">
+    <div className="flex flex-col min-h-full bg-background font-mono">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border shadow-sm px-4 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/production/orders')}
@@ -260,7 +260,7 @@ export default function OrderEntry() {
                   {formData.orderType} Order
                 </span>
               </div>
-              <h1 className="text-3xl font-bold tracking-tighter text-foreground uppercase">
+              <h1 className="text-2xl lg:text-3xl font-bold tracking-tighter text-foreground uppercase">
                 {id ? 'Edit Order' : 'New Order Entry'}
               </h1>
             </div>
@@ -284,35 +284,39 @@ export default function OrderEntry() {
             ))}
           </div>
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Client Information */}
-          <div className="bg-card border border-border p-8">
-            <div className="flex items-center gap-2 text-primary mb-6">
-              <User className="w-4 h-4" />
-              <span className="text-[10px] uppercase font-bold tracking-widest">Client Information</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <div className="md:col-span-3 space-y-2">
-                <div className="flex justify-between items-end">
-                  <label className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Client Name (Ledger)</label>
-                  {formData.clientId && balances[formData.clientId] !== undefined && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest">
-                      Balance: <span className={cn(balances[formData.clientId] >= 0 ? "text-emerald-500" : "text-rose-500")}>
-                        {Math.abs(balances[formData.clientId]).toLocaleString()} {balances[formData.clientId] >= 0 ? 'DR' : 'CR'}
-                      </span>
-                    </span>
-                  )}
-                </div>
-                <SearchableSelect
-                  options={ledgers.map(l => ({ id: l.id, name: l.name }))}
-                  value={formData.clientId || ''}
-                  onChange={handleClientChange}
-                  placeholder="SEARCH CLIENT..."
-                  className="text-lg font-bold"
-                />
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div className="max-w-4xl mx-auto p-4 lg:p-8">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Client Information */}
+            <div className="bg-card border border-border p-8">
+              <div className="flex items-center gap-2 text-primary mb-6">
+                <User className="w-4 h-4" />
+                <span className="text-[10px] uppercase font-bold tracking-widest">Client Information</span>
               </div>
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div className="md:col-span-3 space-y-2">
+                  <div className="flex justify-between items-end">
+                    <label className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Client Name (Ledger)</label>
+                    {formData.clientId && balances[formData.clientId] !== undefined && (
+                      <span className="text-[10px] font-bold uppercase tracking-widest">
+                        Balance: <span className={cn(balances[formData.clientId] >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                          {Math.abs(balances[formData.clientId]).toLocaleString()} {balances[formData.clientId] >= 0 ? 'DR' : 'CR'}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                  <SearchableSelect
+                    options={ledgers.map(l => ({ id: l.id, name: l.name }))}
+                    value={formData.clientId || ''}
+                    onChange={handleClientChange}
+                    placeholder="SEARCH CLIENT..."
+                    className="text-lg font-bold"
+                  />
+                </div>
+                <div className="space-y-2">
                 <label className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Order Received By</label>
                 <select
                   value={formData.receivedBy || ''}
@@ -537,6 +541,7 @@ export default function OrderEntry() {
             </button>
           </div>
         </form>
+      </div>
       </div>
     </div>
   );

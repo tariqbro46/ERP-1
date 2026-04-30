@@ -78,7 +78,7 @@ export function Dashboard() {
     stock: { title: t('dash.stockValue') || 'Stock Value', key: 'stockValue', icon: Package, color: 'bg-orange-600' },
   };
 
-  const selectedCards = dashboardCards.slice(0, 5).map(id => cardConfigs[id]).filter(Boolean);
+  const selectedCards = (dashboardCards.length > 0 ? dashboardCards : ['sales', 'purchase', 'payment', 'receipt', 'profit']).slice(0, 5).map(id => cardConfigs[id]).filter(Boolean);
   
   // Default to current month
   const getDefaultPeriod = () => {
@@ -137,12 +137,16 @@ export function Dashboard() {
       setLoading(true);
       try {
         const [s, v, o] = await Promise.all([
-          erpService.getDashboardStats(user.companyId),
+          erpService.getDashboardStats(user.companyId, periodStart, periodEnd),
           erpService.getRecentVouchers(user.companyId, 5),
           erpService.getOrders(user.companyId)
         ]);
         setStats(s);
-        const processed = (v || []).map(vch => ({
+        // Filter recent vouchers by period if needed, or keep latest 5
+        const processed = (v || []).filter(vch => {
+          if (!periodStart || !periodEnd) return true;
+          return vch.v_date >= periodStart && vch.v_date <= periodEnd;
+        }).map(vch => ({
           ...vch,
           particulars: vch.party_ledger_name || vch.ledger_name || vch.ledgers || vch.particulars || vch.v_type || 'Voucher'
         }));
@@ -178,16 +182,31 @@ export function Dashboard() {
     const { revenue, profit, activeLedgers, stockValue, chartData } = stats;
 
     return (
-      <div className="flex flex-col h-full bg-[#f8f9fa] transition-colors font-sans overflow-hidden">
+      <div className="flex flex-col min-h-full bg-[#f8f9fa] transition-colors font-sans">
         {/* Fixed Header Section */}
-        <div className="flex-none bg-white border-b border-gray-100 shadow-sm px-4 lg:px-6 py-4 z-30">
+        <div className="sticky top-0 bg-white border-b border-gray-100 shadow-sm px-4 lg:px-6 py-4 z-30">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <EditableHeader 
               pageId="dashboard"
               defaultTitle={t('dash.overview')}
               defaultSubtitle={`${t('dash.financialSummary')} • ${companyName}`}
             />
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="flex items-center gap-2">
+                <input 
+                  type="date" 
+                  value={periodStart || ''} 
+                  onChange={(e) => setPeriodStart(e.target.value)}
+                  className="bg-gray-50 border border-gray-200 text-[10px] p-1.5 rounded outline-none focus:border-blue-500 font-mono"
+                />
+                <span className="text-gray-400">/</span>
+                <input 
+                  type="date" 
+                  value={periodEnd || ''} 
+                  onChange={(e) => setPeriodEnd(e.target.value)}
+                  className="bg-gray-50 border border-gray-200 text-[10px] p-1.5 rounded outline-none focus:border-blue-500 font-mono"
+                />
+              </div>
               <button 
                 onClick={() => window.location.reload()}
                 className="text-[11px] font-bold text-gray-500 uppercase hover:text-gray-800 transition-colors"
@@ -198,8 +217,8 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Scrollable Content Section */}
-        <div className="flex-1 overflow-y-auto no-scrollbar p-4 lg:p-6 space-y-6">
+        {/* Content Section */}
+        <div className="p-4 lg:p-6 space-y-6">
           {/* Metric Cards Section */}
           <div className="space-y-4">
             <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('dash.kpi')}</h2>
@@ -344,9 +363,9 @@ export function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background transition-colors font-mono overflow-hidden">
-      {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 z-30">
+    <div className="flex flex-col min-h-full bg-background transition-colors font-mono tracking-tight">
+      {/* Sticky Header Section */}
+      <div className="sticky top-0 bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <EditableHeader 
             pageId="dashboard_main"
@@ -378,8 +397,8 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-4 lg:p-6 space-y-6">
+      {/* Content Section */}
+      <div className="p-4 lg:p-6 space-y-6">
         <div className={cn(
           "grid gap-4",
           selectedCards.length === 5 ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"

@@ -971,10 +971,10 @@ function Layout({ children }: { children: React.ReactNode }) {
       {(menuBarStyle === 'classic' || isSidebarOpen) && renderClassicSidebar()}
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col w-full">
+      <main className="flex-1 flex flex-col w-full overflow-hidden h-full">
         {menuBarStyle !== 'macos' && (
           <header className={cn(
-            "h-14 border-b border-border bg-background flex items-center px-4 lg:px-6 sticky top-0 z-[100] transition-colors",
+            "h-14 flex-none border-b border-border bg-background flex items-center px-4 lg:px-6 z-[500] transition-colors",
             uiStyle === 'UI/UX 2' && "bg-blue-600 border-blue-700 text-white"
           )}>
             <div className="flex items-center gap-3 lg:gap-4 z-10">
@@ -1053,12 +1053,6 @@ function Layout({ children }: { children: React.ReactNode }) {
                         </div>
                       )}
                     </Link>
-                    <h1 className={cn(
-                      "text-[10px] font-bold tracking-tighter truncate max-w-[80px]",
-                      uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground"
-                    )}>
-                      {companyName}
-                    </h1>
                     {activePlan && (
                       <div className={cn(
                         "px-1.5 py-0.5 rounded text-[7px] font-bold uppercase tracking-tighter flex items-center gap-0.5",
@@ -1083,7 +1077,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               </h2>
             </div>
 
-            <div className="ml-auto flex items-center gap-3 lg:gap-6 z-10">
+            <div className="ml-auto flex items-center gap-3 lg:gap-6 z-[510]">
               <NotificationCenter />
               
               {showGoToShortcut && (
@@ -1137,7 +1131,7 @@ function Layout({ children }: { children: React.ReactNode }) {
                 </button>
 
                 {isProfileDropdownOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-56 bg-card border border-border shadow-2xl z-[110] py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="absolute top-full right-0 mt-2 w-56 bg-card border border-border shadow-2xl z-[520] py-2 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="px-4 py-3 border-b border-border mb-2">
                       <p className="text-[10px] font-bold text-foreground uppercase tracking-widest truncate">{user?.displayName || t('common.user')}</p>
                       <p className="text-[9px] text-gray-500 truncate">{user?.email}</p>
@@ -1234,14 +1228,14 @@ function Layout({ children }: { children: React.ReactNode }) {
         <div ref={scrollRef} 
         data-scrolling-tables={showScrollingBar}
         className={cn(
-          "flex-1 pb-16 lg:pb-0 flex flex-col min-h-0 overflow-hidden",
+          "flex-1 pb-16 lg:pb-0 flex flex-col min-h-0 overflow-y-auto scroll-smooth",
           !showScrollingBar && "no-scrollbar",
           menuBarStyle === 'macos' && "pt-10"
         )}>
           <div className={cn(
             "w-full mx-auto flex-1 flex flex-col min-h-0",
             (layoutWidth === 'constrained' && !location.pathname.startsWith('/vouchers/')) ? "max-w-7xl" : "max-w-full",
-            (location.pathname === '/dashboard' || location.pathname.startsWith('/reports/') || location.pathname === '/daybook' || location.pathname.startsWith('/inventory/') || location.pathname.startsWith('/vouchers/')) && "h-full"
+            (location.pathname === '/dashboard' || location.pathname.startsWith('/reports/') || location.pathname === '/daybook' || location.pathname.startsWith('/inventory/') || location.pathname.startsWith('/vouchers/')) && "min-h-full"
           )}>
             {children}
           </div>

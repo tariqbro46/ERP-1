@@ -243,89 +243,92 @@ export const AlterMaster: React.FC = () => {
   );
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
+    <div className="flex flex-col min-h-full bg-background transition-colors">
+      <div className="sticky top-0 z-[40] bg-background border-b border-border shadow-sm p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {selectedCategory && (
+              <button 
+                onClick={() => setSelectedCategory(null)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </button>
+            )}
+            {selectedCategory ? (
+              <h1 className="text-2xl font-bold text-gray-900">
+                {t(selectedCategory.labelKey)}
+              </h1>
+            ) : (
+              <EditableHeader 
+                pageId="alter_master"
+                defaultTitle={t('common.alteration')}
+                defaultSubtitle="Modify your master data records"
+              />
+            )}
+          </div>
           {selectedCategory && (
-            <button 
-              onClick={() => setSelectedCategory(null)}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            <button
+              onClick={handleCreateNew}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
             >
-              <ArrowLeft className="w-6 h-6" />
+              <Plus className="w-4 h-4" />
+              {t('common.create')}
             </button>
           )}
-          {selectedCategory ? (
-            <h1 className="text-3xl font-bold text-gray-900">
-              {t(selectedCategory.labelKey)}
-            </h1>
-          ) : (
-            <EditableHeader 
-              pageId="alter_master"
-              defaultTitle={t('common.alteration')}
-              defaultSubtitle="Modify your master data records"
-            />
-          )}
         </div>
-        {selectedCategory && (
-          <button
-            onClick={handleCreateNew}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            {t('common.create')}
-          </button>
-        )}
       </div>
 
-      <AnimatePresence mode="wait">
-        {!selectedCategory ? (
-          <motion.div 
-            key="categories"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4"
-          >
-            {MASTER_CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat)}
-                className="flex items-center gap-4 p-6 bg-white rounded-xl border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all text-left group"
-              >
-                <div className="p-3 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
-                  <cat.icon className="w-6 h-6 text-blue-600" />
+      <div className="flex-1 p-6">
+        <AnimatePresence mode="wait">
+          {!selectedCategory ? (
+            <motion.div 
+              key="categories"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            >
+              {MASTER_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat)}
+                  className="flex items-center gap-4 p-6 bg-white rounded-xl border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all text-left group"
+                >
+                  <div className="p-3 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                    <cat.icon className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900">{t(cat.labelKey)}</h3>
+                    <p className="text-sm text-gray-500">Alter {cat.label} details</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
+                </button>
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="items"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+            >
+              <div className="p-4 border-b border-gray-200 bg-gray-50 sticky top-[80px] z-10">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder={`Search ${t(selectedCategory.labelKey)}...`}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{t(cat.labelKey)}</h3>
-                  <p className="text-sm text-gray-500">Alter {cat.label} details</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" />
-              </button>
-            ))}
-          </motion.div>
-        ) : (
-          <motion.div 
-            key="items"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="bg-white rounded-xl border border-gray-200 overflow-hidden"
-          >
-            <div className="p-4 border-b border-gray-200 bg-gray-50">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder={`Search ${t(selectedCategory.labelKey)}...`}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                />
               </div>
-            </div>
 
-            <div className="max-h-[60vh] overflow-y-auto">
-              {loading ? (
+              <div className="min-h-0">
+                {loading ? (
                 <div className="p-8 text-center text-gray-500">{t('common.loading')}</div>
               ) : filteredItems.length > 0 ? (
                 <div className="divide-y divide-gray-100">
@@ -367,8 +370,9 @@ export const AlterMaster: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
 
-      {/* Edit Modal */}
+    {/* Edit Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-xl border border-gray-200 w-full max-w-md overflow-hidden shadow-2xl">

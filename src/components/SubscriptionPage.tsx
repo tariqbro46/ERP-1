@@ -162,26 +162,30 @@ export function SubscriptionPage() {
   };
 
   return (
-    <div className="p-6 space-y-8 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
-            <Shield className="w-8 h-8 text-primary" />
-            {t('subscription.title')}
-          </h1>
-          <p className="text-sm text-muted-foreground">{t('subscription.subtitle')}</p>
+    <div className="flex flex-col min-h-full bg-background transition-colors">
+      {/* Sticky Header */}
+      <div className="sticky top-0 bg-background/80 backdrop-blur-xl border-b border-border px-4 lg:px-6 py-4 z-40">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
+              <Shield className="w-8 h-8 text-primary" />
+              {t('subscription.title')}
+            </h1>
+            <p className="text-sm text-muted-foreground">{t('subscription.subtitle')}</p>
+          </div>
+          {isAdmin && (
+            <button
+              onClick={() => setIsUpgradeModalOpen(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
+            >
+              <ArrowUpCircle className="w-4 h-4" />
+              {t('subscription.upgradePlan')}
+            </button>
+          )}
         </div>
-        {isAdmin && (
-          <button
-            onClick={() => setIsUpgradeModalOpen(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
-          >
-            <ArrowUpCircle className="w-4 h-4" />
-            {t('subscription.upgradePlan')}
-          </button>
-        )}
       </div>
+
+      <div className="p-4 lg:p-6 space-y-8 max-w-7xl mx-auto w-full">
 
       {notification && (
         <motion.div
@@ -497,8 +501,9 @@ export function SubscriptionPage() {
           </div>
         </div>
       </div>
+    </div>
 
-      {/* Upgrade Modal */}
+    {/* Upgrade Modal */}
       <AnimatePresence>
         {isUpgradeModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">

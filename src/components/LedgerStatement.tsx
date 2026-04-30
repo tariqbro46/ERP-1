@@ -723,9 +723,9 @@ export function LedgerStatement() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background transition-colors overflow-hidden">
+    <div className="bg-background min-h-full flex flex-col font-mono transition-colors">
       {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+      <div className="sticky top-0 bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
             <EditableHeader 
@@ -874,7 +874,7 @@ export function LedgerStatement() {
       />
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto p-0">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
         <div className="p-4 lg:p-6 space-y-6">
           <div id="ledger-report" className={cn(
             "bg-card border border-border relative",

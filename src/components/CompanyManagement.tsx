@@ -149,13 +149,16 @@ export function CompanyManagement() {
   };
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono">
-      <div className="space-y-8">
-        <div className="border-b border-border pb-4 flex items-baseline gap-4">
+    <div className="flex flex-col min-h-full bg-background font-mono">
+      {/* Sticky Header Section */}
+      <div className="sticky top-0 bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 z-30">
+        <div className="flex items-baseline gap-4">
           <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">{t('company.title')}</h1>
           <p className="text-[10px] text-gray-500 uppercase tracking-widest">{t('company.subtitle')}</p>
         </div>
+      </div>
 
+      <div className="p-4 lg:p-6 space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Create New Company */}
           <div className="bg-card border border-border p-6 space-y-6">

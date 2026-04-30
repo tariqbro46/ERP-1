@@ -414,13 +414,16 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   ];
 
   return (
-    <div className="p-4 lg:p-6 bg-background min-h-screen font-mono transition-colors">
-      <div className="space-y-6">
-        <div className="border-b border-border pb-4 flex items-baseline gap-4">
+    <div className="flex flex-col min-h-full bg-background font-mono transition-colors">
+      {/* Sticky Header Section */}
+      <div className="sticky top-0 bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 z-30">
+        <div className="flex items-baseline gap-4">
           <h1 className="text-xl lg:text-2xl font-mono text-foreground uppercase tracking-tighter">{t('settings.systemSettings')}</h1>
           <p className="text-[10px] text-gray-500 uppercase tracking-widest">{t('settings.configureEnvironment')}</p>
         </div>
+      </div>
 
+      <div className="p-4 lg:p-6 space-y-6">
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* Tabs */}
           <div className="w-full lg:w-64 flex lg:flex-col overflow-x-auto no-scrollbar lg:overflow-visible gap-1 pb-2 lg:pb-0">

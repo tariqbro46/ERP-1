@@ -124,7 +124,7 @@ export default function NotificationCenter({ position = 'top' }: { position?: 't
         {isOpen && (
           <>
             <div 
-              className="fixed inset-0 z-[105]" 
+              className="fixed inset-0 z-[505]" 
               onClick={() => setIsOpen(false)} 
             />
             <motion.div
@@ -132,7 +132,7 @@ export default function NotificationCenter({ position = 'top' }: { position?: 't
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: position === 'top' ? 10 : -10, scale: 0.95 }}
               className={cn(
-                "absolute right-0 w-[calc(100vw-32px)] sm:w-[450px] z-[110] filter drop-shadow-2xl",
+                "absolute right-0 w-[calc(100vw-32px)] sm:w-[450px] z-[520] filter drop-shadow-2xl",
                 position === 'top' ? "top-[calc(100%+8px)] origin-top-right" : "bottom-[calc(100%+8px)] origin-bottom-right"
               )}
             >
