@@ -136,154 +136,154 @@ service cloud.firestore {
 
     // ERP Data
     match /ledgers/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /items/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /vouchers/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /ledger_groups/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /voucher_entries/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /inventory_entries/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /units/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /godowns/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /employees/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /salary_sheets/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /advances/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /loans/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /stock_groups/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /stock_categories/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /voucher_types/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /employee_groups/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /pay_heads/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyAdmin(request.resource.data.companyId);
       allow update: if isCompanyAdmin(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /salary_structures/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyAdmin(request.resource.data.companyId);
       allow update: if isCompanyAdmin(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /attendance/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(request.resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
     
     match /orders/{id} {
-      allow read: if isCompanyMember(resource.data.companyId) && (hasPermission('orders') || isCompanyAdmin(resource.data.companyId));
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId) && (hasPermission('orders') || isCompanyAdmin(resource.data.companyId))));
       allow create: if isCompanyMember(request.resource.data.companyId) && (hasPermission('orders') || isCompanyAdmin(request.resource.data.companyId));
       allow update: if isCompanyMember(request.resource.data.companyId) && (hasPermission('orders') || isCompanyAdmin(request.resource.data.companyId));
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /machines/{id} {
-      allow read: if isCompanyMember(resource.data.companyId) && (hasPermission('machines') || isCompanyAdmin(resource.data.companyId));
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId) && (hasPermission('machines') || isCompanyAdmin(resource.data.companyId))));
       allow create: if isCompanyMember(request.resource.data.companyId) && (hasPermission('machines') || isCompanyAdmin(request.resource.data.companyId));
       allow update: if isCompanyMember(request.resource.data.companyId) && (hasPermission('machines') || isCompanyAdmin(request.resource.data.companyId));
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /godown_stock/{id} {
-      allow read: if isCompanyMember(resource.data.companyId);
+      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();

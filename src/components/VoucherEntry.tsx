@@ -379,6 +379,11 @@ export function VoucherEntry() {
     setLoading(true);
     try {
       const v = await erpService.getVoucherById(id!);
+      if (!v) {
+        showNotification('Voucher not found', 'error');
+        navigate('/vouchers');
+        return;
+      }
       setVType(v.v_type || 'Sales');
       setVDate(v.v_date || new Date().toISOString().split('T')[0]);
       setRefNo(v.v_no || '');

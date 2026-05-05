@@ -831,7 +831,7 @@ export const erpService = {
    async getVoucherById(id: string): Promise<any> {
      try {
        const vSnap = await getDoc(doc(db, 'vouchers', id));
-       if (!vSnap.exists()) throw new Error('Voucher not found');
+       if (!vSnap.exists()) return null;
        const voucher = vSnap.data();
        const companyId = voucher.companyId;
 
@@ -875,6 +875,7 @@ export const erpService = {
 
   async deleteVoucher(id: string) {
     const voucher = await this.getVoucherById(id);
+    if (!voucher) throw new Error('Voucher not found');
     const companyId = voucher.companyId;
     const batch = writeBatch(db);
 
@@ -927,6 +928,7 @@ export const erpService = {
     // then we apply the new effects.
     
     const oldVoucher = await this.getVoucherById(id);
+    if (!oldVoucher) throw new Error('Voucher not found');
     const batch = writeBatch(db);
 
     // Collect all unique ledger and item IDs from both old and new voucher
