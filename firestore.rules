@@ -138,21 +138,21 @@ service cloud.firestore {
     match /ledgers/{id} {
       allow read: if isCompanyMember(resource.data.companyId);
       allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
+      allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /items/{id} {
       allow read: if isCompanyMember(resource.data.companyId);
       allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
+      allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /vouchers/{id} {
       allow read: if isCompanyMember(resource.data.companyId);
       allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
+      allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
@@ -166,14 +166,14 @@ service cloud.firestore {
     match /voucher_entries/{id} {
       allow read: if isCompanyMember(resource.data.companyId);
       allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
+      allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /inventory_entries/{id} {
       allow read: if isCompanyMember(resource.data.companyId);
       allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
+      allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
@@ -282,6 +282,13 @@ service cloud.firestore {
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
+    match /godown_stock/{id} {
+      allow read: if isCompanyMember(resource.data.companyId);
+      allow create: if isCompanyMember(request.resource.data.companyId);
+      allow update: if isCompanyMember(resource.data.companyId);
+      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+    }
+
     match /activity_log/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || isCompanyMember(resource.data.companyId));
       allow create: if isAuthenticated();
@@ -292,17 +299,17 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         isSuperAdmin() || 
         (resource != null && isCompanyMember(resource.data.get('companyId', ''))) ||
-        (getUserData().get('companyId', '') != "" && id.matches("^" + getUserData().get('companyId', '') + ".*"))
+        (id.matches("^" + getUserData().get('companyId', '') + ".*"))
       );
       allow create: if isAuthenticated() && (
         isSuperAdmin() || 
         isCompanyMember(request.resource.data.get('companyId', '')) ||
-        (getUserData().get('companyId', '') != "" && id.matches("^" + getUserData().get('companyId', '') + ".*"))
+        (id.matches("^" + getUserData().get('companyId', '') + ".*"))
       );
       allow update: if isAuthenticated() && (
         isSuperAdmin() || 
         (resource != null && isCompanyMember(resource.data.get('companyId', ''))) ||
-        (getUserData().get('companyId', '') != "" && id.matches("^" + getUserData().get('companyId', '') + ".*"))
+        (id.matches("^" + getUserData().get('companyId', '') + ".*"))
       );
       allow delete: if isSuperAdmin();
     }

@@ -60,7 +60,6 @@ enum OperationType {
   GET = 'get',
   WRITE = 'write',
 }
-// ... (rest of the error handling code remains same)
 
 interface FirestoreErrorInfo {
   error: string;
@@ -241,24 +240,33 @@ export const erpService = {
         // Update the counter if we found a true maximum from the database
         if (foundMax > 0 && (foundMax > lastSerial || forceResync)) {
           lastSerial = foundMax;
-          await setDoc(counterRef, {
-            lastSerial: foundMax,
-            vType: normalizedRequested,
-            companyId: companyId,
-            updatedAt: serverTimestamp()
-          }, { merge: true });
+          try {
+            await setDoc(counterRef, {
+              lastSerial: foundMax,
+              vType: normalizedRequested,
+              companyId: companyId,
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+          } catch (error) {
+            handleFirestoreError(error, OperationType.WRITE, `counters/${companyId}_voucher_${typeKey}`);
+          }
         } else if (!counterSnap.exists()) {
-          await setDoc(counterRef, {
-            lastSerial: foundMax,
-            vType: normalizedRequested,
-            companyId: companyId,
-            updatedAt: serverTimestamp()
-          });
+          try {
+            await setDoc(counterRef, {
+              lastSerial: foundMax,
+              vType: normalizedRequested,
+              companyId: companyId,
+              updatedAt: serverTimestamp()
+            });
+          } catch (error) {
+            handleFirestoreError(error, OperationType.WRITE, `counters/${companyId}_voucher_${typeKey}`);
+          }
         }
       }
 
       return lastSerial + 1;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message && error.message.startsWith('{')) throw error;
       console.error('Error in getNextAutoSerialNo:', error);
       return 1;
     }
@@ -365,10 +373,16 @@ export const erpService = {
       const counterRef = doc(db, 'counters', `${companyId}_voucher_${typeKey}`);
 
       return await runTransaction(db, async (transaction) => {
-        // 1. Handshake with counter to get and increment serial ATOMICALLY
-        const counterSnap = await transaction.get(counterRef);
+        // 1. Handshake with counter
+        let counterSnap;
+        try {
+          counterSnap = await transaction.get(counterRef);
+        } catch (error) {
+          handleFirestoreError(error, OperationType.GET, `counters/${companyId}_voucher_${typeKey}`);
+        }
+
         let nextSerial = 1;
-        if (counterSnap.exists()) {
+        if (counterSnap && counterSnap.exists()) {
           nextSerial = (counterSnap.data().lastSerial || 0) + 1;
         }
 
@@ -450,9 +464,12 @@ export const erpService = {
 
         return true;
       });
-    } catch (err) {
-      console.error('Error creating voucher:', err);
-      throw err;
+    } catch (err: any) {
+      // If it's already a JSON error, just throw it
+      if (err.message && err.message.startsWith('{')) {
+        throw err;
+      }
+      handleFirestoreError(err, OperationType.WRITE, 'vouchers_transaction');
     }
   },
 

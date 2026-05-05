@@ -926,21 +926,6 @@ export function VoucherEntry() {
             <div className="space-y-1 lg:space-y-2">
               <div className="flex justify-between items-center">
                 <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.referenceNo')}</label>
-                {autoSerialNo !== null && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded italic">
-                      Serial No: {autoSerialNo}
-                    </span>
-                    <button
-                      onClick={() => fetchSerial(true)}
-                      disabled={isRefreshingSerial}
-                      className={`p-1 rounded-full hover:bg-gray-100 text-gray-400 transition-colors ${isRefreshingSerial ? 'animate-spin' : ''}`}
-                      title="Sync with database"
-                    >
-                      <RefreshCw size={10} />
-                    </button>
-                  </div>
-                )}
               </div>
               <input 
                 ref={refNoInputRef}

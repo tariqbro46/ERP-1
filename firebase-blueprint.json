@@ -76,6 +76,19 @@
       },
       "required": ["name", "companyId"]
     },
+    "GodownStock": {
+      "title": "Godown Stock",
+      "description": "Stock levels for an item in a specific godown.",
+      "type": "object",
+      "properties": {
+        "godown_id": { "type": "string" },
+        "item_id": { "type": "string" },
+        "companyId": { "type": "string" },
+        "current_stock": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["godown_id", "item_id", "companyId", "current_stock"]
+    },
     "Item": {
       "title": "Item",
       "description": "Inventory item or product.",
@@ -506,6 +519,10 @@
     "/godowns/{id}": {
       "schema": "Godown",
       "description": "Collection of godowns."
+    },
+    "/godown_stock/{id}": {
+      "schema": "GodownStock",
+      "description": "Stock levels in godowns."
     },
     "/items/{id}": {
       "schema": "Item",
