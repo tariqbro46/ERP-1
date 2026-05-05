@@ -112,7 +112,7 @@ export function Daybook() {
         sorted.sort((a, b) => (b.v_no || '').localeCompare(a.v_no || '', undefined, { numeric: true }));
         break;
       case 'Auto Serial No':
-        sorted.sort((a, b) => (a.auto_serial_no || 0) - (b.auto_serial_no || 0));
+        sorted.sort((a, b) => (a.serial_no || a.auto_serial_no || 0) - (b.serial_no || b.auto_serial_no || 0));
         break;
       case 'In Sequence of entry':
         sorted.sort((a, b) => {
@@ -138,7 +138,7 @@ export function Daybook() {
           const orderB = typeOrder[b.v_type] || 99;
           if (orderA !== orderB) return orderA - orderB;
           
-          return (a.auto_serial_no || 0) - (b.auto_serial_no || 0);
+          return (a.serial_no || a.auto_serial_no || 0) - (b.serial_no || b.auto_serial_no || 0);
         });
     }
     return sorted;
@@ -389,7 +389,7 @@ export function Daybook() {
                     {config.showEnteredBy && (
                       <span className="text-[8px] text-gray-400 uppercase">{t('common.providedBy')}: {users.find(u => u.uid === v.createdBy)?.displayName || 'System'}</span>
                     )}
-                    <span className="text-[10px] text-gray-500">{v.v_no}{v.auto_serial_no ? ` / S#${v.auto_serial_no}` : ''}</span>
+                    <span className="text-[10px] text-gray-500">{v.v_no}{(v.serial_no || v.auto_serial_no) ? ` / SN:${v.serial_no || v.auto_serial_no}` : ''}</span>
                   </div>
                   <span className="text-sm font-bold text-foreground">৳ {formatNumber(v.total_amount)}</span>
                 </div>
@@ -419,16 +419,17 @@ export function Daybook() {
                   <th className="px-4 lg:px-6 py-4 font-medium border-b border-border sticky top-0">{t('common.date')}</th>
                   <th className="px-4 lg:px-6 py-4 font-medium border-b border-border sticky top-0">{t('common.particulars')}</th>
                   <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0">{t('common.vchType')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0">{t('common.vchNo')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0">Ref No</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0">Serial No</th>
                   <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right border-b border-border sticky top-0">{t('common.amount')}</th>
                   <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right border-b border-border sticky top-0">{t('common.share')}</th>
                 </tr>
               </thead>
               <tbody className="text-foreground/80">
                 {loading ? (
-                  <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-500">{t('daybook.loading')}</td></tr>
+                  <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-500">{t('daybook.loading')}</td></tr>
                 ) : vouchers.length === 0 ? (
-                  <tr><td colSpan={6} className="px-6 py-10 text-center text-gray-500">{t('daybook.noTransactionsPeriod')}</td></tr>
+                  <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-500">{t('daybook.noTransactionsPeriod')}</td></tr>
                 ) : vouchers.map((v, idx) => (
                   <React.Fragment key={v.id}>
                     <tr 
@@ -461,7 +462,10 @@ export function Daybook() {
                         </div>
                       </td>
                       <td className="px-4 lg:px-6 py-4 uppercase text-[10px] text-gray-500">{v.v_type}</td>
-                      <td className="px-4 lg:px-6 py-4">{v.v_no}{v.auto_serial_no ? ` / S#${v.auto_serial_no}` : ''}</td>
+                      <td className="px-4 lg:px-6 py-4">{v.v_no || v.reference_no}</td>
+                      <td className="px-4 lg:px-6 py-4 font-mono text-[10px] text-emerald-600">
+                        {v.serial_no || v.auto_serial_no || '-'}
+                      </td>
                       <td className="px-4 lg:px-6 py-4 text-right text-foreground font-bold">৳ {formatNumber(v.total_amount)}</td>
                       <td className="px-4 lg:px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">

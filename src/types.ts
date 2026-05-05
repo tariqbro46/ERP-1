@@ -79,6 +79,7 @@ export interface Voucher {
   currency?: string;
   exchange_rate?: number;
   salesperson_id?: string;
+  serial_no?: number;
   auto_serial_no?: number;
   entries: VoucherEntry[];
   inventory?: InventoryEntry[];

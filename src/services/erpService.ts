@@ -15,6 +15,7 @@ import {
   serverTimestamp,
   increment,
   writeBatch,
+  runTransaction,
   Timestamp,
   onSnapshot,
   arrayUnion,
@@ -129,7 +130,7 @@ async function getCollection<T = any>(colName: string, companyId: string): Promi
   try {
     const q = query(collection(db, colName), where('companyId', '==', companyId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) } as unknown as T));
+    return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id } as unknown as T));
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, colName);
     return [];
@@ -161,50 +162,104 @@ export const erpService = {
     }
   },
 
-  async getNextAutoSerialNo(companyId: string, vType: string, skipIncrement = true): Promise<number> {
+  async updateAutoSerialNo(companyId: string, vType: string, newSerial: number) {
     try {
-      const counterRef = doc(db, 'counters', `${companyId}_voucher_${vType.toLowerCase().replace(/\s+/g, '_')}`);
-      const counterSnap = await getDoc(counterRef);
+      const typeKey = vType.trim().toLowerCase().replace(/\s+/g, '_');
+      const counterRef = doc(db, 'counters', `${companyId}_voucher_${typeKey}`);
+      await setDoc(counterRef, {
+        lastSerial: Math.max(0, newSerial - 1),
+        vType: vType,
+        companyId: companyId,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      return newSerial;
+    } catch (error) {
+      console.error('Error updating auto serial:', error);
+      throw error;
+    }
+  },
+
+  async getNextAutoSerialNo(companyId: string, vType: string, isDeepScan = false, forceResync = false): Promise<number> {
+    try {
+      if (!companyId || !vType) return 1;
       
-      if (counterSnap.exists()) {
-        const lastSerial = counterSnap.data().lastSerial || 0;
-        if (!skipIncrement) {
-          await updateDoc(counterRef, { lastSerial: increment(1) });
-          return lastSerial + 1;
-        }
-        return lastSerial + 1;
-      } else {
-        // Fallback to finding max serial if counter doc doesn't exist yet
-        const qMax = query(
-          collection(db, 'vouchers'),
-          where('companyId', '==', companyId),
-          where('v_type', '==', vType),
-          orderBy('auto_serial_no', 'desc'),
-          limit(1)
-        );
-        const snapMax = await getDocs(qMax);
-        let startSerial = 0;
-        if (!snapMax.empty) {
-          startSerial = snapMax.docs[0].data().auto_serial_no || 0;
-        } else {
-          // Absolute fallback: count
-          const qCount = query(
+      const normalizedRequested = vType.trim();
+      const lowerRequested = normalizedRequested.toLowerCase();
+      const typeKey = lowerRequested.replace(/\s+/g, '_');
+      const counterRef = doc(db, 'counters', `${companyId}_voucher_${typeKey}`);
+      
+      const counterSnap = await getDoc(counterRef);
+      let lastSerial = (counterSnap.exists() ? counterSnap.data().lastSerial : 0) || 0;
+
+      // Deep scan or force resync: perform a targeted search for all vouchers of this type
+      if (forceResync || isDeepScan || lastSerial === 0) {
+        let foundMax = 0;
+
+        try {
+          // 1. Try a targeted query (This is the most reliable way)
+          // Targeted by type avoids the "limit" issue where other voucher types bury your results
+          const qTargeted = query(
             collection(db, 'vouchers'),
             where('companyId', '==', companyId),
-            where('v_type', '==', vType)
+            where('v_type', '==', normalizedRequested)
           );
-          const snap = await getDocs(qCount);
-          startSerial = snap.size;
+          
+          const snap = await getDocs(qTargeted);
+          
+          if (!snap.empty) {
+            snap.docs.forEach(d => {
+              const data = d.data();
+              const sField = Number(data.serial_no || data.auto_serial_no) || 0;
+              // Check for valid range and ignore outliers
+              if (sField > 0 && sField < 1000000 && sField > foundMax) {
+                foundMax = sField;
+              }
+            });
+          }
+
+          // 2. If nothing found by exact match, try lowercase match fallback (for data consistency)
+          if (foundMax === 0) {
+             const qBroad = query(
+               collection(db, 'vouchers'),
+               where('companyId', '==', companyId),
+               limit(2000) // Increase limit for fallback
+             );
+             const snapBroad = await getDocs(qBroad);
+             snapBroad.docs.forEach(d => {
+               const data = d.data();
+               const docType = (data.v_type || '').toString().trim().toLowerCase();
+               if (docType === lowerRequested) {
+                 const sField = Number(data.serial_no || data.auto_serial_no) || 0;
+                 if (sField > 0 && sField > foundMax) foundMax = sField;
+               }
+             });
+          }
+        } catch (err) {
+          console.warn('getNextAutoSerialNo scan failed:', err);
         }
-        
-        const nextSerial = startSerial + 1;
-        if (!skipIncrement) {
-          await setDoc(counterRef, { lastSerial: nextSerial });
+
+        // Update the counter if we found a true maximum from the database
+        if (foundMax > 0 && (foundMax > lastSerial || forceResync)) {
+          lastSerial = foundMax;
+          await setDoc(counterRef, {
+            lastSerial: foundMax,
+            vType: normalizedRequested,
+            companyId: companyId,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+        } else if (!counterSnap.exists()) {
+          await setDoc(counterRef, {
+            lastSerial: foundMax,
+            vType: normalizedRequested,
+            companyId: companyId,
+            updatedAt: serverTimestamp()
+          });
         }
-        return nextSerial;
       }
+
+      return lastSerial + 1;
     } catch (error) {
-      console.error('Error fetching next auto serial:', error);
+      console.error('Error in getNextAutoSerialNo:', error);
       return 1;
     }
   },
@@ -214,18 +269,39 @@ export const erpService = {
       const q = query(
         collection(db, 'vouchers'),
         where('companyId', '==', companyId),
-        orderBy('v_date', 'asc'),
-        orderBy('createdAt', 'asc')
+        orderBy('v_date', 'asc')
       );
       const snap = await getDocs(q);
+      const vouchers = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as any))
+        .sort((a, b) => {
+          const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
+          if (dateComp !== 0) return dateComp;
+          
+          const serialA = a.serial_no || a.auto_serial_no || 0;
+          const serialB = b.serial_no || b.auto_serial_no || 0;
+          if (serialA !== serialB) return serialA - serialB;
+
+          const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
+          const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
+          if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+          const vNoComp = (a.v_no || '').localeCompare(b.v_no || '');
+          if (vNoComp !== 0) return vNoComp;
+          
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          if (timeA !== timeB) return timeA - timeB;
+
+          return a.id.localeCompare(b.id);
+        });
+      
       const typeCounters: Record<string, number> = {};
       const serialMap: Record<string, number> = {};
       
-      snap.docs.forEach(doc => {
-        const data = doc.data();
-        const type = data.v_type;
+      vouchers.forEach(v => {
+        const type = v.v_type;
         typeCounters[type] = (typeCounters[type] || 0) + 1;
-        serialMap[doc.id] = typeCounters[type];
+        serialMap[v.id] = typeCounters[type];
       });
       return serialMap;
     } catch (error) {
@@ -234,82 +310,150 @@ export const erpService = {
     }
   },
 
-  // Vouchers
-  async createVoucher(companyId: string, userId: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
-    const batch = writeBatch(db);
-    
-    // Check existence of ledgers and items
-    const ledgerIds = Array.from(new Set(entries.map(e => e.ledger_id).filter(Boolean)));
-    const itemIds = Array.from(new Set((inventoryEntries || []).map(i => i.item_id).filter(Boolean)));
-    
-    const [ledgerSnaps, itemSnaps] = await Promise.all([
-      Promise.all(ledgerIds.map(id => getDoc(doc(db, 'ledgers', id as string)))),
-      Promise.all(itemIds.map(id => getDoc(doc(db, 'items', id as string))))
-    ]);
-    
-    const existingLedgers = new Set(ledgerSnaps.filter(s => s.exists()).map(s => s.id));
-    const existingItems = new Set(itemSnaps.filter(s => s.exists()).map(s => s.id));
+  async migrateVoucherSerials(companyId: string) {
+    try {
+      const q = query(collection(db, 'vouchers'), where('companyId', '==', companyId));
+      const snap = await getDocs(q);
+      const batch = writeBatch(db);
+      let count = 0;
 
-    // Always get a new Auto Serial No for new vouchers to ensure sequential integrity
-    const autoSerialNo = await this.getNextAutoSerialNo(companyId, voucher.v_type, false);
+      for (const d of snap.docs) {
+        const data = d.data();
+        const vNo = (data.v_no || '').toString();
+        
+        let refNo = vNo;
+        let serial = data.serial_no || data.auto_serial_no || 0;
 
-    // 1. Create Voucher Header
-    const vRef = doc(collection(db, 'vouchers'));
-    const vData = cleanData({
-      ...voucher,
-      id: vRef.id,
-      companyId,
-      auto_serial_no: autoSerialNo,
-      createdBy: userId,
-      createdAt: serverTimestamp()
-    });
-    batch.set(vRef, vData);
+        // If it looks like "REF / S#SER", split it
+        if (vNo.includes(' / S#')) {
+          const parts = vNo.split(' / S#');
+          refNo = parts[0];
+          if (serial === 0) {
+            serial = parseInt(parts[1]) || 0;
+          }
+        } else if (vNo.includes('S#')) {
+          const sMatch = vNo.match(/S#(\d+)/);
+          if (sMatch) {
+            serial = parseInt(sMatch[1]);
+            refNo = vNo.replace(/S#\d+/, '').replace(/\s*\/\s*$/, '').trim();
+          }
+        }
 
-    // 2. Create Accounting Entries
-    for (const entry of entries) {
-      const eRef = doc(collection(db, 'voucher_entries'));
-      batch.set(eRef, cleanData({
-        ...entry,
-        voucher_id: vRef.id,
-        companyId,
-        date: voucher.v_date, // Add date for easier reporting
-        created_at: serverTimestamp()
-      }));
-
-      // Update Ledger Balance
-      if (entry.ledger_id && existingLedgers.has(entry.ledger_id)) {
-        const lRef = doc(db, 'ledgers', entry.ledger_id);
-        const balanceChange = (entry.debit || 0) - (entry.credit || 0);
-        batch.update(lRef, { current_balance: increment(balanceChange) });
-      }
-    }
-
-    // 3. Create Inventory Entries
-    if (inventoryEntries && inventoryEntries.length > 0) {
-      for (const i of inventoryEntries) {
-        const iRef = doc(collection(db, 'inventory_entries'));
-        const movementType = i.movement_type || i.m_type || (voucher.v_type === 'Sales' ? 'Outward' : 'Inward');
-        batch.set(iRef, cleanData({
-          ...i,
-          voucher_id: vRef.id,
-          companyId,
-          date: voucher.v_date,
-          movement_type: movementType,
-          created_at: serverTimestamp()
-        }));
-
-        // Update Item Stats
-        if (i.item_id && existingItems.has(i.item_id)) {
-          const itemRef = doc(db, 'items', i.item_id);
-          const totalQty = (i.qty || 0) + (i.free_qty || 0);
-          const stockChange = movementType === 'Inward' ? totalQty : -totalQty;
-          batch.update(itemRef, { current_stock: increment(stockChange) });
+        if (refNo !== data.reference_no || serial !== (data.serial_no || data.auto_serial_no) || refNo !== data.v_no) {
+          batch.update(d.ref, {
+            reference_no: refNo,
+            serial_no: serial,
+            v_no: refNo // Transition v_no to be strictly reference_no
+          });
+          count++;
         }
       }
-    }
 
-    await batch.commit();
-    return vData;
+      if (count > 0) {
+        await batch.commit();
+      }
+      return count;
+    } catch (err) {
+      console.error('Migration error:', err);
+      throw err;
+    }
+  },
+  async createVoucher(companyId: string, userId: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
+    try {
+      const vType = (voucher.v_type || '').toString().trim();
+      const typeKey = vType.toLowerCase().replace(/\s+/g, '_');
+      const counterRef = doc(db, 'counters', `${companyId}_voucher_${typeKey}`);
+
+      return await runTransaction(db, async (transaction) => {
+        // 1. Handshake with counter to get and increment serial ATOMICALLY
+        const counterSnap = await transaction.get(counterRef);
+        let nextSerial = 1;
+        if (counterSnap.exists()) {
+          nextSerial = (counterSnap.data().lastSerial || 0) + 1;
+        }
+
+        // 2. Prepare Voucher Header
+        const vRef = doc(collection(db, 'vouchers'));
+        const reference_no = voucher.v_no || ''; 
+        
+        const vData = cleanData({
+          ...voucher,
+          id: vRef.id,
+          companyId,
+          reference_no: reference_no,
+          serial_no: nextSerial,
+          v_no: reference_no, 
+          createdBy: userId,
+          createdAt: serverTimestamp()
+        });
+        transaction.set(vRef, vData);
+
+        // 3. Create Accounting Entries
+        for (const entry of entries) {
+          const eRef = doc(collection(db, 'voucher_entries'));
+          transaction.set(eRef, cleanData({
+            ...entry,
+            voucher_id: vRef.id,
+            companyId,
+            date: voucher.v_date,
+            created_at: serverTimestamp()
+          }));
+
+          // Update Ledger Balance
+          if (entry.ledger_id) {
+            const lRef = doc(db, 'ledgers', entry.ledger_id);
+            const balanceChange = (entry.debit || 0) - (entry.credit || 0);
+            transaction.update(lRef, { current_balance: increment(balanceChange) });
+          }
+        }
+
+        // 4. Create Inventory Entries
+        if (inventoryEntries && inventoryEntries.length > 0) {
+          for (const inv of inventoryEntries) {
+            const invRef = doc(collection(db, 'inventory_entries'));
+            transaction.set(invRef, cleanData({
+              ...inv,
+              voucher_id: vRef.id,
+              companyId,
+              date: voucher.v_date,
+              created_at: serverTimestamp()
+            }));
+
+            // Item Stock adjustment
+            if (inv.item_id) {
+              const iRef = doc(db, 'items', inv.item_id);
+              const qtyChange = (inv.type === 'In' || inv.type === 'Inward') ? inv.qty : -inv.qty;
+              transaction.update(iRef, { current_stock: increment(qtyChange) });
+
+              // Godown stock
+              if (inv.godown_id) {
+                const gsRef = doc(db, 'godown_stock', `${inv.godown_id}_${inv.item_id}`);
+                transaction.set(gsRef, {
+                  godown_id: inv.godown_id,
+                  item_id: inv.item_id,
+                  companyId,
+                  current_stock: increment(qtyChange),
+                  updatedAt: serverTimestamp()
+                }, { merge: true });
+              }
+            }
+          }
+        }
+
+        // 5. Commit counter increment
+        transaction.set(counterRef, {
+          lastSerial: nextSerial,
+          vType,
+          companyId,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        return true;
+      });
+    } catch (err) {
+      console.error('Error creating voucher:', err);
+      throw err;
+    }
   },
 
   async updateUserSettings(uid: string, settings: any) {
@@ -332,16 +476,39 @@ export const erpService = {
           where('v_type', '==', type),
           where('v_date', '>=', from),
           where('v_date', '<=', to),
-          orderBy('v_date', 'asc'),
-          orderBy('createdAt', 'asc')
+          orderBy('v_date', 'asc')
         )),
         this.getVoucherSerials(companyId)
       ]);
-      const vouchers = snap.docs.map(d => ({ 
-        id: d.id, 
-        ...(d.data() as any),
-        auto_serial_no: d.data().auto_serial_no || serialMap[d.id] || 0
-      }));
+      const vouchers = snap.docs.map(d => {
+        const data = d.data() as any;
+        const dynamicSerial = serialMap[d.id];
+        return { 
+          ...data,
+          id: d.id, 
+          serial_no: dynamicSerial || data.serial_no || data.auto_serial_no || 0
+        };
+      }).sort((a, b) => {
+        const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
+        if (dateComp !== 0) return dateComp;
+        
+        const serialA = a.serial_no || a.auto_serial_no || 0;
+        const serialB = b.serial_no || b.auto_serial_no || 0;
+        if (serialA !== serialB) return serialA - serialB;
+
+        const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
+        const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
+        if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+        const vNoComp = (a.v_no || '').localeCompare(b.v_no || '');
+        if (vNoComp !== 0) return vNoComp;
+        
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        if (timeA !== timeB) return timeA - timeB;
+
+        return a.id.localeCompare(b.id);
+      });
       
       if (vouchers.length === 0) return [];
 
@@ -355,7 +522,7 @@ export const erpService = {
           where('voucher_id', 'in', chunk),
           where('companyId', '==', companyId)
         ));
-        allEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        allEntries.push(...eSnap.docs.map(d => ({ ...d.data(), id: d.id })));
       }
 
       return vouchers.map(v => ({
@@ -391,14 +558,24 @@ export const erpService = {
       if (groupLedgerIds.length === 0) return [];
 
       // Fetch all vouchers in the date range for the company
-      const vQuery = query(
-        collection(db, 'vouchers'),
-        where('companyId', '==', companyId),
-        where('v_date', '>=', from),
-        where('v_date', '<=', to)
-      );
-      const vSnap = await getDocs(vQuery);
-      const allVouchersInRange = vSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      const [vSnap, serialMap] = await Promise.all([
+        getDocs(query(
+          collection(db, 'vouchers'),
+          where('companyId', '==', companyId),
+          where('v_date', '>=', from),
+          where('v_date', '<=', to)
+        )),
+        this.getVoucherSerials(companyId)
+      ]);
+      const allVouchersInRange = vSnap.docs.map(d => {
+        const data = d.data() as any;
+        const dynamicSerial = serialMap[d.id];
+        return { 
+          ...data,
+          id: d.id, 
+          serial_no: dynamicSerial || data.serial_no || data.auto_serial_no || 0
+        };
+      });
 
       if (allVouchersInRange.length === 0) return [];
 
@@ -425,9 +602,25 @@ export const erpService = {
       const resultVouchers = allVouchersInRange
         .filter(v => relevantVoucherIds.has(v.id))
         .sort((a, b) => {
-          const dateComp = a.v_date.localeCompare(b.v_date);
+          const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
           if (dateComp !== 0) return dateComp;
-          return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+          
+          const serialA = a.serial_no || a.auto_serial_no || 0;
+          const serialB = b.serial_no || b.auto_serial_no || 0;
+          if (serialA !== serialB) return serialA - serialB;
+
+          const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
+          const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
+          if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+          const vNoComp = (a.v_no || '').localeCompare(b.v_no || '');
+          if (vNoComp !== 0) return vNoComp;
+          
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          if (timeA !== timeB) return timeA - timeB;
+
+          return a.id.localeCompare(b.id);
         });
 
       if (resultVouchers.length === 0) return [];
@@ -442,7 +635,7 @@ export const erpService = {
           where('voucher_id', 'in', chunk),
           where('companyId', '==', companyId)
         ));
-        allEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        allEntries.push(...eSnap.docs.map(d => ({ ...d.data(), id: d.id })));
       }
 
       return resultVouchers.map(v => ({
@@ -475,7 +668,7 @@ export const erpService = {
         where('companyId', '==', companyId)
       );
       const vSnap = await getDocs(vQuery);
-      const allVouchers = vSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      const allVouchers = vSnap.docs.map(d => ({ ...d.data(), id: d.id } as any));
 
       const vouchersInRange = allVouchers.filter(v => v.v_date >= from && v.v_date <= to);
       const vouchersBeforeRange = allVouchers.filter(v => v.v_date < from);
@@ -606,57 +799,62 @@ export const erpService = {
         where('date', '<=', to)
       );
       const snap = await getDocs(q);
-      const entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const entries = snap.docs.map(d => ({ ...d.data(), id: d.id }));
       
       const voucherIds = Array.from(new Set(entries.map((e: any) => e.voucher_id)));
       if (voucherIds.length === 0) return [];
 
       const vSnaps = await Promise.all(voucherIds.map(id => getDoc(doc(db, 'vouchers', id))));
-      return vSnaps.filter(s => s.exists()).map(s => ({ id: s.id, ...s.data() }));
+      return vSnaps.filter(s => s.exists()).map(s => ({ ...s.data(), id: s.id }));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'voucher_entries');
       return [];
     }
   },
-  async getVoucherById(id: string): Promise<any> {
-    const vSnap = await getDoc(doc(db, 'vouchers', id));
-    if (!vSnap.exists()) throw new Error('Voucher not found');
-    const voucher = vSnap.data();
-    const companyId = voucher.companyId;
+   async getVoucherById(id: string): Promise<any> {
+     try {
+       const vSnap = await getDoc(doc(db, 'vouchers', id));
+       if (!vSnap.exists()) throw new Error('Voucher not found');
+       const voucher = vSnap.data();
+       const companyId = voucher.companyId;
 
-    const [eSnap, iSnap, ledgers, items, godowns, serialMap] = await Promise.all([
-      getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId))),
-      getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId))),
-      this.getLedgers(companyId),
-      this.getItems(companyId),
-      this.getGodowns(companyId),
-      this.getVoucherSerials(companyId)
-    ]);
+       const [eSnap, iSnap, ledgers, items, godowns, serialMap] = await Promise.all([
+         getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId))),
+         getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId))),
+         this.getLedgers(companyId),
+         this.getItems(companyId),
+         this.getGodowns(companyId),
+         this.getVoucherSerials(companyId)
+       ]);
 
-    const entries = eSnap.docs.map(d => {
-      const data = d.data();
-      const ledger = ledgers.find(l => l.id === data.ledger_id);
-      return { 
-        id: d.id, 
-        ...data, 
-        ledger_name: ledger?.name || 'Unknown Ledger' 
-      };
-    }).sort((a: any, b: any) => (a.entry_index || 0) - (b.entry_index || 0));
+       const entries = eSnap.docs.map(d => {
+         const data = d.data();
+         const ledger = ledgers.find(l => l.id === data.ledger_id);
+         return { 
+           ...data,
+           id: d.id, 
+           ledger_name: ledger?.name || 'Unknown Ledger' 
+         };
+       }).sort((a: any, b: any) => (a.entry_index || 0) - (b.entry_index || 0));
 
-    const inventory = iSnap.docs.map(d => {
-      const data = d.data();
-      const item = items.find(i => i.id === data.item_id);
-      const godown = godowns.find(g => g.id === data.godown_id);
-      return { 
-        id: d.id, 
-        ...data, 
-        item_name: item?.name || 'Unknown Item',
-        godown_name: godown?.name || 'N/A'
-      };
-    });
+       const inventory = iSnap.docs.map(d => {
+         const data = d.data();
+         const item = items.find(i => i.id === data.item_id);
+         const godown = godowns.find(g => g.id === data.godown_id);
+         return { 
+           ...data,
+           id: d.id, 
+           item_name: item?.name || 'Unknown Item',
+           godown_name: godown?.name || 'N/A'
+         };
+       });
 
-    return { ...voucher, entries, inventory, id: vSnap.id, auto_serial_no: voucher.auto_serial_no || serialMap[vSnap.id] || 0 };
-  },
+       return { ...voucher, entries, inventory, id: vSnap.id, serial_no: serialMap[vSnap.id] || voucher.serial_no || voucher.auto_serial_no || 0 };
+     } catch (error) {
+       handleFirestoreError(error, OperationType.GET, `vouchers/${id}`);
+       throw error;
+     }
+   },
 
   async deleteVoucher(id: string) {
     const voucher = await this.getVoucherById(id);
@@ -760,8 +958,14 @@ export const erpService = {
 
     // 4. Update Voucher Header
     const vRef = doc(db, 'vouchers', id);
+    
+    // Explicitly separate reference_no
+    const reference_no = voucher.v_no || '';
+    
     batch.update(vRef, cleanData({
       ...voucher,
+      reference_no: reference_no,
+      v_no: reference_no,
       updated_at: serverTimestamp()
     }));
 
@@ -838,7 +1042,7 @@ export const erpService = {
     try {
       const snap = await getDoc(doc(db, 'ledgers', id));
       if (!snap.exists()) return null;
-      return { id: snap.id, ...snap.data() } as Ledger;
+      return { ...(snap.data() as any), id: snap.id } as Ledger;
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, `ledgers/${id}`);
       return null;
@@ -1137,7 +1341,7 @@ export const erpService = {
     try {
       const snap = await getDoc(doc(db, 'items', id));
       if (!snap.exists()) return null;
-      return { id: snap.id, ...snap.data() } as Item;
+      return { ...(snap.data() as any), id: snap.id } as Item;
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, `items/${id}`);
       return null;
@@ -1329,7 +1533,7 @@ export const erpService = {
         where('employeeId', '==', employeeId)
       );
       const snap = await getDocs(q);
-      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      return snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
     }
     return this.getCollection('salary_structures', companyId);
   },
@@ -1350,7 +1554,7 @@ export const erpService = {
       q = query(q, where('date', '>=', startDate), where('date', '<=', endDate));
     }
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
   },
   async createAttendance(companyId: string, data: any) {
     const ref = doc(collection(db, 'attendance'));
@@ -1511,26 +1715,52 @@ export const erpService = {
     
     if (voucherIds.length === 0) return [];
     
-    // Fetch all entries for these vouchers
-    // Since we might have many vouchers, we'll fetch in chunks of 30 if using 'in'
-    // Or just fetch all entries for the company and filter? That's too much data.
-    // Let's fetch all accounting entries for the company first (might be large, but let's try)
     const entriesQuery = query(
       collection(db, 'voucher_entries'),
       where('companyId', '==', companyId)
     );
     const entriesSnap = await getDocs(entriesQuery);
     
-    // Filter in memory by voucherId and date
     return entriesSnap.docs
-      .map(d => ({ id: d.id, ...d.data() } as any))
-      .filter(e => voucherIds.includes(e.voucher_id));
+      .map(d => ({ ...(d.data() as any), id: d.id }))
+      .filter(e => voucherIds.includes(e.voucher_id))
+      .map(e => ({
+        ...e,
+        v_date: vouchersSnap.docs.find(v => v.id === e.voucher_id)?.data()?.v_date
+      }));
+  },
+
+  async getVoucherEntriesByDateRange(companyId: string, startDate: string, endDate: string) {
+    const vouchersQuery = query(
+      collection(db, 'vouchers'),
+      where('companyId', '==', companyId),
+      where('v_date', '>=', startDate),
+      where('v_date', '<=', endDate)
+    );
+    const vouchersSnap = await getDocs(vouchersQuery);
+    const voucherIds = vouchersSnap.docs.map(d => d.id);
+    
+    if (voucherIds.length === 0) return [];
+    
+    const entriesQuery = query(
+      collection(db, 'voucher_entries'),
+      where('companyId', '==', companyId)
+    );
+    const entriesSnap = await getDocs(entriesQuery);
+    
+    return entriesSnap.docs
+      .map(d => ({ ...(d.data() as any), id: d.id }))
+      .filter(e => voucherIds.includes(e.voucher_id))
+      .map(e => ({
+        ...e,
+        v_date: vouchersSnap.docs.find(v => v.id === e.voucher_id)?.data()?.v_date
+      }));
   },
 
   async getInventoryEntriesGrouped(companyId: string): Promise<any[]> {
     const q = query(collection(db, 'inventory_entries'), where('companyId', '==', companyId));
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
   },
 
   async getInventoryEntriesByDate(companyId: string, startDate: string, endDate: string): Promise<any[]> {
@@ -1541,7 +1771,7 @@ export const erpService = {
       where('date', '<=', endDate)
     );
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
   },
 
   async getVoucherWithEntries(companyId: string, ledgerId: string, startDate: string, endDate: string): Promise<any[]> {
@@ -1556,10 +1786,11 @@ export const erpService = {
     ]);
     const vouchers = vouchersSnap.docs.map(d => {
       const data = d.data() as any;
+      const dynamicSerial = serialMap[d.id];
       return { 
-        id: d.id, 
         ...data,
-        auto_serial_no: data.auto_serial_no || serialMap[d.id] || 0
+        id: d.id, 
+        serial_no: dynamicSerial || data.serial_no || data.auto_serial_no || 0
       };
     });
     
@@ -1576,8 +1807,8 @@ export const erpService = {
         getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId))),
         getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId)))
       ]);
-      allEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      allInvEntries.push(...iSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      allEntries.push(...eSnap.docs.map(d => ({ ...d.data(), id: d.id })));
+      allInvEntries.push(...iSnap.docs.map(d => ({ ...d.data(), id: d.id })));
     }
     
     // Filter vouchers that have an entry for the specific ledger
@@ -1591,9 +1822,25 @@ export const erpService = {
       voucher_entries: allEntries.filter((e: any) => e.voucher_id === v.id),
       inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id)
     })).sort((a, b) => {
-      const dateComp = a.v_date.localeCompare(b.v_date);
+      const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
       if (dateComp !== 0) return dateComp;
-      return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+      
+      const serialA = a.serial_no || a.auto_serial_no || 0;
+      const serialB = b.serial_no || b.auto_serial_no || 0;
+      if (serialA !== serialB) return serialA - serialB;
+
+      const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
+      const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
+      if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+      const vNoComp = (a.v_no || '').localeCompare(b.v_no || '');
+      if (vNoComp !== 0) return vNoComp;
+      
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      if (timeA !== timeB) return timeA - timeB;
+
+      return a.id.localeCompare(b.id);
     });
   },
 
@@ -1669,7 +1916,7 @@ export const erpService = {
         limit(limitCount)
       );
       const snapshot = await getDocs(q);
-      const vouchers = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+      const vouchers = snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
       
       if (vouchers.length === 0) return [];
 
@@ -1684,7 +1931,7 @@ export const erpService = {
           where('companyId', '==', companyId),
           where('voucher_id', 'in', chunk)
         ));
-        allInv.push(...invSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) })));
+        allInv.push(...invSnap.docs.map(d => ({ ...(d.data() as any), id: d.id })));
       }
 
       return vouchers.map(v => ({
@@ -1706,19 +1953,39 @@ export const erpService = {
           where('companyId', '==', companyId),
           where('v_date', '>=', startDate),
           where('v_date', '<=', endDate),
-          orderBy('v_date', 'asc'),
-          orderBy('createdAt', 'asc')
+          orderBy('v_date', 'asc')
         )),
         this.getVoucherSerials(companyId)
       ]);
 
       const vouchers = vSnap.docs.map(doc => {
         const data = doc.data() as any;
+        const dynamicSerial = serialMap[doc.id];
         return { 
-          id: doc.id, 
           ...data,
-          auto_serial_no: data.auto_serial_no || serialMap[doc.id] || 0
+          id: doc.id, 
+          serial_no: dynamicSerial || data.serial_no || data.auto_serial_no || 0
         };
+      }).sort((a, b) => {
+        const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
+        if (dateComp !== 0) return dateComp;
+        
+        const serialA = a.serial_no || a.auto_serial_no || 0;
+        const serialB = b.serial_no || b.auto_serial_no || 0;
+        if (serialA !== serialB) return serialA - serialB;
+
+        const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
+        const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
+        if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+        const vNoComp = (a.v_no || '').localeCompare(b.v_no || '');
+        if (vNoComp !== 0) return vNoComp;
+        
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        if (timeA !== timeB) return timeA - timeB;
+
+        return a.id.localeCompare(b.id);
       });
       
       if (vouchers.length === 0) return [];
@@ -1737,8 +2004,8 @@ export const erpService = {
           getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId)))
         ]);
         
-        allAccEntries.push(...eSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) })));
-        allInvEntries.push(...iSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) })));
+        allAccEntries.push(...eSnap.docs.map(d => ({ ...(d.data() as any), id: d.id })));
+        allInvEntries.push(...iSnap.docs.map(d => ({ ...(d.data() as any), id: d.id })));
       }
 
       return vouchers.map(v => ({
@@ -1781,7 +2048,7 @@ export const erpService = {
   async getAllCompanies(): Promise<any[]> {
     try {
       const snapshot = await getDocs(collection(db, 'companies'));
-      return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+      return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'companies');
       return [];
@@ -1797,7 +2064,7 @@ export const erpService = {
         q = query(collection(db, 'activity_log'), orderBy('createdAt', 'desc'), limit(limitCount));
       }
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+      return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'activity_log');
       return [];
@@ -1813,7 +2080,7 @@ export const erpService = {
     );
     const snapshot = await getDocs(q);
     if (snapshot.empty) return null;
-    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+    return { ...snapshot.docs[0].data(), id: snapshot.docs[0].id };
   },
 
   async updateUserRole(uid: string, role: string): Promise<void> {
@@ -1906,27 +2173,44 @@ export const erpService = {
       where('companyId', '==', companyId),
       where('v_type', '==', type),
       orderBy('v_date', 'desc'),
-      orderBy('created_at', 'desc'),
+      orderBy('createdAt', 'desc'),
       limit(1)
     );
-    const snapshot = await getDocs(q);
+    
+    let lastNo = '';
+    try {
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        lastNo = snapshot.docs[0].data().v_no || '';
+      }
+    } catch (err) {
+      console.warn('getNextVoucherNumber strict query failed, trying fallback:', err);
+      const qBroad = query(
+        collection(db, 'vouchers'),
+        where('companyId', '==', companyId),
+        orderBy('v_date', 'desc'),
+        limit(200)
+      );
+      const broadSnap = await getDocs(qBroad);
+      const matchingDoc = broadSnap.docs.find(d => d.data().v_type === type);
+      if (matchingDoc) {
+        lastNo = matchingDoc.data().v_no || '';
+      }
+    }
     
     const year = new Date().getFullYear();
     const prefix = type.substring(0, 3).toUpperCase();
     const defaultFormat = '{PREFIX}/{YEAR}/{NO}';
     const activeFormat = format || defaultFormat;
 
-    if (snapshot.empty) {
+    if (!lastNo) {
       return activeFormat
         .replace('{PREFIX}', prefix)
         .replace('{YEAR}', String(year))
         .replace('{NO}', '001');
     }
 
-    const lastNo = snapshot.docs[0].data().v_no;
-    
-    // Try to extract the number part. This is tricky if format changed.
-    // We'll look for the last numeric part in the string.
+    // Try to extract the number part.
     const match = lastNo.match(/(\d+)(?!.*\d)/);
     const lastNum = match ? parseInt(match[0]) : 0;
     const nextNum = String(lastNum + 1).padStart(3, '0');
@@ -1989,14 +2273,14 @@ export const erpService = {
 
   async updateCompany(companyId: string, data: any) {
     try {
-      if (companyId === 'placeholder') return { id: companyId, ...data };
+      if (companyId === 'placeholder') return { ...data, id: companyId };
       
       const ref = doc(db, 'companies', companyId);
       await setDoc(ref, cleanData({
         ...data,
         updatedAt: serverTimestamp()
       }), { merge: true });
-      return { id: companyId, ...data };
+      return { ...data, id: companyId };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `companies/${companyId}`);
     }
@@ -2097,12 +2381,12 @@ export const erpService = {
       const companiesMap = new Map();
       
       snapOwner.docs.forEach(doc => {
-        companiesMap.set(doc.id, { id: doc.id, ...doc.data() });
+        companiesMap.set(doc.id, { ...(doc.data() as any), id: doc.id });
       });
       
       snapCreator.docs.forEach(doc => {
         if (!companiesMap.has(doc.id)) {
-          companiesMap.set(doc.id, { id: doc.id, ...doc.data() });
+          companiesMap.set(doc.id, { ...(doc.data() as any), id: doc.id });
         }
       });
       
@@ -2403,7 +2687,7 @@ export const erpService = {
             machineName: data.machineName
           }];
         }
-        return { id: doc.id, ...data } as unknown as PrintingOrder;
+        return { ...(doc.data() as any), id: doc.id } as unknown as PrintingOrder;
       });
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'orders');
@@ -2514,7 +2798,7 @@ export const erpService = {
     try {
       const q = query(collection(db, 'machines'), where('companyId', '==', companyId));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as PrintingMachine));
+      return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id } as unknown as PrintingMachine));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'machines');
       return [];
@@ -2545,7 +2829,7 @@ export const erpService = {
         where('clientId', '==', clientId)
       );
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as PrintingOrder));
+      return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id } as unknown as PrintingOrder));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'orders');
       return [];
@@ -2632,7 +2916,7 @@ export const erpService = {
     try {
       const q = query(collection(db, 'subscription_plans'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) } as SubscriptionPlan));
+      return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id } as SubscriptionPlan));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'subscription_plans');
       return [];
@@ -2720,7 +3004,7 @@ export const erpService = {
       if (!planId) return null;
       const planDoc = await getDoc(doc(db, 'subscription_plans', planId));
       if (!planDoc.exists()) return null;
-      return { id: planDoc.id, ...planDoc.data() } as SubscriptionPlan;
+      return { ...(planDoc.data() as any), id: planDoc.id } as SubscriptionPlan;
     } catch (error) {
       console.error('Error fetching company subscription:', error);
       return null;
@@ -2776,7 +3060,7 @@ export const erpService = {
         q = query(collection(db, 'subscription_orders'), orderBy('createdAt', 'desc'));
       }
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+      return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'subscription_orders');
       return [];

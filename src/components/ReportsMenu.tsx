@@ -174,7 +174,7 @@ export const ReportsMenu: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}
-                className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col"
+                className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col self-start"
               >
                 <div className="p-4 bg-foreground/5 border-b border-border flex items-center gap-3">
                   <div className="p-2 bg-background rounded-lg shadow-sm">

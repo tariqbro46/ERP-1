@@ -117,7 +117,7 @@ export function StockItemReport() {
       });
 
       const voucherMap = allVouchers.reduce((acc: any, v: any) => {
-        acc[v.id] = { ...v, auto_serial_no: serialMap[v.id] };
+        acc[v.id] = { ...v, serial_no: serialMap[v.id] || v.serial_no || v.auto_serial_no };
         return acc;
       }, {});
       // Parse dates consistently as local midnight to avoid timezone shifts
@@ -401,7 +401,7 @@ export function StockItemReport() {
           const row: any = {};
           row['date'] = formatReportDate(tx.date || tx.created_at?.toDate?.() || '', settings.dateFormat);
           row['type'] = tx.v_type;
-          row['vch_no'] = `${tx.v_no}${tx.auto_serial_no ? ` / S#${tx.auto_serial_no}` : ''}`;
+          row['vch_no'] = `${tx.v_no}${(tx.serial_no || tx.auto_serial_no) ? ` / SN:${tx.serial_no || tx.auto_serial_no}` : ''}`;
           row['particulars'] = tx.party_name;
           row[`qty_(${unit.toLowerCase()})`] = formatQty(tx.qty + (tx.free_qty || 0));
           row['rate'] = tx.rate;
@@ -699,7 +699,7 @@ export function StockItemReport() {
                               {tx.v_type}
                             </td>
                             <td className="px-6 py-3 text-sm text-gray-600">
-                              {tx.v_no}{tx.auto_serial_no ? ` / S#${tx.auto_serial_no}` : ''}
+                              {tx.v_no}{(tx.serial_no || tx.auto_serial_no) ? ` / SN:${tx.serial_no || tx.auto_serial_no}` : ''}
                             </td>
                             <td className="px-6 py-3 text-sm font-medium text-gray-900 capitalize">
                               {tx.party_name}

@@ -96,6 +96,9 @@
       "properties": {
         "id": { "type": "string" },
         "v_no": { "type": "string" },
+        "serial_no": { "type": "number" },
+        "auto_serial_no": { "type": "number" },
+        "reference_no": { "type": "string" },
         "v_type": { "type": "string" },
         "v_date": { "type": "string" },
         "companyId": { "type": "string" }

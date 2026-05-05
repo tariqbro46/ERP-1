@@ -10,6 +10,7 @@ import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { EditableHeader } from './EditableHeader';
+import { DateInput } from './DateInput';
 
 export function TrialBalance() {
   const navigate = useNavigate();

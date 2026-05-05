@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Save, Printer, Loader2, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon, AlertCircle, Settings2, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Save, Printer, Loader2, RefreshCw, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon, AlertCircle, Settings2, TrendingUp } from 'lucide-react';
 import { cn, formatNumber } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
@@ -350,12 +350,26 @@ export function VoucherEntry() {
     }
   }
 
+  const [isRefreshingSerial, setIsRefreshingSerial] = useState(false);
+
+  const fetchSerial = async (forceSync = false) => {
+    if (!user?.companyId) return;
+    if (forceSync) setIsRefreshingSerial(true);
+    try {
+      const next = await erpService.getNextAutoSerialNo(user.companyId, vType, true, forceSync);
+      setAutoSerialNo(next);
+      if (forceSync) {
+        showNotification('Counter synced successfully', 'success');
+      }
+    } catch (err) {
+      console.error('Error fetching serial:', err);
+    } finally {
+      if (forceSync) setIsRefreshingSerial(false);
+    }
+  };
+
   useEffect(() => {
     if (!isEdit && user?.companyId) {
-      async function fetchSerial() {
-        const next = await erpService.getNextAutoSerialNo(user!.companyId, vType);
-        setAutoSerialNo(next);
-      }
       fetchSerial();
       setRefNo(''); // Always start empty as requested
     }
@@ -374,7 +388,7 @@ export function VoucherEntry() {
       setCurrency(v.currency || baseCurrencySymbol);
       setExchangeRate(v.exchange_rate || 1);
       setSalespersonId(v.salesperson_id || '');
-      setAutoSerialNo(v.auto_serial_no || null);
+      setAutoSerialNo(v.serial_no || v.auto_serial_no || null);
       if (v.bank_details) {
         setBankDetails({
           transaction_type: v.bank_details.transaction_type || 'Cheque',
@@ -687,7 +701,7 @@ export function VoucherEntry() {
         currency,
         exchange_rate: exchangeRate,
         salesperson_id: salespersonId,
-        auto_serial_no: autoSerialNo,
+        serial_no: autoSerialNo,
         party_ledger_id: partyLedgerId,
         sales_purchase_ledger_id: salesPurchaseLedgerId
       };
@@ -786,7 +800,7 @@ export function VoucherEntry() {
           setSalespersonId('');
           setRefNo(''); 
           // Refresh serial number
-          const nextSerial = await erpService.getNextAutoSerialNo(user.companyId, vType);
+          const nextSerial = await erpService.getNextAutoSerialNo(user.companyId, vType, true);
           setAutoSerialNo(nextSerial);
         }
       }
@@ -913,9 +927,19 @@ export function VoucherEntry() {
               <div className="flex justify-between items-center">
                 <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.referenceNo')}</label>
                 {autoSerialNo !== null && (
-                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded italic">
-                    Auto S# {autoSerialNo}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded italic">
+                      Serial No: {autoSerialNo}
+                    </span>
+                    <button
+                      onClick={() => fetchSerial(true)}
+                      disabled={isRefreshingSerial}
+                      className={`p-1 rounded-full hover:bg-gray-100 text-gray-400 transition-colors ${isRefreshingSerial ? 'animate-spin' : ''}`}
+                      title="Sync with database"
+                    >
+                      <RefreshCw size={10} />
+                    </button>
+                  </div>
                 )}
               </div>
               <input 

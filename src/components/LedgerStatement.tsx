@@ -233,7 +233,7 @@ export function LedgerStatement() {
       exportData.push({
         date: formatDate(e.vouchers?.v_date),
         particulars: e.particulars,
-        vch_no: `${e.vouchers?.v_no || '-'}${e.vouchers?.auto_serial_no ? ` / S#${e.vouchers.auto_serial_no}` : ''}`,
+        vch_no: `${e.vouchers?.v_no || '-'}${(e.vouchers?.serial_no || e.vouchers?.auto_serial_no) ? ` / SN:${e.vouchers.serial_no || e.vouchers?.auto_serial_no}` : ''}`,
         vch_type: e.vouchers?.v_type || '-',
         debit: e.debit || 0,
         credit: e.credit || 0,
@@ -347,7 +347,8 @@ export function LedgerStatement() {
               ${config.showNarration && e.vouchers?.narration ? `<div style="font-size: 10px; font-style: italic; margin-left: 10px;">(${e.vouchers.narration})</div>` : ''}
             </td>
             <td>${e.vouchers?.v_type}</td>
-            <td>${e.vouchers?.v_no}${e.vouchers?.auto_serial_no ? ` / S#${e.vouchers.auto_serial_no}` : ''}</td>
+            <td>${e.vouchers?.v_no || e.vouchers?.reference_no || ''}</td>
+            <td style="color: #10b981;">${e.vouchers?.serial_no || e.vouchers?.auto_serial_no || ''}</td>
             <td style="text-align: right;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
             <td style="text-align: right;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
             <td style="text-align: right;">${config.showRunningBalance ? `${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
@@ -471,9 +472,10 @@ export function LedgerStatement() {
                 <thead>
                   <tr>
                     <th style="width: 10%;">Date</th>
-                    <th style="width: 40%;">Particulars</th>
-                    <th style="width: 10%;">Vch Type</th>
-                    <th style="width: 10%;">Vch No.</th>
+                    <th style="width: 35%;">Particulars</th>
+                    <th style="width: 8%;">Vch Type</th>
+                    <th style="width: 9%;">Ref No</th>
+                    <th style="width: 8%;">Serial No</th>
                     <th style="width: 10%; text-align: right;">Debit</th>
                     <th style="width: 10%; text-align: right;">Credit</th>
                     <th style="width: 10%; text-align: right;">Balance</th>
@@ -578,7 +580,8 @@ export function LedgerStatement() {
               <div>Dr <b>${e.particulars}</b></div>
             </td>
             <td style="padding: 2px 5px;">${e.vouchers?.v_type}</td>
-            <td style="padding: 2px 5px;">${e.vouchers?.v_no}${e.vouchers?.auto_serial_no ? ` / S#${e.vouchers.auto_serial_no}` : ''}</td>
+            <td style="padding: 2px 5px;">${e.vouchers?.v_no || e.vouchers?.reference_no || ''}</td>
+            <td style="padding: 2px 5px; color: #10b981;">${e.vouchers?.serial_no || e.vouchers?.auto_serial_no || ''}</td>
             <td style="padding: 2px 5px; text-align: right;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
             <td style="padding: 2px 5px; text-align: right;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
             ${config.showRunningBalance ? '<td style="padding: 2px 5px; text-align: right;"></td>' : ''}
@@ -691,9 +694,10 @@ export function LedgerStatement() {
                 <thead>
                   <tr>
                     <th style="width: 12%;">Date</th>
-                    <th style="width: 38%;">Particulars</th>
-                    <th style="width: 10%;">Vch Type</th>
-                    <th style="width: 10%;">Vch No.</th>
+                    <th style="width: 32%;">Particulars</th>
+                    <th style="width: 8%;">Vch Type</th>
+                    <th style="width: 8%;">Ref No</th>
+                    <th style="width: 8%;">Serial No</th>
                     <th style="width: 10%; text-align: right;">Debit</th>
                     <th style="width: 10%; text-align: right;">Credit</th>
                     ${config.showRunningBalance ? '<th style="width: 10%; text-align: right;">Balance</th>' : ''}
@@ -910,10 +914,11 @@ export function LedgerStatement() {
                 settings.reportLayout === 'Layout 2' && "border-black text-black font-bold bg-white"
               )}>
                 <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[12%] border-black" : "w-[120px]")}>{t('common.date')}</th>
-                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[38%] border-black" : "")}>{t('ledger.particulars')}</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[33%] border-black" : "")}>{t('ledger.particulars')}</th>
                 <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('ledger.vchType')}</th>
-                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('ledger.vchNo')}</th>
-                <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('reports.debit')}</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>Ref No</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>Serial No</th>
+                <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[8%] border-black" : "")}>{t('reports.debit')}</th>
                 <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('reports.credit')}</th>
                 {config.showRunningBalance && (
                   <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('ledger.runningBalance')}</th>
@@ -961,7 +966,7 @@ export function LedgerStatement() {
                         </tr>
 
                         {entries.length === 0 ? (
-                          <tr><td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-10 text-center text-gray-600 italic">{t('ledger.noTransactions')}</td></tr>
+                          <tr><td colSpan={config.showRunningBalance ? 8 : 7} className="px-6 py-10 text-center text-gray-600 italic">{t('ledger.noTransactions')}</td></tr>
                         ) : entries.map((e, idx) => {
                           runningBalance += (e.debit || 0) - (e.credit || 0);
                           const currentBalance = runningBalance;
@@ -989,8 +994,11 @@ export function LedgerStatement() {
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_type}</td>
-                                <td className="px-6 py-4 uppercase text-[10px] text-gray-500">
-                                  {e.vouchers?.v_no}{e.vouchers?.auto_serial_no ? ` / S#${e.vouchers.auto_serial_no}` : ''}
+                                <td className="px-6 py-4 text-[10px] text-gray-500">
+                                  {e.vouchers?.v_no || e.vouchers?.ref_no || e.vouchers?.reference_no}
+                                </td>
+                                <td className="px-6 py-4 text-emerald-600 font-mono text-[10px]">
+                                  {e.vouchers?.serial_no || e.vouchers?.auto_serial_no || '-'}
                                 </td>
                                 <td className="px-6 py-4 text-right">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
                                 <td className="px-6 py-4 text-right">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
@@ -1025,14 +1033,15 @@ export function LedgerStatement() {
                                         )}
                                       </div>
                                     </td>
-                                    <td className="px-6 py-1 text-right text-[11px]">
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td className="px-6 py-1 text-right text-[11px] font-mono text-gray-400 italic">
                                       {item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </td>
-                                    <td className="px-6 py-1 text-right text-[11px]">
+                                    <td className="px-6 py-1 text-right text-[11px] font-mono">
                                       {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                     </td>
-                                    <td></td>
-                                    <td></td>
                                     {config.showRunningBalance && <td></td>}
                                   </tr>
                                 );

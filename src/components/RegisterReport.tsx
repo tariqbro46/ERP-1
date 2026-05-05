@@ -195,7 +195,8 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
               <thead className="sticky top-0 z-20 bg-background shadow-sm">
                 <tr className="border-b border-border">
                   <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Date</th>
-                  <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Voucher No</th>
+                  <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Ref No</th>
+                  <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Serial No</th>
                   <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Particulars</th>
                   <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500">Voucher Type</th>
                   <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 text-right">Amount</th>
@@ -204,7 +205,7 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
               <tbody className="divide-y divide-gray-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
+                    <td colSpan={6} className="px-6 py-12 text-center">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
                     </td>
                   </tr>
@@ -218,7 +219,10 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
                       {formatReportDate(v.v_date, settings.dateFormat)}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      {v.v_no}{v.auto_serial_no ? ` / S#${v.auto_serial_no}` : ''}
+                      {v.v_no || v.reference_no}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-mono text-emerald-600">
+                      {v.serial_no || v.auto_serial_no || '-'}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       <div className="font-medium text-gray-900 group-hover:text-primary transition-colors">{getCounterpartyName(v)}</div>
@@ -233,7 +237,7 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                       No vouchers found for the selected period.
                     </td>
                   </tr>

@@ -288,6 +288,25 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin();
     }
 
+    match /counters/{id} {
+      allow read: if isAuthenticated() && (
+        isSuperAdmin() || 
+        (resource != null && isCompanyMember(resource.data.get('companyId', ''))) ||
+        (getUserData().get('companyId', '') != "" && id.matches("^" + getUserData().get('companyId', '') + ".*"))
+      );
+      allow create: if isAuthenticated() && (
+        isSuperAdmin() || 
+        isCompanyMember(request.resource.data.get('companyId', '')) ||
+        (getUserData().get('companyId', '') != "" && id.matches("^" + getUserData().get('companyId', '') + ".*"))
+      );
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() || 
+        (resource != null && isCompanyMember(resource.data.get('companyId', ''))) ||
+        (getUserData().get('companyId', '') != "" && id.matches("^" + getUserData().get('companyId', '') + ".*"))
+      );
+      allow delete: if isSuperAdmin();
+    }
+
     match /notifications/{id} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() || 

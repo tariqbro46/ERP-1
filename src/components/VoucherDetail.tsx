@@ -143,8 +143,12 @@ export function VoucherDetail() {
                 </div>
                 <div className="flex flex-col text-xs text-gray-500">
                   <div className="flex justify-between gap-4">
-                    <span className="uppercase tracking-widest">No:</span>
-                    <span className="font-bold text-foreground">{voucher.v_no}</span>
+                    <span className="uppercase tracking-widest">Ref No:</span>
+                    <span className="font-bold text-foreground">{voucher.reference_no || voucher.v_no}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="uppercase tracking-widest">Serial No:</span>
+                    <span className="font-bold text-emerald-600">{voucher.serial_no || voucher.auto_serial_no || '-'}</span>
                   </div>
                   <div className="flex justify-between gap-4">
                     <span className="uppercase tracking-widest">Date:</span>
