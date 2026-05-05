@@ -749,10 +749,10 @@ export function LedgerStatement() {
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-          <div className="flex-1 w-full sm:max-w-2xl space-y-4">
+          <div className="flex-1 w-full sm:max-w-3xl space-y-4">
             <div className="relative">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
                   placeholder={t('ledger.searchLedgers')}
@@ -764,12 +764,12 @@ export function LedgerStatement() {
                   }}
                   onKeyDown={handleKeyDown}
                   onFocus={() => setShowLedgerList(true)}
-                  className="w-full bg-card border border-border text-foreground pl-10 pr-4 py-3 text-sm outline-none focus:border-foreground transition-colors"
+                  className="w-full bg-gray-50 border border-border text-foreground pl-11 pr-4 py-3 text-sm outline-none focus:border-foreground transition-all rounded-lg"
                 />
               </div>
               
               {showLedgerList && ledgerSearch && (
-                <div className="absolute z-50 w-full mt-1 bg-card border border-border shadow-xl max-h-60 overflow-y-auto">
+                <div className="absolute z-50 w-full mt-1 bg-white border border-border shadow-xl max-h-60 overflow-y-auto rounded-lg">
                   {filteredLedgers.length > 0 ? (
                     filteredLedgers.map((l, idx) => (
                       <button
@@ -777,8 +777,8 @@ export function LedgerStatement() {
                         onClick={() => handleLedgerSelect(l)}
                         onMouseEnter={() => setActiveIndex(idx)}
                         className={cn(
-                          "w-full text-left px-4 py-3 text-sm text-foreground hover:bg-foreground/5 border-b border-border/50 last:border-none transition-colors",
-                          activeIndex === idx && "bg-foreground/10"
+                          "w-full text-left px-4 py-3 text-sm text-foreground hover:bg-gray-50 border-b border-border/50 last:border-none transition-colors",
+                          activeIndex === idx && "bg-blue-50 text-blue-700"
                         )}
                       >
                         {l.name}

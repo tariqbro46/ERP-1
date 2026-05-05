@@ -244,7 +244,7 @@ export const AlterMaster: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-full bg-background transition-colors">
-      <div className="sticky top-0 z-[40] bg-background border-b border-border shadow-sm p-6">
+      <div className="sticky top-0 z-[40] bg-background border-b border-border shadow-sm p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             {selectedCategory && (
@@ -277,6 +277,19 @@ export const AlterMaster: React.FC = () => {
             </button>
           )}
         </div>
+
+        {selectedCategory && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder={`Search ${t(selectedCategory.labelKey)}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-xs"
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex-1 p-6">
@@ -314,19 +327,6 @@ export const AlterMaster: React.FC = () => {
               exit={{ opacity: 0, x: -20 }}
               className="bg-white rounded-xl border border-gray-200 overflow-hidden"
             >
-              <div className="p-4 border-b border-gray-200 bg-gray-50 sticky top-[80px] z-10">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder={`Search ${t(selectedCategory.labelKey)}...`}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
-                </div>
-              </div>
-
               <div className="min-h-0">
                 {loading ? (
                 <div className="p-8 text-center text-gray-500">{t('common.loading')}</div>

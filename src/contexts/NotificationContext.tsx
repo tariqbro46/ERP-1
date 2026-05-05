@@ -109,12 +109,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   return (
     <NotificationContext.Provider value={{ showNotification }}>
       {children}
-      <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none items-center">
+      <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none items-end">
         {notifications.map(n => (
           <div 
             key={n.id}
             className={cn(
-              "pointer-events-auto flex flex-col bg-card border border-border shadow-2xl rounded-sm min-w-[300px] animate-in slide-in-from-top-full duration-300 overflow-hidden relative",
+              "pointer-events-auto flex flex-col bg-card border border-border shadow-2xl rounded-sm min-w-[300px] animate-in slide-in-from-right-full duration-300 overflow-hidden relative",
               n.type === 'success' ? "border-emerald-500/50" : n.type === 'error' ? "border-rose-500/50" : "border-border"
             )}
           >

@@ -116,30 +116,30 @@ export function ItemMaster() {
         </div>
 
         {/* Filters Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-card border border-border p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input 
               type="text"
               placeholder={t('item.searchPlaceholder')}
               value={search || ''}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-background border border-border text-foreground pl-10 pr-4 py-2 text-[10px] outline-none focus:border-foreground transition-colors uppercase tracking-widest"
+              className="w-full bg-gray-50 border border-border text-foreground pl-10 pr-4 py-2.5 text-[10px] outline-none focus:border-foreground transition-all uppercase tracking-widest rounded-lg"
             />
           </div>
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <select 
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="w-full bg-background border border-border text-foreground pl-10 pr-4 py-2 text-[10px] outline-none focus:border-foreground transition-colors uppercase tracking-widest appearance-none"
+              className="w-full bg-gray-50 border border-border text-foreground pl-10 pr-4 py-2.5 text-[10px] outline-none focus:border-foreground transition-all uppercase tracking-widest appearance-none rounded-lg"
             >
               {categories.map(cat => (
                 <option key={String(cat)} value={String(cat)}>{String(cat).toUpperCase()}</option>
               ))}
             </select>
           </div>
-          <div className="flex items-center justify-end text-[10px] text-gray-600 uppercase tracking-widest pr-2">
+          <div className="flex items-center justify-end text-[10px] text-gray-500 font-bold uppercase tracking-widest pr-2">
             {t('item.totalItems')}: {filteredItems.length}
           </div>
         </div>

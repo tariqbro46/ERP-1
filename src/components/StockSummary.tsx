@@ -213,11 +213,11 @@ export function StockSummary() {
   return (
     <div className="flex flex-col min-h-full bg-background font-mono transition-colors">
       {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-30">
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
             {(settings.companyLogo || settings.systemLogo) && (
-              <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
+              <div className="w-10 h-10 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
                 <img 
                   src={settings.companyLogo || settings.systemLogo} 
                   alt="Logo" 
@@ -227,27 +227,27 @@ export function StockSummary() {
               </div>
             )}
             <div className="flex flex-col">
-              <h1 className="text-xl lg:text-2xl text-foreground uppercase tracking-tighter">{t('stock.title')}</h1>
+              <h1 className="text-xl text-foreground uppercase tracking-tighter">{t('stock.title')}</h1>
               <p className="text-[10px] text-gray-500 uppercase tracking-widest">{settings.companyName || 'ERP System'} • {t('reports.asOnDate')} {asOnDate}</p>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 w-full sm:w-auto">
             <div className="text-left sm:text-right">
               <p className="text-[9px] text-gray-500 uppercase tracking-widest">{t('common.totalValue')}</p>
-              <p className="text-lg lg:text-xl text-foreground font-bold">৳ {formatNumber(totalStockValue)}</p>
+              <p className="text-lg text-foreground font-bold">৳ {formatNumber(totalStockValue)}</p>
             </div>
             <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
               <button 
                 onClick={() => printUtils.printElement('stock-summary-report', `Stock Summary`, settings)}
-                className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
+                className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase rounded-sm shadow-sm"
               >
-                <Printer className="w-4 h-4" />
+                <Printer className="w-3.5 h-3.5" />
                 {t('common.print')}
               </button>
               <button 
                 onClick={handleDownload}
                 disabled={processedItems.length === 0}
-                className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+                className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase rounded-sm shadow-sm"
                 title={t('common.csv')}
               >
                 <Download className="w-3 h-3" /> {t('common.csv')}
@@ -255,17 +255,17 @@ export function StockSummary() {
               <button 
                 onClick={handleDownloadPDF}
                 disabled={processedItems.length === 0}
-                className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+                className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase rounded-sm shadow-sm"
                 title={t('common.pdf')}
               >
                 <Download className="w-3 h-3" /> {t('common.pdf')}
               </button>
               <button 
                 onClick={() => setIsQuickItemOpen(true)}
-                className="px-3 py-2 bg-amber-600/10 border border-amber-600/20 text-amber-600 hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 text-[10px] font-bold uppercase"
+                className="px-3 py-1.5 bg-amber-600/10 border border-amber-600/20 text-amber-600 hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 text-[10px] font-bold uppercase rounded-sm shadow-sm"
                 title={t('stock.quickCreateItem')}
               >
-                <Package className="w-3 h-3" /> {t('item.new')}
+                <Package className="w-3.5 h-3.5" /> {t('item.new')}
               </button>
             </div>
           </div>
