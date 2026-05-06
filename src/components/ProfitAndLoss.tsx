@@ -45,41 +45,58 @@ export function ProfitAndLoss() {
       if (!user?.companyId) return;
       setLoading(true);
       try {
-        const ledgers = await erpService.getLedgers(user.companyId);
-        
-        // Calculate closing stock based on movements up to endDate
-        const [allItems, invEntries] = await Promise.all([
+        const [ledgers, allItems, invEntries, vEntries, allVoucherEntries] = await Promise.all([
+          erpService.getLedgers(user.companyId),
           erpService.getItems(user.companyId),
-          erpService.getInventoryEntriesByDate(user.companyId, '1900-01-01', endDate)
+          erpService.getInventoryEntriesByDate(user.companyId, '1900-01-01', endDate),
+          erpService.getVouchersByDateRange(user.companyId, startDate, endDate),
+          erpService.getCollection('voucher_entries', user.companyId)
         ]);
-
-        const itemStocks: Record<string, { qty: number, cost: number }> = {};
         
-        // Initialize with opening stock if needed, or just from entries
-        for (const entry of invEntries) {
-          if (!itemStocks[entry.item_id]) {
-            const item = allItems.find(i => i.id === entry.item_id);
-            itemStocks[entry.item_id] = { qty: 0, cost: item?.avg_cost || item?.opening_rate || 0 };
-          }
-          const movementType = entry.movement_type || entry.m_type;
-          if (movementType === 'Inward') {
-            itemStocks[entry.item_id].qty += entry.qty;
-          } else {
-            itemStocks[entry.item_id].qty -= entry.qty;
-          }
-        }
+        // 1. Calculate Opening & Closing Stock
+        const calculateStockValue = (asOfDate: string) => {
+          const targetDate = new Date(asOfDate);
+          targetDate.setHours(23, 59, 59, 999);
 
-        const closingStock = Object.values(itemStocks).reduce((sum, item) => sum + (item.qty * item.cost), 0);
+          const stocks: Record<string, number> = {};
+          
+          // Initial quantity from item master
+          allItems.forEach(item => {
+            stocks[item.id] = Number(item.opening_qty) || 0;
+          });
 
-        // Fetch voucher entries within date range for P&L
-        const vEntries = await erpService.getVouchersByDateRange(user.companyId, startDate, endDate);
-        // We need the entries for these vouchers
-        const allVoucherEntries = await erpService.getCollection('voucher_entries', user.companyId);
-        const filteredVEntries = allVoucherEntries.filter((e: any) => vEntries.some((v: any) => v.id === e.voucher_id));
+          // All movements up to target date
+          invEntries.forEach((entry: any) => {
+            const entryDate = new Date(entry.date);
+            if (entryDate <= targetDate) {
+              const qty = (Number(entry.qty) || 0) + (Number(entry.free_qty) || 0);
+              const mType = (entry.movement_type || entry.m_type || '').toLowerCase();
+              
+              if (entry.v_type?.toLowerCase() === 'physical stock' || entry.is_physical_snapshot) {
+                stocks[entry.item_id] = Number(entry.qty) || 0;
+              } else if (mType === 'inward') {
+                stocks[entry.item_id] += qty;
+              } else {
+                stocks[entry.item_id] -= qty;
+              }
+            }
+          });
+
+          return Object.entries(stocks).reduce((sum, [id, qty]) => {
+            const item = allItems.find(i => i.id === id);
+            const rate = Number(item?.avg_cost) || Number(item?.opening_rate) || 0;
+            return sum + (qty * rate);
+          }, 0);
+        };
+
+        const openingStockValue = calculateStockValue(new Date(new Date(startDate).getTime() - 86400000).toISOString().split('T')[0]);
+        const closingStockValue = calculateStockValue(endDate);
+
+        // 2. Fetch and Filter Voucher Entries
+        const voucherIdSet = new Set(vEntries.map((v: any) => v.id));
+        const filteredVEntries = allVoucherEntries.filter((e: any) => voucherIdSet.has(e.voucher_id));
 
         const groups: Record<string, any> = {};
-        
-        // Initialize groups from ledgers to ensure all groups are present
         ledgers.forEach(l => {
           const groupName = l.group_name || 'Uncategorized';
           if (!groups[groupName]) {
@@ -87,47 +104,51 @@ export function ProfitAndLoss() {
               name: groupName,
               nature: l.nature,
               balance: 0,
-              ledgers: []
+              ledgers: new Map()
             };
           }
-          // We don't use current_balance here, we'll calculate from vEntries
         });
 
         filteredVEntries.forEach((e: any) => {
           const ledger = ledgers.find(l => l.id === e.ledger_id);
           if (ledger) {
             const groupName = ledger.group_name || 'Uncategorized';
+            const change = (Number(e.debit) || 0) - (Number(e.credit) || 0);
+            
             if (groups[groupName]) {
-              groups[groupName].balance += (e.debit - e.credit);
-              // Add ledger to group if not already there
-              if (!groups[groupName].ledgers.find((l: any) => l.id === ledger.id)) {
-                groups[groupName].ledgers.push({ ...ledger, period_balance: 0 });
+              groups[groupName].balance += change;
+              if (!groups[groupName].ledgers.has(ledger.id)) {
+                groups[groupName].ledgers.set(ledger.id, { ...ledger, balance: 0 });
               }
-              const ledgerInGroup = groups[groupName].ledgers.find((l: any) => l.id === ledger.id);
-              ledgerInGroup.period_balance += (e.debit - e.credit);
+              const lData = groups[groupName].ledgers.get(ledger.id);
+              lData.balance += change;
             }
           }
         });
 
         const gList = Object.values(groups).map((g: any) => ({
           ...g,
-          // Use period_balance for display
-          ledgers: g.ledgers.map((l: any) => ({ ...l, balance: l.period_balance }))
+          ledgers: Array.from(g.ledgers.values())
         }));
 
-      setTradingData({
-        openingStock: 0, // Simplified
-        closingStock,
-        purchaseGroups: gList.filter(g => g.name.includes('Purchase')).sort((a,b) => a.name.localeCompare(b.name)),
-        salesGroups: gList.filter(g => g.name.includes('Sales')).sort((a,b) => a.name.localeCompare(b.name)),
-        directExpenseGroups: gList.filter(g => g.name.includes('Direct Expense')).sort((a,b) => a.name.localeCompare(b.name)),
-        directIncomeGroups: gList.filter(g => g.name.includes('Direct Income')).sort((a,b) => a.name.localeCompare(b.name))
-      });
+        const purchaseG = gList.filter(g => g.name.toLowerCase().includes('purchase')).sort((a,b) => a.name.localeCompare(b.name));
+        const salesG = gList.filter(g => g.name.toLowerCase().includes('sales')).sort((a,b) => a.name.localeCompare(b.name));
+        const directExpG = gList.filter(g => g.name.toLowerCase().includes('direct expense')).sort((a,b) => a.name.localeCompare(b.name));
+        const indirectExpG = gList.filter(g => g.nature === 'Expense' && !g.name.toLowerCase().includes('direct') && !g.name.toLowerCase().includes('purchase')).sort((a,b) => a.name.localeCompare(b.name));
+        const indirectIncG = gList.filter(g => g.nature === 'Income' && !g.name.toLowerCase().includes('direct') && !g.name.toLowerCase().includes('sales')).sort((a,b) => a.name.localeCompare(b.name));
 
-      setPlData({
-        indirectExpenseGroups: gList.filter(g => g.nature === 'Expense' && !g.name.includes('Direct')).sort((a,b) => a.name.localeCompare(b.name)),
-        indirectIncomeGroups: gList.filter(g => g.nature === 'Income' && !g.name.includes('Direct')).sort((a,b) => a.name.localeCompare(b.name))
-      });
+        setTradingData({
+          openingStock: openingStockValue,
+          closingStock: closingStockValue,
+          purchaseGroups: purchaseG,
+          salesGroups: salesG,
+          directExpenseGroups: directExpG
+        });
+
+        setPlData({
+          indirectExpenseGroups: indirectExpG,
+          indirectIncomeGroups: indirectIncG
+        });
 
       } catch (err) {
         console.error('Error fetching P&L:', err);
@@ -136,7 +157,7 @@ export function ProfitAndLoss() {
       }
     }
     fetchPL();
-  }, [startDate, endDate]);
+  }, [startDate, endDate, user?.companyId]);
 
   const toggleGroup = (name: string) => {
     const newSet = new Set(expandedGroups);
@@ -146,15 +167,17 @@ export function ProfitAndLoss() {
   };
 
   const totalPurchases = tradingData.purchaseGroups.reduce((s: number, g: any) => s + g.balance, 0);
-  const totalSales = tradingData.salesGroups.reduce((s: number, g: any) => s + g.balance, 0);
+  const totalSales = Math.abs(tradingData.salesGroups.reduce((s: number, g: any) => s + g.balance, 0));
   const totalDirectExp = tradingData.directExpenseGroups.reduce((s: number, g: any) => s + g.balance, 0);
-  const totalDirectInc = tradingData.directIncomeGroups.reduce((s: number, g: any) => s + g.balance, 0);
-  
-  const grossProfit = (Math.abs(totalSales) + tradingData.closingStock + Math.abs(totalDirectInc)) - (tradingData.openingStock + Math.abs(totalPurchases) + totalDirectExp);
-  
   const totalIndirectExp = plData.indirectExpenseGroups.reduce((s: number, g: any) => s + g.balance, 0);
-  const totalIndirectInc = plData.indirectIncomeGroups.reduce((s: number, g: any) => s + g.balance, 0);
-  const netProfit = (grossProfit + Math.abs(totalIndirectInc)) - totalIndirectExp;
+  const totalIndirectInc = Math.abs(plData.indirectIncomeGroups.reduce((s: number, g: any) => s + g.balance, 0));
+  
+  // Left side sum (Debit): Opening + Purchases + Direct Exp + Indirect Exp
+  // Right side sum (Credit): Sales + Closing Stock + Indirect Income
+  const debitTotal = tradingData.openingStock + totalPurchases + totalDirectExp + totalIndirectExp;
+  const creditTotal = totalSales + tradingData.closingStock + totalIndirectInc;
+  
+  const netProfit = creditTotal - debitTotal;
 
   const handlePrint = () => {
     printUtils.printElement('pl-report', 'Profit & Loss Report');
@@ -166,21 +189,10 @@ export function ProfitAndLoss() {
 
   const handleDownload = () => {
     const exportData: any[] = [];
-    
-    // Trading Account
-    exportData.push({ particulars: 'TRADING ACCOUNT', amount: '' });
     exportData.push({ particulars: 'Opening Stock', amount: tradingData.openingStock });
-    tradingData.purchaseGroups.forEach((g: any) => exportData.push({ particulars: g.name, amount: Math.abs(g.balance) }));
-    exportData.push({ particulars: 'Sales', amount: Math.abs(totalSales) });
+    tradingData.purchaseGroups.forEach((g: any) => exportData.push({ particulars: g.name, amount: g.balance }));
+    tradingData.salesGroups.forEach((g: any) => exportData.push({ particulars: g.name, amount: Math.abs(g.balance) }));
     exportData.push({ particulars: 'Closing Stock', amount: tradingData.closingStock });
-    exportData.push({ particulars: 'GROSS PROFIT', amount: grossProfit });
-    
-    exportData.push({ particulars: '', amount: '' }); // Spacer
-    
-    // P&L Account
-    exportData.push({ particulars: 'PROFIT & LOSS ACCOUNT', amount: '' });
-    plData.indirectExpenseGroups.forEach((g: any) => exportData.push({ particulars: g.name, amount: g.balance }));
-    plData.indirectIncomeGroups.forEach((g: any) => exportData.push({ particulars: g.name, amount: g.balance }));
     exportData.push({ particulars: 'NET PROFIT', amount: netProfit });
 
     exportToCSV('Profit_And_Loss', 'Profit & Loss A/c', exportData, ['Particulars', 'Amount'], settings);
@@ -194,9 +206,10 @@ export function ProfitAndLoss() {
     );
   }
 
+  const finalTotal = Math.max(debitTotal + (netProfit > 0 ? netProfit : 0), creditTotal + (netProfit < 0 ? Math.abs(netProfit) : 0));
+
   return (
     <div className="flex flex-col min-h-full bg-background transition-colors">
-      {/* Fixed Header Section */}
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex-1 w-full sm:max-w-md space-y-4">
@@ -213,13 +226,18 @@ export function ProfitAndLoss() {
                 defaultSubtitle={settings.companyName}
               />
             </div>
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-muted/50 px-3 py-1 rounded-full w-fit">
+              <span>{formatReportDate(startDate)}</span>
+              <span className="opacity-50">to</span>
+              <span>{formatReportDate(endDate)}</span>
+            </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <DateInput
                   label={t('common.from')}
                   value={startDate}
                   onChange={setStartDate}
-                  className="w-full"
+                  className="w-full shadow-none border-0 bg-muted/50 focus:bg-background"
                 />
               </div>
               <div className="flex-1">
@@ -227,171 +245,158 @@ export function ProfitAndLoss() {
                   label={t('common.to')}
                   value={endDate}
                   onChange={setEndDate}
-                  className="w-full"
+                  className="w-full shadow-none border-0 bg-muted/50 focus:bg-background"
                 />
               </div>
             </div>
           </div>
-          <div className="flex gap-3 w-full sm:w-auto">
+          <div className="flex gap-2 w-full sm:w-auto">
             <button 
               onClick={handlePrint}
-              className="flex-1 sm:flex-none p-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center"
+              className="p-2 aspect-square hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors border border-border"
+              title="Print"
             >
-              <Printer className="w-4 h-4" />
-            </button>
-            <button 
-              onClick={handleDownload}
-              className="flex-1 sm:flex-none px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
-              title={t('common.downloadPdf')}
-            >
-              <Download className="w-3 h-3" /> CSV
+              <Printer className="w-5 h-5" />
             </button>
             <button 
               onClick={handleDownloadPDF}
-              className="flex-1 sm:flex-none px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
-              title={t('common.downloadPdf')}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all font-medium text-sm shadow-sm active:scale-95"
             >
-              <Download className="w-3 h-3" /> PDF
+              <Download className="w-4 h-4" />
+              PDF
             </button>
           </div>
         </div>
       </div>
 
-      {/* Scrollable Content Section */}
       <div className="flex-1 overflow-y-auto no-scrollbar p-0">
         <div id="pl-report" className="p-4 lg:p-6 space-y-6 pb-20">
-          <div className="border border-border bg-card">
-            <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border">
-              {/* Expenses Side */}
-              <div className="relative">
-                <div className="sticky top-0 z-20 px-4 lg:px-6 py-3 bg-muted/90 backdrop-blur-sm shadow-sm border-b border-border flex justify-between">
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('common.particulars')}</span>
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
+          <div className="border border-border bg-card shadow-sm rounded-lg overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x divide-border">
+              {/* Left Side: Debit (Expenses) */}
+              <div className="flex flex-col min-h-[400px]">
+                <div className="bg-muted px-4 py-2 border-b border-border flex justify-between items-center group">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('common.particulars')}</span>
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('common.amount')}</span>
                 </div>
-                <div className="min-h-[200px] lg:min-h-[300px] divide-y divide-border/50">
-                  <div className="px-4 lg:px-6 py-3 flex justify-between text-sm text-gray-400 font-bold uppercase tracking-widest text-[10px]">
-                    <span>{t('reports.openingStock')}</span>
-                    <span className="">{tradingData.openingStock.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                
+                <div className="flex-1 divide-y divide-border/30">
+                  {/* Opening Stock */}
+                  <div 
+                    onClick={() => navigate('/reports/stock-summary')}
+                    className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 transition-colors cursor-pointer"
+                  >
+                    <span className="text-sm font-medium text-foreground">{t('reports.openingStock')}</span>
+                    <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(tradingData.openingStock)}</span>
                   </div>
-                  {tradingData.purchaseGroups.map((group: any) => (
-                    <div key={group.name}>
-                      <div onClick={() => toggleGroup(group.name)} className="px-4 lg:px-6 py-3 flex justify-between items-center cursor-pointer hover:bg-foreground/5 transition-colors">
-                        <div className="flex items-center gap-2">
-                          {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
-                          <span className="text-sm text-foreground uppercase tracking-tight">{group.name}</span>
-                        </div>
-                        <span className="text-sm text-foreground">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                      </div>
-                      {expandedGroups.has(group.name) && (
-                        <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
-                          {group.ledgers.sort((a: any, b: any) => a.name.localeCompare(b.name)).map((l: any) => (
-                            <div 
-                              key={l.id} 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/reports/ledger?ledgerId=${l.id}`);
-                              }}
-                              className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
-                            >
-                              <span>{l.name}</span>
-                              <span className="">{Math.abs(l.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+
+                  {/* Purchase Accounts */}
+                  {tradingData.purchaseGroups.map((g: any) => (
+                    <div 
+                      key={g.name} 
+                      onClick={() => navigate(`/reports/group-summary?groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
+                    >
+                      <span className="text-sm font-medium text-foreground">{g.name}</span>
+                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
                     </div>
                   ))}
-                  {grossProfit > 0 && (
-                    <div className="px-4 lg:px-6 py-4 flex justify-between text-emerald-500 font-bold border-t border-border bg-emerald-500/5">
-                      <span className="uppercase text-[10px] tracking-widest">{t('reports.grossProfit')} c/o</span>
-                      <span className="">{grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+
+                  {/* Direct Expenses */}
+                  {tradingData.directExpenseGroups.map((g: any) => (
+                    <div 
+                      key={g.name} 
+                      onClick={() => navigate(`/reports/group-summary?groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
+                    >
+                      <span className="text-sm font-medium text-foreground">{g.name}</span>
+                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
+                    </div>
+                  ))}
+
+                  {/* Indirect Expenses */}
+                  {plData.indirectExpenseGroups.map((g: any) => (
+                    <div 
+                      key={g.name} 
+                      onClick={() => navigate(`/reports/group-summary?groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
+                    >
+                      <span className="text-sm font-medium text-foreground">{g.name}</span>
+                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
+                    </div>
+                  ))}
+
+                  {/* Nett Profit */}
+                  {netProfit > 0 && (
+                    <div className="px-4 py-3 flex justify-between items-center bg-emerald-500/5 group">
+                      <span className="text-sm font-bold italic text-emerald-600">Nett Profit</span>
+                      <span className="text-sm font-bold text-emerald-600 tabular-nums underline decoration-emerald-500/30 underline-offset-4">{formatNumber(netProfit)}</span>
                     </div>
                   )}
                 </div>
+
+                {/* Total Left */}
+                <div className="px-4 py-3 border-t border-border bg-muted/20 flex justify-between items-center mt-auto">
+                  <span className="text-sm font-black uppercase tracking-tight text-foreground">Total</span>
+                  <span className="text-sm font-black text-foreground tabular-nums border-b-2 border-double border-foreground py-0.5">{formatNumber(finalTotal)}</span>
+                </div>
               </div>
 
-              {/* Income Side */}
-              <div className="relative">
-                <div className="sticky top-0 z-20 px-4 lg:px-6 py-3 bg-muted/90 backdrop-blur-sm shadow-sm border-b border-border flex justify-between">
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">{t('common.particulars')}</span>
-                  <span className="text-[10px] text-gray-500 uppercase tracking-widest text-right font-bold">{t('common.amount')} (৳)</span>
+              {/* Right Side: Credit (Incomes) */}
+              <div className="flex flex-col min-h-[400px]">
+                <div className="bg-muted px-4 py-2 border-b border-border flex justify-between items-center">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('common.particulars')}</span>
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('common.amount')}</span>
                 </div>
-                <div className="min-h-[200px] lg:min-h-[300px] divide-y divide-border/50">
-                  {tradingData.salesGroups.map((group: any) => (
-                    <div key={group.name}>
-                      <div onClick={() => toggleGroup(group.name)} className="px-4 lg:px-6 py-3 flex justify-between items-center cursor-pointer hover:bg-foreground/5 transition-colors">
-                        <div className="flex items-center gap-2">
-                          {expandedGroups.has(group.name) ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
-                          <span className="text-sm text-foreground uppercase tracking-tight">{group.name}</span>
-                        </div>
-                        <span className="text-sm text-foreground">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                      </div>
-                      {expandedGroups.has(group.name) && (
-                        <div className="bg-foreground/[0.02] px-8 lg:px-12 py-2 space-y-2">
-                          {group.ledgers.sort((a: any, b: any) => a.name.localeCompare(b.name)).map((l: any) => (
-                            <div 
-                              key={l.id} 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/reports/ledger?ledgerId=${l.id}`);
-                              }}
-                              className="flex justify-between text-[11px] text-gray-500 hover:text-foreground cursor-pointer transition-colors"
-                            >
-                              <span>{l.name}</span>
-                              <span className="">{Math.abs(l.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+
+                <div className="flex-1 divide-y divide-border/30">
+                  {/* Sales Accounts */}
+                  {tradingData.salesGroups.map((g: any) => (
+                    <div 
+                      key={g.name} 
+                      onClick={() => navigate(`/reports/group-summary?groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
+                    >
+                      <span className="text-sm font-medium text-foreground">{g.name}</span>
+                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(g.balance))}</span>
                     </div>
                   ))}
-                  <div className="px-4 lg:px-6 py-3 flex justify-between text-sm text-gray-400 font-bold uppercase tracking-widest text-[10px]">
-                    <span>{t('reports.closingStock')}</span>
-                    <span className="">{tradingData.closingStock.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+
+                  {/* Indirect Incomes */}
+                  {plData.indirectIncomeGroups.map((g: any) => (
+                    <div 
+                      key={g.name} 
+                      onClick={() => navigate(`/reports/group-summary?groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
+                    >
+                      <span className="text-sm font-medium text-foreground">{g.name}</span>
+                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(g.balance))}</span>
+                    </div>
+                  ))}
+
+                  {/* Closing Stock */}
+                  <div 
+                    onClick={() => navigate('/reports/stock-summary')}
+                    className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
+                  >
+                    <span className="text-sm font-medium text-foreground">Closing Stock</span>
+                    <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(tradingData.closingStock)}</span>
                   </div>
-                  {grossProfit < 0 && (
-                    <div className="px-4 lg:px-6 py-4 flex justify-between text-rose-500 font-bold border-t border-border bg-rose-500/5">
-                      <span className="uppercase text-[10px] tracking-widest">{t('reports.grossLoss')} c/o</span>
-                      <span className="">{Math.abs(grossProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+
+                  {/* Nett Loss */}
+                  {netProfit < 0 && (
+                    <div className="px-4 py-3 flex justify-between items-center bg-rose-500/5">
+                      <span className="text-sm font-bold italic text-rose-600">Nett Loss</span>
+                      <span className="text-sm font-bold text-rose-600 tabular-nums underline decoration-rose-500/30 underline-offset-4">{formatNumber(Math.abs(netProfit))}</span>
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
 
-            {/* P&L Account */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 border-t border-border divide-y lg:divide-y-0 lg:divide-x divide-border mt-0">
-              <div className="divide-y divide-border/50">
-                {plData.indirectExpenseGroups.map((group: any) => (
-                  <div key={group.name} className="px-4 lg:px-6 py-3 flex justify-between items-center hover:bg-foreground/5 transition-colors">
-                    <span className="text-sm text-gray-500 uppercase tracking-tight">{group.name}</span>
-                    <span className="text-sm text-foreground">{group.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                  </div>
-                ))}
-                {netProfit > 0 && (
-                  <div className="px-4 lg:px-6 py-4 flex justify-between text-emerald-500 font-bold border-t border-border bg-emerald-500/10">
-                    <span className="uppercase text-[10px] tracking-widest">{t('reports.netProfit')}</span>
-                    <span className="">{netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                  </div>
-                )}
-              </div>
-              <div className="divide-y divide-border/50 bg-foreground/5">
-                <div className="px-4 lg:px-6 py-3 flex justify-between text-sm text-gray-500 font-bold uppercase tracking-widest text-[10px]">
-                  <span>{t('reports.grossProfit')} b/f</span>
-                  <span className="">{grossProfit > 0 ? grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</span>
+                {/* Total Right */}
+                <div className="px-4 py-3 border-t border-border bg-muted/20 flex justify-between items-center mt-auto">
+                  <span className="text-sm font-black uppercase tracking-tight text-foreground">Total</span>
+                  <span className="text-sm font-black text-foreground tabular-nums border-b-2 border-double border-foreground py-0.5">{formatNumber(finalTotal)}</span>
                 </div>
-                {plData.indirectIncomeGroups.map((group: any) => (
-                  <div key={group.name} className="px-4 lg:px-6 py-3 flex justify-between items-center hover:bg-foreground/5 transition-colors bg-card">
-                    <span className="text-sm text-gray-500 uppercase tracking-tight">{group.name}</span>
-                    <span className="text-sm text-foreground">{Math.abs(group.balance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                  </div>
-                ))}
-                {netProfit < 0 && (
-                  <div className="px-4 lg:px-6 py-4 flex justify-between text-rose-500 font-bold border-t border-border bg-rose-500/10">
-                    <span className="uppercase text-[10px] tracking-widest">{t('reports.netLoss')}</span>
-                    <span className="">{Math.abs(netProfit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                  </div>
-                )}
               </div>
             </div>
           </div>
