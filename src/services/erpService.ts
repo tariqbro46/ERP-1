@@ -19,7 +19,9 @@ import {
   Timestamp,
   onSnapshot,
   arrayUnion,
-  arrayRemove
+  arrayRemove,
+  DocumentReference,
+  DocumentSnapshot
 } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -372,21 +374,49 @@ export const erpService = {
       const typeKey = vType.toLowerCase().replace(/\s+/g, '_');
       const counterRef = doc(db, 'counters', `${companyId}_voucher_${typeKey}`);
 
-      return await runTransaction(db, async (transaction) => {
-        // 1. Handshake with counter
-        let counterSnap;
-        try {
-          counterSnap = await transaction.get(counterRef);
-        } catch (error) {
-          handleFirestoreError(error, OperationType.GET, `counters/${companyId}_voucher_${typeKey}`);
+      const res = await runTransaction(db, async (transaction) => {
+        // 1. All mandatory reads first
+        const reads: Promise<DocumentSnapshot>[] = [transaction.get(counterRef)];
+        
+        // Track references needed for Physical Stock reads
+        const itemRefsMap: Record<string, DocumentReference> = {};
+        const godownStockRefsMap: Record<string, DocumentReference> = {};
+
+        if (vType === 'Physical Stock' && inventoryEntries && inventoryEntries.length > 0) {
+          for (const inv of inventoryEntries) {
+            if (inv.item_id) {
+              if (!itemRefsMap[inv.item_id]) {
+                const iRef = doc(db, 'items', inv.item_id);
+                itemRefsMap[inv.item_id] = iRef;
+                reads.push(transaction.get(iRef));
+              }
+              if (inv.godown_id) {
+                const gsKey = `${inv.godown_id}_${inv.item_id}`;
+                if (!godownStockRefsMap[gsKey]) {
+                  const gsRef = doc(db, 'godown_stock', gsKey);
+                  godownStockRefsMap[gsKey] = gsRef;
+                  reads.push(transaction.get(gsRef));
+                }
+              }
+            }
+          }
         }
+
+        const allSnaps = await Promise.all(reads);
+        const counterSnap = allSnaps[0];
+        
+        // Cache item and godown snapshots by path
+        const snapsCache: Record<string, DocumentSnapshot> = {};
+        allSnaps.slice(1).forEach(snap => {
+          snapsCache[snap.ref.path] = snap;
+        });
 
         let nextSerial = 1;
         if (counterSnap && counterSnap.exists()) {
           nextSerial = (counterSnap.data().lastSerial || 0) + 1;
         }
 
-        // 2. Prepare Voucher Header
+        // 2. Start writes after all reads are done
         const vRef = doc(collection(db, 'vouchers'));
         const reference_no = voucher.v_no || ''; 
         
@@ -425,45 +455,101 @@ export const erpService = {
         if (inventoryEntries && inventoryEntries.length > 0) {
           for (const inv of inventoryEntries) {
             const invRef = doc(collection(db, 'inventory_entries'));
-            transaction.set(invRef, cleanData({
+            
+            // Special handling for Physical Stock
+            let qtyChange = (inv.type === 'In' || inv.type === 'Inward') ? (inv.qty || 0) : -(inv.qty || 0);
+            let finalInvData = {
               ...inv,
               voucher_id: vRef.id,
+              v_type: vType,
               companyId,
               date: voucher.v_date,
               created_at: serverTimestamp()
-            }));
+            };
 
-            // Item Stock adjustment
+    if (vType.toLowerCase() === 'physical stock' && inv.item_id) {
+              const iRef = itemRefsMap[inv.item_id];
+              const itemSnap = snapsCache[iRef.path];
+              const globalStock = (itemSnap && itemSnap.exists() ? itemSnap.data().current_stock : 0) || 0;
+
+              let currentGodownStock = 0;
+              if (inv.godown_id) {
+                const gsKey = `${inv.godown_id}_${inv.item_id}`;
+                const gsRef = godownStockRefsMap[gsKey];
+                const gsSnap = snapsCache[gsRef.path];
+                currentGodownStock = (gsSnap && gsSnap.exists() ? gsSnap.data().current_stock : 0) || 0;
+              }
+
+              const targetQty = Number(inv.qty) || 0;
+              const adjustment = targetQty - (inv.godown_id ? currentGodownStock : globalStock);
+              
+              qtyChange = adjustment;
+              
+              finalInvData = {
+                ...finalInvData,
+                qty: targetQty,
+                adjustment_qty: adjustment,
+                movement_type: adjustment >= 0 ? 'Inward' : 'Outward',
+                is_physical_snapshot: true
+              };
+            }
+
+            transaction.set(invRef, cleanData(finalInvData));
+
             if (inv.item_id) {
               const iRef = doc(db, 'items', inv.item_id);
-              const qtyChange = (inv.type === 'In' || inv.type === 'Inward') ? inv.qty : -inv.qty;
-              transaction.update(iRef, { current_stock: increment(qtyChange) });
+              if (vType.toLowerCase() === 'physical stock' && !inv.godown_id) {
+                 // If no godown specified, physical stock sets the global absolute
+                 transaction.update(iRef, { current_stock: Number(inv.qty) || 0 });
+              } else {
+                 transaction.update(iRef, { current_stock: increment(qtyChange) });
+              }
 
-              // Godown stock
               if (inv.godown_id) {
                 const gsRef = doc(db, 'godown_stock', `${inv.godown_id}_${inv.item_id}`);
-                transaction.set(gsRef, {
-                  godown_id: inv.godown_id,
-                  item_id: inv.item_id,
-                  companyId,
-                  current_stock: increment(qtyChange),
-                  updatedAt: serverTimestamp()
-                }, { merge: true });
+                if (vType.toLowerCase() === 'physical stock') {
+                  transaction.set(gsRef, {
+                    godown_id: inv.godown_id,
+                    item_id: inv.item_id,
+                    companyId,
+                    current_stock: Number(inv.qty) || 0,
+                    updatedAt: serverTimestamp()
+                  }, { merge: true });
+                } else {
+                  transaction.set(gsRef, {
+                    godown_id: inv.godown_id,
+                    item_id: inv.item_id,
+                    companyId,
+                    current_stock: increment(qtyChange),
+                    updatedAt: serverTimestamp()
+                  }, { merge: true });
+                }
               }
             }
           }
         }
 
         // 5. Commit counter increment
-        transaction.set(counterRef, {
+        await transaction.set(counterRef, {
           lastSerial: nextSerial,
           vType,
           companyId,
           updatedAt: serverTimestamp()
         }, { merge: true });
 
-        return true;
+        return { success: true, id: vRef.id, itemIds: Array.from(new Set(inventoryEntries?.map(i => i.item_id).filter(Boolean) || [])) };
       });
+
+      if (res && res.success && res.itemIds.length > 0) {
+        for (const itemId of res.itemIds) {
+          try {
+            await this.recalculateItemStats(itemId as string, companyId);
+          } catch (e) {
+            console.warn('Post-creation recalculation failed for', itemId, e);
+          }
+        }
+      }
+      return true;
     } catch (err: any) {
       // If it's already a JSON error, just throw it
       if (err.message && err.message.startsWith('{')) {
@@ -904,9 +990,14 @@ export const erpService = {
     for (const i of voucher.inventory) {
       if (i.item_id && existingItems.has(i.item_id)) {
         const itemRef = doc(db, 'items', i.item_id);
-        const totalQty = (i.qty || 0) + (i.free_qty || 0);
-        const stockChange = i.movement_type === 'Inward' ? -totalQty : totalQty;
-        batch.update(itemRef, { current_stock: increment(stockChange) });
+        if (voucher.v_type === 'Physical Stock') {
+           // Physical stock reversal needs a recalculation because it's an absolute set
+           // We'll trigger recalculation at the end.
+        } else {
+          const totalQty = (i.qty || 0) + (i.free_qty || 0);
+          const stockChange = i.movement_type === 'Inward' ? -totalQty : totalQty;
+          batch.update(itemRef, { current_stock: increment(stockChange) });
+        }
       }
     }
 
@@ -921,116 +1012,203 @@ export const erpService = {
     batch.delete(doc(db, 'vouchers', id));
 
     await batch.commit();
+
+    // Trigger recalculation for affected items to ensure accuracy
+    for (const itemId of itemIds) {
+      await this.recalculateItemStats(itemId as string, companyId);
+    }
   },
 
   async updateVoucher(id: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
-    // To update, we first reverse the effects of the old voucher and delete its entries,
-    // then we apply the new effects.
-    
-    const oldVoucher = await this.getVoucherById(id);
-    if (!oldVoucher) throw new Error('Voucher not found');
-    const batch = writeBatch(db);
+    try {
+      const oldVoucher = await this.getVoucherById(id);
+      if (!oldVoucher) throw new Error('Voucher not found');
+      
+      const vType = (voucher.v_type || '').toString().trim();
+      const companyId = oldVoucher.companyId;
 
-    // Collect all unique ledger and item IDs from both old and new voucher
-    const oldLedgerIds = oldVoucher.entries.map((e: any) => e.ledger_id).filter(Boolean);
-    const newLedgerIds = entries.map(e => e.ledger_id).filter(Boolean);
-    const ledgerIds = Array.from(new Set([...oldLedgerIds, ...newLedgerIds]));
+      await runTransaction(db, async (transaction) => {
+        // Collect all IDs
+        const oldLedgerIds = oldVoucher.entries.map((e: any) => e.ledger_id).filter(Boolean);
+        const newLedgerIds = entries.map(e => e.ledger_id).filter(Boolean);
+        const ledgerIds = Array.from(new Set([...oldLedgerIds, ...newLedgerIds]));
 
-    const oldItemIds = oldVoucher.inventory.map((i: any) => i.item_id).filter(Boolean);
-    const newItemIds = (inventoryEntries || []).map(i => i.item_id).filter(Boolean);
-    const itemIds = Array.from(new Set([...oldItemIds, ...newItemIds]));
+        const oldItemIds = oldVoucher.inventory.map((i: any) => i.item_id).filter(Boolean);
+        const newItemIds = (inventoryEntries || []).map(i => i.item_id).filter(Boolean);
+        const itemIds = Array.from(new Set([...oldItemIds, ...newItemIds]));
 
-    const [ledgerSnaps, itemSnaps] = await Promise.all([
-      Promise.all(ledgerIds.map(id => getDoc(doc(db, 'ledgers', id as string)))),
-      Promise.all(itemIds.map(id => getDoc(doc(db, 'items', id as string))))
-    ]);
-    
-    const existingLedgers = new Set(ledgerSnaps.filter(s => s.exists()).map(s => s.id));
-    const existingItems = new Set(itemSnaps.filter(s => s.exists()).map(s => s.id));
+        // Setup reads
+        const reads: Promise<DocumentSnapshot>[] = [];
+        ledgerIds.forEach(lId => reads.push(transaction.get(doc(db, 'ledgers', lId as string))));
+        itemIds.forEach(iId => reads.push(transaction.get(doc(db, 'items', iId as string))));
+        
+        // Add godown stock reads if Physical Stock
+        const godownStockRefsMap: Record<string, DocumentReference> = {};
+        if (vType.toLowerCase() === 'physical stock' && inventoryEntries) {
+          inventoryEntries.filter(i => i.item_id && i.godown_id).forEach(i => {
+            const key = `${i.godown_id}_${i.item_id}`;
+            const ref = doc(db, 'godown_stock', key);
+            godownStockRefsMap[key] = ref;
+            reads.push(transaction.get(ref));
+          });
+        }
 
-    // 1. Reverse Old Ledger Balances
-    for (const entry of oldVoucher.entries) {
-      if (entry.ledger_id && existingLedgers.has(entry.ledger_id)) {
-        const lRef = doc(db, 'ledgers', entry.ledger_id);
-        const balanceChange = (entry.credit || 0) - (entry.debit || 0);
-        batch.update(lRef, { current_balance: increment(balanceChange) });
-      }
-    }
+        const allSnaps = await Promise.all(reads);
+        const snapsCache: Record<string, DocumentSnapshot> = {};
+        allSnaps.forEach(s => { snapsCache[s.ref.path] = s; });
 
-    // 2. Reverse Old Inventory Stats
-    for (const i of oldVoucher.inventory) {
-      if (i.item_id && existingItems.has(i.item_id)) {
-        const itemRef = doc(db, 'items', i.item_id);
-        const totalQty = (i.qty || 0) + (i.free_qty || 0);
-        const stockChange = i.movement_type === 'Inward' ? -totalQty : totalQty;
-        batch.update(itemRef, { current_stock: increment(stockChange) });
-      }
-    }
+        // 1. Reverse Old
+        for (const entry of oldVoucher.entries) {
+          if (entry.ledger_id) {
+            const lRef = doc(db, 'ledgers', entry.ledger_id);
+            if (snapsCache[lRef.path]?.exists()) {
+              const balanceChange = (entry.credit || 0) - (entry.debit || 0);
+              transaction.update(lRef, { current_balance: increment(balanceChange) });
+            }
+          }
+        }
 
-    // 3. Delete Old Entries
-    const companyId = oldVoucher.companyId;
-    const eSnapOld = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
-    eSnapOld.docs.forEach(d => batch.delete(d.ref));
+        for (const i of oldVoucher.inventory) {
+          if (i.item_id) {
+            const iRef = doc(db, 'items', i.item_id);
+            if (snapsCache[iRef.path]?.exists()) {
+              if (oldVoucher.v_type?.toLowerCase() === 'physical stock') {
+                // For Physical Stock, reversing depends on whether it was godown-specific or global
+                if (i.godown_id) {
+                   // Reverse the adjustment
+                   const adj = Number(i.adjustment_qty) || 0;
+                   transaction.update(iRef, { current_stock: increment(-adj) });
+                   
+                   const gsRef = doc(db, 'godown_stock', `${i.godown_id}_${i.item_id}`);
+                   // For godown stock, we don't 'reverse' easily because it's absolute. 
+                   // We trust the new voucher will set it.
+                } else {
+                   // Global absolute reset reversal is difficult without a full history re-run.
+                   // Recalculation at end will fix it.
+                }
+              } else {
+                const totalQty = (i.qty || 0) + (i.free_qty || 0);
+                const stockChange = i.movement_type === 'Inward' ? -totalQty : totalQty;
+                transaction.update(iRef, { current_stock: increment(stockChange) });
 
-    const iSnapOld = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
-    iSnapOld.docs.forEach(d => batch.delete(d.ref));
+                if (i.godown_id) {
+                  const gsRef = doc(db, 'godown_stock', `${i.godown_id}_${i.item_id}`);
+                  transaction.set(gsRef, { current_stock: increment(stockChange) }, { merge: true });
+                }
+              }
+            }
+          }
+        }
 
-    // 4. Update Voucher Header
-    const vRef = doc(db, 'vouchers', id);
-    
-    // Explicitly separate reference_no
-    const reference_no = voucher.v_no || '';
-    
-    batch.update(vRef, cleanData({
-      ...voucher,
-      reference_no: reference_no,
-      v_no: reference_no,
-      updated_at: serverTimestamp()
-    }));
+        // Delete Old Entries
+        const eSnapOld = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
+        eSnapOld.docs.forEach(d => transaction.delete(d.ref));
+        const iSnapOld = await getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId)));
+        iSnapOld.docs.forEach(d => transaction.delete(d.ref));
 
-    // 5. Create New Accounting Entries
-    for (const entry of entries) {
-      const eRef = doc(collection(db, 'voucher_entries'));
-      batch.set(eRef, cleanData({
-        ...entry,
-        voucher_id: id,
-        companyId: oldVoucher.companyId,
-        date: voucher.v_date || oldVoucher.v_date, // Add date for easier reporting
-        created_at: serverTimestamp()
-      }));
-
-      // Update Ledger Balance
-      if (entry.ledger_id && existingLedgers.has(entry.ledger_id)) {
-        const lRef = doc(db, 'ledgers', entry.ledger_id);
-        const balanceChange = (entry.debit || 0) - (entry.credit || 0);
-        batch.update(lRef, { current_balance: increment(balanceChange) });
-      }
-    }
-
-    // 6. Create New Inventory Entries
-    if (inventoryEntries && inventoryEntries.length > 0) {
-      for (const i of inventoryEntries) {
-        const iRef = doc(collection(db, 'inventory_entries'));
-        const movementType = i.movement_type || i.m_type || (voucher.v_type === 'Sales' ? 'Outward' : 'Inward');
-        batch.set(iRef, cleanData({
-          ...i,
-          voucher_id: id,
-          companyId: oldVoucher.companyId,
-          movement_type: movementType,
-          created_at: serverTimestamp()
+        // 2. Apply New
+        const vRef = doc(db, 'vouchers', id);
+        const reference_no = voucher.v_no || '';
+        transaction.update(vRef, cleanData({
+          ...voucher,
+          reference_no: reference_no,
+          v_no: reference_no,
+          updated_at: serverTimestamp()
         }));
 
-        // Update Item Stats
-        if (i.item_id && existingItems.has(i.item_id)) {
-          const itemRef = doc(db, 'items', i.item_id);
-          const totalQty = (i.qty || 0) + (i.free_qty || 0);
-          const stockChange = movementType === 'Inward' ? totalQty : -totalQty;
-          batch.update(itemRef, { current_stock: increment(stockChange) });
-        }
-      }
-    }
+        for (const entry of entries) {
+          const eRef = doc(collection(db, 'voucher_entries'));
+          transaction.set(eRef, cleanData({
+            ...entry,
+            voucher_id: id,
+            companyId,
+            date: voucher.v_date || oldVoucher.v_date,
+            created_at: serverTimestamp()
+          }));
 
-    await batch.commit();
+          if (entry.ledger_id) {
+            const lRef = doc(db, 'ledgers', entry.ledger_id);
+            if (snapsCache[lRef.path]?.exists()) {
+              const balanceChange = (entry.debit || 0) - (entry.credit || 0);
+              transaction.update(lRef, { current_balance: increment(balanceChange) });
+            }
+          }
+        }
+
+        if (inventoryEntries && inventoryEntries.length > 0) {
+          for (const i of inventoryEntries) {
+            const invRef = doc(collection(db, 'inventory_entries'));
+            let movementType = i.movement_type || i.m_type || (vType === 'Sales' ? 'Outward' : 'Inward');
+            let adjustment_qty = 0;
+            let qtyChange = (movementType === 'Inward' ? (i.qty || 0) : -(i.qty || 0)) + (i.free_qty || 0);
+
+            if (vType.toLowerCase() === 'physical stock' && i.item_id) {
+              const iRef = doc(db, 'items', i.item_id);
+              const itemSnap = snapsCache[iRef.path];
+              const globalStock = (itemSnap && itemSnap.exists() ? itemSnap.data().current_stock : 0) || 0;
+              
+              let currentGodownStock = 0;
+              if (i.godown_id) {
+                const gsKey = `${i.godown_id}_${i.item_id}`;
+                const gsSnap = snapsCache[godownStockRefsMap[gsKey]?.path];
+                currentGodownStock = (gsSnap && gsSnap.exists() ? gsSnap.data().current_stock : 0) || 0;
+              }
+              
+              const targetQty = Number(i.qty) || 0;
+              adjustment_qty = targetQty - (i.godown_id ? currentGodownStock : globalStock);
+              movementType = adjustment_qty >= 0 ? 'Inward' : 'Outward';
+              qtyChange = adjustment_qty;
+            }
+
+            transaction.set(invRef, cleanData({
+              ...i,
+              voucher_id: id,
+              v_type: vType,
+              companyId,
+              movement_type: movementType,
+              adjustment_qty,
+              is_physical_snapshot: vType.toLowerCase() === 'physical stock',
+              created_at: serverTimestamp()
+            }));
+
+            if (i.item_id) {
+              const itemRef = doc(db, 'items', i.item_id);
+              if (vType.toLowerCase() === 'physical stock' && !i.godown_id) {
+                transaction.update(itemRef, { current_stock: Number(i.qty) || 0 });
+              } else {
+                transaction.update(itemRef, { current_stock: increment(qtyChange) });
+              }
+              
+              if (i.godown_id) {
+                const gsRef = doc(db, 'godown_stock', `${i.godown_id}_${i.item_id}`);
+                if (vType.toLowerCase() === 'physical stock') {
+                  transaction.set(gsRef, {
+                    godown_id: i.godown_id,
+                    item_id: i.item_id,
+                    companyId,
+                    current_stock: Number(i.qty) || 0,
+                    updatedAt: serverTimestamp()
+                  }, { merge: true });
+                } else {
+                  transaction.set(gsRef, { current_stock: increment(qtyChange) }, { merge: true });
+                }
+              }
+            }
+          }
+        }
+
+        return { success: true, itemIds };
+      });
+
+      const resItemIds = Array.from(new Set([...oldVoucher.inventory.map((i: any) => i.item_id), ...(inventoryEntries || []).map(i => i.item_id)])).filter(Boolean);
+      for (const itemId of resItemIds) {
+        await this.recalculateItemStats(itemId as string, companyId);
+      }
+      return true;
+    } catch (err: any) {
+      if (err.message && err.message.startsWith('{')) throw err;
+      handleFirestoreError(err, OperationType.WRITE, 'vouchers_update_transaction');
+    }
   },
 
   // Ledgers
@@ -1649,19 +1827,38 @@ export const erpService = {
       );
       
       const snap = await getDocs(q);
-      const entries = snap.docs.map(d => d.data());
+      const sortedEntries = snap.docs.map(d => ({ ...(d.data() as any), id: d.id }))
+        .sort((a, b) => {
+          const dateComp = (a.date || '').localeCompare(b.date || '');
+          if (dateComp !== 0) return dateComp;
+          return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
+        });
       
-      const inwardSummary = entries.filter(e => e.movement_type === 'Inward');
-      const outwardSummary = entries.filter(e => e.movement_type === 'Outward');
-      
-      const totalInward = inwardSummary.reduce((sum, e: any) => sum + (e.qty || 0) + (e.free_qty || 0), 0);
-      const totalOutward = outwardSummary.reduce((sum, e: any) => sum + (e.qty || 0) + (e.free_qty || 0), 0);
+      let currentStock = (item.opening_qty || 0);
+      let totalInward = 0;
+      let totalOutward = 0;
+
+      for (const e of sortedEntries) {
+        const qty = (e.qty || 0) + (e.free_qty || 0);
+        if (e.v_type?.toLowerCase() === 'physical stock') {
+          currentStock = (e.qty || 0);
+          // Adjustment logic for inward/outward totals if needed
+          if (e.adjustment_qty > 0) totalInward += e.adjustment_qty;
+          else if (e.adjustment_qty < 0) totalOutward += Math.abs(e.adjustment_qty);
+        } else if (e.movement_type === 'Inward') {
+          currentStock += qty;
+          totalInward += qty;
+        } else {
+          currentStock -= qty;
+          totalOutward += qty;
+        }
+      }
       
       return {
-        currentStock: (item.opening_qty || 0) + totalInward - totalOutward,
+        currentStock,
         totalInward,
         totalOutward,
-        lastRate: entries.length > 0 ? (entries[entries.length - 1] as any).rate : item.opening_rate
+        lastRate: sortedEntries.length > 0 ? sortedEntries[sortedEntries.length - 1].rate : item.opening_rate
       };
     } catch (error) {
       console.error('Error fetching item stats:', error);
@@ -1689,20 +1886,30 @@ export const erpService = {
         where('companyId', '==', effectiveCompanyId)
       );
       const snap = await getDocs(q);
-      const entries = snap.docs.map(d => d.data());
+      const entries = snap.docs.map(d => ({ ...(d.data() as any), id: d.id }))
+        .sort((a, b) => {
+          const dateComp = (a.date || '').localeCompare(b.date || '');
+          if (dateComp !== 0) return dateComp;
+          return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
+        });
       
       let stock = Number(effectiveItemData.opening_qty) || 0;
       let totalValue = stock * (Number(effectiveItemData.opening_rate) || 0);
       let totalQty = stock;
 
       for (const e of entries) {
+        const vType = e.v_type;
         const movementType = e.movement_type || e.m_type;
         const qty = Number(e.qty) || 0;
         const freeQty = Number(e.free_qty) || 0;
         const rate = Number(e.rate) || 0;
         const totalEntryQty = qty + freeQty;
 
-        if (movementType === 'Inward') {
+        if (vType?.toLowerCase() === 'physical stock') {
+          stock = qty; // For physical stock, the input qty is the new absolute stock
+          // Reset totalQty to match the new physical count so future avg cost calcs are accurate
+          totalQty = stock; 
+        } else if (movementType === 'Inward') {
           stock += totalEntryQty;
           totalValue += (qty * rate);
           totalQty += qty;

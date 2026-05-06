@@ -409,7 +409,7 @@ export function VoucherEntry() {
         const inv = v.inventory.map((i: any) => ({
           item_id: i.item_id || '',
           godown_id: i.godown_id || '',
-          qty: i.qty || 0,
+          qty: i.physical_qty !== undefined ? i.physical_qty : (i.qty || 0),
           free_qty: i.free_qty || 0,
           rate: i.rate || 0,
           disc_percent: i.discount_percent || 0,

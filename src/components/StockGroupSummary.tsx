@@ -34,14 +34,17 @@ export function StockGroupSummary() {
         setInventory(allInv || []);
 
         const getStock = (item: any, gId: string) => {
-          const openingQty = Number(item.opening_qty) || 0;
+          const openingAllocations = item.opening_godowns || [];
+          const godownOpening = openingAllocations.find((a: any) => a.godown_id === gId);
+          const openingForGodown = godownOpening ? (Number(godownOpening.qty) || 0) : 0;
+
           const transactionStock = allInv
             .filter(inv => inv.item_id === item.id && inv.godown_id === gId)
             .reduce((sum, inv) => {
               const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
               return inv.movement_type === 'Inward' ? sum + qty : sum - qty;
             }, 0);
-          return openingQty + transactionStock;
+          return openingForGodown + transactionStock;
         };
 
         const summary = stockGroups.map(group => {
@@ -108,7 +111,11 @@ export function StockGroupSummary() {
   }, [user?.companyId, selectedGodown]);
 
   const filteredGroups = groups
-    .filter(g => g.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter(g => {
+      const matchesSearch = g.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const hasStock = !selectedGodown || g.totalQty > 0;
+      return matchesSearch && hasStock;
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 
   if (loading) {

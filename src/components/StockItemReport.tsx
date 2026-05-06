@@ -130,7 +130,12 @@ export function StockItemReport() {
       const end = parseLocal(to);
       end.setHours(23, 59, 59, 999); // Include entire end day
       
-      // Calculate Opening Balance (sum of all entries before START date)
+      const godownAllocation = (item.opening_godowns || []).find((a: any) => a.godown_id === selectedGodown);
+      const initialQty = selectedGodown 
+        ? (Number(godownAllocation?.qty) || 0)
+        : (Number(item.opening_qty) || 0);
+      const initialValue = initialQty * (Number(item.opening_rate) || 0);
+
       const openingEntries = allInvEntries.filter((e: any) => {
         if (String(e.item_id) !== String(item.id)) return false;
         if (selectedGodown && e.godown_id !== selectedGodown) return false;
@@ -142,19 +147,26 @@ export function StockItemReport() {
         }
         return dateObj < start;
       });
+      
+      // Calculate Opening Balance (sum of all entries before START date)
+      const sortedOpeningEntries = [...openingEntries].sort((a, b) => {
+        const dateA = a.date || (a.created_at?.toDate?.() || 0);
+        const dateB = b.date || (b.created_at?.toDate?.() || 0);
+        return new Date(dateA).getTime() - new Date(dateB).getTime();
+      });
 
-      // Include master opening_qty and opening_qty * opening_rate in the initial opening calculations
-      // User specifically requested: (Global Opening + Filtered transactions)
-      const initialQty = Number(item.opening_qty) || 0;
-      const initialValue = initialQty * (Number(item.opening_rate) || 0);
-
-      const openingBalance = openingEntries.reduce((sum, e) => {
+      const openingBalance = sortedOpeningEntries.reduce((sum, e) => {
         const total = (e.qty || 0) + (e.free_qty || 0);
+        const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
+        if (isPhysical) return total;
         return sum + (e.movement_type === 'Inward' ? total : -total);
       }, initialQty);
 
-      const openingValue = openingEntries.reduce((sum, e) => {
+      const openingValue = sortedOpeningEntries.reduce((sum, e) => {
         const val = (e.qty || 0) * (e.rate || 0);
+        const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
+        // Valuation for physical stock is tricky, for now we treat it as inward if we don't have better info
+        if (isPhysical) return val || sum; 
         return sum + (e.movement_type === 'Inward' ? val : -val);
       }, initialValue);
 
@@ -215,25 +227,56 @@ export function StockItemReport() {
             if (e.date) return e.date === targetStr;
             const ed = new Date(e.created_at?.toDate?.() || 0);
             return toYMD(ed) === targetStr;
+          }).sort((a, b) => {
+            const timeA = a.created_at?.seconds || 0;
+            const timeB = b.created_at?.seconds || 0;
+            return timeA - timeB;
           });
           
-          const inward = dayEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'inward');
-          const outward = dayEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'outward');
+          let dayInQty = 0;
+          let dayInVal = 0;
+          let dayOutQty = 0;
+          let dayOutVal = 0;
 
-          const inQty = inward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0);
-          const outQty = outward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0);
-          const inVal = inward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0);
-          const outVal = outward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0);
+          for (const e of dayEntries) {
+            const total = (e.qty || 0) + (e.free_qty || 0);
+            const val = (e.qty || 0) * (e.rate || 0);
+            const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
 
-          runningQty += (inQty - outQty);
-          runningVal += (inVal - outVal);
+            if (isPhysical) {
+              const adj = total - runningQty;
+              const curRate = Number(e.rate) || 0;
+              if (adj >= 0) {
+                dayInQty += adj;
+                dayInVal += (adj * curRate);
+              } else {
+                dayOutQty += Math.abs(adj);
+              }
+              runningQty = total;
+              if (curRate > 0) {
+                runningVal = runningQty * curRate;
+              } else {
+                const prevTQ = runningQty - adj;
+                runningVal = prevTQ > 0 ? (runningVal / prevTQ) * runningQty : 0;
+              }
+            } else if ((e.movement_type || '').toLowerCase() === 'inward') {
+              dayInQty += total;
+              dayInVal += val;
+              runningQty += total;
+              runningVal += val;
+            } else {
+              dayOutQty += total;
+              dayOutVal += val;
+              runningQty -= total;
+            }
+          }
 
           days.push({
             label: targetStr,
-            inwardQty: inQty,
-            inwardValue: inVal,
-            outwardQty: outQty,
-            outwardValue: outVal,
+            inwardQty: dayInQty,
+            inwardValue: dayInVal,
+            outwardQty: dayOutQty,
+            outwardValue: dayOutVal,
             closingQty: runningQty,
             closingValue: runningVal
           });
@@ -276,25 +319,48 @@ export function StockItemReport() {
             }
             // Ensure we compare against normalized month/year from local date
             return dateObj.getMonth() === monthIdx && dateObj.getFullYear() === year;
+          }).sort((a, b) => {
+            const timeA = a.created_at?.seconds || 0;
+            const timeB = b.created_at?.seconds || 0;
+            return timeA - timeB;
           });
 
-          const inward = mEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'inward');
-          const outward = mEntries.filter((e: any) => (e.movement_type || '').toLowerCase() === 'outward');
+          let mInQty = 0;
+          let mInVal = 0;
+          let mOutQty = 0;
+          let mOutVal = 0;
 
-          const inQty = inward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0);
-          const outQty = outward.reduce((sum, e) => sum + (e.qty + (e.free_qty || 0)), 0);
-          const inVal = inward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0);
-          const outVal = outward.reduce((sum, e) => sum + (e.qty * (e.rate || 0)), 0);
+          for (const e of mEntries) {
+            const total = (e.qty || 0) + (e.free_qty || 0);
+            const val = (e.qty || 0) * (e.rate || 0);
 
-          runningQty += (inQty - outQty);
-          runningVal += (inVal - outVal);
+            if (e.v_type === 'Physical Stock') {
+              const adj = total - runningQty;
+              if (adj >= 0) {
+                mInQty += adj;
+                mInVal += (adj * (e.rate || 0));
+              } else {
+                mOutQty += Math.abs(adj);
+              }
+              runningQty = total;
+            } else if ((e.movement_type || '').toLowerCase() === 'inward') {
+              mInQty += total;
+              mInVal += val;
+              runningQty += total;
+              runningVal += val;
+            } else {
+              mOutQty += total;
+              mOutVal += val;
+              runningQty -= total;
+            }
+          }
 
           summary.push({
             label: curr.toLocaleString('default', { month: 'short', year: 'numeric' }),
-            inwardQty: inQty,
-            inwardValue: inVal,
-            outwardQty: outQty,
-            outwardValue: outVal,
+            inwardQty: mInQty,
+            inwardValue: mInVal,
+            outwardQty: mOutQty,
+            outwardValue: mOutVal,
             closingQty: runningQty,
             closingValue: runningVal
           });
@@ -642,19 +708,19 @@ export function StockItemReport() {
                       <tr>
                         <td className="px-6 py-4 border-r border-gray-100 uppercase text-[10px]">{t('common.total')}</td>
                         <td className="px-6 py-4 text-right">
-                          {formatQty(summaryData.reduce((sum, m) => sum + m.inwardQty, 0))}
+                          {formatQty(summaryData.filter(m => !m.isOpening).reduce((sum, m) => sum + m.inwardQty, 0))}
                         </td>
                         <td className="px-6 py-4 text-right border-r border-gray-100">
-                          {formatCurrency(summaryData.reduce((sum, m) => sum + m.inwardValue, 0))}
+                          {formatCurrency(summaryData.filter(m => !m.isOpening).reduce((sum, m) => sum + m.inwardValue, 0))}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          {formatQty(summaryData.reduce((sum, m) => sum + m.outwardQty, 0))}
+                          {formatQty(summaryData.filter(m => !m.isOpening).reduce((sum, m) => sum + m.outwardQty, 0))}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          {formatCurrency(summaryData.reduce((sum, m) => sum + m.outwardValue, 0))}
+                          {formatCurrency(summaryData.filter(m => !m.isOpening).reduce((sum, m) => sum + m.outwardValue, 0))}
                         </td>
                         <td className="px-6 py-4 text-right text-primary">
-                          {formatQty(summaryData.reduce((sum, m) => sum + (m.inwardQty - m.outwardQty), 0))}
+                          {formatQty(summaryData.length > 0 ? summaryData[summaryData.length - 1].closingQty : 0)}
                         </td>
                       </tr>
                     </tfoot>
@@ -704,12 +770,23 @@ export function StockItemReport() {
                             <td className="px-6 py-3 text-sm font-medium text-gray-900 capitalize">
                               {tx.party_name}
                             </td>
-                            <td className={cn(
-                              "px-6 py-3 text-sm text-right font-bold",
-                              tx.movement_type === 'Inward' ? "text-green-600" : "text-red-600"
-                            )}>
-                              {formatQty(tx.qty + (tx.free_qty || 0))}
-                            </td>
+          <td className={cn(
+            "px-6 py-3 text-sm text-right font-bold",
+            (tx.v_type?.toLowerCase() === 'physical stock' || tx.is_physical_snapshot)
+              ? (tx.adjustment_qty >= 0 ? "text-green-600" : "text-red-600")
+              : (tx.movement_type === 'Inward' ? "text-green-600" : "text-red-600")
+          )}>
+            {(tx.v_type?.toLowerCase() === 'physical stock' || tx.is_physical_snapshot) ? (
+              <div className="flex flex-col items-end">
+                <span>{formatQty(tx.qty)}</span>
+                <span className="text-[10px] opacity-70 font-medium italic">
+                  ({tx.adjustment_qty >= 0 ? '+' : ''}{formatQty(tx.adjustment_qty)})
+                </span>
+              </div>
+            ) : (
+              formatQty(tx.qty + (tx.free_qty || 0))
+            )}
+          </td>
                             <td className="px-6 py-3 text-sm text-right text-gray-600">
                               {formatCurrency(tx.rate)}
                             </td>

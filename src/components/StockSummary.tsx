@@ -89,24 +89,34 @@ export function StockSummary() {
 
   const getStockForGodown = (itemId: string, godownId: string | null) => {
     const item = items.find(i => i.id === itemId);
-    const openingQty = item?.opening_qty || 0;
     const openingAllocations = item?.opening_godowns || [];
 
     if (!godownId) {
       return item?.current_stock || 0;
     }
     
+    // Get opening stock specifically for this godown
+    const godownOpening = openingAllocations.find((a: any) => a.godown_id === godownId);
+    const openingForGodown = godownOpening ? (Number(godownOpening.qty) || 0) : 0;
+    
     // Calculate stock from transactions for this specific godown
-    const transactionStock = inventory
+    const sortedInv = [...inventory]
       .filter(inv => inv.item_id === itemId && inv.godown_id === godownId)
-      .reduce((sum, inv) => {
-        const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
-        return inv.movement_type === 'Inward' ? sum + qty : sum - qty;
-      }, 0);
+      .sort((a, b) => {
+        const dateComp = (a.date || '').localeCompare(b.date || '');
+        if (dateComp !== 0) return dateComp;
+        return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
+      });
 
-    // Use Global Opening Balance as starting point for specific godown as requested
-    // Logic: Global Opening + Godown-specific transactions
-    return transactionStock + openingQty;
+    const transactionStock = sortedInv.reduce((sum, inv) => {
+      const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
+      if (inv.v_type === 'Physical Stock') {
+        return qty; // Absolute reset
+      }
+      return inv.movement_type === 'Inward' ? sum + qty : sum - qty;
+    }, openingForGodown);
+
+    return transactionStock;
   };
 
   const processedItems = items.map(item => ({
