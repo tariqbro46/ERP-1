@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Save, Printer, Loader2, RefreshCw, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon, AlertCircle, Settings2, TrendingUp } from 'lucide-react';
-import { cn, formatNumber } from '../lib/utils';
+import { cn, formatNumber, formatQuantity } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
@@ -1417,7 +1417,7 @@ export function VoucherEntry() {
                           />
                           {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
                             <p className="text-[8px] text-gray-500 uppercase">
-                              {t('item.currentStock')}: <span className="font-bold text-foreground">{itemStocks[`${entry.item_id}-${entry.godown_id}`]} {entry.unit}</span>
+                              {t('item.currentStock')}: <span className="font-bold text-foreground">{formatQuantity(itemStocks[`${entry.item_id}-${entry.godown_id}`], entry.unit)} {entry.unit}</span>
                             </p>
                           )}
                         </div>
@@ -1646,7 +1646,7 @@ export function VoucherEntry() {
                       />
                       {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
                         <p className="text-[8px] text-gray-500 uppercase">
-                          {t('item.currentStock')}: <span className="font-bold text-foreground">{itemStocks[`${entry.item_id}-${entry.godown_id}`]} {entry.unit}</span>
+                          {t('item.currentStock')}: <span className="font-bold text-foreground">{formatQuantity(itemStocks[`${entry.item_id}-${entry.godown_id}`], entry.unit)} {entry.unit}</span>
                         </p>
                       )}
                     </div>

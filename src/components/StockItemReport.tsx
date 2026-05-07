@@ -455,12 +455,7 @@ export function StockItemReport() {
 
   const formatQty = (qty: number) => {
     if (qty === 0) return '-';
-    // Use the custom unit name or formatted name
-    const unitName = selectedItem?.unitName?.toLowerCase() || '';
-    const isPcs = unitName === 'pcs' || unitName === 'pc' || unitName === 'nos';
-    
-    if (isPcs) return formatQuantity(qty, 0);
-    return formatQuantity(qty, 2);
+    return formatQuantity(qty, selectedItem?.unitName || '');
   };
 
   const handleDownloadPDF = () => {

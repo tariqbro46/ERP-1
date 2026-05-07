@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, Printer, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn, formatNumber } from '../lib/utils';
+import { cn, formatNumber, formatQuantity } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { pdfService } from '../services/pdfService';
 import { useAuth } from '../contexts/AuthContext';
@@ -515,8 +515,8 @@ export function Daybook() {
                                     </div>
                                   </td>
                                   <td className="py-1">{godowns.find(g => g.id === item.godown_id)?.name || '-'}</td>
-                                  <td className="py-1 text-right">{formatNumber(item.qty)}</td>
-                                  <td className="py-1 text-right">{formatNumber(item.free_qty || 0)}</td>
+                                  <td className="py-1 text-right">{formatQuantity(item.qty, item.unit)}</td>
+                                  <td className="py-1 text-right">{formatQuantity(item.free_qty || 0, item.unit)}</td>
                                   <td className="py-1 text-right">{formatNumber(item.rate)}</td>
                                   <td className="py-1 text-center">{item.unit || 'pcs'}</td>
                                   <td className="py-1 text-right">{item.disc_percent || 0}%</td>

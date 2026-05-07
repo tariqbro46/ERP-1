@@ -10,3 +10,8 @@
 - Gold Plan (Tier 3) and above should have access to all major modules (Payroll, Order Management, Manufacturing, Analytics) by default.
 - The "Marketing Manager" role must be available in the Permissions tab for all companies.
 - When checking features, use both granular IDs and broad module IDs.
+
+## Numeric Formatting
+- Quantity values for items with units like "Pcs", "Pc", or "Nos" MUST NOT show any decimal places.
+- All other numeric values (Rate, Amount, Totals, or non-Pcs quantities) MUST NOT show more than 2 decimal places.
+- Use the `formatQuantity` utility for quantities and `formatNumber`/`formatCurrency` for financial values to ensure consistency.

@@ -205,14 +205,6 @@ export function StockSummary() {
     return true;
   }).sort((a, b) => a.name.localeCompare(b.name));
 
-  const formatQty = (qty: number, unitName?: string) => {
-    const isPcs = unitName?.toLowerCase() === 'pcs' || unitName?.toLowerCase() === 'pc' || unitName?.toLowerCase() === 'nos';
-    if (qty === 0) return isPcs ? '0' : '0.00';
-    
-    if (isPcs) return formatQuantity(qty, 0);
-    return formatQuantity(qty, 2);
-  };
-
   const groupedItems: Record<string, any[]> = {};
   processedItems.forEach(item => {
     const group = item.category || 'General Items';
@@ -479,7 +471,7 @@ export function StockSummary() {
                         <span className="text-xs text-foreground/80 italic">
                           {highlightText(item.name, search)}
                         </span>
-                        <span className="text-xs font-bold text-foreground font-mono">{formatQty(item.displayStock, item.units?.name)}</span>
+                        <span className="text-xs font-bold text-foreground font-mono">{formatQuantity(item.displayStock, item.units?.name)}</span>
                       </div>
                       <div className="flex justify-between items-center text-[10px] text-gray-500 uppercase">
                         <span>{t('common.avgRate')}: ৳ {formatNumber(item.avg_cost || item.opening_rate || 0)}</span>
@@ -571,16 +563,16 @@ export function StockSummary() {
                             )}
                           </td>
                            <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
-                             {formatQty(item.opening, item.units?.name)}
+                             {formatQuantity(item.opening, item.units?.name)}
                            </td>
                            <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
-                             {formatQty(item.inward, item.units?.name)}
+                             {formatQuantity(item.inward, item.units?.name)}
                            </td>
                            <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
-                             {formatQty(item.outward, item.units?.name)}
+                             {formatQuantity(item.outward, item.units?.name)}
                            </td>
                            <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5">
-                             {formatQty(item.displayStock, item.units?.name)}
+                             {formatQuantity(item.displayStock, item.units?.name)}
                            </td>
                            <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5">
                              {formatNumber(item.avg_cost || item.opening_rate || 0)}

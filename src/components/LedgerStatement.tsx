@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Printer, Download, ArrowLeft, Calculator, FileText, Settings as SettingsIcon, Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { cn, formatCurrency, formatNumber } from '../lib/utils';
+import { cn, formatCurrency, formatNumber, formatQuantity } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -248,7 +248,7 @@ export function LedgerStatement() {
           const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
           exportData.push({
             date: '',
-            particulars: `  ${itemName} (${item.qty} ${item.unit || 'pcs'} @ ${item.rate})`,
+            particulars: `  ${itemName} (${formatQuantity(item.qty, item.unit || 'pcs')} ${item.unit || 'pcs'} @ ${formatNumber(item.rate)})`,
             vch_no: '',
             vch_type: '',
             debit: 0,
@@ -360,7 +360,7 @@ export function LedgerStatement() {
               return `
                 <div style="display: flex; font-size: 11px; margin-left: 40px; color: #000;">
                   <div style="width: 150px; text-align: right; padding-right: 20px;">${itemName}</div>
-                  <div style="width: 80px; text-align: right;">${formatNumber(item.qty)} ${item.unit || 'Pcs'}</div>
+                  <div style="width: 80px; text-align: right;">${formatQuantity(item.qty, item.unit || 'Pcs')} ${item.unit || 'Pcs'}</div>
                   <div style="width: 100px; text-align: right;">${formatNumber(item.rate)}/Pcs</div>
                   <div style="width: 100px; text-align: right;">${formatNumber(item.amount)}</div>
                 </div>
@@ -533,7 +533,7 @@ export function LedgerStatement() {
                 <td style="padding: 1px 5px 1px 20px; font-size: 11px; color: #333;">
                   <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
                     <span style="font-weight: 500;">${itemName}</span>
-                    <span style="font-size: 10px; color: #666; white-space: nowrap;">${item.qty.toLocaleString()} ${item.unit || 'pcs'}</span>
+                    <span style="font-size: 10px; color: #666; white-space: nowrap;">${formatQuantity(item.qty, item.unit || 'pcs')} ${item.unit || 'pcs'}</span>
                   </div>
                   ${config.showStockDescriptions && item.description ? `<div style="font-size: 9px; font-style: italic; color: #666;">${item.description}</div>` : ''}
                 </td>

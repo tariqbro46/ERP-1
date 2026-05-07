@@ -5,7 +5,7 @@ import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { formatCurrency, formatNumber, cn } from '../lib/utils';
+import { formatCurrency, formatNumber, formatQuantity, cn } from '../lib/utils';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
@@ -228,7 +228,7 @@ export function VoucherDetail() {
                       {item.godown_name && <div className="text-[9px] text-gray-500 mt-1">Location: {item.godown_name}</div>}
                     </div>
                     <div className="col-span-2 text-right font-mono">
-                      {formatNumber(item.qty)} {item.unit}
+                      {formatQuantity(item.qty, item.unit)} {item.unit}
                     </div>
                     <div className="col-span-2 text-right font-mono">
                       {formatNumber(item.rate)}

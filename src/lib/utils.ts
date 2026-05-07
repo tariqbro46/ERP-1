@@ -15,14 +15,15 @@ export function formatCurrency(amount: number, symbol: string = '৳'): string {
 
 export function formatNumber(amount: number): string {
   return new Intl.NumberFormat('en-BD', {
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount || 0);
 }
 
-export function formatQuantity(amount: number, decimals: number = 2): string {
+export function formatQuantity(amount: number, unit?: string): string {
+  const isPcs = unit?.toLowerCase() === 'pcs' || unit?.toLowerCase() === 'pc' || unit?.toLowerCase() === 'nos';
   return new Intl.NumberFormat('en-BD', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: decimals,
+    maximumFractionDigits: isPcs ? 0 : 2,
   }).format(amount || 0);
 }
