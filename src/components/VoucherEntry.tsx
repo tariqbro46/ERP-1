@@ -13,6 +13,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { printVoucher } from '../utils/printUtils';
 import { pdfService } from '../services/pdfService';
+import { errorService } from '../services/errorService';
 import { BankDetails, VoucherType, UserRole, Company, Ledger, Voucher, UserProfile, VoucherEntry as VoucherEntryType, InventoryEntry, Item } from '../types';
 
 function Toggle({ enabled, onChange, label }: { enabled: boolean, onChange: () => void, label: string }) {
@@ -723,7 +724,7 @@ export function VoucherEntry() {
       }
       
       let finalAccEntries = [];
-      if (isInventory) {
+      if (isInventory && !isPhysicalStock) {
         finalAccEntries = [
           {
             ledger_id: partyLedgerId,
@@ -738,6 +739,9 @@ export function VoucherEntry() {
             entry_index: 1
           }
         ];
+      } else if (isPhysicalStock) {
+        // Physical Stock usually doesn't have accounting entries
+        finalAccEntries = [];
       } else if (isSingleEntry) {
         const mainEntry = {
           ledger_id: bankCashLedgerId,
@@ -812,8 +816,26 @@ export function VoucherEntry() {
       if (isEdit) {
         navigate(-1);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving voucher:', err);
+      // Log to technical logs
+      errorService.logError({
+        message: `Voucher Save Failed: ${err.message || 'Unknown Error'}`,
+        stack: err.stack,
+        componentName: 'VoucherEntry',
+        severity: 'error',
+        companyId: user?.companyId,
+        metadata: {
+          vType,
+          vNo: refNo,
+          isEdit,
+          voucherData: {
+            v_type: vType,
+            total: finalTotal,
+            party: partyLedgerId
+          }
+        }
+      });
       showNotification('Failed to save voucher');
     } finally {
       setLoading(false);

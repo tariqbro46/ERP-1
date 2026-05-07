@@ -1,5 +1,6 @@
 import { db, auth } from '../firebase';
 import { ensureDate } from '../lib/utils';
+import { errorService } from './errorService';
 import { 
   collection, 
   addDoc, 
@@ -102,6 +103,19 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     operationType,
     path
   }
+  
+  // Persist error to Firestore for founder visibility
+  errorService.logError({
+    message: `Firestore Error: ${errInfo.error}`,
+    metadata: {
+      operationType,
+      path,
+      auth: errInfo.authInfo
+    },
+    severity: 'error',
+    componentName: 'erpService'
+  });
+
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
