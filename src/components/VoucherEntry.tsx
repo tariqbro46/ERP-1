@@ -603,7 +603,13 @@ export function VoucherEntry() {
 
   const isBalanced = () => {
     if (isInventory) {
-      if (isPhysicalStock) return invEntries.every(i => i.item_id && i.qty > 0);
+      if (isPhysicalStock) {
+        const activeEntries = invEntries.filter(i => i.item_id);
+        return activeEntries.length > 0 && activeEntries.every(i => {
+          const q = Number(i.qty);
+          return !isNaN(q) && q >= 0;
+        });
+      }
       return partyLedgerId && salesPurchaseLedgerId && invEntries.every(i => i.item_id && i.qty > 0);
     }
     if (isStockJournal) {
@@ -768,12 +774,12 @@ export function VoucherEntry() {
           id!, 
           voucher, 
           finalAccEntries, 
-          isInventory ? invEntries.map(i => ({ 
+          isInventory ? invEntries.filter(i => i.item_id).map(i => ({ 
             ...i, 
             entry_type: i.entry_type || (vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward'),
             item_name: items.find(item => item.id === i.item_id)?.name,
             m_type: vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward' 
-          })) : (isStockJournal ? [...consumptionEntries.map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
+          })) : (isStockJournal ? [...consumptionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
             ...i,
             item_name: items.find(item => item.id === i.item_id)?.name,
             m_type: i.entry_type === 'Consumption' ? 'Outward' : 'Inward'
@@ -786,12 +792,12 @@ export function VoucherEntry() {
           user.uid,
           voucher, 
           finalAccEntries, 
-          isInventory ? invEntries.map(i => ({ 
+          isInventory ? invEntries.filter(i => i.item_id).map(i => ({ 
             ...i, 
             entry_type: i.entry_type || (vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward'),
             item_name: items.find(item => item.id === i.item_id)?.name,
             m_type: vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward' 
-          })) : (isStockJournal ? [...consumptionEntries.map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
+          })) : (isStockJournal ? [...consumptionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
             ...i,
             item_name: items.find(item => item.id === i.item_id)?.name,
             m_type: i.entry_type === 'Consumption' ? 'Outward' : 'Inward'
