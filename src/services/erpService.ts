@@ -104,17 +104,23 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     path
   }
   
-  // Persist error to Firestore for founder visibility
-  errorService.logError({
-    message: `Firestore Error: ${errInfo.error}`,
-    metadata: {
-      operationType,
-      path,
-      auth: errInfo.authInfo
-    },
-    severity: 'error',
-    componentName: 'erpService'
-  });
+  // Persist error to Firestore for founder visibility - wrap in try-catch to avoid blocking
+  try {
+    errorService.logError({
+      message: `Firestore Error: ${errInfo.error}`,
+      metadata: {
+        operationType,
+        path,
+        auth: errInfo.authInfo,
+        stack: error instanceof Error ? error.stack : undefined
+      },
+      severity: 'error',
+      companyId: localStorage.getItem('last_company_id') || undefined,
+      componentName: 'erpService'
+    });
+  } catch (logErr) {
+    console.error('Failed to log error to Firestore:', logErr);
+  }
 
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
@@ -390,6 +396,9 @@ export const erpService = {
       const counterRef = doc(db, 'counters', `${companyId}_voucher_${typeKey}`);
 
       const res = await runTransaction(db, async (transaction) => {
+        // Log transaction start attempt
+        console.log(`Starting transaction for ${vType} in company ${companyId}`);
+        
         // 1. All mandatory reads first
         const reads: Promise<DocumentSnapshot>[] = [transaction.get(counterRef)];
         

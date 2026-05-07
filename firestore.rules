@@ -40,26 +40,28 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    function getCompanyData(companyId) {
-      return get(/databases/$(database)/documents/companies/$(companyId)).data;
+    function getUserCompanyId() {
+      let data = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return data == null ? "" : data.get('companyId', '');
     }
-    
+
     function isCompanyMember(companyId) {
-      return isAuthenticated() && (
+      return isAuthenticated() && companyId != null && companyId != "" && (
         isSuperAdmin() || 
-        (companyId != null && companyId != "" && userExists() && getUserData().get('companyId', '') == companyId) ||
-        (companyId != null && companyId != "" && exists(/databases/$(database)/documents/companies/$(companyId)) && 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserCompanyId() == companyId) ||
+        (exists(/databases/$(database)/documents/companies/$(companyId)) && 
          (get(/databases/$(database)/documents/companies/$(companyId)).data.get('ownerId', '') == request.auth.uid || 
           get(/databases/$(database)/documents/companies/$(companyId)).data.get('createdBy', '') == request.auth.uid))
       );
     }
     
     function isCompanyAdmin(companyId) {
-      return isAuthenticated() && (
+      return isAuthenticated() && companyId != null && companyId != "" && (
         isSuperAdmin() || 
-        (companyId != null && companyId != "" && userExists() && getUserData().get('companyId', '') == companyId && 
-         (getUserData().get('role', '') in ['Admin', 'Founder', 'Marketing Manager'])) ||
-        (companyId != null && companyId != "" && exists(/databases/$(database)/documents/companies/$(companyId)) && 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         getUserCompanyId() == companyId && 
+         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') in ['Admin', 'Founder', 'Marketing Manager'])) ||
+        (exists(/databases/$(database)/documents/companies/$(companyId)) && 
          (get(/databases/$(database)/documents/companies/$(companyId)).data.get('ownerId', '') == request.auth.uid || 
           get(/databases/$(database)/documents/companies/$(companyId)).data.get('createdBy', '') == request.auth.uid))
       );
@@ -136,21 +138,24 @@ service cloud.firestore {
 
     // ERP Data
     match /ledgers/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
+      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
+      allow list: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /items/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
+      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
+      allow list: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /vouchers/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
+      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
+      allow list: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
@@ -164,14 +169,16 @@ service cloud.firestore {
     }
 
     match /voucher_entries/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
+      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
+      allow list: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
     }
 
     match /inventory_entries/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
+      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
+      allow list: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
@@ -283,7 +290,8 @@ service cloud.firestore {
     }
 
     match /godown_stock/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
+      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
+      allow list: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
       allow create: if isCompanyMember(request.resource.data.companyId);
       allow update: if isCompanyMember(resource.data.companyId);
       allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
@@ -296,20 +304,9 @@ service cloud.firestore {
     }
 
     match /counters/{id} {
-      allow read: if isAuthenticated() && (
+      allow read, create, update: if isAuthenticated() && (
         isSuperAdmin() || 
-        (resource != null && isCompanyMember(resource.data.get('companyId', ''))) ||
-        (id.matches("^" + getUserData().get('companyId', '') + ".*"))
-      );
-      allow create: if isAuthenticated() && (
-        isSuperAdmin() || 
-        isCompanyMember(request.resource.data.get('companyId', '')) ||
-        (id.matches("^" + getUserData().get('companyId', '') + ".*"))
-      );
-      allow update: if isAuthenticated() && (
-        isSuperAdmin() || 
-        (resource != null && isCompanyMember(resource.data.get('companyId', ''))) ||
-        (id.matches("^" + getUserData().get('companyId', '') + ".*"))
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && id.startsWith(getUserCompanyId()))
       );
       allow delete: if isSuperAdmin();
     }

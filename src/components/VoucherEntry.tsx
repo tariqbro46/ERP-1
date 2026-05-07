@@ -532,11 +532,11 @@ export function VoucherEntry() {
     setIsQuickLedgerOpen(true);
   };
 
-  const isPhysicalStock = vType === 'Physical Stock';
-  const isInventory = vType === 'Sales' || vType === 'Purchase' || isPhysicalStock;
-  const isStockJournal = vType === 'Stock Journal';
-  const isSingleEntry = vType === 'Payment' || vType === 'Receipt' || vType === 'Contra';
-  const isJournal = vType === 'Journal';
+  const isPhysicalStock = vType.toLowerCase() === 'physical stock';
+  const isInventory = vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'purchase' || isPhysicalStock;
+  const isStockJournal = vType.toLowerCase() === 'stock journal';
+  const isSingleEntry = vType.toLowerCase() === 'payment' || vType.toLowerCase() === 'receipt';
+  const isJournal = vType.toLowerCase() === 'journal' || vType.toLowerCase() === 'contra';
 
   const handleBarcodeScan = async (code: string) => {
     if (!code.trim() || !user?.companyId) return;
@@ -605,12 +605,14 @@ export function VoucherEntry() {
     if (isInventory) {
       if (isPhysicalStock) {
         const activeEntries = invEntries.filter(i => i.item_id);
-        return activeEntries.length > 0 && activeEntries.every(i => {
+        if (activeEntries.length === 0) return false;
+        return activeEntries.every(i => {
           const q = Number(i.qty);
+          // Allow 0 for physical stock, but reject negative/NaN
           return !isNaN(q) && q >= 0;
         });
       }
-      return partyLedgerId && salesPurchaseLedgerId && invEntries.every(i => i.item_id && i.qty > 0);
+      return partyLedgerId && salesPurchaseLedgerId && invEntries.length > 0 && invEntries.every(i => i.item_id && Number(i.qty) > 0);
     }
     if (isStockJournal) {
       return consumptionEntries.every(e => e.item_id && e.qty > 0) && 
