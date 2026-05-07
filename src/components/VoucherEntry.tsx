@@ -778,9 +778,9 @@ export function VoucherEntry() {
           finalAccEntries, 
           isInventory ? invEntries.filter(i => i.item_id).map(i => ({ 
             ...i, 
-            entry_type: i.entry_type || (vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward'),
+            entry_type: i.entry_type || (vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'physical stock' ? 'Outward' : 'Inward'),
             item_name: items.find(item => item.id === i.item_id)?.name,
-            m_type: vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward' 
+            m_type: vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'physical stock' ? 'Outward' : 'Inward' 
           })) : (isStockJournal ? [...consumptionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
             ...i,
             item_name: items.find(item => item.id === i.item_id)?.name,
@@ -796,9 +796,9 @@ export function VoucherEntry() {
           finalAccEntries, 
           isInventory ? invEntries.filter(i => i.item_id).map(i => ({ 
             ...i, 
-            entry_type: i.entry_type || (vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward'),
+            entry_type: i.entry_type || (vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'physical stock' ? 'Outward' : 'Inward'),
             item_name: items.find(item => item.id === i.item_id)?.name,
-            m_type: vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward' 
+            m_type: vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'physical stock' ? 'Outward' : 'Inward' 
           })) : (isStockJournal ? [...consumptionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
             ...i,
             item_name: items.find(item => item.id === i.item_id)?.name,
@@ -1624,7 +1624,7 @@ export function VoucherEntry() {
                       <div className="flex justify-end">
                         <button 
                           type="button"
-                          onClick={() => setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: vType === 'Sales' || vType === 'Physical Stock' ? 'Outward' : 'Inward' }])}
+                          onClick={() => setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'physical stock' ? 'Outward' : 'Inward' }])}
                           tabIndex={500}
                           className={cn(
                             "px-4 py-1.5 text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",

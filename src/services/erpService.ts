@@ -406,7 +406,7 @@ export const erpService = {
         const itemRefsMap: Record<string, DocumentReference> = {};
         const godownStockRefsMap: Record<string, DocumentReference> = {};
 
-        if (vType === 'Physical Stock' && inventoryEntries && inventoryEntries.length > 0) {
+        if (vType.toLowerCase() === 'physical stock' && inventoryEntries && inventoryEntries.length > 0) {
           for (const inv of inventoryEntries) {
             if (inv.item_id) {
               if (!itemRefsMap[inv.item_id]) {
