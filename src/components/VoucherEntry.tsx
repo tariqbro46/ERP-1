@@ -1227,7 +1227,17 @@ export function VoucherEntry() {
                             setConsumptionEntries(next);
                           }} tabIndex={103 + idx * 10} />
                         </td>
-                        <td className="px-1 py-1 w-24 text-right font-bold text-[10px]">{formatNumber(e.amount)}</td>
+                        <td className="px-1 py-1 w-24">
+                          <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.amount || ''} onFocus={e => e.target.value === '0' && e.target.select()} onChange={val => {
+                            const next = [...consumptionEntries];
+                            const newAmount = Number(val.target.value);
+                            next[idx].amount = newAmount;
+                            if (next[idx].qty > 0) {
+                              next[idx].rate = newAmount / next[idx].qty;
+                            }
+                            setConsumptionEntries(next);
+                          }} tabIndex={104 + idx * 10} />
+                        </td>
                         <td className="px-1 py-1 text-center">
                           <button onClick={() => setConsumptionEntries(consumptionEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-500/50 group-hover:text-rose-500" /></button>
                         </td>
@@ -1304,7 +1314,17 @@ export function VoucherEntry() {
                             setProductionEntries(next);
                           }} tabIndex={503 + idx * 10} />
                         </td>
-                        <td className="px-1 py-1 w-24 text-right font-bold text-[10px]">{formatNumber(e.amount)}</td>
+                        <td className="px-1 py-1 w-24">
+                          <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.amount || ''} onFocus={e => e.target.value === '0' && e.target.select()} onChange={val => {
+                            const next = [...productionEntries];
+                            const newAmount = Number(val.target.value);
+                            next[idx].amount = newAmount;
+                            if (next[idx].qty > 0) {
+                              next[idx].rate = newAmount / next[idx].qty;
+                            }
+                            setProductionEntries(next);
+                          }} tabIndex={504 + idx * 10} />
+                        </td>
                         <td className="px-1 py-1 text-center">
                           <button onClick={() => setProductionEntries(productionEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-emerald-500/50 group-hover:text-emerald-500" /></button>
                         </td>
@@ -1543,12 +1563,25 @@ export function VoucherEntry() {
                             </td>
                           )}
                           <td className={cn("text-right text-foreground font-bold w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
-                            <span 
+                            <input 
+                              type="number"
                               tabIndex={17 + idx * 10}
-                              className="outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded block"
-                            >
-                              {baseCurrencySymbol} {formatNumber(entry.amount)}
-                            </span>
+                              className="bg-transparent border-none text-foreground outline-none w-full text-right font-bold"
+                              value={entry.amount || ''}
+                              onFocus={e => e.target.value === '0' && e.target.select()}
+                              onChange={e => {
+                                const next = [...invEntries];
+                                const newAmount = Number(e.target.value);
+                                next[idx].amount = newAmount;
+                                
+                                if (next[idx].qty > 0) {
+                                  const taxFactor = 1 + (next[idx].tax_percent / 100);
+                                  const discFactor = 1 - (next[idx].disc_percent / 100);
+                                  next[idx].rate = newAmount / (taxFactor * discFactor * next[idx].qty);
+                                }
+                                setInvEntries(next);
+                              }}
+                            />
                           </td>
                         </>
                       )}
@@ -1733,7 +1766,27 @@ export function VoucherEntry() {
 
                     <div className="flex justify-between items-center pt-2 border-t border-border/50">
                       <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.amount')}</span>
-                      <span className="text-sm text-foreground font-bold">{baseCurrencySymbol} {formatNumber(entry.amount)}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-foreground font-bold">{baseCurrencySymbol}</span>
+                        <input 
+                          type="number"
+                          className="w-24 bg-background border border-border text-foreground p-1 text-right text-sm font-bold outline-none focus:border-foreground"
+                          value={entry.amount || ''}
+                          onFocus={e => e.target.value === '0' && e.target.select()}
+                          onChange={e => {
+                            const next = [...invEntries];
+                            const newAmount = Number(e.target.value);
+                            next[idx].amount = newAmount;
+                            
+                            if (next[idx].qty > 0) {
+                              const taxFactor = 1 + (next[idx].tax_percent / 100);
+                              const discFactor = 1 - (next[idx].disc_percent / 100);
+                              next[idx].rate = newAmount / (taxFactor * discFactor * next[idx].qty);
+                            }
+                            setInvEntries(next);
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
