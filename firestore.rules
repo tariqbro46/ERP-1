@@ -338,6 +338,12 @@ service cloud.firestore {
       allow write: if isFounder();
     }
 
+    // Error Logs
+    match /error_logs/{logId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isFounder();
+    }
+
     // Subscription Orders
     match /subscription_orders/{orderId} {
       allow read: if isAuthenticated() && (

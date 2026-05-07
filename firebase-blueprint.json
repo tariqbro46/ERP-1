@@ -481,9 +481,34 @@
         },
         "updatedAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "ErrorLog": {
+      "title": "Error Log",
+      "description": "Captured error information for debugging.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "companyId": { "type": "string" },
+        "message": { "type": "string" },
+        "stack": { "type": "string" },
+        "componentName": { "type": "string" },
+        "path": { "type": "string" },
+        "browserInfo": { "type": "string" },
+        "severity": { "type": "string", "enum": ["info", "warning", "error", "critical"] },
+        "status": { "type": "string", "enum": ["new", "investigating", "resolved", "ignored"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["message", "path", "severity", "status", "timestamp"]
     }
   },
   "firestore": {
+    "/error_logs/{id}": {
+      "schema": "ErrorLog",
+      "description": "Collection of technical error logs."
+    },
     "/site_content/{pageId}": {
       "schema": "SiteContent",
       "description": "Content for landing pages."

@@ -456,3 +456,19 @@ export interface MenuConfig {
   groups: MenuGroupConfig[];
   updatedAt: any;
 }
+
+export interface ErrorLog {
+  id: string;
+  userId?: string;
+  userEmail?: string;
+  companyId?: string;
+  message: string;
+  stack?: string;
+  componentName?: string;
+  path: string;
+  browserInfo: string;
+  severity: 'info' | 'warning' | 'error' | 'critical';
+  status: 'new' | 'investigating' | 'resolved' | 'ignored';
+  timestamp: any;
+  metadata?: Record<string, any>;
+}

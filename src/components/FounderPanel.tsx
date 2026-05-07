@@ -75,6 +75,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn, ensureDate } from '../lib/utils';
 import { SiteContentEditor } from './SiteContentEditor';
 import { AVAILABLE_FEATURES, FeatureCategory } from '../constants/features';
+import { errorService } from '../services/errorService';
 
 interface CompanyStats extends Company {
   userCount: number;
@@ -97,7 +98,7 @@ export default function FounderPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<CompanyStats | null>(null);
   const [isEditingSubscription, setIsEditingSubscription] = useState(false);
-  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent' | 'plans' | 'orders' | 'menu' | 'features'>('companies');
+  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent' | 'plans' | 'orders' | 'menu' | 'features' | 'errorLogs'>('companies');
   const [menuConfig, setMenuConfig] = useState<MenuConfig | null>(null);
   const [isEditingMenu, setIsEditingMenu] = useState(false);
 
@@ -111,6 +112,7 @@ export default function FounderPanel() {
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [errorLogs, setErrorLogs] = useState<any[]>([]);
   const [isCreatingNotification, setIsCreatingNotification] = useState(false);
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
 
@@ -118,6 +120,15 @@ export default function FounderPanel() {
     if (viewMode === 'menu') {
       const unsubscribe = erpService.subscribeToMenuConfig((config) => {
         if (config) setMenuConfig(config);
+      });
+      return () => unsubscribe();
+    }
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (viewMode === 'errorLogs') {
+      const unsubscribe = errorService.subscribeToLogs((logs: any[]) => {
+        setErrorLogs(logs);
       });
       return () => unsubscribe();
     }
@@ -971,6 +982,18 @@ export default function FounderPanel() {
               Features
             </button>
             <button
+              onClick={() => setViewMode('errorLogs')}
+              className={cn(
+                "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
+                viewMode === 'errorLogs' 
+                  ? uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white shadow-md" : "bg-background text-foreground shadow-sm"
+                  : uiStyle === 'UI/UX 2' ? "text-blue-400 hover:text-blue-600" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <AlertCircle className="w-4 h-4" />
+              Error Logs
+            </button>
+            <button
               onClick={() => setViewMode('settings')}
               className={cn(
                 "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
@@ -1578,6 +1601,119 @@ export default function FounderPanel() {
                       <td colSpan={6} className="p-12 text-center">
                         <ClipboardList className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
                         <p className="text-sm text-muted-foreground italic">No subscription orders found.</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : viewMode === 'errorLogs' ? (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className={cn(
+              "text-lg font-bold uppercase tracking-widest",
+              uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+            )}>System Error Logs</h2>
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+              Total Logs: {errorLogs.length}
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-muted/50 border-b border-border">
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Error Details</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">User / Location</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Severity</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Status</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Time</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right px-6">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {errorLogs.length > 0 ? (
+                    errorLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-muted/30 transition-colors group">
+                        <td className="p-4 max-w-md">
+                          <div className="space-y-1">
+                            <p className="text-sm font-bold text-foreground break-words">{log.message}</p>
+                            <p className="text-[10px] text-muted-foreground font-mono truncate cursor-help" title={log.stack}>
+                              {log.componentName || 'Global'} • {log.path}
+                            </p>
+                            {log.stack && (
+                                <details className="mt-2 text-[8px] font-mono bg-muted p-2 rounded max-h-40 overflow-auto">
+                                    <summary className="cursor-pointer hover:text-primary list-none flex items-center gap-1 font-bold uppercase">
+                                        <ChevronDown className="w-3 h-3 text-current group-open:rotate-180 transition-transform" /> View Stack Trace
+                                    </summary>
+                                    <pre className="mt-2 whitespace-pre-wrap leading-relaxed opacity-70 border-l border-primary/20 pl-2">{log.stack}</pre>
+                                </details>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="space-y-1 text-xs">
+                            <p className="font-bold text-foreground">{log.userEmail || 'Anonymous'}</p>
+                            <p className="text-[9px] text-muted-foreground truncate max-w-[150px]" title={log.browserInfo}>{log.browserInfo}</p>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className={cn(
+                            "px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest",
+                            log.severity === 'critical' ? "bg-rose-500 text-white" :
+                            log.severity === 'error' ? "bg-rose-500/10 text-rose-500 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.2)]" :
+                            log.severity === 'warning' ? "bg-amber-500/10 text-amber-500" :
+                            "bg-blue-500/10 text-blue-500"
+                          )}>
+                            {log.severity}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                            <select 
+                                value={log.status}
+                                onChange={async (e) => {
+                                    errorService.updateLogStatus(log.id, e.target.value as any);
+                                }}
+                                className={cn(
+                                    "bg-transparent text-[10px] font-bold uppercase tracking-wider border border-border p-1 rounded focus:ring-0 cursor-pointer outline-none",
+                                    log.status === 'new' ? "text-rose-500 border-rose-500/20" :
+                                    log.status === 'investigating' ? "text-amber-500 border-amber-500/20" :
+                                    log.status === 'resolved' ? "text-emerald-500 border-emerald-500/20" :
+                                    "text-muted-foreground border-border"
+                                )}
+                            >
+                                <option value="new">New</option>
+                                <option value="investigating">Investigating</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="ignored">Ignored</option>
+                            </select>
+                        </td>
+                        <td className="p-4">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                            {safeFormat(log.timestamp, 'dd MMM, HH:mm:ss')}
+                          </p>
+                        </td>
+                        <td className="p-4 text-right px-6">
+                            <button
+                                onClick={async () => {
+                                    if (confirm('Delete this log?')) {
+                                        await errorService.deleteLog(log.id);
+                                    }
+                                }}
+                                className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="p-12 text-center text-muted-foreground italic">
+                        No error logs found.
                       </td>
                     </tr>
                   )}

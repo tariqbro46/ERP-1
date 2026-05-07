@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { errorService } from '../services/errorService';
 
 interface Props {
   children: ReactNode;
@@ -19,8 +20,19 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error', error, errorInfo);
+    
+    // Log error to Firestore
+    errorService.logError({
+      message: error.message || 'Unknown Rendering Error',
+      stack: error.stack,
+      componentName: 'ErrorBoundary',
+      severity: 'critical',
+      metadata: {
+        componentStack: errorInfo.componentStack
+      }
+    });
   }
 
   render() {
