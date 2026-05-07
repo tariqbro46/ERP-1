@@ -137,57 +137,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
 
             } else {
-              // FOUNDER RECOVERY: If the user is the Founder but their profile is missing, recreate it.
-              if (fUser.email?.toLowerCase() === 'sapientman46@gmail.com') {
-                console.log("Founder profile missing, attempting recovery for UID:", fUser.uid);
-                try {
-                  // 1. Try to find a company where this user is the owner
-                  const ownerQuery = query(collection(db, 'companies'), where('ownerId', '==', fUser.uid));
-                  const ownerSnap = await getDocs(ownerQuery);
-                  
-                  let companyId = 'placeholder';
-                  if (!ownerSnap.empty) {
-                    companyId = ownerSnap.docs[0].id;
-                    console.log("Found company by ownerId:", companyId);
-                  } else {
-                    // 2. Try by createdBy
-                    const creatorQuery = query(collection(db, 'companies'), where('createdBy', '==', fUser.uid));
-                    const creatorSnap = await getDocs(creatorQuery);
-                    if (!creatorSnap.empty) {
-                      companyId = creatorSnap.docs[0].id;
-                      console.log("Found company by createdBy:", companyId);
+              // PROFILE RECOVERY: If the user profile is missing, attempt to find their company.
+              console.log("Profile missing, attempting recovery for UID:", fUser.uid);
+              try {
+                // 1. Try to find a company where this user is the owner
+                const ownerQuery = query(collection(db, 'companies'), where('ownerId', '==', fUser.uid));
+                const ownerSnap = await getDocs(ownerQuery);
+                
+                let companyId = '';
+                let role: UserRole = 'Admin';
+                
+                if (!ownerSnap.empty) {
+                  companyId = ownerSnap.docs[0].id;
+                  console.log("Found company by ownerId:", companyId);
+                } else {
+                  // 2. Try by createdBy
+                  const creatorQuery = query(collection(db, 'companies'), where('createdBy', '==', fUser.uid));
+                  const creatorSnap = await getDocs(creatorQuery);
+                  if (!creatorSnap.empty) {
+                    companyId = creatorSnap.docs[0].id;
+                    console.log("Found company by createdBy:", companyId);
+                  }
+                }
+
+                // Special handling for Founder
+                const isFounderEmail = fUser.email?.toLowerCase() === 'sapientman46@gmail.com';
+                if (isFounderEmail) {
+                  role = 'Founder';
+                  // If founder has no company yet, find ANY company or use a placeholder
+                  if (!companyId) {
+                    const allCompaniesSnap = await getDocs(collection(db, 'companies'));
+                    if (!allCompaniesSnap.empty) {
+                      companyId = allCompaniesSnap.docs[0].id;
+                      console.log("Found fallback company for founder:", companyId);
                     } else {
-                      // 3. Fallback to ANY company if no direct ownership found
-                      const allCompaniesSnap = await getDocs(collection(db, 'companies'));
-                      if (!allCompaniesSnap.empty) {
-                        companyId = allCompaniesSnap.docs[0].id;
-                        console.log("Found fallback company:", companyId);
-                      } else {
-                        console.log("No companies found at all. Using placeholder.");
-                      }
+                      companyId = 'placeholder';
                     }
                   }
+                }
 
+                if (companyId) {
                   const newProfile: Profile = {
                     uid: fUser.uid,
-                    email: fUser.email,
-                    displayName: fUser.displayName || 'Founder',
+                    email: fUser.email || '',
+                    displayName: fUser.displayName || (isFounderEmail ? 'Founder' : 'Admin'),
                     companyId: companyId,
-                    role: 'Founder'
+                    role: role
                   };
                   
                   await setDoc(userRef, {
                     ...newProfile,
                     createdAt: new Date().toISOString()
                   });
-                  // The snapshot will fire again and set the user.
-                } catch (err) {
-                  console.error("Founder recovery failed:", err);
+                  console.log("Profile recovered and saved for UID:", fUser.uid);
+                } else {
+                  console.log("No company found for user, recovery skipped.");
                   setUser(null);
                   setCompany(null);
                   setLoading(false);
                 }
-              } else {
+              } catch (err) {
+                console.error("Profile recovery failed:", err);
                 setUser(null);
                 setCompany(null);
                 setLoading(false);

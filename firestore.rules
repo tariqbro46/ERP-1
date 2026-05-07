@@ -42,12 +42,13 @@ service cloud.firestore {
 
     function getUserCompanyId() {
       let data = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return data == null ? "" : data.get('companyId', '');
+      return (data != null) ? data.get('companyId', '') : '';
     }
 
     function isCompanyMember(companyId) {
-      return isAuthenticated() && companyId != null && companyId != "" && (
+      return isAuthenticated() && (
         isSuperAdmin() || 
+        (companyId == request.auth.uid) || // Self-owned "virtual" company
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserCompanyId() == companyId) ||
         (exists(/databases/$(database)/documents/companies/$(companyId)) && 
          (get(/databases/$(database)/documents/companies/$(companyId)).data.get('ownerId', '') == request.auth.uid || 
@@ -56,8 +57,9 @@ service cloud.firestore {
     }
     
     function isCompanyAdmin(companyId) {
-      return isAuthenticated() && companyId != null && companyId != "" && (
+      return isAuthenticated() && (
         isSuperAdmin() || 
+        (companyId == request.auth.uid) || // Self-owned "virtual" company
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          getUserCompanyId() == companyId && 
          (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') in ['Admin', 'Founder', 'Marketing Manager'])) ||
@@ -102,17 +104,18 @@ service cloud.firestore {
       }
     }
 
-    // Companies
     match /companies/{companyId} {
-      allow read: if isAuthenticated() && (
+      allow get: if isAuthenticated() && (
         isSuperAdmin() || 
-        resource == null ||
-        (resource != null && (resource.data.ownerId == request.auth.uid || resource.data.createdBy == request.auth.uid)) ||
-        (userExists() && getUserData().get('companyId', '') == companyId && resource.data.get('isAccessEnabled', true) != false)
+        isCompanyMember(companyId)
+      );
+      allow list: if isAuthenticated() && (
+        isSuperAdmin() || 
+        (resource != null && (resource.data.get('ownerId', '') == request.auth.uid || resource.data.get('createdBy', '') == request.auth.uid))
       );
       allow create: if isAuthenticated();
       allow update: if isCompanyAdmin(companyId);
-      allow delete: if isSuperAdmin() || (isAuthenticated() && resource.data.ownerId == request.auth.uid);
+      allow delete: if isSuperAdmin() || (isAuthenticated() && resource.data.get('ownerId', '') == request.auth.uid);
     }
 
     // User Profiles
@@ -304,9 +307,20 @@ service cloud.firestore {
     }
 
     match /counters/{id} {
-      allow read, create, update: if isAuthenticated() && (
+      allow read: if isAuthenticated() && (
         isSuperAdmin() || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && id.startsWith(getUserCompanyId()))
+        id.startsWith(request.auth.uid) || // Allow user to read/create their own counters
+        (resource != null && isCompanyMember(resource.data.get('companyId', '')))
+      );
+      allow create: if isAuthenticated() && (
+        isSuperAdmin() || 
+        id.startsWith(request.auth.uid) ||
+        isCompanyMember(request.resource.data.companyId)
+      );
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() || 
+        id.startsWith(request.auth.uid) ||
+        isCompanyMember(resource.data.companyId)
       );
       allow delete: if isSuperAdmin();
     }
