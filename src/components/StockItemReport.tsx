@@ -426,10 +426,9 @@ export function StockItemReport() {
         isOpening: true
       };
 
-      // Prepare raw transactions
-      const detailedTransactions = [
-        openingBalanceRow,
-        ...itemEntries.map((e: any) => {
+      // Prepare raw transactions with running balance
+      let currentRunningBalance = openingBalance;
+      const sortedEntries = itemEntries.map((e: any) => {
           const v = voucherMap[e.voucher_id] || {};
           return {
             ...e,
@@ -441,10 +440,28 @@ export function StockItemReport() {
         }).sort((a, b) => {
           const dateA = a.date || (a.created_at?.toDate?.() || 0);
           const dateB = b.date || (b.created_at?.toDate?.() || 0);
-          return new Date(dateB).getTime() - new Date(dateA).getTime();
-        })
-      ];
-      setTransactions(detailedTransactions);
+          const timeA = new Date(dateA).getTime();
+          const timeB = new Date(dateB).getTime();
+          if (timeA !== timeB) return timeA - timeB;
+          return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
+        });
+
+      const transactionsWithBalance = sortedEntries.map(tx => {
+        const total = (tx.qty || 0) + (tx.free_qty || 0);
+        const isPhysical = tx.is_physical_snapshot === true || (tx.v_type && tx.v_type.toString().toLowerCase() === 'physical stock');
+        if (isPhysical) {
+          if (!selectedGodown) {
+            currentRunningBalance += (Number(tx.adjustment_qty) || 0);
+          } else {
+            currentRunningBalance = total;
+          }
+        } else {
+          currentRunningBalance += (tx.movement_type === 'Inward' ? total : -total);
+        }
+        return { ...tx, closing_balance: currentRunningBalance };
+      });
+
+      setTransactions([...transactionsWithBalance].reverse());
 
     } catch (err) {
       console.error('Error calculating summary:', err);
@@ -724,8 +741,31 @@ export function StockItemReport() {
                         </td>
                       </tr>
                       {summaryData.map((row, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-3 font-medium text-gray-900 border-r border-gray-100">
+                        <tr 
+                          key={idx} 
+                          className="hover:bg-primary/5 transition-colors cursor-pointer group"
+                          onClick={() => {
+                            if (row.isOpening) return;
+                            if (viewType === 'monthly') {
+                              // Find start and end dates for this month
+                              const dateParts = row.label.split(' ');
+                              if (dateParts.length === 2) {
+                                const monthName = dateParts[0];
+                                const year = parseInt(dateParts[1]);
+                                const monthIdx = new Date(Date.parse(monthName + " 1, 2012")).getMonth();
+                                const firstDay = new Date(year, monthIdx, 1).toLocaleDateString('en-CA');
+                                const lastDay = new Date(year, monthIdx + 1, 0).toLocaleDateString('en-CA');
+                                setStartDate(firstDay);
+                                setEndDate(lastDay);
+                              }
+                            } else if (viewType === 'daily') {
+                              setStartDate(row.label);
+                              setEndDate(row.label);
+                            }
+                            setViewMode('transactions');
+                          }}
+                        >
+                          <td className="px-6 py-3 font-medium text-gray-900 border-r border-gray-100 group-hover:text-primary transition-colors">
                             {viewType === 'daily' ? formatReportDate(row.label, settings.dateFormat) : row.label}
                           </td>
                           <td className="px-6 py-3 text-right text-green-600">
@@ -778,6 +818,7 @@ export function StockItemReport() {
                         <th className="px-6 py-2 text-right">Qty ({selectedItem.unitName})</th>
                         <th className="px-6 py-2 text-right">Rate</th>
                         <th className="px-6 py-2 text-right">Amount</th>
+                        <th className="px-6 py-2 text-right border-l border-gray-100">Closing</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -793,11 +834,14 @@ export function StockItemReport() {
                             <td className="px-6 py-3 text-sm text-right font-bold text-gray-400 italic">
                               {formatCurrency(openingValue)}
                             </td>
+                            <td className="px-6 py-3 text-sm text-right font-bold text-gray-400 italic border-l border-gray-100">
+                              {formatQty(openingBalance)}
+                            </td>
                           </tr>
                           {transactions.map((tx, idx) => (
                           <tr 
                             key={idx} 
-                            onClick={() => tx.v_id && navigate('/vouchers', { state: { editId: tx.v_id } })}
+                            onClick={() => tx.v_id && navigate(`/vouchers/view/${tx.v_id}`)}
                             className="hover:bg-primary/5 transition-colors cursor-pointer group"
                           >
                             <td className="px-6 py-3 text-sm text-gray-900 group-hover:text-primary">
@@ -835,12 +879,15 @@ export function StockItemReport() {
                             <td className="px-6 py-3 text-sm text-right font-bold text-gray-900">
                               {formatCurrency(tx.qty * tx.rate)}
                             </td>
+                            <td className="px-6 py-3 text-sm text-right font-bold text-primary border-l border-gray-100">
+                              {formatQty(tx.closing_balance)}
+                            </td>
                           </tr>
                           ))}
                         </>
                       ) : (
                         <tr>
-                          <td colSpan={7} className="px-6 py-12 text-center text-gray-400 italic">
+                          <td colSpan={8} className="px-6 py-12 text-center text-gray-400 italic">
                             No transactions found for this period.
                           </td>
                         </tr>

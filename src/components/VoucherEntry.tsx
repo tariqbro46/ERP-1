@@ -1186,7 +1186,7 @@ export function VoucherEntry() {
                   </thead>
                   <tbody className="divide-y divide-border/50">
                     {consumptionEntries.map((e, idx) => (
-                      <tr key={idx} className="group hover:bg-foreground/5">
+                      <tr key={idx} className="group hover:bg-muted/80 transition-colors">
                         <td className="px-1 py-1">
                           <SearchableSelect 
                             options={items} 
@@ -1273,7 +1273,7 @@ export function VoucherEntry() {
                   </thead>
                   <tbody className="divide-y divide-border/50">
                     {productionEntries.map((e, idx) => (
-                      <tr key={idx} className="group hover:bg-foreground/5">
+                      <tr key={idx} className="group hover:bg-muted/80 transition-colors">
                         <td className="px-1 py-1">
                           <SearchableSelect 
                             options={items} 
@@ -1391,7 +1391,7 @@ export function VoucherEntry() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {invEntries.map((entry, idx) => (
-                    <tr key={idx} className="group hover:bg-foreground/5">
+                    <tr key={idx} className="group hover:bg-muted/80 transition-colors">
                       <td className={cn("min-w-[16ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                         <div className="flex flex-col gap-1">
                           <SearchableSelect
@@ -1848,7 +1848,7 @@ export function VoucherEntry() {
               </thead>
               <tbody className="divide-y divide-border">
                 {accEntries.map((entry, idx) => (
-                  <tr key={idx} className="group hover:bg-foreground/5">
+                  <tr key={idx} className="group hover:bg-muted/80 transition-colors">
                     <td className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <div className="flex items-center gap-2">
                         <SearchableSelect
@@ -1909,7 +1909,7 @@ export function VoucherEntry() {
               </thead>
               <tbody className="divide-y divide-border">
                 {accEntries.map((entry, idx) => (
-                  <tr key={idx} className="group hover:bg-foreground/5">
+                  <tr key={idx} className="group hover:bg-muted/80 transition-colors">
                     <td className={cn("w-20", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
                       <select 
                         value={entry.type}

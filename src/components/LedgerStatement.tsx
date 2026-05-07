@@ -944,7 +944,7 @@ export function LedgerStatement() {
                     return (
                       <>
                         <tr className={cn(
-                          "border-b border-border/50 bg-foreground/5 font-bold italic",
+                          "border-b border-border/50 bg-muted/20 font-bold italic hover:bg-muted/80 cursor-pointer border-l-4 border-transparent hover:border-primary transition-colors",
                           settings.reportLayout === 'Layout 2' && "bg-white border-black text-black border",
                           settings.reportLayout === 'Layout 2' && openingBalanceRowIsStripe && "bg-[#F3F4F6]"
                         )}>
@@ -978,7 +978,7 @@ export function LedgerStatement() {
                             <React.Fragment key={e.id}>
                               <tr 
                                 className={cn(
-                                  "border-b border-border/50 hover:bg-foreground/5 transition-colors cursor-pointer group",
+                                  "border-b border-border/50 hover:bg-muted/80 transition-colors cursor-pointer group border-l-4 border-transparent hover:border-primary",
                                   config.enableStripeView && !settings.reportLayout && idx % 2 !== 0 && "bg-muted/30",
                                   settings.reportLayout === 'Layout 2' && "bg-white text-black hover:bg-gray-50",
                                   settings.reportLayout === 'Layout 2' && mainRowIsStripe && "bg-[#F3F4F6]"

@@ -205,19 +205,21 @@ export function StockSummary() {
     return true;
   }).sort((a, b) => a.name.localeCompare(b.name));
 
+  const finalFilteredItems = processedItems.filter(item => {
+    const groupName = item.category || 'General Items';
+    return !search || 
+      item.name.toLowerCase().includes(search.toLowerCase()) || 
+      groupName.toLowerCase().includes(search.toLowerCase());
+  });
+
   const groupedItems: Record<string, any[]> = {};
-  processedItems.forEach(item => {
+  finalFilteredItems.forEach(item => {
     const group = item.category || 'General Items';
     if (!groupedItems[group]) groupedItems[group] = [];
     groupedItems[group].push(item);
   });
 
-  const filteredGroups = Object.keys(groupedItems)
-    .filter(group => 
-      group.toLowerCase().includes(search.toLowerCase()) ||
-      groupedItems[group].some(item => item.name.toLowerCase().includes(search.toLowerCase()))
-    )
-    .sort((a, b) => a.localeCompare(b));
+  const filteredGroups = Object.keys(groupedItems).sort((a, b) => a.localeCompare(b));
 
   const toggleGroup = (group: string) => {
     const newSet = new Set(expandedGroups);
@@ -226,14 +228,14 @@ export function StockSummary() {
     setExpandedGroups(newSet);
   };
 
-  const totalStockValue = processedItems.reduce((sum, item) => sum + (item.displayStock * (item.avg_cost || item.opening_rate || 0)), 0);
+  const totalStockValue = finalFilteredItems.reduce((sum, item) => sum + (item.displayStock * (item.avg_cost || item.opening_rate || 0)), 0);
 
   const activeCategoryName = selectedCategory === 'uncategorized' 
     ? 'Uncategorized' 
     : stockCategories.find(c => c.id === selectedCategory)?.name;
 
   const handleDownload = () => {
-    const exportData = processedItems.map(item => ({
+    const exportData = finalFilteredItems.map(item => ({
       particulars: item.name,
       category: item.category || 'General',
       quantity: item.displayStock,
@@ -246,7 +248,7 @@ export function StockSummary() {
   };
 
   const handleDownloadPDF = () => {
-    const exportData = processedItems.map(item => ({
+    const exportData = finalFilteredItems.map(item => ({
       particulars: item.name,
       category: item.category || 'General',
       quantity: item.displayStock,
@@ -341,7 +343,7 @@ export function StockSummary() {
               </button>
               <button 
                 onClick={handleDownload}
-                disabled={processedItems.length === 0}
+                disabled={finalFilteredItems.length === 0}
                 className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase rounded-sm shadow-sm"
                 title={t('common.csv')}
               >
@@ -349,7 +351,7 @@ export function StockSummary() {
               </button>
               <button 
                 onClick={handleDownloadPDF}
-                disabled={processedItems.length === 0}
+                disabled={finalFilteredItems.length === 0}
                 className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase rounded-sm shadow-sm"
                 title={t('common.pdf')}
               >
@@ -452,7 +454,7 @@ export function StockSummary() {
 
               return (
                 <div key={groupName} className="flex flex-col">
-            <div className="p-4 bg-foreground/5 flex justify-between items-center cursor-pointer"
+            <div className="p-4 bg-muted/20 flex justify-between items-center cursor-pointer hover:bg-muted/80 transition-colors border-l-4 border-transparent hover:border-primary"
                   >
                     <div className="flex items-center gap-2">
                       {isExpanded ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
@@ -466,7 +468,11 @@ export function StockSummary() {
                     </div>
                   </div>
                   {isExpanded && groupItems.map(item => (
-                    <div key={item.id} className="p-4 pl-8 border-t border-border/30 space-y-2">
+                    <div 
+                      key={item.id} 
+                      onClick={() => navigate(`/reports/stock-item?itemId=${item.id}&from=${startDate}&to=${endDate}`)}
+                      className="p-4 pl-8 border-t border-border/30 space-y-2 hover:bg-muted/60 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary/40"
+                    >
                       <div className="flex justify-between items-start">
                         <span className="text-xs text-foreground/80 italic">
                           {highlightText(item.name, search)}
@@ -503,7 +509,7 @@ export function StockSummary() {
                   <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">Opening</th>
                   <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">Inward</th>
                   <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">Outward</th>
-                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">{t('common.quantity')}</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l bg-amber-500/10 text-amber-700">{t('common.quantity')}</th>
                   <th className="px-4 py-3 font-medium text-right w-28 border-b border-border sticky top-0 border-l">Rate (Avg)</th>
                   <th className="px-4 py-3 font-medium text-right w-32 border-b border-border sticky top-0 border-l">{t('common.value')} (৳)</th>
                 </tr>
@@ -522,7 +528,7 @@ export function StockSummary() {
                     <React.Fragment key={groupName}>
                       <tr 
                         onClick={() => toggleGroup(groupName)}
-                        className="hover:bg-foreground/5 transition-colors cursor-pointer group"
+                        className="hover:bg-muted/80 transition-colors cursor-pointer group border-l-4 border-transparent hover:border-primary"
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
@@ -541,7 +547,7 @@ export function StockSummary() {
                         <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
                           {formatQuantity(groupOutward)}
                         </td>
-                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
+                        <td className="px-4 py-3 text-right text-amber-700 font-mono font-bold border-l border-amber-500/10 bg-amber-500/5">
                           {formatQuantity(groupQty)}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-600 border-l border-border/10">
@@ -552,7 +558,11 @@ export function StockSummary() {
                         </td>
                       </tr>
                       {isExpanded && groupItems.map(item => (
-                        <tr key={item.id} className={cn("bg-foreground/[0.02] hover:bg-foreground/5 transition-colors group/item", item.isLowStock && "bg-rose-500/5")}>
+                        <tr 
+                          key={item.id} 
+                          onClick={() => navigate(`/reports/stock-item?id=${item.id}&from=${startDate}&to=${endDate}`)}
+                          className={cn("bg-muted/5 hover:bg-muted/60 transition-colors group/item cursor-pointer border-l-4 border-transparent hover:border-primary/40", item.isLowStock && "bg-rose-500/5")}
+                        >
                           <td className="px-10 py-2.5 text-foreground/60 italic flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-border group-hover/item:bg-primary transition-colors" />
                             {highlightText(item.name, search)}
@@ -571,7 +581,7 @@ export function StockSummary() {
                            <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
                              {formatQuantity(item.outward, item.units?.name)}
                            </td>
-                           <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5">
+                           <td className="px-4 py-2.5 text-right text-amber-600 font-mono border-l border-amber-500/10 bg-amber-500/[0.03]">
                              {formatQuantity(item.displayStock, item.units?.name)}
                            </td>
                            <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5">
@@ -591,22 +601,22 @@ export function StockSummary() {
                   </tr>
                 )}
               </tbody>
-              <tfoot className="bg-foreground/5 border-t border-border sticky bottom-0">
+              <tfoot className="bg-muted border-t border-border sticky bottom-0 text-[10px] z-10">
                 <tr className="font-bold text-foreground">
                   <td className="px-4 py-3 uppercase text-[9px] text-gray-500 tracking-widest">{t('common.grandTotal')}</td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-foreground/[0.02]">
-                    {formatQuantity(processedItems.reduce((sum, i) => sum + i.opening, 0))}
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-muted/50">
+                    {formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.opening, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-foreground/[0.02]">
-                    {formatQuantity(processedItems.reduce((sum, i) => sum + i.inward, 0))}
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-muted/50">
+                    {formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.inward, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-foreground/[0.02]">
-                    {formatQuantity(processedItems.reduce((sum, i) => sum + i.outward, 0))}
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-muted/50">
+                    {formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.outward, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-foreground/[0.02]">
-                    {formatQuantity(processedItems.reduce((sum, i) => sum + i.displayStock, 0))}
+                  <td className="px-4 py-3 text-right font-mono border-l border-amber-500/20 bg-amber-500/20 text-amber-900">
+                    {formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.displayStock, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border">
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-muted/50">
                     -
                   </td>
                   <td className="px-4 py-3 text-right font-mono border-l border-border">

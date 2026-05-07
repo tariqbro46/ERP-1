@@ -202,7 +202,7 @@ export function TrialBalance() {
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
             {filteredData.map((ledger) => (
-              <div key={ledger.id} className="p-4 space-y-2 hover:bg-foreground/5 transition-colors">
+              <div key={ledger.id} className="p-4 space-y-2 hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold text-foreground">{ledger.name}</span>
                   <span className="text-[9px] text-gray-500 uppercase px-1.5 py-0.5 bg-foreground/5 border border-border">
@@ -251,7 +251,7 @@ export function TrialBalance() {
                   <tr 
                     key={ledger.id} 
                     onClick={() => navigate(`/reports/ledger?ledgerId=${ledger.id}`)}
-                    className="hover:bg-foreground/5 transition-colors group cursor-pointer"
+                    className="hover:bg-muted/80 transition-colors group cursor-pointer border-l-4 border-transparent hover:border-primary"
                   >
                     <td className="px-6 py-3 text-foreground font-medium">{ledger.name}</td>
                     <td className="px-6 py-3 text-gray-500 uppercase text-[10px]">{ledger.ledger_groups?.name}</td>

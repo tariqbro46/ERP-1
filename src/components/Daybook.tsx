@@ -366,7 +366,7 @@ export function Daybook() {
               <div 
                 key={v.id} 
                 className={cn(
-                  "p-4 space-y-3 hover:bg-foreground/5 transition-colors cursor-pointer group",
+                  "p-4 space-y-3 hover:bg-muted/80 transition-colors cursor-pointer group border-l-4 border-transparent hover:border-primary",
                   config.enableStripeView && idx % 2 !== 0 && "bg-muted/30"
                 )}
                 onClick={() => navigate(`/vouchers/view/${v.id}`)}
@@ -434,7 +434,7 @@ export function Daybook() {
                   <React.Fragment key={v.id}>
                     <tr 
                       className={cn(
-                        "border-b border-border/50 hover:bg-foreground/5 cursor-pointer group transition-colors",
+                        "border-b border-border/50 hover:bg-muted/80 cursor-pointer group transition-colors border-l-4 border-transparent hover:border-primary",
                         config.enableStripeView && idx % 2 !== 0 && "bg-muted/30"
                       )}
                       onClick={() => navigate(`/vouchers/view/${v.id}`)}

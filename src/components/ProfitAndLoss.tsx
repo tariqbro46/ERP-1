@@ -284,7 +284,7 @@ export function ProfitAndLoss() {
                   {/* Opening Stock */}
                   <div 
                     onClick={() => navigate(`/reports/stock?from=${startDate}&to=${endDate}`)}
-                    className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 transition-colors cursor-pointer"
+                    className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
                   >
                     <span className="text-sm font-medium text-foreground">{t('reports.openingStock')}</span>
                     <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(tradingData.openingStock)}</span>
@@ -295,7 +295,7 @@ export function ProfitAndLoss() {
                     <div 
                       key={g.name} 
                       onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
-                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
+                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
                       <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
@@ -307,7 +307,7 @@ export function ProfitAndLoss() {
                     <div 
                       key={g.name} 
                       onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
-                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
+                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
                       <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
@@ -319,7 +319,7 @@ export function ProfitAndLoss() {
                     <div 
                       key={g.name} 
                       onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
-                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
+                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
                       <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
@@ -328,7 +328,7 @@ export function ProfitAndLoss() {
 
                   {/* Nett Profit */}
                   {netProfit > 0 && (
-                    <div className="px-4 py-3 flex justify-between items-center bg-emerald-500/5 group">
+                    <div className="px-4 py-3 flex justify-between items-center bg-emerald-500/5 group hover:bg-emerald-500/10 transition-colors cursor-pointer border-l-4 border-emerald-500">
                       <span className="text-sm font-bold italic text-emerald-600">Nett Profit</span>
                       <span className="text-sm font-bold text-emerald-600 tabular-nums underline decoration-emerald-500/30 underline-offset-4">{formatNumber(netProfit)}</span>
                     </div>
@@ -355,7 +355,7 @@ export function ProfitAndLoss() {
                     <div 
                       key={g.name} 
                       onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
-                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
+                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
                       <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(g.balance))}</span>
@@ -367,7 +367,7 @@ export function ProfitAndLoss() {
                     <div 
                       key={g.name} 
                       onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
-                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
+                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
                       <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(g.balance))}</span>
@@ -377,7 +377,7 @@ export function ProfitAndLoss() {
                   {/* Closing Stock */}
                   <div 
                     onClick={() => navigate(`/reports/stock?from=${startDate}&to=${endDate}`)}
-                    className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
+                    className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
                   >
                     <span className="text-sm font-medium text-foreground">Closing Stock</span>
                     <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(tradingData.closingStock)}</span>
@@ -385,7 +385,7 @@ export function ProfitAndLoss() {
 
                   {/* Nett Loss */}
                   {netProfit < 0 && (
-                    <div className="px-4 py-3 flex justify-between items-center bg-rose-500/5">
+                    <div className="px-4 py-3 flex justify-between items-center bg-rose-500/5 hover:bg-rose-500/10 transition-colors cursor-pointer border-l-4 border-rose-500">
                       <span className="text-sm font-bold italic text-rose-600">Nett Loss</span>
                       <span className="text-sm font-bold text-rose-600 tabular-nums underline decoration-rose-500/30 underline-offset-4">{formatNumber(Math.abs(netProfit))}</span>
                     </div>
