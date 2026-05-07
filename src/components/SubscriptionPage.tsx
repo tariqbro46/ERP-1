@@ -23,7 +23,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { erpService } from '../services/erpService';
 import { SubscriptionPlan, SubscriptionOrder } from '../types';
-import { cn } from '../lib/utils';
+import { cn, ensureDate } from '../lib/utils';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AVAILABLE_FEATURES } from '../constants/features';
@@ -139,8 +139,8 @@ export function SubscriptionPage() {
   const safeFormat = (date: any, formatStr: string) => {
     try {
       if (!date) return 'N/A';
-      // Handle Firestore Timestamp
-      const d = (date as any)?.toDate ? (date as any).toDate() : (date instanceof Date ? date : new Date(date));
+      // Handle various date formats safely
+      const d = ensureDate(date);
       if (isNaN(d.getTime())) return 'N/A';
       return format(d, formatStr);
     } catch (e) {

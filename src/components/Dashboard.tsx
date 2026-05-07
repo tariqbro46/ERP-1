@@ -10,7 +10,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { cn, formatNumber } from '../lib/utils';
+import { cn, formatNumber, ensureDate } from '../lib/utils';
 import { format, differenceInDays } from 'date-fns';
 import { EditableHeader } from './EditableHeader';
 
@@ -123,7 +123,7 @@ export function Dashboard() {
   const safeFormat = (date: any, formatStr: string) => {
     try {
       if (!date) return 'N/A';
-      const d = (date as any)?.toDate ? (date as any).toDate() : (date instanceof Date ? date : new Date(date));
+      const d = ensureDate(date);
       if (isNaN(d.getTime())) return 'N/A';
       return format(d, formatStr);
     } catch (e) {
@@ -440,7 +440,7 @@ export function Dashboard() {
                  t('dash.subscriptionInactive')}
               </h3>
               <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                {t('dash.plan')}: {company.planType} • {company.expiryDate ? differenceInDays((company.expiryDate as any)?.toDate ? (company.expiryDate as any).toDate() : new Date(company.expiryDate), new Date()) : 'N/A'} {t('dash.daysRemaining')}
+                {t('dash.plan')}: {company.planType} • {company.expiryDate ? differenceInDays(ensureDate(company.expiryDate), new Date()) : 'N/A'} {t('dash.daysRemaining')}
               </p>
             </div>
           </div>

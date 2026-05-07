@@ -4,7 +4,7 @@ import { ArrowLeft, Loader2, Calendar, Package, Filter, Search } from 'lucide-re
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, cn, ensureDate } from '../lib/utils';
 
 export function AgeingAnalysis() {
   const { user } = useAuth();
@@ -50,7 +50,7 @@ export function AgeingAnalysis() {
             const entryQty = (entry.qty || 0) + (entry.free_qty || 0);
             const takenQty = Math.min(remainingStock, entryQty);
             
-            const entryDate = entry.date ? new Date(entry.date) : (entry.created_at?.toDate ? entry.created_at.toDate() : new Date(entry.created_at || 0));
+            const entryDate = ensureDate(entry.date || entry.created_at);
             const daysOld = Math.floor((now.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
 
             // Find interval

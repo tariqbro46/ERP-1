@@ -1,4 +1,5 @@
 import { db, auth } from '../firebase';
+import { ensureDate } from '../lib/utils';
 import { 
   collection, 
   addDoc, 
@@ -2776,9 +2777,9 @@ export const erpService = {
           return { 
             ...data,
             id: doc.id, 
-            createdAt: data.createdAt?.toDate() || new Date(),
-            scheduledAt: data.scheduledAt?.toDate(),
-            sentAt: data.sentAt?.toDate()
+            createdAt: ensureDate(data.createdAt),
+            scheduledAt: data.scheduledAt ? ensureDate(data.scheduledAt) : undefined,
+            sentAt: data.sentAt ? ensureDate(data.sentAt) : undefined
           } as AppNotification;
         });
       } else {
@@ -2804,9 +2805,9 @@ export const erpService = {
           return { 
             ...data,
             id: doc.id, 
-            createdAt: data.createdAt?.toDate() || new Date(),
-            scheduledAt: data.scheduledAt?.toDate(),
-            sentAt: data.sentAt?.toDate()
+            createdAt: ensureDate(data.createdAt),
+            scheduledAt: data.scheduledAt ? ensureDate(data.scheduledAt) : undefined,
+            sentAt: data.sentAt ? ensureDate(data.sentAt) : undefined
           } as AppNotification;
         }).sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
       }
@@ -2835,9 +2836,9 @@ export const erpService = {
           return { 
             ...data,
             id: doc.id, 
-            createdAt: data.createdAt?.toDate() || new Date(),
-            scheduledAt: data.scheduledAt?.toDate(),
-            sentAt: data.sentAt?.toDate()
+            createdAt: ensureDate(data.createdAt),
+            scheduledAt: data.scheduledAt ? ensureDate(data.scheduledAt) : undefined,
+            sentAt: data.sentAt ? ensureDate(data.sentAt) : undefined
           } as AppNotification;
         });
         callback(notifications);

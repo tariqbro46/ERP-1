@@ -5,7 +5,7 @@ import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
-import { cn, formatNumber, formatQuantity } from '../lib/utils';
+import { cn, formatNumber, formatQuantity, ensureDate } from '../lib/utils';
 import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -123,7 +123,7 @@ export function StockSummary() {
         const [y, m, d] = inv.date.split('-').map(Number);
         entryDate = new Date(y, m - 1, d);
       } else {
-        entryDate = new Date(inv.created_at?.toDate?.() || 0);
+        entryDate = ensureDate(inv.created_at);
       }
       
       const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
@@ -509,7 +509,7 @@ export function StockSummary() {
                   <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">Opening</th>
                   <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">Inward</th>
                   <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">Outward</th>
-                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l bg-amber-500/10 text-amber-700">{t('common.quantity')}</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l bg-amber-600 text-white z-10 shadow-sm">{t('common.quantity')}</th>
                   <th className="px-4 py-3 font-medium text-right w-28 border-b border-border sticky top-0 border-l">Rate (Avg)</th>
                   <th className="px-4 py-3 font-medium text-right w-32 border-b border-border sticky top-0 border-l">{t('common.value')} (৳)</th>
                 </tr>
@@ -563,27 +563,27 @@ export function StockSummary() {
                           onClick={() => navigate(`/reports/stock-item?id=${item.id}&from=${startDate}&to=${endDate}`)}
                           className={cn("bg-muted/5 hover:bg-muted/60 transition-colors group/item cursor-pointer border-l-4 border-transparent hover:border-primary/40", item.isLowStock && "bg-rose-500/5")}
                         >
-                          <td className="px-10 py-2.5 text-foreground/60 italic flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-border group-hover/item:bg-primary transition-colors" />
-                            {highlightText(item.name, search)}
-                            {item.isLowStock && (
-                              <span className="px-1.5 py-0.5 bg-rose-500 text-white text-[8px] font-bold uppercase rounded flex items-center gap-1">
-                                <AlertTriangle className="w-2 h-2" /> Low
-                              </span>
-                            )}
-                          </td>
-                           <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
-                             {formatQuantity(item.opening, item.units?.name)}
-                           </td>
-                           <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
-                             {formatQuantity(item.inward, item.units?.name)}
-                           </td>
-                           <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
-                             {formatQuantity(item.outward, item.units?.name)}
-                           </td>
-                           <td className="px-4 py-2.5 text-right text-amber-600 font-mono border-l border-amber-500/10 bg-amber-500/[0.03]">
-                             {formatQuantity(item.displayStock, item.units?.name)}
-                           </td>
+                        <td className="px-10 py-2.5 text-foreground/60 italic flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-border group-hover:bg-primary transition-colors" />
+                          {highlightText(item.name, search)}
+                          {item.isLowStock && (
+                            <span className="px-1.5 py-0.5 bg-rose-500 text-white text-[8px] font-bold uppercase rounded flex items-center gap-1">
+                              <AlertTriangle className="w-2 h-2" /> Low
+                            </span>
+                          )}
+                        </td>
+                         <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
+                           {formatQuantity(item.opening, item.units?.name)}
+                         </td>
+                         <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
+                           {formatQuantity(item.inward, item.units?.name)}
+                         </td>
+                         <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
+                           {formatQuantity(item.outward, item.units?.name)}
+                         </td>
+                         <td className="px-4 py-2.5 text-right text-amber-700 font-bold font-mono border-l border-amber-500/20 bg-amber-500/10">
+                           {formatQuantity(item.displayStock, item.units?.name)}
+                         </td>
                            <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5">
                              {formatNumber(item.avg_cost || item.opening_rate || 0)}
                            </td>
@@ -601,25 +601,25 @@ export function StockSummary() {
                   </tr>
                 )}
               </tbody>
-              <tfoot className="bg-muted border-t border-border sticky bottom-0 text-[10px] z-10">
-                <tr className="font-bold text-foreground">
-                  <td className="px-4 py-3 uppercase text-[9px] text-gray-500 tracking-widest">{t('common.grandTotal')}</td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-muted/50">
+              <tfoot className="bg-background border-t-2 border-border sticky bottom-0 text-[10px] z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                <tr className="font-bold text-foreground bg-background">
+                  <td className="px-4 py-3 uppercase text-[9px] text-gray-500 tracking-widest bg-background">{t('common.grandTotal')}</td>
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
                     {formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.opening, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-muted/50">
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
                     {formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.inward, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-muted/50">
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
                     {formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.outward, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-amber-500/20 bg-amber-500/20 text-amber-900">
+                  <td className="px-4 py-3 text-right font-mono border-l border-amber-600 bg-amber-600 text-white">
                     {formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.displayStock, 0))}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-muted/50">
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
                     -
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border">
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
                     ৳ {formatNumber(totalStockValue)}
                   </td>
                 </tr>

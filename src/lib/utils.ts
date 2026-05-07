@@ -27,3 +27,24 @@ export function formatQuantity(amount: number, unit?: string): string {
     maximumFractionDigits: isPcs ? 0 : 2,
   }).format(amount || 0);
 }
+
+export function ensureDate(date: any): Date {
+  if (!date) return new Date();
+  if (date.toDate && typeof date.toDate === 'function') {
+    return date.toDate();
+  }
+  if (date instanceof Date) {
+    return date;
+  }
+  if (typeof date === 'number') {
+    return new Date(date);
+  }
+  if (typeof date === 'string') {
+    return new Date(date);
+  }
+  // Handle Firestore-like object { seconds, nanoseconds }
+  if (date.seconds !== undefined) {
+    return new Date(date.seconds * 1000);
+  }
+  return new Date(date);
+}

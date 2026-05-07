@@ -72,7 +72,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '../lib/utils';
+import { cn, ensureDate } from '../lib/utils';
 import { SiteContentEditor } from './SiteContentEditor';
 import { AVAILABLE_FEATURES, FeatureCategory } from '../constants/features';
 
@@ -286,7 +286,7 @@ export default function FounderPanel() {
   const safeFormat = (date: any, formatStr: string) => {
     try {
       if (!date) return 'N/A';
-      const d = (date as any)?.toDate ? (date as any).toDate() : (date instanceof Date ? date : new Date(date));
+      const d = ensureDate(date);
       if (isNaN(d.getTime())) return 'N/A';
       return format(d, formatStr);
     } catch (e) {
@@ -1146,7 +1146,7 @@ export default function FounderPanel() {
                       <div className="flex flex-col">
                         <span className="text-xs text-foreground">{company.lastActivity.action}</span>
                         <span className="text-[10px] text-muted-foreground">
-                          {company.lastActivity.timestamp?.toDate ? safeFormat(company.lastActivity.timestamp.toDate(), 'dd MMM, HH:mm') : 'N/A'}
+                          {company.lastActivity.timestamp ? safeFormat(company.lastActivity.timestamp, 'dd MMM, HH:mm') : 'N/A'}
                         </span>
                       </div>
                     ) : (
@@ -1415,8 +1415,7 @@ export default function FounderPanel() {
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                        {log.createdAt?.toDate ? safeFormat(log.createdAt.toDate(), 'dd MMM, HH:mm:ss') : 
-                         log.createdAt ? safeFormat(log.createdAt, 'dd MMM, HH:mm:ss') : 'N/A'}
+                        {safeFormat(log.createdAt, 'dd MMM, HH:mm:ss')}
                       </p>
                     </div>
                   </div>
@@ -1496,7 +1495,7 @@ export default function FounderPanel() {
                         </td>
                         <td className="p-4">
                           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                            {order.createdAt?.toDate ? safeFormat(order.createdAt.toDate(), 'dd MMM yyyy, HH:mm') : 'N/A'}
+                            {safeFormat(order.createdAt, 'dd MMM yyyy, HH:mm')}
                           </p>
                         </td>
                         <td className="p-4">
