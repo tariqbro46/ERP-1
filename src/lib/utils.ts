@@ -19,3 +19,10 @@ export function formatNumber(amount: number): string {
     maximumFractionDigits: 2,
   }).format(amount || 0);
 }
+
+export function formatQuantity(amount: number, decimals: number = 2): string {
+  return new Intl.NumberFormat('en-BD', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  }).format(amount || 0);
+}

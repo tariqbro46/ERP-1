@@ -5,7 +5,7 @@ import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { formatCurrency, formatNumber, cn } from '../lib/utils';
+import { formatCurrency, formatNumber, formatQuantity, cn } from '../lib/utils';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { exportToPDF } from '../utils/exportUtils';
@@ -158,15 +158,29 @@ export function StockItemReport() {
       const openingBalance = sortedOpeningEntries.reduce((sum, e) => {
         const total = (e.qty || 0) + (e.free_qty || 0);
         const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
-        if (isPhysical) return total;
+        if (isPhysical) {
+          if (!selectedGodown) {
+            return sum + (Number(e.adjustment_qty) || 0);
+          } else {
+            return total;
+          }
+        }
         return sum + (e.movement_type === 'Inward' ? total : -total);
       }, initialQty);
 
       const openingValue = sortedOpeningEntries.reduce((sum, e) => {
         const val = (e.qty || 0) * (e.rate || 0);
         const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
-        // Valuation for physical stock is tricky, for now we treat it as inward if we don't have better info
-        if (isPhysical) return val || sum; 
+        
+        if (isPhysical) {
+          if (!selectedGodown) {
+            const adj = Number(e.adjustment_qty) || 0;
+            const rate = Number(e.rate) || (sum > 0 ? sum / sum : 0); // Approximation if missing
+            return sum + (adj * (Number(e.rate) || 0));
+          } else {
+            return val || sum;
+          }
+        }
         return sum + (e.movement_type === 'Inward' ? val : -val);
       }, initialValue);
 
@@ -244,15 +258,26 @@ export function StockItemReport() {
             const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
 
             if (isPhysical) {
-              const adj = total - runningQty;
+              let adj = 0;
+              if (!selectedGodown) {
+                adj = Number(e.adjustment_qty) || 0;
+              } else {
+                adj = total - runningQty;
+              }
               const curRate = Number(e.rate) || 0;
               if (adj >= 0) {
                 dayInQty += adj;
                 dayInVal += (adj * curRate);
               } else {
                 dayOutQty += Math.abs(adj);
+                dayOutVal += (Math.abs(adj) * curRate);
               }
-              runningQty = total;
+              
+              if (!selectedGodown) {
+                runningQty += adj;
+              } else {
+                runningQty = total;
+              }
               if (curRate > 0) {
                 runningVal = runningQty * curRate;
               } else {
@@ -333,16 +358,35 @@ export function StockItemReport() {
           for (const e of mEntries) {
             const total = (e.qty || 0) + (e.free_qty || 0);
             const val = (e.qty || 0) * (e.rate || 0);
+            const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
 
-            if (e.v_type === 'Physical Stock') {
-              const adj = total - runningQty;
+            if (isPhysical) {
+              let adj = 0;
+              if (!selectedGodown) {
+                adj = Number(e.adjustment_qty) || 0;
+              } else {
+                adj = total - runningQty;
+              }
+              const curRate = Number(e.rate) || 0;
               if (adj >= 0) {
                 mInQty += adj;
-                mInVal += (adj * (e.rate || 0));
+                mInVal += (adj * curRate);
               } else {
                 mOutQty += Math.abs(adj);
+                mOutVal += (Math.abs(adj) * curRate);
               }
-              runningQty = total;
+
+              if (!selectedGodown) {
+                runningQty += adj;
+              } else {
+                runningQty = total;
+              }
+              if (curRate > 0) {
+                runningVal = runningQty * curRate;
+              } else {
+                const prevTQ = runningQty - adj;
+                runningVal = prevTQ > 0 ? (runningVal / prevTQ) * runningQty : 0;
+              }
             } else if ((e.movement_type || '').toLowerCase() === 'inward') {
               mInQty += total;
               mInVal += val;
@@ -411,9 +455,12 @@ export function StockItemReport() {
 
   const formatQty = (qty: number) => {
     if (qty === 0) return '-';
-    const isPcs = selectedItem?.unitName?.toLowerCase() === 'pcs';
-    if (isPcs) return Math.round(qty).toString();
-    return formatNumber(qty);
+    // Use the custom unit name or formatted name
+    const unitName = selectedItem?.unitName?.toLowerCase() || '';
+    const isPcs = unitName === 'pcs' || unitName === 'pc' || unitName === 'nos';
+    
+    if (isPcs) return formatQuantity(qty, 0);
+    return formatQuantity(qty, 2);
   };
 
   const handleDownloadPDF = () => {
@@ -645,7 +692,7 @@ export function StockItemReport() {
                   <span className="font-bold text-gray-900 capitalize">{selectedItem.name}</span>
                 </div>
                 <div className="text-sm text-gray-500">
-                  {t('stockItem.currentStock')} <span className="font-bold text-primary">{formatNumber(selectedItem.current_stock)} {selectedItem.unitName}</span>
+                  {t('stockItem.currentStock')} <span className="font-bold text-primary">{formatQty(selectedItem.current_stock)} {selectedItem.unitName}</span>
                 </div>
               </div>
               

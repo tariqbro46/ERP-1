@@ -1897,6 +1897,12 @@ export const erpService = {
       let totalValue = stock * (Number(effectiveItemData.opening_rate) || 0);
       let totalQty = stock;
 
+      // Track godown balances during recalculation if we want perfectly accurate global physical stock handling
+      const godownBalances: Record<string, number> = {};
+      (effectiveItemData.opening_godowns || []).forEach((ag: any) => {
+        godownBalances[ag.godown_id] = Number(ag.qty) || 0;
+      });
+
       for (const e of entries) {
         const vType = e.v_type;
         const movementType = e.movement_type || e.m_type;
@@ -1904,17 +1910,29 @@ export const erpService = {
         const freeQty = Number(e.free_qty) || 0;
         const rate = Number(e.rate) || 0;
         const totalEntryQty = qty + freeQty;
+        const godownId = e.godown_id;
 
         if (vType?.toLowerCase() === 'physical stock') {
-          stock = qty; // For physical stock, the input qty is the new absolute stock
-          // Reset totalQty to match the new physical count so future avg cost calcs are accurate
-          totalQty = stock; 
+          if (!godownId) {
+            // Global physical stock sets the current global absolute
+            stock = qty;
+            totalQty = stock;
+          } else {
+            // Godown-specific physical stock
+            const oldGodownStock = godownBalances[godownId] || 0;
+            const adjustment = qty - oldGodownStock;
+            stock += adjustment;
+            godownBalances[godownId] = qty;
+            totalQty += adjustment;
+          }
         } else if (movementType === 'Inward') {
           stock += totalEntryQty;
           totalValue += (qty * rate);
           totalQty += qty;
+          if (godownId) godownBalances[godownId] = (godownBalances[godownId] || 0) + totalEntryQty;
         } else {
           stock -= totalEntryQty;
+          if (godownId) godownBalances[godownId] = (godownBalances[godownId] || 0) - totalEntryQty;
         }
       }
       

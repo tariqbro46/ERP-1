@@ -1,25 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Package, Search, Printer, Download, ChevronDown, ChevronRight, Loader2, Filter, MapPin, Activity, AlertTriangle, X } from 'lucide-react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { Package, Search, Printer, Download, ChevronDown, ChevronRight, Loader2, Filter, MapPin, Activity, AlertTriangle, X, Calendar } from 'lucide-react';
 import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
-import { cn, formatNumber } from '../lib/utils';
+import { cn, formatNumber, formatQuantity } from '../lib/utils';
 import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ReportPrintHeader, ReportPrintFooter } from './ReportPrintHeader';
+import { DateInput } from './DateInput';
 import * as printUtils from '../utils/printUtils';
 
 export function StockSummary() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const settings = useSettings();
+  const navigate = useNavigate();
   const location = useLocation();
-  const locationState = location.state as { godownId?: string; categoryId?: string } | null;
+  const [searchParams] = useSearchParams();
   const { showNotification } = useNotification();
+  const locationState = location.state as { godownId?: string; categoryId?: string } | null;
+  
+  const [startDate, setStartDate] = useState(searchParams.get('from') || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'));
+  const [endDate, setEndDate] = useState(searchParams.get('to') || new Date().toLocaleDateString('en-CA'));
   const [items, setItems] = useState<any[]>([]);
   const [godowns, setGodowns] = useState<any[]>([]);
   const [stockCategories, setStockCategories] = useState<any[]>([]);
@@ -30,39 +36,7 @@ export function StockSummary() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [isQuickItemOpen, setIsQuickItemOpen] = useState(false);
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
-
-  useEffect(() => {
-    async function fetchData() {
-      if (!user?.companyId) return;
-      try {
-        const [allItems, godownsRes, allInv, catsRes] = await Promise.all([
-          erpService.getItems(user.companyId),
-          erpService.getGodowns(user.companyId),
-          erpService.getCollection('inventory_entries', user.companyId),
-          erpService.getCollection('stock_categories', user.companyId)
-        ]);
-        
-        // Calculate stock per item per godown if needed
-        // For now, we'll store the raw inventory entries to calculate on the fly
-        setInventory(allInv);
-        setItems(allItems);
-        setGodowns(godownsRes || []);
-        setStockCategories(catsRes || []);
-        
-        // Expand all groups by default
-        const groups = new Set(allItems.map(i => i.category || 'General Items'));
-        setExpandedGroups(groups);
-      } catch (err) {
-        console.error('Error fetching stock data:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [user?.companyId]);
-
   const [inventory, setInventory] = useState<any[]>([]);
-
   const [recalculating, setRecalculating] = useState(false);
 
   const handleRecalculateAll = async () => {
@@ -72,7 +46,6 @@ export function StockSummary() {
         await erpService.recalculateItemStats(item.id);
       }
       showNotification('All item statistics recalculated successfully');
-      // Refresh data
       window.location.reload();
     } catch (err) {
       console.error('Error recalculating:', err);
@@ -87,57 +60,157 @@ export function StockSummary() {
     showNotification('Item created successfully');
   };
 
-  const getStockForGodown = (itemId: string, godownId: string | null) => {
-    const item = items.find(i => i.id === itemId);
-    const openingAllocations = item?.opening_godowns || [];
-
-    if (!godownId) {
-      return item?.current_stock || 0;
+  useEffect(() => {
+    async function fetchData() {
+      if (!user?.companyId) return;
+      setLoading(true);
+      try {
+        const [allItems, godownsRes, allInv, catsRes] = await Promise.all([
+          erpService.getItems(user.companyId),
+          erpService.getGodowns(user.companyId),
+          erpService.getCollection('inventory_entries', user.companyId),
+          erpService.getCollection('stock_categories', user.companyId)
+        ]);
+        
+        setInventory(allInv);
+        setItems(allItems);
+        setGodowns(godownsRes || []);
+        setStockCategories(catsRes || []);
+        
+        const groups = new Set(allItems.map(i => i.category || 'General Items'));
+        setExpandedGroups(groups);
+      } catch (err) {
+        console.error('Error fetching stock data:', err);
+      } finally {
+        setLoading(false);
+      }
     }
-    
-    // Get opening stock specifically for this godown
-    const godownOpening = openingAllocations.find((a: any) => a.godown_id === godownId);
-    const openingForGodown = godownOpening ? (Number(godownOpening.qty) || 0) : 0;
-    
-    // Calculate stock from transactions for this specific godown
-    const sortedInv = [...inventory]
-      .filter(inv => inv.item_id === itemId && inv.godown_id === godownId)
+    fetchData();
+  }, [user?.companyId, endDate]);
+
+  const getStockDetails = (itemId: string, godownId: string | null) => {
+    const item = items.find(i => i.id === itemId);
+    if (!item) return { opening: 0, inward: 0, outward: 0, closing: 0 };
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const godownAllocation = (item.opening_godowns || []).find((a: any) => a.godown_id === godownId);
+    let currentStock = godownId 
+      ? (Number(godownAllocation?.qty) || 0)
+      : (Number(item.opening_qty) || 0);
+
+    let opening = 0;
+    let inward = 0;
+    let outward = 0;
+
+    // Filter and sort entries for consistent calculation
+    // We filter by godownId only if one is selected.
+    // If "All Locations" is selected, we need all entries to calculate total stock correctly.
+    const relevantEntries = inventory
+      .filter(inv => inv.item_id === itemId && (!godownId || inv.godown_id === godownId))
       .sort((a, b) => {
         const dateComp = (a.date || '').localeCompare(b.date || '');
         if (dateComp !== 0) return dateComp;
         return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
       });
 
-    const transactionStock = sortedInv.reduce((sum, inv) => {
-      const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
-      if (inv.v_type === 'Physical Stock') {
-        return qty; // Absolute reset
+    relevantEntries.forEach(inv => {
+      // Normalize entry date to start of day for comparison with 'start'
+      let entryDate: Date;
+      if (inv.date) {
+        const [y, m, d] = inv.date.split('-').map(Number);
+        entryDate = new Date(y, m - 1, d);
+      } else {
+        entryDate = new Date(inv.created_at?.toDate?.() || 0);
       }
-      return inv.movement_type === 'Inward' ? sum + qty : sum - qty;
-    }, openingForGodown);
+      
+      const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
+      const mType = (inv.movement_type || inv.m_type || (inv.v_type === 'Sales' ? 'outward' : 'inward')).toLowerCase();
+      const isPhysical = inv.v_type?.toLowerCase() === 'physical stock' || inv.is_physical_snapshot;
 
-    return transactionStock;
+      if (entryDate < start) {
+        // Entries before the period affect opening balance
+        if (isPhysical) {
+          if (!godownId) {
+            // For All Locations, a physical stock entry anywhere only changes total by its adjustment
+            currentStock += (Number(inv.adjustment_qty) || 0);
+          } else {
+            // For a specific godown, physical stock sets the absolute value
+            currentStock = Number(inv.qty) || 0;
+          }
+        } else {
+          currentStock += (mType === 'inward' ? qty : -qty);
+        }
+      } else if (entryDate <= end) {
+        // Entries during the period
+        if (isPhysical) {
+          let adj = 0;
+          if (!godownId) {
+            adj = Number(inv.adjustment_qty) || 0;
+          } else {
+            // For specific godown, adjustment is target - current
+            adj = (Number(inv.qty) || 0) - currentStock;
+          }
+
+          if (adj > 0) inward += adj;
+          else {
+            outward += Math.abs(adj);
+          }
+
+          if (!godownId) {
+            currentStock += adj;
+          } else {
+            currentStock = Number(inv.qty) || 0;
+          }
+        } else {
+          if (mType === 'inward') {
+            inward += qty;
+            currentStock += qty;
+          } else {
+            outward += qty;
+            currentStock -= qty;
+          }
+        }
+      }
+    });
+
+    opening = currentStock - inward + outward;
+
+    return {
+      opening,
+      inward,
+      outward,
+      closing: currentStock
+    };
   };
 
-  const processedItems = items.map(item => ({
-    ...item,
-    displayStock: getStockForGodown(item.id, selectedGodown),
-    isLowStock: (getStockForGodown(item.id, null) <= (item.low_stock_threshold || 0)) && (item.low_stock_threshold > 0)
-  })).filter(item => {
+  const processedItems = items.map(item => {
+    const details = getStockDetails(item.id, selectedGodown);
+    return {
+      ...item,
+      ...details,
+      displayStock: details.closing,
+      isLowStock: (details.closing <= (item.low_stock_threshold || 0)) && (item.low_stock_threshold > 0)
+    };
+  }).filter(item => {
     if (selectedCategory && item.category_id !== selectedCategory) {
       if (selectedCategory === 'uncategorized' && item.category_id) return false;
       if (selectedCategory !== 'uncategorized') return false;
     }
-    if (selectedGodown && item.displayStock === 0) return false;
+    // Only show items with any movement or balance in the period
+    if (selectedGodown && item.displayStock === 0 && item.opening === 0 && item.inward === 0 && item.outward === 0) return false;
     if (showLowStockOnly && !item.isLowStock) return false;
     return true;
   }).sort((a, b) => a.name.localeCompare(b.name));
 
   const formatQty = (qty: number, unitName?: string) => {
-    if (qty === 0) return '0.00';
-    const isPcs = unitName?.toLowerCase() === 'pcs';
-    if (isPcs) return Math.round(qty).toString();
-    return formatNumber(qty);
+    const isPcs = unitName?.toLowerCase() === 'pcs' || unitName?.toLowerCase() === 'pc' || unitName?.toLowerCase() === 'nos';
+    if (qty === 0) return isPcs ? '0' : '0.00';
+    
+    if (isPcs) return formatQuantity(qty, 0);
+    return formatQuantity(qty, 2);
   };
 
   const groupedItems: Record<string, any[]> = {};
@@ -202,7 +275,7 @@ export function StockSummary() {
   }
 
   const now = new Date();
-  const asOnDate = formatReportDate(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0], settings.dateFormat);
+  const asOnDate = formatReportDate(endDate, settings.dateFormat);
 
   const highlightText = (text: string, query: string) => {
     if (!query) return text;
@@ -239,6 +312,26 @@ export function StockSummary() {
             <div className="flex flex-col">
               <h1 className="text-xl text-foreground uppercase tracking-tighter">{t('stock.title')}</h1>
               <p className="text-[10px] text-gray-500 uppercase tracking-widest">{settings.companyName || 'ERP System'} • {t('reports.asOnDate')} {asOnDate}</p>
+            </div>
+          </div>
+          <div className="flex-1 max-w-sm">
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <DateInput
+                  label="From"
+                  value={startDate}
+                  onChange={setStartDate}
+                  className="w-full bg-muted/50 border-0 shadow-none focus:bg-background"
+                />
+              </div>
+              <div className="flex-1">
+                <DateInput
+                  label="To"
+                  value={endDate}
+                  onChange={setEndDate}
+                  className="w-full bg-muted/50 border-0 shadow-none focus:bg-background"
+                />
+              </div>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 w-full sm:w-auto">
@@ -352,7 +445,8 @@ export function StockSummary() {
             title="Stock Summary" 
             subtitle={cn(
               selectedGodown ? `Location: ${godowns.find(g => g.id === selectedGodown)?.name}` : 'All Locations',
-              selectedCategory ? ` | Category: ${activeCategoryName}` : ''
+              selectedCategory ? ` | Category: ${activeCategoryName}` : '',
+              ` | Period: ${formatReportDate(startDate)} to ${formatReportDate(endDate)}`
             )} 
           />
           
@@ -410,18 +504,24 @@ export function StockSummary() {
 
           {/* Desktop View: Table */}
           <div className="hidden lg:block relative h-full">
-            <table className="w-full text-left text-xs min-w-[600px] border-separate border-spacing-0">
+            <table className="w-full text-left text-[11px] min-w-[800px] border-separate border-spacing-0">
               <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-sm shadow-sm">
                 <tr className="text-gray-500 uppercase text-[9px] font-bold tracking-widest">
-                  <th className="px-6 py-4 font-medium border-b border-border sticky top-0">{t('common.particulars')}</th>
-                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border sticky top-0">{t('common.quantity')}</th>
-                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border sticky top-0">{t('common.rate')} ({t('common.avgRate')})</th>
-                  <th className="px-6 py-4 font-medium text-right w-48 border-b border-border sticky top-0">{t('common.value')} (৳)</th>
+                  <th className="px-4 py-3 font-medium border-b border-border sticky top-0">{t('common.particulars')}</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">Opening</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">Inward</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">Outward</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">{t('common.quantity')}</th>
+                  <th className="px-4 py-3 font-medium text-right w-28 border-b border-border sticky top-0 border-l">Rate (Avg)</th>
+                  <th className="px-4 py-3 font-medium text-right w-32 border-b border-border sticky top-0 border-l">{t('common.value')} (৳)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
                 {filteredGroups.map(groupName => {
                   const groupItems = groupedItems[groupName];
+                  const groupOpening = groupItems.reduce((sum, i) => sum + i.opening, 0);
+                  const groupInward = groupItems.reduce((sum, i) => sum + i.inward, 0);
+                  const groupOutward = groupItems.reduce((sum, i) => sum + i.outward, 0);
                   const groupQty = groupItems.reduce((sum, i) => sum + i.displayStock, 0);
                   const groupValue = groupItems.reduce((sum, i) => sum + (i.displayStock * (i.avg_cost || i.opening_rate || 0)), 0);
                   const isExpanded = expandedGroups.has(groupName) || search.length > 0;
@@ -432,7 +532,7 @@ export function StockSummary() {
                         onClick={() => toggleGroup(groupName)}
                         className="hover:bg-foreground/5 transition-colors cursor-pointer group"
                       >
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             {isExpanded ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
                             <span className="text-foreground font-bold uppercase tracking-tight">
@@ -440,33 +540,52 @@ export function StockSummary() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right text-foreground font-mono font-bold">
-                          {formatNumber(groupQty)}
+                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
+                          {formatQuantity(groupOpening)}
                         </td>
-                        <td className="px-6 py-4 text-right text-gray-600">
+                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
+                          {formatQuantity(groupInward)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
+                          {formatQuantity(groupOutward)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
+                          {formatQuantity(groupQty)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-600 border-l border-border/10">
                           -
                         </td>
-                        <td className="px-6 py-4 text-right text-foreground font-mono font-bold">
+                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
                           {formatNumber(groupValue)}
                         </td>
                       </tr>
                       {isExpanded && groupItems.map(item => (
-                        <tr key={item.id} className={cn("bg-foreground/[0.02] hover:bg-foreground/5 transition-colors", item.isLowStock && "bg-rose-500/5")}>
-                          <td className="px-12 py-3 text-foreground/60 italic flex items-center gap-2">
+                        <tr key={item.id} className={cn("bg-foreground/[0.02] hover:bg-foreground/5 transition-colors group/item", item.isLowStock && "bg-rose-500/5")}>
+                          <td className="px-10 py-2.5 text-foreground/60 italic flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-border group-hover/item:bg-primary transition-colors" />
                             {highlightText(item.name, search)}
                             {item.isLowStock && (
                               <span className="px-1.5 py-0.5 bg-rose-500 text-white text-[8px] font-bold uppercase rounded flex items-center gap-1">
-                                <AlertTriangle className="w-2 h-2" /> {t('stock.lowStock')}
+                                <AlertTriangle className="w-2 h-2" /> Low
                               </span>
                             )}
                           </td>
-                           <td className="px-6 py-3 text-right text-foreground/80 font-mono">
+                           <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
+                             {formatQty(item.opening, item.units?.name)}
+                           </td>
+                           <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
+                             {formatQty(item.inward, item.units?.name)}
+                           </td>
+                           <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
+                             {formatQty(item.outward, item.units?.name)}
+                           </td>
+                           <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5">
                              {formatQty(item.displayStock, item.units?.name)}
                            </td>
-                           <td className="px-6 py-3 text-right text-foreground/80 font-mono">
+                           <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5">
                              {formatNumber(item.avg_cost || item.opening_rate || 0)}
                            </td>
-                           <td className="px-6 py-3 text-right text-foreground/80 font-mono">
+                           <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5">
                              {formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))}
                            </td>
                         </tr>
@@ -476,20 +595,29 @@ export function StockSummary() {
                 })}
                 {filteredGroups.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-gray-500 uppercase tracking-widest">{t('stock.noItems')}</td>
+                    <td colSpan={7} className="px-6 py-10 text-center text-gray-500 uppercase tracking-widest">{t('stock.noItems')}</td>
                   </tr>
                 )}
               </tbody>
-              <tfoot className="bg-foreground/5 border-t border-border">
+              <tfoot className="bg-foreground/5 border-t border-border sticky bottom-0">
                 <tr className="font-bold text-foreground">
-                  <td className="px-6 py-4 uppercase text-[10px] text-gray-500 tracking-widest">{t('common.grandTotal')}</td>
-                  <td className="px-6 py-4 text-right font-mono border-l border-border">
-                    {formatNumber(processedItems.reduce((sum, i) => sum + i.displayStock, 0))}
+                  <td className="px-4 py-3 uppercase text-[9px] text-gray-500 tracking-widest">{t('common.grandTotal')}</td>
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-foreground/[0.02]">
+                    {formatQuantity(processedItems.reduce((sum, i) => sum + i.opening, 0))}
                   </td>
-                  <td className="px-6 py-4 text-right font-mono border-l border-border">
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-foreground/[0.02]">
+                    {formatQuantity(processedItems.reduce((sum, i) => sum + i.inward, 0))}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-foreground/[0.02]">
+                    {formatQuantity(processedItems.reduce((sum, i) => sum + i.outward, 0))}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-foreground/[0.02]">
+                    {formatQuantity(processedItems.reduce((sum, i) => sum + i.displayStock, 0))}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono border-l border-border">
                     -
                   </td>
-                  <td className="px-6 py-4 text-right font-mono border-l border-border">
+                  <td className="px-4 py-3 text-right font-mono border-l border-border">
                     ৳ {formatNumber(totalStockValue)}
                   </td>
                 </tr>

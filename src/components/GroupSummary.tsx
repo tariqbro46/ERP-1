@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Printer, Download, ArrowLeft, Loader2, ChevronRight, Calendar } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,13 +15,22 @@ export function GroupSummary() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
   const [loading, setLoading] = useState(true);
   const [groups, setGroups] = useState<any[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<string>('');
-  const [ledgers, setLedgers] = useState<any[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<string>(searchParams.get('groupId') || '');
   const [searchTerm, setSearchTerm] = useState('');
-  const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'));
-  const [endDate, setEndDate] = useState(new Date().toLocaleDateString('en-CA'));
+  
+  const [startDate, setStartDate] = useState(
+    searchParams.get('from') || 
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA')
+  );
+  const [endDate, setEndDate] = useState(
+    searchParams.get('to') || 
+    new Date().toLocaleDateString('en-CA')
+  );
+  const [ledgers, setLedgers] = useState<any[]>([]);
 
   useEffect(() => {
     async function fetchGroups() {
@@ -29,7 +38,17 @@ export function GroupSummary() {
       try {
         const data = await erpService.getLedgerGroups(user.companyId);
         setGroups(data);
-        if (data.length > 0) {
+        
+        const paramGroupId = searchParams.get('groupId');
+        const paramGroupName = searchParams.get('groupName');
+        
+        if (paramGroupId && data.some(g => g.id === paramGroupId)) {
+          setSelectedGroup(paramGroupId);
+        } else if (paramGroupName) {
+          const group = data.find(g => g.name.toLowerCase() === paramGroupName.toLowerCase());
+          if (group) setSelectedGroup(group.id);
+          else if (data.length > 0) setSelectedGroup(data[0].id);
+        } else if (data.length > 0 && !selectedGroup) {
           setSelectedGroup(data[0].id);
         }
       } catch (err) {

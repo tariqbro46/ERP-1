@@ -73,7 +73,11 @@ export function ProfitAndLoss() {
               const mType = (entry.movement_type || entry.m_type || '').toLowerCase();
               
               if (entry.v_type?.toLowerCase() === 'physical stock' || entry.is_physical_snapshot) {
-                stocks[entry.item_id] = Number(entry.qty) || 0;
+                // For global calculation, we use adjustment_qty to update the total
+                // If the physical stock entry had no godown, adjustment_qty will reflect target - global_old
+                // If it had a godown, adjustment_qty will reflect target - godown_old
+                // In both cases, adding it to the global balance is correct.
+                stocks[entry.item_id] += (Number(entry.adjustment_qty) || 0);
               } else if (mType === 'inward') {
                 stocks[entry.item_id] += qty;
               } else {
@@ -104,6 +108,7 @@ export function ProfitAndLoss() {
               name: groupName,
               nature: l.nature,
               balance: 0,
+              groupId: l.group_id,
               ledgers: new Map()
             };
           }
@@ -226,11 +231,6 @@ export function ProfitAndLoss() {
                 defaultSubtitle={settings.companyName}
               />
             </div>
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground bg-muted/50 px-3 py-1 rounded-full w-fit">
-              <span>{formatReportDate(startDate)}</span>
-              <span className="opacity-50">to</span>
-              <span>{formatReportDate(endDate)}</span>
-            </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <DateInput
@@ -283,7 +283,7 @@ export function ProfitAndLoss() {
                 <div className="flex-1 divide-y divide-border/30">
                   {/* Opening Stock */}
                   <div 
-                    onClick={() => navigate('/reports/stock-summary')}
+                    onClick={() => navigate(`/reports/stock?from=${startDate}&to=${endDate}`)}
                     className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 transition-colors cursor-pointer"
                   >
                     <span className="text-sm font-medium text-foreground">{t('reports.openingStock')}</span>
@@ -294,7 +294,7 @@ export function ProfitAndLoss() {
                   {tradingData.purchaseGroups.map((g: any) => (
                     <div 
                       key={g.name} 
-                      onClick={() => navigate(`/reports/group-summary?groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                      onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
                       className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
@@ -306,7 +306,7 @@ export function ProfitAndLoss() {
                   {tradingData.directExpenseGroups.map((g: any) => (
                     <div 
                       key={g.name} 
-                      onClick={() => navigate(`/reports/group-summary?groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                      onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
                       className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
@@ -318,7 +318,7 @@ export function ProfitAndLoss() {
                   {plData.indirectExpenseGroups.map((g: any) => (
                     <div 
                       key={g.name} 
-                      onClick={() => navigate(`/reports/group-summary?groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                      onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
                       className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
@@ -354,7 +354,7 @@ export function ProfitAndLoss() {
                   {tradingData.salesGroups.map((g: any) => (
                     <div 
                       key={g.name} 
-                      onClick={() => navigate(`/reports/group-summary?groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                      onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
                       className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
@@ -366,7 +366,7 @@ export function ProfitAndLoss() {
                   {plData.indirectIncomeGroups.map((g: any) => (
                     <div 
                       key={g.name} 
-                      onClick={() => navigate(`/reports/group-summary?groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                      onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
                       className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
@@ -376,7 +376,7 @@ export function ProfitAndLoss() {
 
                   {/* Closing Stock */}
                   <div 
-                    onClick={() => navigate('/reports/stock-summary')}
+                    onClick={() => navigate(`/reports/stock?from=${startDate}&to=${endDate}`)}
                     className="px-4 py-3 flex justify-between items-center hover:bg-muted/30 cursor-pointer"
                   >
                     <span className="text-sm font-medium text-foreground">Closing Stock</span>

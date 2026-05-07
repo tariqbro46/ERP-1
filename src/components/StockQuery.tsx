@@ -71,7 +71,19 @@ export function StockQuery() {
       const godowns = await erpService.getGodowns(user!.companyId);
       const stockByGodown = godowns.map((g: any) => {
         const gEntries = itemEntries.filter((e: any) => e.godown_id === g.id);
-        const qty = gEntries.reduce((sum, e) => sum + (e.movement_type === 'Inward' ? (e.qty + (e.free_qty || 0)) : -(e.qty + (e.free_qty || 0))), 0);
+        const qty = gEntries.reduce((sum, e) => {
+          const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
+          const entryQty = (e.qty || 0) + (e.free_qty || 0);
+          
+          if (isPhysical) {
+            // For a specific godown, the physical stock was calculated as target qty
+            // In erpService, we store adjustment_qty which is (target - existing)
+            // Adding this adjustment to our running sum will correctly set the new balance.
+            return sum + (Number(e.adjustment_qty) || 0);
+          }
+          
+          return sum + (e.movement_type === 'Inward' ? entryQty : -entryQty);
+        }, 0);
         
         // Add opening godown allocation if any
         const openingAlloc = (item.opening_godowns || []).find((ag: any) => ag.godown_id === g.id);
