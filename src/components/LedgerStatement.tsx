@@ -191,11 +191,16 @@ export function LedgerStatement() {
     }
   };
 
-  const currentLedger = ledgers.find(l => l.id === selectedLedger);
-  const openingBalance = currentLedger?.opening_balance || 0;
-  const totalDebit = entries.reduce((sum, e) => sum + (e.debit || 0), 0);
-  const totalCredit = entries.reduce((sum, e) => sum + (e.credit || 0), 0);
-  let runningBalance = openingBalance;
+    const currentLedger = ledgers.find(l => l.id === selectedLedger);
+    const groupName = currentLedger?.group_name?.toLowerCase() || '';
+    const isDebtor = groupName.includes('debtor') || groupName.includes('asset') || groupName.includes('receivable');
+    const isCreditor = groupName.includes('creditor') || groupName.includes('liability') || groupName.includes('payable');
+    const isExpense = groupName.includes('expense');
+
+    const openingBalance = currentLedger?.opening_balance || 0;
+    const totalDebit = entries.reduce((sum, e) => sum + (e.debit || 0), 0);
+    const totalCredit = entries.reduce((sum, e) => sum + (e.credit || 0), 0);
+    let runningBalance = openingBalance;
 
   const handlePrint = () => {
     printUtils.printElement('ledger-report', `Ledger Statement: ${currentLedger?.name || ''}`);
@@ -214,14 +219,16 @@ export function LedgerStatement() {
     let rowCounter = 1;
     
     // Opening Balance
+    const obVal = rb;
     exportData.push({
       date: formatDate(startDate),
       particulars: 'Opening Balance',
       vch_no: '-',
       vch_type: '-',
-      debit: rb > 0 ? rb : 0,
-      credit: rb < 0 ? Math.abs(rb) : 0,
-      balance: `${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}`,
+      serial_no: '-',
+      debit: (isDebtor || isExpense) ? Math.abs(obVal) : (isCreditor ? 0 : (obVal > 0 ? Math.abs(obVal) : 0)),
+      credit: isCreditor ? Math.abs(obVal) : ((isDebtor || isExpense) ? 0 : (obVal < 0 ? Math.abs(obVal) : 0)),
+      balance: '-',
       isShaded: config.enableStripeView && rowCounter % 2 !== 0
     });
     rowCounter++;
@@ -233,8 +240,9 @@ export function LedgerStatement() {
       exportData.push({
         date: formatDate(e.vouchers?.v_date),
         particulars: e.particulars,
-        vch_no: `${e.vouchers?.v_no || '-'}${(e.vouchers?.serial_no || e.vouchers?.auto_serial_no) ? ` / SN:${e.vouchers.serial_no || e.vouchers?.auto_serial_no}` : ''}`,
+        vch_no: e.vouchers?.v_no || '-',
         vch_type: e.vouchers?.v_type || '-',
+        serial_no: e.vouchers?.serial_no || e.vouchers?.auto_serial_no || '-',
         debit: e.debit || 0,
         credit: e.credit || 0,
         balance: config.showRunningBalance ? `${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}` : '',
@@ -297,12 +305,13 @@ export function LedgerStatement() {
     exportData.push({
       date: '',
       particulars: 'Closing Balance',
-      vch_no: '',
-      vch_type: '',
-      debit: finalBalance < 0 ? Math.abs(finalBalance) : 0,
-      credit: finalBalance >= 0 ? Math.abs(finalBalance) : 0,
-      balance: formatNumber(Math.abs(finalBalance)),
-      isShaded: false // Closing balance usually not shaded or special
+      vch_no: '-',
+      vch_type: '-',
+      serial_no: '-',
+      debit: (isDebtor || isExpense) ? Math.abs(finalBalance) : (isCreditor ? 0 : (finalBalance > 0 ? Math.abs(finalBalance) : 0)),
+      credit: isCreditor ? Math.abs(finalBalance) : ((isDebtor || isExpense) ? 0 : (finalBalance < 0 ? Math.abs(finalBalance) : 0)),
+      balance: '-',
+      isShaded: false 
     });
 
     const period = `${formatDate(startDate)} to ${formatDate(endDate)}`;
@@ -323,16 +332,32 @@ export function LedgerStatement() {
     let totalDebit = (rb > 0 ? rb : 0);
     let totalCredit = (rb < 0 ? Math.abs(rb) : 0);
 
-    const generateLayout1 = () => {
+      const generateLayout1 = () => {
+      const displayTotalDebitCalc = totalDebit + (openingBalance > 0 ? openingBalance : 0);
+      const displayTotalCreditCalc = totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0);
+      const balancedTotal = Math.max(displayTotalDebitCalc, displayTotalCreditCalc);
+      
+      let finalFTotalD = displayTotalDebitCalc;
+      let finalFTotalC = displayTotalCreditCalc;
+      
+      if (isDebtor || isExpense) {
+        finalFTotalD = 0;
+        finalFTotalC = balancedTotal;
+      } else if (isCreditor) {
+        finalFTotalD = balancedTotal;
+        finalFTotalC = 0;
+      }
+
       const reportRows = [
-        `<tr>
-          <td>${formatDate(startDate)}</td>
-          <td>Dr <b>Opening Balance</b></td>
+        `<tr style="border-bottom: 2px solid #000;">
+          <td style="color: #000;">${formatDate(startDate)}</td>
+          <td style="color: #000;"><b>Opening Balance</b></td>
           <td></td>
           <td></td>
-          <td style="text-align: right;"><b>${rb > 0 ? formatNumber(rb) : ''}</b></td>
-          <td style="text-align: right;">${rb < 0 ? formatNumber(Math.abs(rb)) : ''}</td>
-          <td style="text-align: right;">${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}</td>
+          <td></td>
+          <td style="text-align: right; color: #000;"><b>${((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && rb > 0)) ? formatNumber(Math.abs(rb)) : ''}</b></td>
+          <td style="text-align: right; color: #000;">${(isCreditor || (!(isDebtor || isExpense || isCreditor) && rb < 0)) ? formatNumber(Math.abs(rb)) : ''}</td>
+          <td style="text-align: right; color: #000;"></td>
         </tr>`,
         ...entries.map(e => {
           rb += (e.debit || 0) - (e.credit || 0);
@@ -340,18 +365,18 @@ export function LedgerStatement() {
           totalCredit += (e.credit || 0);
           const creator = users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System';
           
-          let row = `<tr>
-            <td>${formatDate(e.vouchers?.v_date)}</td>
-            <td>
+          let row = `<tr style="border-bottom: 2px solid #000;">
+            <td style="color: #000;">${formatDate(e.vouchers?.v_date)}</td>
+            <td style="color: #000;">
               <div>Dr <b>${e.particulars}</b></div>
-              ${config.showNarration && e.vouchers?.narration ? `<div style="font-size: 10px; font-style: italic; margin-left: 10px;">(${e.vouchers.narration})</div>` : ''}
+              ${config.showNarration && e.vouchers?.narration ? `<div style="font-size: 10px; font-style: italic; margin-left: 10px; color: #000;">${e.vouchers.narration}</div>` : ''}
             </td>
-            <td>${e.vouchers?.v_type}</td>
-            <td>${e.vouchers?.v_no || e.vouchers?.reference_no || ''}</td>
-            <td style="color: #10b981;">${e.vouchers?.serial_no || e.vouchers?.auto_serial_no || ''}</td>
-            <td style="text-align: right;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
-            <td style="text-align: right;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
-            <td style="text-align: right;">${config.showRunningBalance ? `${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
+            <td style="color: #000;">${e.vouchers?.v_type}</td>
+            <td style="color: #000;">${e.vouchers?.v_no || e.vouchers?.reference_no || ''}</td>
+            <td style="color: #000;">${e.vouchers?.serial_no || e.vouchers?.auto_serial_no || ''}</td>
+            <td style="text-align: right; color: #000;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
+            <td style="text-align: right; color: #000;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
+            <td style="text-align: right; color: #000;">${config.showRunningBalance ? `${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
           </tr>`;
 
           if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
@@ -367,20 +392,20 @@ export function LedgerStatement() {
               `;
             }).join('');
             
-            row += `<tr>
+            row += `<tr style="border-bottom: 2px solid #000;">
               <td></td>
-              <td colspan="6">
-                <div style="border: 1px solid #eee; padding: 5px; margin: 2px 0 2px 20px;">
+              <td colspan="7">
+                <div style="padding: 5px; margin: 2px 0 2px 20px;">
                   ${inventoryRows}
-                  ${config.showEnteredBy ? `<div style="font-size: 10px; margin-top: 5px; border-top: 1px dashed #ccc; padding-top: 2px;"><i>Entered By : <b>${creator}</b></i></div>` : ''}
+                  ${config.showEnteredBy ? `<div style="font-size: 10px; margin-top: 5px; border-top: 1px dashed #000; padding-top: 2px; color: #000;"><i>Entered By : <b>${creator}</b></i></div>` : ''}
                 </div>
               </td>
             </tr>`;
           } else if (config.showEnteredBy) {
-            row += `<tr>
+            row += `<tr style="border-bottom: 2px solid #000;">
               <td></td>
-              <td colspan="6">
-                <div style="font-size: 10px; margin-left: 40px;"><i>Entered By : <b>${creator}</b></i></div>
+              <td colspan="7">
+                <div style="font-size: 10px; margin-left: 40px; color: #000;"><i>Entered By : <b>${creator}</b></i></div>
               </td>
             </tr>`;
           }
@@ -390,23 +415,26 @@ export function LedgerStatement() {
       ].join('');
 
       const finalBalance = rb;
+      
       const closingBalanceRow = `
-        <tr class="closing-balance">
+        <tr class="closing-balance" style="border-bottom: 2px solid #000;">
           <td></td>
-          <td><b>${finalBalance >= 0 ? 'Cr' : 'Dr'} Closing Balance</b></td>
+          <td style="color: #000;"><b>Closing Balance</b></td>
           <td></td>
           <td></td>
-          <td style="text-align: right;"><b>${finalBalance < 0 ? formatNumber(Math.abs(finalBalance)) : ''}</b></td>
-          <td style="text-align: right;"><b>${finalBalance >= 0 ? formatNumber(Math.abs(finalBalance)) : ''}</b></td>
-          <td style="text-align: right;"></td>
+          <td></td>
+          <td style="text-align: right; color: #000;"><b>${((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && finalBalance > 0)) ? formatNumber(Math.abs(finalBalance)) : ''}</b></td>
+          <td style="text-align: right; color: #000;"><b>${(isCreditor || (!(isDebtor || isExpense || isCreditor) && finalBalance < 0)) ? formatNumber(Math.abs(finalBalance)) : ''}</b></td>
+          <td style="text-align: right; color: #000;"></td>
         </tr>
         <tr class="total-row">
           <td></td>
           <td></td>
           <td></td>
           <td></td>
-          <td style="text-align: right; border-top: 1px solid #000; border-bottom: 3px double #000;"><b>${formatNumber(totalDebit + (finalBalance < 0 ? Math.abs(finalBalance) : 0))}</b></td>
-          <td style="text-align: right; border-top: 1px solid #000; border-bottom: 3px double #000;"><b>${formatNumber(totalCredit + (finalBalance >= 0 ? Math.abs(finalBalance) : 0))}</b></td>
+          <td></td>
+          <td style="text-align: ${finalFTotalD > 0 ? 'right' : 'center'}; border-top: 1px solid #000; border-bottom: 3px double #000; color: #000;"><b>${finalFTotalD > 0 ? formatNumber(finalFTotalD) : '-'}</b></td>
+          <td style="text-align: ${finalFTotalC > 0 ? 'right' : 'center'}; border-top: 1px solid #000; border-bottom: 3px double #000; color: #000;"><b>${finalFTotalC > 0 ? formatNumber(finalFTotalC) : '-'}</b></td>
           <td></td>
         </tr>
       `;
@@ -442,13 +470,11 @@ export function LedgerStatement() {
             <div class="container">
               <div class="page-num"><span>Page 1</span></div>
               
-              <div class="header-box" style="display: flex; align-items: center; justify-content: center; text-align: left;">
-                ${settings?.companyLogo ? `
-                  <div style="width: 60px; height: 60px; margin-right: 20px; flex-shrink: 0;">
-                    <img src="${settings.companyLogo}" style="width: 100%; height: 100%; object-fit: contain;" referrerPolicy="no-referrer" />
-                  </div>
-                ` : ''}
-                <div style="flex: 1; text-align: center;">
+              <div class="header-box" style="display: grid; grid-template-columns: 100px 1fr 100px; align-items: center; border-bottom: 2px solid #000; padding: 5px; margin-bottom: 10px;">
+                <div style="width: 100px; display: flex; justify-content: flex-start;">
+                  ${settings?.companyLogo ? `<img src="${settings.companyLogo}" style="max-width: 80px; max-height: 80px; object-fit: contain;" referrerPolicy="no-referrer" />` : ''}
+                </div>
+                <div style="text-align: center;">
                   <div class="company-name">${settings?.companyName || 'COMPANY NAME'}</div>
                   <div style="font-size: 12px;">${settings?.companyAddress || ''}</div>
                   <div style="font-size: 12px;">
@@ -457,9 +483,10 @@ export function LedgerStatement() {
                     ${settings?.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
                   </div>
                 </div>
+                <div style="width: 100px;"></div>
               </div>
               
-              <div class="ledger-box">
+              <div class="ledger-box" style="border: none; padding: 0; margin-bottom: 10px;">
                 <div class="ledger-name">${ledgerName}</div>
                 <div style="font-size: 12px;">${currentLedger?.address || ''}</div>
               </div>
@@ -472,12 +499,12 @@ export function LedgerStatement() {
                 <thead>
                   <tr>
                     <th style="width: 10%;">Date</th>
-                    <th style="width: 35%;">Particulars</th>
-                    <th style="width: 8%;">Vch Type</th>
+                    <th style="width: 33%;">Particulars</th>
+                    <th style="width: 10%; white-space: nowrap;">Vch Type</th>
                     <th style="width: 9%;">Ref No</th>
-                    <th style="width: 8%;">Serial No</th>
-                    <th style="width: 10%; text-align: right;">Debit</th>
-                    <th style="width: 10%; text-align: right;">Credit</th>
+                    <th style="width: 6%;">Serial No</th>
+                    <th style="width: 11%; text-align: right;">Debit</th>
+                    <th style="width: 11%; text-align: right;">Credit</th>
                     <th style="width: 10%; text-align: right;">Balance</th>
                   </tr>
                 </thead>
@@ -502,12 +529,13 @@ export function LedgerStatement() {
       const openingBalanceRow = `
         <tr class="border-all ${openingBalanceRowIsStripe ? 'stripe-row' : ''}">
           <td style="padding: 2px 5px;">${formatDate(startDate)}</td>
-          <td style="padding: 2px 5px;"><b>Dr Opening Balance</b></td>
+          <td style="padding: 2px 5px;"><b>Opening Balance</b></td>
           <td style="padding: 2px 5px;"></td>
           <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px; text-align: right;">${(currentLedger?.opening_balance || 0) > 0 ? formatNumber(Math.abs(currentLedger?.opening_balance || 0)) : ''}</td>
-          <td style="padding: 2px 5px; text-align: right;">${(currentLedger?.opening_balance || 0) < 0 ? formatNumber(Math.abs(currentLedger?.opening_balance || 0)) : ''}</td>
-          ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right;">${formatNumber(Math.abs(currentLedger?.opening_balance || 0))} ${(currentLedger?.opening_balance || 0) >= 0 ? 'Dr' : 'Cr'}</td>` : ''}
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px; text-align: right;"><b>${((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && (currentLedger?.opening_balance || 0) > 0)) ? formatNumber(Math.abs(currentLedger?.opening_balance || 0)) : ''}</b></td>
+          <td style="padding: 2px 5px; text-align: right;">${(isCreditor || (!(isDebtor || isExpense || isCreditor) && (currentLedger?.opening_balance || 0) < 0)) ? formatNumber(Math.abs(currentLedger?.opening_balance || 0)) : ''}</td>
+          ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right;"></td>` : ''}
         </tr>
       `;
 
@@ -530,15 +558,16 @@ export function LedgerStatement() {
             return `
               <tr class="${invRowIsStripe ? 'stripe-row' : ''}">
                 <td></td>
-                <td style="padding: 1px 5px 1px 20px; font-size: 11px; color: #333;">
+                <td style="padding: 1px 5px 1px 20px; font-size: 11px; color: #000;">
                   <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
                     <span style="font-weight: 500;">${itemName}</span>
-                    <span style="font-size: 10px; color: #666; white-space: nowrap;">${formatQuantity(item.qty, item.unit || 'pcs')} ${item.unit || 'pcs'}</span>
+                    <span style="font-size: 10px; color: #000; white-space: nowrap;">${formatQuantity(item.qty, item.unit || 'pcs')} ${item.unit || 'pcs'}</span>
                   </div>
-                  ${config.showStockDescriptions && item.description ? `<div style="font-size: 9px; font-style: italic; color: #666;">${item.description}</div>` : ''}
+                  ${config.showStockDescriptions && item.description ? `<div style="font-size: 9px; font-style: italic; color: #000;">${item.description}</div>` : ''}
                 </td>
-                <td style="padding: 1px 5px; font-size: 11px; text-align: right;">${formatNumber(item.rate)}</td>
-                <td style="padding: 1px 5px; font-size: 11px; text-align: right;">${formatNumber(item.amount)}</td>
+                <td style="padding: 1px 5px; font-size: 11px; text-align: right; color: #000;">${formatNumber(item.rate)}</td>
+                <td style="padding: 1px 5px; font-size: 11px; text-align: right; color: #000;">${formatNumber(item.amount)}</td>
+                <td></td>
                 <td></td>
                 <td></td>
                 ${config.showRunningBalance ? '<td></td>' : ''}
@@ -554,8 +583,8 @@ export function LedgerStatement() {
           extraRows += `
             <tr class="${narrationRowIsStripe ? 'stripe-row' : ''}">
               <td></td>
-              <td colspan="${config.showRunningBalance ? '6' : '5'}" style="padding: 1px 5px 1px 20px; font-size: 10px; font-style: italic; color: #666;">
-                (${e.vouchers.narration})
+              <td colspan="${config.showRunningBalance ? '7' : '6'}" style="padding: 1px 5px 1px 20px; font-size: 10px; font-style: italic; color: #000;">
+                ${e.vouchers.narration}
               </td>
             </tr>
           `;
@@ -566,7 +595,7 @@ export function LedgerStatement() {
           extraRows += `
             <tr class="${enteredByRowIsStripe ? 'stripe-row' : ''}">
               <td></td>
-              <td colspan="${config.showRunningBalance ? '6' : '5'}" style="padding: 1px 5px 1px 40px; font-size: 10px; color: #666;">
+              <td colspan="${config.showRunningBalance ? '7' : '6'}" style="padding: 1px 5px 1px 40px; font-size: 10px; color: #000;">
                 <i>Entered By : <b>${creator}</b></i>
               </td>
             </tr>
@@ -574,17 +603,17 @@ export function LedgerStatement() {
         }
         
         return `
-          <tr class="${mainRowIsStripe ? 'stripe-row' : ''}">
-            <td style="padding: 2px 5px; white-space: nowrap;">${formatDate(e.vouchers?.v_date)}</td>
-            <td style="padding: 2px 5px;">
+          <tr class="${mainRowIsStripe ? 'stripe-row' : ''}" style="border-bottom: 2px solid #000;">
+            <td style="padding: 2px 5px; white-space: nowrap; color: #000;">${formatDate(e.vouchers?.v_date)}</td>
+            <td style="padding: 2px 5px; color: #000;">
               <div>Dr <b>${e.particulars}</b></div>
             </td>
-            <td style="padding: 2px 5px;">${e.vouchers?.v_type}</td>
-            <td style="padding: 2px 5px;">${e.vouchers?.v_no || e.vouchers?.reference_no || ''}</td>
-            <td style="padding: 2px 5px; color: #10b981;">${e.vouchers?.serial_no || e.vouchers?.auto_serial_no || ''}</td>
-            <td style="padding: 2px 5px; text-align: right;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
-            <td style="padding: 2px 5px; text-align: right;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
-            ${config.showRunningBalance ? '<td style="padding: 2px 5px; text-align: right;"></td>' : ''}
+            <td style="padding: 2px 5px; color: #000;">${e.vouchers?.v_type}</td>
+            <td style="padding: 2px 5px; color: #000;">${e.vouchers?.v_no || e.vouchers?.reference_no || ''}</td>
+            <td style="padding: 2px 5px; color: #000;">${e.vouchers?.serial_no || e.vouchers?.auto_serial_no || ''}</td>
+            <td style="padding: 2px 5px; text-align: right; color: #000;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
+            <td style="padding: 2px 5px; text-align: right; color: #000;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
+            ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right; font-weight: 500; color: #000;">${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}</td>` : ''}
           </tr>
           ${inventoryRows}
           ${extraRows}
@@ -592,31 +621,44 @@ export function LedgerStatement() {
       }).join('');
 
       const finalBalance = rb;
-      const displayTotalDebit = totalDebit + (openingBalance > 0 ? openingBalance : 0) + (finalBalance < 0 ? Math.abs(finalBalance) : 0);
-      const displayTotalCredit = totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0) + (finalBalance >= 0 ? finalBalance : 0);
+      const displayTotalDebitCalc = totalDebit + (openingBalance > 0 ? openingBalance : 0);
+      const displayTotalCreditCalc = totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0);
+      const balancedTotal = Math.max(displayTotalDebitCalc, displayTotalCreditCalc);
+      
+      let finalFTotalD = displayTotalDebitCalc;
+      let finalFTotalC = displayTotalCreditCalc;
+      
+      if (isDebtor || isExpense) {
+        finalFTotalD = 0; // Faka under Debit
+        finalFTotalC = balancedTotal;
+      } else if (isCreditor) {
+        finalFTotalD = balancedTotal;
+        finalFTotalC = 0; // Faka under Credit
+      }
       
       const closingBalanceRow = `
         <tr class="border-all">
           <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px;"><b>Dr Closing Balance</b></td>
+          <td style="padding: 2px 5px;"><b>Closing Balance</b></td>
           <td style="padding: 2px 5px;"></td>
           <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px; text-align: right;"><b>${finalBalance < 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
-          <td style="padding: 2px 5px; text-align: right;"><b>${finalBalance >= 0 ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
-          ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right;"><b>${Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>` : ''}
+          <td style="padding: 2px 5px;"></td>
+          <td style="padding: 2px 5px; text-align: right; color: #000;"><b>${((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && finalBalance > 0)) ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+          <td style="padding: 2px 5px; text-align: right; color: #000;"><b>${(isCreditor || (!(isDebtor || isExpense || isCreditor) && finalBalance < 0)) ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+          ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right;"></td>` : ''}
         </tr>
         <tr class="border-all" style="border-top: 1px solid #000; border-bottom: 2px solid #000;">
-          <td style="padding: 2px 5px; text-align: right;" colspan="4"><b>Total</b></td>
-          <td style="padding: 2px 5px; text-align: right;"><b>${displayTotalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
-          <td style="padding: 2px 5px; text-align: right;"><b>${displayTotalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></td>
+          <td style="padding: 2px 5px; text-align: right; color: #000;" colspan="5"><b>Total</b></td>
+          <td style="padding: 2px 5px; text-align: ${finalFTotalD > 0 ? 'right' : 'center'}; color: #000;"><b>${finalFTotalD > 0 ? finalFTotalD.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</b></td>
+          <td style="padding: 2px 5px; text-align: ${finalFTotalC > 0 ? 'right' : 'center'}; color: #000;"><b>${finalFTotalC > 0 ? finalFTotalC.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</b></td>
           ${config.showRunningBalance ? '<td style="padding: 2px 5px; text-align: right;"></td>' : ''}
         </tr>
       `;
 
       const footerHtml = `
         <div class="footer">
-          ${settings.showPrintFooter ? `<div style="font-size: 10px; color: #666;">${settings.printFooter}</div>` : ''}
-          ${settings.showDeveloperContact ? `<div style="font-size: 8px; color: #999; margin-top: 2px;">Powered by TallyFlow ERP | Developer Contact: +880 1700 000000</div>` : ''}
+          ${settings.showPrintFooter ? `<div style="font-size: 10px; color: #000;">${settings.printFooter}</div>` : ''}
+          ${settings.showDeveloperContact ? `<div style="font-size: 8px; color: #000; margin-top: 2px;">Powered by TallyFlow ERP | Developer Contact: +880 1700 000000</div>` : ''}
         </div>
       `;
 
@@ -666,26 +708,24 @@ export function LedgerStatement() {
           </head>
           <body>
             <div class="container">
-              <div class="header-section" style="display: flex; align-items: center; justify-content: center; text-align: left;">
-                ${settings?.companyLogo ? `
-                  <div style="width: 60px; height: 60px; margin-right: 20px; flex-shrink: 0;">
-                    <img src="${settings.companyLogo}" style="width: 100%; height: 100%; object-fit: contain;" referrerPolicy="no-referrer" />
-                  </div>
-                ` : ''}
-                <div style="flex: 1; text-align: center;">
+              <div class="header-section" style="display: grid; grid-template-columns: 100px 1fr 100px; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px;">
+                <div style="width: 100px; display: flex; justify-content: flex-start;">
+                  ${settings?.companyLogo ? `<img src="${settings.companyLogo}" style="max-width: 80px; max-height: 80px; object-fit: contain;" referrerPolicy="no-referrer" />` : ''}
+                </div>
+                <div style="text-align: center;">
                   <div class="company-name">${settings?.companyName || 'COMPANY NAME'}</div>
                   <div class="company-details">${settings?.companyAddress || ''}</div>
                   <div class="company-details">
-                    <span class="email-line">E-Mail : ${settings?.printEmail || ''}</span>
+                    <span>E-Mail : ${settings?.printEmail || ''}</span>
                   </div>
                 </div>
+                <div style="width: 100px;"></div>
               </div>
               
-              <div style="text-align: center; margin-bottom: 20px;">
+              <div style="text-align: center; margin-bottom: 10px;">
                 <div class="ledger-name">${ledgerName}</div>
-                <div class="ledger-label">Ledger Account</div>
-                <div class="ledger-address">${currentLedger?.address || ''}</div>
-                <div class="period-text">${period}</div>
+                <div class="ledger-address" style="margin-bottom: 5px;">${currentLedger?.address || ''}</div>
+                <div class="period-text" style="font-weight: bold;">${period}</div>
               </div>
               
               <div class="page-num">Page 1</div>
@@ -694,13 +734,13 @@ export function LedgerStatement() {
                 <thead>
                   <tr>
                     <th style="width: 12%;">Date</th>
-                    <th style="width: 32%;">Particulars</th>
-                    <th style="width: 8%;">Vch Type</th>
-                    <th style="width: 8%;">Ref No</th>
-                    <th style="width: 8%;">Serial No</th>
+                    <th style="width: 29%;">Particulars</th>
+                    <th style="width: 10%; white-space: nowrap;">Vch Type</th>
+                    <th style="width: 9%;">Ref No</th>
+                    <th style="width: 6%;">Serial No</th>
                     <th style="width: 10%; text-align: right;">Debit</th>
                     <th style="width: 10%; text-align: right;">Credit</th>
-                    ${config.showRunningBalance ? '<th style="width: 10%; text-align: right;">Balance</th>' : ''}
+                    ${config.showRunningBalance ? '<th style="width: 14%; text-align: right;">Balance</th>' : ''}
                   </tr>
                 </thead>
                 <tbody>
@@ -886,22 +926,18 @@ export function LedgerStatement() {
           )}>
           {settings.reportLayout === 'Layout 2' && (
             <>
-              <div className="text-center mb-8 border-b border-black pb-4">
-                <h2 className="text-xl font-bold uppercase">{settings.companyName}</h2>
-                <p className="text-xs">{settings.companyAddress}</p>
-                <p className="text-[10px] underline decoration-black">E-Mail : {settings.printEmail}</p>
+              <div className="text-center mb-6 border-b-2 border-black pb-4">
+                <h2 className="text-xl font-bold uppercase text-black">{settings.companyName}</h2>
+                <p className="text-xs text-black">{settings.companyAddress}</p>
+                <p className="text-[10px] text-black">E-Mail : {settings.printEmail}</p>
                 
-                <div className="mt-6">
-                  <h3 className="text-lg font-bold">{currentLedger?.name}</h3>
-                  <p className="text-xs">Ledger Account</p>
-                  <p className="text-xs">{currentLedger?.address}</p>
-                </div>
-                
-                <div className="mt-4 text-xs font-bold">
-                  {formatReportDate(startDate, settings.dateFormat)} to {formatReportDate(endDate, settings.dateFormat)}
+                <div className="mt-4">
+                  <h3 className="text-lg font-bold text-black">{currentLedger?.name}</h3>
+                  <p className="text-xs text-black">{currentLedger?.address}</p>
+                  <p className="text-xs font-bold text-black border-t border-black/10 mt-1 pt-1">{formatReportDate(startDate, settings.dateFormat)} to {formatReportDate(endDate, settings.dateFormat)}</p>
                 </div>
               </div>
-              <div className="absolute top-8 right-8 border border-black px-2 py-1 text-[10px]">Page 1</div>
+              <div className="absolute top-8 right-8 border border-black px-2 py-1 text-[10px] text-black">Page 1</div>
             </>
           )}
           <div className="flex-1 min-h-0">
@@ -909,20 +945,20 @@ export function LedgerStatement() {
               "w-full text-left text-xs min-w-[700px] border-separate border-spacing-0 h-full",
               settings.reportLayout === 'Layout 2' ? "border-y border-black table-fixed" : ""
             )}>
-              <thead className="sticky top-0 z-20 bg-background shadow-sm ring-1 ring-border">
+              <thead className="sticky top-0 z-20 bg-white shadow-[0_2px_10px_-3px_rgba(0,0,0,0.1)]">
               <tr className={cn(
-                "border-b border-border text-gray-500 uppercase bg-foreground/5",
-                settings.reportLayout === 'Layout 2' && "border-black text-black font-bold bg-white"
+                "border-b border-border text-gray-500 uppercase bg-gray-50/50",
+                settings.reportLayout === 'Layout 2' && "border-y-2 border-black text-black font-bold bg-white"
               )}>
                 <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[12%] border-black" : "w-[120px]")}>{t('common.date')}</th>
-                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[33%] border-black" : "")}>{t('ledger.particulars')}</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[28%] border-black" : "")}>{t('ledger.particulars')}</th>
                 <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('ledger.vchType')}</th>
                 <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>Ref No</th>
-                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>Serial No</th>
-                <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[8%] border-black" : "")}>{t('reports.debit')}</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[6%] border-black" : "")}>Serial No</th>
+                <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('reports.debit')}</th>
                 <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('reports.credit')}</th>
                 {config.showRunningBalance && (
-                  <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('ledger.runningBalance')}</th>
+                  <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[14%] border-black" : "")}>{t('ledger.runningBalance')}</th>
                 )}
               </tr>
             </thead>
@@ -951,17 +987,17 @@ export function LedgerStatement() {
                         )}>
                           <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{formatReportDate(startDate, settings.dateFormat)}</td>
                           <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{t('ledger.openingBalance')}</td>
-                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>-</td>
-                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>-</td>
+                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                           <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
-                            {(currentLedger?.opening_balance || 0) > 0 ? Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                            {((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && (currentLedger?.opening_balance || 0) > 0)) ? Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
                           </td>
                           <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
-                            {(currentLedger?.opening_balance || 0) < 0 ? Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                            {(isCreditor || (!(isDebtor || isExpense || isCreditor) && (currentLedger?.opening_balance || 0) < 0)) ? Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
                           </td>
                           {config.showRunningBalance && (
                             <td className={cn("px-6 py-4 text-right text-foreground", settings.reportLayout === 'Layout 2' && "border border-black")}>
-                              {Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} {(currentLedger?.opening_balance || 0) >= 0 ? 'Dr' : 'Cr'}
                             </td>
                           )}
                         </tr>
@@ -979,37 +1015,33 @@ export function LedgerStatement() {
                             <React.Fragment key={e.id}>
                               <tr 
                                 className={cn(
-                                  "border-b border-border/50 hover:bg-muted/80 transition-colors cursor-pointer group border-l-4 border-transparent hover:border-primary",
+                                  "border-b-2 border-black/80 hover:bg-muted/80 transition-colors cursor-pointer group border-l-4 border-transparent hover:border-primary",
                                   config.enableStripeView && !settings.reportLayout && idx % 2 !== 0 && "bg-muted/30",
                                   settings.reportLayout === 'Layout 2' && "bg-white text-black hover:bg-gray-50",
                                   settings.reportLayout === 'Layout 2' && mainRowIsStripe && "bg-[#F3F4F6]"
                                 )}
                                 onClick={() => navigate(`/vouchers/view/${e.id}`)}
                               >
-                                <td className="px-6 py-4 whitespace-nowrap">{formatReportDate(e.vouchers?.v_date, settings.dateFormat)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-black">{formatReportDate(e.vouchers?.v_date, settings.dateFormat)}</td>
                                 <td className="px-6 py-4">
                                   <div className="flex flex-col">
-                                    <span className="text-foreground font-bold">
+                                    <span className="text-black font-bold">
                                       {settings.reportLayout === 'Layout 2' ? 'Dr ' : ''}{e.particulars}
                                     </span>
                                   </div>
                                 </td>
-                                <td className="px-6 py-4 uppercase text-[10px] text-gray-500">{e.vouchers?.v_type}</td>
-                                <td className="px-6 py-4 text-[10px] text-gray-500">
+                                <td className="px-6 py-4 uppercase text-[10px] text-black">{e.vouchers?.v_type}</td>
+                                <td className="px-6 py-4 text-[10px] text-black">
                                   {e.vouchers?.v_no || e.vouchers?.ref_no || e.vouchers?.reference_no}
                                 </td>
-                                <td className="px-6 py-4 text-emerald-600 font-mono text-[10px]">
+                                <td className="px-6 py-4 text-black font-mono text-[10px]">
                                   {e.vouchers?.serial_no || e.vouchers?.auto_serial_no || '-'}
                                 </td>
-                                <td className="px-6 py-4 text-right">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                                <td className="px-6 py-4 text-right">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                <td className="px-6 py-4 text-right text-black">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                <td className="px-6 py-4 text-right text-black">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
                                 {config.showRunningBalance && (
-                                  <td className="px-6 py-4 text-right text-foreground font-bold">
-                                    {settings.reportLayout !== 'Layout 2' ? (
-                                      <>
-                                        {Math.abs(currentBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currentBalance >= 0 ? 'Dr' : 'Cr'}
-                                      </>
-                                    ) : '-'}
+                                  <td className="px-6 py-4 text-right text-black font-bold">
+                                    {Math.abs(currentBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currentBalance >= 0 ? 'Dr' : 'Cr'}
                                   </td>
                                 )}
                               </tr>
@@ -1057,8 +1089,8 @@ export function LedgerStatement() {
                                     settings.reportLayout === 'Layout 2' && narrationRowIsStripe && "bg-[#F3F4F6]"
                                   )}>
                                     <td></td>
-                                    <td colSpan={config.showRunningBalance ? 6 : 5} className="px-6 py-1 pl-10 italic text-[10px] text-gray-500">
-                                      ({e.vouchers.narration})
+                                    <td colSpan={config.showRunningBalance ? 6 : 5} className="px-6 py-1 pl-10 italic text-[10px] text-black">
+                                      {e.vouchers.narration}
                                     </td>
                                   </tr>
                                 );
@@ -1086,38 +1118,85 @@ export function LedgerStatement() {
                   {/* Closing Balance Row */}
                   <tr className={cn(
                     "border-t-2 border-black font-bold",
-                    settings.reportLayout === 'Layout 2' ? "bg-white text-black border border-black" : "bg-foreground/5"
+                    settings.reportLayout === 'Layout 2' ? "bg-white text-black border border-black shadow-[0_-2px_10px_-3px_rgba(0,0,0,0.1)]" : "bg-foreground/5 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]"
                   )}>
                     <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                     <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{t('ledger.closingBalance')}</td>
                     <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                     <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                     <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
-                      {runningBalance < 0 ? Math.abs(runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                      {((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && runningBalance > 0)) ? Math.abs(runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
                     </td>
                     <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
-                      {runningBalance >= 0 ? Math.abs(runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                      {(isCreditor || (!(isDebtor || isExpense || isCreditor) && runningBalance < 0)) ? Math.abs(runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
                     </td>
                     {config.showRunningBalance && (
-                      <td className={cn("px-6 py-4 text-right text-foreground", settings.reportLayout === 'Layout 2' && "border border-black")}>
-                        {Math.abs(runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      <td className={cn("px-6 py-4 text-right text-foreground font-bold bg-muted/10", settings.reportLayout === 'Layout 2' && "border border-black bg-white")}>
                       </td>
                     )}
                   </tr>
 
                   {/* Totals Row for Layout 2 */}
-                  {settings.reportLayout === 'Layout 2' && (
-                    <tr className="border-t-2 border-black font-bold bg-white text-black">
-                      <td colSpan={4} className="px-6 py-4 text-right border border-black">{t('common.total')}</td>
-                      <td className="px-6 py-4 text-right border border-black">
-                        {(totalDebit + (openingBalance > 0 ? openingBalance : 0) + (runningBalance < 0 ? Math.abs(runningBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="px-6 py-4 text-right border border-black">
-                        {(totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0) + (runningBalance >= 0 ? Math.abs(runningBalance) : 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
-                      {config.showRunningBalance && <td className="px-6 py-4 border border-black"></td>}
-                    </tr>
-                  )}
+                  {settings.reportLayout === 'Layout 2' && (() => {
+                    const dTotal = totalDebit + (openingBalance > 0 ? openingBalance : 0);
+                    const cTotal = totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0);
+                    const balancedT = Math.max(dTotal, cTotal);
+                    
+                    let finalDT = dTotal;
+                    let finalCT = cTotal;
+                    
+                    if (isDebtor || isExpense) {
+                      finalDT = 0;
+                      finalCT = balancedT;
+                    } else if (isCreditor) {
+                      finalDT = balancedT;
+                      finalCT = 0;
+                    }
+
+                    return (
+                      <tr className="border-t-2 border-black font-bold bg-white text-black">
+                        <td colSpan={4} className="px-6 py-4 text-right border border-black">{t('common.total')}</td>
+                        <td className={cn("px-6 py-4 border border-black", finalDT > 0 ? "text-right" : "text-center")}>
+                          {finalDT > 0 ? finalDT.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                        </td>
+                        <td className={cn("px-6 py-4 border border-black", finalCT > 0 ? "text-right" : "text-center")}>
+                          {finalCT > 0 ? finalCT.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                        </td>
+                        {config.showRunningBalance && <td className="px-6 py-4 border border-black"></td>}
+                      </tr>
+                    );
+                  })()}
+                  {/* Totals Row for Standard/Layout 1 View */}
+                  {settings.reportLayout !== 'Layout 2' && (() => {
+                    const dTotal = totalDebit + (openingBalance > 0 ? openingBalance : 0);
+                    const cTotal = totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0);
+                    const balancedT = Math.max(dTotal, cTotal);
+                    
+                    let finalDT = dTotal;
+                    let finalCT = cTotal;
+                    
+                    if (isDebtor || isExpense) {
+                      finalDT = 0;
+                      finalCT = balancedT;
+                    } else if (isCreditor) {
+                      finalDT = balancedT;
+                      finalCT = 0;
+                    }
+
+                    return (
+                      <tr className="border-t-2 border-black font-bold bg-foreground/5 shadow-[0_-2px_4px_rgba(0,0,0,0.05)] text-black">
+                        <td colSpan={5} className="px-6 py-4 text-right border-none">{t('common.total')}</td>
+                        <td className={cn("px-6 py-4 border-t-2 border-black", finalDT > 0 ? "text-right" : "text-center")}>
+                          {finalDT > 0 ? finalDT.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                        </td>
+                        <td className={cn("px-6 py-4 border-t-2 border-black", finalCT > 0 ? "text-right" : "text-center")}>
+                          {finalCT > 0 ? finalCT.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                        </td>
+                        {config.showRunningBalance && <td className="px-6 py-4 border-t-2 border-black"></td>}
+                      </tr>
+                    );
+                  })()}
                 </>
               );
             })()}
