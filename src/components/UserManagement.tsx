@@ -30,7 +30,9 @@ export const UserManagement: React.FC = () => {
       // Initialize with defaults if none exist
       setLocalRolePermissions({
         'Staff': ['acc_reports_view', 'inv_reports_view'],
-        'Manager': ['acc_masters_create', 'acc_vouchers_create', 'acc_reports_view', 'acc_reports_financial', 'inv_masters_create', 'inv_vouchers_create', 'inv_reports_view']
+        'Marketing Manager': ['acc_reports_view', 'inv_reports_view', 'inv_reports_stock', 'acc_reports_sales'],
+        'Manager': ['acc_masters_create', 'acc_vouchers_create', 'acc_reports_view', 'acc_reports_financial', 'inv_masters_create', 'inv_vouchers_create', 'inv_reports_view'],
+        'Admin': APP_FEATURES.flatMap(cat => cat.features.map(f => f.id))
       });
     }
   }, [rolePermissions]);

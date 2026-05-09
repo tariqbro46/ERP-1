@@ -400,6 +400,7 @@ export function StockItemReport() {
           const v = voucherMap[e.voucher_id] || {};
           return {
             ...e,
+            date: e.date || v.v_date || '', // Prioritize entry date, fallback to voucher date
             v_no: v.v_no || 'N/A',
             v_type: v.v_type || 'N/A',
             party_name: v.particulars || v.party_ledger_name || 'N/A',
@@ -427,7 +428,7 @@ export function StockItemReport() {
         return { ...tx, closing_balance: currentRunningBalance };
       });
 
-      setTransactions([...transactionsWithBalance].reverse());
+      setTransactions(transactionsWithBalance); // Remove .reverse() to show earliest first
 
     } catch (err) {
       console.error('Error calculating summary:', err);
