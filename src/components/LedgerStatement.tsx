@@ -968,10 +968,10 @@ export function LedgerStatement() {
                           <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                           <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                           <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
-                            {((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && (currentLedger?.opening_balance || 0) > 0)) ? Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
+                            {((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && openingBalance > 0)) ? formatNumber(Math.abs(openingBalance)) : ''}
                           </td>
                           <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
-                            {(isCreditor || (!(isDebtor || isExpense || isCreditor) && (currentLedger?.opening_balance || 0) < 0)) ? Math.abs(currentLedger?.opening_balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
+                            {(isCreditor || (!(isDebtor || isExpense || isCreditor) && openingBalance < 0)) ? formatNumber(Math.abs(openingBalance)) : ''}
                           </td>
                           {config.showRunningBalance && (
                             <td className={cn("px-6 py-4 text-right text-foreground", settings.reportLayout === 'Layout 2' && "border border-black")}>
