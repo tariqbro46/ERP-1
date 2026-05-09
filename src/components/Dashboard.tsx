@@ -551,7 +551,7 @@ export function Dashboard() {
           )}>{t('dash.revenueTrajectory')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 10, left: 40, bottom: 0 }}>
+              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0.2}/>
@@ -588,7 +588,7 @@ export function Dashboard() {
           )}>{t('dash.expenseDistribution')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 10, left: 40, bottom: 0 }}>
+              <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
                 <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
                 <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
@@ -619,7 +619,7 @@ export function Dashboard() {
           )}>{t('dash.netProfitMargin')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData.map(d => ({ ...d, profit: d.value * 0.15 }))} margin={{ top: 5, right: 10, left: 40, bottom: 0 }}>
+              <LineChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData.map(d => ({ ...d, profit: d.value * 0.15 }))} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
                 <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
                 <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
@@ -650,7 +650,7 @@ export function Dashboard() {
           )}>{t('dash.cashFlowProjection')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData.map(d => ({ ...d, value: d.value * 1.2 }))} margin={{ top: 5, right: 10, left: 40, bottom: 0 }}>
+              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData.map(d => ({ ...d, value: d.value * 1.2 }))} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
                 <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
                 <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />

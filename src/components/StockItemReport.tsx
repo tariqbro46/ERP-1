@@ -121,6 +121,25 @@ export function StockItemReport() {
         return acc;
       }, {});
 
+      // Enrich entries with voucher data for more robust reporting
+      const enrichedInvEntries = allInvEntries.map((e: any) => {
+        const v = voucherMap[e.voucher_id] || {};
+        const vType = (e.v_type || v.v_type || '').toString();
+        
+        const movementData = {
+          ...e,
+          v_type: vType,
+          m_type: e.m_type || e.movement_type || e.entry_type || v.m_type || v.movement_type || ''
+        };
+        
+        return {
+          ...e,
+          v_type: vType,
+          date: e.date || v.v_date || '',
+          m_type: getMovementType(movementData)
+        };
+      });
+
         const start = parseEntryDate(from, null);
         const end = parseEntryDate(to, null);
         end.setHours(23, 59, 59, 999); 
@@ -133,7 +152,7 @@ export function StockItemReport() {
       let runningTotal = Number(item.opening_qty) || 0;
 
       // Filter and sort ALL entries for this item to correctly simulate history
-      const sortedHistory = allInvEntries
+      const sortedHistory = enrichedInvEntries
         .filter((e: any) => String(e.item_id) === String(item.id))
         .sort((a, b) => {
           const d_a = parseEntryDate(a.date, a.created_at);
@@ -156,10 +175,10 @@ export function StockItemReport() {
         let adj = 0;
         if (isPhysical) {
            if (eGodownId) {
-             adj = qty - (godownBalances[eGodownId] || 0);
+             adj = qty - (Number(godownBalances[eGodownId]) || 0);
              godownBalances[eGodownId] = qty;
            } else {
-             adj = qty - runningTotal;
+             adj = qty - Number(runningTotal);
              runningTotal = qty;
              // Reset all godown records for this item when a global reset happens
              Object.keys(godownBalances).forEach(k => {
@@ -168,10 +187,10 @@ export function StockItemReport() {
            }
         } else {
            adj = mType === 'inward' ? qty : -qty;
-           if (eGodownId) godownBalances[eGodownId] = (godownBalances[eGodownId] || 0) + adj;
+           if (eGodownId) godownBalances[eGodownId] = (Number(godownBalances[eGodownId]) || 0) + adj;
         }
         
-        if (!isPhysical || eGodownId) runningTotal += adj;
+        if (!isPhysical || eGodownId) runningTotal = (Number(runningTotal) || 0) + adj;
 
         if (dateObj < start) {
            openingBalance = selectedGodown ? (godownBalances[selectedGodown] || 0) : runningTotal;
@@ -230,11 +249,7 @@ export function StockItemReport() {
             return eDate.getFullYear() === targetDateObj.getFullYear() && 
                    eDate.getMonth() === targetDateObj.getMonth() && 
                    eDate.getDate() === targetDateObj.getDate();
-          }).sort((a, b) => {
-            const timeA = a.created_at?.seconds || 0;
-            const timeB = b.created_at?.seconds || 0;
-            return timeA - timeB;
-          });
+          }); // Removed re-sort
           
           let dayInQty = 0;
           let dayInVal = 0;
@@ -242,10 +257,12 @@ export function StockItemReport() {
           let dayOutVal = 0;
 
           for (const e of dayEntries) {
-            const total = (e.qty || 0) + (e.free_qty || 0);
+            const qty_val = Number(e.qty) || 0;
+            const free_qty_val = Number(e.free_qty) || 0;
+            const total = qty_val + free_qty_val;
             const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
             const rate = Number(e.rate) || 0;
-            const value = (total - (e.free_qty || 0)) * rate;
+            const value = (total - free_qty_val) * rate;
             const mType = getMovementType(e);
 
             if (isPhysical) {
@@ -319,11 +336,7 @@ export function StockItemReport() {
           const mEntries = itemEntries.filter((e: any) => {
             const dateObj = parseEntryDate(e.date, e.created_at);
             return dateObj.getMonth() === monthIdx && dateObj.getFullYear() === year;
-          }).sort((a, b) => {
-            const timeA = a.created_at?.seconds || 0;
-            const timeB = b.created_at?.seconds || 0;
-            return timeA - timeB;
-          });
+          }); // Removed re-sort as itemEntries is already sorted by date+time
 
           let mInQty = 0;
           let mInVal = 0;
@@ -331,10 +344,12 @@ export function StockItemReport() {
           let mOutVal = 0;
 
           for (const e of mEntries) {
-            const total = (e.qty || 0) + (e.free_qty || 0);
+            const qty_val = Number(e.qty) || 0;
+            const free_qty_val = Number(e.free_qty) || 0;
+            const total = qty_val + free_qty_val;
             const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
             const rate = Number(e.rate) || 0;
-            const value = (total - (e.free_qty || 0)) * rate;
+            const value = (total - free_qty_val) * rate;
             const mType = getMovementType(e);
 
             if (isPhysical) {
@@ -404,15 +419,14 @@ export function StockItemReport() {
             v_no: v.v_no || 'N/A',
             v_type: v.v_type || 'N/A',
             party_name: v.particulars || v.party_ledger_name || 'N/A',
-            v_id: v.id
+            v_id: v.id,
+            created_at_time: e.created_at?.seconds || 0
           };
         }).sort((a, b) => {
-          const dateA = a.date || (a.created_at?.toDate?.() || 0);
-          const dateB = b.date || (b.created_at?.toDate?.() || 0);
-          const timeA = new Date(dateA).getTime();
-          const timeB = new Date(dateB).getTime();
-          if (timeA !== timeB) return timeA - timeB;
-          return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
+          const dateA = a.date || '';
+          const dateB = b.date || '';
+          if (dateA !== dateB) return dateA.localeCompare(dateB);
+          return a.created_at_time - b.created_at_time;
         });
 
       const transactionsWithBalance = sortedEntries.map(tx => {
@@ -629,10 +643,10 @@ export function StockItemReport() {
       </div>
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
-        <div className="p-6 grid grid-cols-1 lg:grid-cols-4 gap-8 pb-20">
-          <div className="lg:col-span-1">
-            <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col h-[500px] lg:h-[600px] overflow-hidden">
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full p-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <div className="lg:col-span-1 flex flex-col min-h-0">
+            <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col flex-1 overflow-hidden">
             <div className="p-4 border-b border-gray-200 bg-gray-50">
                <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -667,10 +681,10 @@ export function StockItemReport() {
           </div>
         </div>
 
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 flex flex-col min-h-0">
           {selectedItem ? (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col flex-1 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between flex-none">
                 <div className="flex items-center gap-2">
                   <Package className="w-5 h-5 text-primary" />
                   <span className="font-bold text-gray-900 capitalize">{selectedItem.name}</span>
@@ -680,7 +694,7 @@ export function StockItemReport() {
                 </div>
               </div>
               
-              <div id="stock-item-report-table" className="overflow-x-auto print:p-8 overflow-y-auto max-h-[600px] no-scrollbar">
+              <div id="stock-item-report-table" className="flex-1 overflow-x-auto print:p-8 overflow-y-auto no-scrollbar">
                 {viewMode === 'summary' ? (
                   <table className="w-full text-left border-collapse">
                     <thead>
@@ -832,7 +846,7 @@ export function StockItemReport() {
             "px-6 py-3 text-sm text-right font-bold",
             (tx.v_type?.toLowerCase() === 'physical stock' || tx.is_physical_snapshot)
               ? (tx.adjustment_qty >= 0 ? "text-green-600" : "text-red-600")
-              : (tx.movement_type === 'Inward' ? "text-green-600" : "text-red-600")
+              : (getMovementType(tx) === 'inward' ? "text-green-600" : "text-red-600")
           )}>
             {(tx.v_type?.toLowerCase() === 'physical stock' || tx.is_physical_snapshot) ? (
               <div className="flex flex-col items-end">

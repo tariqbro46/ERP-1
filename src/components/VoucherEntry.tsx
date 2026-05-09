@@ -533,7 +533,11 @@ export function VoucherEntry() {
   };
 
   const isPhysicalStock = vType.toLowerCase() === 'physical stock';
-  const isInventory = vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'purchase' || isPhysicalStock;
+  const isInventory = [
+    'sales', 'purchase', 'delivery note', 'receipt note', 
+    'rejection out', 'rejection in', 'sales return', 'purchase return', 
+    'physical stock', 'material in', 'material out'
+  ].includes(vType.toLowerCase());
   const isStockJournal = vType.toLowerCase() === 'stock journal';
   const isSingleEntry = vType.toLowerCase() === 'payment' || vType.toLowerCase() === 'receipt';
   const isJournal = vType.toLowerCase() === 'journal' || vType.toLowerCase() === 'contra';
@@ -771,21 +775,23 @@ export function VoucherEntry() {
         }));
       }
 
+      const inventoryData = isInventory ? invEntries.filter(i => i.item_id).map(i => ({ 
+        ...i, 
+        entry_type: i.entry_type || (['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out'].includes(vType.toLowerCase()) ? 'Outward' : 'Inward'),
+        item_name: items.find(item => item.id === i.item_id)?.name,
+        m_type: ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out'].includes(vType.toLowerCase()) ? 'Outward' : 'Inward' 
+      })) : (isStockJournal ? [...consumptionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
+        ...i,
+        item_name: items.find(item => item.id === i.item_id)?.name,
+        m_type: i.entry_type === 'Consumption' ? 'Outward' : 'Inward'
+      })) : []);
+
       if (isEdit) {
         await erpService.updateVoucher(
           id!, 
           voucher, 
           finalAccEntries, 
-          isInventory ? invEntries.filter(i => i.item_id).map(i => ({ 
-            ...i, 
-            entry_type: i.entry_type || (vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'physical stock' ? 'Outward' : 'Inward'),
-            item_name: items.find(item => item.id === i.item_id)?.name,
-            m_type: vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'physical stock' ? 'Outward' : 'Inward' 
-          })) : (isStockJournal ? [...consumptionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
-            ...i,
-            item_name: items.find(item => item.id === i.item_id)?.name,
-            m_type: i.entry_type === 'Consumption' ? 'Outward' : 'Inward'
-          })) : [])
+          inventoryData
         );
         showNotification('Voucher updated successfully');
       } else {
@@ -794,16 +800,7 @@ export function VoucherEntry() {
           user.uid,
           voucher, 
           finalAccEntries, 
-          isInventory ? invEntries.filter(i => i.item_id).map(i => ({ 
-            ...i, 
-            entry_type: i.entry_type || (vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'physical stock' ? 'Outward' : 'Inward'),
-            item_name: items.find(item => item.id === i.item_id)?.name,
-            m_type: vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'physical stock' ? 'Outward' : 'Inward' 
-          })) : (isStockJournal ? [...consumptionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
-            ...i,
-            item_name: items.find(item => item.id === i.item_id)?.name,
-            m_type: i.entry_type === 'Consumption' ? 'Outward' : 'Inward'
-          })) : [])
+          inventoryData
         );
         showNotification(notifications.voucherSaved);
         if (!isEdit) {

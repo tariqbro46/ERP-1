@@ -1,5 +1,5 @@
 import { db, auth } from '../firebase';
-import { ensureDate, formatToYMD, parseEntryDate } from '../lib/utils';
+import { ensureDate, formatToYMD, parseEntryDate, getMovementType } from '../lib/utils';
 import { errorService } from './errorService';
 import { 
   collection, 
@@ -458,13 +458,14 @@ export const erpService = {
         transaction.set(vRef, vData);
 
         // 3. Create Accounting Entries
+        const vDateYMD = formatToYMD(voucher.v_date);
         for (const entry of entries) {
           const eRef = doc(collection(db, 'voucher_entries'));
           transaction.set(eRef, cleanData({
             ...entry,
             voucher_id: vRef.id,
             companyId,
-            date: formatToYMD(voucher.v_date),
+            date: vDateYMD,
             created_at: serverTimestamp()
           }));
 
@@ -481,18 +482,29 @@ export const erpService = {
           for (const inv of inventoryEntries) {
             const invRef = doc(collection(db, 'inventory_entries'));
             
-            // Special handling for Physical Stock
-            let qtyChange = (inv.type === 'In' || inv.type === 'Inward') ? (inv.qty || 0) : -(inv.qty || 0);
+            // Special handling for movement type
+            const vTypeLower = vType.toLowerCase();
+            let isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes(vTypeLower) || 
+                           ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((inv.entry_type || '').toLowerCase()) ||
+                           ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((inv.m_type || '').toLowerCase()) ||
+                           ['outward', 'out'].includes((inv.type || '').toLowerCase());
+            
+            const totalEntryQty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
+            let qtyChange = isOutward ? -totalEntryQty : totalEntryQty;
             let finalInvData = {
               ...inv,
               voucher_id: vRef.id,
               v_type: vType,
               companyId,
-              date: formatToYMD(voucher.v_date),
-              created_at: serverTimestamp()
+              date: vDateYMD,
+              created_at: serverTimestamp(),
+              // Ensure consistent movement fields for reporting
+              movement_type: isOutward ? 'Outward' : 'Inward',
+              m_type: isOutward ? 'Outward' : 'Inward',
+              entry_type: inv.entry_type || (isOutward ? 'Outward' : 'Inward')
             };
 
-    if (vType.toLowerCase() === 'physical stock' && inv.item_id) {
+            if (vTypeLower === 'physical stock' && inv.item_id) {
               const iRef = itemRefsMap[inv.item_id];
               const itemSnap = snapsCache[iRef.path];
               const globalStock = (itemSnap && itemSnap.exists() ? itemSnap.data().current_stock : 0) || 0;
@@ -1022,6 +1034,11 @@ export const erpService = {
           const totalQty = (i.qty || 0) + (i.free_qty || 0);
           const stockChange = i.movement_type === 'Inward' ? -totalQty : totalQty;
           batch.update(itemRef, { current_stock: increment(stockChange) });
+
+          if (i.godown_id) {
+            const gsRef = doc(db, 'godown_stock', `${i.godown_id}_${i.item_id}`);
+            batch.set(gsRef, { current_stock: increment(stockChange) }, { merge: true });
+          }
         }
       }
     }
@@ -1134,10 +1151,13 @@ export const erpService = {
         // 2. Apply New
         const vRef = doc(db, 'vouchers', id);
         const reference_no = voucher.v_no || '';
+        const vDateYMD = formatToYMD(voucher.v_date || oldVoucher.v_date);
+        
         transaction.update(vRef, cleanData({
           ...voucher,
           reference_no: reference_no,
           v_no: reference_no,
+          v_date: vDateYMD,
           updated_at: serverTimestamp()
         }));
 
@@ -1147,7 +1167,7 @@ export const erpService = {
             ...entry,
             voucher_id: id,
             companyId,
-            date: voucher.v_date || oldVoucher.v_date,
+            date: vDateYMD,
             created_at: serverTimestamp()
           }));
 
@@ -1163,19 +1183,28 @@ export const erpService = {
         if (inventoryEntries && inventoryEntries.length > 0) {
           for (const i of inventoryEntries) {
             const invRef = doc(collection(db, 'inventory_entries'));
-            let movementType = i.movement_type || i.m_type || (vType === 'Sales' ? 'Outward' : 'Inward');
-            let adjustment_qty = 0;
-            let qtyChange = (movementType === 'Inward' ? (i.qty || 0) : -(i.qty || 0)) + (i.free_qty || 0);
+            
+            // Re-use logic for movement detection
+            const vTypeLower = vType.toLowerCase();
+            let isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes(vTypeLower) || 
+                           ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((i.movement_type || '').toLowerCase()) ||
+                           ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((i.m_type || '').toLowerCase()) ||
+                           ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((i.entry_type || '').toLowerCase());
 
-            if (vType.toLowerCase() === 'physical stock' && i.item_id) {
-              const iRef = doc(db, 'items', i.item_id);
-              const itemSnap = snapsCache[iRef.path];
+            let movementType = isOutward ? 'Outward' : 'Inward';
+            let adjustment_qty = 0;
+            const totalEntryQty = (Number(i.qty) || 0) + (Number(i.free_qty) || 0);
+            let qtyChange = isOutward ? -totalEntryQty : totalEntryQty;
+
+            if (vTypeLower === 'physical stock' && i.item_id) {
+              const itemRef = doc(db, 'items', i.item_id);
+              const itemSnap = snapsCache[itemRef.path];
               const globalStock = (itemSnap && itemSnap.exists() ? itemSnap.data().current_stock : 0) || 0;
               
               let currentGodownStock = 0;
               if (i.godown_id) {
-                const gsKey = `${i.godown_id}_${i.item_id}`;
-                const gsSnap = snapsCache[godownStockRefsMap[gsKey]?.path];
+                const gsRef = godownStockRefsMap[`${i.godown_id}_${i.item_id}`];
+                const gsSnap = gsRef ? snapsCache[gsRef.path] : null;
                 currentGodownStock = (gsSnap && gsSnap.exists() ? gsSnap.data().current_stock : 0) || 0;
               }
               
@@ -1190,9 +1219,11 @@ export const erpService = {
               voucher_id: id,
               v_type: vType,
               companyId,
+              date: vDateYMD,
               movement_type: movementType,
+              m_type: movementType,
               adjustment_qty,
-              is_physical_snapshot: vType.toLowerCase() === 'physical stock',
+              is_physical_snapshot: vTypeLower === 'physical stock',
               created_at: serverTimestamp()
             }));
 
@@ -1864,13 +1895,15 @@ export const erpService = {
       let totalOutward = 0;
 
       for (const e of sortedEntries) {
-        const qty = (e.qty || 0) + (e.free_qty || 0);
+        const qty = (Number(e.qty) || 0) + (Number(e.free_qty) || 0);
+        const mType = getMovementType(e);
+        
         if (e.v_type?.toLowerCase() === 'physical stock') {
-          currentStock = (e.qty || 0);
-          // Adjustment logic for inward/outward totals if needed
-          if (e.adjustment_qty > 0) totalInward += e.adjustment_qty;
-          else if (e.adjustment_qty < 0) totalOutward += Math.abs(e.adjustment_qty);
-        } else if (e.movement_type === 'Inward') {
+          currentStock = (Number(e.qty) || 0);
+          const adj = (e.adjustment_qty !== undefined) ? Number(e.adjustment_qty) : (currentStock - (currentStock - qty)); // approximated if missing
+          if (adj > 0) totalInward += adj;
+          else if (adj < 0) totalOutward += Math.abs(adj);
+        } else if (mType === 'inward') {
           currentStock += qty;
           totalInward += qty;
         } else {
@@ -1931,7 +1964,7 @@ export const erpService = {
 
       for (const e of entries) {
         const vType = e.v_type;
-        const movementType = e.movement_type || e.m_type;
+        const mType = getMovementType(e);
         const qty = Number(e.qty) || 0;
         const freeQty = Number(e.free_qty) || 0;
         const rate = Number(e.rate) || 0;
@@ -1940,21 +1973,19 @@ export const erpService = {
 
         if (vType?.toLowerCase() === 'physical stock') {
           if (!godownId) {
-            // Global physical stock sets the current global absolute
             stock = qty;
             totalQty = stock;
           } else {
-            // Godown-specific physical stock
             const oldGodownStock = godownBalances[godownId] || 0;
             const adjustment = qty - oldGodownStock;
             stock += adjustment;
             godownBalances[godownId] = qty;
             totalQty += adjustment;
           }
-        } else if (movementType === 'Inward') {
+        } else if (mType === 'inward') {
           stock += totalEntryQty;
           totalValue += (qty * rate);
-          totalQty += qty;
+          totalQty += totalEntryQty; // Included free_qty in totalQty for weighted average cost calculation
           if (godownId) godownBalances[godownId] = (godownBalances[godownId] || 0) + totalEntryQty;
         } else {
           stock -= totalEntryQty;

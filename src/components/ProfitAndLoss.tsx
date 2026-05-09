@@ -45,14 +45,30 @@ export function ProfitAndLoss() {
       if (!user?.companyId) return;
       setLoading(true);
       try {
-        const [ledgers, allItems, invEntries, vEntries, allVoucherEntries] = await Promise.all([
+        const [ledgers, allItems, invEntries, vEntries, allVoucherEntries, allVouchers] = await Promise.all([
           erpService.getLedgers(user.companyId),
           erpService.getItems(user.companyId),
           erpService.getInventoryEntriesByDate(user.companyId, '1900-01-01', endDate),
           erpService.getVouchersByDateRange(user.companyId, startDate, endDate),
-          erpService.getCollection('voucher_entries', user.companyId)
+          erpService.getCollection('voucher_entries', user.companyId),
+          erpService.getCollection('vouchers', user.companyId)
         ]);
         
+        const voucherMap = (allVouchers || []).reduce((acc: any, v: any) => {
+          acc[v.id] = v;
+          return acc;
+        }, {});
+
+        // Enrich inventory entries with voucher data
+        const enrichedInv = (invEntries || []).map((e: any) => {
+          const v = voucherMap[e.voucher_id] || {};
+          return {
+            ...e,
+            v_type: e.v_type || v.v_type || '',
+            m_type: e.m_type || e.movement_type || e.entry_type || ''
+          };
+        });
+
         // 1. Calculate Opening & Closing Stock using per-godown simulation
         const calculateStockValue = (asOfDate: string) => {
           const targetDate = parseEntryDate(asOfDate, null);
@@ -73,7 +89,7 @@ export function ProfitAndLoss() {
           });
 
           // Sort entries by date/time for accurate simulation
-          const sortedEntries = [...invEntries].sort((a, b) => {
+          const sortedEntries = [...enrichedInv].sort((a, b) => {
             const d_a = parseEntryDate(a.date, a.created_at);
             const d_b = parseEntryDate(b.date, b.created_at);
             if (d_a.getTime() !== d_b.getTime()) return d_a.getTime() - d_b.getTime();
@@ -244,7 +260,7 @@ export function ProfitAndLoss() {
   const finalTotal = Math.max(debitTotal + (netProfit > 0 ? netProfit : 0), creditTotal + (netProfit < 0 ? Math.abs(netProfit) : 0));
 
   return (
-    <div className="flex flex-col min-h-full bg-background transition-colors">
+    <div className="flex flex-col h-screen bg-background transition-colors overflow-hidden">
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex-1 w-full sm:max-w-md space-y-4">

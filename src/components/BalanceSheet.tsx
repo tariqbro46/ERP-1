@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Loader2, Printer, Download, ChevronDown, ChevronRight, ArrowLeft, AlertCircle } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
-import { cn, formatNumber } from '../lib/utils';
+import { cn, formatNumber, parseEntryDate, getMovementType } from '../lib/utils';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { printBalanceSheet, printUtils } from '../utils/printUtils';
@@ -32,31 +32,69 @@ export function BalanceSheet() {
       if (!user?.companyId) return;
       setLoading(true);
       try {
-        const [ledgers, vEntries, items, invEntries, groupsData] = await Promise.all([
+        const [ledgers, vEntries, items, invEntries, groupsData, allVouchers] = await Promise.all([
           erpService.getLedgers(user.companyId),
           erpService.getVoucherEntriesByDate(user.companyId, asOnDate),
           erpService.getItems(user.companyId),
           erpService.getInventoryEntriesByDate(user.companyId, '1900-01-01', asOnDate),
-          erpService.getLedgerGroups(user.companyId)
+          erpService.getLedgerGroups(user.companyId),
+          erpService.getCollection('vouchers', user.companyId)
         ]);
 
-        // 1. Calculate Closing Stock
-        const itemStocks: Record<string, { qty: number, cost: number }> = {};
-        for (const entry of invEntries) {
-          if (!itemStocks[entry.item_id]) {
-            const item = items.find(i => i.id === entry.item_id);
-            itemStocks[entry.item_id] = { qty: 0, cost: item?.avg_cost || item?.opening_rate || 0 };
-          }
-          const movementType = (entry.movement_type || entry.m_type || '').toLowerCase();
-          const qty = (Number(entry.qty) || 0) + (Number(entry.free_qty) || 0);
+        const voucherMap = (allVouchers || []).reduce((acc: any, v: any) => {
+          acc[v.id] = v;
+          return acc;
+        }, {});
 
-          if (movementType === 'inward') {
-            itemStocks[entry.item_id].qty += qty;
+        // Enrich inventory entries with voucher data
+        const enrichedInv = (invEntries || []).map((e: any) => {
+          const v = voucherMap[e.voucher_id] || {};
+          return {
+            ...e,
+            v_type: e.v_type || v.v_type || '',
+            m_type: e.m_type || e.movement_type || e.entry_type || ''
+          };
+        });
+
+        // 1. Calculate Closing Stock
+        const itemStocks: Record<string, number> = {};
+        const costMap: Record<string, number> = {};
+        
+        items.forEach(i => {
+           itemStocks[i.id] = Number(i.opening_qty) || 0;
+           costMap[i.id] = i.avg_cost || i.opening_rate || 0;
+        });
+
+        const sortedInv = [...enrichedInv].sort((a, b) => {
+          const da = parseEntryDate(a.date, a.created_at);
+          const db = parseEntryDate(b.date, b.created_at);
+          if (da.getTime() !== db.getTime()) return da.getTime() - db.getTime();
+          return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
+        });
+
+        for (const entry of sortedInv) {
+          if (!itemStocks[entry.item_id] && itemStocks[entry.item_id] !== 0) {
+             const itm = items.find(i => i.id === entry.item_id);
+             itemStocks[entry.item_id] = Number(itm?.opening_qty) || 0;
+             costMap[entry.item_id] = itm?.avg_cost || itm?.opening_rate || 0;
+          }
+          const mType = getMovementType(entry);
+          const qty = (Number(entry.qty) || 0) + (Number(entry.free_qty) || 0);
+          const isPhysical = (entry.v_type || '').toLowerCase() === 'physical stock' || !!entry.is_physical_snapshot;
+
+          if (isPhysical) {
+             // Basic implementation matching erpService
+             itemStocks[entry.item_id] = (Number(entry.qty) || 0);
+          } else if (mType === 'inward') {
+            itemStocks[entry.item_id] = (Number(itemStocks[entry.item_id]) || 0) + qty;
           } else {
-            itemStocks[entry.item_id].qty -= qty;
+            itemStocks[entry.item_id] = (Number(itemStocks[entry.item_id]) || 0) - qty;
           }
         }
-        const closingStockValue = Object.values(itemStocks).reduce((sum, item) => sum + (item.qty * item.cost), 0);
+        const closingStockValue = Object.keys(itemStocks).reduce((sum, id) => {
+           const val = itemStocks[id] * (costMap[id] || 0);
+           return sum + (val > 0 ? val : 0);
+        }, 0);
 
         // 2. Calculate Individual Ledger Balances
         const ledgerBalances: Record<string, number> = {};
@@ -236,7 +274,7 @@ export function BalanceSheet() {
   const finalTotal = Math.max(Math.abs(totalAssets), absTotalLiabilities);
 
   return (
-    <div className="flex flex-col min-h-screen bg-background transition-colors">
+    <div className="flex flex-col h-screen bg-background transition-colors overflow-hidden">
       {/* Fixed Header Section */}
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
@@ -294,11 +332,11 @@ export function BalanceSheet() {
         </div>
       </div>
 
-      {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-0 bg-background">
-        <div id="balance-sheet-report" className="p-4 lg:p-6 space-y-6 pb-20">
-          <div className="border border-border bg-card shadow-sm rounded-lg overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x divide-border">
+      {/* Report Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0 bg-background scroll-smooth">
+        <div id="balance-sheet-report" className="p-4 lg:p-6 min-h-full flex flex-col bg-white">
+          <div className="flex-1 border border-border bg-card shadow-sm rounded-lg overflow-hidden flex flex-col">
+            <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x divide-border flex-1">
             {/* Liabilities Side */}
             <div className="flex flex-col border-r border-border">
               <div className="bg-muted px-4 py-2 border-b border-border flex justify-between items-center group">

@@ -279,7 +279,7 @@ export function Daybook() {
   };
 
   return (
-    <div className="flex flex-col min-h-full bg-background transition-colors">
+    <div className="flex flex-col h-screen bg-background transition-colors overflow-hidden">
       {/* Fixed Header Section */}
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
@@ -313,21 +313,21 @@ export function Daybook() {
           <div className="flex gap-3 w-full sm:w-auto">
             <button 
               onClick={() => setIsConfigOpen(true)}
-              className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
+              className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap"
               title={t('daybook.configureReport')}
             >
               <SettingsIcon className="w-3 h-3" /> {t('common.f12Configure')}
             </button>
             <button 
               onClick={handlePrint}
-              className="flex-1 sm:flex-none p-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center"
+              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-3 h-3" /> PRINT
             </button>
             <button 
               onClick={handleDownloadExcel}
               disabled={vouchers.length === 0}
-              className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+              className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
               title={t('daybook.downloadExcel')}
             >
               <Download className="w-3 h-3" /> {t('common.excel')}
@@ -335,7 +335,7 @@ export function Daybook() {
             <button 
               onClick={handleDownloadPDF}
               disabled={vouchers.length === 0}
-              className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+              className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
               title={t('daybook.downloadPDF')}
             >
               <Download className="w-3 h-3" /> {t('common.pdf')}
@@ -352,12 +352,12 @@ export function Daybook() {
         title="Daybook"
       />
 
-      {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
-        <div className="p-4 lg:p-6 space-y-6 pb-20">
-          <div id="daybook-report" className="bg-card border border-border">
+      {/* Report Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+        <div id="daybook-report" className="min-h-full flex flex-col bg-white">
+          <div className="p-4 lg:p-6 flex-1 flex flex-col">
           {/* Mobile View: Cards */}
-          <div className="block lg:hidden divide-y divide-border/50">
+          <div className="block lg:hidden divide-y divide-border/50 flex-none">
             {loading ? (
               <div className="p-10 text-center text-gray-500">{t('daybook.loading')}</div>
             ) : vouchers.length === 0 ? (
@@ -412,9 +412,9 @@ export function Daybook() {
           </div>
 
           {/* Desktop View: Table */}
-          <div className="hidden lg:block relative h-full">
+          <div className="hidden lg:block relative flex-1">
             <table className="w-full text-left text-xs min-w-[700px] lg:min-w-0 border-separate border-spacing-0">
-              <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-sm shadow-sm">
+              <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-sm shadow-sm ring-1 ring-border">
                 <tr className="text-gray-500 uppercase text-[9px] font-bold tracking-widest">
                   <th className="px-4 lg:px-6 py-4 font-medium border-b border-border sticky top-0">{t('common.date')}</th>
                   <th className="px-4 lg:px-6 py-4 font-medium border-b border-border sticky top-0">{t('common.particulars')}</th>

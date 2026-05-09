@@ -65,14 +65,39 @@ export function StockSummary() {
       if (!user?.companyId) return;
       setLoading(true);
       try {
-        const [allItems, godownsRes, allInv, catsRes] = await Promise.all([
+        const [allItems, godownsRes, allInv, catsRes, allVouchers] = await Promise.all([
           erpService.getItems(user.companyId),
           erpService.getGodowns(user.companyId),
           erpService.getCollection('inventory_entries', user.companyId),
-          erpService.getCollection('stock_categories', user.companyId)
+          erpService.getCollection('stock_categories', user.companyId),
+          erpService.getCollection('vouchers', user.companyId)
         ]);
         
-        setInventory(allInv);
+        const vMap = (allVouchers || []).reduce((acc: any, v: any) => {
+          acc[v.id] = v;
+          return acc;
+        }, {});
+
+        const enrichedInv = (allInv || []).map((e: any) => {
+          const v = vMap[e.voucher_id] || {};
+          const vType = (e.v_type || v.v_type || '').toString();
+          
+          // Ensure we have a reliable movement type by combining entry data and voucher context
+          const movementData = {
+            ...e,
+            v_type: vType,
+            m_type: e.m_type || e.movement_type || e.entry_type || v.m_type || v.movement_type || ''
+          };
+          
+          return {
+            ...e,
+            v_type: vType,
+            date: e.date || v.v_date || '',
+            m_type: getMovementType(movementData)
+          };
+        });
+
+        setInventory(enrichedInv);
         setItems(allItems);
         setGodowns(godownsRes || []);
         setStockCategories(catsRes || []);
@@ -137,13 +162,13 @@ export function StockSummary() {
 
       const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
       const mType = getMovementType(inv);
-      const isPhysical = inv.v_type?.toLowerCase() === 'physical stock' || !!inv.is_physical_snapshot;
+      const isPhysical = (inv.v_type || '').toLowerCase() === 'physical stock' || !!inv.is_physical_snapshot;
       const invGodownId = inv.godown_id;
 
       let adjustment = 0;
       if (isPhysical) {
         if (invGodownId) {
-          const oldGodownStock = godownBalances[invGodownId] || 0;
+          const oldGodownStock = Number(godownBalances[invGodownId]) || 0;
           adjustment = qty - oldGodownStock;
           godownBalances[invGodownId] = qty;
         } else {
@@ -156,7 +181,7 @@ export function StockSummary() {
       } else {
         adjustment = mType === 'inward' ? qty : -qty;
         if (invGodownId) {
-          godownBalances[invGodownId] = (godownBalances[invGodownId] || 0) + adjustment;
+          godownBalances[invGodownId] = (Number(godownBalances[invGodownId]) || 0) + adjustment;
         }
       }
 
@@ -436,10 +461,10 @@ export function StockSummary() {
         </div>
       </div>
 
-      {/* Scrollable Content Section */}
+      {/* Report Content Section */}
       <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
-        <div className="p-4 lg:p-6 space-y-6 pb-20">
-          <div id="stock-summary-report" className="bg-card border border-border p-0 print:p-8 print:border-none print:shadow-none bg-white">
+        <div id="stock-summary-report" className="min-h-full flex flex-col bg-white">
+          <div className="p-4 lg:p-6 flex-1 flex flex-col">
           <ReportPrintHeader 
             title="Stock Summary" 
             subtitle={cn(
@@ -521,8 +546,8 @@ export function StockSummary() {
           </div>
 
           {/* Desktop View: Table */}
-          <div className="hidden lg:block relative">
-            <table className="w-full text-left text-[11px] min-w-[800px] border-separate border-spacing-0">
+          <div className="hidden lg:block relative flex-1">
+            <table className="w-full text-left text-[11px] min-w-[800px] border-separate border-spacing-0 h-full">
               <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-sm shadow-sm ring-1 ring-border">
                 <tr className="text-gray-500 uppercase text-[9px] font-bold tracking-widest">
                   <th className="px-4 py-3 font-medium border-b border-border sticky top-0 bg-inherit">{t('common.particulars')}</th>
@@ -534,7 +559,7 @@ export function StockSummary() {
                   <th className="px-4 py-3 font-medium text-right w-32 border-b border-border sticky top-0 bg-inherit border-l">{t('common.value')} (৳)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/50">
+              <tbody className="divide-y divide-border/50 bg-white">
                 {filteredGroups.map(groupName => {
                   const groupItems = groupedItems[groupName];
                   const groupOpening = groupItems.reduce((sum, i) => sum + i.opening, 0);

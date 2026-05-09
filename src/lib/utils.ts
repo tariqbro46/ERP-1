@@ -51,13 +51,23 @@ export function ensureDate(date: any): Date {
 
   if (typeof date === 'string') {
     // Attempt local parse first if YYYY-MM-DD to avoid UTC shift
-    const parts = date.split(/[-/]/);
+    const trimmed = date.trim();
+    const parts = trimmed.split(/[-/.]/);
     if (parts.length === 3) {
-      const p0 = Number(parts[0]);
-      const p1 = Number(parts[1]);
-      const p2 = Number(parts[2]);
+      let p0 = Number(parts[0]);
+      let p1 = Number(parts[1]);
+      let p2 = Number(parts[2]);
+      
+      // Handle 2-digit years
+      const handleYear = (y: number) => {
+        if (y < 50) return 2000 + y;
+        if (y < 100) return 1900 + y;
+        return y;
+      };
+
       if (parts[0].length === 4) return new Date(p0, p1 - 1, p2); // YYYY-MM-DD
       if (parts[2].length === 4) return new Date(p2, p1 - 1, p0); // DD-MM-YYYY
+      if (parts[2].length === 2) return new Date(handleYear(p2), p1 - 1, p0); // DD-MM-YY
     }
     const d = new Date(date);
     if (!isNaN(d.getTime())) return d;
@@ -83,15 +93,25 @@ export function parseEntryDate(dateStr: any, fallback: any): Date {
 }
 
 export function getMovementType(item: any): 'inward' | 'outward' {
-  const mType = (
+  const vType = (item.v_type || '').toString().toLowerCase();
+  
+  // Specific overrides for movement type field names
+  const movement = (
     item.movement_type || 
     item.m_type || 
+    item.entry_type ||
     item.type || 
-    (item.v_type?.toLowerCase() === 'sales' ? 'outward' : 
-     ['purchase', 'receipt note', 'delivery note'].includes(item.v_type?.toLowerCase()) ? 
-       (item.v_type.toLowerCase().includes('delivery') ? 'outward' : 'inward') : 
-     'inward')
+    ''
   ).toString().toLowerCase();
 
-  return (mType === 'out' || mType === 'outward') ? 'outward' : 'inward';
+  // HEURISTIC: Prioritize Voucher Type if it's a standard one
+  if (['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'consumption', 'debit note'].includes(vType)) return 'outward';
+  if (['purchase', 'receipt note', 'sales return', 'rejection in', 'material in', 'credit note'].includes(vType)) return 'inward';
+
+  // Fallback to specific movement fields if vType is unknown
+  if (['outward', 'out', 'consumption', 'sale', 'sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out'].includes(movement)) return 'outward';
+  if (['inward', 'in', 'production', 'purchase', 'receipt note', 'sales return', 'rejection in', 'material in'].includes(movement)) return 'inward';
+  
+  // Default fallback
+  return 'inward';
 }

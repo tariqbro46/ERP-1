@@ -727,9 +727,9 @@ export function LedgerStatement() {
   };
 
   return (
-    <div className="bg-background min-h-full flex flex-col font-mono transition-colors">
+    <div className="bg-background h-screen flex flex-col font-mono transition-colors overflow-hidden">
       {/* Fixed Header Section */}
-      <div className="sticky top-0 bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
             <EditableHeader 
@@ -877,11 +877,11 @@ export function LedgerStatement() {
         title={t('ledger.statement')}
       />
 
-      {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
-        <div className="p-4 lg:p-6 space-y-6">
+      {/* Report Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-0 scroll-smooth">
+        <div className="p-4 lg:p-6 space-y-6 min-h-full flex flex-col bg-white">
           <div id="ledger-report" className={cn(
-            "bg-card border border-border relative",
+            "bg-card border border-border relative flex-1 flex flex-col",
             settings.reportLayout === 'Layout 2' && "bg-white text-black p-8 min-h-[800px] pb-32"
           )}>
           {settings.reportLayout === 'Layout 2' && (
@@ -904,11 +904,12 @@ export function LedgerStatement() {
               <div className="absolute top-8 right-8 border border-black px-2 py-1 text-[10px]">Page 1</div>
             </>
           )}
-          <table className={cn(
-            "w-full text-left text-xs min-w-[700px] border-separate border-spacing-0",
-            settings.reportLayout === 'Layout 2' ? "border-y border-black table-fixed" : ""
-          )}>
-            <thead className="sticky top-0 z-20 bg-background shadow-sm">
+          <div className="flex-1 min-h-0">
+            <table className={cn(
+              "w-full text-left text-xs min-w-[700px] border-separate border-spacing-0 h-full",
+              settings.reportLayout === 'Layout 2' ? "border-y border-black table-fixed" : ""
+            )}>
+              <thead className="sticky top-0 z-20 bg-background shadow-sm ring-1 ring-border">
               <tr className={cn(
                 "border-b border-border text-gray-500 uppercase bg-foreground/5",
                 settings.reportLayout === 'Layout 2' && "border-black text-black font-bold bg-white"
@@ -1154,5 +1155,6 @@ export function LedgerStatement() {
       )}
     </div>
   </div>
+</div>
 );
 }

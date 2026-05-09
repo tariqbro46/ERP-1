@@ -48,9 +48,11 @@ export function parseDateInput(input: string): string | null {
 
     // Handle 2-digit years
     if (year.length === 2) {
+      const y = parseInt(year);
       const currentYear = new Date().getFullYear();
-      const century = Math.floor(currentYear / 100);
-      year = century.toString() + year;
+      const currentCentury = Math.floor(currentYear / 100) * 100;
+      // Fixed pivot: years 0-49 are 2000s, 50-99 are 1900s
+      year = (y < 50 ? 2000 + y : 1900 + y).toString();
     }
 
     // Attempt to create a valid ISO date string (YYYY-MM-DD)
