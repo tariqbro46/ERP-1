@@ -5,7 +5,7 @@ import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { formatCurrency, formatNumber, formatQuantity, cn } from '../lib/utils';
+import { formatCurrency, formatNumber, formatQuantity, cn, ensureDate, parseEntryDate, getMovementType } from '../lib/utils';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { exportToPDF } from '../utils/exportUtils';
@@ -120,86 +120,73 @@ export function StockItemReport() {
         acc[v.id] = { ...v, serial_no: serialMap[v.id] || v.serial_no || v.auto_serial_no };
         return acc;
       }, {});
-      // Parse dates consistently as local midnight to avoid timezone shifts
-      const parseLocal = (dateStr: string) => {
-        const [y, m, d] = dateStr.split('-').map(Number);
-        return new Date(y, m - 1, d);
-      };
 
-      const start = parseLocal(from);
-      const end = parseLocal(to);
-      end.setHours(23, 59, 59, 999); // Include entire end day
+        const start = parseEntryDate(from, null);
+        const end = parseEntryDate(to, null);
+        end.setHours(23, 59, 59, 999); 
       
-      const godownAllocation = (item.opening_godowns || []).find((a: any) => a.godown_id === selectedGodown);
-      const initialQty = selectedGodown 
-        ? (Number(godownAllocation?.qty) || 0)
-        : (Number(item.opening_qty) || 0);
-      const initialValue = initialQty * (Number(item.opening_rate) || 0);
+      // Tracking godown balances for accurate simulation
+      const godownBalances: Record<string, number> = {};
+      (item.opening_godowns || []).forEach((ag: any) => {
+        if (ag.godown_id) godownBalances[ag.godown_id] = Number(ag.qty) || 0;
+      });
+      let runningTotal = Number(item.opening_qty) || 0;
 
-      const openingEntries = allInvEntries.filter((e: any) => {
-        if (String(e.item_id) !== String(item.id)) return false;
-        if (selectedGodown && e.godown_id !== selectedGodown) return false;
-        let dateObj: Date;
-        if (e.date && typeof e.date === 'string' && e.date.includes('-')) {
-          dateObj = parseLocal(e.date);
+      // Filter and sort ALL entries for this item to correctly simulate history
+      const sortedHistory = allInvEntries
+        .filter((e: any) => String(e.item_id) === String(item.id))
+        .sort((a, b) => {
+          const d_a = parseEntryDate(a.date, a.created_at);
+          const d_b = parseEntryDate(b.date, b.created_at);
+          if (d_a.getTime() !== d_b.getTime()) return d_a.getTime() - d_b.getTime();
+          return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
+        });
+
+      let openingBalance = selectedGodown ? (godownBalances[selectedGodown] || 0) : runningTotal;
+      let openingValue = openingBalance * (Number(item.opening_rate) || 0);
+
+      sortedHistory.forEach(e => {
+        const dateObj = parseEntryDate(e.date, e.created_at);
+
+        const qty = (Number(e.qty) || 0) + (Number(e.free_qty) || 0);
+        const mType = getMovementType(e);
+        const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
+        const eGodownId = e.godown_id;
+
+        let adj = 0;
+        if (isPhysical) {
+           if (eGodownId) {
+             adj = qty - (godownBalances[eGodownId] || 0);
+             godownBalances[eGodownId] = qty;
+           } else {
+             adj = qty - runningTotal;
+             runningTotal = qty;
+             // Reset all godown records for this item when a global reset happens
+             Object.keys(godownBalances).forEach(k => {
+               godownBalances[k] = 0;
+             });
+           }
         } else {
-          dateObj = new Date(e.date || e.created_at?.toDate?.() || 0);
+           adj = mType === 'inward' ? qty : -qty;
+           if (eGodownId) godownBalances[eGodownId] = (godownBalances[eGodownId] || 0) + adj;
         }
-        return dateObj < start;
-      });
-      
-      // Calculate Opening Balance (sum of all entries before START date)
-      const sortedOpeningEntries = [...openingEntries].sort((a, b) => {
-        const dateA = a.date || (a.created_at?.toDate?.() || 0);
-        const dateB = b.date || (b.created_at?.toDate?.() || 0);
-        return new Date(dateA).getTime() - new Date(dateB).getTime();
-      });
-
-      const openingBalance = sortedOpeningEntries.reduce((sum, e) => {
-        const total = (e.qty || 0) + (e.free_qty || 0);
-        const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
-        if (isPhysical) {
-          if (!selectedGodown) {
-            return sum + (Number(e.adjustment_qty) || 0);
-          } else {
-            return total;
-          }
-        }
-        return sum + (e.movement_type === 'Inward' ? total : -total);
-      }, initialQty);
-
-      const openingValue = sortedOpeningEntries.reduce((sum, e) => {
-        const val = (e.qty || 0) * (e.rate || 0);
-        const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
         
-        if (isPhysical) {
-          if (!selectedGodown) {
-            const adj = Number(e.adjustment_qty) || 0;
-            const rate = Number(e.rate) || (sum > 0 ? sum / sum : 0); // Approximation if missing
-            return sum + (adj * (Number(e.rate) || 0));
-          } else {
-            return val || sum;
-          }
+        if (!isPhysical || eGodownId) runningTotal += adj;
+
+        if (dateObj < start) {
+           openingBalance = selectedGodown ? (godownBalances[selectedGodown] || 0) : runningTotal;
+           // Value approximation
+           if (mType === 'inward') openingValue += (qty * (e.rate || 0));
+           else if (mType === 'outward') openingValue -= (qty * (e.rate || 0));
         }
-        return sum + (e.movement_type === 'Inward' ? val : -val);
-      }, initialValue);
+      });
 
       setOpeningBalance(openingBalance);
       setOpeningValue(openingValue);
 
-      const itemEntries = allInvEntries.filter((e: any) => {
-        if (String(e.item_id) !== String(item.id)) return false;
-        if (selectedGodown && e.godown_id !== selectedGodown) return false;
-        
-        // Robust date parsing for YYYY-MM-DD or Timestamp
-        let dateObj: Date;
-        if (e.date && typeof e.date === 'string' && e.date.includes('-')) {
-          dateObj = parseLocal(e.date);
-        } else {
-          dateObj = new Date(e.date || e.created_at?.toDate?.() || 0);
-        }
-        
-        return dateObj >= start && dateObj <= end;
+      const itemEntries = sortedHistory.filter((e: any) => {
+        const dateObj = parseEntryDate(e.date, e.created_at);
+        return dateObj >= start && dateObj <= end && (!selectedGodown || e.godown_id === selectedGodown);
       });
 
       // Decide view type: if range < 90 days or specific dates requested, show daily
@@ -236,11 +223,13 @@ export function StockItemReport() {
         let runningVal = openingValue;
 
         while (curr <= end) {
-          const targetStr = toYMD(curr);
+          const targetDateObj = new Date(curr);
+          const targetStr = toYMD(targetDateObj);
           const dayEntries = itemEntries.filter(e => {
-            if (e.date) return e.date === targetStr;
-            const ed = new Date(e.created_at?.toDate?.() || 0);
-            return toYMD(ed) === targetStr;
+            const eDate = parseEntryDate(e.date, e.created_at);
+            return eDate.getFullYear() === targetDateObj.getFullYear() && 
+                   eDate.getMonth() === targetDateObj.getMonth() && 
+                   eDate.getDate() === targetDateObj.getDate();
           }).sort((a, b) => {
             const timeA = a.created_at?.seconds || 0;
             const timeB = b.created_at?.seconds || 0;
@@ -254,16 +243,13 @@ export function StockItemReport() {
 
           for (const e of dayEntries) {
             const total = (e.qty || 0) + (e.free_qty || 0);
-            const val = (e.qty || 0) * (e.rate || 0);
             const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
+            const rate = Number(e.rate) || 0;
+            const value = (total - (e.free_qty || 0)) * rate;
+            const mType = getMovementType(e);
 
             if (isPhysical) {
-              let adj = 0;
-              if (!selectedGodown) {
-                adj = Number(e.adjustment_qty) || 0;
-              } else {
-                adj = total - runningQty;
-              }
+              let adj = total - runningQty;
               const curRate = Number(e.rate) || 0;
               if (adj >= 0) {
                 dayInQty += adj;
@@ -272,27 +258,23 @@ export function StockItemReport() {
                 dayOutQty += Math.abs(adj);
                 dayOutVal += (Math.abs(adj) * curRate);
               }
-              
-              if (!selectedGodown) {
-                runningQty += adj;
-              } else {
-                runningQty = total;
-              }
+              runningQty = total;
               if (curRate > 0) {
                 runningVal = runningQty * curRate;
               } else {
                 const prevTQ = runningQty - adj;
                 runningVal = prevTQ > 0 ? (runningVal / prevTQ) * runningQty : 0;
               }
-            } else if ((e.movement_type || '').toLowerCase() === 'inward') {
+            } else if (mType === 'inward') {
               dayInQty += total;
-              dayInVal += val;
+              dayInVal += value;
               runningQty += total;
-              runningVal += val;
+              runningVal += value;
             } else {
               dayOutQty += total;
-              dayOutVal += val;
+              dayOutVal += value;
               runningQty -= total;
+              runningVal -= value;
             }
           }
 
@@ -335,14 +317,7 @@ export function StockItemReport() {
           const year = curr.getFullYear();
           
           const mEntries = itemEntries.filter((e: any) => {
-            let dateObj: Date;
-            if (e.date && typeof e.date === 'string' && e.date.includes('-')) {
-              const [y, m, d] = e.date.split('-').map(Number);
-              dateObj = new Date(y, m - 1, d);
-            } else {
-              dateObj = new Date(e.date || e.created_at?.toDate?.() || 0);
-            }
-            // Ensure we compare against normalized month/year from local date
+            const dateObj = parseEntryDate(e.date, e.created_at);
             return dateObj.getMonth() === monthIdx && dateObj.getFullYear() === year;
           }).sort((a, b) => {
             const timeA = a.created_at?.seconds || 0;
@@ -357,16 +332,13 @@ export function StockItemReport() {
 
           for (const e of mEntries) {
             const total = (e.qty || 0) + (e.free_qty || 0);
-            const val = (e.qty || 0) * (e.rate || 0);
             const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
+            const rate = Number(e.rate) || 0;
+            const value = (total - (e.free_qty || 0)) * rate;
+            const mType = getMovementType(e);
 
             if (isPhysical) {
-              let adj = 0;
-              if (!selectedGodown) {
-                adj = Number(e.adjustment_qty) || 0;
-              } else {
-                adj = total - runningQty;
-              }
+              let adj = total - runningQty;
               const curRate = Number(e.rate) || 0;
               if (adj >= 0) {
                 mInQty += adj;
@@ -375,27 +347,23 @@ export function StockItemReport() {
                 mOutQty += Math.abs(adj);
                 mOutVal += (Math.abs(adj) * curRate);
               }
-
-              if (!selectedGodown) {
-                runningQty += adj;
-              } else {
-                runningQty = total;
-              }
+              runningQty = total;
               if (curRate > 0) {
                 runningVal = runningQty * curRate;
               } else {
                 const prevTQ = runningQty - adj;
                 runningVal = prevTQ > 0 ? (runningVal / prevTQ) * runningQty : 0;
               }
-            } else if ((e.movement_type || '').toLowerCase() === 'inward') {
+            } else if (mType === 'inward') {
               mInQty += total;
-              mInVal += val;
+              mInVal += value;
               runningQty += total;
-              runningVal += val;
+              runningVal += value;
             } else {
               mOutQty += total;
-              mOutVal += val;
+              mOutVal += value;
               runningQty -= total;
+              runningVal -= value;
             }
           }
 
@@ -449,14 +417,12 @@ export function StockItemReport() {
       const transactionsWithBalance = sortedEntries.map(tx => {
         const total = (tx.qty || 0) + (tx.free_qty || 0);
         const isPhysical = tx.is_physical_snapshot === true || (tx.v_type && tx.v_type.toString().toLowerCase() === 'physical stock');
+        const mType = getMovementType(tx);
+
         if (isPhysical) {
-          if (!selectedGodown) {
-            currentRunningBalance += (Number(tx.adjustment_qty) || 0);
-          } else {
-            currentRunningBalance = total;
-          }
+          currentRunningBalance = total;
         } else {
-          currentRunningBalance += (tx.movement_type === 'Inward' ? total : -total);
+          currentRunningBalance += (mType === 'inward' ? total : -total);
         }
         return { ...tx, closing_balance: currentRunningBalance };
       });
@@ -579,88 +545,93 @@ export function StockItemReport() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-4 mb-8">
-        <button 
-          onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
-          <div className="flex flex-col">
-            <h1 className="text-3xl font-bold text-gray-900">{t('stockItem.title')}</h1>
-            <div className="flex items-center gap-1 mt-1">
-              <button 
-                onClick={() => setViewMode('summary')}
-                className={cn(
-                  "px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md transition-all",
-                  viewMode === 'summary' ? "bg-primary text-white" : "text-gray-500 hover:bg-gray-100"
-                )}
-              >
-                Summary
-              </button>
-              <button 
-                onClick={() => setViewMode('transactions')}
-                className={cn(
-                  "px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md transition-all",
-                  viewMode === 'transactions' ? "bg-primary text-white" : "text-gray-500 hover:bg-gray-100"
-                )}
-              >
-                Transactions
-              </button>
+    <div className="flex flex-col h-screen bg-background font-mono transition-colors overflow-hidden">
+      {/* Fixed Header Section */}
+      <div className="flex-none bg-background border-b border-border shadow-sm px-6 py-4 space-y-4 z-30">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-muted rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-foreground" />
+          </button>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+            <div className="flex flex-col">
+              <h1 className="text-xl font-bold text-foreground uppercase tracking-tighter">{t('stockItem.title')}</h1>
+              <div className="flex items-center gap-1 mt-1 font-bold">
+                <button 
+                  onClick={() => setViewMode('summary')}
+                  className={cn(
+                    "px-3 py-1 text-[10px] uppercase tracking-wider rounded-sm transition-all border border-transparent",
+                    viewMode === 'summary' ? "bg-primary text-white border-primary" : "text-gray-500 hover:bg-muted border-border"
+                  )}
+                >
+                  Summary
+                </button>
+                <button 
+                  onClick={() => setViewMode('transactions')}
+                  className={cn(
+                    "px-3 py-1 text-[10px] uppercase tracking-wider rounded-sm transition-all border border-transparent",
+                    viewMode === 'transactions' ? "bg-primary text-white border-primary" : "text-gray-500 hover:bg-muted border-border"
+                  )}
+                >
+                  Transactions
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <select
-                value={selectedGodown}
-                onChange={(e) => setSelectedGodown(e.target.value)}
-                className="bg-transparent border-none text-xs font-bold text-gray-900 outline-none focus:ring-0"
-              >
-                <option value="">All Godowns</option>
-                {godowns.map(g => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
-              <DateInput 
-                value={startDate}
-                onChange={setStartDate}
-                className="w-32 py-1"
-              />
-              <span className="text-gray-400 font-bold uppercase text-[9px] px-2 italic">To</span>
-              <DateInput 
-                value={endDate}
-                onChange={setEndDate}
-                className="w-32 py-1"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={handlePrint}
-                className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
-                title="Print"
-              >
-                <Printer className="w-5 h-5 text-gray-600" />
-              </button>
-              <button 
-                onClick={handleDownloadPDF}
-                className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
-                title="Download PDF"
-              >
-                <Download className="w-5 h-5 text-gray-600" />
-              </button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-sm px-3 py-1.5 focus-within:border-foreground transition-colors">
+                <Filter className="w-3.5 h-3.5 text-gray-400" />
+                <select
+                  value={selectedGodown}
+                  onChange={(e) => setSelectedGodown(e.target.value)}
+                  className="bg-transparent border-none text-[10px] font-bold text-foreground uppercase tracking-widest outline-none focus:ring-0"
+                >
+                  <option value="">All Godowns</option>
+                  {godowns.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-sm px-3 py-1.5 focus-within:border-foreground transition-colors">
+                <DateInput 
+                  value={startDate}
+                  onChange={setStartDate}
+                  className="w-28 py-0.5 text-[10px] border-0 bg-transparent shadow-none"
+                />
+                <span className="text-gray-400 font-bold uppercase text-[9px] px-1 italic">To</span>
+                <DateInput 
+                  value={endDate}
+                  onChange={setEndDate}
+                  className="w-28 py-0.5 text-[10px] border-0 bg-transparent shadow-none"
+                />
+              </div>
+              <div className="flex items-center gap-2 border-l border-border pl-3 font-bold">
+                <button 
+                  onClick={handlePrint}
+                  className="p-2 text-gray-500 hover:text-foreground hover:bg-muted rounded-sm transition-all"
+                  title="Print"
+                >
+                  <Printer className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={handleDownloadPDF}
+                  className="p-2 text-gray-500 hover:text-foreground hover:bg-muted rounded-sm transition-all"
+                  title="Download PDF"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col h-[600px]">
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+        <div className="p-6 grid grid-cols-1 lg:grid-cols-4 gap-8 pb-20">
+          <div className="lg:col-span-1">
+            <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col h-[500px] lg:h-[600px] overflow-hidden">
             <div className="p-4 border-b border-gray-200 bg-gray-50">
                <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -905,5 +876,6 @@ export function StockItemReport() {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

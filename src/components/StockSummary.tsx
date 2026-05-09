@@ -5,7 +5,7 @@ import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
-import { cn, formatNumber, formatQuantity, ensureDate } from '../lib/utils';
+import { cn, formatNumber, formatQuantity, ensureDate, parseEntryDate, getMovementType, formatToYMD } from '../lib/utils';
 import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -92,97 +92,103 @@ export function StockSummary() {
     const item = items.find(i => i.id === itemId);
     if (!item) return { opening: 0, inward: 0, outward: 0, closing: 0 };
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    const startD = parseEntryDate(startDate, null);
+    const endD = parseEntryDate(endDate, null);
+    const startStr = formatToYMD(startD);
+    const endStr = formatToYMD(endD);
 
-    const godownAllocation = (item.opening_godowns || []).find((a: any) => a.godown_id === godownId);
-    let currentStock = godownId 
-      ? (Number(godownAllocation?.qty) || 0)
-      : (Number(item.opening_qty) || 0);
+    // Track godown balances precisely during the simulation
+    const godownBalances: Record<string, number> = {};
+    (item.opening_godowns || []).forEach((ag: any) => {
+      if (ag.godown_id) {
+        godownBalances[ag.godown_id] = Number(ag.qty) || 0;
+      }
+    });
+    
+    // Total opening includes all allocated and unallocated stock
+    let currentTotalStock = Number(item.opening_qty) || 0;
 
-    let opening = 0;
-    let inward = 0;
-    let outward = 0;
+    let periodInward = 0;
+    let periodOutward = 0;
+    let periodOpening = 0;
+    let openingFound = false;
 
-    // Filter and sort entries for consistent calculation
-    // We filter by godownId only if one is selected.
-    // If "All Locations" is selected, we need all entries to calculate total stock correctly.
+    // Filter by item and sort by ACTUAL date time
     const relevantEntries = inventory
-      .filter(inv => inv.item_id === itemId && (!godownId || inv.godown_id === godownId))
+      .filter(inv => String(inv.item_id) === String(itemId))
       .sort((a, b) => {
-        const dateComp = (a.date || '').localeCompare(b.date || '');
-        if (dateComp !== 0) return dateComp;
+        const d_a = parseEntryDate(a.date, a.created_at);
+        const d_b = parseEntryDate(b.date, b.created_at);
+        if (d_a.getTime() !== d_b.getTime()) return d_a.getTime() - d_b.getTime();
         return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
       });
 
     relevantEntries.forEach(inv => {
-      // Normalize entry date to start of day for comparison with 'start'
-      let entryDate: Date;
-      if (inv.date) {
-        const [y, m, d] = inv.date.split('-').map(Number);
-        entryDate = new Date(y, m - 1, d);
-      } else {
-        entryDate = ensureDate(inv.created_at);
-      }
+      const entryDateObj = parseEntryDate(inv.date, inv.created_at);
+      const entryDateStr = formatToYMD(entryDateObj);
       
+      if (entryDateStr > endStr) return;
+      
+      // Before we process the first entry of the period, we mark what the stock was at the start
+      if (!openingFound && entryDateStr >= startStr) {
+        periodOpening = godownId ? (godownBalances[godownId] || 0) : currentTotalStock;
+        openingFound = true;
+      }
+
       const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
-      const mType = (inv.movement_type || inv.m_type || (inv.v_type === 'Sales' ? 'outward' : 'inward')).toLowerCase();
-      const isPhysical = inv.v_type?.toLowerCase() === 'physical stock' || inv.is_physical_snapshot;
+      const mType = getMovementType(inv);
+      const isPhysical = inv.v_type?.toLowerCase() === 'physical stock' || !!inv.is_physical_snapshot;
+      const invGodownId = inv.godown_id;
 
-      if (entryDate < start) {
-        // Entries before the period affect opening balance
-        if (isPhysical) {
-          if (!godownId) {
-            // For All Locations, a physical stock entry anywhere only changes total by its adjustment
-            currentStock += (Number(inv.adjustment_qty) || 0);
-          } else {
-            // For a specific godown, physical stock sets the absolute value
-            currentStock = Number(inv.qty) || 0;
-          }
+      let adjustment = 0;
+      if (isPhysical) {
+        if (invGodownId) {
+          const oldGodownStock = godownBalances[invGodownId] || 0;
+          adjustment = qty - oldGodownStock;
+          godownBalances[invGodownId] = qty;
         } else {
-          currentStock += (mType === 'inward' ? qty : -qty);
+          adjustment = qty - currentTotalStock;
+          currentTotalStock = qty;
+          Object.keys(godownBalances).forEach(key => {
+            godownBalances[key] = 0;
+          });
         }
-      } else if (entryDate <= end) {
-        // Entries during the period
-        if (isPhysical) {
-          let adj = 0;
-          if (!godownId) {
-            adj = Number(inv.adjustment_qty) || 0;
-          } else {
-            // For specific godown, adjustment is target - current
-            adj = (Number(inv.qty) || 0) - currentStock;
-          }
+      } else {
+        adjustment = mType === 'inward' ? qty : -qty;
+        if (invGodownId) {
+          godownBalances[invGodownId] = (godownBalances[invGodownId] || 0) + adjustment;
+        }
+      }
 
-          if (adj > 0) inward += adj;
-          else {
-            outward += Math.abs(adj);
-          }
+      if (!isPhysical || invGodownId) {
+        currentTotalStock += adjustment;
+      }
 
-          if (!godownId) {
-            currentStock += adj;
+      if (entryDateStr >= startStr && entryDateStr <= endStr) {
+        const matchesGodownFilter = !godownId || invGodownId === godownId;
+        if (matchesGodownFilter) {
+          if (isPhysical) {
+            if (adjustment >= 0) periodInward += adjustment;
+            else periodOutward += Math.abs(adjustment);
           } else {
-            currentStock = Number(inv.qty) || 0;
-          }
-        } else {
-          if (mType === 'inward') {
-            inward += qty;
-            currentStock += qty;
-          } else {
-            outward += qty;
-            currentStock -= qty;
+            if (mType === 'inward') periodInward += qty;
+            else periodOutward += qty;
           }
         }
       }
     });
 
-    opening = currentStock - inward + outward;
+    if (!openingFound) {
+      periodOpening = godownId ? (godownBalances[godownId] || 0) : currentTotalStock;
+    }
+
+    const finalClosing = godownId ? (godownBalances[godownId] || 0) : currentTotalStock;
 
     return {
-      opening,
-      inward,
-      outward,
-      closing: currentStock
+      opening: periodOpening,
+      inward: periodInward,
+      outward: periodOutward,
+      closing: finalClosing
     };
   };
 
@@ -288,9 +294,9 @@ export function StockSummary() {
   };
 
   return (
-    <div className="flex flex-col min-h-full bg-background font-mono transition-colors">
+    <div className="flex flex-col h-screen bg-background font-mono transition-colors overflow-hidden">
       {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-4">
+      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-4 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
             {(settings.companyLogo || settings.systemLogo) && (
@@ -431,9 +437,8 @@ export function StockSummary() {
       </div>
 
       {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-0">
+      <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
         <div className="p-4 lg:p-6 space-y-6 pb-20">
-          {/* Table/Cards */}
           <div id="stock-summary-report" className="bg-card border border-border p-0 print:p-8 print:border-none print:shadow-none bg-white">
           <ReportPrintHeader 
             title="Stock Summary" 
@@ -448,13 +453,18 @@ export function StockSummary() {
           <div className="block lg:hidden divide-y divide-border/50">
             {filteredGroups.map(groupName => {
               const groupItems = groupedItems[groupName];
+              const groupOpening = groupItems.reduce((sum, i) => sum + (i.opening || 0), 0);
+              const groupInward = groupItems.reduce((sum, i) => sum + (i.inward || 0), 0);
+              const groupOutward = groupItems.reduce((sum, i) => sum + (i.outward || 0), 0);
               const groupQty = groupItems.reduce((sum, i) => sum + i.displayStock, 0);
               const groupValue = groupItems.reduce((sum, i) => sum + (i.displayStock * (i.avg_cost || i.opening_rate || 0)), 0);
               const isExpanded = expandedGroups.has(groupName) || search.length > 0;
 
               return (
                 <div key={groupName} className="flex flex-col">
-            <div className="p-4 bg-muted/20 flex justify-between items-center cursor-pointer hover:bg-muted/80 transition-colors border-l-4 border-transparent hover:border-primary"
+                  <div 
+                    onClick={() => toggleGroup(groupName)}
+                    className="p-4 bg-muted/20 flex justify-between items-center cursor-pointer hover:bg-muted/80 transition-colors border-l-4 border-transparent hover:border-primary"
                   >
                     <div className="flex items-center gap-2">
                       {isExpanded ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
@@ -470,7 +480,7 @@ export function StockSummary() {
                   {isExpanded && groupItems.map(item => (
                     <div 
                       key={item.id} 
-                      onClick={() => navigate(`/reports/stock-item?itemId=${item.id}&from=${startDate}&to=${endDate}`)}
+                      onClick={() => navigate(`/reports/stock-item?id=${item.id}&from=${startDate}&to=${endDate}`)}
                       className="p-4 pl-8 border-t border-border/30 space-y-2 hover:bg-muted/60 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary/40"
                     >
                       <div className="flex justify-between items-start">
@@ -479,9 +489,19 @@ export function StockSummary() {
                         </span>
                         <span className="text-xs font-bold text-foreground font-mono">{formatQuantity(item.displayStock, item.units?.name)}</span>
                       </div>
-                      <div className="flex justify-between items-center text-[10px] text-gray-500 uppercase">
-                        <span>{t('common.avgRate')}: ৳ {formatNumber(item.avg_cost || item.opening_rate || 0)}</span>
-                        <span className="font-bold text-foreground/60">{t('common.value')}: ৳ {formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))}</span>
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <div className="text-[9px] text-gray-500 uppercase">
+                          Op: <span className="text-foreground font-bold">{formatQuantity(item.opening)}</span>
+                        </div>
+                        <div className="text-[9px] text-gray-500 uppercase text-right">
+                          In: <span className="text-foreground font-bold">{formatQuantity(item.inward)}</span>
+                        </div>
+                        <div className="text-[9px] text-gray-500 uppercase">
+                          Out: <span className="text-foreground font-bold">{formatQuantity(item.outward)}</span>
+                        </div>
+                        <div className="text-[9px] text-gray-500 uppercase text-right font-bold text-foreground">
+                          Val: ৳ {formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -501,17 +521,17 @@ export function StockSummary() {
           </div>
 
           {/* Desktop View: Table */}
-          <div className="hidden lg:block relative h-full">
+          <div className="hidden lg:block relative">
             <table className="w-full text-left text-[11px] min-w-[800px] border-separate border-spacing-0">
-              <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-sm shadow-sm">
+              <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-sm shadow-sm ring-1 ring-border">
                 <tr className="text-gray-500 uppercase text-[9px] font-bold tracking-widest">
-                  <th className="px-4 py-3 font-medium border-b border-border sticky top-0">{t('common.particulars')}</th>
-                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">Opening</th>
-                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">Inward</th>
-                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l">Outward</th>
+                  <th className="px-4 py-3 font-medium border-b border-border sticky top-0 bg-inherit">{t('common.particulars')}</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 bg-inherit border-l">Opening</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 bg-inherit border-l">Inward</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 bg-inherit border-l">Outward</th>
                   <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l bg-amber-600 text-white z-10 shadow-sm">{t('common.quantity')}</th>
-                  <th className="px-4 py-3 font-medium text-right w-28 border-b border-border sticky top-0 border-l">Rate (Avg)</th>
-                  <th className="px-4 py-3 font-medium text-right w-32 border-b border-border sticky top-0 border-l">{t('common.value')} (৳)</th>
+                  <th className="px-4 py-3 font-medium text-right w-28 border-b border-border sticky top-0 bg-inherit border-l">Rate (Avg)</th>
+                  <th className="px-4 py-3 font-medium text-right w-32 border-b border-border sticky top-0 bg-inherit border-l">{t('common.value')} (৳)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">

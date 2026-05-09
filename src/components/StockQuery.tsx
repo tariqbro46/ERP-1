@@ -4,7 +4,7 @@ import { ArrowLeft, Loader2, Search, Package, ShoppingCart, Tag, MapPin, Trendin
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, cn, ensureDate, parseEntryDate, getMovementType } from '../lib/utils';
 
 export function StockQuery() {
   const { user } = useAuth();
@@ -59,37 +59,55 @@ export function StockQuery() {
       const itemEntries = allInvEntries
         .filter((e: any) => String(e.item_id) === String(item.id))
         .sort((a: any, b: any) => {
-          const dateA = a.date || a.created_at?.toDate?.()?.toISOString() || '';
-          const dateB = b.date || b.created_at?.toDate?.()?.toISOString() || '';
-          return dateB.localeCompare(dateA);
+          const d_a = parseEntryDate(a.date, a.created_at);
+          const d_b = parseEntryDate(b.date, b.created_at);
+          if (d_a.getTime() !== d_b.getTime()) return d_a.getTime() - d_b.getTime();
+          return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
         });
 
-      const lastPurchase = itemEntries.find((e: any) => e.movement_type === 'Inward');
-      const lastSales = itemEntries.find((e: any) => e.movement_type === 'Outward');
+      // Track godown balances precisely
+      const godownBalances: Record<string, number> = {};
+      (item.opening_godowns || []).forEach((ag: any) => {
+        if (ag.godown_id) godownBalances[ag.godown_id] = Number(ag.qty) || 0;
+      });
+      let runningTotal = Number(item.opening_qty) || 0;
+
+      itemEntries.forEach((e: any) => {
+        const entryQty = (Number(e.qty) || 0) + (Number(e.free_qty) || 0);
+        const mType = getMovementType(e);
+        const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
+        const eGodownId = e.godown_id;
+
+        let adj = 0;
+        if (isPhysical) {
+          if (eGodownId) {
+            adj = entryQty - (godownBalances[eGodownId] || 0);
+            godownBalances[eGodownId] = entryQty;
+          } else {
+            adj = entryQty - runningTotal;
+            runningTotal = entryQty;
+            // Global reset
+            Object.keys(godownBalances).forEach(k => godownBalances[k] = 0);
+          }
+        } else {
+          adj = mType === 'inward' ? entryQty : -entryQty;
+          if (eGodownId) {
+            godownBalances[eGodownId] = (godownBalances[eGodownId] || 0) + adj;
+          }
+        }
+
+        if (!isPhysical || eGodownId) {
+          runningTotal += adj;
+        }
+      });
+
+      const lastPurchase = [...itemEntries].reverse().find((e: any) => getMovementType(e) === 'inward');
+      const lastSales = [...itemEntries].reverse().find((e: any) => getMovementType(e) === 'outward');
 
       // Group by godown
       const godowns = await erpService.getGodowns(user!.companyId);
       const stockByGodown = godowns.map((g: any) => {
-        const gEntries = itemEntries.filter((e: any) => e.godown_id === g.id);
-        const qty = gEntries.reduce((sum, e) => {
-          const isPhysical = e.is_physical_snapshot === true || (e.v_type && e.v_type.toString().toLowerCase() === 'physical stock');
-          const entryQty = (e.qty || 0) + (e.free_qty || 0);
-          
-          if (isPhysical) {
-            // For a specific godown, the physical stock was calculated as target qty
-            // In erpService, we store adjustment_qty which is (target - existing)
-            // Adding this adjustment to our running sum will correctly set the new balance.
-            return sum + (Number(e.adjustment_qty) || 0);
-          }
-          
-          return sum + (e.movement_type === 'Inward' ? entryQty : -entryQty);
-        }, 0);
-        
-        // Add opening godown allocation if any
-        const openingAlloc = (item.opening_godowns || []).find((ag: any) => ag.godown_id === g.id);
-        const totalQty = qty + (openingAlloc ? Number(openingAlloc.qty) : 0);
-        
-        return { name: g.name, qty: totalQty };
+        return { name: g.name, qty: godownBalances[g.id] || 0 };
       }).filter(g => g.qty !== 0);
 
       setDetails({

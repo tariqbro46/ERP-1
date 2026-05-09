@@ -1,5 +1,5 @@
 import { db, auth } from '../firebase';
-import { ensureDate } from '../lib/utils';
+import { ensureDate, formatToYMD, parseEntryDate } from '../lib/utils';
 import { errorService } from './errorService';
 import { 
   collection, 
@@ -451,6 +451,7 @@ export const erpService = {
           reference_no: reference_no,
           serial_no: nextSerial,
           v_no: reference_no, 
+          v_date: formatToYMD(voucher.v_date), // Ensure YYYY-MM-DD
           createdBy: userId,
           createdAt: serverTimestamp()
         });
@@ -463,7 +464,7 @@ export const erpService = {
             ...entry,
             voucher_id: vRef.id,
             companyId,
-            date: voucher.v_date,
+            date: formatToYMD(voucher.v_date),
             created_at: serverTimestamp()
           }));
 
@@ -487,7 +488,7 @@ export const erpService = {
               voucher_id: vRef.id,
               v_type: vType,
               companyId,
-              date: voucher.v_date,
+              date: formatToYMD(voucher.v_date),
               created_at: serverTimestamp()
             };
 
@@ -1912,8 +1913,9 @@ export const erpService = {
       const snap = await getDocs(q);
       const entries = snap.docs.map(d => ({ ...(d.data() as any), id: d.id }))
         .sort((a, b) => {
-          const dateComp = (a.date || '').localeCompare(b.date || '');
-          if (dateComp !== 0) return dateComp;
+          const d_a = parseEntryDate(a.date, a.created_at);
+          const d_b = parseEntryDate(b.date, b.created_at);
+          if (d_a.getTime() !== d_b.getTime()) return d_a.getTime() - d_b.getTime();
           return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
         });
       
@@ -1975,11 +1977,17 @@ export const erpService = {
   async getVoucherEntriesByDate(companyId: string, asOnDate: string): Promise<any[]> {
     const vouchersQuery = query(
       collection(db, 'vouchers'),
-      where('companyId', '==', companyId),
-      where('v_date', '<=', asOnDate)
+      where('companyId', '==', companyId)
     );
     const vouchersSnap = await getDocs(vouchersQuery);
-    const voucherIds = vouchersSnap.docs.map(d => d.id);
+    const targetDate = parseEntryDate(asOnDate, null);
+
+    const filteredVouchers = vouchersSnap.docs.filter(d => {
+      const vDate = parseEntryDate(d.data().v_date, d.data().createdAt);
+      return vDate <= targetDate;
+    });
+
+    const voucherIds = filteredVouchers.map(d => d.id);
     
     if (voucherIds.length === 0) return [];
     
@@ -2032,14 +2040,19 @@ export const erpService = {
   },
 
   async getInventoryEntriesByDate(companyId: string, startDate: string, endDate: string): Promise<any[]> {
+    // We widen the query to be string-format agnostic and filter in JS for absolute correctness
+    // while the database is being migrated to YYYY-MM-DD
     const q = query(
       collection(db, 'inventory_entries'),
-      where('companyId', '==', companyId),
-      where('date', '>=', startDate),
-      where('date', '<=', endDate)
+      where('companyId', '==', companyId)
     );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
+    try {
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, 'inventory_entries');
+      return [];
+    }
   },
 
   async getVoucherWithEntries(companyId: string, ledgerId: string, startDate: string, endDate: string): Promise<any[]> {

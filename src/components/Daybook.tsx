@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, Printer, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn, formatNumber, formatQuantity } from '../lib/utils';
+import { cn, formatNumber, formatQuantity, parseEntryDate } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { pdfService } from '../services/pdfService';
 import { useAuth } from '../contexts/AuthContext';
@@ -130,8 +130,8 @@ export function Daybook() {
           'Purchase': 4
         };
         sorted.sort((a, b) => {
-          const dateA = new Date(a.v_date).getTime();
-          const dateB = new Date(b.v_date).getTime();
+          const dateA = parseEntryDate(a.v_date, a.createdAt).getTime();
+          const dateB = parseEntryDate(b.v_date, b.createdAt).getTime();
           if (dateA !== dateB) return dateA - dateB;
 
           const orderA = typeOrder[a.v_type] || 99;

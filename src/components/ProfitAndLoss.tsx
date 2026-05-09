@@ -8,7 +8,7 @@ import { printProfitAndLoss, printUtils } from '../utils/printUtils';
 import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
-import { formatNumber, cn } from '../lib/utils';
+import { formatNumber, cn, ensureDate, parseEntryDate, getMovementType } from '../lib/utils';
 import { EditableHeader } from './EditableHeader';
 import { useNavigate } from 'react-router-dom';
 
@@ -53,43 +53,73 @@ export function ProfitAndLoss() {
           erpService.getCollection('voucher_entries', user.companyId)
         ]);
         
-        // 1. Calculate Opening & Closing Stock
+        // 1. Calculate Opening & Closing Stock using per-godown simulation
         const calculateStockValue = (asOfDate: string) => {
-          const targetDate = new Date(asOfDate);
+          const targetDate = parseEntryDate(asOfDate, null);
           targetDate.setHours(23, 59, 59, 999);
 
-          const stocks: Record<string, number> = {};
+          // Track precise state for each item
+          const itemStates: Record<string, { total: number, godowns: Record<string, number> }> = {};
           
-          // Initial quantity from item master
           allItems.forEach(item => {
-            stocks[item.id] = Number(item.opening_qty) || 0;
+            const godownBalances: Record<string, number> = {};
+            (item.opening_godowns || []).forEach((ag: any) => {
+              if (ag.godown_id) godownBalances[ag.godown_id] = Number(ag.qty) || 0;
+            });
+            itemStates[item.id] = {
+              total: Number(item.opening_qty) || 0,
+              godowns: godownBalances
+            };
           });
 
-          // All movements up to target date
-          invEntries.forEach((entry: any) => {
-            const entryDate = new Date(entry.date);
+          // Sort entries by date/time for accurate simulation
+          const sortedEntries = [...invEntries].sort((a, b) => {
+            const d_a = parseEntryDate(a.date, a.created_at);
+            const d_b = parseEntryDate(b.date, b.created_at);
+            if (d_a.getTime() !== d_b.getTime()) return d_a.getTime() - d_b.getTime();
+            return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
+          });
+
+          sortedEntries.forEach((entry: any) => {
+            const entryDate = parseEntryDate(entry.date, entry.created_at);
             if (entryDate <= targetDate) {
+              const state = itemStates[entry.item_id];
+              if (!state) return;
+
               const qty = (Number(entry.qty) || 0) + (Number(entry.free_qty) || 0);
-              const mType = (entry.movement_type || entry.m_type || '').toLowerCase();
-              
-              if (entry.v_type?.toLowerCase() === 'physical stock' || entry.is_physical_snapshot) {
-                // For global calculation, we use adjustment_qty to update the total
-                // If the physical stock entry had no godown, adjustment_qty will reflect target - global_old
-                // If it had a godown, adjustment_qty will reflect target - godown_old
-                // In both cases, adding it to the global balance is correct.
-                stocks[entry.item_id] += (Number(entry.adjustment_qty) || 0);
-              } else if (mType === 'inward') {
-                stocks[entry.item_id] += qty;
+              const mType = getMovementType(entry);
+              const isPhysical = entry.v_type?.toLowerCase() === 'physical stock' || !!entry.is_physical_snapshot;
+              const gId = entry.godown_id;
+
+              let adjustment = 0;
+              if (isPhysical) {
+                if (gId) {
+                  const oldVal = state.godowns[gId] || 0;
+                  adjustment = qty - oldVal;
+                  state.godowns[gId] = qty;
+                } else {
+                  adjustment = qty - state.total;
+                  state.total = qty;
+                  // Reset godowns
+                  Object.keys(state.godowns).forEach(k => {
+                    state.godowns[k] = 0;
+                  });
+                }
               } else {
-                stocks[entry.item_id] -= qty;
+                adjustment = mType === 'inward' ? qty : -qty;
+                if (gId) state.godowns[gId] = (state.godowns[gId] || 0) + adjustment;
+              }
+
+              if (!isPhysical || gId) {
+                state.total += adjustment;
               }
             }
           });
 
-          return Object.entries(stocks).reduce((sum, [id, qty]) => {
+          return Object.entries(itemStates).reduce((sum, [id, state]) => {
             const item = allItems.find(i => i.id === id);
             const rate = Number(item?.avg_cost) || Number(item?.opening_rate) || 0;
-            return sum + (qty * rate);
+            return sum + (state.total * rate);
           }, 0);
         };
 
