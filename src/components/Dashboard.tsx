@@ -83,11 +83,8 @@ export function Dashboard() {
   // Default to current month
   const getDefaultPeriod = () => {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    
-    const start = new Date(year, month, 1);
-    const end = new Date(year, month + 1, 0);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // End of current month
+    const start = new Date(now.getFullYear(), now.getMonth() - 5, 1); // Start of 5 months ago
     
     const toLocalISO = (d: Date) => {
       const y = d.getFullYear();
@@ -554,7 +551,7 @@ export function Dashboard() {
           )}>{t('dash.revenueTrajectory')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0.2}/>
@@ -563,7 +560,7 @@ export function Dashboard() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
                 <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
+                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
@@ -573,6 +570,7 @@ export function Dashboard() {
                     color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
                   }}
                   itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#2563eb' : theme === 'dark' ? '#fff' : '#000' }}
+                  formatter={(value: any) => [formatNumber(value), t('dash.revenue')]}
                 />
                 <Area type="monotone" dataKey="value" stroke={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#fff' : '#000'} fillOpacity={1} fill="url(#colorValue)" />
               </AreaChart>
@@ -590,10 +588,10 @@ export function Dashboard() {
           )}>{t('dash.expenseDistribution')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+              <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
                 <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
+                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
@@ -603,8 +601,9 @@ export function Dashboard() {
                     color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
                   }}
                   itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#059669' : theme === 'dark' ? '#fff' : '#000' }}
+                  formatter={(value: any) => [formatNumber(value), t('dash.purchase')]}
                 />
-                <Bar dataKey="value" fill={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} radius={[2, 2, 0, 0]} />
+                <Bar dataKey={stats.chartData.length > 0 ? "expense" : "value"} fill={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -620,10 +619,10 @@ export function Dashboard() {
           )}>{t('dash.netProfitMargin')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 0.15 })) : mockChartData.map(d => ({ ...d, value: d.value * 0.15 }))} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+              <LineChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData.map(d => ({ ...d, profit: d.value * 0.15 }))} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
                 <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
+                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
@@ -633,8 +632,9 @@ export function Dashboard() {
                     color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
                   }}
                   itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#d97706' : theme === 'dark' ? '#fff' : '#000' }}
+                  formatter={(value: any) => [formatNumber(value), t('dash.profit')]}
                 />
-                <Line type="monotone" dataKey="value" stroke={uiStyle === 'UI/UX 2' ? '#fff' : "#10b981"} strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="profit" stroke={uiStyle === 'UI/UX 2' ? '#fff' : "#10b981"} strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -650,10 +650,10 @@ export function Dashboard() {
           )}>{t('dash.cashFlowProjection')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData.length > 0 ? stats.chartData.map(d => ({ ...d, value: d.value * 1.2 })) : mockChartData.map(d => ({ ...d, value: d.value * 1.2 }))} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
+              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData.map(d => ({ ...d, value: d.value * 1.2 }))} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
                 <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
+                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
@@ -663,6 +663,7 @@ export function Dashboard() {
                     color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
                   }}
                   itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#e11d48' : theme === 'dark' ? '#fff' : '#000' }}
+                  formatter={(value: any) => [formatNumber(value), 'Projection']}
                 />
                 <Area type="monotone" dataKey="value" stroke={uiStyle === 'UI/UX 2' ? '#fff' : "#3b82f6"} fill={uiStyle === 'UI/UX 2' ? '#fff' : "#3b82f6"} fillOpacity={0.1} />
               </AreaChart>

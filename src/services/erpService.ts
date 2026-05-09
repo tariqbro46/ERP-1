@@ -2159,15 +2159,42 @@ export const erpService = {
       const receipt = vDocs.filter(v => v.v_type === 'Receipt').reduce((sum, v) => sum + (v.total_amount || 0), 0);
       const stockValue = items.reduce((sum: number, i: any) => sum + (i.current_stock * (i.avg_cost || i.purchase_price || 0)), 0);
       
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const chartData = months.map(m => ({ name: m, value: 0 }));
+      // Generate dynamic months based on range or default to 12 months
+      let chartData: any[] = [];
+      if (fromDate && toDate) {
+        const start = new Date(fromDate);
+        const end = new Date(toDate);
+        const curr = new Date(start.getFullYear(), start.getMonth(), 1);
+        
+        while (curr <= end) {
+          chartData.push({
+            name: curr.toLocaleString('default', { month: 'short' }),
+            month: curr.getMonth(),
+            year: curr.getFullYear(),
+            value: 0,
+            expense: 0,
+            profit: 0
+          });
+          curr.setMonth(curr.getMonth() + 1);
+        }
+      } else {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        chartData = months.map((m, i) => ({ name: m, month: i, year: new Date().getFullYear(), value: 0, expense: 0, profit: 0 }));
+      }
       
-      vDocs.filter(v => v.v_type === 'Sales').forEach(v => {
+      vDocs.forEach(v => {
         const dateString = v.v_date;
         const date = new Date(dateString);
         if (!isNaN(date.getTime())) {
           const month = date.getMonth();
-          chartData[month].value += (v.total_amount || 0);
+          const year = date.getFullYear();
+          
+          const monthData = chartData.find(d => d.month === month && d.year === year);
+          if (monthData) {
+            if (v.v_type === 'Sales') monthData.value += (v.total_amount || 0);
+            if (v.v_type === 'Purchase') monthData.expense += (v.total_amount || 0);
+            monthData.profit = monthData.value - monthData.expense;
+          }
         }
       });
 
