@@ -55,6 +55,7 @@ export function LedgerStatement() {
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
   const [config, setConfig] = useState<ReportConfig>(DEFAULT_CONFIG);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [openingBalance, setOpeningBalance] = useState(0);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -119,7 +120,13 @@ export function LedgerStatement() {
     
     setLoading(true);
     try {
-      const data = await erpService.getVoucherWithEntries(user.companyId, selectedLedger, startDate, endDate);
+      const [data, movementBefore] = await Promise.all([
+        erpService.getVoucherWithEntries(user.companyId, selectedLedger, startDate, endDate),
+        erpService.getLedgerMovementBeforeDate(user.companyId, selectedLedger, startDate)
+      ]);
+      
+      const l = ledgers.find(l => l.id === selectedLedger);
+      setOpeningBalance((l?.opening_balance || 0) + movementBefore);
       
       const processed = data.map((v: any) => {
         // Find the specific entry for our selected ledger
@@ -197,10 +204,10 @@ export function LedgerStatement() {
     const isCreditor = groupName.includes('creditor') || groupName.includes('liability') || groupName.includes('payable');
     const isExpense = groupName.includes('expense');
 
-    const openingBalance = currentLedger?.opening_balance || 0;
+    const openingBalanceVal = openingBalance;
     const totalDebit = entries.reduce((sum, e) => sum + (e.debit || 0), 0);
     const totalCredit = entries.reduce((sum, e) => sum + (e.credit || 0), 0);
-    let runningBalance = openingBalance;
+    let runningBalance = openingBalanceVal;
 
   const handlePrint = () => {
     printUtils.printElement('ledger-report', `Ledger Statement: ${currentLedger?.name || ''}`);
@@ -214,7 +221,7 @@ export function LedgerStatement() {
     if (!selectedLedger) return;
     const ledgerName = currentLedger?.name || 'Ledger';
     
-    let rb = currentLedger?.opening_balance || 0;
+    let rb = openingBalance;
     const exportData: any[] = [];
     let rowCounter = 1;
     
@@ -328,13 +335,13 @@ export function LedgerStatement() {
     
     const period = `${formatDate(startDate)} to ${formatDate(endDate)}`;
     
-    let rb = currentLedger?.opening_balance || 0;
-    let totalDebit = (rb > 0 ? rb : 0);
-    let totalCredit = (rb < 0 ? Math.abs(rb) : 0);
+    let rb = openingBalance;
+    let totalDebitCounter = (rb > 0 ? rb : 0);
+    let totalCreditCounter = (rb < 0 ? Math.abs(rb) : 0);
 
       const generateLayout1 = () => {
-      const displayTotalDebitCalc = totalDebit + (openingBalance > 0 ? openingBalance : 0);
-      const displayTotalCreditCalc = totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0);
+      const displayTotalDebitCalc = totalDebitCounter + (openingBalance > 0 ? openingBalance : 0); // This logic seems a bit redundant now but keeping it for consistency
+      const displayTotalCreditCalc = totalCreditCounter + (openingBalance < 0 ? Math.abs(openingBalance) : 0);
       const balancedTotal = Math.max(displayTotalDebitCalc, displayTotalCreditCalc);
       
       let finalFTotalD = displayTotalDebitCalc;
@@ -349,7 +356,7 @@ export function LedgerStatement() {
       }
 
       const reportRows = [
-        `<tr style="border-bottom: 2px solid #000;">
+        `<tr style="border-bottom: 0.1mm solid #333;">
           <td style="color: #000;">${formatDate(startDate)}</td>
           <td style="color: #000;"><b>Opening Balance</b></td>
           <td></td>
@@ -361,11 +368,11 @@ export function LedgerStatement() {
         </tr>`,
         ...entries.map(e => {
           rb += (e.debit || 0) - (e.credit || 0);
-          totalDebit += (e.debit || 0);
-          totalCredit += (e.credit || 0);
+          totalDebitCounter += (e.debit || 0);
+          totalCreditCounter += (e.credit || 0);
           const creator = users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System';
           
-          let row = `<tr style="border-bottom: 2px solid #000;">
+          let row = `<tr style="border-bottom: 0.1mm solid #333;">
             <td style="color: #000;">${formatDate(e.vouchers?.v_date)}</td>
             <td style="color: #000;">
               <div>Dr <b>${e.particulars}</b></div>
@@ -392,7 +399,7 @@ export function LedgerStatement() {
               `;
             }).join('');
             
-            row += `<tr style="border-bottom: 2px solid #000;">
+            row += `<tr style="border-bottom: 0.1mm solid #333;">
               <td></td>
               <td colspan="7">
                 <div style="padding: 5px; margin: 2px 0 2px 20px;">
@@ -402,7 +409,7 @@ export function LedgerStatement() {
               </td>
             </tr>`;
           } else if (config.showEnteredBy) {
-            row += `<tr style="border-bottom: 2px solid #000;">
+            row += `<tr style="border-bottom: 0.1mm solid #333;">
               <td></td>
               <td colspan="7">
                 <div style="font-size: 10px; margin-left: 40px; color: #000;"><i>Entered By : <b>${creator}</b></i></div>
@@ -414,28 +421,18 @@ export function LedgerStatement() {
         })
       ].join('');
 
-      const finalBalance = rb;
+      const finalClosingBalance = rb;
       
       const closingBalanceRow = `
-        <tr class="closing-balance" style="border-bottom: 2px solid #000;">
+        <tr class="closing-balance" style="border-bottom: 0.1mm solid #333;">
           <td></td>
           <td style="color: #000;"><b>Closing Balance</b></td>
           <td></td>
           <td></td>
           <td></td>
-          <td style="text-align: right; color: #000;"><b>${((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && finalBalance > 0)) ? formatNumber(Math.abs(finalBalance)) : ''}</b></td>
-          <td style="text-align: right; color: #000;"><b>${(isCreditor || (!(isDebtor || isExpense || isCreditor) && finalBalance < 0)) ? formatNumber(Math.abs(finalBalance)) : ''}</b></td>
+          <td style="text-align: right; color: #000;"><b>${((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && finalClosingBalance > 0)) ? formatNumber(Math.abs(finalClosingBalance)) : ''}</b></td>
+          <td style="text-align: right; color: #000;"><b>${(isCreditor || (!(isDebtor || isExpense || isCreditor) && finalClosingBalance < 0)) ? formatNumber(Math.abs(finalClosingBalance)) : ''}</b></td>
           <td style="text-align: right; color: #000;"></td>
-        </tr>
-        <tr class="total-row">
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td style="text-align: ${finalFTotalD > 0 ? 'right' : 'center'}; border-top: 1px solid #000; border-bottom: 3px double #000; color: #000;"><b>${finalFTotalD > 0 ? formatNumber(finalFTotalD) : '-'}</b></td>
-          <td style="text-align: ${finalFTotalC > 0 ? 'right' : 'center'}; border-top: 1px solid #000; border-bottom: 3px double #000; color: #000;"><b>${finalFTotalC > 0 ? formatNumber(finalFTotalC) : '-'}</b></td>
-          <td></td>
         </tr>
       `;
 
@@ -456,7 +453,7 @@ export function LedgerStatement() {
               .page-num { text-align: right; font-size: 11px; margin-bottom: 5px; }
               .page-num span { border: 1px solid #000; padding: 2px 10px; }
               
-              table { width: 100%; border-collapse: collapse; margin-top: 5px; border-top: 2px solid #000; border-bottom: 2px solid #000; table-layout: fixed; }
+              table { width: 100%; border-collapse: collapse; margin-top: 5px; border-top: 1px solid #333; border-bottom: 1px solid #333; table-layout: fixed; }
               th { border: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; text-transform: capitalize; }
               td { padding: 5px; text-align: left; font-size: 12px; vertical-align: top; }
               .stripe-row { background-color: #F3F4F6 !important; -webkit-print-color-adjust: exact; }
@@ -533,16 +530,16 @@ export function LedgerStatement() {
           <td style="padding: 2px 5px;"></td>
           <td style="padding: 2px 5px;"></td>
           <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px; text-align: right;"><b>${((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && (currentLedger?.opening_balance || 0) > 0)) ? formatNumber(Math.abs(currentLedger?.opening_balance || 0)) : ''}</b></td>
-          <td style="padding: 2px 5px; text-align: right;">${(isCreditor || (!(isDebtor || isExpense || isCreditor) && (currentLedger?.opening_balance || 0) < 0)) ? formatNumber(Math.abs(currentLedger?.opening_balance || 0)) : ''}</td>
+          <td style="padding: 2px 5px; text-align: right;"><b>${((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && openingBalance > 0)) ? formatNumber(Math.abs(openingBalance)) : ''}</b></td>
+          <td style="padding: 2px 5px; text-align: right;">${(isCreditor || (!(isDebtor || isExpense || isCreditor) && openingBalance < 0)) ? formatNumber(Math.abs(openingBalance)) : ''}</td>
           ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right;"></td>` : ''}
         </tr>
       `;
 
       const reportRows = entries.map((e) => {
         rb += (e.debit || 0) - (e.credit || 0);
-        totalDebit += (e.debit || 0);
-        totalCredit += (e.credit || 0);
+        totalDebitCounter += (e.debit || 0);
+        totalCreditCounter += (e.credit || 0);
         const creator = users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System';
         
         const mainRowIsStripe = config.enableStripeView && rowCounter % 2 !== 0;
@@ -603,7 +600,7 @@ export function LedgerStatement() {
         }
         
         return `
-          <tr class="${mainRowIsStripe ? 'stripe-row' : ''}" style="border-bottom: 2px solid #000;">
+          <tr class="${mainRowIsStripe ? 'stripe-row' : ''}" style="border-bottom: 0.1mm solid #333;">
             <td style="padding: 2px 5px; white-space: nowrap; color: #000;">${formatDate(e.vouchers?.v_date)}</td>
             <td style="padding: 2px 5px; color: #000;">
               <div>Dr <b>${e.particulars}</b></div>
@@ -620,21 +617,7 @@ export function LedgerStatement() {
         `;
       }).join('');
 
-      const finalBalance = rb;
-      const displayTotalDebitCalc = totalDebit + (openingBalance > 0 ? openingBalance : 0);
-      const displayTotalCreditCalc = totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0);
-      const balancedTotal = Math.max(displayTotalDebitCalc, displayTotalCreditCalc);
-      
-      let finalFTotalD = displayTotalDebitCalc;
-      let finalFTotalC = displayTotalCreditCalc;
-      
-      if (isDebtor || isExpense) {
-        finalFTotalD = 0; // Faka under Debit
-        finalFTotalC = balancedTotal;
-      } else if (isCreditor) {
-        finalFTotalD = balancedTotal;
-        finalFTotalC = 0; // Faka under Credit
-      }
+      const finalClosingBalance = rb;
       
       const closingBalanceRow = `
         <tr class="border-all">
@@ -643,15 +626,9 @@ export function LedgerStatement() {
           <td style="padding: 2px 5px;"></td>
           <td style="padding: 2px 5px;"></td>
           <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px; text-align: right; color: #000;"><b>${((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && finalBalance > 0)) ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
-          <td style="padding: 2px 5px; text-align: right; color: #000;"><b>${(isCreditor || (!(isDebtor || isExpense || isCreditor) && finalBalance < 0)) ? Math.abs(finalBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+          <td style="padding: 2px 5px; text-align: right; color: #000;"><b>${((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && finalClosingBalance > 0)) ? Math.abs(finalClosingBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
+          <td style="padding: 2px 5px; text-align: right; color: #000;"><b>${(isCreditor || (!(isDebtor || isExpense || isCreditor) && finalClosingBalance < 0)) ? Math.abs(finalClosingBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}</b></td>
           ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right;"></td>` : ''}
-        </tr>
-        <tr class="border-all" style="border-top: 1px solid #000; border-bottom: 2px solid #000;">
-          <td style="padding: 2px 5px; text-align: right; color: #000;" colspan="5"><b>Total</b></td>
-          <td style="padding: 2px 5px; text-align: ${finalFTotalD > 0 ? 'right' : 'center'}; color: #000;"><b>${finalFTotalD > 0 ? finalFTotalD.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</b></td>
-          <td style="padding: 2px 5px; text-align: ${finalFTotalC > 0 ? 'right' : 'center'}; color: #000;"><b>${finalFTotalC > 0 ? finalFTotalC.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</b></td>
-          ${config.showRunningBalance ? '<td style="padding: 2px 5px; text-align: right;"></td>' : ''}
         </tr>
       `;
 
@@ -1015,7 +992,7 @@ export function LedgerStatement() {
                             <React.Fragment key={e.id}>
                               <tr 
                                 className={cn(
-                                  "border-b-2 border-black/80 hover:bg-muted/80 transition-colors cursor-pointer group border-l-4 border-transparent hover:border-primary",
+                                  "border-b border-black/10 hover:bg-muted/80 transition-colors cursor-pointer group border-l-4 border-transparent hover:border-primary",
                                   config.enableStripeView && !settings.reportLayout && idx % 2 !== 0 && "bg-muted/30",
                                   settings.reportLayout === 'Layout 2' && "bg-white text-black hover:bg-gray-50",
                                   settings.reportLayout === 'Layout 2' && mainRowIsStripe && "bg-[#F3F4F6]"
@@ -1117,7 +1094,7 @@ export function LedgerStatement() {
                   
                   {/* Closing Balance Row */}
                   <tr className={cn(
-                    "border-t-2 border-black font-bold",
+                    "border-t border-black/50 font-bold",
                     settings.reportLayout === 'Layout 2' ? "bg-white text-black border border-black shadow-[0_-2px_10px_-3px_rgba(0,0,0,0.1)]" : "bg-foreground/5 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]"
                   )}>
                     <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
@@ -1137,66 +1114,7 @@ export function LedgerStatement() {
                     )}
                   </tr>
 
-                  {/* Totals Row for Layout 2 */}
-                  {settings.reportLayout === 'Layout 2' && (() => {
-                    const dTotal = totalDebit + (openingBalance > 0 ? openingBalance : 0);
-                    const cTotal = totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0);
-                    const balancedT = Math.max(dTotal, cTotal);
-                    
-                    let finalDT = dTotal;
-                    let finalCT = cTotal;
-                    
-                    if (isDebtor || isExpense) {
-                      finalDT = 0;
-                      finalCT = balancedT;
-                    } else if (isCreditor) {
-                      finalDT = balancedT;
-                      finalCT = 0;
-                    }
-
-                    return (
-                      <tr className="border-t-2 border-black font-bold bg-white text-black">
-                        <td colSpan={4} className="px-6 py-4 text-right border border-black">{t('common.total')}</td>
-                        <td className={cn("px-6 py-4 border border-black", finalDT > 0 ? "text-right" : "text-center")}>
-                          {finalDT > 0 ? finalDT.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
-                        </td>
-                        <td className={cn("px-6 py-4 border border-black", finalCT > 0 ? "text-right" : "text-center")}>
-                          {finalCT > 0 ? finalCT.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
-                        </td>
-                        {config.showRunningBalance && <td className="px-6 py-4 border border-black"></td>}
-                      </tr>
-                    );
-                  })()}
-                  {/* Totals Row for Standard/Layout 1 View */}
-                  {settings.reportLayout !== 'Layout 2' && (() => {
-                    const dTotal = totalDebit + (openingBalance > 0 ? openingBalance : 0);
-                    const cTotal = totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0);
-                    const balancedT = Math.max(dTotal, cTotal);
-                    
-                    let finalDT = dTotal;
-                    let finalCT = cTotal;
-                    
-                    if (isDebtor || isExpense) {
-                      finalDT = 0;
-                      finalCT = balancedT;
-                    } else if (isCreditor) {
-                      finalDT = balancedT;
-                      finalCT = 0;
-                    }
-
-                    return (
-                      <tr className="border-t-2 border-black font-bold bg-foreground/5 shadow-[0_-2px_4px_rgba(0,0,0,0.05)] text-black">
-                        <td colSpan={5} className="px-6 py-4 text-right border-none">{t('common.total')}</td>
-                        <td className={cn("px-6 py-4 border-t-2 border-black", finalDT > 0 ? "text-right" : "text-center")}>
-                          {finalDT > 0 ? finalDT.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
-                        </td>
-                        <td className={cn("px-6 py-4 border-t-2 border-black", finalCT > 0 ? "text-right" : "text-center")}>
-                          {finalCT > 0 ? finalCT.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
-                        </td>
-                        {config.showRunningBalance && <td className="px-6 py-4 border-t-2 border-black"></td>}
-                      </tr>
-                    );
-                  })()}
+                  {/* Totals Row Removed as requested */}
                 </>
               );
             })()}

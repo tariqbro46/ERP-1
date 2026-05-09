@@ -2086,6 +2086,30 @@ export const erpService = {
     }
   },
 
+  async getLedgerMovementBeforeDate(companyId: string, ledgerId: string, date: string): Promise<number> {
+    try {
+      // Use only equality filters that are more likely to have indexes
+      const q = query(
+        collection(db, 'voucher_entries'),
+        where('companyId', '==', companyId),
+        where('ledger_id', '==', ledgerId)
+      );
+      const snap = await getDocs(q);
+      let movement = 0;
+      snap.docs.forEach(d => {
+        const data = d.data();
+        // Filter by date in memory to avoid needing a complex composite index (companyId, ledger_id, date)
+        if (data.date && data.date < date) {
+          movement += (data.debit || 0) - (data.credit || 0);
+        }
+      });
+      return movement;
+    } catch (error) {
+      console.error('Error calculating movement before date:', error);
+      return 0;
+    }
+  },
+
   async getVoucherWithEntries(companyId: string, ledgerId: string, startDate: string, endDate: string): Promise<any[]> {
     const [vouchersSnap, serialMap] = await Promise.all([
       getDocs(query(
