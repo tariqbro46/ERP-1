@@ -21,7 +21,7 @@
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
         "companyId": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "manager", "staff"] },
+        "role": { "type": "string", "enum": ["Founder", "Marketing Manager", "Admin", "Manager", "Staff"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "companyId", "role"]

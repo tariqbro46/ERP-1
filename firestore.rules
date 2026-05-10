@@ -32,6 +32,53 @@ service cloud.firestore {
       );
     }
 
+    function isVerified() {
+      return isAuthenticated() && (
+        request.auth.token.email_verified == true ||
+        request.auth.token.firebase.sign_in_provider == 'google.com' // Google provider is inherently verified
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts == request.time;
+    }
+
+    // ===============================================================
+    // Entity Validation Helpers
+    // ===============================================================
+
+    function isValidVoucher(data) {
+      return data.keys().hasAll(['v_type', 'v_date', 'companyId']) &&
+             data.v_type is string && data.v_type.size() <= 50 &&
+             data.v_date is string && data.v_date.size() <= 20 &&
+             data.companyId is string && data.companyId.size() <= 50;
+    }
+
+    function isValidVoucherEntry(data) {
+      return data.keys().hasAll(['voucher_id', 'ledger_id', 'companyId']) &&
+             data.voucher_id is string && data.voucher_id.size() <= 50 &&
+             data.ledger_id is string && data.ledger_id.size() <= 50 &&
+             data.companyId is string && data.companyId.size() <= 50;
+    }
+
+    function isValidItem(data) {
+      return data.keys().hasAll(['name', 'companyId']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.companyId is string && data.companyId.size() <= 50;
+    }
+
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
@@ -80,6 +127,11 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
     // Subscription Plans - Move to top for priority
     match /subscription_plans/{planId} {
       allow get, list: if true;
@@ -125,202 +177,208 @@ service cloud.firestore {
         isSuperAdmin() || 
         (userExists() && getUserData().get('companyId', '') == resource.data.get('companyId', ''))
       );
-      allow create: if isAuthenticated() && (
+      allow create: if isVerified() && (
         request.auth.uid == uid || 
         isSuperAdmin() || 
         (request.resource != null && isCompanyAdmin(request.resource.data.get('companyId', '')))
       );
-      allow update: if isAuthenticated() && (
+      allow update: if isVerified() && (
         request.auth.uid == uid || 
         (userExists() && isCompanyAdmin(resource.data.get('companyId', '')))
       );
       allow delete: if isSuperAdmin() || 
-                    (isAuthenticated() && request.auth.uid == uid) || 
+                    (isVerified() && request.auth.uid == uid) || 
                     isCompanyAdmin(resource.data.get('companyId', ''));
     }
 
     // ERP Data
     match /ledgers/{id} {
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
+      allow get: if isAuthenticated() && isValidId(id) && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
       allow list: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId) && 
+                      exists(/databases/$(database)/documents/ledger_groups/$(incoming().group_id));
+      allow update: if isVerified() && isCompanyMember(existing().companyId) && 
+                      (incoming().diff(existing()).affectedKeys().hasOnly(['current_balance', 'name', 'group_id', 'alias', 'opening_balance']));
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /items/{id} {
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
+      allow get: if isAuthenticated() && isValidId(id) && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
       allow list: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId) && isValidItem(incoming());
+      allow update: if isVerified() && isCompanyMember(existing().companyId) &&
+                      (incoming().diff(existing()).affectedKeys().hasOnly(['current_stock', 'name', 'unit_id', 'description', 'avg_cost']));
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /vouchers/{id} {
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
+      allow get: if isAuthenticated() && isValidId(id) && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
       allow list: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId) && isValidVoucher(incoming());
+      allow update: if isVerified() && isCompanyMember(existing().companyId) && isValidVoucher(incoming());
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /ledger_groups/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /voucher_entries/{id} {
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
+      allow get: if isAuthenticated() && isValidId(id) && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
       allow list: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId) && 
+                      isValidVoucherEntry(incoming()) &&
+                      exists(/databases/$(database)/documents/vouchers/$(incoming().voucher_id));
+      allow update: if isVerified() && isCompanyMember(existing().companyId) && isValidVoucherEntry(incoming());
+      allow delete: if isVerified() && isCompanyMember(existing().companyId); 
     }
 
     match /inventory_entries/{id} {
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
+      allow get: if isAuthenticated() && isValidId(id) && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
       allow list: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId) &&
+                      exists(/databases/$(database)/documents/vouchers/$(incoming().voucher_id));
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && isCompanyMember(existing().companyId);
     }
 
     match /units/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /godowns/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /employees/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /salary_sheets/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /advances/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /loans/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /stock_groups/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /stock_categories/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /voucher_types/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /employee_groups/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /pay_heads/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyAdmin(request.resource.data.companyId);
-      allow update: if isCompanyAdmin(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyAdmin(incoming().companyId);
+      allow update: if isVerified() && isCompanyAdmin(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /salary_structures/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyAdmin(request.resource.data.companyId);
-      allow update: if isCompanyAdmin(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyAdmin(incoming().companyId);
+      allow update: if isVerified() && isCompanyAdmin(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /attendance/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(request.resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
     
     match /orders/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId) && (hasPermission('orders') || isCompanyAdmin(resource.data.companyId))));
-      allow create: if isCompanyMember(request.resource.data.companyId) && (hasPermission('orders') || isCompanyAdmin(request.resource.data.companyId));
-      allow update: if isCompanyMember(request.resource.data.companyId) && (hasPermission('orders') || isCompanyAdmin(request.resource.data.companyId));
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId) && (hasPermission('orders') || isCompanyAdmin(incoming().companyId));
+      allow update: if isVerified() && isCompanyMember(existing().companyId) && (hasPermission('orders') || isCompanyAdmin(existing().companyId));
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /machines/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId) && (hasPermission('machines') || isCompanyAdmin(resource.data.companyId))));
-      allow create: if isCompanyMember(request.resource.data.companyId) && (hasPermission('machines') || isCompanyAdmin(request.resource.data.companyId));
-      allow update: if isCompanyMember(request.resource.data.companyId) && (hasPermission('machines') || isCompanyAdmin(request.resource.data.companyId));
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId) && (hasPermission('machines') || isCompanyAdmin(incoming().companyId));
+      allow update: if isVerified() && isCompanyMember(existing().companyId) && (hasPermission('machines') || isCompanyAdmin(existing().companyId));
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /godown_stock/{id} {
       allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isCompanyMember(resource.data.companyId));
       allow list: if isAuthenticated() && (isSuperAdmin() || (resource != null && isCompanyMember(resource.data.companyId)));
-      allow create: if isCompanyMember(request.resource.data.companyId);
-      allow update: if isCompanyMember(resource.data.companyId);
-      allow delete: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow create: if isVerified() && isCompanyMember(incoming().companyId);
+      allow update: if isVerified() && isCompanyMember(existing().companyId);
+      allow delete: if isVerified() && (isCompanyAdmin(existing().companyId) || isSuperAdmin());
     }
 
     match /activity_log/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || isCompanyMember(resource.data.companyId));
-      allow create: if isAuthenticated();
+      allow create: if isVerified();
       allow update, delete: if isSuperAdmin();
     }
 
     match /counters/{id} {
       allow read: if isAuthenticated() && (
         isSuperAdmin() || 
-        id.startsWith(request.auth.uid) || // Allow user to read/create their own counters
+        id.startsWith(request.auth.uid) || 
         (resource != null && isCompanyMember(resource.data.get('companyId', '')))
       );
-      allow create: if isAuthenticated() && (
+      allow create: if isVerified() && (
         isSuperAdmin() || 
         id.startsWith(request.auth.uid) ||
-        isCompanyMember(request.resource.data.companyId)
+        isCompanyMember(incoming().companyId)
       );
-      allow update: if isAuthenticated() && (
+      allow update: if isVerified() && (
         isSuperAdmin() || 
         id.startsWith(request.auth.uid) ||
-        isCompanyMember(resource.data.companyId)
+        isCompanyMember(existing().companyId)
       );
       allow delete: if isSuperAdmin();
     }
@@ -336,9 +394,9 @@ service cloud.firestore {
       );
       allow create: if isSuperAdmin();
       allow update: if isSuperAdmin() || (
-        isAuthenticated() && 
+        isVerified() && 
         (resource != null && resource.data.get('targetType', '') == 'user' && resource.data.get('targetId', '') == request.auth.uid) ||
-        (resource != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']))
+        (resource != null && incoming().diff(existing()).affectedKeys().hasOnly(['readBy']))
       );
       allow delete: if isSuperAdmin();
     }
@@ -346,12 +404,12 @@ service cloud.firestore {
     // Site Content (Landing Pages)
     match /site_content/{pageId} {
       allow read: if true; // Public read for landing pages
-      allow write: if isFounder();
+      allow write: if isVerified() && isFounder();
     }
 
     // Error Logs
     match /error_logs/{logId} {
-      allow create: if isAuthenticated();
+      allow create: if isVerified();
       allow read, update, delete: if isFounder();
     }
 
@@ -361,14 +419,14 @@ service cloud.firestore {
         isSuperAdmin() || 
         (resource != null && (resource.data.requestedBy == request.auth.uid || isCompanyAdmin(resource.data.companyId)))
       );
-      allow create: if isAuthenticated() && 
-                    request.resource.data.requestedBy == request.auth.uid &&
-                    isCompanyAdmin(request.resource.data.companyId);
-      allow update: if isAuthenticated() && (
+      allow create: if isVerified() && 
+                    incoming().requestedBy == request.auth.uid &&
+                    isCompanyAdmin(incoming().companyId);
+      allow update: if isVerified() && (
         isSuperAdmin() || 
         (resource != null && resource.data.requestedBy == request.auth.uid && resource.data.status == 'pending' && 
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'notes', 'updatedAt']) &&
-         request.resource.data.status == 'cancelled')
+         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'notes', 'updatedAt']) &&
+         incoming().status == 'cancelled')
       );
       allow delete: if isSuperAdmin();
     }
