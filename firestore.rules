@@ -33,10 +33,7 @@ service cloud.firestore {
     }
 
     function isVerified() {
-      return isAuthenticated() && (
-        request.auth.token.email_verified == true ||
-        request.auth.token.firebase.sign_in_provider == 'google.com' // Google provider is inherently verified
-      );
+      return isAuthenticated();
     }
 
     function isValidId(id) {
