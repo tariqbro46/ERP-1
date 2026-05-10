@@ -207,6 +207,14 @@ export function LedgerStatement() {
     const openingBalanceVal = openingBalance;
     const totalDebit = entries.reduce((sum, e) => sum + (e.debit || 0), 0);
     const totalCredit = entries.reduce((sum, e) => sum + (e.credit || 0), 0);
+    
+    // Calculate display totals that include opening balance
+    const displayOpeningDebit = openingBalance > 0 ? openingBalance : 0;
+    const displayOpeningCredit = openingBalance < 0 ? Math.abs(openingBalance) : 0;
+    
+    const displayTotalDebit = totalDebit + displayOpeningDebit;
+    const displayTotalCredit = totalCredit + displayOpeningCredit;
+
     let runningBalance = openingBalanceVal;
 
   const handlePrint = () => {
@@ -336,12 +344,12 @@ export function LedgerStatement() {
     const period = `${formatDate(startDate)} to ${formatDate(endDate)}`;
     
     let rb = openingBalance;
-    let totalDebitCounter = (rb > 0 ? rb : 0);
-    let totalCreditCounter = (rb < 0 ? Math.abs(rb) : 0);
+    let totalDebitCounter = 0;
+    let totalCreditCounter = 0;
 
-      const generateLayout1 = () => {
-      const displayTotalDebitCalc = totalDebitCounter + (openingBalance > 0 ? openingBalance : 0); // This logic seems a bit redundant now but keeping it for consistency
-      const displayTotalCreditCalc = totalCreditCounter + (openingBalance < 0 ? Math.abs(openingBalance) : 0);
+    const generateLayout1 = () => {
+      const displayTotalDebitCalc = totalDebit + (openingBalance > 0 ? openingBalance : 0);
+      const displayTotalCreditCalc = totalCredit + (openingBalance < 0 ? Math.abs(openingBalance) : 0);
       const balancedTotal = Math.max(displayTotalDebitCalc, displayTotalCreditCalc);
       
       let finalFTotalD = displayTotalDebitCalc;
@@ -362,8 +370,8 @@ export function LedgerStatement() {
           <td></td>
           <td></td>
           <td></td>
-          <td style="text-align: right; color: #000;"><b>${((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && rb > 0)) ? formatNumber(Math.abs(rb)) : ''}</b></td>
-          <td style="text-align: right; color: #000;">${(isCreditor || (!(isDebtor || isExpense || isCreditor) && rb < 0)) ? formatNumber(Math.abs(rb)) : ''}</td>
+          <td style="text-align: right; color: #000;"><b>${openingBalance > 0 ? formatNumber(openingBalance) : ''}</b></td>
+          <td style="text-align: right; color: #000;">${openingBalance < 0 ? formatNumber(Math.abs(openingBalance)) : ''}</td>
           <td style="text-align: right; color: #000;"></td>
         </tr>`,
         ...entries.map(e => {
@@ -530,8 +538,8 @@ export function LedgerStatement() {
           <td style="padding: 2px 5px;"></td>
           <td style="padding: 2px 5px;"></td>
           <td style="padding: 2px 5px;"></td>
-          <td style="padding: 2px 5px; text-align: right;"><b>${((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && openingBalance > 0)) ? formatNumber(Math.abs(openingBalance)) : ''}</b></td>
-          <td style="padding: 2px 5px; text-align: right;">${(isCreditor || (!(isDebtor || isExpense || isCreditor) && openingBalance < 0)) ? formatNumber(Math.abs(openingBalance)) : ''}</td>
+          <td style="padding: 2px 5px; text-align: right;"><b>${openingBalance > 0 ? formatNumber(openingBalance) : ''}</b></td>
+          <td style="padding: 2px 5px; text-align: right;">${openingBalance < 0 ? formatNumber(Math.abs(openingBalance)) : ''}</td>
           ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right;"></td>` : ''}
         </tr>
       `;
@@ -968,10 +976,10 @@ export function LedgerStatement() {
                           <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                           <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                           <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
-                            {((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && openingBalance > 0)) ? formatNumber(Math.abs(openingBalance)) : ''}
+                            {openingBalance > 0 ? formatNumber(openingBalance) : ''}
                           </td>
                           <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
-                            {(isCreditor || (!(isDebtor || isExpense || isCreditor) && openingBalance < 0)) ? formatNumber(Math.abs(openingBalance)) : ''}
+                            {openingBalance < 0 ? formatNumber(Math.abs(openingBalance)) : ''}
                           </td>
                           {config.showRunningBalance && (
                             <td className={cn("px-6 py-4 text-right text-foreground", settings.reportLayout === 'Layout 2' && "border border-black")}>
@@ -1092,21 +1100,20 @@ export function LedgerStatement() {
                           );
                         })}
                   
-                  {/* Closing Balance Row */}
                   <tr className={cn(
                     "border-t border-black/50 font-bold",
                     settings.reportLayout === 'Layout 2' ? "bg-white text-black border border-black shadow-[0_-2px_10px_-3px_rgba(0,0,0,0.1)]" : "bg-foreground/5 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]"
                   )}>
                     <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
-                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{t('ledger.closingBalance')}</td>
+                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{t('common.grandTotal')}</td>
                     <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                     <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                     <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                     <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
-                      {((isDebtor || isExpense) || (!(isDebtor || isExpense || isCreditor) && runningBalance > 0)) ? Math.abs(runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
+                      {displayTotalDebit > 0 ? formatNumber(displayTotalDebit) : ''}
                     </td>
                     <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
-                      {(isCreditor || (!(isDebtor || isExpense || isCreditor) && runningBalance < 0)) ? Math.abs(runningBalance).toLocaleString(undefined, { minimumFractionDigits: 2 }) : ''}
+                      {displayTotalCredit > 0 ? formatNumber(displayTotalCredit) : ''}
                     </td>
                     {config.showRunningBalance && (
                       <td className={cn("px-6 py-4 text-right text-foreground font-bold bg-muted/10", settings.reportLayout === 'Layout 2' && "border border-black bg-white")}>
