@@ -161,14 +161,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 // Special handling for Founder
-                const isFounderEmail = fUser.email?.toLowerCase() === 'sapientman46@gmail.com';
+                const isFounderEmail = fUser.email?.toLowerCase() === 'sapientman46@gmail.com' || fUser.email?.toLowerCase() === 'arifulislamoffice35@gmail.com';
                 if (isFounderEmail) {
                   role = 'Founder';
-                  // If founder has no company yet, find ANY company or use a placeholder
+                  // Use a specific query or limit if searching for a company
                   if (!companyId) {
-                    const allCompaniesSnap = await getDocs(collection(db, 'companies'));
-                    if (!allCompaniesSnap.empty) {
-                      companyId = allCompaniesSnap.docs[0].id;
+                    const companyQuery = query(collection(db, 'companies'), limit(1));
+                    const companySnap = await getDocs(companyQuery);
+                    if (!companySnap.empty) {
+                      companyId = companySnap.docs[0].id;
                       console.log("Found fallback company for founder:", companyId);
                     } else {
                       companyId = 'placeholder';

@@ -1513,20 +1513,20 @@ function ProtectedRoute() {
   );
 }
 
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'system', 'connection_test'));
-    console.log("Firestore connection check: SUCCESS");
-  } catch (error) {
-    if (error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('unavailable'))) {
-      console.error("Please check your Firebase configuration or internet connection.");
-    } else {
-      console.error("Firestore connection test error:", error);
-    }
-  }
-}
+// async function testConnection() {
+//   try {
+//     await getDocFromServer(doc(db, 'system', 'connection_test'));
+//     console.log("Firestore connection check: SUCCESS");
+//   } catch (error) {
+//     if (error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('unavailable'))) {
+//       console.error("Please check your Firebase configuration or internet connection.");
+//     } else {
+//       console.error("Firestore connection test error:", error);
+//     }
+//   }
+// }
 
-testConnection();
+// testConnection();
 
 export default function App() {
   return (

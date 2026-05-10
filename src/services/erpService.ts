@@ -160,6 +160,16 @@ async function getCollection<T = any>(colName: string, companyId: string): Promi
 }
 
 export const erpService = {
+  // Caching mechanism for voucher serials and common collections to significantly reduce reads
+  _serialsCache: {} as Record<string, { data: Record<string, number>, timestamp: number }>,
+  _ledgersCache: {} as Record<string, { data: Ledger[], timestamp: number }>,
+  _itemsCache: {} as Record<string, { data: Item[], timestamp: number }>,
+  _godownsCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _employeesCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _unitsCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _collectionTTL: 30000, // 30 seconds for collections
+  _SERIALS_CACHE_TTL: 60000, // 60 seconds for serials cache (more expensive to fetch)
+
   async getCollection(colName: string, companyId: string) {
     return getCollection(colName, companyId);
   },
@@ -296,35 +306,21 @@ export const erpService = {
   },
 
   async getVoucherSerials(companyId: string): Promise<Record<string, number>> {
+    const now = Date.now();
+    const cached = this._serialsCache[companyId];
+    if (cached && (now - cached.timestamp < this._SERIALS_CACHE_TTL)) {
+      return cached.data;
+    }
+
     try {
       const q = query(
         collection(db, 'vouchers'),
         where('companyId', '==', companyId),
-        orderBy('v_date', 'asc')
+        orderBy('v_date', 'asc'),
+        limit(5000) // Safety limit
       );
       const snap = await getDocs(q);
-      const vouchers = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as any))
-        .sort((a, b) => {
-          const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
-          if (dateComp !== 0) return dateComp;
-          
-          const serialA = a.serial_no || a.auto_serial_no || 0;
-          const serialB = b.serial_no || b.auto_serial_no || 0;
-          if (serialA !== serialB) return serialA - serialB;
-
-          const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
-          const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
-          if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
-
-          const vNoComp = (a.v_no || '').localeCompare(b.v_no || '');
-          if (vNoComp !== 0) return vNoComp;
-          
-          const timeA = a.createdAt?.seconds || 0;
-          const timeB = b.createdAt?.seconds || 0;
-          if (timeA !== timeB) return timeA - timeB;
-
-          return a.id.localeCompare(b.id);
-        });
+      const vouchers = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as any));
       
       const typeCounters: Record<string, number> = {};
       const serialMap: Record<string, number> = {};
@@ -334,6 +330,8 @@ export const erpService = {
         typeCounters[type] = (typeCounters[type] || 0) + 1;
         serialMap[v.id] = typeCounters[type];
       });
+
+      this._serialsCache[companyId] = { data: serialMap, timestamp: now };
       return serialMap;
     } catch (error) {
       console.error('Error fetching voucher serials:', error);
@@ -390,6 +388,9 @@ export const erpService = {
     }
   },
   async createVoucher(companyId: string, userId: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
+    this._serialsCache[companyId] = { data: {}, timestamp: 0 }; // Invalidate cache
+    this._ledgersCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
+    this._itemsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
     try {
       const vType = (voucher.v_type || '').toString().trim();
       const typeKey = vType.toLowerCase().replace(/\s+/g, '_');
@@ -1000,6 +1001,9 @@ export const erpService = {
     const voucher = await this.getVoucherById(id);
     if (!voucher) throw new Error('Voucher not found');
     const companyId = voucher.companyId;
+    this._serialsCache[companyId] = { data: {}, timestamp: 0 }; // Invalidate cache
+    this._ledgersCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
+    this._itemsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
     const batch = writeBatch(db);
 
     // Check existence of ledgers and items
@@ -1068,6 +1072,9 @@ export const erpService = {
       
       const vType = (voucher.v_type || '').toString().trim();
       const companyId = oldVoucher.companyId;
+      this._serialsCache[companyId] = { data: {}, timestamp: 0 }; // Invalidate cache
+      this._ledgersCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
+      this._itemsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
 
       await runTransaction(db, async (transaction) => {
         // Collect all IDs
@@ -1269,15 +1276,19 @@ export const erpService = {
 
   // Ledgers
   async getLedgers(companyId: string): Promise<Ledger[]> {
+    const now = Date.now();
+    if (this._ledgersCache[companyId] && (now - this._ledgersCache[companyId].timestamp < this._collectionTTL)) {
+      return this._ledgersCache[companyId].data;
+    }
+
     try {
       console.log('erpService.getLedgers called for companyId:', companyId);
       const [ledgers, groups] = await Promise.all([
         getCollection<Ledger>('ledgers', companyId),
         getCollection<any>('ledger_groups', companyId)
       ]);
-      console.log(`Fetched ${ledgers.length} ledgers and ${groups.length} groups`);
       
-      return ledgers.map(l => {
+      const result = ledgers.map(l => {
         const group = groups.find(g => g.id === l.group_id);
         return {
           ...l,
@@ -1285,6 +1296,9 @@ export const erpService = {
           group_name: group?.name || l.group_name
         };
       });
+
+      this._ledgersCache[companyId] = { data: result, timestamp: now };
+      return result;
     } catch (error) {
       console.error('Error in getLedgers:', error);
       return [];
@@ -1422,6 +1436,11 @@ export const erpService = {
   async updateUnit(id: string, unit: any) {
     try {
       const ref = doc(db, 'units', id);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const companyId = snap.data().companyId;
+        if (companyId) this._unitsCache[companyId] = { data: [], timestamp: 0 };
+      }
       await updateDoc(ref, unit);
       return { id, ...unit };
     } catch (error) {
@@ -1431,7 +1450,13 @@ export const erpService = {
 
   async deleteUnit(id: string) {
     try {
-      await deleteDoc(doc(db, 'units', id));
+      const ref = doc(db, 'units', id);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const companyId = snap.data().companyId;
+        if (companyId) this._unitsCache[companyId] = { data: [], timestamp: 0 };
+      }
+      await deleteDoc(ref);
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `units/${id}`);
     }
@@ -1509,6 +1534,7 @@ export const erpService = {
   },
 
   async createUnit(companyId: string, unit: any) {
+    this._unitsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
     try {
       const isDuplicate = await this.checkDuplicate('units', companyId, 'name', unit.name);
       if (isDuplicate) throw new Error(`Unit "${unit.name}" already exists.`);
@@ -1553,6 +1579,7 @@ export const erpService = {
   },
 
   async createLedger(companyId: string, ledger: any) {
+    this._ledgersCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
     try {
       const isDuplicate = await this.checkDuplicate('ledgers', companyId, 'name', ledger.name);
       if (isDuplicate) throw new Error(`Ledger "${ledger.name}" already exists.`);
@@ -1574,6 +1601,11 @@ export const erpService = {
   async updateLedger(id: string, ledger: any) {
     try {
       const ref = doc(db, 'ledgers', id);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const companyId = snap.data().companyId;
+        if (companyId) this._ledgersCache[companyId] = { data: [], timestamp: 0 };
+      }
       await updateDoc(ref, ledger);
       return { id, ...ledger };
     } catch (error) {
@@ -1582,6 +1614,7 @@ export const erpService = {
   },
 
   async deleteLedger(id: string, companyId: string) {
+    this._ledgersCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
     const hasTransactions = await this.checkLedgerTransactions(id, companyId);
     if (hasTransactions) {
       throw new Error('Cannot delete ledger with transactions. Please delete all vouchers associated with this ledger first.');
@@ -1613,10 +1646,18 @@ export const erpService = {
   },
 
   async getUnits(companyId: string) {
+    const now = Date.now();
+    if (this._unitsCache[companyId] && (now - this._unitsCache[companyId].timestamp < this._collectionTTL)) {
+      return this._unitsCache[companyId].data;
+    }
+
     const units = await this.getCollection('units', companyId);
     if (units.length === 0) {
-      return await this.seedDefaultUnits(companyId);
+      const seeded = await this.seedDefaultUnits(companyId);
+      this._unitsCache[companyId] = { data: seeded, timestamp: now };
+      return seeded;
     }
+    this._unitsCache[companyId] = { data: units, timestamp: now };
     return units;
   },
 
@@ -1641,10 +1682,17 @@ export const erpService = {
   },
 
   async getItems(companyId: string): Promise<Item[]> {
-    return getCollection<Item>('items', companyId);
+    const now = Date.now();
+    if (this._itemsCache[companyId] && (now - this._itemsCache[companyId].timestamp < this._collectionTTL)) {
+      return this._itemsCache[companyId].data;
+    }
+    const result = await getCollection<Item>('items', companyId);
+    this._itemsCache[companyId] = { data: result, timestamp: now };
+    return result;
   },
 
   async createItem(companyId: string, item: any) {
+    this._itemsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
     const isDuplicate = await this.checkDuplicate('items', companyId, 'name', item.name);
     if (isDuplicate) throw new Error(`Stock Item "${item.name}" already exists.`);
 
@@ -1673,6 +1721,9 @@ export const erpService = {
     }
     
     const oldData = oldSnap.data();
+    if (oldData.companyId) {
+      this._itemsCache[oldData.companyId] = { data: [], timestamp: 0 }; // Invalidate cache
+    }
     const updates: any = { ...item };
     
     // Ensure numeric values
@@ -1690,6 +1741,7 @@ export const erpService = {
   },
 
   async deleteItem(id: string, companyId: string) {
+    this._itemsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
     const hasTransactions = await this.checkItemTransactions(id, companyId);
     if (hasTransactions) {
       throw new Error('Cannot delete item with transactions. Please delete all vouchers associated with this item first.');
@@ -1699,10 +1751,17 @@ export const erpService = {
 
   // Godowns
   async getGodowns(companyId: string) {
-    return this.getCollection('godowns', companyId);
+    const now = Date.now();
+    if (this._godownsCache[companyId] && (now - this._godownsCache[companyId].timestamp < this._collectionTTL)) {
+      return this._godownsCache[companyId].data;
+    }
+    const result = await this.getCollection('godowns', companyId);
+    this._godownsCache[companyId] = { data: result, timestamp: now };
+    return result;
   },
 
   async createGodown(companyId: string, godown: any) {
+    this._godownsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
     const isDuplicate = await this.checkDuplicate('godowns', companyId, 'name', godown.name);
     if (isDuplicate) throw new Error(`Godown "${godown.name}" already exists.`);
 
@@ -1713,19 +1772,38 @@ export const erpService = {
   },
 
   async updateGodown(id: string, godown: any) {
-    await updateDoc(doc(db, 'godowns', id), godown);
+    const ref = doc(db, 'godowns', id);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const companyId = snap.data().companyId;
+      if (companyId) this._godownsCache[companyId] = { data: [], timestamp: 0 };
+    }
+    await updateDoc(ref, godown);
   },
 
   async deleteGodown(id: string) {
-    await deleteDoc(doc(db, 'godowns', id));
+    const ref = doc(db, 'godowns', id);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const companyId = snap.data().companyId;
+      if (companyId) this._godownsCache[companyId] = { data: [], timestamp: 0 };
+    }
+    await deleteDoc(ref);
   },
 
   // Employees
-  async getEmployees(companyId: string) {
-    return this.getCollection('employees', companyId);
+  async getEmployees(companyId: string): Promise<any[]> {
+    const now = Date.now();
+    if (this._employeesCache[companyId] && (now - this._employeesCache[companyId].timestamp < this._collectionTTL)) {
+      return this._employeesCache[companyId].data;
+    }
+    const result = await this.getCollection('employees', companyId);
+    this._employeesCache[companyId] = { data: result, timestamp: now };
+    return result;
   },
 
   async createEmployee(companyId: string, employee: any) {
+    this._employeesCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
     const isDuplicate = await this.checkDuplicate('employees', companyId, 'name', employee.name);
     if (isDuplicate) throw new Error(`Employee "${employee.name}" already exists.`);
 
@@ -1736,11 +1814,23 @@ export const erpService = {
   },
 
   async updateEmployee(id: string, employee: any) {
-    await updateDoc(doc(db, 'employees', id), { ...employee, updatedAt: serverTimestamp() });
+    const ref = doc(db, 'employees', id);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const companyId = snap.data().companyId;
+      if (companyId) this._employeesCache[companyId] = { data: [], timestamp: 0 };
+    }
+    await updateDoc(ref, { ...employee, updatedAt: serverTimestamp() });
   },
 
   async deleteEmployee(id: string) {
-    await deleteDoc(doc(db, 'employees', id));
+    const ref = doc(db, 'employees', id);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const companyId = snap.data().companyId;
+      if (companyId) this._employeesCache[companyId] = { data: [], timestamp: 0 };
+    }
+    await deleteDoc(ref);
   },
 
   // Salary Sheets
@@ -1924,11 +2014,41 @@ export const erpService = {
     }
   },
 
-  async recalculateItemStats(itemId: string, companyId?: string, itemData?: any) {
-    try {
-      const itemRef = doc(db, 'items', itemId);
-      let effectiveItemData = itemData;
+  // Queue for recalculation to prevent rapid redundant reads
+    _recalcQueue: new Set<string>(),
+    _isProcessingQueue: false,
 
+    async recalculateItemStats(itemId: string, companyId?: string, itemData?: any) {
+      if (!itemId) return;
+      
+      // Add to queue and wait for processing or process immediately if not too frequent
+      const queueKey = `${itemId}:${companyId}`;
+      this._recalcQueue.add(queueKey);
+      
+      if (this._isProcessingQueue) return;
+      
+      this._isProcessingQueue = true;
+      // Small delay to coalesce multiple updates (e.g. from a voucher with many items)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      try {
+        const itemsToProcess = Array.from(this._recalcQueue);
+        this._recalcQueue.clear();
+        
+        for (const key of itemsToProcess) {
+          const [id, cId] = key.split(':');
+          await this._executeRecalculateItemStats(id, cId, key === queueKey ? itemData : undefined);
+        }
+      } finally {
+        this._isProcessingQueue = false;
+      }
+    },
+
+    async _executeRecalculateItemStats(itemId: string, companyId?: string, itemData?: any) {
+      try {
+        const itemRef = doc(db, 'items', itemId);
+        let effectiveItemData = itemData;
+  
       if (!effectiveItemData) {
         const itemSnap = await getDoc(itemRef);
         if (!itemSnap.exists()) return;

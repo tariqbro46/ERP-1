@@ -216,10 +216,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribeUser();
-  }, [user?.uid]);
+  }, [user?.uid]);    // Cache for global settings to avoid redundant fetches across tabs/sessions
+    const globalConfigLoaded = React.useRef(false);
 
-  useEffect(() => {
-    // Listen to global system config
+    useEffect(() => {
+    // Listen to global system config - only if not already loaded or if specifically needed
     const systemRef = doc(db, 'system', 'config');
     const unsubscribeSystem = onSnapshot(systemRef, (snap) => {
       if (snap.exists()) {
@@ -239,18 +240,26 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           notificationDuration: data.notificationDuration || prev.notificationDuration,
           notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle
         }));
+        globalConfigLoaded.current = true;
       }
     }, (error) => {
-      console.error("System settings snapshot error:", error);
+      // Gracefully handle quota errors for global config
+      if (error.message?.includes('Quota exceeded')) {
+        console.warn("Global settings quota exceeded - using defaults.");
+      } else {
+        console.error("System settings snapshot error:", error);
+      }
     });
 
-    // Listen to subscription plans
+    // Listen to subscription plans - potentially change to one-time fetch if quota is tight
     const plansRef = collection(db, 'subscription_plans');
     const unsubscribePlans = onSnapshot(plansRef, (snap) => {
       const plans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionPlan));
       setSettings(prev => ({ ...prev, subscriptionPlans: plans }));
     }, (error) => {
-      console.error("Subscription plans snapshot error:", error);
+      if (!error.message?.includes('Quota exceeded')) {
+        console.error("Subscription plans snapshot error:", error);
+      }
     });
 
     // Listen to app features config
@@ -263,9 +272,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setSettings(prev => ({ ...prev, appFeatures: APP_FEATURES }));
       }
     }, (error) => {
-      console.error("Features configuration snapshot error:", error);
+      if (!error.message?.includes('Quota exceeded')) {
+        console.error("Features configuration snapshot error:", error);
+      }
       setSettings(prev => ({ ...prev, appFeatures: APP_FEATURES }));
     });
+;
 
     if (!user?.companyId) {
       // Keep system settings but reset company settings
