@@ -144,7 +144,7 @@ function cleanData(data: any): any {
 }
 
 // Helper to get collection with company filter
-async function getCollection<T = any>(colName: string, companyId: string, limitCount: number = 300): Promise<T[]> {
+async function getCollection<T = any>(colName: string, companyId: string, limitCount: number = 5000): Promise<T[]> {
   if (!companyId) {
     console.warn(`Attempted to fetch collection ${colName} without companyId`);
     return [];
@@ -172,8 +172,8 @@ export const erpService = {
   _employeesCache: {} as Record<string, { data: any[], timestamp: number }>,
   _unitsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _dashboardStatsCache: { key: '', data: null as any, timestamp: 0 },
-  _collectionTTL: 300000, // 5 minutes for collections
-  _SERIALS_CACHE_TTL: 3600000, // 1 hour for serials cache (invalidated on create/update)
+  _collectionTTL: 60000, // 1 minute for collections (balance safety and quota)
+  _SERIALS_CACHE_TTL: 300000, // 5 minutes for serials cache
 
   async getCollection(colName: string, companyId: string) {
     return getCollection(colName, companyId);
@@ -228,8 +228,8 @@ export const erpService = {
       const counterSnap = await getDoc(counterRef);
       let lastSerial = (counterSnap.exists() ? counterSnap.data().lastSerial : 0) || 0;
 
-      // Deep scan or force resync: ONLY if counter doesn't exist
-      if ((forceResync || isDeepScan || lastSerial === 0) && !counterSnap.exists()) {
+      // Deep scan or force resync: perform a targeted search for all vouchers of this type
+      if (forceResync || isDeepScan || lastSerial === 0) {
         let foundMax = 0;
 
         try {
@@ -259,7 +259,7 @@ export const erpService = {
              const qBroad = query(
                collection(db, 'vouchers'),
                where('companyId', '==', companyId),
-               limit(1000) 
+               limit(5000) 
              );
              const snapBroad = await getDocs(qBroad);
              snapBroad.docs.forEach(d => {
@@ -322,11 +322,36 @@ export const erpService = {
         collection(db, 'vouchers'),
         where('companyId', '==', companyId),
         orderBy('v_date', 'asc'),
-        limit(1000) // Reduced limit for quota saving
+        limit(10000) // Increase limit to handle larger datasets
       );
       const snap = await getDocs(q);
       const vouchers = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as any));
       
+      // Sort vouchers BEFORE assigning serials to ensure stability
+      // Priority: v_date, then numeric part of v_no, then saved serial_no, then createdAt
+      vouchers.sort((a, b) => {
+        const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
+        if (dateComp !== 0) return dateComp;
+
+        // Try numeric sort for Ref No (v_no)
+        const numA = parseInt(a.v_no?.toString().replace(/\D/g, '') || '0') || 0;
+        const numB = parseInt(b.v_no?.toString().replace(/\D/g, '') || '0') || 0;
+        if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+        // Fallback to saved serial_no
+        const sA = Number(a.serial_no || a.auto_serial_no) || 0;
+        const sB = Number(b.serial_no || b.auto_serial_no) || 0;
+        if (sA !== sB) return sA - sB;
+
+        // Final fallback to v_no string compare
+        const vNoA = (a.v_no || '').toString();
+        const vNoB = (b.v_no || '').toString();
+        const vNoComp = vNoA.localeCompare(vNoB);
+        if (vNoComp !== 0) return vNoComp;
+
+        return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
+      });
+
       const typeCounters: Record<string, number> = {};
       const serialMap: Record<string, number> = {};
       
@@ -583,6 +608,11 @@ export const erpService = {
         return { success: true, id: vRef.id, itemIds: Array.from(new Set(inventoryEntries?.map(i => i.item_id).filter(Boolean) || [])) };
       });
 
+      if (res && res.success && res.itemIds.length > 0) {
+        for (const itemId of res.itemIds) {
+          this.recalculateItemStats(itemId as string, companyId).catch(console.error);
+        }
+      }
       return true;
     } catch (err: any) {
       // If it's already a JSON error, just throw it
@@ -1024,12 +1054,13 @@ export const erpService = {
     }
 
     // Reverse Inventory Stats
+    const itemIdsToRecalc = new Set<string>();
     for (const i of voucher.inventory) {
       if (i.item_id && existingItems.has(i.item_id)) {
+        itemIdsToRecalc.add(i.item_id as string);
         const itemRef = doc(db, 'items', i.item_id);
         if (voucher.v_type === 'Physical Stock') {
-           // Physical stock reversal needs a recalculation because it's an absolute set
-           // We'll trigger recalculation at the end.
+           // No direct update needed, recalculation will fix it
         } else {
           const totalQty = (i.qty || 0) + (i.free_qty || 0);
           const stockChange = i.movement_type === 'Inward' ? -totalQty : totalQty;
@@ -1054,6 +1085,11 @@ export const erpService = {
     batch.delete(doc(db, 'vouchers', id));
 
     await batch.commit();
+
+    // Trigger recalculation for affected items
+    for (const itemId of itemIdsToRecalc) {
+      this.recalculateItemStats(itemId, companyId).catch(console.error);
+    }
   },
 
   async updateVoucher(id: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
@@ -1067,7 +1103,7 @@ export const erpService = {
       this._ledgersCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
       this._itemsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
 
-      await runTransaction(db, async (transaction) => {
+      const res = await runTransaction(db, async (transaction) => {
         // Collect all IDs
         const oldLedgerIds = oldVoucher.entries.map((e: any) => e.ledger_id).filter(Boolean);
         const newLedgerIds = entries.map(e => e.ledger_id).filter(Boolean);
@@ -1254,6 +1290,11 @@ export const erpService = {
         return { success: true, itemIds };
       });
 
+      if (res && res.success && res.itemIds.length > 0) {
+        for (const itemId of res.itemIds) {
+          this.recalculateItemStats(itemId as string, companyId).catch(console.error);
+        }
+      }
       return true;
     } catch (err: any) {
       if (err.message && err.message.startsWith('{')) throw err;
@@ -2318,19 +2359,19 @@ export const erpService = {
       const vDocs = vouchersSnap.docs.map(d => d.data());
       
       const stats = {
-        sales: vDocs.filter(v => v.v_type === 'Sales').reduce((sum, v) => sum + (v.total_amount || 0), 0),
-        purchase: vDocs.filter(v => v.v_type === 'Purchase').reduce((sum, v) => sum + (v.total_amount || 0), 0),
-        payment: vDocs.filter(v => v.v_type === 'Payment').reduce((sum, v) => sum + (v.total_amount || 0), 0),
-        receipt: vDocs.filter(v => v.v_type === 'Receipt').reduce((sum, v) => sum + (v.total_amount || 0), 0),
-        stockValue: items.reduce((sum: number, i: any) => sum + (i.current_stock * (i.avg_cost || i.purchase_price || 0)), 0),
-        revenue: 0, // Calculated later
+        sales: vDocs.filter((v: any) => v.v_type === 'Sales').reduce((sum: number, v: any) => sum + (v.total_amount || 0), 0),
+        purchase: vDocs.filter((v: any) => v.v_type === 'Purchase').reduce((sum: number, v: any) => sum + (v.total_amount || 0), 0),
+        payment: vDocs.filter((v: any) => v.v_type === 'Payment').reduce((sum: number, v: any) => sum + (v.total_amount || 0), 0),
+        receipt: vDocs.filter((v: any) => v.v_type === 'Receipt').reduce((sum: number, v: any) => sum + (v.total_amount || 0), 0),
+        stockValue: items.reduce((sum: number, i: any) => sum + ((Number(i.current_stock) || 0) * (Number(i.avg_cost || i.purchase_price) || 0)), 0),
+        revenue: 0, 
         profit: 0,
         activeLedgers: ledgers.length,
         chartData: [] as any[]
       };
 
-      stats.revenue = stats.sales;
-      stats.profit = stats.sales - stats.purchase;
+      stats.revenue = Number(stats.sales) || 0;
+      stats.profit = (Number(stats.sales) || 0) - (Number(stats.purchase) || 0);
 
       // Generate dynamic months based on range or default to 12 months
       let chartData: any[] = [];
@@ -2355,7 +2396,7 @@ export const erpService = {
         chartData = months.map((m, i) => ({ name: m, month: i, year: new Date().getFullYear(), value: 0, expense: 0, profit: 0 }));
       }
       
-      vDocs.forEach(v => {
+      vDocs.forEach((v: any) => {
         const dateString = v.v_date;
         const date = new Date(dateString);
         if (!isNaN(date.getTime())) {
@@ -2364,9 +2405,9 @@ export const erpService = {
           
           const monthData = chartData.find(d => d.month === month && d.year === year);
           if (monthData) {
-            if (v.v_type === 'Sales') monthData.value += (v.total_amount || 0);
-            if (v.v_type === 'Purchase') monthData.expense += (v.total_amount || 0);
-            monthData.profit = monthData.value - monthData.expense;
+            if (v.v_type === 'Sales') monthData.value += (Number(v.total_amount) || 0);
+            if (v.v_type === 'Purchase') monthData.expense += (Number(v.total_amount) || 0);
+            monthData.profit = (Number(monthData.value) || 0) - (Number(monthData.expense) || 0);
           }
         }
       });
