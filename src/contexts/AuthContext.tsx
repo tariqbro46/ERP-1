@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, getDocs, collection, query, where, limit } from 'firebase/firestore';
 
 export type UserRole = 'Founder' | 'Marketing Manager' | 'Admin' | 'Manager' | 'Staff';
 
@@ -32,6 +32,12 @@ export interface CompanyData {
     godowns?: number;
     multiCurrency?: boolean;
     rolePermissions?: boolean;
+  };
+  search_config?: {
+    placeholder?: string;
+    showShortcut?: boolean;
+    helpText?: string;
+    iconColor?: string;
   };
 }
 

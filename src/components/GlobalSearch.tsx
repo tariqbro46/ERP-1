@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Receipt, Users, Package, ChevronRight, Hash, Calendar, ArrowRight } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -21,6 +22,17 @@ export const GlobalSearch: React.FC<{ isOpen: boolean; onClose: () => void }> = 
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { company } = useAuth();
+  const settings = useSettings();
+  
+  // Prefer company-specific search config, fallback to system settings
+  const searchConfig = {
+    placeholder: company?.search_config?.placeholder || settings.searchPlaceholder,
+    helpText: company?.search_config?.helpText || settings.searchHelpText,
+    showShortcut: company?.search_config?.showShortcut !== undefined 
+      ? company.search_config.showShortcut 
+      : settings.showSearchShortcut
+  };
+
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -122,7 +134,7 @@ export const GlobalSearch: React.FC<{ isOpen: boolean; onClose: () => void }> = 
               <input
                 ref={inputRef}
                 type="text"
-                placeholder="Search everything... (Voucher No, Ledger Name, Item Name)"
+                placeholder={searchConfig?.placeholder || "Search everything... (Voucher No, Ledger Name, Item Name)"}
                 className="flex-1 bg-transparent border-none outline-none text-lg placeholder:text-muted-foreground"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -131,9 +143,11 @@ export const GlobalSearch: React.FC<{ isOpen: boolean; onClose: () => void }> = 
                 {loading && (
                   <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 )}
-                <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-                  ESC
-                </kbd>
+                {searchConfig?.showShortcut !== false && (
+                  <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                    ESC
+                  </kbd>
+                )}
                 <button onClick={onClose} className="p-1 hover:bg-muted rounded-md shrink-0">
                   <X className="w-4 h-4 text-muted-foreground" />
                 </button>
@@ -195,7 +209,7 @@ export const GlobalSearch: React.FC<{ isOpen: boolean; onClose: () => void }> = 
                     <div className="flex items-center gap-1"><Package className="w-3 h-3" /> Items</div>
                     <div className="flex items-center gap-1"><Users className="w-3 h-3" /> Employees</div>
                   </div>
-                  <p className="text-sm">Type to start searching your company data</p>
+                  <p className="text-sm">{searchConfig?.helpText || "Type to start searching your company data"}</p>
                 </div>
               )}
             </div>

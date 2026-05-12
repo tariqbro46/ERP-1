@@ -227,7 +227,25 @@ export default function FounderPanel() {
     { id: 'Settings', label: 'Settings', icon: Settings }
   ];
 
-  const { showGoToShortcut, appVersion, updateSettings, updateSystemSettings, uiStyle, glassBackground, statusOnlineText, statusOfflineText, statusErrorText, systemLogo, systemFavicon, notificationDuration, notificationAnimationStyle } = useSettings();
+  const { 
+    showGoToShortcut, 
+    appVersion, 
+    updateSettings, 
+    updateSystemSettings, 
+    uiStyle, 
+    glassBackground, 
+    statusOnlineText, 
+    statusOfflineText, 
+    statusErrorText, 
+    systemLogo, 
+    systemFavicon, 
+    notificationDuration, 
+    notificationAnimationStyle,
+    searchPlaceholder,
+    searchHelpText,
+    showSearchShortcut,
+    searchIconColor
+  } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
   const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground || 'default');
@@ -239,6 +257,10 @@ export default function FounderPanel() {
   const [localNotificationDuration, setLocalNotificationDuration] = useState(notificationDuration || 5000);
   const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle || 'default');
   const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut ?? true);
+  const [localSearchPlaceholder, setLocalSearchPlaceholder] = useState(searchPlaceholder || '');
+  const [localSearchHelpText, setLocalSearchHelpText] = useState(searchHelpText || '');
+  const [localShowSearchShortcut, setLocalShowSearchShortcut] = useState(showSearchShortcut ?? true);
+  const [localSearchIconColor, setLocalSearchIconColor] = useState(searchIconColor || '');
 
   useEffect(() => {
     fetchData();
@@ -289,6 +311,22 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalShowGoToShortcut(showGoToShortcut);
   }, [showGoToShortcut]);
+
+  useEffect(() => {
+    setLocalSearchPlaceholder(searchPlaceholder || '');
+  }, [searchPlaceholder]);
+
+  useEffect(() => {
+    setLocalSearchHelpText(searchHelpText || '');
+  }, [searchHelpText]);
+
+  useEffect(() => {
+    setLocalShowSearchShortcut(showSearchShortcut ?? true);
+  }, [showSearchShortcut]);
+
+  useEffect(() => {
+    setLocalSearchIconColor(searchIconColor || '');
+  }, [searchIconColor]);
 
   useEffect(() => {
     setLocalGlassBackground(glassBackground);
@@ -2634,6 +2672,53 @@ export default function FounderPanel() {
                     <p className="text-[9px] text-muted-foreground uppercase">Set your application's favicon. This icon will appear in browser tabs and as the app icon when "Added to Home Screen" on mobile devices.</p>
                   </div>
                 </div>
+
+                <div className="bg-card border border-border shadow-sm rounded-2xl overflow-hidden">
+                  <div className="p-4 border-b border-border bg-foreground/[0.02] flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                      <Search className="w-4 h-4 text-purple-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground">Global Search Settings</h4>
+                      <p className="text-[10px] text-muted-foreground">Default search configuration for all companies.</p>
+                    </div>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Default Placeholder</label>
+                      <input 
+                        type="text" 
+                        value={localSearchPlaceholder} 
+                        onChange={(e) => setLocalSearchPlaceholder(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Default Help Text</label>
+                      <textarea 
+                        value={localSearchHelpText} 
+                        onChange={(e) => setLocalSearchHelpText(e.target.value)}
+                        rows={2}
+                        className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Show ESC Shortcut</span>
+                      <button 
+                        onClick={() => setLocalShowSearchShortcut(!localShowSearchShortcut)}
+                        className={cn(
+                          "w-10 h-5 rounded-full relative transition-colors",
+                          localShowSearchShortcut ? "bg-emerald-500" : "bg-border"
+                        )}
+                      >
+                        <div className={cn(
+                          "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                          localShowSearchShortcut ? "right-1" : "left-1"
+                        )} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="pt-4">
@@ -2651,7 +2736,11 @@ export default function FounderPanel() {
                         glassBackground: localGlassBackground,
                         notificationDuration: localNotificationDuration,
                         notificationAnimationStyle: localNotificationAnimationStyle,
-                        showGoToShortcut: localShowGoToShortcut
+                        showGoToShortcut: localShowGoToShortcut,
+                        searchPlaceholder: localSearchPlaceholder,
+                        searchHelpText: localSearchHelpText,
+                        showSearchShortcut: localShowSearchShortcut,
+                        searchIconColor: localSearchIconColor
                       });
                       showNotification('System configuration updated successfully', 'success');
                     } catch (err) {

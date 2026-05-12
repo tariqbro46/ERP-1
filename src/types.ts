@@ -30,6 +30,12 @@ export interface Company {
   };
   createdBy?: string;
   ownerId?: string;
+  search_config?: {
+    placeholder?: string;
+    showShortcut?: boolean;
+    helpText?: string;
+    iconColor?: string;
+  };
 }
 
 export interface Ledger {

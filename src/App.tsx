@@ -197,6 +197,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
   const { user, company, logout, isAdmin, isSuperAdmin, hasPermission } = useAuth();
+  const searchIconColor = company?.search_config?.iconColor;
   const { isFeatureEnabled } = useSubscription();
   const { 
     companyName, 
@@ -681,6 +682,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
           onClick={onOpenSearch}
           className="p-2 hover:bg-foreground/5 rounded-full transition-colors group flex items-center gap-2"
           title="Search (Cmd+K or /)"
+          style={searchIconColor ? { color: searchIconColor } : {}}
         >
           <Search className="w-5 h-5 text-gray-500 group-hover:text-foreground" />
           <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
@@ -924,6 +926,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
             onClick={onOpenSearch}
             className="p-2.5 rounded-xl transition-all hover:bg-foreground/10 group text-gray-500 hover:text-foreground"
             title="Search (Cmd+K or /)"
+            style={searchIconColor ? { color: searchIconColor } : {}}
           >
             <Search className="w-6 h-6" />
           </button>
@@ -1122,6 +1125,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                   uiStyle === 'UI/UX 2' ? "hover:bg-white/10" : "hover:bg-foreground/5"
                 )}
                 title="Search (Cmd+K or /)"
+                style={searchIconColor ? { color: searchIconColor } : {}}
               >
                 <Search className={cn("w-5 h-5", uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500 group-hover:text-foreground")} />
                 <kbd className={cn(
@@ -1401,12 +1405,14 @@ function RegisterWrapper() {
 }
 
 function ProtectedRoute() {
-  const { user, isSuperAdmin, logout, firebaseUser, loading } = useAuth();
+  const { user, isFounder, isSuperAdmin, logout, firebaseUser, loading, company } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
 
   if (loading) return null;
+
+  const searchIconColor = company?.search_config?.iconColor;
 
   if (firebaseUser && !user) {
     return (

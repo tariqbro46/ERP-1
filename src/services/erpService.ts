@@ -144,13 +144,17 @@ function cleanData(data: any): any {
 }
 
 // Helper to get collection with company filter
-async function getCollection<T = any>(colName: string, companyId: string): Promise<T[]> {
+async function getCollection<T = any>(colName: string, companyId: string, limitCount: number = 300): Promise<T[]> {
   if (!companyId) {
     console.warn(`Attempted to fetch collection ${colName} without companyId`);
     return [];
   }
   try {
-    const q = query(collection(db, colName), where('companyId', '==', companyId));
+    const q = query(
+      collection(db, colName), 
+      where('companyId', '==', companyId),
+      limit(limitCount)
+    );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id } as unknown as T));
   } catch (error) {
@@ -167,8 +171,9 @@ export const erpService = {
   _godownsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _employeesCache: {} as Record<string, { data: any[], timestamp: number }>,
   _unitsCache: {} as Record<string, { data: any[], timestamp: number }>,
-  _collectionTTL: 30000, // 30 seconds for collections
-  _SERIALS_CACHE_TTL: 60000, // 60 seconds for serials cache (more expensive to fetch)
+  _dashboardStatsCache: { key: '', data: null as any, timestamp: 0 },
+  _collectionTTL: 300000, // 5 minutes for collections
+  _SERIALS_CACHE_TTL: 3600000, // 1 hour for serials cache (invalidated on create/update)
 
   async getCollection(colName: string, companyId: string) {
     return getCollection(colName, companyId);
@@ -223,8 +228,8 @@ export const erpService = {
       const counterSnap = await getDoc(counterRef);
       let lastSerial = (counterSnap.exists() ? counterSnap.data().lastSerial : 0) || 0;
 
-      // Deep scan or force resync: perform a targeted search for all vouchers of this type
-      if (forceResync || isDeepScan || lastSerial === 0) {
+      // Deep scan or force resync: ONLY if counter doesn't exist
+      if ((forceResync || isDeepScan || lastSerial === 0) && !counterSnap.exists()) {
         let foundMax = 0;
 
         try {
@@ -254,7 +259,7 @@ export const erpService = {
              const qBroad = query(
                collection(db, 'vouchers'),
                where('companyId', '==', companyId),
-               limit(2000) // Increase limit for fallback
+               limit(1000) 
              );
              const snapBroad = await getDocs(qBroad);
              snapBroad.docs.forEach(d => {
@@ -317,7 +322,7 @@ export const erpService = {
         collection(db, 'vouchers'),
         where('companyId', '==', companyId),
         orderBy('v_date', 'asc'),
-        limit(5000) // Safety limit
+        limit(1000) // Reduced limit for quota saving
       );
       const snap = await getDocs(q);
       const vouchers = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as any));
@@ -578,15 +583,6 @@ export const erpService = {
         return { success: true, id: vRef.id, itemIds: Array.from(new Set(inventoryEntries?.map(i => i.item_id).filter(Boolean) || [])) };
       });
 
-      if (res && res.success && res.itemIds.length > 0) {
-        for (const itemId of res.itemIds) {
-          try {
-            await this.recalculateItemStats(itemId as string, companyId);
-          } catch (e) {
-            console.warn('Post-creation recalculation failed for', itemId, e);
-          }
-        }
-      }
       return true;
     } catch (err: any) {
       // If it's already a JSON error, just throw it
@@ -1058,11 +1054,6 @@ export const erpService = {
     batch.delete(doc(db, 'vouchers', id));
 
     await batch.commit();
-
-    // Trigger recalculation for affected items to ensure accuracy
-    for (const itemId of itemIds) {
-      await this.recalculateItemStats(itemId as string, companyId);
-    }
   },
 
   async updateVoucher(id: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
@@ -1263,10 +1254,6 @@ export const erpService = {
         return { success: true, itemIds };
       });
 
-      const resItemIds = Array.from(new Set([...oldVoucher.inventory.map((i: any) => i.item_id), ...(inventoryEntries || []).map(i => i.item_id)])).filter(Boolean);
-      for (const itemId of resItemIds) {
-        await this.recalculateItemStats(itemId as string, companyId);
-      }
       return true;
     } catch (err: any) {
       if (err.message && err.message.startsWith('{')) throw err;
@@ -1707,8 +1694,6 @@ export const erpService = {
       avg_cost: Number(item.opening_rate) || 0
     });
     await setDoc(ref, data);
-    // Ensure stats are perfectly calculated from the start - pass data to avoid redundant getDoc
-    await this.recalculateItemStats(ref.id, companyId, data);
     return data;
   },
 
@@ -1735,9 +1720,6 @@ export const erpService = {
       updated_at: serverTimestamp(),
       companyId: oldData.companyId // Ensure it stays
     });
-
-    // Always recalculate to be safe and ensure current_stock/avg_cost are correct
-    await this.recalculateItemStats(id, oldData.companyId, { ...oldData, ...updates });
   },
 
   async deleteItem(id: string, companyId: string) {
@@ -2032,7 +2014,7 @@ export const erpService = {
       await new Promise(resolve => setTimeout(resolve, 500));
       
       try {
-        const itemsToProcess = Array.from(this._recalcQueue);
+        const itemsToProcess = Array.from(this._recalcQueue) as string[];
         this._recalcQueue.clear();
         
         for (const key of itemsToProcess) {
@@ -2302,11 +2284,30 @@ export const erpService = {
 
   // Dashboard Stats
   async getDashboardStats(companyId: string, fromDate?: string, toDate?: string) {
+    const cacheKey = `${companyId}_${fromDate}_${toDate}`;
+    const now = Date.now();
+    
+    if (this._dashboardStatsCache.key === cacheKey && (now - this._dashboardStatsCache.timestamp < 300000)) {
+      return this._dashboardStatsCache.data;
+    }
+
     try {
-      let q = query(
-        collection(db, 'vouchers'), 
-        where('companyId', '==', companyId)
-      );
+      let q;
+      if (fromDate && toDate) {
+        q = query(
+          collection(db, 'vouchers'), 
+          where('companyId', '==', companyId),
+          where('v_date', '>=', fromDate),
+          where('v_date', '<=', toDate)
+        );
+      } else {
+        q = query(
+          collection(db, 'vouchers'), 
+          where('companyId', '==', companyId),
+          orderBy('v_date', 'desc'),
+          limit(500)
+        );
+      }
 
       const [vouchersSnap, items, ledgers] = await Promise.all([
         getDocs(q),
@@ -2314,26 +2315,23 @@ export const erpService = {
         this.getLedgers(companyId)
       ]);
 
-      let vDocs = vouchersSnap.docs.map(d => d.data());
+      const vDocs = vouchersSnap.docs.map(d => d.data());
       
-      // Strict date filtering
-      if (fromDate || toDate) {
-        vDocs = vDocs.filter(v => {
-          const vDate = v.v_date;
-          if (!vDate) return false;
-          const trimmedVDate = vDate.trim();
-          if (fromDate && trimmedVDate < fromDate) return false;
-          if (toDate && trimmedVDate > toDate) return false;
-          return true;
-        });
-      }
+      const stats = {
+        sales: vDocs.filter(v => v.v_type === 'Sales').reduce((sum, v) => sum + (v.total_amount || 0), 0),
+        purchase: vDocs.filter(v => v.v_type === 'Purchase').reduce((sum, v) => sum + (v.total_amount || 0), 0),
+        payment: vDocs.filter(v => v.v_type === 'Payment').reduce((sum, v) => sum + (v.total_amount || 0), 0),
+        receipt: vDocs.filter(v => v.v_type === 'Receipt').reduce((sum, v) => sum + (v.total_amount || 0), 0),
+        stockValue: items.reduce((sum: number, i: any) => sum + (i.current_stock * (i.avg_cost || i.purchase_price || 0)), 0),
+        revenue: 0, // Calculated later
+        profit: 0,
+        activeLedgers: ledgers.length,
+        chartData: [] as any[]
+      };
 
-      const sales = vDocs.filter(v => v.v_type === 'Sales').reduce((sum, v) => sum + (v.total_amount || 0), 0);
-      const purchase = vDocs.filter(v => v.v_type === 'Purchase').reduce((sum, v) => sum + (v.total_amount || 0), 0);
-      const payment = vDocs.filter(v => v.v_type === 'Payment').reduce((sum, v) => sum + (v.total_amount || 0), 0);
-      const receipt = vDocs.filter(v => v.v_type === 'Receipt').reduce((sum, v) => sum + (v.total_amount || 0), 0);
-      const stockValue = items.reduce((sum: number, i: any) => sum + (i.current_stock * (i.avg_cost || i.purchase_price || 0)), 0);
-      
+      stats.revenue = stats.sales;
+      stats.profit = stats.sales - stats.purchase;
+
       // Generate dynamic months based on range or default to 12 months
       let chartData: any[] = [];
       if (fromDate && toDate) {
@@ -2373,24 +2371,32 @@ export const erpService = {
         }
       });
 
-      return { 
-        revenue: sales, 
-        profit: sales - purchase, // Simplified for dashboard
-        sales,
-        purchase,
-        payment,
-        receipt,
-        activeLedgers: ledgers.length, 
-        stockValue, 
-        chartData 
+      stats.chartData = chartData;
+
+      // Save to cache
+      this._dashboardStatsCache = {
+        key: cacheKey,
+        data: stats,
+        timestamp: now
       };
+
+      return stats;
     } catch (err) {
       console.error('Error getting dashboard stats:', err);
       return { revenue: 0, profit: 0, sales: 0, purchase: 0, payment: 0, receipt: 0, activeLedgers: 0, stockValue: 0, chartData: [] };
     }
   },
 
+  _recentVouchersCache: {} as Record<string, { data: any[], timestamp: number }>,
+
   async getRecentVouchers(companyId: string, limitCount = 5): Promise<any[]> {
+    const cacheKey = `${companyId}_${limitCount}`;
+    const now = Date.now();
+    
+    if (this._recentVouchersCache[cacheKey] && (now - this._recentVouchersCache[cacheKey].timestamp < 30000)) {
+      return this._recentVouchersCache[cacheKey].data;
+    }
+
     try {
       const q = query(
         collection(db, 'vouchers'), 
@@ -2417,13 +2423,19 @@ export const erpService = {
         allInv.push(...invSnap.docs.map(d => ({ ...(d.data() as any), id: d.id })));
       }
 
-      return vouchers.map(v => ({
-        ...v,
-        inventory: allInv.filter((i: any) => i.voucher_id === v.id),
-        item_names: (v as any).item_names || allInv.filter((i: any) => i.voucher_id === v.id).map((i: any) => i.item_name).filter(Boolean).join(', ')
-      }));
+      const result = vouchers.map(v => {
+        const voucherInv = allInv.filter((i: any) => i.voucher_id === v.id);
+        return {
+          ...v,
+          inventory: voucherInv,
+          item_names: (v as any).item_names || voucherInv.map((i: any) => i.item_name).filter(Boolean).join(', ')
+        };
+      });
+
+      this._recentVouchersCache[cacheKey] = { data: result, timestamp: now };
+      return result;
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'vouchers');
+      handleFirestoreError(error, OperationType.LIST, 'recent_vouchers');
       return [];
     }
   },

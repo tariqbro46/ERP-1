@@ -97,6 +97,10 @@ interface SettingsContextType {
   dashboardCards: string[];
   whatsappTemplates: WhatsAppTemplates;
   notifications: NotificationSettings;
+  searchPlaceholder?: string;
+  searchHelpText?: string;
+  showSearchShortcut?: boolean;
+  searchIconColor?: string;
   features: FeatureSettings[];
   appFeatures: FeatureCategory[];
   subscriptionPlans: SubscriptionPlan[];
@@ -238,7 +242,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           systemFavicon: data.systemFavicon || prev.systemFavicon,
           glassBackground: data.glassBackground || prev.glassBackground,
           notificationDuration: data.notificationDuration || prev.notificationDuration,
-          notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle
+          notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle,
+          searchPlaceholder: data.searchPlaceholder || prev.searchPlaceholder,
+          searchHelpText: data.searchHelpText || prev.searchHelpText,
+          showSearchShortcut: data.showSearchShortcut !== undefined ? data.showSearchShortcut : prev.showSearchShortcut,
+          searchIconColor: data.searchIconColor || prev.searchIconColor
         }));
         globalConfigLoaded.current = true;
       }

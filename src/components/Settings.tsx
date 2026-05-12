@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2, Package } from 'lucide-react';
+import { Search, Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2, Package } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { erpService } from '../services/erpService';
+import { updateDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { NAV_ITEMS } from '../constants/navigation';
@@ -17,6 +19,17 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+  const { 
+    searchPlaceholder,
+    searchHelpText,
+    showSearchShortcut,
+    searchIconColor
+  } = useSettings();
+  const [localSearchPlaceholder, setLocalSearchPlaceholder] = useState(searchPlaceholder || '');
+  const [localSearchHelpText, setLocalSearchHelpText] = useState(searchHelpText || '');
+  const [localShowSearchShortcut, setLocalShowSearchShortcut] = useState(showSearchShortcut ?? true);
+  const [localSearchIconColor, setLocalSearchIconColor] = useState(searchIconColor || '');
+
   const { 
     companyName, 
     companyLogo,
@@ -380,6 +393,27 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     }
   };
 
+  const handleSaveSearch = () => {
+    updateSettings({
+      searchPlaceholder: localSearchPlaceholder,
+      searchHelpText: localSearchHelpText,
+      showSearchShortcut: localShowSearchShortcut,
+      searchIconColor: localSearchIconColor
+    });
+    // Also update company doc for all users to see (AuthContext uses companyRef)
+    if (user?.companyId) {
+      updateDoc(doc(db, 'companies', user.companyId), {
+        search_config: {
+          placeholder: localSearchPlaceholder,
+          helpText: localSearchHelpText,
+          showShortcut: localShowSearchShortcut,
+          iconColor: localSearchIconColor
+        }
+      });
+    }
+    showNotification('Search settings updated successfully!');
+  };
+
   const tabs = [
     { id: 'company', label: t('settings.companyInfo'), icon: Building2 },
     { id: 'ui', label: t('settings.uiCustomization'), icon: SettingsIcon },
@@ -388,6 +422,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     { id: 'print', label: t('settings.printSettings'), icon: Printer },
     { id: 'features', label: t('settings.f11Features'), icon: Database },
     { id: 'security', label: t('settings.security'), icon: Shield },
+    { id: 'search', label: 'Global Search', icon: Search },
     { id: 'notifications', label: t('settings.notifications'), icon: Bell },
     { id: 'whatsapp', label: t('settings.whatsappTemplates'), icon: MessageSquare },
     { id: 'subscription', label: 'Subscription', icon: CreditCard },
@@ -1938,6 +1973,81 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                           </div>
                         </div>
                       )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'search' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center border-b border-border pb-2">
+                  <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">Global Search Configuration</h3>
+                  <button 
+                    onClick={handleSaveSearch}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all"
+                  >
+                    <Save className="w-3 h-3" /> Save Configuration
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Search Placeholder Text</label>
+                    <input 
+                      type="text" 
+                      value={localSearchPlaceholder} 
+                      onChange={(e) => setLocalSearchPlaceholder(e.target.value)}
+                      placeholder="e.g. Search everything..."
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                    />
+                    <p className="text-[10px] text-muted-foreground italic">Visible inside the search box before typing.</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Initial Help Text</label>
+                    <textarea 
+                      value={localSearchHelpText} 
+                      onChange={(e) => setLocalSearchHelpText(e.target.value)}
+                      placeholder="e.g. Type to start searching..."
+                      rows={3}
+                      className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground" 
+                    />
+                    <p className="text-[10px] text-muted-foreground italic">Shown when the search box is empty.</p>
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t border-border">
+                    <div className="flex items-center justify-between py-2">
+                      <div className="space-y-1">
+                        <span className="text-xs font-bold text-foreground">Show ESC Shortcut Label</span>
+                        <p className="text-[10px] text-gray-500">Display "ESC" keyboard tip in top right of search bar.</p>
+                      </div>
+                      <button 
+                        onClick={() => setLocalShowSearchShortcut(!localShowSearchShortcut)}
+                        className={cn(
+                          "w-10 h-5 rounded-full relative transition-colors",
+                          localShowSearchShortcut ? "bg-emerald-500" : "bg-border"
+                        )}
+                      >
+                        <div className={cn(
+                          "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                          localShowSearchShortcut ? "right-1" : "left-1"
+                        )} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between py-2">
+                      <div className="space-y-1">
+                        <span className="text-xs font-bold text-foreground">Search Icon Custom Color</span>
+                        <p className="text-[10px] text-gray-500">Enter a HEX code or leave blank for default.</p>
+                      </div>
+                      <input 
+                        type="text" 
+                        value={localSearchIconColor} 
+                        onChange={(e) => setLocalSearchIconColor(e.target.value)}
+                        placeholder="#HEX"
+                        className="w-24 bg-background border border-border text-foreground p-1 text-xs text-center outline-none focus:border-foreground" 
+                      />
                     </div>
                   </div>
                 </div>
