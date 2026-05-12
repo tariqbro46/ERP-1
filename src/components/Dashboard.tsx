@@ -28,14 +28,14 @@ const StatCard = ({ title, value, change, icon: Icon, trend, loading, color, uiS
     "bg-card border border-border p-4 flex flex-col gap-2 transition-all",
     uiStyle === 'UI/UX 2' && color ? `${color} border-transparent shadow-md hover:brightness-95` : ""
   )}>
-    <div className="flex justify-between items-start">
+    <div className="flex justify-between items-center">
       <span className={cn(
         "text-[10px] uppercase tracking-wider font-mono",
         uiStyle === 'UI/UX 2' ? "text-white/70" : "text-gray-500"
       )}>{title}</span>
       <Icon className={cn("w-4 h-4", uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-600")} />
     </div>
-    <div className="flex items-baseline justify-start gap-2 flex-wrap">
+    <div className="flex items-baseline justify-between gap-2 flex-wrap mt-auto">
       {loading ? (
         <div className="h-8 w-24 bg-foreground/5 animate-pulse rounded" />
       ) : (
@@ -546,7 +546,7 @@ export function Dashboard() {
           uiStyle === 'UI/UX 2' && "bg-blue-600 border-blue-700 text-white shadow-lg scale-[1.02] z-10"
         )}>
           <h3 className={cn(
-            "text-[10px] font-mono uppercase mb-1 tracking-widest px-1",
+            "text-[10px] font-mono uppercase mb-2 tracking-widest px-1 text-center border-b border-border/10 pb-1",
             uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
           )}>{t('dash.revenueTrajectory')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
@@ -583,7 +583,7 @@ export function Dashboard() {
           uiStyle === 'UI/UX 2' && "bg-emerald-600 border-emerald-700 text-white shadow-lg scale-[1.02] z-10"
         )}>
           <h3 className={cn(
-            "text-[10px] font-mono uppercase mb-1 tracking-widest px-1",
+            "text-[10px] font-mono uppercase mb-2 tracking-widest px-1 text-center border-b border-border/10 pb-1",
             uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
           )}>{t('dash.expenseDistribution')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
@@ -614,7 +614,7 @@ export function Dashboard() {
           uiStyle === 'UI/UX 2' && "bg-amber-600 border-amber-700 text-white shadow-lg scale-[1.02] z-10"
         )}>
           <h3 className={cn(
-            "text-[10px] font-mono uppercase mb-1 tracking-widest px-1",
+            "text-[10px] font-mono uppercase mb-2 tracking-widest px-1 text-center border-b border-border/10 pb-1",
             uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
           )}>{t('dash.netProfitMargin')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">
@@ -645,7 +645,7 @@ export function Dashboard() {
           uiStyle === 'UI/UX 2' && "bg-rose-600 border-rose-700 text-white shadow-lg scale-[1.02] z-10"
         )}>
           <h3 className={cn(
-            "text-[10px] font-mono uppercase mb-1 tracking-widest px-1",
+            "text-[10px] font-mono uppercase mb-2 tracking-widest px-1 text-center border-b border-border/10 pb-1",
             uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
           )}>{t('dash.cashFlowProjection')}</h3>
           <div className="h-[150px] lg:h-[180px] w-full">

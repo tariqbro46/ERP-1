@@ -74,6 +74,7 @@ import NotificationCenter from './components/NotificationCenter';
 import NotificationPage from './components/NotificationPage';
 import { AlterMaster } from './components/AlterMaster';
 import { ReportsMenu } from './components/ReportsMenu';
+import { GlobalSearch } from './components/GlobalSearch';
 import { NegativeReports } from './components/NegativeReports';
 import { CashFlow } from './components/CashFlow';
 import { FundsFlow } from './components/FundsFlow';
@@ -191,7 +192,7 @@ const SidebarGroup = ({ title, children, isOpen, onToggle, to }: { title: string
 import { useTheme, Theme } from './contexts/ThemeContext';
 import { useSettings } from './contexts/SettingsContext';
 
-function Layout({ children }: { children: React.ReactNode }) {
+function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenSearch: () => void }) {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
@@ -299,7 +300,25 @@ function Layout({ children }: { children: React.ReactNode }) {
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    
+    const handleGlobalShortcut = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        onOpenSearch();
+      } else if (e.key === '/') {
+        // Only trigger if not already typing in an input/textarea
+        if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          onOpenSearch();
+        }
+      }
+    };
+    document.addEventListener('keydown', handleGlobalShortcut);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('keydown', handleGlobalShortcut);
+    };
   }, []);
 
   // Initialize expandedGroups based on sidebarDefaultExpanded
@@ -658,6 +677,16 @@ function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Right side controls for macOS */}
       <div className="flex items-center gap-4">
+        <button 
+          onClick={onOpenSearch}
+          className="p-2 hover:bg-foreground/5 rounded-full transition-colors group flex items-center gap-2"
+          title="Search (Cmd+K or /)"
+        >
+          <Search className="w-5 h-5 text-gray-500 group-hover:text-foreground" />
+          <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+            /
+          </kbd>
+        </button>
         <NotificationCenter />
         
         <div className="relative" ref={dropdownRef}>
@@ -891,6 +920,14 @@ function Layout({ children }: { children: React.ReactNode }) {
         )}
         
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-xl border border-border/50 h-14 px-2 rounded-2xl flex items-center gap-1 shadow-2xl z-50 hidden lg:flex">
+          <button 
+            onClick={onOpenSearch}
+            className="p-2.5 rounded-xl transition-all hover:bg-foreground/10 group text-gray-500 hover:text-foreground"
+            title="Search (Cmd+K or /)"
+          >
+            <Search className="w-6 h-6" />
+          </button>
+          <div className="w-[1px] h-6 bg-border mx-2" />
           <NotificationCenter position="bottom" />
           <div className="w-[1px] h-6 bg-border mx-2" />
           <button 
@@ -1078,6 +1115,22 @@ function Layout({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="ml-auto flex items-center gap-3 lg:gap-6 z-[510]">
+              <button 
+                onClick={onOpenSearch}
+                className={cn(
+                  "p-2 rounded-full transition-colors group flex items-center gap-2",
+                  uiStyle === 'UI/UX 2' ? "hover:bg-white/10" : "hover:bg-foreground/5"
+                )}
+                title="Search (Cmd+K or /)"
+              >
+                <Search className={cn("w-5 h-5", uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500 group-hover:text-foreground")} />
+                <kbd className={cn(
+                  "hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium transition-colors",
+                  uiStyle === 'UI/UX 2' ? "bg-white/20 border-white/20 text-white" : "border-border bg-muted text-muted-foreground"
+                )}>
+                  /
+                </kbd>
+              </button>
               <NotificationCenter />
               
               {showGoToShortcut && (
@@ -1351,6 +1404,7 @@ function ProtectedRoute() {
   const { user, isSuperAdmin, logout, firebaseUser, loading } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
 
   if (loading) return null;
 
@@ -1407,7 +1461,7 @@ function ProtectedRoute() {
   }
 
   return (
-    <Layout>
+    <Layout onOpenSearch={() => setIsSearchOpen(true)}>
       <ErrorBoundary>
         <Routes>
           <Route path="/dashboard" element={<FeatureGuard permission="ana_dashboard"><Dashboard /></FeatureGuard>} />
@@ -1509,6 +1563,7 @@ function ProtectedRoute() {
           } />
         </Routes>
       </ErrorBoundary>
+      <GlobalSearch isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </Layout>
   );
 }

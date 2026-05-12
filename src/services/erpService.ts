@@ -3568,6 +3568,137 @@ export const erpService = {
       handleFirestoreError(error, OperationType.DELETE, `subscription_orders/${id}`);
     }
   },
+  // Cache for search results to save quota
+  _searchVouchersCache: { companyId: '', data: [] as any[], timestamp: 0 },
+
+  async searchCompanyData(companyId: string, searchTerm: string) {
+    if (!searchTerm || searchTerm.length < 2 || !companyId) return [];
+    const lowerSearch = searchTerm.toLowerCase();
+    
+    // 1. Search Ledgers
+    const ledgerResults = await (async () => {
+      try {
+        const ledgers = await this.getLedgers(companyId);
+        return ledgers
+          .filter(l => 
+            l.name.toLowerCase().includes(lowerSearch) || 
+            l.alias?.toLowerCase().includes(lowerSearch) ||
+            (l as any).ledger_groups?.name?.toLowerCase().includes(lowerSearch)
+          )
+          .map(l => ({
+            id: l.id,
+            title: l.name,
+            subtitle: `Ledger • ${(l as any).ledger_groups?.name || 'Group'}`,
+            type: 'ledger' as const,
+            category: 'Masters',
+            metadata: l
+          }));
+      } catch (e) {
+        console.error('Search Ledgers error:', e);
+        return [];
+      }
+    })();
+
+    // 2. Search Items
+    const itemResults = await (async () => {
+      try {
+        const items = await this.getItems(companyId);
+        return items
+          .filter(i => 
+            i.name.toLowerCase().includes(lowerSearch) || 
+            i.part_no?.toLowerCase().includes(lowerSearch) || 
+            i.barcode?.toLowerCase().includes(lowerSearch) ||
+            i.description?.toLowerCase().includes(lowerSearch)
+          )
+          .map(i => ({
+            id: i.id,
+            title: i.name,
+            subtitle: `Stock Item • ${i.part_no || 'No Part No'}`,
+            type: 'item' as const,
+            category: 'Masters',
+            metadata: i
+          }));
+      } catch (e) {
+        console.error('Search Items error:', e);
+        return [];
+      }
+    })();
+
+    // 3. Search Employees
+    const employeeResults = await (async () => {
+      try {
+        const employees = await this.getEmployees(companyId);
+        return employees
+          .filter(e => 
+            e.name.toLowerCase().includes(lowerSearch) || 
+            e.employee_id?.toLowerCase().includes(lowerSearch) ||
+            e.mobile?.toLowerCase().includes(lowerSearch)
+          )
+          .map(e => ({
+            id: e.id,
+            title: e.name,
+            subtitle: `Employee • ${e.employee_id || 'No ID'}`,
+            type: 'employee' as const,
+            category: 'Masters',
+            metadata: e
+          }));
+      } catch (e) {
+        console.error('Search Employees error:', e);
+        return [];
+      }
+    })();
+
+    // 4. Search Vouchers (Optimized with 5-minute session cache)
+    const voucherResults = await (async () => {
+      try {
+        const now = Date.now();
+        let vouchers = [];
+        
+        // Use cache if same company and less than 5 minutes old
+        if (this._searchVouchersCache.companyId === companyId && 
+            (now - this._searchVouchersCache.timestamp < 300000)) {
+          vouchers = this._searchVouchersCache.data;
+        } else {
+          const vSnap = await getDocs(query(
+            collection(db, 'vouchers'),
+            where('companyId', '==', companyId),
+            orderBy('v_date', 'desc'),
+            limit(400)
+          ));
+          vouchers = vSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as any));
+          this._searchVouchersCache = {
+            companyId,
+            data: vouchers,
+            timestamp: now
+          };
+        }
+        
+        return vouchers
+          .filter(v => 
+            (v.v_no || '').toLowerCase().includes(lowerSearch) ||
+            (v.reference_no || '').toLowerCase().includes(lowerSearch) ||
+            (v.narration || '').toLowerCase().includes(lowerSearch) ||
+            (v.v_type || '').toLowerCase().includes(lowerSearch) ||
+            (v.party_name || '').toLowerCase().includes(lowerSearch) ||
+            (v.entries || []).some((e: any) => (e.ledger_name || '').toLowerCase().includes(lowerSearch))
+          )
+          .map(v => ({
+            id: v.id,
+            title: `${v.v_type} - ${v.v_no}`,
+            subtitle: `Voucher • ${v.v_date} • ${v.narration?.substring(0, 50) || 'No narration'}`,
+            type: 'voucher' as const,
+            category: 'Transactions',
+            metadata: v
+          }));
+      } catch (e) {
+        console.error('Search Vouchers error:', e);
+        return [];
+      }
+    })();
+
+    return [...ledgerResults, ...itemResults, ...employeeResults, ...voucherResults];
+  },
+
   async updateFeaturesConfig(categories: FeatureCategory[]): Promise<void> {
     try {
       const cleanedData = cleanData({ categories });
