@@ -143,27 +143,7 @@ function cleanData(data: any): any {
   return data;
 }
 
-// Helper to get collection with company filter
-async function getCollection<T = any>(colName: string, companyId: string, limitCount: number = 5000): Promise<T[]> {
-  if (!companyId) {
-    console.warn(`Attempted to fetch collection ${colName} without companyId`);
-    return [];
-  }
-  try {
-    const q = query(
-      collection(db, colName), 
-      where('companyId', '==', companyId),
-      limit(limitCount)
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id } as unknown as T));
-  } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, colName);
-    return [];
-  }
-}
-
-export const erpService = {
+export const erpService: any = {
   // Caching mechanism for voucher serials and common collections to significantly reduce reads
   _serialsCache: {} as Record<string, { data: Record<string, number>, timestamp: number }>,
   _ledgersCache: {} as Record<string, { data: Ledger[], timestamp: number }>,
@@ -172,11 +152,68 @@ export const erpService = {
   _employeesCache: {} as Record<string, { data: any[], timestamp: number }>,
   _unitsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _dashboardStatsCache: { key: '', data: null as any, timestamp: 0 },
-  _collectionTTL: 60000, // 1 minute for collections (balance safety and quota)
-  _SERIALS_CACHE_TTL: 300000, // 5 minutes for serials cache
+  _collectionTTL: 300000, // 5 minutes for collections
+  _SERIALS_CACHE_TTL: 600000, // 10 minutes for serials cache
+  _ledgerGroupsCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _voucherTypesCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _stockGroupsCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _stockCategoriesCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _employeeGroupsCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _usersCache: {} as Record<string, { data: any[], timestamp: number }>,
 
-  async getCollection(colName: string, companyId: string) {
-    return getCollection(colName, companyId);
+  _pendingRequests: {} as Record<string, Promise<any>>,
+
+  getCollection: async function<T = any>(colName: string, companyId: string, limitCount: number = 5000, forceRefresh = false): Promise<T[]> {
+    if (!companyId) return [];
+    const cacheKey = `${colName}_${companyId}`;
+    
+    // Check if there's a pending request for this exact collection (unless forcing)
+    if (!forceRefresh && (this as any)._pendingRequests[cacheKey]) {
+      return (this as any)._pendingRequests[cacheKey];
+    }
+
+    const now = Date.now();
+    // Use the appropriate cache based on collection name
+    let cache: any = null;
+    if (colName === 'ledgers') cache = (this as any)._ledgersCache[companyId];
+    else if (colName === 'items') cache = (this as any)._itemsCache[companyId];
+    else if (colName === 'godowns') cache = (this as any)._godownsCache[companyId];
+    else if (colName === 'employees') cache = (this as any)._employeesCache[companyId];
+    else if (colName === 'units') cache = (this as any)._unitsCache[companyId];
+    else if (colName === 'ledger_groups') cache = (this as any)._ledgerGroupsCache[companyId];
+    else if (colName === 'voucher_types') cache = (this as any)._voucherTypesCache[companyId];
+
+    if (!forceRefresh && cache && (now - cache.timestamp < (this as any)._collectionTTL)) {
+      return cache.data;
+    }
+
+    const fetchPromise = (async () => {
+      try {
+        const q = query(
+          collection(db, colName), 
+          where('companyId', '==', companyId),
+          limit(limitCount)
+        );
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id } as unknown as T));
+        
+        // Update specific cache if applicable
+        if (colName === 'ledgers') (this as any)._ledgersCache[companyId] = { data: data as any, timestamp: now };
+        else if (colName === 'items') (this as any)._itemsCache[companyId] = { data: data as any, timestamp: now };
+        else if (colName === 'godowns') (this as any)._godownsCache[companyId] = { data: data as any, timestamp: now };
+        else if (colName === 'employees') (this as any)._employeesCache[companyId] = { data: data as any, timestamp: now };
+        else if (colName === 'units') (this as any)._unitsCache[companyId] = { data: data as any, timestamp: now };
+        else if (colName === 'ledger_groups') (this as any)._ledgerGroupsCache[companyId] = { data: data as any, timestamp: now };
+        else if (colName === 'voucher_types') (this as any)._voucherTypesCache[companyId] = { data: data as any, timestamp: now };
+
+        return data;
+      } finally {
+        delete (this as any)._pendingRequests[cacheKey];
+      }
+    })();
+
+    (this as any)._pendingRequests[cacheKey] = fetchPromise;
+    return fetchPromise;
   },
 
   async deleteDocCustom(colName: string, id: string) {
@@ -322,7 +359,7 @@ export const erpService = {
         collection(db, 'vouchers'),
         where('companyId', '==', companyId),
         orderBy('v_date', 'asc'),
-        limit(10000) // Increase limit to handle larger datasets
+        limit(2000) // Restricted for performance. Deep scan would need more.
       );
       const snap = await getDocs(q);
       const vouchers = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as any));
@@ -418,9 +455,19 @@ export const erpService = {
     }
   },
   async createVoucher(companyId: string, userId: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
-    this._serialsCache[companyId] = { data: {}, timestamp: 0 }; // Invalidate cache
-    this._ledgersCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
-    this._itemsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
+    this._serialsCache[companyId] = { data: {}, timestamp: 0 }; 
+    this._ledgersCache[companyId] = { data: [], timestamp: 0 }; 
+    this._itemsCache[companyId] = { data: [], timestamp: 0 };
+    this._ledgerGroupsCache[companyId] = { data: [], timestamp: 0 };
+    this._voucherTypesCache[companyId] = { data: [], timestamp: 0 };
+    this._stockGroupsCache[companyId] = { data: [], timestamp: 0 };
+    this._stockCategoriesCache[companyId] = { data: [], timestamp: 0 };
+    this._employeeGroupsCache[companyId] = { data: [], timestamp: 0 };
+    this._godownsCache[companyId] = { data: [], timestamp: 0 };
+    this._employeesCache[companyId] = { data: [], timestamp: 0 };
+    this._unitsCache[companyId] = { data: [], timestamp: 0 };
+    this._dashboardStatsCache = { key: '', data: null as any, timestamp: 0 };
+    this._recentVouchersCache = {};
     try {
       const vType = (voucher.v_type || '').toString().trim();
       const typeKey = vType.toLowerCase().replace(/\s+/g, '_');
@@ -659,17 +706,17 @@ export const erpService = {
         const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
         if (dateComp !== 0) return dateComp;
         
-        const serialA = a.serial_no || a.auto_serial_no || 0;
-        const serialB = b.serial_no || b.auto_serial_no || 0;
-        if (serialA !== serialB) return serialA - serialB;
-
         const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
         const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
         if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
 
         const vNoComp = (a.v_no || '').localeCompare(b.v_no || '');
         if (vNoComp !== 0) return vNoComp;
-        
+
+        const serialA = a.serial_no || a.auto_serial_no || 0;
+        const serialB = b.serial_no || b.auto_serial_no || 0;
+        if (serialA !== serialB) return serialA - serialB;
+
         const timeA = a.createdAt?.seconds || 0;
         const timeB = b.createdAt?.seconds || 0;
         if (timeA !== timeB) return timeA - timeB;
@@ -705,7 +752,7 @@ export const erpService = {
   async getVouchersByGroup(companyId: string, groupId: string, from: string, to: string) {
     try {
       // Get all groups to build hierarchy
-      const allGroups = await getCollection<any>('ledger_groups', companyId);
+      const allGroups = await this.getCollection('ledger_groups', companyId);
       
       const getChildGroupIds = (parentId: string): string[] => {
         let ids = [parentId];
@@ -719,7 +766,7 @@ export const erpService = {
       const groupIds = getChildGroupIds(groupId);
       
       // Get all ledgers in these groups
-      const ledgers = await getCollection<any>('ledgers', companyId);
+      const ledgers = await this.getCollection('ledgers', companyId);
       const groupLedgerIds = ledgers.filter(l => groupIds.includes(l.group_id)).map(l => l.id);
       
       if (groupLedgerIds.length === 0) return [];
@@ -886,7 +933,7 @@ export const erpService = {
 
   async getLedgerBalancesByGroup(companyId: string, groupId: string) {
     try {
-      const ledgers = await getCollection<any>('ledgers', companyId);
+      const ledgers = await this.getCollection('ledgers', companyId);
       return ledgers.filter(l => l.group_id === groupId);
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'ledgers');
@@ -896,7 +943,7 @@ export const erpService = {
 
   async getGroupSummary(companyId: string, groupId: string, from: string, to: string) {
     try {
-      const allLedgers = await getCollection<any>('ledgers', companyId);
+      const allLedgers = await this.getCollection('ledgers', companyId);
       const groupLedgers = allLedgers.filter(l => l.group_id === groupId);
       
       if (groupLedgers.length === 0) return [];
@@ -949,8 +996,8 @@ export const erpService = {
 
   async getCashBankVouchers(companyId: string, from: string, to: string) {
     try {
-      const ledgers = await getCollection<any>('ledgers', companyId);
-      const cashBankLedgerIds = ledgers.filter(l => 
+      const ledgers = await this.getCollection('ledgers', companyId);
+      const cashBankLedgerIds = ledgers.filter((l: any) => 
         l.group_name?.includes('Cash') || 
         l.group_name?.includes('Bank') ||
         l.nature === 'Asset' && (l.name.toLowerCase().includes('cash') || l.name.toLowerCase().includes('bank'))
@@ -1303,17 +1350,17 @@ export const erpService = {
   },
 
   // Ledgers
-  async getLedgers(companyId: string): Promise<Ledger[]> {
+  async getLedgers(companyId: string, forceRefresh = false): Promise<Ledger[]> {
     const now = Date.now();
-    if (this._ledgersCache[companyId] && (now - this._ledgersCache[companyId].timestamp < this._collectionTTL)) {
+    if (!forceRefresh && this._ledgersCache[companyId] && (now - this._ledgersCache[companyId].timestamp < this._collectionTTL)) {
       return this._ledgersCache[companyId].data;
     }
 
     try {
       console.log('erpService.getLedgers called for companyId:', companyId);
       const [ledgers, groups] = await Promise.all([
-        getCollection<Ledger>('ledgers', companyId),
-        getCollection<any>('ledger_groups', companyId)
+        this.getCollection('ledgers', companyId, 5000, forceRefresh),
+        this.getCollection('ledger_groups', companyId, 5000, forceRefresh)
       ]);
       
       const result = ledgers.map(l => {
@@ -1361,11 +1408,18 @@ export const erpService = {
   },
 
   async getLedgerGroups(companyId: string): Promise<any[]> {
+    const now = Date.now();
+    if (this._ledgerGroupsCache[companyId] && (now - this._ledgerGroupsCache[companyId].timestamp < this._collectionTTL)) {
+      return this._ledgerGroupsCache[companyId].data;
+    }
     try {
-      const groups = await getCollection<any>('ledger_groups', companyId);
+      const groups = await this.getCollection('ledger_groups', companyId);
       if (groups.length === 0) {
-        return await this.seedDefaultGroups(companyId);
+        const seeded = await this.seedDefaultGroups(companyId);
+        this._ledgerGroupsCache[companyId] = { data: seeded, timestamp: now };
+        return seeded;
       }
+      this._ledgerGroupsCache[companyId] = { data: groups, timestamp: now };
       return groups;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'ledger_groups');
@@ -1374,11 +1428,18 @@ export const erpService = {
   },
 
   async getVoucherTypes(companyId: string): Promise<any[]> {
+    const now = Date.now();
+    if (this._voucherTypesCache[companyId] && (now - this._voucherTypesCache[companyId].timestamp < this._collectionTTL)) {
+      return this._voucherTypesCache[companyId].data;
+    }
     try {
-      const types = await getCollection<any>('voucher_types', companyId);
+      const types = await this.getCollection('voucher_types', companyId);
       if (types.length === 0) {
-        return await this.seedDefaultVoucherTypes(companyId);
+        const seeded = await this.seedDefaultVoucherTypes(companyId);
+        this._voucherTypesCache[companyId] = { data: seeded, timestamp: now };
+        return seeded;
       }
+      this._voucherTypesCache[companyId] = { data: types, timestamp: now };
       return types;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'voucher_types');
@@ -1410,15 +1471,33 @@ export const erpService = {
   },
 
   async getStockGroups(companyId: string): Promise<any[]> {
-    return getCollection<any>('stock_groups', companyId);
+    const now = Date.now();
+    if (this._stockGroupsCache[companyId] && (now - this._stockGroupsCache[companyId].timestamp < this._collectionTTL)) {
+      return this._stockGroupsCache[companyId].data;
+    }
+    const result = await this.getCollection('stock_groups', companyId);
+    this._stockGroupsCache[companyId] = { data: result, timestamp: now };
+    return result;
   },
 
   async getStockCategories(companyId: string): Promise<any[]> {
-    return getCollection<any>('stock_categories', companyId);
+    const now = Date.now();
+    if (this._stockCategoriesCache[companyId] && (now - this._stockCategoriesCache[companyId].timestamp < this._collectionTTL)) {
+      return this._stockCategoriesCache[companyId].data;
+    }
+    const result = await this.getCollection('stock_categories', companyId);
+    this._stockCategoriesCache[companyId] = { data: result, timestamp: now };
+    return result;
   },
 
   async getEmployeeGroups(companyId: string): Promise<any[]> {
-    return getCollection<any>('employee_groups', companyId);
+    const now = Date.now();
+    if (this._employeeGroupsCache[companyId] && (now - this._employeeGroupsCache[companyId].timestamp < this._collectionTTL)) {
+      return this._employeeGroupsCache[companyId].data;
+    }
+    const result = await this.getCollection('employee_groups', companyId);
+    this._employeeGroupsCache[companyId] = { data: result, timestamp: now };
+    return result;
   },
 
   async updateLedgerGroup(id: string, group: any) {
@@ -1709,14 +1788,8 @@ export const erpService = {
     return results;
   },
 
-  async getItems(companyId: string): Promise<Item[]> {
-    const now = Date.now();
-    if (this._itemsCache[companyId] && (now - this._itemsCache[companyId].timestamp < this._collectionTTL)) {
-      return this._itemsCache[companyId].data;
-    }
-    const result = await getCollection<Item>('items', companyId);
-    this._itemsCache[companyId] = { data: result, timestamp: now };
-    return result;
+  async getItems(companyId: string, forceRefresh = false): Promise<Item[]> {
+    return this.getCollection('items', companyId, 5000, forceRefresh);
   },
 
   async createItem(companyId: string, item: any) {
@@ -1773,12 +1846,12 @@ export const erpService = {
   },
 
   // Godowns
-  async getGodowns(companyId: string) {
+  async getGodowns(companyId: string, forceRefresh = false): Promise<any[]> {
     const now = Date.now();
-    if (this._godownsCache[companyId] && (now - this._godownsCache[companyId].timestamp < this._collectionTTL)) {
+    if (!forceRefresh && this._godownsCache[companyId] && (now - this._godownsCache[companyId].timestamp < this._collectionTTL)) {
       return this._godownsCache[companyId].data;
     }
-    const result = await this.getCollection('godowns', companyId);
+    const result = await this.getCollection('godowns', companyId, 5000, forceRefresh);
     this._godownsCache[companyId] = { data: result, timestamp: now };
     return result;
   },
@@ -2304,31 +2377,28 @@ export const erpService = {
       const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
       if (dateComp !== 0) return dateComp;
       
-      const serialA = a.serial_no || a.auto_serial_no || 0;
-      const serialB = b.serial_no || b.auto_serial_no || 0;
-      if (serialA !== serialB) return serialA - serialB;
+      const vTypeComp = (a.v_type || '').localeCompare(b.v_type || '');
+      if (vTypeComp !== 0) return vTypeComp;
 
       const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
       const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
       if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
 
-      const vNoComp = (a.v_no || '').localeCompare(b.v_no || '');
+      const vNoComp = (a.v_no || '').localeCompare(b.v_no || '', undefined, { numeric: true });
       if (vNoComp !== 0) return vNoComp;
-      
-      const timeA = a.createdAt?.seconds || 0;
-      const timeB = b.createdAt?.seconds || 0;
-      if (timeA !== timeB) return timeA - timeB;
 
-      return a.id.localeCompare(b.id);
+      const serialA = a.serial_no || a.auto_serial_no || 0;
+      const serialB = b.serial_no || b.auto_serial_no || 0;
+      return serialA - serialB;
     });
   },
 
   // Dashboard Stats
-  async getDashboardStats(companyId: string, fromDate?: string, toDate?: string) {
+  async getDashboardStats(companyId: string, fromDate?: string, toDate?: string, forceRefresh = false) {
     const cacheKey = `${companyId}_${fromDate}_${toDate}`;
     const now = Date.now();
     
-    if (this._dashboardStatsCache.key === cacheKey && (now - this._dashboardStatsCache.timestamp < 300000)) {
+    if (!forceRefresh && this._dashboardStatsCache.key === cacheKey && (now - this._dashboardStatsCache.timestamp < 300000)) {
       return this._dashboardStatsCache.data;
     }
 
@@ -2346,14 +2416,14 @@ export const erpService = {
           collection(db, 'vouchers'), 
           where('companyId', '==', companyId),
           orderBy('v_date', 'desc'),
-          limit(500)
+          limit(200)
         );
       }
 
       const [vouchersSnap, items, ledgers] = await Promise.all([
         getDocs(q),
-        this.getItems(companyId),
-        this.getLedgers(companyId)
+        this.getItems(companyId, forceRefresh),
+        this.getLedgers(companyId, forceRefresh)
       ]);
 
       const vDocs = vouchersSnap.docs.map(d => d.data());
@@ -2506,17 +2576,17 @@ export const erpService = {
         const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
         if (dateComp !== 0) return dateComp;
         
-        const serialA = a.serial_no || a.auto_serial_no || 0;
-        const serialB = b.serial_no || b.auto_serial_no || 0;
-        if (serialA !== serialB) return serialA - serialB;
-
         const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
         const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
         if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
 
         const vNoComp = (a.v_no || '').localeCompare(b.v_no || '');
         if (vNoComp !== 0) return vNoComp;
-        
+
+        const serialA = a.serial_no || a.auto_serial_no || 0;
+        const serialB = b.serial_no || b.auto_serial_no || 0;
+        if (serialA !== serialB) return serialA - serialB;
+
         const timeA = a.createdAt?.seconds || 0;
         const timeB = b.createdAt?.seconds || 0;
         if (timeA !== timeB) return timeA - timeB;
@@ -2566,14 +2636,14 @@ export const erpService = {
   },
 
   async getUsers(companyId: string): Promise<any[]> {
-    const q = query(collection(db, 'users'), where('companyId', '==', companyId));
+    const q = query(collection(db, 'users'), where('companyId', '==', companyId), limit(100));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ uid: doc.id, ...(doc.data() as any) }));
   },
 
   async getAllUsers(): Promise<any[]> {
     try {
-      const snapshot = await getDocs(collection(db, 'users'));
+      const snapshot = await getDocs(query(collection(db, 'users'), limit(500)));
       return snapshot.docs.map(doc => ({ uid: doc.id, ...(doc.data() as any) }));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'users');
@@ -2583,7 +2653,7 @@ export const erpService = {
 
   async getAllCompanies(): Promise<any[]> {
     try {
-      const snapshot = await getDocs(collection(db, 'companies'));
+      const snapshot = await getDocs(query(collection(db, 'companies'), limit(200)));
       return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'companies');
@@ -3413,10 +3483,18 @@ export const erpService = {
   },
 
   async getUsersByCompany(companyId: string): Promise<any[]> {
+    if (!companyId) return [];
+    const now = Date.now();
+    if (this._usersCache[companyId] && (now - this._usersCache[companyId].timestamp < this._collectionTTL)) {
+      return this._usersCache[companyId].data;
+    }
+
     try {
-      const q = query(collection(db, 'users'), where('companyId', '==', companyId));
+      const q = query(collection(db, 'users'), where('companyId', '==', companyId), limit(500));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      const data = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+      this._usersCache[companyId] = { data, timestamp: now };
+      return data;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'users');
       return [];
@@ -3460,11 +3538,15 @@ export const erpService = {
   },
 
   // Menu Configuration
+  _menuConfigCache: null as MenuConfig | null,
   async getMenuConfig(): Promise<MenuConfig | null> {
+    if (this._menuConfigCache) return this._menuConfigCache;
     try {
       const menuDoc = await getDoc(doc(db, 'system', 'menu'));
       if (menuDoc.exists()) {
-        return menuDoc.data() as MenuConfig;
+        const data = menuDoc.data() as MenuConfig;
+        this._menuConfigCache = data;
+        return data;
       }
       return null;
     } catch (error) {
@@ -3475,6 +3557,7 @@ export const erpService = {
 
   async updateMenuConfig(config: MenuConfig): Promise<void> {
     try {
+      this._menuConfigCache = config;
       const cleanedConfig = cleanData(config);
       await setDoc(doc(db, 'system', 'menu'), {
         ...cleanedConfig,
@@ -3486,15 +3569,9 @@ export const erpService = {
   },
 
   subscribeToMenuConfig(callback: (config: MenuConfig | null) => void) {
-    return onSnapshot(doc(db, 'system', 'menu'), (doc) => {
-      if (doc.exists()) {
-        callback(doc.data() as MenuConfig);
-      } else {
-        callback(null);
-      }
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'system/menu');
-    });
+    // Return a dummy unsubscribe and call callback immediately to avoid breaking UI if it expects a listener
+    this.getMenuConfig().then(callback);
+    return () => {};
   },
 
   async createSubscriptionPlan(plan: Omit<SubscriptionPlan, 'id'>) {

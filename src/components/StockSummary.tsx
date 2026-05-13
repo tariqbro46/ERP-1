@@ -39,6 +39,9 @@ export function StockSummary() {
   const [inventory, setInventory] = useState<any[]>([]);
   const [recalculating, setRecalculating] = useState(false);
 
+  const [refreshKey, setRefreshKey] = useState(0);
+  const isInitialMount = React.useRef(true);
+
   const handleRecalculateAll = async () => {
     setRecalculating(true);
     try {
@@ -46,7 +49,7 @@ export function StockSummary() {
         await erpService.recalculateItemStats(item.id);
       }
       showNotification('All item statistics recalculated successfully');
-      window.location.reload();
+      setRefreshKey(prev => prev + 1);
     } catch (err) {
       console.error('Error recalculating:', err);
       showNotification('Failed to recalculate statistics', 'error');
@@ -65,12 +68,15 @@ export function StockSummary() {
       if (!user?.companyId) return;
       setLoading(true);
       try {
+        const isForced = !isInitialMount.current && refreshKey > 0;
+        isInitialMount.current = false;
+
         const [allItems, godownsRes, allInv, catsRes, allVouchers] = await Promise.all([
-          erpService.getItems(user.companyId),
-          erpService.getGodowns(user.companyId),
-          erpService.getCollection('inventory_entries', user.companyId),
-          erpService.getCollection('stock_categories', user.companyId),
-          erpService.getCollection('vouchers', user.companyId)
+          erpService.getItems(user.companyId, isForced),
+          erpService.getGodowns(user.companyId, isForced),
+          erpService.getCollection('inventory_entries', user.companyId, 5000, isForced),
+          erpService.getCollection('stock_categories', user.companyId, 5000, isForced),
+          erpService.getCollection('vouchers', user.companyId, 5000, isForced)
         ]);
         
         const vMap = (allVouchers || []).reduce((acc: any, v: any) => {
@@ -102,7 +108,7 @@ export function StockSummary() {
         setGodowns(godownsRes || []);
         setStockCategories(catsRes || []);
         
-        const groups = new Set(allItems.map(i => i.category || 'General Items'));
+        const groups = new Set<string>(allItems.map(i => (i.category as string) || 'General Items'));
         setExpandedGroups(groups);
       } catch (err) {
         console.error('Error fetching stock data:', err);
@@ -111,7 +117,7 @@ export function StockSummary() {
       }
     }
     fetchData();
-  }, [user?.companyId, endDate]);
+  }, [user?.companyId, endDate, refreshKey]);
 
   const getStockDetails = (itemId: string, godownId: string | null) => {
     const item = items.find(i => i.id === itemId);

@@ -128,13 +128,19 @@ export function Dashboard() {
     }
   };
 
+  const [refreshKey, setRefreshKey] = useState(0);
+  const isInitialMount = React.useRef(true);
+
   useEffect(() => {
     async function fetchData() {
       if (!user?.companyId) return;
       setLoading(true);
       try {
+        const isForced = !isInitialMount.current && refreshKey > 0;
+        isInitialMount.current = false;
+
         const [s, v, o] = await Promise.all([
-          erpService.getDashboardStats(user.companyId, periodStart, periodEnd),
+          erpService.getDashboardStats(user.companyId, periodStart, periodEnd, isForced),
           erpService.getRecentVouchers(user.companyId, 5),
           erpService.getOrders(user.companyId)
         ]);
@@ -156,7 +162,7 @@ export function Dashboard() {
       }
     }
     fetchData();
-  }, [periodStart, periodEnd, user?.companyId]);
+  }, [periodStart, periodEnd, user?.companyId, refreshKey]);
 
   const formatFY = (start: string, end: string) => {
     const s = new Date(start).getFullYear().toString().slice(-2);
@@ -205,7 +211,7 @@ export function Dashboard() {
                 />
               </div>
               <button 
-                onClick={() => window.location.reload()}
+                onClick={() => setRefreshKey(prev => prev + 1)}
                 className="text-[11px] font-bold text-gray-500 uppercase hover:text-gray-800 transition-colors"
               >
                 {t('common.refresh')}

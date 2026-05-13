@@ -106,7 +106,7 @@ export function Daybook() {
         sorted.sort((a, b) => a.total_amount - b.total_amount);
         break;
       case 'Voucher Number (Ascending)':
-        sorted.sort((a, b) => (a.v_no || '').localeCompare(a.v_no || '', undefined, { numeric: true }));
+        sorted.sort((a, b) => (a.v_no || '').localeCompare(b.v_no || '', undefined, { numeric: true }));
         break;
       case 'Voucher Number (Descending)':
         sorted.sort((a, b) => (b.v_no || '').localeCompare(a.v_no || '', undefined, { numeric: true }));
@@ -122,7 +122,7 @@ export function Daybook() {
         });
         break;
       default:
-        // Default Sort: Type Order (Payment, Receipt, Sales, Purchase) then Auto Serial No
+        // Default Sort: Type Order (Payment, Receipt, Sales, Purchase) then Voucher Number then Serial No
         const typeOrder: Record<string, number> = {
           'Payment': 1,
           'Receipt': 2,
@@ -138,6 +138,9 @@ export function Daybook() {
           const orderB = typeOrder[b.v_type] || 99;
           if (orderA !== orderB) return orderA - orderB;
           
+          const vNoComp = (a.v_no || '').localeCompare(b.v_no || '', undefined, { numeric: true });
+          if (vNoComp !== 0) return vNoComp;
+
           return (a.serial_no || a.auto_serial_no || 0) - (b.serial_no || b.auto_serial_no || 0);
         });
     }
@@ -146,7 +149,13 @@ export function Daybook() {
 
   useEffect(() => {
     fetchVouchers();
-  }, [startDate, endDate, config.format, config.sortingMethod]);
+  }, [startDate, endDate, config.format]);
+
+  useEffect(() => {
+    if (vouchers.length > 0) {
+      setVouchers(prev => sortVouchers(prev));
+    }
+  }, [config.sortingMethod]);
 
   const handleSaveConfig = async (newConfig: ReportConfig) => {
     if (!user?.companyId) return;
