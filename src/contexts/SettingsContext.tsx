@@ -80,6 +80,14 @@ interface SettingsContextType {
   menuBarStyle: MenuBarStyle;
   layoutWidth: 'responsive' | 'constrained';
   sidebarDefaultExpanded: boolean;
+  enableTax: boolean;
+  enableCRM: boolean;
+  enableSupplyChain: boolean;
+  enableInventory: boolean;
+  enableDataExport: boolean;
+  enableAI: boolean;
+  enableHelpButton: boolean;
+  pwaEnabled: boolean;
   uiStyle: UIStyle;
   glassBackground: GlassBackground;
   notificationDuration: number;
@@ -159,6 +167,14 @@ const defaultSettings: SettingsContextType = {
   menuBarStyle: 'classic',
   layoutWidth: 'constrained',
   sidebarDefaultExpanded: true,
+  enableTax: true,
+  enableCRM: true,
+  enableSupplyChain: true,
+  enableInventory: true,
+  enableDataExport: true,
+  enableAI: true,
+  enableHelpButton: true,
+  pwaEnabled: true,
   showScrollingBar: false,
   uiStyle: 'UI/UX 1',
   glassBackground: 'default',

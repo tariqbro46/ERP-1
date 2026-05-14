@@ -94,6 +94,13 @@ import { InventoryBooks } from './components/InventoryBooks';
 import { ReportPlaceholder } from './components/ReportPlaceholder';
 import { GroupDashboard } from './components/GroupDashboard';
 import { VoucherDetail } from './components/VoucherDetail';
+import { PageHelp } from './components/PageHelp';
+import TaxManagement from './pages/TaxManagement';
+import CRM from './pages/CRM';
+import PurchaseManagement from './pages/PurchaseManagement';
+import InventoryAdvanced from './pages/InventoryAdvanced';
+import DataCenter from './pages/DataCenter';
+import AIInsights from './pages/AIInsights';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
@@ -237,29 +244,61 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     return () => unsubscribe();
   }, []);
 
-  const getIcon = (name: string) => {
+  const getIcon = React.useCallback((name: string) => {
     const Icon = (LucideIcons as any)[name];
     return Icon || LucideIcons.Package;
-  };
+  }, []);
 
   const menuGroups = React.useMemo(() => {
+    let finalGroups = [];
+    
     if (!dynamicMenu) {
-      return NAV_ITEMS.map((group) => ({
-        ...group,
-        items: group.items.map((item) => ({
-          ...item,
-          icon: item.icon // Static items already have the component
-        }))
-      }));
+      finalGroups = NAV_ITEMS;
+    } else {
+      // Create a map of dynamic groups for easy updates
+      const dynamicGroupsMap = new Map(dynamicMenu.groups.map(g => [g.id, { ...g, items: [...g.items] }]));
+      
+      // Track all item IDs already in the dynamic menu to avoid duplicates across any group
+      const allItemIds = new Set();
+      dynamicMenu.groups.forEach(group => {
+        group.items.forEach(item => allItemIds.add(item.id));
+      });
+      
+      // Ensure all core groups from NAV_ITEMS exist, and merge missing items
+      NAV_ITEMS.forEach(coreGroup => {
+        if (!dynamicGroupsMap.has(coreGroup.id)) {
+          // Group completely missing, filter out items that are already somewhere else
+          const uniqueItems = coreGroup.items.filter(item => !allItemIds.has(item.id));
+          if (uniqueItems.length > 0) {
+            const newGroup = { ...coreGroup, items: uniqueItems };
+            dynamicGroupsMap.set(coreGroup.id, newGroup);
+            uniqueItems.forEach(item => allItemIds.add(item.id));
+          }
+        } else {
+          // Group exists, check for missing items (that aren't anywhere else)
+          const dynamicGroup = dynamicGroupsMap.get(coreGroup.id)!;
+          const missingCoreItems = coreGroup.items.filter(item => !allItemIds.has(item.id));
+          
+          if (missingCoreItems.length > 0) {
+            dynamicGroup.items = [...dynamicGroup.items, ...missingCoreItems];
+            missingCoreItems.forEach(item => allItemIds.add(item.id));
+          }
+        }
+      });
+      
+      finalGroups = Array.from(dynamicGroupsMap.values());
     }
-    return dynamicMenu.groups.map(group => ({
+
+    return finalGroups
+      .filter(group => !group.hidden)
+      .map((group) => ({
       ...group,
-      items: group.items.map(item => ({
+      items: group.items.map((item) => ({
         ...item,
-        icon: getIcon(item.icon)
+        icon: typeof item.icon === 'string' ? getIcon(item.icon) : item.icon
       }))
     }));
-  }, [dynamicMenu]);
+  }, [dynamicMenu, getIcon]);
 
   const currentPageTitleKey = PAGE_TITLES[location.pathname] || (location.pathname.includes('/edit/') ? 'Edit Record' : 'ERP System');
   const currentPageTitle = currentPageTitleKey.startsWith('nav.') ? t(currentPageTitleKey) : currentPageTitleKey;
@@ -689,6 +728,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
             /
           </kbd>
         </button>
+        <PageHelp />
         <NotificationCenter />
         
         <div className="relative" ref={dropdownRef}>
@@ -931,6 +971,8 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
             <Search className="w-6 h-6" />
           </button>
           <div className="w-[1px] h-6 bg-border mx-2" />
+          <PageHelp />
+          <div className="w-[1px] h-6 bg-border mx-2" />
           <NotificationCenter position="bottom" />
           <div className="w-[1px] h-6 bg-border mx-2" />
           <button 
@@ -1135,6 +1177,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                   /
                 </kbd>
               </button>
+              <PageHelp />
               <NotificationCenter />
               
               {showGoToShortcut && (
@@ -1455,9 +1498,12 @@ function ProtectedRoute() {
             </div>
             <span className="text-sm font-bold uppercase tracking-tighter">{t('common.erpSystem')}</span>
           </div>
-          <button onClick={() => logout()} className="text-[10px] uppercase font-bold tracking-widest text-rose-500 hover:text-rose-600">
-            {t('common.logout')}
-          </button>
+          <div className="flex items-center gap-4">
+            <PageHelp />
+            <button onClick={() => logout()} className="text-[10px] uppercase font-bold tracking-widest text-rose-500 hover:text-rose-600">
+              {t('common.logout')}
+            </button>
+          </div>
         </header>
         <div className="flex-1 overflow-y-auto">
           <CompanyManagement />
@@ -1471,6 +1517,12 @@ function ProtectedRoute() {
       <ErrorBoundary>
         <Routes>
           <Route path="/dashboard" element={<FeatureGuard permission="ana_dashboard"><Dashboard /></FeatureGuard>} />
+          <Route path="/tax-management" element={<FeatureGuard feature="enableTax"><TaxManagement /></FeatureGuard>} />
+          <Route path="/crm" element={<FeatureGuard feature="enableCRM"><CRM /></FeatureGuard>} />
+          <Route path="/supply-chain" element={<FeatureGuard feature="enableSupplyChain"><PurchaseManagement /></FeatureGuard>} />
+          <Route path="/inventory-advanced" element={<FeatureGuard feature="enableInventory"><InventoryAdvanced /></FeatureGuard>} />
+          <Route path="/data-center" element={<FeatureGuard feature="enableDataExport"><DataCenter /></FeatureGuard>} />
+          <Route path="/ai-insights" element={<FeatureGuard feature="enableAI"><AIInsights /></FeatureGuard>} />
           <Route path="/vouchers/new" element={<FeatureGuard permission="acc_vouchers_create"><VoucherEntry /></FeatureGuard>} />
           <Route path="/vouchers/edit/:id" element={<FeatureGuard permission="acc_vouchers_alter"><VoucherEntry /></FeatureGuard>} />
           <Route path="/vouchers/view/:id" element={<FeatureGuard permission="acc_reports_view"><VoucherDetail /></FeatureGuard>} />

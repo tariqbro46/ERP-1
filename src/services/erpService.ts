@@ -46,8 +46,18 @@ import {
   SubscriptionPlan,
   MenuConfig,
   MenuGroupConfig,
-  MenuItemConfig
+  MenuItemConfig,
+  TaxRate,
+  Lead,
+  Interaction,
+  PurchaseOrder,
+  Batch,
+  SerialNumber
 } from '../types';
+import { GoogleGenAI } from "@google/genai";
+import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -3839,5 +3849,146 @@ export const erpService: any = {
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, 'system/features');
     }
+  },
+
+  // --- TAX & VAT ---
+  getTaxRates: async function(companyId: string): Promise<TaxRate[]> {
+    return this.getCollection('tax_rates', companyId);
+  },
+
+  createTaxRate: async function(data: Partial<TaxRate>): Promise<string> {
+    try {
+      const docRef = await addDoc(collection(db, 'tax_rates'), {
+        ...data,
+        createdAt: serverTimestamp()
+      });
+      return docRef.id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'tax_rates');
+      return '';
+    }
+  },
+
+  // --- CRM ---
+  getLeads: async function(companyId: string): Promise<Lead[]> {
+    return this.getCollection('leads', companyId);
+  },
+
+  createLead: async function(data: Partial<Lead>): Promise<string> {
+    try {
+      const docRef = await addDoc(collection(db, 'leads'), {
+        ...data,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      return docRef.id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'leads');
+      return '';
+    }
+  },
+
+  addInteraction: async function(data: Partial<Interaction>): Promise<string> {
+    try {
+      const docRef = await addDoc(collection(db, 'interactions'), {
+        ...data,
+        createdAt: serverTimestamp()
+      });
+      // Update lead last contact
+      if (data.leadId) {
+        await updateDoc(doc(db, 'leads', data.leadId), {
+          lastContactDate: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+      return docRef.id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'interactions');
+      return '';
+    }
+  },
+
+  // --- SUPPLY CHAIN ---
+  getPurchaseOrders: async function(companyId: string): Promise<PurchaseOrder[]> {
+    return this.getCollection('purchase_orders', companyId);
+  },
+
+  createPurchaseOrder: async function(data: Partial<PurchaseOrder>): Promise<string> {
+    try {
+      const docRef = await addDoc(collection(db, 'purchase_orders'), {
+        ...data,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      return docRef.id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'purchase_orders');
+      return '';
+    }
+  },
+
+  // --- INVENTORY ---
+  getBatches: async function(itemId: string, companyId: string): Promise<Batch[]> {
+    try {
+      const q = query(
+        collection(db, 'batches'),
+        where('item_id', '==', itemId),
+        where('companyId', '==', companyId)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Batch));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'batches');
+      return [];
+    }
+  },
+
+  getSerialNumbers: async function(itemId: string, companyId: string): Promise<SerialNumber[]> {
+    try {
+      const q = query(
+        collection(db, 'serial_numbers'),
+        where('item_id', '==', itemId),
+        where('companyId', '==', companyId),
+        where('status', '==', 'Available')
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as SerialNumber));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'serial_numbers');
+      return [];
+    }
+  },
+
+  // --- AI INSIGHTS ---
+  getAIInsights: async function(prompt: string, dataContext: any): Promise<string> {
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const model = 'gemini-3.1-flash-lite';
+      const fullPrompt = `
+        You are an AI ERP Expert. Analyze the following business data and provide insights.
+        Context: ${JSON.stringify(dataContext)}
+        User Question: ${prompt}
+        
+        Provide a concise, professional analysis in Markdown format.
+      `;
+      
+      const response = await ai.models.generateContent({
+        model,
+        contents: [fullPrompt]
+      });
+      
+      return response.text || 'Unable to generate insights at this time.';
+    } catch (error) {
+      console.error('AI Insights Error:', error);
+      return 'AI Insights service is temporarily unavailable.';
+    }
+  },
+
+  // --- DATA EXPORT ---
+  exportToExcel: function(data: any[], fileName: string) {
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    XLSX.writeFile(wb, `${fileName}.xlsx`);
   }
 };

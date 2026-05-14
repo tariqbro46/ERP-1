@@ -24,7 +24,11 @@ import {
   Printer,
   Cpu,
   BarChart3,
-  AlertCircle
+  AlertCircle,
+  Truck,
+  Layers,
+  Zap,
+  Share2
 } from 'lucide-react';
 
 export interface NavItem {
@@ -82,6 +86,19 @@ export const NAV_ITEMS: NavGroup[] = [
     groupKey: 'nav.transactions',
     items: [
       { id: 'voucher-new', to: '/vouchers/new', icon: FileText, iconName: 'FileText', label: 'Voucher Entry', labelKey: 'nav.voucherEntry', permission: 'acc_vouchers_create' },
+    ]
+  },
+  {
+    id: 'group-advanced',
+    group: 'Advanced Modules',
+    groupKey: 'nav.advancedModules',
+    items: [
+      { id: 'tax-mgmt', to: '/tax-management', icon: FileText, iconName: 'FileText', label: 'Tax & VAT', labelKey: 'nav.taxManagement', feature: 'enableTax' },
+      { id: 'crm', to: '/crm', icon: Users, iconName: 'Users', label: 'CRM', labelKey: 'nav.crm', feature: 'enableCRM' },
+      { id: 'supply-chain', to: '/supply-chain', icon: Truck, iconName: 'Truck', label: 'Supply Chain', labelKey: 'nav.supplyChain', feature: 'enableSupplyChain' },
+      { id: 'inventory-adv', to: '/inventory-advanced', icon: Layers, iconName: 'Layers', label: 'Modern Inventory', labelKey: 'nav.inventoryAdvanced', feature: 'enableInventory' },
+      { id: 'data-center', to: '/data-center', icon: Share2, iconName: 'Share2', label: 'Data Center', labelKey: 'nav.dataCenter', feature: 'enableDataExport' },
+      { id: 'ai-insights', to: '/ai-insights', icon: Zap, iconName: 'Zap', label: 'AI Insights', labelKey: 'nav.aiInsights', feature: 'enableAI' },
     ]
   },
   {
@@ -271,4 +288,10 @@ export const PAGE_TITLES: Record<string, string> = {
   '/settings/security': 'nav.security',
   '/settings/notifications': 'nav.notifications',
   '/settings/whatsapp': 'nav.whatsappTemplates',
+  '/tax-management': 'nav.taxManagement',
+  '/crm': 'nav.crm',
+  '/supply-chain': 'nav.supplyChain',
+  '/inventory-advanced': 'nav.inventoryAdvanced',
+  '/data-center': 'nav.dataCenter',
+  '/ai-insights': 'nav.aiInsights',
 };

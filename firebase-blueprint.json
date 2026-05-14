@@ -341,9 +341,98 @@
         "layoutWidth": { "type": "string", "enum": ["responsive", "constrained"] },
         "sidebarDefaultExpanded": { "type": "boolean" },
         "baseCurrencySymbol": { "type": "string" },
-        "timezone": { "type": "string" }
+        "timezone": { "type": "string" },
+        "enableTax": { "type": "boolean" },
+        "enableHelpButton": { "type": "boolean" },
+        "pwaEnabled": { "type": "boolean" }
       },
       "required": ["companyName"]
+    },
+    "TaxRate": {
+      "title": "Tax Rate",
+      "description": "Tax percentages for GST/VAT.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "rate": { "type": "number" },
+        "type": { "type": "string", "enum": ["GST", "VAT", "Service Tax"] },
+        "companyId": { "type": "string" }
+      },
+      "required": ["name", "rate", "companyId"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "CRM Lead or Potential Customer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "companyName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "status": { "type": "string", "enum": ["New", "Contacted", "Qualified", "Converted", "Lost"] },
+        "assignedTo": { "type": "string" },
+        "companyId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "companyId"]
+    },
+    "Interaction": {
+      "title": "Interaction",
+      "description": "CRM activity log for a lead or customer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "leadId": { "type": "string" },
+        "type": { "type": "string", "enum": ["Call", "Email", "Meeting", "Note"] },
+        "details": { "type": "string" },
+        "companyId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["leadId", "type", "companyId"]
+    },
+    "PurchaseOrder": {
+      "title": "Purchase Order",
+      "description": "PO for supply chain management.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "poNumber": { "type": "string" },
+        "supplierId": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Draft", "Sent", "Received", "Cancelled"] },
+        "totalAmount": { "type": "number" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["poNumber", "supplierId", "companyId"]
+    },
+    "Batch": {
+      "title": "Batch",
+      "description": "Inventory batch tracking with expiry.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "itemId": { "type": "string" },
+        "batchNumber": { "type": "string" },
+        "expiryDate": { "type": "string", "format": "date" },
+        "quantity": { "type": "number" },
+        "companyId": { "type": "string" }
+      },
+      "required": ["itemId", "batchNumber", "companyId"]
+    },
+    "SerialNumber": {
+      "title": "Serial Number",
+      "description": "Individual item serial number tracking.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "itemId": { "type": "string" },
+        "serialNumber": { "type": "string" },
+        "status": { "type": "string", "enum": ["In Stock", "Sold", "Returned"] },
+        "companyId": { "type": "string" }
+      },
+      "required": ["itemId", "serialNumber", "companyId"]
     },
     "Notification": {
       "title": "Notification",
@@ -628,6 +717,30 @@
     "/subscription_plans/{id}": {
       "schema": "SubscriptionPlan",
       "description": "Collection of subscription plans."
+    },
+    "/tax_rates/{id}": {
+      "schema": "TaxRate",
+      "description": "GST/VAT tax rates."
+    },
+    "/leads/{id}": {
+      "schema": "Lead",
+      "description": "CRM leads."
+    },
+    "/interactions/{id}": {
+      "schema": "Interaction",
+      "description": "CRM interactions."
+    },
+    "/purchase_orders/{id}": {
+      "schema": "PurchaseOrder",
+      "description": "Purchase orders for supply chain."
+    },
+    "/batches/{id}": {
+      "schema": "Batch",
+      "description": "Item batches."
+    },
+    "/serial_numbers/{id}": {
+      "schema": "SerialNumber",
+      "description": "Item serial numbers."
     },
     "/system/menu": {
       "schema": "MenuConfig",

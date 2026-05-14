@@ -865,6 +865,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.stockItem': 'Stock Item',
     'nav.statementOfAccount': 'Statement of Account',
     'nav.ledger': 'Ledger',
+    'nav.advancedModules': 'Advanced Modules',
+    'nav.taxManagement': 'Tax & VAT',
+    'nav.crm': 'Customer Relationship (CRM)',
+    'nav.supplyChain': 'Supply Chain Management',
+    'nav.inventoryAdvanced': 'Advanced Inventory',
+    'nav.dataCenter': 'Data Center',
+    'nav.aiInsights': 'AI Business Insights',
   },
   bn: {
     // Navbar
@@ -1668,6 +1675,13 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.stockItem': 'স্টক আইটেম',
     'nav.statementOfAccount': 'স্টেটমেন্ট অফ অ্যাকাউন্ট',
     'nav.ledger': 'লেজার',
+    'nav.advancedModules': 'অ্যাডভান্সড মডিউল',
+    'nav.taxManagement': 'ট্যাক্স এবং ভ্যাট',
+    'nav.crm': 'কাস্টমার রিলেশনশিপ (CRM)',
+    'nav.supplyChain': 'সাপ্লাই চেইন ম্যানেজমেন্ট',
+    'nav.inventoryAdvanced': 'আধুনিক ইনভেন্টরি',
+    'nav.dataCenter': 'ডেটা সেন্টার',
+    'nav.aiInsights': 'এআই বিজনেস ইনসাইটস',
   }
 };
 

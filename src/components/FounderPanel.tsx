@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Company, UserRole, UserProfile, AppNotification, SubscriptionPlan, MenuConfig, MenuGroupConfig, MenuItemConfig } from '../types';
+import { NAV_ITEMS } from '../constants/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
@@ -101,6 +102,69 @@ export default function FounderPanel() {
   const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent' | 'plans' | 'orders' | 'menu' | 'features' | 'errorLogs'>('companies');
   const [menuConfig, setMenuConfig] = useState<MenuConfig | null>(null);
   const [isEditingMenu, setIsEditingMenu] = useState(false);
+
+  const displayMenuGroups = React.useMemo(() => {
+    if (!menuConfig) return [];
+    
+    // Create a map of dynamic groups for easy updates
+    const dynamicGroupsMap = new Map(menuConfig.groups.map(g => [g.id, { ...g, items: [...g.items] }]));
+    
+    // Track all item IDs already in the dynamic menu to avoid duplicates across any group
+    const allItemIds = new Set();
+    menuConfig.groups.forEach(group => {
+      group.items.forEach(item => allItemIds.add(item.id));
+    });
+    
+    // Ensure all core groups from NAV_ITEMS exist, and merge missing items for display
+    NAV_ITEMS.forEach(coreGroup => {
+      if (!dynamicGroupsMap.has(coreGroup.id)) {
+        const uniqueItems = coreGroup.items.filter(item => !allItemIds.has(item.id));
+        if (uniqueItems.length > 0) {
+          const newGroup: MenuGroupConfig = {
+            id: coreGroup.id,
+            group: coreGroup.group,
+            groupKey: coreGroup.groupKey,
+            items: uniqueItems.map(item => ({
+              id: item.id,
+              to: item.to,
+              icon: item.iconName,
+              label: item.label,
+              labelKey: item.labelKey,
+              feature: item.feature,
+              permission: item.permission,
+              adminOnly: item.adminOnly,
+              superAdminOnly: item.superAdminOnly,
+              hidden: item.hidden || false
+            }))
+          };
+          dynamicGroupsMap.set(coreGroup.id, newGroup);
+          uniqueItems.forEach(item => allItemIds.add(item.id));
+        }
+      } else {
+        const dynamicGroup = dynamicGroupsMap.get(coreGroup.id)!;
+        const missingCoreItems = coreGroup.items.filter(item => !allItemIds.has(item.id));
+        
+        if (missingCoreItems.length > 0) {
+          const newItems = missingCoreItems.map(item => ({
+            id: item.id,
+            to: item.to,
+            icon: item.iconName,
+            label: item.label,
+            labelKey: item.labelKey,
+            feature: item.feature,
+            permission: item.permission,
+            adminOnly: item.adminOnly,
+            superAdminOnly: item.superAdminOnly,
+            hidden: item.hidden || false
+          }));
+          dynamicGroup.items = [...dynamicGroup.items, ...newItems];
+          missingCoreItems.forEach(item => allItemIds.add(item.id));
+        }
+      }
+    });
+    
+    return Array.from(dynamicGroupsMap.values());
+  }, [menuConfig]);
 
   // Features editing state
   const [editableFeatures, setEditableFeatures] = useState<FeatureCategory[]>([]);
@@ -430,102 +494,84 @@ export default function FounderPanel() {
   };
 
   const syncMenuWithDefaults = async () => {
+    if (!menuConfig) {
+      await seedInitialMenu();
+      return;
+    }
+    
     try {
       setLoading(true);
-      const { NAV_ITEMS } = await import('../constants/navigation');
       
-      if (!menuConfig) {
-        await seedInitialMenu();
-        return;
-      }
+      const dynamicGroupsMap = new Map(menuConfig.groups.map(g => [g.id, { ...g, items: [...g.items] }]));
+      const allItemIds = new Set();
+      menuConfig.groups.forEach(group => {
+        group.items.forEach(item => allItemIds.add(item.id));
+      });
 
-      const updatedGroups = [...menuConfig.groups];
-      let itemsAdded = 0;
+      let updated = false;
 
-      NAV_ITEMS.forEach(defaultGroup => {
-        const existingGroupIndex = updatedGroups.findIndex(g => g.id === defaultGroup.id || g.group.toLowerCase() === defaultGroup.group.toLowerCase());
-        
-        if (existingGroupIndex === -1) {
-          // Add missing group
-          updatedGroups.push({
-            id: defaultGroup.id,
-            group: defaultGroup.group,
-            groupKey: defaultGroup.groupKey,
-            hidden: defaultGroup.hidden,
-            items: defaultGroup.items.map(item => ({
+      NAV_ITEMS.forEach(coreGroup => {
+        if (!dynamicGroupsMap.has(coreGroup.id)) {
+          // Group completely missing, filter out items that are already somewhere else
+          const uniqueItems = coreGroup.items.filter(item => !allItemIds.has(item.id));
+          if (uniqueItems.length > 0) {
+            const newGroup: MenuGroupConfig = {
+              id: coreGroup.id,
+              group: coreGroup.group,
+              groupKey: coreGroup.groupKey,
+              items: uniqueItems.map(item => ({
+                id: item.id,
+                to: item.to,
+                icon: item.iconName,
+                label: item.label,
+                labelKey: item.labelKey,
+                feature: item.feature,
+                permission: item.permission,
+                adminOnly: item.adminOnly,
+                superAdminOnly: item.superAdminOnly,
+                hidden: item.hidden || false
+              }))
+            };
+            dynamicGroupsMap.set(coreGroup.id, newGroup);
+            uniqueItems.forEach(item => allItemIds.add(item.id));
+            updated = true;
+          }
+        } else {
+          // Group exists, check for missing items (that aren't anywhere else)
+          const dynamicGroup = dynamicGroupsMap.get(coreGroup.id)!;
+          const missingCoreItems = coreGroup.items.filter(item => !allItemIds.has(item.id));
+          
+          if (missingCoreItems.length > 0) {
+            const newItems = missingCoreItems.map(item => ({
               id: item.id,
               to: item.to,
               icon: item.iconName,
               label: item.label,
               labelKey: item.labelKey,
               feature: item.feature,
+              permission: item.permission,
               adminOnly: item.adminOnly,
               superAdminOnly: item.superAdminOnly,
-              permission: item.permission,
-              hidden: item.hidden,
-              children: item.children?.map(child => ({
-                id: child.id,
-                to: child.to,
-                icon: child.iconName,
-                label: child.label,
-                labelKey: child.labelKey,
-                feature: child.feature,
-                adminOnly: child.adminOnly,
-                superAdminOnly: child.superAdminOnly,
-                permission: child.permission,
-                hidden: child.hidden
-              }))
-            }))
-          });
-          itemsAdded += defaultGroup.items.length;
-        } else {
-          // Sync items in existing group
-          const existingGroup = { ...updatedGroups[existingGroupIndex] };
-          existingGroup.hidden = defaultGroup.hidden; // Sync hidden status
-          const existingItemIds = new Set(existingGroup.items.map(i => i.id));
-          const existingPaths = new Set(existingGroup.items.map(i => i.to));
-          
-          defaultGroup.items.forEach(defaultItem => {
-            if (!existingItemIds.has(defaultItem.id) && !existingPaths.has(defaultItem.to)) {
-              existingGroup.items.push({
-                id: defaultItem.id,
-                to: defaultItem.to,
-                icon: defaultItem.iconName,
-                label: defaultItem.label,
-                labelKey: defaultItem.labelKey,
-                feature: defaultItem.feature,
-                adminOnly: defaultItem.adminOnly,
-                superAdminOnly: defaultItem.superAdminOnly,
-                permission: defaultItem.permission,
-                hidden: defaultItem.hidden,
-                children: defaultItem.children?.map(child => ({
-                  id: child.id,
-                  to: child.to,
-                  icon: child.iconName,
-                  label: child.label,
-                  labelKey: child.labelKey,
-                  feature: child.feature,
-                  adminOnly: child.adminOnly,
-                  superAdminOnly: child.superAdminOnly,
-                  permission: child.permission,
-                  hidden: child.hidden
-                }))
-              });
-              itemsAdded++;
-            }
-          });
-          
-          updatedGroups[existingGroupIndex] = existingGroup;
+              hidden: item.hidden || false
+            }));
+            dynamicGroup.items = [...dynamicGroup.items, ...newItems];
+            missingCoreItems.forEach(item => allItemIds.add(item.id));
+            updated = true;
+          }
         }
       });
 
-      if (itemsAdded > 0) {
-        const newConfig = { ...menuConfig, groups: updatedGroups, updatedAt: new Date() };
+      if (updated) {
+        const newConfig: MenuConfig = {
+          ...menuConfig,
+          groups: Array.from(dynamicGroupsMap.values()),
+          updatedAt: new Date()
+        };
         await erpService.updateMenuConfig(newConfig);
         setMenuConfig(newConfig);
-        showNotification(`Synced ${itemsAdded} new items from defaults`, 'success');
+        showNotification('Menu synchronized with defaults successfully', 'success');
       } else {
-        showNotification('Menu is already up to date', 'info');
+        showNotification('Menu is already up to date with defaults', 'info');
       }
     } catch (error) {
       console.error('Error syncing menu:', error);
@@ -538,7 +584,6 @@ export default function FounderPanel() {
   const seedInitialMenu = async () => {
     try {
       setLoading(true);
-      const { NAV_ITEMS } = await import('../constants/navigation');
       const initialGroups: MenuGroupConfig[] = NAV_ITEMS.map((group) => ({
         id: group.id,
         group: group.group,
@@ -549,7 +594,8 @@ export default function FounderPanel() {
             to: item.to,
             icon: item.iconName,
             label: item.label,
-            labelKey: item.labelKey
+            labelKey: item.labelKey,
+            hidden: item.hidden || false
           };
           
           if (item.feature) menuItem.feature = item.feature;
@@ -2818,7 +2864,8 @@ export default function FounderPanel() {
                       id: `group-${Date.now()}`,
                       group: '',
                       groupKey: '',
-                      items: []
+                      items: [],
+                      hidden: false
                     });
                   }}
                   className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center gap-2"
@@ -2903,7 +2950,7 @@ export default function FounderPanel() {
                     ref={provided.innerRef}
                     className="space-y-4"
                   >
-                    {menuConfig.groups
+                    {displayMenuGroups
                       .filter(g => g.group !== 'System Configuration')
                       .map((group, index) => (
                       <Draggable key={group.id} draggableId={group.id} index={index}>
@@ -2923,7 +2970,15 @@ export default function FounderPanel() {
                                 </div>
                                 <LayoutGrid className="w-5 h-5 text-primary" />
                                 <div>
-                                  <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">{group.group || 'Unnamed Group'}</h3>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">{group.group || 'Unnamed Group'}</h3>
+                                    {group.hidden && (
+                                      <span className="text-[8px] px-1.5 py-0.5 bg-rose-500/10 text-rose-500 rounded-full font-bold uppercase flex items-center gap-1">
+                                        <EyeOff className="w-2 h-2" />
+                                        Hidden
+                                      </span>
+                                    )}
+                                  </div>
                                   <p className="text-[10px] text-muted-foreground font-mono">{group.groupKey}</p>
                                 </div>
                               </div>
@@ -3391,6 +3446,19 @@ export default function FounderPanel() {
                     placeholder="e.g. /reports"
                     className="w-full bg-background border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary outline-none"
                   />
+                </div>
+
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="group-hidden"
+                    checked={editingGroup.hidden || false}
+                    onChange={(e) => setEditingGroup({ ...editingGroup, hidden: e.target.checked })}
+                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <label htmlFor="group-hidden" className="text-xs font-bold text-foreground cursor-pointer select-none">
+                    Hide Group from Sidebar
+                  </label>
                 </div>
 
                 <div className="pt-4 flex gap-3">

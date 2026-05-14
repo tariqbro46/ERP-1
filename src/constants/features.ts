@@ -69,6 +69,18 @@ export const APP_FEATURES: FeatureCategory[] = [
       { id: 'ana_ageing', label: 'Ageing Analysis', description: 'Stock ageing reports', subscriptionFeatureId: 'adv_reports' },
       { id: 'ana_insights', label: 'AI Financial Insights', description: 'Generate AI-driven business insights', subscriptionFeatureId: 'insights' },
     ]
+  },
+  {
+    id: 'advanced',
+    label: 'Advanced ERP Modules',
+    features: [
+      { id: 'enableTax', label: 'Tax & VAT Management', description: 'Enable tax rates and GST/VAT configurations', subscriptionFeatureId: 'tax' },
+      { id: 'enableCRM', label: 'Advanced CRM', description: 'Leads, interactions and conversion tracking', subscriptionFeatureId: 'crm' },
+      { id: 'enableSupplyChain', label: 'Supply Chain', description: 'Purchase orders and supply chain tracking', subscriptionFeatureId: 'scm' },
+      { id: 'enableInventory', label: 'Modern Inventory', description: 'Advanced stock tracking and godown transfers', subscriptionFeatureId: 'inv_adv' },
+      { id: 'enableDataExport', label: 'Data Center', description: 'Export business data and manage share links', subscriptionFeatureId: 'data' },
+      { id: 'enableAI', label: 'AI Business Insights', description: 'AI-powered financial health analytics', subscriptionFeatureId: 'ai' },
+    ]
   }
 ];
 

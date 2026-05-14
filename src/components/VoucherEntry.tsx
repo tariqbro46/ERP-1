@@ -1372,7 +1372,7 @@ export function VoucherEntry() {
             <div className="min-w-full">
               {/* Desktop Table Header */}
               <table className="w-full text-left text-xs border-collapse hidden lg:table">
-                <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px]">
+                <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px] sticky top-0 z-10 backdrop-blur-sm">
                   <tr>
                     <th className={cn("border-b border-border min-w-[16ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>
                       <div className="flex justify-between items-center">

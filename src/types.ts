@@ -478,3 +478,84 @@ export interface ErrorLog {
   timestamp: any;
   metadata?: Record<string, any>;
 }
+
+export interface TaxRate {
+  id: string;
+  companyId: string;
+  name: string;
+  rate: number;
+  type: 'GST' | 'VAT' | 'Service Tax' | 'Sales Tax';
+  description?: string;
+  isActive: boolean;
+  createdAt: any;
+}
+
+export interface Lead {
+  id: string;
+  companyId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  source?: string;
+  status: 'New' | 'Qualified' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
+  assignedTo?: string;
+  assignedToName?: string;
+  notes?: string;
+  lastContactDate?: any;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface Interaction {
+  id: string;
+  companyId: string;
+  leadId: string;
+  userId: string;
+  userName: string;
+  type: 'Call' | 'Email' | 'Meeting' | 'Note';
+  details: string;
+  date: any;
+  createdAt: any;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  companyId: string;
+  supplierId: string;
+  supplierName: string;
+  date: string;
+  poNumber: string;
+  items: {
+    itemId: string;
+    itemName: string;
+    qty: number;
+    rate: number;
+    amount: number;
+  }[];
+  totalAmount: number;
+  status: 'Pending' | 'Ordered' | 'Partial' | 'Received' | 'Cancelled';
+  notes?: string;
+  expectedDeliveryDate?: string;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface Batch {
+  id: string;
+  batch_no: string;
+  item_id: string;
+  companyId: string;
+  expiry_date?: string;
+  mfg_date?: string;
+  current_qty: number;
+  createdAt: any;
+}
+
+export interface SerialNumber {
+  id: string;
+  item_id: string;
+  companyId: string;
+  status: 'Available' | 'Sold' | 'Damaged' | 'Returned';
+  soldVoucherId?: string;
+  createdAt: any;
+}

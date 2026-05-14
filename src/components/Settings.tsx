@@ -75,6 +75,14 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     menuBarStyle,
     layoutWidth,
     sidebarDefaultExpanded,
+    enableTax,
+    enableCRM,
+    enableSupplyChain,
+    enableInventory,
+    enableDataExport,
+    enableAI,
+    enableHelpButton,
+    pwaEnabled,
     showGoToShortcut,
     showScrollingBar,
     showQuickActions,
@@ -1593,19 +1601,54 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
 
             {activeTab === 'features' && (
               <div className="space-y-6">
-                <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Accounting & Inventory Features</h3>
+                <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">System Modules & Features</h3>
                 <div className="space-y-4">
-                  {features.map((f) => (
-                    <div key={f.id} className="flex items-center justify-between py-2 border-b border-border/50">
-                      <span className="text-xs text-gray-400">{f.label}</span>
-                      <div 
-                        onClick={() => toggleFeature(f.id)}
-                        className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${f.enabled ? 'bg-emerald-500' : 'bg-border'}`}
-                      >
-                        <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${f.enabled ? 'right-1' : 'left-1'}`} />
+                  {[
+                    { id: 'enableTax', label: 'Tax & VAT Management', enabled: enableTax },
+                    { id: 'enableCRM', label: 'Advanced CRM', enabled: enableCRM },
+                    { id: 'enableSupplyChain', label: 'Supply Chain & Purchase', enabled: enableSupplyChain },
+                    { id: 'enableInventory', label: 'Advanced Inventory Features', enabled: enableInventory },
+                    { id: 'enableDataExport', label: 'Data Export & Sharing', enabled: enableDataExport },
+                    { id: 'enableAI', label: 'AI Insights (Gemini)', enabled: enableAI },
+                    { id: 'pwaEnabled', label: 'Mobile App Experience (PWA)', enabled: pwaEnabled },
+                    { id: 'enableHelpButton', label: 'Instructions (i) Button', enabled: enableHelpButton },
+                  ].map((f) => (
+                    <div key={f.id} className="flex items-center justify-between py-4 px-4 bg-foreground/5 border border-border">
+                      <div>
+                        <h4 className="text-xs font-bold text-foreground uppercase">{f.label}</h4>
+                        <p className="text-[10px] text-gray-500 uppercase">Enable or disable this module across the system.</p>
                       </div>
+                      <button 
+                        onClick={() => updateSettings({ [f.id]: !f.enabled })}
+                        className={cn(
+                          "w-10 h-5 rounded-full transition-colors relative",
+                          f.enabled ? "bg-emerald-500" : "bg-gray-600"
+                        )}
+                      >
+                        <div className={cn(
+                          "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                          f.enabled ? "right-1" : "left-1"
+                        )} />
+                      </button>
                     </div>
                   ))}
+
+                  {features.length > 0 && (
+                    <div className="pt-6 border-t border-border mt-6">
+                      <h4 className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-4">Additional Features</h4>
+                      {features.map((f) => (
+                        <div key={f.id} className="flex items-center justify-between py-2 border-b border-border/50">
+                          <span className="text-xs text-gray-400">{f.label}</span>
+                          <div 
+                            onClick={() => toggleFeature(f.id)}
+                            className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${f.enabled ? 'bg-emerald-500' : 'bg-border'}`}
+                          >
+                            <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${f.enabled ? 'right-1' : 'left-1'}`} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

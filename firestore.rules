@@ -273,6 +273,42 @@ service cloud.firestore {
       allow write: if isAuthenticated() && (isSuperAdmin() || ((isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId())) && (hasPermission('machines') || isCompanyAdminSimple(getEffectiveCompanyId()))));
     }
 
+    match /serial_numbers/{id} {
+      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
+      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+    }
+
+    match /tax_rates/{id} {
+      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
+      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+    }
+
+    match /leads/{id} {
+      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
+      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+    }
+
+    match /interactions/{id} {
+      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
+      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+    }
+
+    match /purchase_orders/{id} {
+      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
+      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+    }
+
+    match /batches/{id} {
+      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
+      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+    }
+
     match /activity_log/{id} {
       allow read: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow create: if isAuthenticated();
