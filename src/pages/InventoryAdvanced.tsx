@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Hash, Calendar, ShieldCheck, Search, Filter, Plus, AlertTriangle, Layers, QrCode, FileBarChart, ArrowRightLeft, Database, History, Zap } from 'lucide-react';
+import { Package, Hash, Calendar, ShieldCheck, Search, Filter, Plus, AlertTriangle, Layers, QrCode, FileBarChart, ArrowRightLeft, Database, History, Zap, Clock } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -13,22 +13,30 @@ export default function InventoryAdvanced() {
   const { showNotification } = useNotification();
   const { t } = useLanguage();
   const [items, setItems] = useState<Item[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [serials, setSerials] = useState<SerialNumber[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'batches' | 'serials' | 'history'>('batches');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadInventory();
-  }, [user?.companyId]);
+  }, [user?.companyId, activeTab]);
 
   const loadInventory = async () => {
     if (!user?.companyId) return;
     setLoading(true);
     try {
-      const data = await erpService.getCollection('items', user.companyId);
-      setItems(data);
+      if (activeTab === 'batches') {
+        const data = await erpService.getAllBatches(user.companyId);
+        setBatches(data);
+      } else if (activeTab === 'serials') {
+        const data = await erpService.getAllSerialNumbers(user.companyId);
+        setSerials(data);
+      }
     } catch (error) {
       console.error('Error loading inventory:', error);
+      showNotification('Failed to load inventory', 'error');
     } finally {
       setLoading(false);
     }
@@ -111,51 +119,57 @@ export default function InventoryAdvanced() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {[
-                  { name: 'Art Paper 120GSM', ref: 'BATCH-4402', status: 'In Stock', date: 'Exp: 2026-05-12', godown: 'Factory A' },
-                  { name: 'HP LaserJet Toner', ref: 'SN-HP9901223', status: 'Allocated', date: 'Added: 2024-02-10', godown: 'H.O Store' },
-                  { name: 'Standard Ink Cyan', ref: 'BATCH-2291', status: 'Low Stock', date: 'Exp: 2024-12-01', godown: 'Factory B' },
-                ].map((row, idx) => (
-                  <tr key={idx} className="hover:bg-foreground/5 group transition-colors">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <Clock className="w-6 h-6 animate-spin text-gray-400 mx-auto" />
+                    </td>
+                  </tr>
+                ) : (activeTab === 'batches' ? batches : serials).length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest">No {activeTab} records found</p>
+                    </td>
+                  </tr>
+                ) : (activeTab === 'batches' ? batches : serials).map((record: any, idx) => (
+                  <tr key={record.id || idx} className="hover:bg-foreground/5 group transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 border border-border bg-muted flex items-center justify-center">
                           <Package className="w-5 h-5 text-gray-400" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold text-foreground mb-0.5 tracking-tight">{row.name}</span>
-                          <span className="text-[9px] text-gray-400 font-mono italic">ERP-ITEM-{idx+1}00</span>
+                          <span className="text-xs font-bold text-foreground mb-0.5 tracking-tight">{record.item_name || record.item_id || 'Unknown Item'}</span>
+                          <span className="text-[10px] text-gray-400 font-mono italic">{activeTab === 'batches' ? 'Batch Record' : 'Serial Record'}</span>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <div className="p-1 px-2 border border-blue-500/20 bg-blue-500/5 text-blue-600 text-[10px] font-mono font-bold rounded">
-                          {row.ref}
+                          {activeTab === 'batches' ? record.batch_no : record.serial_no}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <div className={cn("w-2 h-2 rounded-full", row.status === 'In Stock' ? 'bg-emerald-500' : 'bg-amber-500')} />
-                          <span className="text-[10px] font-bold text-foreground">{row.status}</span>
+                          <div className={cn("w-2 h-2 rounded-full", (record.quantity > 0 || record.status === 'Available') ? 'bg-emerald-500' : 'bg-amber-500')} />
+                          <span className="text-[10px] font-bold text-foreground">{record.status || (record.quantity > 0 ? 'In Stock' : 'Out of Stock')}</span>
                         </div>
-                        <p className="text-[9px] text-gray-400">{row.godown}</p>
+                        <p className="text-[9px] text-gray-400">{record.location || record.godown || 'Main Godown'}</p>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-[10px] text-gray-500 font-bold">
-                        <Calendar className="w-3 h-3" /> {row.date}
+                        <Calendar className="w-3 h-3" /> {record.expiry_date || record.createdAt?.toDate?.()?.toLocaleDateString() || 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button className="px-4 py-1.5 border border-border text-[9px] font-bold uppercase tracking-widest hover:bg-foreground hover:text-background transition-all">
-                          Transfer
-                        </button>
-                        <button className="p-2 border border-border hover:bg-muted transition-colors rounded">
-                          <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                          Manage
                         </button>
                       </div>
                     </td>

@@ -115,31 +115,33 @@ export default function FounderPanel() {
       group.items.forEach(item => allItemIds.add(item.id));
     });
     
-    // Ensure all core groups from NAV_ITEMS exist, and merge missing items for display
+    // Ensure all core groups from NAV_ITEMS exist
     NAV_ITEMS.forEach(coreGroup => {
       if (!dynamicGroupsMap.has(coreGroup.id)) {
+        // Group completely missing, filter out items that are already somewhere else
         const uniqueItems = coreGroup.items.filter(item => !allItemIds.has(item.id));
-        if (uniqueItems.length > 0) {
-          const newGroup: MenuGroupConfig = {
-            id: coreGroup.id,
-            group: coreGroup.group,
-            groupKey: coreGroup.groupKey,
-            items: uniqueItems.map(item => ({
-              id: item.id,
-              to: item.to,
-              icon: item.iconName,
-              label: item.label,
-              labelKey: item.labelKey,
-              feature: item.feature,
-              permission: item.permission,
-              adminOnly: item.adminOnly,
-              superAdminOnly: item.superAdminOnly,
-              hidden: item.hidden || false
-            }))
-          };
-          dynamicGroupsMap.set(coreGroup.id, newGroup);
-          uniqueItems.forEach(item => allItemIds.add(item.id));
-        }
+        
+        // We ALWAYS add the group if it's from core NAV_ITEMS so it can be managed
+        const newGroup: MenuGroupConfig = {
+          id: coreGroup.id,
+          group: coreGroup.group,
+          groupKey: coreGroup.groupKey,
+          hidden: coreGroup.hidden || false,
+          items: uniqueItems.map(item => ({
+            id: item.id,
+            to: item.to,
+            icon: item.iconName,
+            label: item.label,
+            labelKey: item.labelKey,
+            feature: item.feature,
+            permission: item.permission,
+            adminOnly: item.adminOnly,
+            superAdminOnly: item.superAdminOnly,
+            hidden: item.hidden || false
+          }))
+        };
+        dynamicGroupsMap.set(coreGroup.id, newGroup);
+        uniqueItems.forEach(item => allItemIds.add(item.id));
       } else {
         const dynamicGroup = dynamicGroupsMap.get(coreGroup.id)!;
         const missingCoreItems = coreGroup.items.filter(item => !allItemIds.has(item.id));
@@ -216,12 +218,12 @@ export default function FounderPanel() {
     }
 
     // Item reordering
-    const sourceGroupIndex = menuConfig.groups.findIndex(g => g.id === source.droppableId);
-    const destGroupIndex = menuConfig.groups.findIndex(g => g.id === destination.droppableId);
+    const sourceGroupIndex = displayMenuGroups.findIndex(g => g.id === source.droppableId);
+    const destGroupIndex = displayMenuGroups.findIndex(g => g.id === destination.droppableId);
 
     if (sourceGroupIndex === -1 || destGroupIndex === -1) return;
 
-    const newGroups = Array.from(menuConfig.groups);
+    const newGroups = Array.from(displayMenuGroups);
     const sourceGroup = { ...newGroups[sourceGroupIndex] };
     const destGroup = { ...newGroups[destGroupIndex] };
 

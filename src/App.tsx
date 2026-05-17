@@ -522,7 +522,8 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   const renderRibbonMenu = () => {
     return (
       <div className="bg-card border-b border-border hidden lg:block">
-        <div className="flex border-b border-border px-4">
+        <div className="flex border-b border-border px-4 items-center justify-between">
+          <div className="flex">
             <button
               onClick={() => setActiveRibbonTab('Dashboard')}
               className={cn(
@@ -548,6 +549,10 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                 {t(group.groupKey)}
               </button>
             ))}
+          </div>
+          <div className="flex items-center gap-3 pr-4">
+            <PageHelp />
+          </div>
         </div>
         <div className="p-2 flex items-center gap-6 overflow-x-auto no-scrollbar">
           {activeRibbonTab === 'Dashboard' ? (

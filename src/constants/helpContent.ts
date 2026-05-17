@@ -6,16 +6,16 @@ export interface HelpSection {
 
 export const HELP_CONTENT: Record<string, HelpSection> = {
   "/dashboard": {
-    en: "Overview of your company's financial status, sales trends, and recent transactions. You can see your cash balance, bank balance, total sales, and pending orders at a glance. Use the date picker to filter data for specific periods.",
-    bn: "আপনার কোম্পানির আর্থিক অবস্থা, বিক্রয়ের প্রবণতা এবং সাম্প্রতিক লেনদেনের সারসংক্ষেপ। আপনি এক নজরে আপনার ক্যাশ ব্যালেন্স, ব্যাংক ব্যালেন্স, মোট বিক্রয় এবং পেন্ডিং অর্ডার দেখতে পারেন। নির্দিষ্ট সময়ের ডেটা ফিল্টার করতে ডেট পিকার ব্যবহার করুন।"
+    en: "The Command Center of your business. Here you can monitor:\n1. Financial Health: View live Cash and Bank balances.\n2. Sales Performance: Track revenue trends over days, months, or years.\n3. Recent Activity: See the latest vouchers and transactions.\n4. Quick Actions: Jump directly to voucher entry or ledger creation.\n5. Pending Tasks: Monitor orders that need your attention.",
+    bn: "আপনার ব্যবসার কমান্ড সেন্টার। এখানে আপনি যা মনিটর করতে পারেন:\n১. আর্থিক অবস্থা: বর্তমান ক্যাশ এবং ব্যাংক ব্যালেন্স দেখুন।\n২. বিক্রয়ের পারফরম্যান্স: দিন, মাস বা বছর অনুযায়ী আয়ের প্রবণতা ট্র্যাক করুন।\n৩. সাম্প্রতিক কার্যক্রম: সর্বশেষ ভাউচার এবং লেনদেন দেখুন।\n৪. কুইক অ্যাকশন: সরাসরি ভাউচার এন্ট্রি বা লেজার তৈরিতে যান।\n৫. পেন্ডিং টাস্ক: আপনার মনোযোগ প্রয়োজন এমন অর্ডারগুলো মনিটর করুন।"
   },
   "/vouchers/new": {
-    en: "Create a new accounting voucher. \n1. Select the Voucher Type (Payment, Receipt, Journal, etc.).\n2. Select the Ledger to debit/credit.\n3. Enter the amount and narration.\n4. Add tax if applicable.\n5. Click Save to record the transaction.",
-    bn: "একটি নতুন অ্যাকাউন্টিং ভাউচার তৈরি করুন। \n১. ভাউচারের ধরন নির্বাচন করুন (পেমেন্ট, রিসিট, জার্নাল ইত্যাদি)।\n২. ডেবিট/ক্রেডিট করার জন্য লেজার নির্বাচন করুন।\n৩. পরিমাণ এবং ন্যারেশন লিখুন।\n৪. প্রযোজ্য হলে ট্যাক্স যোগ করুন।\n৫. লেনদেন রেকর্ড করতে সেভ ক্লিক করুন।"
+    en: "Step-by-step Guide to Recording a Transaction:\n1. Choose Type: Select if it's a Payment, Receipt, Sales, or Purchase.\n2. Date Selection: Use the date picker for retrospective or future entries.\n3. Ledger Selection: Choose the account affected. Search by name or code.\n4. Item Details: For inventory vouchers, add items, quantities, and rates.\n5. Tax & Discounts: Apply applicable taxes or discounts at the bottom.\n6. Narration: Add a brief note for future audit reference.\n7. Print/Save: You can choose to print the invoice immediately after saving.",
+    bn: "লেনদেন রেকর্ড করার ধাপে ধাপে নির্দেশিকা:\n১. ধরন বেছে নিন: পেমেন্ট, রিসিট, সেলস বা পারচেজ কিনা তা নির্বাচন করুন।\n২. তারিখ নির্বাচন: পূর্ববর্তী বা ভবিষ্যতের এন্ট্রির জন্য ডেট পিকার ব্যবহার করুন।\n৩. লেজার নির্বাচন: সংশ্লিষ্ট অ্যাকাউন্ট বেছে নিন। নাম বা কোড দিয়ে সার্চ করুন।\n৪. আইটেমের বিবরণ: ইনভেন্টরি ভাউচারের জন্য আইটেম, পরিমাণ এবং রেট যোগ করুন।\n৫. ট্যাক্স ও ডিসকাউন্ট: নিচে প্রযোজ্য ট্যাক্স বা ডিসকাউন্ট প্রয়োগ করুন।\n৬. ন্যারেশন: ভবিষ্যতের অডিট রেফারেন্সের জন্য একটি ছোট নোট যোগ করুন।\n৭. প্রিন্ট/সেভ: সেভ করার সাথে সাথে ইনভয়েস প্রিন্ট করার অপশন পাবেন।"
   },
   "/accounts/ledgers/new": {
-    en: "Create a new account ledger to track your financial transactions.\n- Assets: Fixed Assets, Current Assets, etc.\n- Liabilities: Loans, Creditors, etc.\n- Income: Sales, Indirect Income.\n- Expenses: Purchase, Indirect Expenses.\nEnsure you select the correct 'Group' for accurate financial reporting.",
-    bn: "আপনার আর্থিক লেনদেন ট্র্যাক করতে একটি নতুন অ্যাকাউন্ট লেজার তৈরি করুন।\n- সম্পদ: স্থায়ী সম্পদ, চলতি সম্পদ ইত্যাদি।\n- দায়: ঋণ, পাওনাদার ইত্যাদি।\n- আয়: বিক্রয়, পরোক্ষ আয়।\n- ব্যয়: ক্রয়, পরোক্ষ ব্যয়।\nসঠিক আর্থিক রিপোর্টিংয়ের জন্য সঠিক 'গ্রুপ' নির্বাচন নিশ্চিত করুন।"
+    en: "Creating a robust Chart of Accounts:\n1. Name: Enter the full legal name of the account/party.\n2. Grouping: This is CRITICAL. Select 'Hand in Cash' for cash accounts, 'Bank Accounts' for bank, 'Sundry Debtors' for customers, and 'Sundry Creditors' for suppliers.\n3. Opening Balance: Enter any balance carried forward from your previous system.\n4. Contact Info: Add address and GST/Tax details for parties to ensure accurate invoicing.",
+    bn: "একটি শক্তিশালী চার্ট অফ অ্যাকাউন্টস তৈরি করা:\n১. নাম: অ্যাকাউন্ট বা পার্টির পূর্ণ আইনি নাম লিখুন।\n২. গ্রুপিং: এটি অত্যন্ত গুরুত্বপূর্ণ। ক্যাশ অ্যাকাউন্টের জন্য 'Hand in Cash', ব্যাংকের জন্য 'Bank Accounts', কাস্টমারদের জন্য 'Sundry Debtors' এবং সাপ্লায়ারদের জন্য 'Sundry Creditors' নির্বাচন করুন।\n৩. ওপেনিং ব্যালেন্স: পূর্ববর্তী সিস্টেম থেকে আসা কোনো ব্যালেন্স থাকলে তা লিখুন।\n৪. যোগাযোগের তথ্য: সঠিক ইনভয়েসিং নিশ্চিত করতে পার্টির ঠিকানা এবং ট্যাক্স সম্পর্কিত বিস্তারিত যোগ করুন।"
   },
   "/inventory/items/new": {
     en: "Add a new stock item to your inventory.\n- Define the Item Name and Code.\n- Select the Category and Group.\n- Set Units of Measure (Pcs, Kg, etc.).\n- Add Opening Stock balance if any.\n- Configure Reorder levels to get alerts when stock is low.",
@@ -62,8 +62,8 @@ export const HELP_CONTENT: Record<string, HelpSection> = {
     bn: "ম্যানুফ্যাকচারিং লাইফসাইকেল ট্র্যাকিং।\n- অর্ডার তৈরি করুন: ক্লায়েন্টের চাহিদা বা স্টকের প্রয়োজনের ভিত্তিতে তৈরি করুন।\n- অগ্রগতি ট্র্যাক করুন: 'প্ল্যানিং' থেকে 'কোয়ালিটি চেক' হয়ে 'ফিনিশড' পর্যন্ত।\n- রিসোর্স বরাদ্দ: নির্দিষ্ট কাজে মেশিন এবং লেবার নিযুক্ত করুন।"
   },
   "/crm": {
-    en: "Customer Relationship Management.\n- Leads: Capture potential customer information.\n- Pipeline: Monitor the conversion journey from lead to client.\n- History: Track past interactions, calls, and emails.\n- Tasks: Set reminders for follow-ups.",
-    bn: "কাস্টমার রিলেশনশিপ ম্যানেজমেন্ট।\n- লিডস: সম্ভাব্য কাস্টমারের তথ্য সংগ্রহ করুন।\n- পাইপলাইন: লিড থেকে ক্লায়েন্টে রূপান্তরের যাত্রা পর্যবেক্ষণ করুন।\n- হিস্ট্রি: পূর্ববর্তী কথা-বার্তা, কল এবং ইমেল ট্র্যাক করুন।\n- টাস্কস: ফলো-আপের জন্য রিমাইন্ডার সেট করুন।"
+    en: "Customer Relationship Management (CRM) Guide:\n1. Leads Management: Record potential inquiries. Assign status like 'New' or 'Qualified'.\n2. Pipeline View: Visualize your sales funnel by updating lead status.\n3. Deletion: Authorized users can delete irrelevant leads using the trash icon.",
+    bn: "কাস্টমার রিলেশনশিপ ম্যানেজমেন্ট (CRM) নির্দেশিকা:\n১. লিডস ম্যানেজমেন্ট: সম্ভাব্য ইনকোয়ারি রেকর্ড করুন এবং স্ট্যাটাস বরাদ্দ করুন।\n২. পাইপলাইন ভিউ: স্ট্যাটাস আপডেট করে আপনার সেলস ফানেল দেখুন।\n৩. ডিলিট করা: অনুমোদিত ব্যবহারকারীরা ট্র্যাশ আইকন ব্যবহার করে অপ্রয়োজনীয় লিড মুছে ফেলতে পারেন।"
   },
   "/tax-management": {
     en: "Compliance and Tax configuration.\n- Define Tax Types: GST, VAT, Service Tax.\n- Tax Ledger Mapping: Assign specific ledgers for tax collection/payment.\n- Rates: Set percentage rates for different goods or services category.",
@@ -74,8 +74,8 @@ export const HELP_CONTENT: Record<string, HelpSection> = {
     bn: "সাপ্লায়ার এবং পারচেজিং পরিচালনা করুন।\n- সাপ্লায়ার: আপনার বিক্রেতাদের একটি ডেটাবেস রাখুন।\n- পারচেজ অর্ডার: পণ্য কেনার অভিপ্রায় নথিবদ্ধ করুন।\n- ইনবাউন্ড শিপমেন্ট: আপনার গুদামে পণ্য কখন পৌঁছাবে তা ট্র্যাক করুন।\n- সাপ্লায়ার পারফরম্যান্স: লিড টাইম এবং ধারাবাহিকতা বিশ্লেষণ করুন।"
   },
   "/inventory-advanced": {
-    en: "Advanced inventory features.\n- Batch Tracking: Perishable goods or groups of items.\n- Serial Numbers: Track unique electronics or high-value items.\n- Multi-Godown: Transfer stock between different warehouses.\n- Physical Stock: Reconcile system records with actual physical counts.",
-    bn: "উন্নত ইনভেন্টরি ফিচার।\n- ব্যাচ ট্র্যাকিং: পচনশীল পণ্য বা আইটেমের গ্রুপের জন্য।\n- সিরিয়াল নম্বর: অনন্য ইলেকট্রনিক্স বা উচ্চ-মূল্যের আইটেম ট্র্যাক করুন।\n- মাল্টি-গোডাউন: বিভিন্ন গুদামের মধ্যে স্টক স্থানান্তর করুন।\n- ফিজিক্যাল স্টক: প্রকৃত ফিজিক্যাল গণনার সাথে সিস্টেম রেকর্ড মিলিয়ে নিন।"
+    en: "Advanced Inventory Guide:\n1. Batch Tracking: Monitor products by manufacturing batches and expiry.\n2. Serial Tracking: Track high-value items individually (e.g., Machines).\n3. Real-time Movement: Every inward and outward shipment updates stock levels.\n4. Deletion: Authorized users can delete batch/serial records if needed.",
+    bn: "উন্নত ইনভেন্টরি নির্দেশিকা:\n১. ব্যাচ ট্র্যাকিং: উৎপাদন ব্যাচ এবং মেয়াদ অনুযায়ী পণ্য মনিটর করুন।\n২. সিরিয়াল ট্র্যাকিং: উচ্চ-মূল্যের আইটেমগুলো একে একে ট্র্যাক করুন (যেমন: মেশিন)।\n৩. রিয়েল-টাইম মুভমেন্ট: প্রতিটি শিপমেন্ট সাথে সাথে স্টকের পরিমাণ আপডেট করে।\n৪. ডিলিট করা: অনুমোদিত ব্যবহারকারীরা ভুল রেকর্ড মুছে ফেলতে পারেন।"
   },
   "/data-center": {
     en: "Export and Data Security.\n- Export: Download reports in Excel, PDF, or JSON format.\n- Share Links: Create view-only access links for external stakeholders.\n- Audit logs: See who made changes to which module and when.",

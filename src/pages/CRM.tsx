@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Phone, Mail, Calendar, Search, Filter, MessageCircle, MoreVertical, Star, TrendingUp, Clock, CheckCircle2, Plus } from 'lucide-react';
+import { Users, UserPlus, Phone, Mail, Calendar, Search, Filter, MessageCircle, MoreVertical, Star, TrendingUp, Clock, CheckCircle2, Plus, Trash2, X } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -35,13 +35,38 @@ export default function CRM() {
 
   const loadLeads = async () => {
     if (!user?.companyId) return;
-    setLoading(false);
-    // Demo data for now, would be erpService.getLeads
-    setLeads([
-      { id: '1', companyId: user.companyId, name: 'Sabbir Ahmed', email: 'sabbir@example.com', phone: '01711223344', status: 'New', source: 'Web', createdAt: new Date() } as Lead,
-      { id: '2', companyId: user.companyId, name: 'Farhana Kabir', email: 'farhana@example.com', phone: '01855667788', status: 'Qualified', source: 'Referral', createdAt: new Date() } as Lead,
-      { id: '3', companyId: user.companyId, name: 'Tanvir Rahman', email: 'tanvir@test.com', phone: '01900112233', status: 'Won', source: 'Direct', createdAt: new Date() } as Lead,
-    ]);
+    setLoading(true);
+    try {
+      const data = await erpService.getLeads(user.companyId);
+      setLeads(data);
+    } catch (error) {
+      console.error('Error loading leads:', error);
+      showNotification('Failed to load leads', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteLead = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this lead?')) return;
+    try {
+      await erpService.deleteLead(id);
+      showNotification('Lead deleted successfully');
+      if (selectedLead?.id === id) setSelectedLead(null);
+      loadLeads();
+    } catch (error) {
+      showNotification('Failed to delete lead', 'error');
+    }
+  };
+
+  const handleUpdateStatus = async (leadId: string, newStatus: string) => {
+    try {
+      await erpService.updateLead(leadId, { status: newStatus as any });
+      showNotification('Status updated');
+      loadLeads();
+    } catch (error) {
+      showNotification('Failed to update status', 'error');
+    }
   };
 
   const filteredLeads = leads.filter(lead => {
@@ -105,49 +130,75 @@ export default function CRM() {
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="divide-y divide-border">
-              {filteredLeads.map(lead => (
-                <div 
-                  key={lead.id}
-                  onClick={() => setSelectedLead(lead)}
-                  className={cn(
-                    "p-4 cursor-pointer transition-all hover:bg-foreground/5",
-                    selectedLead?.id === lead.id ? "bg-foreground/5 border-l-4 border-foreground" : "border-l-4 border-transparent"
-                  )}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-xs font-bold uppercase tracking-widest">{lead.name}</h3>
-                    <span className={cn(
-                      "text-[9px] font-bold uppercase tracking-tighter px-2 py-0.5 border rounded-sm",
-                      statusColors[lead.status]
-                    )}>
-                      {lead.status}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 mt-3">
-                    <div className="flex items-center gap-2 text-[10px] text-gray-500 uppercase tracking-widest">
-                      <Phone className="w-3 h-3" /> {lead.phone}
+            {loading ? (
+              <div className="flex justify-center p-12">
+                <Clock className="w-6 h-6 animate-spin text-gray-400" />
+              </div>
+            ) : filteredLeads.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center">
+                <Users className="w-12 h-12 text-gray-300 mb-4" />
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest">No Leads Found</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {filteredLeads.map(lead => (
+                  <div 
+                    key={lead.id}
+                    onClick={() => setSelectedLead(lead)}
+                    className={cn(
+                      "p-4 cursor-pointer transition-all hover:bg-foreground/5",
+                      selectedLead?.id === lead.id ? "bg-foreground/5 border-l-4 border-foreground" : "border-l-4 border-transparent"
+                    )}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="text-xs font-bold uppercase tracking-widest">{lead.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={lead.status}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => handleUpdateStatus(lead.id, e.target.value)}
+                          className={cn(
+                            "text-[9px] font-bold uppercase tracking-tighter px-2 py-0.5 border rounded-sm outline-none",
+                            statusColors[lead.status]
+                          )}
+                        >
+                          <option value="New text-blue-500">New</option>
+                          <option value="Qualified text-purple-500">Qualified</option>
+                          <option value="Proposal text-amber-500">Proposal</option>
+                          <option value="Negotiation text-indigo-500">Negotiation</option>
+                          <option value="Won text-emerald-500">Won</option>
+                          <option value="Lost text-red-500">Lost</option>
+                        </select>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-gray-500 truncate uppercase tracking-widest">
-                      <Mail className="w-3 h-3" /> {lead.email}
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <div className="flex items-center gap-2 text-[10px] text-gray-500 uppercase tracking-widest">
+                        <Phone className="w-3 h-3" /> {lead.phone}
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] text-gray-500 truncate uppercase tracking-widest">
+                        <Mail className="w-3 h-3" /> {lead.email}
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-center justify-between">
+                      <span className="text-[9px] text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Source: {lead.source || 'Unknown'}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteLead(lead.id);
+                          }}
+                          className="p-1 hover:bg-rose-500/10 rounded transition-colors text-rose-500"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className="text-[9px] text-gray-400 uppercase tracking-widest flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> Last Active: Just Now
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button className="p-1 hover:bg-foreground/10 rounded transition-colors">
-                        <Star className="w-3 h-3 text-amber-500" />
-                      </button>
-                      <button className="p-1 hover:bg-foreground/10 rounded transition-colors">
-                        <MoreVertical className="w-3 h-3 text-gray-400" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -262,6 +313,71 @@ export default function CRM() {
           )}
         </div>
       </div>
+
+      {/* Add Lead Modal */}
+      <AnimatePresence>
+        {showAddForm && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-card border border-border w-full max-w-md shadow-2xl p-6 space-y-4"
+            >
+              <div className="flex justify-between items-center border-b border-border pb-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-foreground">Add New Lead</h3>
+                <button onClick={() => setShowAddForm(false)} className="text-gray-500 hover:text-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form className="space-y-4" onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const data = {
+                  companyId: user!.companyId,
+                  name: formData.get('name') as string,
+                  email: formData.get('email') as string,
+                  phone: formData.get('phone') as string,
+                  status: 'New',
+                  source: formData.get('source') as string || 'Manual',
+                };
+                try {
+                  await erpService.createLead(data);
+                  showNotification('Lead added successfully');
+                  setShowAddForm(false);
+                  loadLeads();
+                } catch (error) {
+                  showNotification('Failed to add lead', 'error');
+                }
+              }}>
+                <div className="space-y-2">
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Full Name</label>
+                  <input name="name" required className="w-full bg-background border border-border p-3 text-xs outline-none focus:border-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Phone Number</label>
+                  <input name="phone" required className="w-full bg-background border border-border p-3 text-xs outline-none focus:border-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Email Address</label>
+                  <input name="email" type="email" className="w-full bg-background border border-border p-3 text-xs outline-none focus:border-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Lead Source</label>
+                  <input name="source" placeholder="e.g. Web, Referral" className="w-full bg-background border border-border p-3 text-xs outline-none focus:border-foreground uppercase" />
+                </div>
+                
+                <div className="pt-4">
+                  <button type="submit" className="w-full py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all">
+                    Save Lead
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

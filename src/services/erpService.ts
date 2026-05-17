@@ -3927,7 +3927,56 @@ export const erpService: any = {
     }
   },
 
+  deletePurchaseOrder: async function(id: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'purchase_orders', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `purchase_orders/${id}`);
+    }
+  },
+
+  updateLead: async function(id: string, data: Partial<Lead>): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'leads', id), {
+        ...data,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `leads/${id}`);
+    }
+  },
+
+  deleteLead: async function(id: string): Promise<void> {
+    try {
+      await deleteDoc(doc(db, 'leads', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `leads/${id}`);
+    }
+  },
+
   // --- INVENTORY ---
+  getAllBatches: async function(companyId: string): Promise<Batch[]> {
+    try {
+      const q = query(collection(db, 'batches'), where('companyId', '==', companyId));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Batch));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'batches');
+      return [];
+    }
+  },
+
+  getAllSerialNumbers: async function(companyId: string): Promise<SerialNumber[]> {
+    try {
+      const q = query(collection(db, 'serial_numbers'), where('companyId', '==', companyId));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as SerialNumber));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'serial_numbers');
+      return [];
+    }
+  },
+
   getBatches: async function(itemId: string, companyId: string): Promise<Batch[]> {
     try {
       const q = query(

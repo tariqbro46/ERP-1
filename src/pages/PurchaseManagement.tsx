@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Package, Truck, Clock, Search, Filter, Plus, FileText, CheckCircle2, AlertCircle, TrendingUp, BarChart3, ChevronRight, Zap } from 'lucide-react';
+import { ShoppingCart, Package, Truck, Clock, Search, Filter, Plus, FileText, CheckCircle2, AlertCircle, TrendingUp, BarChart3, ChevronRight, Zap, Trash2 } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -23,19 +23,33 @@ export default function PurchaseManagement() {
 
   const loadOrders = async () => {
     if (!user?.companyId) return;
-    setLoading(false);
-    // Demo data
-    setOrders([
-      { id: '1', poNumber: 'PO-2024-001', supplierName: 'Global Paper Mart', date: '2024-03-10', totalAmount: 45000, status: 'Pending', createdAt: new Date() } as PurchaseOrder,
-      { id: '2', poNumber: 'PO-2024-002', supplierName: 'Standard Ink Co.', date: '2024-03-08', totalAmount: 12500, status: 'Received', createdAt: new Date() } as PurchaseOrder,
-      { id: '3', poNumber: 'PO-2024-003', supplierName: 'Premium Glue Ltd', date: '2024-03-05', totalAmount: 8900, status: 'Ordered', createdAt: new Date() } as PurchaseOrder,
-    ]);
+    setLoading(true);
+    try {
+      const data = await erpService.getPurchaseOrders(user.companyId);
+      setOrders(data);
+    } catch (error) {
+      console.error('Error loading purchase orders:', error);
+      showNotification('Failed to load purchase orders', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteOrder = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this purchase order?')) return;
+    try {
+      await erpService.deletePurchaseOrder(id);
+      showNotification('Purchase order deleted successfully');
+      loadOrders();
+    } catch (error) {
+      showNotification('Failed to delete purchase order', 'error');
+    }
   };
 
   const stats = [
-    { label: 'Open POs', value: '12', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-    { label: 'Month Spend', value: '৳ 354,200', icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-    { label: 'Active Suppliers', value: '28', icon: Truck, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+    { label: 'Open POs', value: orders.filter(o => o.status === 'Pending').length.toString(), icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+    { label: 'Month Spend', value: `৳ ${orders.reduce((acc, curr) => acc + (curr.totalAmount || 0), 0).toLocaleString()}`, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+    { label: 'Active Suppliers', value: new Set(orders.map(o => o.supplierName)).size.toString(), icon: Truck, color: 'text-blue-500', bg: 'bg-blue-500/10' },
   ];
 
   return (
@@ -108,10 +122,24 @@ export default function PurchaseManagement() {
                     <th className="px-6 py-4">Amount</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <Clock className="w-6 h-6 animate-spin text-gray-400 mx-auto" />
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {orders.map(order => (
+                ) : orders.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <Package className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-[10px] text-gray-500 uppercase tracking-widest">No Purchase Orders Found</p>
+                    </td>
+                  </tr>
+                ) : (
+                  orders.map(order => (
                     <tr key={order.id} className="hover:bg-foreground/5 cursor-pointer group transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
@@ -122,12 +150,12 @@ export default function PurchaseManagement() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded bg-muted flex items-center justify-center text-[10px] font-bold">
-                            {order.supplierName[0]}
+                            {order.supplierName?.[0] || 'S'}
                           </div>
                           <span className="text-[10px] font-bold text-foreground">{order.supplierName}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-mono text-xs font-bold">৳ {order.totalAmount.toLocaleString()}</td>
+                      <td className="px-6 py-4 font-mono text-xs font-bold">৳ {order.totalAmount?.toLocaleString() || '0'}</td>
                       <td className="px-6 py-4">
                         <span className={cn(
                           "text-[9px] font-bold px-2 py-0.5 rounded-sm flex items-center gap-1 w-fit",
@@ -138,14 +166,23 @@ export default function PurchaseManagement() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="p-2 hover:bg-foreground/10 transition-colors">
-                          <ChevronRight className="w-4 h-4 text-gray-400" />
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteOrder(order.id);
+                            }}
+                            className="p-2 hover:bg-rose-500/10 text-rose-500 rounded transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  ))
+                )}
+              </tbody>
+            </table>
             </div>
 
             <div className="p-4 bg-muted/20 border-t border-border flex justify-between items-center">
