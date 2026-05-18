@@ -965,6 +965,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       >
                         <option value="Design 1">{t('settings.dashboardDesignClassic')}</option>
                         <option value="Design 2">{t('settings.dashboardDesignModern')}</option>
+                        <option value="Design 3">Design 3 (Minimalist - High Performance)</option>
+                        <option value="Design 4">Design 4 (Executive Summary - Lowest Usage)</option>
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">{t('settings.dashboardDesignDesc')}</p>
                     </div>

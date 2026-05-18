@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { erpService } from '../services/erpService';
-import { doc, onSnapshot, collection } from 'firebase/firestore';
+import { doc, onSnapshot, collection, getDocFromServer, getDocs } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { SubscriptionPlan } from '../types';
 import { FeatureCategory, APP_FEATURES } from '../constants/features';
@@ -21,7 +21,7 @@ interface FeatureSettings {
 
 export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11';
 export type ReportLayout = 'Layout 1' | 'Layout 2';
-export type DashboardDesign = 'Design 1' | 'Design 2';
+export type DashboardDesign = 'Design 1' | 'Design 2' | 'Design 3' | 'Design 4';
 export type UIStyle = 'UI/UX 1' | 'UI/UX 2' | 'UI/UX 3';
 export type NotificationAnimationStyle = 'default' | 'neon' | 'snake' | 'liquid' | 'glitch' | 'shimmer';
 export type GlassBackground = 'default' | 'sunset' | 'ocean' | 'aurora' | 'minimal';
@@ -77,6 +77,7 @@ interface SettingsContextType {
   voucherTableCompact: boolean;
   reportLayout: ReportLayout;
   dashboardDesign: DashboardDesign;
+  globalDashboardDesign?: DashboardDesign;
   menuBarStyle: MenuBarStyle;
   layoutWidth: 'responsive' | 'constrained';
   sidebarDefaultExpanded: boolean;
@@ -103,6 +104,17 @@ interface SettingsContextType {
   showQuickActions: boolean;
   dashboardQuickActions: string[];
   dashboardCards: string[];
+  showAnnouncement: boolean;
+  announcementText: string;
+  announcementColor: 'blue' | 'amber' | 'emerald' | 'rose' | 'slate';
+  showHelpfulLinks: boolean;
+  helpfulLinks: { title: string; url: string }[];
+  showSupportContact: boolean;
+  supportContactPhone: string;
+  supportContactEmail: string;
+  showCustomMessage: boolean;
+  customMessageTitle: string;
+  customMessageContent: string;
   whatsappTemplates: WhatsAppTemplates;
   notifications: NotificationSettings;
   searchPlaceholder?: string;
@@ -190,6 +202,21 @@ const defaultSettings: SettingsContextType = {
   showQuickActions: true,
   dashboardQuickActions: ['voucher', 'item', 'ledger', 'godown', 'users'],
   dashboardCards: ['revenue', 'profit', 'ledgers', 'stock'],
+  showAnnouncement: true,
+  announcementText: 'Welcome to our new high-performance dashboard! Please use the "Refresh Source" button sparingly to save your read quota.',
+  announcementColor: 'emerald',
+  showHelpfulLinks: true,
+  helpfulLinks: [
+    { title: 'Video Tutorials', url: '#' },
+    { title: 'User Manual', url: '#' },
+    { title: 'Support Desk', url: '#' }
+  ],
+  showSupportContact: true,
+  supportContactPhone: '+880 1700-000000',
+  supportContactEmail: 'support@tallyflow.com',
+  showCustomMessage: false,
+  customMessageTitle: 'Note from Admin',
+  customMessageContent: 'This dashboard is optimized for speed and reliability.',
   whatsappTemplates: {
     Sales: "*{{companyName}}*\nSales Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
     Purchase: "*{{companyName}}*\nPurchase Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
@@ -240,68 +267,78 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const globalConfigLoaded = React.useRef(false);
 
     useEffect(() => {
-    // Listen to global system config - only if not already loaded or if specifically needed
-    const systemRef = doc(db, 'system', 'config');
-    const unsubscribeSystem = onSnapshot(systemRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setSettings(prev => ({
-          ...prev,
-          statusOnlineText: data.statusOnlineText || prev.statusOnlineText,
-          statusOfflineText: data.statusOfflineText || prev.statusOfflineText,
-          statusErrorText: data.statusErrorText || prev.statusErrorText,
-          showGoToShortcut: data.showGoToShortcut !== undefined ? data.showGoToShortcut : prev.showGoToShortcut,
-          appVersion: data.appVersion || prev.appVersion,
-          englishFont: data.englishFont || prev.englishFont,
-          banglaFont: data.banglaFont || prev.banglaFont,
-          systemLogo: data.systemLogo || prev.systemLogo,
-          systemFavicon: data.systemFavicon || prev.systemFavicon,
-          glassBackground: data.glassBackground || prev.glassBackground,
-          notificationDuration: data.notificationDuration || prev.notificationDuration,
-          notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle,
-          searchPlaceholder: data.searchPlaceholder || prev.searchPlaceholder,
-          searchHelpText: data.searchHelpText || prev.searchHelpText,
-          showSearchShortcut: data.showSearchShortcut !== undefined ? data.showSearchShortcut : prev.showSearchShortcut,
-          searchIconColor: data.searchIconColor || prev.searchIconColor
-        }));
-        globalConfigLoaded.current = true;
+    // Fetch global system config - One-time fetch to save quota
+    const fetchSystemConfig = async () => {
+      try {
+        const systemRef = doc(db, 'system', 'config');
+        const snap = await getDocFromServer(systemRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          setSettings(prev => ({
+            ...prev,
+            statusOnlineText: data.statusOnlineText || prev.statusOnlineText,
+            statusOfflineText: data.statusOfflineText || prev.statusOfflineText,
+            statusErrorText: data.statusErrorText || prev.statusErrorText,
+            showGoToShortcut: data.showGoToShortcut !== undefined ? data.showGoToShortcut : prev.showGoToShortcut,
+            appVersion: data.appVersion || prev.appVersion,
+            englishFont: data.englishFont || prev.englishFont,
+            banglaFont: data.banglaFont || prev.banglaFont,
+            systemLogo: data.systemLogo || prev.systemLogo,
+            systemFavicon: data.systemFavicon || prev.systemFavicon,
+            glassBackground: data.glassBackground || prev.glassBackground,
+            notificationDuration: data.notificationDuration || prev.notificationDuration,
+            notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle,
+            searchPlaceholder: data.searchPlaceholder || prev.searchPlaceholder,
+            searchHelpText: data.searchHelpText || prev.searchHelpText,
+            showSearchShortcut: data.showSearchShortcut !== undefined ? data.showSearchShortcut : prev.showSearchShortcut,
+            searchIconColor: data.searchIconColor || prev.searchIconColor,
+            globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign
+          }));
+          globalConfigLoaded.current = true;
+        }
+      } catch (error: any) {
+        if (!error.message?.includes('Quota exceeded')) {
+          console.error("System settings fetch error:", error);
+        }
       }
-    }, (error) => {
-      // Gracefully handle quota errors for global config
-      if (error.message?.includes('Quota exceeded')) {
-        console.warn("Global settings quota exceeded - using defaults.");
-      } else {
-        console.error("System settings snapshot error:", error);
-      }
-    });
+    };
 
-    // Listen to subscription plans - potentially change to one-time fetch if quota is tight
-    const plansRef = collection(db, 'subscription_plans');
-    const unsubscribePlans = onSnapshot(plansRef, (snap) => {
-      const plans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionPlan));
-      setSettings(prev => ({ ...prev, subscriptionPlans: plans }));
-    }, (error) => {
-      if (!error.message?.includes('Quota exceeded')) {
-        console.error("Subscription plans snapshot error:", error);
+    // Fetch subscription plans - One-time fetch
+    const fetchPlans = async () => {
+      try {
+        const plansRef = collection(db, 'subscription_plans');
+        const snap = await getDocs(plansRef);
+        const plans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionPlan));
+        setSettings(prev => ({ ...prev, subscriptionPlans: plans }));
+      } catch (error: any) {
+        if (!error.message?.includes('Quota exceeded')) {
+          console.error("Subscription plans fetch error:", error);
+        }
       }
-    });
+    };
 
-    // Listen to app features config
-    const featuresRef = doc(db, 'system', 'features');
-    const unsubscribeFeatures = onSnapshot(featuresRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        setSettings(prev => ({ ...prev, appFeatures: data.categories || APP_FEATURES }));
-      } else {
+    // Fetch app features config - One-time fetch
+    const fetchFeatures = async () => {
+      try {
+        const featuresRef = doc(db, 'system', 'features');
+        const snap = await getDocFromServer(featuresRef);
+        if (snap.exists()) {
+          const data = snap.data();
+          setSettings(prev => ({ ...prev, appFeatures: data.categories || APP_FEATURES }));
+        } else {
+          setSettings(prev => ({ ...prev, appFeatures: APP_FEATURES }));
+        }
+      } catch (error: any) {
+        if (!error.message?.includes('Quota exceeded')) {
+          console.error("Features configuration fetch error:", error);
+        }
         setSettings(prev => ({ ...prev, appFeatures: APP_FEATURES }));
       }
-    }, (error) => {
-      if (!error.message?.includes('Quota exceeded')) {
-        console.error("Features configuration snapshot error:", error);
-      }
-      setSettings(prev => ({ ...prev, appFeatures: APP_FEATURES }));
-    });
-;
+    };
+
+    fetchSystemConfig();
+    fetchPlans();
+    fetchFeatures();
 
     if (!user?.companyId) {
       // Keep system settings but reset company settings
@@ -317,11 +354,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         appFeatures: prev.appFeatures,
         subscriptionPlans: prev.subscriptionPlans
       }));
-      return () => {
-        unsubscribeSystem();
-        unsubscribePlans();
-        unsubscribeFeatures();
-      };
+      return;
     }
 
     const ref = doc(db, 'settings', user.companyId);
@@ -357,9 +390,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       unsubscribe();
-      unsubscribeSystem();
-      unsubscribePlans();
-      unsubscribeFeatures();
     };
   }, [user?.companyId]);
 
@@ -437,6 +467,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const updateSystemSettings = async (newSettings: any) => {
     try {
       await erpService.updateSystemConfig(newSettings);
+      // Update local state to reflect changes immediately
+      setSettings(prev => ({
+        ...prev,
+        ...newSettings,
+        // Map dashboardDesign back to globalDashboardDesign if it's in the payload
+        globalDashboardDesign: newSettings.dashboardDesign || prev.globalDashboardDesign
+      }));
     } catch (err) {
       console.error('Error updating system settings:', err);
     }

@@ -161,9 +161,9 @@ export const erpService: any = {
   _godownsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _employeesCache: {} as Record<string, { data: any[], timestamp: number }>,
   _unitsCache: {} as Record<string, { data: any[], timestamp: number }>,
-  _dashboardStatsCache: { key: '', data: null as any, timestamp: 0 },
-  _collectionTTL: 300000, // 5 minutes for collections
-  _SERIALS_CACHE_TTL: 600000, // 10 minutes for serials cache
+  _dashboardStatsCache: {} as Record<string, { data: any, timestamp: number }>,
+  _collectionTTL: 600000, // 10 minutes for collections (increased from 5)
+  _SERIALS_CACHE_TTL: 1800000, // 30 minutes for serials cache
   _ledgerGroupsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _voucherTypesCache: {} as Record<string, { data: any[], timestamp: number }>,
   _stockGroupsCache: {} as Record<string, { data: any[], timestamp: number }>,
@@ -1972,6 +1972,9 @@ export const erpService: any = {
   async updatePayHead(id: string, data: any) {
     await updateDoc(doc(db, 'pay_heads', id), { ...data, updatedAt: serverTimestamp() });
   },
+  async deletePayHead(id: string) {
+    await deleteDoc(doc(db, 'pay_heads', id));
+  },
 
   // Salary Structures
   async getSalaryStructures(companyId: string, employeeId?: string) {
@@ -1994,6 +1997,9 @@ export const erpService: any = {
   },
   async updateSalaryStructure(id: string, data: any) {
     await updateDoc(doc(db, 'salary_structures', id), { ...data, updatedAt: serverTimestamp() });
+  },
+  async deleteSalaryStructure(id: string) {
+    await deleteDoc(doc(db, 'salary_structures', id));
   },
 
   // Attendance
@@ -2408,28 +2414,48 @@ export const erpService: any = {
     const cacheKey = `${companyId}_${fromDate}_${toDate}`;
     const now = Date.now();
     
-    if (!forceRefresh && this._dashboardStatsCache.key === cacheKey && (now - this._dashboardStatsCache.timestamp < 300000)) {
-      return this._dashboardStatsCache.data;
+    // Persistence: Try to load from localStorage first for dashboard
+    const storageKey = `dash_cache_${companyId}_${fromDate}_${toDate}`;
+    const cachedData = localStorage.getItem(storageKey);
+    const DASHBOARD_TTL = 7200000; // 2 hours as requested
+    
+    if (cachedData && !forceRefresh) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        if (now - parsed.timestamp < DASHBOARD_TTL) {
+          return parsed.data;
+        }
+      } catch (e) {
+        localStorage.removeItem(storageKey);
+      }
+    }
+
+    if (!forceRefresh && this._dashboardStatsCache[cacheKey] && (now - this._dashboardStatsCache[cacheKey].timestamp < DASHBOARD_TTL)) {
+      return this._dashboardStatsCache[cacheKey].data;
     }
 
     try {
       let q;
+      // Optimization: For free quota saving, we limit the documents fetched severely
+      // Large companies should move to a summarized document
       if (fromDate && toDate) {
         q = query(
           collection(db, 'vouchers'), 
           where('companyId', '==', companyId),
           where('v_date', '>=', fromDate),
-          where('v_date', '<=', toDate)
+          where('v_date', '<=', toDate),
+          limit(300) // Lowered cap to save reads on broad ranges
         );
       } else {
         q = query(
           collection(db, 'vouchers'), 
           where('companyId', '==', companyId),
           orderBy('v_date', 'desc'),
-          limit(200)
+          limit(200) // Lowered limit for dashboard
         );
       }
 
+      // We use getDocs instead of onSnapshot for dashboard to save persistent read cost
       const [vouchersSnap, items, ledgers] = await Promise.all([
         getDocs(q),
         this.getItems(companyId, forceRefresh),
@@ -2494,12 +2520,22 @@ export const erpService: any = {
 
       stats.chartData = chartData;
 
-      // Save to cache
-      this._dashboardStatsCache = {
-        key: cacheKey,
+      // Save to memory cache
+      this._dashboardStatsCache[cacheKey] = {
         data: stats,
         timestamp: now
       };
+
+      // Save to localStorage persistence
+      try {
+        const storageKey = `dash_cache_${companyId}_${fromDate}_${toDate}`;
+        localStorage.setItem(storageKey, JSON.stringify({
+          data: stats,
+          timestamp: now
+        }));
+      } catch (e) {
+        console.warn('Failed to save dashboard to localStorage:', e);
+      }
 
       return stats;
     } catch (err) {
@@ -2510,12 +2546,28 @@ export const erpService: any = {
 
   _recentVouchersCache: {} as Record<string, { data: any[], timestamp: number }>,
 
-  async getRecentVouchers(companyId: string, limitCount = 5): Promise<any[]> {
+  async getRecentVouchers(companyId: string, limitCount = 10, forceRefresh = false): Promise<any[]> {
     const cacheKey = `${companyId}_${limitCount}`;
+    const storageKey = `recent_v_cache_${companyId}`;
     const now = Date.now();
+    const TTL = 7200000; // 2 hours
     
-    if (this._recentVouchersCache[cacheKey] && (now - this._recentVouchersCache[cacheKey].timestamp < 30000)) {
-      return this._recentVouchersCache[cacheKey].data;
+    if (!forceRefresh) {
+      if (this._recentVouchersCache[cacheKey] && (now - this._recentVouchersCache[cacheKey].timestamp < TTL)) {
+        return this._recentVouchersCache[cacheKey].data;
+      }
+      
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (now - parsed.timestamp < TTL) {
+            return parsed.data;
+          }
+        } catch (e) {
+          localStorage.removeItem(storageKey);
+        }
+      }
     }
 
     try {
@@ -2523,7 +2575,7 @@ export const erpService: any = {
         collection(db, 'vouchers'), 
         where('companyId', '==', companyId),
         orderBy('v_date', 'desc'),
-        limit(limitCount)
+        limit(Math.min(limitCount, 10))
       );
       const snapshot = await getDocs(q);
       const vouchers = snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
@@ -2533,7 +2585,6 @@ export const erpService: any = {
       const vIds = vouchers.map(v => v.id);
       const allInv: any[] = [];
       
-      // Only fetch inventory for these specific vouchers
       for (let i = 0; i < vIds.length; i += 30) {
         const chunk = vIds.slice(i, i + 30);
         const invSnap = await getDocs(query(
@@ -2554,9 +2605,10 @@ export const erpService: any = {
       });
 
       this._recentVouchersCache[cacheKey] = { data: result, timestamp: now };
+      localStorage.setItem(storageKey, JSON.stringify({ data: result, timestamp: now }));
       return result;
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'recent_vouchers');
+      console.error('Error getting recent vouchers:', error);
       return [];
     }
   },

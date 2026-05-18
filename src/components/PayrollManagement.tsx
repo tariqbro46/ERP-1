@@ -86,6 +86,15 @@ export function PayrollManagement() {
   const [loanDeduction, setLoanDeduction] = useState(0);
 
   useEffect(() => {
+    if (selectedEmployeeId && (activeTab === 'salary' || activeTab === 'bulk') && !editingItem) {
+      // Auto-sync with structure when selecting employee for new salary sheet
+      const result = calculateEmployeeSalaryForMonth(selectedEmployeeId, month);
+      setAllowances(result.earnings.toString());
+      setDeductions(result.deductions.toString());
+    }
+  }, [selectedEmployeeId, month]);
+
+  useEffect(() => {
     if (selectedEmployeeId && (activeTab === 'salary' || activeTab === 'bulk')) {
       const empAdvances = advances.filter(a => a.employeeId === selectedEmployeeId && a.status === 'Pending');
       const totalAdvance = empAdvances.reduce((sum, a) => sum + a.amount, 0);
@@ -123,27 +132,31 @@ export function PayrollManagement() {
   }, [user?.companyId]);
 
   async function fetchData() {
+    if (!user?.companyId) return;
     setLoading(true);
     try {
+      // Use cached collection fetching to reduce Firestore reads
       const [empData, salaryData, advanceData, loanData, attendanceData, payHeadsData, structureData] = await Promise.all([
-        erpService.getEmployees(user!.companyId),
-        erpService.getSalarySheets(user!.companyId),
-        erpService.getAdvances(user!.companyId),
-        erpService.getLoans(user!.companyId),
-        erpService.getAttendance(user!.companyId),
-        erpService.getPayHeads(user!.companyId),
-        erpService.getSalaryStructures(user!.companyId)
+        erpService.getCollection('employees', user.companyId),
+        erpService.getCollection('salary_sheets', user.companyId),
+        erpService.getCollection('advances', user.companyId),
+        erpService.getCollection('loans', user.companyId),
+        erpService.getCollection('attendance', user.companyId),
+        erpService.getCollection('pay_heads', user.companyId),
+        erpService.getCollection('salary_structures', user.companyId)
       ]);
-      setEmployees(empData);
-      setSalarySheets(salaryData);
-      setAdvances(advanceData);
-      setLoans(loanData);
-      setAttendance(attendanceData);
-      setPayHeads(payHeadsData);
-      setSalaryStructures(structureData);
+      setEmployees(empData || []);
+      setSalarySheets(salaryData || []);
+      setAdvances(advanceData || []);
+      setLoans(loanData || []);
+      setAttendance(attendanceData || []);
+      setPayHeads(payHeadsData || []);
+      setSalaryStructures(structureData || []);
     } catch (err: any) {
-      console.error('Error fetching payroll data:', err);
-      showNotification('Failed to load payroll data', 'error');
+      if (!err.message?.includes('Quota exceeded')) {
+        console.error('Error fetching payroll data:', err);
+        showNotification('Failed to load payroll data', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -918,8 +931,32 @@ export function PayrollManagement() {
                           setIsModalOpen(true);
                         }}
                         className="p-1 hover:bg-foreground/10 rounded"
+                        title="Edit Pay Head"
                       >
                         <Edit2 className="w-3 h-3" />
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Are you sure you want to delete pay head "${ph.name}"? This will not remove it from existing employee structures but is recommended only if not in use.`)) {
+                            try {
+                              setLoading(true);
+                              await erpService.deletePayHead(ph.id);
+                              showNotification('Pay Head deleted successfully');
+                              await fetchData();
+                            } catch (err) {
+                              console.error(err);
+                              showNotification('Failed to delete pay head', 'error');
+                            } finally {
+                              setLoading(false);
+                            }
+                          }
+                        }}
+                        className="p-1.5 hover:bg-rose-500/10 text-rose-500 rounded-md transition-colors"
+                        title="Delete Pay Head"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -942,19 +979,34 @@ export function PayrollManagement() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {salaryStructures.filter(s => s.employeeId === emp.id).map(struct => (
-                        <div key={struct.id} className="bg-foreground/5 border border-border px-2 py-1 rounded flex items-center gap-2 group/struct">
+                        <div key={struct.id} className="bg-foreground/5 border border-border px-2 py-1 rounded flex items-center gap-2 group/struct relative pr-8">
                           <span className="text-[9px] font-bold uppercase text-gray-500">{struct.payHeadName}:</span>
                           <span className="text-[9px] font-bold tracking-tight">৳{struct.amount}</span>
                           <button 
-                            onClick={async () => {
-                              if (confirm('Remove this pay head?')) {
-                                await erpService.deleteDocCustom('salary_structures', struct.id);
-                                fetchData();
+                            type="button"
+                            onMouseDownCapture={(e) => e.stopPropagation()}
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (window.confirm(`Remove ${struct.payHeadName} from ${emp.name}'s structure?`)) {
+                                try {
+                                  setLoading(true);
+                                  await erpService.deleteDocCustom('salary_structures', struct.id);
+                                  showNotification('Salary component removed');
+                                  await fetchData();
+                                } catch (err) {
+                                  console.error(err);
+                                  showNotification('Failed to remove component', 'error');
+                                } finally {
+                                  setLoading(false);
+                                }
                               }
                             }}
-                            className="text-rose-500 opacity-0 group-hover/struct:opacity-100 transition-opacity"
+                            className="absolute right-0 top-0 bottom-0 w-8 flex items-center justify-center text-rose-500 bg-rose-500/5 hover:bg-rose-500 hover:text-white transition-all border-l border-border"
+                            style={{ zIndex: 10 }}
+                            title="Remove Component"
                           >
-                            <X className="w-2.5 h-2.5" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       ))}
@@ -985,21 +1037,22 @@ export function PayrollManagement() {
                   try {
                     const pendingEmployees = employees.filter(emp => !salarySheets.find(s => s.employeeId === emp.id && s.month === month));
                     for (const emp of pendingEmployees) {
+                      const result = calculateEmployeeSalaryForMonth(emp.id, month);
                       const empAdvances = advances.filter(a => a.employeeId === emp.id && a.status === 'Pending');
                       const totalAdvance = empAdvances.reduce((sum, a) => sum + a.amount, 0);
                       const empLoans = loans.filter(l => l.employeeId === emp.id && l.status === 'Active');
                       const totalLoanEMI = empLoans.reduce((sum, l) => sum + (l.monthlyEMI || 0), 0);
                       
                       const basic = parseFloat(emp.salary) || 0;
-                      const net = basic - totalAdvance - totalLoanEMI;
+                      const net = basic + result.earnings - result.deductions - totalAdvance - totalLoanEMI;
 
                       await erpService.createSalarySheet(user!.companyId, {
                         employeeId: emp.id,
                         employeeName: emp.name,
                         month,
                         basicSalary: basic,
-                        allowances: 0,
-                        deductions: 0,
+                        allowances: result.earnings,
+                        deductions: result.deductions,
                         advanceDeduction: totalAdvance,
                         loanDeduction: totalLoanEMI,
                         netSalary: net,

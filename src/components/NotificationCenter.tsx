@@ -20,25 +20,28 @@ export default function NotificationCenter({ position = 'top' }: { position?: 't
   useEffect(() => {
     if (!user) return;
     
-    setLoading(true);
-    const unsubscribe = erpService.subscribeToNotifications(
-      user.uid, 
-      user.companyId, 
-      isSuperAdmin,
-      (data) => {
-        if (data.length > notifications.length && notifications.length > 0) {
-          const newOnes = data.filter(n => !notifications.find(old => old.id === n.id));
-          if (newOnes.some(n => !n.readBy?.includes(user.uid))) {
-            setHasNew(true);
-          }
-        }
+    const loadInitial = async () => {
+      setLoading(true);
+      try {
+        const data = await erpService.getNotifications(
+          user.uid, 
+          user.companyId, 
+          isSuperAdmin
+        );
         setNotifications(data);
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+      } finally {
         setLoading(false);
       }
-    );
+    };
 
-    return () => unsubscribe();
-  }, [user, notifications.length]);
+    loadInitial();
+    
+    // Auto-refresh every 10 minutes instead of real-time listener to save quota
+    const interval = setInterval(loadInitial, 600000);
+    return () => clearInterval(interval);
+  }, [user?.uid, user?.companyId, isSuperAdmin]);
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();

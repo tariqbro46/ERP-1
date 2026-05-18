@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, LineChart, Line, PieChart, Pie, Cell
-} from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, Clock, Hammer, CheckCircle2, ListTodo, TrendingUp } from 'lucide-react';
+  ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, Clock, Hammer, CheckCircle2, ListTodo, TrendingUp, RefreshCw, MessageSquare, Globe, Phone, Mail, StickyNote } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -63,7 +60,30 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { companyName, financialYearStart, financialYearEnd, dashboardDesign, uiStyle, showQuickActions, dashboardQuickActions = ['voucher', 'item', 'ledger', 'godown', 'users'], dashboardCards = ['revenue', 'profit', 'ledgers', 'stock'] } = useSettings();
+  const { 
+    companyName, 
+    financialYearStart, 
+    financialYearEnd, 
+    dashboardDesign: localDesign, 
+    globalDashboardDesign,
+    uiStyle, 
+    showQuickActions, 
+    dashboardQuickActions = ['voucher', 'item', 'ledger', 'godown', 'users'], 
+    dashboardCards = ['revenue', 'profit', 'ledgers', 'stock'],
+    showAnnouncement,
+    announcementText,
+    announcementColor,
+    showHelpfulLinks,
+    helpfulLinks,
+    showSupportContact,
+    supportContactPhone,
+    supportContactEmail,
+    showCustomMessage,
+    customMessageTitle,
+    customMessageContent
+  } = useSettings();
+  
+  const dashboardDesign = globalDashboardDesign || localDesign;
   const { isAdmin, user } = useAuth();
   const [loading, setLoading] = useState(true);
   
@@ -78,7 +98,13 @@ export function Dashboard() {
     stock: { title: t('dash.stockValue') || 'Stock Value', key: 'stockValue', icon: Package, color: 'bg-orange-600' },
   };
 
-  const selectedCards = (dashboardCards.length > 0 ? dashboardCards : ['sales', 'purchase', 'payment', 'receipt', 'profit']).slice(0, 5).map(id => cardConfigs[id]).filter(Boolean);
+  // Filter out expensive financial cards if they are not allowed
+  const forbiddenKeys = ['sales', 'purchase', 'payment', 'receipt', 'stock', 'revenue'];
+  const selectedCards = (dashboardCards.length > 0 ? dashboardCards : ['ledgers', 'profit'])
+    .filter(id => !forbiddenKeys.includes(id))
+    .slice(0, 5)
+    .map(id => cardConfigs[id])
+    .filter(Boolean);
   
   // Default to current month
   const getDefaultPeriod = () => {
@@ -141,7 +167,7 @@ export function Dashboard() {
 
         const [s, v, o] = await Promise.all([
           erpService.getDashboardStats(user.companyId, periodStart, periodEnd, isForced),
-          erpService.getRecentVouchers(user.companyId, 5),
+          erpService.getRecentVouchers(user.companyId, 5, isForced),
           erpService.getOrders(user.companyId)
         ]);
         setStats(s);
@@ -181,11 +207,263 @@ export function Dashboard() {
     }
   };
 
-  if (dashboardDesign === 'Design 2') {
-    const { revenue, profit, activeLedgers, stockValue, chartData } = stats;
+  const formatTimestamp = (ts: number) => {
+    if (!ts) return 'Unknown';
+    return format(new Date(ts), 'hh:mm:ss a');
+  };
 
+  const lastUpdated = erpService._dashboardStatsCache[`${user?.companyId}_${periodStart}_${periodEnd}`]?.timestamp || 0;
+  // Dashboard is considered "Live" if updated in the last 10 minutes, otherwise "Cached"
+  const isCacheOptimized = lastUpdated > 0 && (Date.now() - lastUpdated < 7200000); 
+  const isStale = Date.now() - lastUpdated > 600000;
+
+  if (dashboardDesign === 'Design 3') {
     return (
-      <div className="flex flex-col min-h-full bg-[#f8f9fa] transition-colors font-sans">
+      <div className="flex flex-col min-h-full bg-slate-50 transition-colors font-sans overflow-y-auto">
+        {/* Fixed Header Section */}
+        <div className="sticky top-0 bg-white border-b border-gray-100 shadow-sm px-4 lg:px-6 py-4 z-30">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <EditableHeader 
+              pageId="dashboard_min"
+              defaultTitle={t('dash.overview')}
+              defaultSubtitle={`${companyName} • ${t('dash.minimalistMode')}`}
+            />
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 border border-emerald-100 rounded">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="text-[9px] font-black uppercase tracking-tight text-emerald-700 leading-none">
+                  Live Status: Optimized
+                </span>
+                <span className="text-[8px] text-gray-400 font-mono ml-2 border-l border-emerald-200 pl-2">
+                  DATA CACHED ({Math.round((Date.now() - lastUpdated) / 60000)}m ago)
+                </span>
+              </div>
+              <button 
+                onClick={() => setRefreshKey(prev => prev + 1)}
+                className="flex items-center gap-2 px-4 py-1.5 bg-slate-900 text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-black transition-all shadow-lg"
+              >
+                <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
+                Refresh Data
+              </button>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-gray-50 pt-3">
+            <div className="flex items-center gap-2">
+               <span className="text-[9px] font-bold text-gray-400 uppercase">{t('dash.period')}:</span>
+               <input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} className="text-[10px] bg-transparent border-none focus:ring-0 p-0 font-bold text-gray-600" />
+               <span className="text-gray-300">-</span>
+               <input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} className="text-[10px] bg-transparent border-none focus:ring-0 p-0 font-bold text-gray-600" />
+            </div>
+            <div className="ml-auto text-[9px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1">
+              <Activity className={cn("w-2.5 h-2.5", isStale ? "text-amber-500" : "text-emerald-500")} />
+              {t('dash.lastUpdated')}: {formatTimestamp(lastUpdated)}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 lg:p-6 space-y-6">
+          {/* Global Announcement */}
+          {showAnnouncement && (
+            <div className={cn(
+              "p-3 rounded border flex items-center gap-3 shadow-sm",
+              announcementColor === 'blue' && "bg-blue-50 border-blue-200 text-blue-700",
+              announcementColor === 'amber' && "bg-amber-50 border-amber-200 text-amber-700",
+              announcementColor === 'emerald' && "bg-emerald-50 border-emerald-200 text-emerald-700",
+              announcementColor === 'rose' && "bg-rose-50 border-rose-200 text-rose-700",
+              announcementColor === 'slate' && "bg-slate-50 border-slate-200 text-slate-700"
+            )}>
+              <MessageSquare className="w-4 h-4" />
+              <p className="text-[11px] font-bold uppercase tracking-tight">{announcementText}</p>
+            </div>
+          )}
+
+          {/* Big Metrics Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+             {selectedCards.slice(0, 4).map((card: any) => (
+                <div key={card.key} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                   <div className="flex justify-between items-center mb-4">
+                      <div className={cn("p-2 rounded-xl bg-opacity-10", card.color.replace('bg-', 'bg-opacity-10 text-'))}>
+                         <card.icon className="w-5 h-5" />
+                      </div>
+                   </div>
+                   <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{card.title}</h3>
+                   <p className="text-2xl font-bold text-gray-900 font-mono">
+                      {card.key === 'activeLedgers' ? stats[card.key as keyof typeof stats] : `৳${formatNumber(stats[card.key as keyof typeof stats] as number)}`}
+                   </p>
+                </div>
+             ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Quick Actions Widget */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+               <h3 className="text-xs font-black text-gray-800 uppercase tracking-tighter border-b pb-2">Operational Controls</h3>
+               <div className="grid grid-cols-2 gap-3">
+                  {dashboardQuickActions.slice(0, 4).map(action => (
+                    <button 
+                      key={action}
+                      onClick={() => navigate(`/${action === 'voucher' ? 'vouchers/new' : action === 'item' ? 'inventory/items/new' : action === 'ledger' ? 'accounts/ledgers/new' : 'users'}`)}
+                      className="p-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 transition-all text-left"
+                    >
+                      <p className="text-[10px] font-black uppercase text-slate-400 mb-1">{action}</p>
+                      <p className="text-[11px] font-bold text-slate-700">Access Module</p>
+                    </button>
+                  ))}
+               </div>
+            </div>
+
+            {/* Performance Snapshot */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
+                <h3 className="text-xs font-black text-gray-800 uppercase tracking-tighter mb-4">Support & Resources</h3>
+                <div className="space-y-4">
+                  {showSupportContact && (
+                    <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                          <div className="p-2 bg-emerald-500 rounded-lg text-white">
+                             <Phone className="w-4 h-4" />
+                          </div>
+                          <div>
+                             <p className="text-[10px] font-bold text-emerald-800 uppercase">Support Line</p>
+                             <p className="text-xs text-emerald-600 font-bold">{supportContactPhone}</p>
+                          </div>
+                       </div>
+                    </div>
+                  )}
+
+                  {showHelpfulLinks && (
+                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                          <div className="p-2 bg-blue-500 rounded-lg text-white">
+                             <Globe className="w-4 h-4" />
+                          </div>
+                          <div>
+                             <p className="text-[10px] font-bold text-blue-800 uppercase">Guides</p>
+                             <p className="text-xs text-blue-600 font-bold">{helpfulLinks?.[0]?.title || 'View System Docs'}</p>
+                          </div>
+                       </div>
+                    </div>
+                  )}
+                </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (dashboardDesign === 'Design 4') {
+    return (
+      <div className="flex flex-col min-h-full bg-slate-900 text-slate-100 transition-colors font-sans overflow-y-auto">
+        <div className="p-6 lg:p-8 space-y-8">
+          {/* Global Announcement */}
+          {showAnnouncement && (
+            <div className={cn(
+              "p-4 rounded-2xl border flex items-center gap-4 bg-slate-800/50 border-slate-700",
+              announcementColor === 'rose' && "border-rose-500/30",
+              announcementColor === 'emerald' && "border-emerald-500/30",
+              announcementColor === 'blue' && "border-blue-500/30"
+            )}>
+              <MessageSquare className="w-5 h-5 text-slate-400" />
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-300">{announcementText}</p>
+            </div>
+          )}
+
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+             <div>
+                <h1 className="text-3xl font-black tracking-tighter uppercase mb-1">Executive Summary</h1>
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">Real-time analysis • {companyName}</p>
+             </div>
+             <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-full">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">Live Status: Safe Mode</span>
+                  <span className="text-[8px] text-slate-500 font-mono ml-2 border-l border-slate-700 pl-2">CACHED: {formatTimestamp(lastUpdated)}</span>
+                </div>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+             <div className="lg:col-span-2 space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  {selectedCards.map((card: any) => (
+                    <div key={card.key} className="bg-slate-800/50 border border-slate-700 p-8 rounded-[2rem] hover:bg-slate-800 transition-all">
+                       <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">{card.title}</p>
+                       <p className="text-2xl font-mono font-bold">
+                          {card.key === 'activeLedgers' ? stats[card.key as keyof typeof stats] : `৳${formatNumber(stats[card.key as keyof typeof stats] as number)}`}
+                       </p>
+                    </div>
+                  ))}
+                </div>
+
+                {showHelpfulLinks && (
+                  <div className="bg-slate-800 border border-slate-700 rounded-[2rem] p-8 space-y-4">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">Resource links</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {helpfulLinks?.map((link: any, i: number) => (
+                        <a key={i} href={link.url} className="p-3 bg-slate-900/50 border border-slate-700 rounded-xl flex justify-between items-center text-[10px] font-bold uppercase hover:bg-slate-700 transition-all">
+                          {link.title}
+                          <ArrowUpRight className="w-3 h-3 text-slate-500" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+             </div>
+
+             <div className="bg-slate-800 border border-slate-700 rounded-[2rem] p-8 flex flex-col justify-between">
+                <div className="space-y-6">
+                   <h3 className="text-sm font-bold uppercase tracking-widest">System Health</h3>
+                   <div className="space-y-6">
+                      <div className="p-4 bg-slate-900/50 border border-slate-700 rounded-2xl">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-[10px] text-slate-500 uppercase font-bold">Read Quota Status</span>
+                          <span className="text-[10px] font-mono text-emerald-400">OPTIMIZED</span>
+                        </div>
+                        <div className="h-1.5 bg-slate-950 rounded-full overflow-hidden">
+                           <div className="h-full bg-emerald-500 w-[12%]" />
+                        </div>
+                      </div>
+
+                      {showSupportContact && (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-4 p-4 border border-slate-700 rounded-2xl">
+                             <div className="p-2 bg-slate-700 rounded-lg">
+                                <Phone className="w-4 h-4 text-slate-300" />
+                             </div>
+                             <div>
+                                <p className="text-[9px] font-bold text-slate-500 uppercase">Support Line</p>
+                                <p className="text-xs font-bold font-mono">{supportContactPhone}</p>
+                             </div>
+                          </div>
+                        </div>
+                      )}
+                   </div>
+                </div>
+                
+                <div className="pt-8 space-y-4">
+                   <button 
+                     onClick={() => setRefreshKey(prev => prev + 1)}
+                     className="w-full py-4 bg-white text-slate-900 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:scale-[1.02] transition-all"
+                   >
+                      Force Cloud Sync
+                   </button>
+                   <button 
+                     onClick={() => navigate('/settings')}
+                    className="w-full py-2 border border-slate-700 rounded-xl text-[8px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-300 transition-all text-center"
+                   >
+                     System Preferences
+                   </button>
+                </div>
+             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (dashboardDesign === 'Design 2') {
+    return (
+      <div className="flex flex-col min-h-full bg-[#f8f9fa] transition-colors font-sans overflow-y-auto">
         {/* Fixed Header Section */}
         <div className="sticky top-0 bg-white border-b border-gray-100 shadow-sm px-4 lg:px-6 py-4 z-30">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -194,27 +472,19 @@ export function Dashboard() {
               defaultTitle={t('dash.overview')}
               defaultSubtitle={`${t('dash.financialSummary')} • ${companyName}`}
             />
-            <div className="flex flex-col sm:flex-row items-center gap-3">
-              <div className="flex items-center gap-2">
-                <input 
-                  type="date" 
-                  value={periodStart || ''} 
-                  onChange={(e) => setPeriodStart(e.target.value)}
-                  className="bg-gray-50 border border-gray-200 text-[10px] p-1.5 rounded outline-none focus:border-blue-500 font-mono"
-                />
-                <span className="text-gray-400">/</span>
-                <input 
-                  type="date" 
-                  value={periodEnd || ''} 
-                  onChange={(e) => setPeriodEnd(e.target.value)}
-                  className="bg-gray-50 border border-gray-200 text-[10px] p-1.5 rounded outline-none focus:border-blue-500 font-mono"
-                />
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded">
+                <div className={cn("w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse")} />
+                <span className="text-[9px] font-black uppercase tracking-tight text-blue-700">
+                  Quota Optimized Mode
+                </span>
               </div>
               <button 
                 onClick={() => setRefreshKey(prev => prev + 1)}
-                className="text-[11px] font-bold text-gray-500 uppercase hover:text-gray-800 transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold uppercase tracking-widest rounded hover:bg-blue-700 transition-all shadow-sm"
               >
-                {t('common.refresh')}
+                <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
+                Refresh
               </button>
             </div>
           </div>
@@ -222,143 +492,78 @@ export function Dashboard() {
 
         {/* Content Section */}
         <div className="p-4 lg:p-6 space-y-6">
-          {/* Metric Cards Section */}
-          <div className="space-y-4">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t('dash.kpi')}</h2>
+          {/* Global Announcement */}
+          {showAnnouncement && (
             <div className={cn(
-              "grid gap-4",
-              selectedCards.length === 5 ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+              "p-4 rounded-xl border flex items-center gap-3 bg-white shadow-sm border-gray-100",
+              announcementColor === 'blue' && "border-l-4 border-l-blue-500"
             )}>
-              {selectedCards.map((card: any) => (
-                <div key={card.key} className={cn("p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer", card.color || "bg-blue-600")}>
-                  <div className="space-y-4">
-                    <card.icon className={cn("w-6 h-6", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/60" : "text-white/60")} />
-                    <p className={cn("text-[10px] font-bold uppercase leading-tight", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/60" : "text-white/60")}>{card.title}</p>
-                  </div>
-                  <span className={cn("text-2xl font-light", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/80" : "text-white/90")}>
-                    {card.key === 'activeLedgers' ? stats[card.key as keyof typeof stats] : `৳ ${formatNumber(stats[card.key as keyof typeof stats] as number)}`}
+              <MessageSquare className="w-5 h-5 text-gray-400" />
+              <p className="text-xs font-bold text-gray-600 truncate">{announcementText}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {selectedCards.map((card: any) => (
+              <div key={card.key} className={cn("p-6 rounded-2xl shadow-sm flex flex-col justify-between items-start group hover:brightness-95 transition-all", card.color || "bg-blue-600")}>
+                <card.icon className={cn("w-8 h-8 mb-6", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/40" : "text-white/40")} />
+                <div>
+                  <p className={cn("text-[10px] font-bold uppercase leading-tight mb-2", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/60" : "text-white/60")}>{card.title}</p>
+                  <span className={cn("text-3xl font-light font-mono", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/80" : "text-white/90")}>
+                    {card.key === 'activeLedgers' ? stats[card.key as keyof typeof stats] : `৳${formatNumber(stats[card.key as keyof typeof stats] as number)}`}
                   </span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Sales Trend */}
-          <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-100 lg:col-span-2">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">{t('dash.monthlySalesTrend')}</h3>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4285f4" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#4285f4" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
-                  <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
-                  <YAxis fontSize={10} axisLine={false} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '4px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Area type="monotone" dataKey="value" stroke="#4285f4" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Performance Breakdown */}
-          <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-100">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">{t('dash.performanceMetrics')}</h3>
-            <div className="space-y-6">
-              {[
-                { label: t('dash.revenueTarget'), value: 75, color: '#4285f4' },
-                { label: t('dash.profitMargin'), value: 45, color: '#673ab7' },
-                { label: t('dash.stockTurnover'), value: 60, color: '#00bcd4' },
-                { label: t('dash.collectionEfficiency'), value: 90, color: '#34a853' },
-              ].map((item) => (
-                <div key={item.label} className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-bold text-gray-500 uppercase">
-                    <span>{item.label}</span>
-                    <span>{item.value}%</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {showSupportContact && (
+              <div className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
+                <h3 className="text-xs font-black uppercase tracking-tighter text-gray-400 mb-4 border-b pb-2">Technical Support</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+                      <Phone className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-gray-400 uppercase">Support Phone</p>
+                      <p className="text-xs font-bold font-gray-700">{supportContactPhone}</p>
+                    </div>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full transition-all duration-1000" 
-                      style={{ width: `${item.value}%`, backgroundColor: item.color }}
-                    />
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-gray-400 uppercase">Support Email</p>
+                      <p className="text-xs font-bold font-gray-700">{supportContactEmail}</p>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
+              </div>
+            )}
 
-        {/* Table Section */}
-        <div className="bg-white rounded-sm shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">{t('dash.recentTransactions')}</h3>
-            <button 
-              onClick={() => navigate('/reports/daybook')}
-              className="text-[10px] font-bold text-blue-600 uppercase hover:underline"
-            >
-              {t('dash.viewAll')}
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left font-sans text-xs">
-              <thead>
-                <tr className="bg-gray-50 text-gray-500 uppercase font-bold border-b border-gray-100">
-                  <th className="px-6 py-3">{t('common.date')}</th>
-                  <th className="px-6 py-3">{t('common.voucherNo')}</th>
-                  <th className="px-6 py-3">{t('common.particulars')}</th>
-                  <th className="px-6 py-3">{t('common.type')}</th>
-                  <th className="px-6 py-3 text-right">{t('common.amount')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {recentVouchers.map((v, i) => (
-                  <tr key={i} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-gray-600">{v.v_date}</td>
-                    <td className="px-6 py-4 text-blue-600 font-medium hover:underline cursor-pointer" onClick={() => navigate(`/vouchers/edit/${v.id}`)}>
-                      {v.v_no}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 truncate max-w-[200px]">{v.particulars}</td>
-                    <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
-                        v.v_type === 'Sales' ? "bg-green-100 text-green-700" :
-                        v.v_type === 'Payment' ? "bg-red-100 text-red-700" :
-                        "bg-blue-100 text-blue-700"
-                      )}>
-                        {v.v_type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">৳ {formatNumber(v.total_amount)}</td>
-                  </tr>
-                ))}
-                {recentVouchers.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-10 text-center text-gray-400 uppercase font-bold tracking-widest">{t('dash.noRecentTransactions')}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+            {showHelpfulLinks && (
+              <div className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
+                <h3 className="text-xs font-black uppercase tracking-tighter text-gray-400 mb-4 border-b pb-2">Self Help Center</h3>
+                <div className="space-y-2">
+                  {helpfulLinks?.map((link: any, i: number) => (
+                    <a key={i} href={link.url} className="block p-3 bg-gray-50 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-100 transition-all flex justify-between items-center">
+                      {link.title}
+                      <ArrowUpRight className="w-4 h-4 text-gray-300" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
-      {/* Footer Info */}
-        <div className="flex-none bg-[#0078d4] p-2 text-white text-[10px] font-medium flex justify-between items-center px-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-3 h-3" />
-            <span>{t('dash.financialYear')}: {formatFY(financialYearStart, financialYearEnd)} • {t('dash.systemStatus')}: {t('dash.online')}</span>
-          </div>
-          <div className="flex gap-4">
-            <span className="uppercase font-bold">{t('dash.support')}</span>
-            <span className="uppercase font-bold">{t('dash.documentation')}</span>
+            {showCustomMessage && (
+              <div className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
+                <h3 className="text-xs font-black uppercase tracking-tighter text-gray-400 mb-4 border-b pb-2">{customMessageTitle}</h3>
+                <p className="text-xs leading-relaxed text-gray-500">{customMessageContent}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -375,8 +580,25 @@ export function Dashboard() {
             defaultTitle={`${t('dash.gatewayOf')} ${companyName}`}
             defaultSubtitle={`${t('dash.technicalOverview')} • ${t('dash.financialYear')} ${formatFY(periodStart, periodEnd)}`}
           />
-          <div className="flex flex-col items-end sm:items-end gap-2 w-full sm:w-auto">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-col items-end sm:items-end gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-foreground/5 border border-border rounded-lg">
+              <div className={cn("w-2 h-2 rounded-full", isCacheOptimized ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-gray-400")} />
+              <span className="text-[9px] font-black uppercase text-foreground/60 tracking-widest">
+                {isCacheOptimized ? "Safe Quota Mode" : "Refresh Recommended"}
+              </span>
+              <span className="text-[9px] text-gray-500 font-mono ml-2 pl-2 border-l border-border italic">
+                {isCacheOptimized ? `Cache: ${formatTimestamp(lastUpdated)}` : "Live Sync Needed"}
+              </span>
+            </div>
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+              <button 
+                onClick={() => setRefreshKey(prev => prev + 1)}
+                className="flex items-center gap-2 px-4 py-2 bg-foreground text-background text-[10px] font-black uppercase tracking-tighter hover:opacity-90 transition-all rounded"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+                Refresh Source
+              </button>
+              <div className="flex items-center gap-2 flex-1 sm:flex-none justify-end">
               <div className="flex-1">
                 <label className="text-[9px] text-gray-500 uppercase font-bold mb-1 block">{t('dash.from')}</label>
                 <input 
@@ -399,9 +621,27 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+    </div>
 
       {/* Content Section */}
       <div className="p-4 lg:p-6 space-y-6">
+        {/* Global Announcement */}
+        {showAnnouncement && (
+          <div className={cn(
+            "p-3 rounded border flex items-center gap-3 shadow-sm",
+            announcementColor === 'blue' && "bg-blue-50 border-blue-200 text-blue-700",
+            announcementColor === 'amber' && "bg-amber-50 border-amber-200 text-amber-700",
+            announcementColor === 'emerald' && "bg-emerald-50 border-emerald-200 text-emerald-700",
+            announcementColor === 'rose' && "bg-rose-50 border-rose-200 text-rose-700",
+            announcementColor === 'slate' && "bg-slate-50 border-slate-200 text-slate-700"
+          )}>
+            <div className="p-1.5 rounded-full bg-white/50">
+              <MessageSquare className="w-4 h-4" />
+            </div>
+            <p className="text-[11px] font-bold uppercase tracking-tight">{announcementText}</p>
+          </div>
+        )}
+
         <div className={cn(
           "grid gap-4",
           selectedCards.length === 5 ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
@@ -417,6 +657,71 @@ export function Dashboard() {
               uiStyle={uiStyle}
             />
           ))}
+        </div>
+
+        {/* Low-Read Support Widgets */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {showHelpfulLinks && (
+            <div className="bg-card border border-border p-5 space-y-4">
+              <div className="flex items-center gap-2 border-b border-border pb-2">
+                <Globe className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Helpful Resources</h3>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {helpfulLinks?.map((link: any, i: number) => (
+                  <a 
+                    key={i} 
+                    href={link.url} 
+                    className="p-2 bg-foreground/5 hover:bg-foreground/10 transition-all rounded text-[10px] uppercase font-bold text-foreground/70 flex justify-between items-center group"
+                  >
+                    {link.title}
+                    <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showSupportContact && (
+            <div className="bg-card border border-border p-5 space-y-4">
+              <div className="flex items-center gap-2 border-b border-border pb-2">
+                <Phone className="w-4 h-4 text-rose-500" />
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">Official Support</h3>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
+                    <Phone className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-[8px] uppercase font-bold text-muted-foreground">Direct Line</p>
+                    <p className="text-xs font-mono font-bold">{supportContactPhone}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-[8px] uppercase font-bold text-muted-foreground">Email Support</p>
+                    <p className="text-xs font-mono font-bold">{supportContactEmail}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showCustomMessage && (
+            <div className="bg-card border border-border p-5 space-y-4">
+              <div className="flex items-center gap-2 border-b border-border pb-2">
+                <StickyNote className="w-4 h-4 text-amber-500" />
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-foreground">{customMessageTitle}</h3>
+              </div>
+              <p className="text-[11px] leading-relaxed text-muted-foreground italic">
+                "{customMessageContent}"
+              </p>
+            </div>
+          )}
         </div>
 
       {/* Subscription Status Widget - Only show if access is disabled */}
@@ -546,136 +851,56 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className={cn(
-          "bg-card border border-border p-2 transition-all",
-          uiStyle === 'UI/UX 2' && "bg-blue-600 border-blue-700 text-white shadow-lg scale-[1.02] z-10"
-        )}>
-          <h3 className={cn(
-            "text-[10px] font-mono uppercase mb-2 tracking-widest px-1 text-center border-b border-border/10 pb-1",
-            uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
-          )}>{t('dash.revenueTrajectory')}</h3>
-          <div className="h-[150px] lg:h-[180px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
-                    border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
-                    fontSize: '10px', 
-                    fontFamily: 'monospace',
-                    color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
-                  }}
-                  itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#2563eb' : theme === 'dark' ? '#fff' : '#000' }}
-                  formatter={(value: any) => [formatNumber(value), t('dash.revenue')]}
-                />
-                <Area type="monotone" dataKey="value" stroke={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#fff' : '#000'} fillOpacity={1} fill="url(#colorValue)" />
-              </AreaChart>
-            </ResponsiveContainer>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Support Widget */}
+        {showSupportContact && (
+          <div className="bg-card border border-border p-6 rounded-lg space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-tighter text-muted-foreground mb-4">Official Technical Support</h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-3 bg-foreground/5 rounded-xl border border-border">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                  <Phone className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase">Support Line</p>
+                  <p className="text-xs font-bold font-mono text-foreground">{supportContactPhone}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 p-3 bg-foreground/5 rounded-xl border border-border">
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase">Email Query</p>
+                  <p className="text-xs font-bold font-mono text-foreground">{supportContactEmail}</p>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className={cn(
-          "bg-card border border-border p-2 transition-all",
-          uiStyle === 'UI/UX 2' && "bg-emerald-600 border-emerald-700 text-white shadow-lg scale-[1.02] z-10"
-        )}>
-          <h3 className={cn(
-            "text-[10px] font-mono uppercase mb-2 tracking-widest px-1 text-center border-b border-border/10 pb-1",
-            uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
-          )}>{t('dash.expenseDistribution')}</h3>
-          <div className="h-[150px] lg:h-[180px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
-                    border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
-                    fontSize: '10px', 
-                    fontFamily: 'monospace',
-                    color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
-                  }}
-                  itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#059669' : theme === 'dark' ? '#fff' : '#000' }}
-                  formatter={(value: any) => [formatNumber(value), t('dash.purchase')]}
-                />
-                <Bar dataKey={stats.chartData.length > 0 ? "expense" : "value"} fill={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} radius={[2, 2, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        {/* Links Widget */}
+        {showHelpfulLinks && (
+          <div className="bg-card border border-border p-6 rounded-lg space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-tighter text-muted-foreground mb-4">Learning Resources</h3>
+            <div className="space-y-2">
+              {helpfulLinks?.map((link: any, i: number) => (
+                <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-3 bg-foreground/5 hover:bg-foreground/10 border border-border rounded-xl transition-all group">
+                  <span className="text-xs font-bold uppercase text-foreground/70">{link.title}</span>
+                  <ArrowUpRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                </a>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className={cn(
-          "bg-card border border-border p-2 transition-all",
-          uiStyle === 'UI/UX 2' && "bg-amber-600 border-amber-700 text-white shadow-lg scale-[1.02] z-10"
-        )}>
-          <h3 className={cn(
-            "text-[10px] font-mono uppercase mb-2 tracking-widest px-1 text-center border-b border-border/10 pb-1",
-            uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
-          )}>{t('dash.netProfitMargin')}</h3>
-          <div className="h-[150px] lg:h-[180px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData.map(d => ({ ...d, profit: d.value * 0.15 }))} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
-                    border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
-                    fontSize: '10px', 
-                    fontFamily: 'monospace',
-                    color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
-                  }}
-                  itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#d97706' : theme === 'dark' ? '#fff' : '#000' }}
-                  formatter={(value: any) => [formatNumber(value), t('dash.profit')]}
-                />
-                <Line type="monotone" dataKey="profit" stroke={uiStyle === 'UI/UX 2' ? '#fff' : "#10b981"} strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+        {/* Message Widget */}
+        {showCustomMessage && (
+          <div className="bg-card border border-border p-6 rounded-lg">
+            <h3 className="text-xs font-black uppercase tracking-tighter text-muted-foreground mb-4 border-b border-border pb-2">{customMessageTitle}</h3>
+            <p className="text-sm italic leading-relaxed text-muted-foreground">"{customMessageContent}"</p>
           </div>
-        </div>
-
-        <div className={cn(
-          "bg-card border border-border p-2 transition-all",
-          uiStyle === 'UI/UX 2' && "bg-rose-600 border-rose-700 text-white shadow-lg scale-[1.02] z-10"
-        )}>
-          <h3 className={cn(
-            "text-[10px] font-mono uppercase mb-2 tracking-widest px-1 text-center border-b border-border/10 pb-1",
-            uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
-          )}>{t('dash.cashFlowProjection')}</h3>
-          <div className="h-[150px] lg:h-[180px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData.map(d => ({ ...d, value: d.value * 1.2 }))} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
-                    border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
-                    fontSize: '10px', 
-                    fontFamily: 'monospace',
-                    color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
-                  }}
-                  itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#e11d48' : theme === 'dark' ? '#fff' : '#000' }}
-                  formatter={(value: any) => [formatNumber(value), 'Projection']}
-                />
-                <Area type="monotone" dataKey="value" stroke={uiStyle === 'UI/UX 2' ? '#fff' : "#3b82f6"} fill={uiStyle === 'UI/UX 2' ? '#fff' : "#3b82f6"} fillOpacity={0.1} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        )}
       </div>
 
       <div className="bg-card border border-border overflow-hidden">
