@@ -311,18 +311,7 @@ export default function FounderPanel() {
     searchHelpText,
     showSearchShortcut,
     searchIconColor,
-    globalDashboardDesign,
-    showAnnouncement,
-    announcementText,
-    announcementColor,
-    showHelpfulLinks,
-    helpfulLinks,
-    showSupportContact,
-    supportContactPhone,
-    supportContactEmail,
-    showCustomMessage,
-    customMessageTitle,
-    customMessageContent
+    globalDashboardDesign
   } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
@@ -340,18 +329,6 @@ export default function FounderPanel() {
   const [localSearchHelpText, setLocalSearchHelpText] = useState(searchHelpText || '');
   const [localShowSearchShortcut, setLocalShowSearchShortcut] = useState(showSearchShortcut ?? true);
   const [localSearchIconColor, setLocalSearchIconColor] = useState(searchIconColor || '');
-
-  const [localShowAnnouncement, setLocalShowAnnouncement] = useState(showAnnouncement ?? true);
-  const [localAnnouncementText, setLocalAnnouncementText] = useState(announcementText || '');
-  const [localAnnouncementColor, setLocalAnnouncementColor] = useState(announcementColor || 'emerald');
-  const [localShowHelpfulLinks, setLocalShowHelpfulLinks] = useState(showHelpfulLinks ?? true);
-  const [localHelpfulLinks, setLocalHelpfulLinks] = useState(helpfulLinks || []);
-  const [localShowSupportContact, setLocalShowSupportContact] = useState(showSupportContact ?? true);
-  const [localSupportContactPhone, setLocalSupportContactPhone] = useState(supportContactPhone || '');
-  const [localSupportContactEmail, setLocalSupportContactEmail] = useState(supportContactEmail || '');
-  const [localShowCustomMessage, setLocalShowCustomMessage] = useState(showCustomMessage ?? false);
-  const [localCustomMessageTitle, setLocalCustomMessageTitle] = useState(customMessageTitle || '');
-  const [localCustomMessageContent, setLocalCustomMessageContent] = useState(customMessageContent || '');
 
   useEffect(() => {
     fetchData();
@@ -426,32 +403,6 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalGlassBackground(glassBackground);
   }, [glassBackground]);
-
-  useEffect(() => {
-    setLocalShowAnnouncement(showAnnouncement);
-    setLocalAnnouncementText(announcementText);
-    setLocalAnnouncementColor(announcementColor);
-    setLocalShowHelpfulLinks(showHelpfulLinks);
-    setLocalHelpfulLinks(helpfulLinks);
-    setLocalShowSupportContact(showSupportContact);
-    setLocalSupportContactPhone(supportContactPhone);
-    setLocalSupportContactEmail(supportContactEmail);
-    setLocalShowCustomMessage(showCustomMessage);
-    setLocalCustomMessageTitle(customMessageTitle);
-    setLocalCustomMessageContent(customMessageContent);
-  }, [
-    showAnnouncement, 
-    announcementText, 
-    announcementColor, 
-    showHelpfulLinks, 
-    helpfulLinks, 
-    showSupportContact, 
-    supportContactPhone, 
-    supportContactEmail, 
-    showCustomMessage, 
-    customMessageTitle, 
-    customMessageContent
-  ]);
 
   const safeFormat = (date: any, formatStr: string) => {
     try {
@@ -2805,181 +2756,50 @@ export default function FounderPanel() {
                   </div>
                 </div>
 
-                </div>
-
-              {/* Dashboard Widgets Configuration */}
-              <div className="bg-card border border-border shadow-sm rounded-2xl overflow-hidden">
-                <div className="p-4 border-b border-border bg-foreground/[0.02] flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                    <LayoutDashboard className="w-4 h-4 text-amber-500" />
+                <div className="bg-card border border-border shadow-sm rounded-2xl overflow-hidden">
+                  <div className="p-4 border-b border-border bg-foreground/[0.02] flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                      <Search className="w-4 h-4 text-purple-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground">Global Search Settings</h4>
+                      <p className="text-[10px] text-muted-foreground">Default search configuration for all companies.</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-foreground uppercase tracking-widest leading-none mb-1">Dashboard Widgets</h4>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-tighter">Read Quota Optimization & Global Controls</p>
-                  </div>
-                </div>
-                <div className="p-6 space-y-8">
-                  {/* Announcement Bar */}
-                  <div className="p-4 bg-muted/30 rounded-xl space-y-4">
+                  <div className="p-6 space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Default Placeholder</label>
+                      <input 
+                        type="text" 
+                        value={localSearchPlaceholder} 
+                        onChange={(e) => setLocalSearchPlaceholder(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Default Help Text</label>
+                      <textarea 
+                        value={localSearchHelpText} 
+                        onChange={(e) => setLocalSearchHelpText(e.target.value)}
+                        rows={2}
+                        className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
+                      />
+                    </div>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4 text-blue-500" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Global Announcement Bar</span>
-                      </div>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Show ESC Shortcut</span>
                       <button 
-                        onClick={() => setLocalShowAnnouncement(!localShowAnnouncement)}
+                        onClick={() => setLocalShowSearchShortcut(!localShowSearchShortcut)}
                         className={cn(
                           "w-10 h-5 rounded-full relative transition-colors",
-                          localShowAnnouncement ? "bg-emerald-500" : "bg-border"
+                          localShowSearchShortcut ? "bg-emerald-500" : "bg-border"
                         )}
                       >
                         <div className={cn(
                           "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
-                          localShowAnnouncement ? "right-1" : "left-1"
+                          localShowSearchShortcut ? "right-1" : "left-1"
                         )} />
                       </button>
                     </div>
-                    {localShowAnnouncement && (
-                      <div className="space-y-4 pt-2">
-                        <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-bold text-muted-foreground">Announcement Message</label>
-                          <textarea 
-                            value={localAnnouncementText} 
-                            onChange={(e) => setLocalAnnouncementText(e.target.value)}
-                            rows={2}
-                            className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none resize-none" 
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[9px] uppercase font-bold text-muted-foreground">Alert Color</label>
-                          <div className="flex gap-2">
-                            {['blue', 'amber', 'emerald', 'rose', 'slate'].map(color => (
-                              <button
-                                key={color}
-                                onClick={() => setLocalAnnouncementColor(color as any)}
-                                className={cn(
-                                  "w-6 h-6 rounded-full border-2 transition-all",
-                                  localAnnouncementColor === color ? "border-foreground scale-110" : "border-transparent",
-                                  color === 'blue' && "bg-blue-500",
-                                  color === 'amber' && "bg-amber-500",
-                                  color === 'emerald' && "bg-emerald-500",
-                                  color === 'rose' && "bg-rose-500",
-                                  color === 'slate' && "bg-slate-500"
-                                )}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Helpful Links */}
-                  <div className="p-4 bg-muted/30 rounded-xl space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Globe className="w-4 h-4 text-emerald-500" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Global Helpful Links</span>
-                      </div>
-                      <button 
-                        onClick={() => setLocalShowHelpfulLinks(!localShowHelpfulLinks)}
-                        className={cn(
-                          "w-10 h-5 rounded-full relative transition-colors",
-                          localShowHelpfulLinks ? "bg-emerald-500" : "bg-border"
-                        )}
-                      >
-                        <div className={cn(
-                          "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
-                          localShowHelpfulLinks ? "right-1" : "left-1"
-                        )} />
-                      </button>
-                    </div>
-                    {localShowHelpfulLinks && (
-                      <div className="space-y-3 pt-2">
-                        {localHelpfulLinks.map((link, idx) => (
-                          <div key={idx} className="flex gap-2 items-center">
-                            <input 
-                              type="text" 
-                              value={link.title}
-                              placeholder="Title"
-                              onChange={(e) => {
-                                const newLinks = [...localHelpfulLinks];
-                                newLinks[idx].title = e.target.value;
-                                setLocalHelpfulLinks(newLinks);
-                              }}
-                              className="flex-1 bg-background border border-border rounded-lg p-2 text-[10px] font-bold outline-none"
-                            />
-                            <input 
-                              type="text" 
-                              value={link.url}
-                              placeholder="URL"
-                              onChange={(e) => {
-                                const newLinks = [...localHelpfulLinks];
-                                newLinks[idx].url = e.target.value;
-                                setLocalHelpfulLinks(newLinks);
-                              }}
-                              className="flex-1 bg-background border border-border rounded-lg p-2 text-[10px] outline-none"
-                            />
-                            <button 
-                              onClick={() => setLocalHelpfulLinks(localHelpfulLinks.filter((_, i) => i !== idx))}
-                              className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
-                        <button 
-                          onClick={() => setLocalHelpfulLinks([...localHelpfulLinks, { title: '', url: '' }])}
-                          className="w-full py-2 border border-dashed border-border rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-foreground/5"
-                        >
-                          + Add New Link
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Support Info */}
-                  <div className="p-4 bg-muted/30 rounded-xl space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-rose-500" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Global Support Contact</span>
-                      </div>
-                      <button 
-                        onClick={() => setLocalShowSupportContact(!localShowSupportContact)}
-                        className={cn(
-                          "w-10 h-5 rounded-full relative transition-colors",
-                          localShowSupportContact ? "bg-emerald-500" : "bg-border"
-                        )}
-                      >
-                        <div className={cn(
-                          "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
-                          localShowSupportContact ? "right-1" : "left-1"
-                        )} />
-                      </button>
-                    </div>
-                    {localShowSupportContact && (
-                      <div className="grid grid-cols-2 gap-3 pt-2">
-                        <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-bold text-muted-foreground">Phone</label>
-                          <input 
-                            type="text" 
-                            value={localSupportContactPhone} 
-                            onChange={(e) => setLocalSupportContactPhone(e.target.value)}
-                            className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none" 
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[9px] uppercase font-bold text-muted-foreground">Email</label>
-                          <input 
-                            type="email" 
-                            value={localSupportContactEmail} 
-                            onChange={(e) => setLocalSupportContactEmail(e.target.value)}
-                            className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none" 
-                          />
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -3004,18 +2824,7 @@ export default function FounderPanel() {
                         searchHelpText: localSearchHelpText,
                         showSearchShortcut: localShowSearchShortcut,
                         searchIconColor: localSearchIconColor,
-                        dashboardDesign: localDashboardDesign,
-                        showAnnouncement: localShowAnnouncement,
-                        announcementText: localAnnouncementText,
-                        announcementColor: localAnnouncementColor,
-                        showHelpfulLinks: localShowHelpfulLinks,
-                        helpfulLinks: localHelpfulLinks,
-                        showSupportContact: localShowSupportContact,
-                        supportContactPhone: localSupportContactPhone,
-                        supportContactEmail: localSupportContactEmail,
-                        showCustomMessage: localShowCustomMessage,
-                        customMessageTitle: localCustomMessageTitle,
-                        customMessageContent: localCustomMessageContent
+                        dashboardDesign: localDashboardDesign
                       });
                       showNotification('System configuration updated successfully', 'success');
                     } catch (err) {

@@ -2414,22 +2414,9 @@ export const erpService: any = {
     const cacheKey = `${companyId}_${fromDate}_${toDate}`;
     const now = Date.now();
     
-    // Persistence: Try to load from localStorage first for dashboard
-    const storageKey = `dash_cache_${companyId}_${fromDate}_${toDate}`;
-    const cachedData = localStorage.getItem(storageKey);
-    const DASHBOARD_TTL = 7200000; // 2 hours as requested
+    // Increased cache TTL for dashboard stats to 30 minutes to save reads
+    const DASHBOARD_TTL = 1800000; 
     
-    if (cachedData && !forceRefresh) {
-      try {
-        const parsed = JSON.parse(cachedData);
-        if (now - parsed.timestamp < DASHBOARD_TTL) {
-          return parsed.data;
-        }
-      } catch (e) {
-        localStorage.removeItem(storageKey);
-      }
-    }
-
     if (!forceRefresh && this._dashboardStatsCache[cacheKey] && (now - this._dashboardStatsCache[cacheKey].timestamp < DASHBOARD_TTL)) {
       return this._dashboardStatsCache[cacheKey].data;
     }
@@ -2520,22 +2507,11 @@ export const erpService: any = {
 
       stats.chartData = chartData;
 
-      // Save to memory cache
+      // Save to cache
       this._dashboardStatsCache[cacheKey] = {
         data: stats,
         timestamp: now
       };
-
-      // Save to localStorage persistence
-      try {
-        const storageKey = `dash_cache_${companyId}_${fromDate}_${toDate}`;
-        localStorage.setItem(storageKey, JSON.stringify({
-          data: stats,
-          timestamp: now
-        }));
-      } catch (e) {
-        console.warn('Failed to save dashboard to localStorage:', e);
-      }
 
       return stats;
     } catch (err) {
@@ -2546,28 +2522,12 @@ export const erpService: any = {
 
   _recentVouchersCache: {} as Record<string, { data: any[], timestamp: number }>,
 
-  async getRecentVouchers(companyId: string, limitCount = 10, forceRefresh = false): Promise<any[]> {
+  async getRecentVouchers(companyId: string, limitCount = 5): Promise<any[]> {
     const cacheKey = `${companyId}_${limitCount}`;
-    const storageKey = `recent_v_cache_${companyId}`;
     const now = Date.now();
-    const TTL = 7200000; // 2 hours
     
-    if (!forceRefresh) {
-      if (this._recentVouchersCache[cacheKey] && (now - this._recentVouchersCache[cacheKey].timestamp < TTL)) {
-        return this._recentVouchersCache[cacheKey].data;
-      }
-      
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (now - parsed.timestamp < TTL) {
-            return parsed.data;
-          }
-        } catch (e) {
-          localStorage.removeItem(storageKey);
-        }
-      }
+    if (this._recentVouchersCache[cacheKey] && (now - this._recentVouchersCache[cacheKey].timestamp < 30000)) {
+      return this._recentVouchersCache[cacheKey].data;
     }
 
     try {
@@ -2575,7 +2535,7 @@ export const erpService: any = {
         collection(db, 'vouchers'), 
         where('companyId', '==', companyId),
         orderBy('v_date', 'desc'),
-        limit(Math.min(limitCount, 10))
+        limit(limitCount)
       );
       const snapshot = await getDocs(q);
       const vouchers = snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
@@ -2585,6 +2545,7 @@ export const erpService: any = {
       const vIds = vouchers.map(v => v.id);
       const allInv: any[] = [];
       
+      // Only fetch inventory for these specific vouchers
       for (let i = 0; i < vIds.length; i += 30) {
         const chunk = vIds.slice(i, i + 30);
         const invSnap = await getDocs(query(
@@ -2605,10 +2566,9 @@ export const erpService: any = {
       });
 
       this._recentVouchersCache[cacheKey] = { data: result, timestamp: now };
-      localStorage.setItem(storageKey, JSON.stringify({ data: result, timestamp: now }));
       return result;
     } catch (error) {
-      console.error('Error getting recent vouchers:', error);
+      handleFirestoreError(error, OperationType.LIST, 'recent_vouchers');
       return [];
     }
   },

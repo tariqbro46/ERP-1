@@ -104,17 +104,6 @@ interface SettingsContextType {
   showQuickActions: boolean;
   dashboardQuickActions: string[];
   dashboardCards: string[];
-  showAnnouncement: boolean;
-  announcementText: string;
-  announcementColor: 'blue' | 'amber' | 'emerald' | 'rose' | 'slate';
-  showHelpfulLinks: boolean;
-  helpfulLinks: { title: string; url: string }[];
-  showSupportContact: boolean;
-  supportContactPhone: string;
-  supportContactEmail: string;
-  showCustomMessage: boolean;
-  customMessageTitle: string;
-  customMessageContent: string;
   whatsappTemplates: WhatsAppTemplates;
   notifications: NotificationSettings;
   searchPlaceholder?: string;
@@ -202,21 +191,6 @@ const defaultSettings: SettingsContextType = {
   showQuickActions: true,
   dashboardQuickActions: ['voucher', 'item', 'ledger', 'godown', 'users'],
   dashboardCards: ['revenue', 'profit', 'ledgers', 'stock'],
-  showAnnouncement: true,
-  announcementText: 'Welcome to our new high-performance dashboard! Please use the "Refresh Source" button sparingly to save your read quota.',
-  announcementColor: 'emerald',
-  showHelpfulLinks: true,
-  helpfulLinks: [
-    { title: 'Video Tutorials', url: '#' },
-    { title: 'User Manual', url: '#' },
-    { title: 'Support Desk', url: '#' }
-  ],
-  showSupportContact: true,
-  supportContactPhone: '+880 1700-000000',
-  supportContactEmail: 'support@tallyflow.com',
-  showCustomMessage: false,
-  customMessageTitle: 'Note from Admin',
-  customMessageContent: 'This dashboard is optimized for speed and reliability.',
   whatsappTemplates: {
     Sales: "*{{companyName}}*\nSales Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
     Purchase: "*{{companyName}}*\nPurchase Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
