@@ -233,7 +233,7 @@ export function Dashboard() {
     try {
       const stored = localStorage.getItem('tallyflow_zero_bookmarks');
       return stored ? JSON.parse(stored) : [
-        { id: '1', name: 'Create General Ledger', url: '/ledgers' },
+        { id: '1', name: 'Create General Ledger', url: '/accounts' },
         { id: '2', name: 'Instant Stock Master', url: '/inventory/items' },
         { id: '3', name: 'System Setup Configs', url: '/settings' }
       ];
@@ -242,7 +242,7 @@ export function Dashboard() {
     }
   });
   const [newBmkName, setNewBmkName] = useState('');
-  const [newBmkUrl, setNewBmkUrl] = useState('/ledgers');
+  const [newBmkUrl, setNewBmkUrl] = useState('/accounts');
   const [calcCost, setCalcCost] = useState(1000);
   const [calcMarkup, setCalcMarkup] = useState(25);
 
@@ -329,20 +329,8 @@ export function Dashboard() {
             <EditableHeader 
               pageId="dashboard_command"
               defaultTitle={customWelcomeMessage}
-              defaultSubtitle={`${companyName} • Zero-Read Offline Console`}
+              defaultSubtitle={`${companyName} • Modern Management Dashboard`}
             />
-            
-            <div className="flex items-center gap-2.5">
-              <div className={cn("flex items-center gap-2 px-3 py-1.5 border rounded-lg text-[9px] font-mono uppercase tracking-widest font-black", scheme.badge)}>
-                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                Quota Saver: 100% Active
-              </div>
-
-              <div className={cn("hidden lg:flex items-center gap-1.5 px-3 py-1 border rounded-lg text-[10px] font-black uppercase tracking-wider font-mono", isDark ? "bg-cyan-950/20 border-cyan-900/40 text-cyan-400" : "bg-emerald-50/40 border-emerald-100 text-emerald-700")}>
-                <Coins className="w-3.5 h-3.5" />
-                DB Read Saved
-              </div>
-            </div>
           </div>
         </div>
 
@@ -352,19 +340,15 @@ export function Dashboard() {
           <div className={cn("p-4.5 rounded-2xl border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all", isDark ? "bg-cyan-950/10 border-cyan-500/20" : "bg-white border-border shadow-sm")}>
             <div className="flex items-start gap-3.5">
               <div className={cn("p-2.5 rounded-xl bg-opacity-10 shrink-0", isDark ? "bg-cyan-400/10 text-cyan-400" : "bg-primary/5 text-primary")}>
-                <Cpu className="w-5 h-5 animate-pulse" />
+                <ShieldCheck className="w-5 h-5 animate-pulse" />
               </div>
               <div className="space-y-0.5">
-                <p className="text-xs font-black uppercase tracking-tight text-foreground">Zero Database Reading Mode Active</p>
-                <p className="text-[11px] text-muted-foreground leading-relaxed font-mono">
-                  All metrics, bookmarks, and shortcuts are mounted locally. Absolutely no Firestore read instructions are sent to the server.
+                <p className="text-xs font-black uppercase tracking-tight text-foreground">Interactive Control Dashboard</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Welcome back! Pin key reports to your local pinboard, calculate dynamic margins, and quickly manage core accounting transaction modules.
                 </p>
               </div>
             </div>
-            
-            <span className={cn("px-3.5 py-1.5 text-[10px] font-black font-mono uppercase tracking-wider rounded-lg shrink-0 border", scheme.badge)}>
-              Read Quota Saved: YES
-            </span>
           </div>
 
           {/* Quick Workflows Grid & Control Console */}
@@ -373,7 +357,7 @@ export function Dashboard() {
             <div className="lg:col-span-2 space-y-6">
               <div className="space-y-2">
                 <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/90 pl-1">Professional Portals Workspace</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   
                   {/* Ledger & Accounts */}
                   <div className={cn("p-5 rounded-2xl border transition-all flex flex-col justify-between group", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm", scheme.cardHover)}>
@@ -384,13 +368,13 @@ export function Dashboard() {
                         </div>
                         <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">Accounting</span>
                       </div>
-                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground">Accounts & Ledgers Control</h4>
+                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground">Accounts Control</h4>
                       <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                         Establish general ledgers, monitor chart of accounts, adjust matching credits, and set opening balances.
                       </p>
                     </div>
                     <button 
-                      onClick={() => navigate('/ledgers')} 
+                      onClick={() => navigate('/accounts')} 
                       className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
                     >
                       Enter Accounts
@@ -430,7 +414,7 @@ export function Dashboard() {
                         </div>
                         <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">Inventory</span>
                       </div>
-                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground font-sans">Stock Control & Godowns</h4>
+                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground font-sans">Stock Control</h4>
                       <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                         Configure batch items, view stock value logs, track multi-godown storage allocations, and set unit definitions.
                       </p>
@@ -444,38 +428,15 @@ export function Dashboard() {
                     </button>
                   </div>
 
-                  {/* Employees & Payroll */}
-                  <div className={cn("p-5 rounded-2xl border transition-all flex flex-col justify-between group", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm", scheme.cardHover)}>
-                    <div>
-                      <div className="flex justify-between items-start mb-3.5">
-                        <div className={cn("p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500")}>
-                          <Users className="w-5 h-5" />
-                        </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">HR & Payroll</span>
-                      </div>
-                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground font-sans">Employee Payroll Center</h4>
-                      <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                        Log monthly salaries, calculate employee attendance margins, trigger advanced sheets, and generate payroll slips.
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => navigate('/payroll/employees')} 
-                      className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
-                    >
-                      Open Payroll Control
-                      <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                    </button>
-                  </div>
-
                 </div>
               </div>
 
               {/* Daybook Preview Shortcut Header & list */}
               <div className="space-y-2">
-                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/90 pl-1">Local Session Static Activity Logs</h3>
+                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/90 pl-1">Recent Activity Logs</h3>
                 <div className={cn("rounded-2xl border overflow-hidden", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm")}>
                   <div className="p-4 border-b border-border/80 flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-foreground">Sample Audit Activity Trail (Reads Bypassed)</span>
+                    <span className="text-[10px] uppercase font-bold text-foreground">Recent Transactions and Adjustments</span>
                     <button onClick={() => navigate('/reports/daybook')} className="text-[9px] font-bold uppercase tracking-wider text-primary hover:underline">Full Daybook &rarr;</button>
                   </div>
                   <div className="divide-y divide-border/60">
@@ -559,10 +520,9 @@ export function Dashboard() {
                             onChange={e => setNewBmkUrl(e.target.value)}
                             className="w-full bg-background border border-border/80 rounded-lg px-2 text-[10px] h-[24px] focus:ring-1 focus:ring-primary outline-none"
                           >
-                            <option value="/ledgers">Ledgers List</option>
+                            <option value="/accounts">Ledgers List</option>
                             <option value="/vouchers/new">Create Voucher</option>
                             <option value="/inventory/items">Items Index</option>
-                            <option value="/payroll/employees">Employees Master</option>
                             <option value="/reports">Reports System</option>
                             <option value="/settings">Settings</option>
                           </select>
