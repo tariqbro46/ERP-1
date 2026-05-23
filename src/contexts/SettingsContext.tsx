@@ -21,7 +21,7 @@ interface FeatureSettings {
 
 export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11' | 'colorful';
 export type ReportLayout = 'Layout 1' | 'Layout 2';
-export type DashboardDesign = 'Design 1' | 'Design 2' | 'Design 3' | 'Design 4';
+export type DashboardDesign = 'Design 1' | 'Design 2' | 'Design 3' | 'Design 4' | 'Design 5';
 export type UIStyle = 'UI/UX 1' | 'UI/UX 2' | 'UI/UX 3' | 'UI/UX 4';
 export type NotificationAnimationStyle = 'default' | 'neon' | 'snake' | 'liquid' | 'glitch' | 'shimmer';
 export type GlassBackground = 'default' | 'sunset' | 'ocean' | 'aurora' | 'minimal';
@@ -116,6 +116,10 @@ interface SettingsContextType {
   loaderIconStyle?: 'spinner' | 'dots' | 'circle-bar' | 'quantum';
   loaderPhrases?: string;
   loaderTheme?: 'dark' | 'light' | 'glass';
+  showQuickCalculator?: boolean;
+  showPinnedBookmarks?: boolean;
+  customControlCenterTheme?: 'emerald' | 'indigo' | 'slate' | 'cyber';
+  customWelcomeMessage?: string;
   features: FeatureSettings[];
   appFeatures: FeatureCategory[];
   subscriptionPlans: SubscriptionPlan[];
@@ -199,6 +203,10 @@ const defaultSettings: SettingsContextType = {
   loaderIconStyle: 'spinner',
   loaderPhrases: 'Connecting to server, Requesting data, Waiting for response, Almost done, Here we go!',
   loaderTheme: 'glass',
+  showQuickCalculator: true,
+  showPinnedBookmarks: true,
+  customControlCenterTheme: 'emerald',
+  customWelcomeMessage: 'Executive Command Center',
   showGoToShortcut: true,
   showQuickActions: true,
   dashboardQuickActions: ['voucher', 'item', 'ledger', 'godown', 'users'],
@@ -282,6 +290,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             loaderIconStyle: data.loaderIconStyle || prev.loaderIconStyle || 'spinner',
             loaderPhrases: data.loaderPhrases || prev.loaderPhrases || 'Connecting to server, Requesting data, Waiting for response, Almost done, Here we go!',
             loaderTheme: data.loaderTheme || prev.loaderTheme || 'glass',
+            showQuickCalculator: data.showQuickCalculator !== undefined ? data.showQuickCalculator : prev.showQuickCalculator,
+            showPinnedBookmarks: data.showPinnedBookmarks !== undefined ? data.showPinnedBookmarks : prev.showPinnedBookmarks,
+            customControlCenterTheme: data.customControlCenterTheme || prev.customControlCenterTheme || 'emerald',
+            customWelcomeMessage: data.customWelcomeMessage || prev.customWelcomeMessage || 'Executive Command Center',
             systemUiStyle: data.uiStyle || prev.systemUiStyle,
             systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
             globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign

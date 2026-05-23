@@ -319,7 +319,11 @@ export default function FounderPanel() {
     loaderBlurStyle,
     loaderIconStyle,
     loaderPhrases,
-    loaderTheme
+    loaderTheme,
+    showQuickCalculator,
+    showPinnedBookmarks,
+    customControlCenterTheme,
+    customWelcomeMessage
   } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
@@ -342,6 +346,10 @@ export default function FounderPanel() {
   const [localLoaderIconStyle, setLocalLoaderIconStyle] = useState(loaderIconStyle || 'spinner');
   const [localLoaderPhrases, setLocalLoaderPhrases] = useState(loaderPhrases || 'Connecting to server, Requesting data, Waiting for response, Almost done, Here we go!');
   const [localLoaderTheme, setLocalLoaderTheme] = useState(loaderTheme || 'glass');
+  const [localShowQuickCalculator, setLocalShowQuickCalculator] = useState(showQuickCalculator ?? true);
+  const [localShowPinnedBookmarks, setLocalShowPinnedBookmarks] = useState(showPinnedBookmarks ?? true);
+  const [localCustomControlCenterTheme, setLocalCustomControlCenterTheme] = useState(customControlCenterTheme || 'emerald');
+  const [localCustomWelcomeMessage, setLocalCustomWelcomeMessage] = useState(customWelcomeMessage || 'Executive Command Center');
   const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'branding' | 'search' | 'loader'>('general');
 
   useEffect(() => {
@@ -2554,7 +2562,11 @@ export default function FounderPanel() {
                       loaderBlurStyle: localLoaderBlurStyle,
                       loaderIconStyle: localLoaderIconStyle,
                       loaderPhrases: localLoaderPhrases,
-                      loaderTheme: localLoaderTheme
+                      loaderTheme: localLoaderTheme,
+                      showQuickCalculator: localShowQuickCalculator,
+                      showPinnedBookmarks: localShowPinnedBookmarks,
+                      customControlCenterTheme: localCustomControlCenterTheme,
+                      customWelcomeMessage: localCustomWelcomeMessage
                     });
                     showNotification('System configuration updated successfully', 'success');
                   } catch (err) {
@@ -2795,7 +2807,8 @@ export default function FounderPanel() {
                         { id: 'Design 1', label: 'Classic Design', desc: 'Full-featured with all metrics and primary charts.' },
                         { id: 'Design 2', label: 'Modern Design', desc: 'Clean, modern look with focus on KPI cards and trends.' },
                         { id: 'Design 3', label: 'Minimalist (Quota Fix)', desc: 'High-performance, minimal charts. Saves 50% reads by reducing complexity.' },
-                        { id: 'Design 4', label: 'Executive Executive', desc: 'Dark-themed, focused only on essential numbers. Lowest quota usage.' }
+                        { id: 'Design 4', label: 'Executive Executive', desc: 'Dark-themed, focused only on essential numbers. Lowest quota usage.' },
+                        { id: 'Design 5', label: 'Zero-Read Command Center', desc: 'No database queries printed on layout. Loaded locally with rich interactive workflow portals.' }
                       ].map(d => (
                         <button
                           key={d.id}
@@ -2812,6 +2825,101 @@ export default function FounderPanel() {
                         </button>
                       ))}
                     </div>
+
+                    {localDashboardDesign === 'Design 5' && (
+                      <div className="mt-4 p-4 bg-muted/20 border border-border rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center gap-2 pb-2 border-b border-border">
+                          <Palette className="w-4 h-4 text-primary" />
+                          <p className="text-[10px] font-black uppercase tracking-wider text-foreground">Zero-Read Command Center Preferences</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Welcome message */}
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Custom Splash Welcome Accent</label>
+                            <input 
+                              type="text"
+                              value={localCustomWelcomeMessage}
+                              onChange={(e) => setLocalCustomWelcomeMessage(e.target.value)}
+                              className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                              placeholder="Executive Command Center"
+                            />
+                          </div>
+
+                          {/* Theme Selection */}
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Theme Accent Profile</label>
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {[
+                                { id: 'emerald', label: 'Emerald' },
+                                { id: 'indigo', label: 'Indigo' },
+                                { id: 'slate', label: 'Slate' },
+                                { id: 'cyber', label: 'Cyber' }
+                              ].map((t) => (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => setLocalCustomControlCenterTheme(t.id as any)}
+                                  className={cn(
+                                    "py-1 px-1 border text-[9px] font-black uppercase rounded text-center transition-all",
+                                    localCustomControlCenterTheme === t.id
+                                      ? "bg-foreground text-background border-foreground font-black"
+                                      : "bg-background text-muted-foreground border-border hover:text-foreground"
+                                  )}
+                                >
+                                  {t.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-border/40">
+                          {/* Toggle Calculator */}
+                          <div className="flex items-center justify-between gap-4 p-2.5 bg-background border border-border/50 rounded-lg grow">
+                            <div>
+                              <p className="text-[10px] font-bold text-foreground leading-none">Interactive Margin Calc</p>
+                              <p className="text-[8px] text-muted-foreground uppercase mt-0.5">Show calculator tool on widget board</p>
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => setLocalShowQuickCalculator(!localShowQuickCalculator)}
+                              className={cn(
+                                "w-8 h-4.5 rounded-full relative transition-colors shrink-0",
+                                localShowQuickCalculator ? "bg-emerald-500" : "bg-border"
+                              )}
+                            >
+                              <div className={cn(
+                                "absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all",
+                                localShowQuickCalculator ? "right-0.5" : "left-0.5"
+                              )} />
+                            </button>
+                          </div>
+
+                          {/* Toggle Local Bookmarks */}
+                          <div className="flex items-center justify-between gap-4 p-2.5 bg-background border border-border/50 rounded-lg grow">
+                            <div>
+                              <p className="text-[10px] font-bold text-foreground leading-none">Local Pin Bookmarks</p>
+                              <p className="text-[8px] text-muted-foreground uppercase mt-0.5">Let users bookmark pages in LocalStorage</p>
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => setLocalShowPinnedBookmarks(!localShowPinnedBookmarks)}
+                              className={cn(
+                                "w-8 h-4.5 rounded-full relative transition-colors shrink-0",
+                                localShowPinnedBookmarks ? "bg-emerald-500" : "bg-border"
+                              )}
+                            >
+                              <div className={cn(
+                                "absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all",
+                                localShowPinnedBookmarks ? "right-0.5" : "left-0.5"
+                              )} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <p className="text-[9px] text-blue-600 bg-blue-50 p-2.5 rounded border border-blue-100 uppercase font-bold mt-3">
                       * Recommended: Use Design 3 or 4 to drastically reduce non-critical database reads and stay within your free plan limits.
                     </p>

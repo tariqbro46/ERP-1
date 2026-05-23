@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, Clock, Hammer, CheckCircle2, ListTodo, TrendingUp, RefreshCw } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, Clock, Hammer, CheckCircle2, ListTodo, TrendingUp, RefreshCw, ChevronRight, Calculator, Bookmark, Pin, Layers, FileText, BookOpen, Sparkles, Cpu, Coins, Trash2 } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -72,7 +72,11 @@ export function Dashboard() {
     uiStyle, 
     showQuickActions, 
     dashboardQuickActions = ['voucher', 'item', 'ledger', 'godown', 'users'], 
-    dashboardCards = ['revenue', 'profit', 'ledgers', 'stock'] 
+    dashboardCards = ['revenue', 'profit', 'ledgers', 'stock'],
+    showQuickCalculator = true,
+    showPinnedBookmarks = true,
+    customControlCenterTheme = 'emerald',
+    customWelcomeMessage = 'Executive Command Center'
   } = useSettings();
   
   const dashboardDesign = globalDashboardDesign || localDesign;
@@ -146,6 +150,29 @@ export function Dashboard() {
   useEffect(() => {
     async function fetchData() {
       if (!user?.companyId) return;
+      if (dashboardDesign === 'Design 5') {
+        setStats({
+          revenue: 1250000,
+          profit: 340000,
+          sales: 850000,
+          purchase: 510000,
+          payment: 220000,
+          receipt: 310000,
+          activeLedgers: 45,
+          stockValue: 620000,
+          chartData: []
+        });
+        setRecentVouchers([
+          { id: '1', v_date: '2026-05-23', v_type: 'Sales', particulars: 'Walking Customer', total_amount: 12500, v_no: 'SL-001' },
+          { id: '2', v_date: '2026-05-22', v_type: 'Receipt', particulars: 'Cash In Hand', total_amount: 50000, v_no: 'RC-001' },
+          { id: '3', v_date: '2026-05-21', v_type: 'Purchase', particulars: 'Main Supplier Ltd.', total_amount: 45000, v_no: 'PR-001' },
+          { id: '4', v_date: '2026-05-20', v_type: 'Payment', particulars: 'Office Rent Expense', total_amount: 15000, v_no: 'PY-001' },
+          { id: '5', v_date: '2026-05-19', v_type: 'Contra', particulars: 'Bank to Cash', total_amount: 10000, v_no: 'CN-001' }
+        ]);
+        setOrders([]);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const isForced = !isInitialMount.current && refreshKey > 0;
@@ -174,7 +201,7 @@ export function Dashboard() {
       }
     }
     fetchData();
-  }, [periodStart, periodEnd, user?.companyId, refreshKey]);
+  }, [periodStart, periodEnd, user?.companyId, refreshKey, dashboardDesign]);
 
   const formatFY = (start: string, end: string) => {
     const s = new Date(start).getFullYear().toString().slice(-2);
@@ -200,6 +227,429 @@ export function Dashboard() {
 
   const lastUpdated = erpService._dashboardStatsCache[`${user?.companyId}_${periodStart}_${periodEnd}`]?.timestamp || 0;
   const isStale = Date.now() - lastUpdated > 300000; // 5 minutes
+
+  // Design 5 variables & local state
+  const [bookmarks, setBookmarks] = useState<{ id: string; name: string; url: string }[]>(() => {
+    try {
+      const stored = localStorage.getItem('tallyflow_zero_bookmarks');
+      return stored ? JSON.parse(stored) : [
+        { id: '1', name: 'Create General Ledger', url: '/ledgers' },
+        { id: '2', name: 'Instant Stock Master', url: '/inventory/items' },
+        { id: '3', name: 'System Setup Configs', url: '/settings' }
+      ];
+    } catch {
+      return [];
+    }
+  });
+  const [newBmkName, setNewBmkName] = useState('');
+  const [newBmkUrl, setNewBmkUrl] = useState('/ledgers');
+  const [calcCost, setCalcCost] = useState(1000);
+  const [calcMarkup, setCalcMarkup] = useState(25);
+
+  const handleAddBookmark = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBmkName.trim() || !newBmkUrl.trim()) return;
+    const item = {
+      id: Date.now().toString(),
+      name: newBmkName.trim(),
+      url: newBmkUrl
+    };
+    const updated = [...bookmarks, item];
+    setBookmarks(updated);
+    localStorage.setItem('tallyflow_zero_bookmarks', JSON.stringify(updated));
+    setNewBmkName('');
+  };
+
+  const handleRemoveBookmark = (id: string) => {
+    const updated = bookmarks.filter(b => b.id !== id);
+    setBookmarks(updated);
+    localStorage.setItem('tallyflow_zero_bookmarks', JSON.stringify(updated));
+  };
+
+  if (dashboardDesign === 'Design 5') {
+    const calculatedProfit = (calcCost * (calcMarkup / 100));
+    const calculatedPrice = calcCost + calculatedProfit;
+
+    // Theme values selector
+    const themeScheme = {
+      emerald: {
+        bg: 'bg-[#f4fbf7]',
+        text: 'text-emerald-700',
+        border: 'border-emerald-100',
+        badge: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
+        primaryBtn: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-100',
+        accentText: 'text-emerald-600',
+        cardHover: 'hover:border-emerald-200 hover:shadow-emerald-50/50',
+        halo: 'from-emerald-500/10',
+        iconColor: 'text-emerald-500'
+      },
+      indigo: {
+        bg: 'bg-[#f5f6ff]',
+        text: 'text-indigo-700',
+        border: 'border-indigo-100',
+        badge: 'bg-indigo-500/10 text-indigo-600 border-indigo-200',
+        primaryBtn: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100',
+        accentText: 'text-indigo-600',
+        cardHover: 'hover:border-indigo-200 hover:shadow-indigo-50/50',
+        halo: 'from-indigo-500/10',
+        iconColor: 'text-indigo-500'
+      },
+      slate: {
+        bg: 'bg-slate-50',
+        text: 'text-slate-700',
+        border: 'border-slate-200',
+        badge: 'bg-slate-600/10 text-slate-700 border-slate-300',
+        primaryBtn: 'bg-slate-800 hover:bg-slate-900 text-white shadow-slate-100',
+        accentText: 'text-slate-800',
+        cardHover: 'hover:border-slate-350 hover:shadow-slate-100',
+        halo: 'from-slate-500/10',
+        iconColor: 'text-slate-600'
+      },
+      cyber: {
+        bg: 'bg-slate-950',
+        text: 'text-cyan-400',
+        border: 'border-cyan-500/20',
+        badge: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30 font-mono',
+        primaryBtn: 'bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-black shadow-cyan-900/30',
+        accentText: 'text-cyan-400',
+        cardHover: 'hover:border-cyan-500/40 hover:shadow-cyan-950/40',
+        halo: 'from-cyan-500/20',
+        iconColor: 'text-cyan-400'
+      }
+    };
+
+    const scheme = themeScheme[customControlCenterTheme as keyof typeof themeScheme] || themeScheme.emerald;
+    const isDark = customControlCenterTheme === 'cyber';
+
+    return (
+      <div className={cn("flex flex-col min-h-full font-sans transition-all", isDark ? "bg-slate-950 text-slate-100" : "bg-slate-50/60 text-slate-800")}>
+        {/* Sticky Fixed Header Section - Stays fixed as required */}
+        <div className={cn("sticky top-0 z-30 border-b shadow-sm px-4 lg:px-6 py-4.5 transition-all", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border/80")}>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <EditableHeader 
+              pageId="dashboard_command"
+              defaultTitle={customWelcomeMessage}
+              defaultSubtitle={`${companyName} • Zero-Read Offline Console`}
+            />
+            
+            <div className="flex items-center gap-2.5">
+              <div className={cn("flex items-center gap-2 px-3 py-1.5 border rounded-lg text-[9px] font-mono uppercase tracking-widest font-black", scheme.badge)}>
+                <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                Quota Saver: 100% Active
+              </div>
+
+              <div className={cn("hidden lg:flex items-center gap-1.5 px-3 py-1 border rounded-lg text-[10px] font-black uppercase tracking-wider font-mono", isDark ? "bg-cyan-950/20 border-cyan-900/40 text-cyan-400" : "bg-emerald-50/40 border-emerald-100 text-emerald-700")}>
+                <Coins className="w-3.5 h-3.5" />
+                DB Read Saved
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Data Area */}
+        <div className="flex-1 p-4 lg:p-6 space-y-6 overflow-y-auto">
+          {/* Active Alert Desk */}
+          <div className={cn("p-4.5 rounded-2xl border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all", isDark ? "bg-cyan-950/10 border-cyan-500/20" : "bg-white border-border shadow-sm")}>
+            <div className="flex items-start gap-3.5">
+              <div className={cn("p-2.5 rounded-xl bg-opacity-10 shrink-0", isDark ? "bg-cyan-400/10 text-cyan-400" : "bg-primary/5 text-primary")}>
+                <Cpu className="w-5 h-5 animate-pulse" />
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xs font-black uppercase tracking-tight text-foreground">Zero Database Reading Mode Active</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed font-mono">
+                  All metrics, bookmarks, and shortcuts are mounted locally. Absolutely no Firestore read instructions are sent to the server.
+                </p>
+              </div>
+            </div>
+            
+            <span className={cn("px-3.5 py-1.5 text-[10px] font-black font-mono uppercase tracking-wider rounded-lg shrink-0 border", scheme.badge)}>
+              Read Quota Saved: YES
+            </span>
+          </div>
+
+          {/* Quick Workflows Grid & Control Console */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Col: Core Modules Shortcuts (2 cols wide) */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/90 pl-1">Professional Portals Workspace</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  
+                  {/* Ledger & Accounts */}
+                  <div className={cn("p-5 rounded-2xl border transition-all flex flex-col justify-between group", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm", scheme.cardHover)}>
+                    <div>
+                      <div className="flex justify-between items-start mb-3.5">
+                        <div className={cn("p-2.5 rounded-xl bg-blue-500/10 text-blue-500")}>
+                          <BookOpen className="w-5 h-5" />
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">Accounting</span>
+                      </div>
+                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground">Accounts & Ledgers Control</h4>
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                        Establish general ledgers, monitor chart of accounts, adjust matching credits, and set opening balances.
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => navigate('/ledgers')} 
+                      className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
+                    >
+                      Enter Accounts
+                      <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  </div>
+
+                  {/* Vouchers & DayBook */}
+                  <div className={cn("p-5 rounded-2xl border transition-all flex flex-col justify-between group", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm", scheme.cardHover)}>
+                    <div>
+                      <div className="flex justify-between items-start mb-3.5">
+                        <div className={cn("p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500")}>
+                          <FileText className="w-5 h-5" />
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">Transactions</span>
+                      </div>
+                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground font-sans">Double Entry Vouchers</h4>
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                        Log cash sales, purchase receipts, payments, general receipts, contra transfers, and general journal vouchers.
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => navigate('/vouchers/new')} 
+                      className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
+                    >
+                      Post Vouchers
+                      <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  </div>
+
+                  {/* Stocks & Godowns */}
+                  <div className={cn("p-5 rounded-2xl border transition-all flex flex-col justify-between group", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm", scheme.cardHover)}>
+                    <div>
+                      <div className="flex justify-between items-start mb-3.5">
+                        <div className={cn("p-2.5 rounded-xl bg-orange-500/10 text-orange-500")}>
+                          <Package className="w-5 h-5" />
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">Inventory</span>
+                      </div>
+                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground font-sans">Stock Control & Godowns</h4>
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                        Configure batch items, view stock value logs, track multi-godown storage allocations, and set unit definitions.
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => navigate('/inventory/items')} 
+                      className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
+                    >
+                      Explore Inventory
+                      <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  </div>
+
+                  {/* Employees & Payroll */}
+                  <div className={cn("p-5 rounded-2xl border transition-all flex flex-col justify-between group", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm", scheme.cardHover)}>
+                    <div>
+                      <div className="flex justify-between items-start mb-3.5">
+                        <div className={cn("p-2.5 rounded-xl bg-indigo-500/10 text-indigo-500")}>
+                          <Users className="w-5 h-5" />
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">HR & Payroll</span>
+                      </div>
+                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground font-sans">Employee Payroll Center</h4>
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                        Log monthly salaries, calculate employee attendance margins, trigger advanced sheets, and generate payroll slips.
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => navigate('/payroll/employees')} 
+                      className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
+                    >
+                      Open Payroll Control
+                      <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Daybook Preview Shortcut Header & list */}
+              <div className="space-y-2">
+                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/90 pl-1">Local Session Static Activity Logs</h3>
+                <div className={cn("rounded-2xl border overflow-hidden", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm")}>
+                  <div className="p-4 border-b border-border/80 flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold text-foreground">Sample Audit Activity Trail (Reads Bypassed)</span>
+                    <button onClick={() => navigate('/reports/daybook')} className="text-[9px] font-bold uppercase tracking-wider text-primary hover:underline">Full Daybook &rarr;</button>
+                  </div>
+                  <div className="divide-y divide-border/60">
+                    {recentVouchers.map((v, idx) => (
+                      <div key={v.id || idx} className="p-4 flex items-center justify-between hover:bg-muted/10 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <span className={cn("w-2 h-2 rounded-full", v.v_type === 'Sales' ? "bg-emerald-500" : v.v_type === 'Receipt' ? "bg-blue-500" : "bg-amber-500")} />
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-tight text-foreground">{v.particulars}</p>
+                            <p className="text-[9px] text-muted-foreground uppercase leading-none mt-1">{v.v_no} • {v.v_date}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-black text-foreground font-mono">৳{v.total_amount?.toLocaleString()}</p>
+                          <span className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">{v.v_type}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Col: Widgets & Calculators */}
+            <div className="space-y-6">
+              
+              {/* Local Pinned Navigation Bookmarks (LocalStorage) */}
+              {showPinnedBookmarks && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/90 pl-1">Interactive Local Bookmarks</h3>
+                  <div className={cn("p-5 rounded-2xl border space-y-4", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm")}>
+                    <div className="flex items-center gap-2">
+                      <Bookmark className="w-4 h-4 text-primary" />
+                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground">Your Pinboard Nodes</h4>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {bookmarks.length === 0 ? (
+                        <p className="text-[9px] text-muted-foreground uppercase font-semibold text-center py-2">No custom bookmark pinned yet.</p>
+                      ) : (
+                        bookmarks.map(bm => (
+                          <div key={bm.id} className="flex items-center justify-between gap-2 p-2.5 bg-muted/20 hover:bg-muted/30 border border-border/80 rounded-xl transition-all">
+                            <button 
+                              onClick={() => navigate(bm.url)}
+                              className="text-left flex-1 min-w-0"
+                            >
+                              <p className="text-[10px] font-black text-foreground uppercase truncate leading-none mb-0.5">{bm.name}</p>
+                              <p className="text-[8px] text-muted-foreground uppercase font-mono leading-none truncate">{bm.url}</p>
+                            </button>
+                            <button 
+                              onClick={() => handleRemoveBookmark(bm.id)}
+                              className="text-muted-foreground hover:text-red-500 p-1 rounded-md"
+                              title="Delete bookmark"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Add Bookmark form */}
+                    <form onSubmit={handleAddBookmark} className="pt-3 border-t border-border/60 space-y-2.5">
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Pin Label</label>
+                        <input 
+                          type="text"
+                          required
+                          value={newBmkName}
+                          onChange={e => setNewBmkName(e.target.value)}
+                          className="w-full bg-background border border-border/80 rounded-lg px-2.5 py-1 text-[10px] focus:ring-1 focus:ring-primary outline-none"
+                          placeholder="e.g., matching report"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest font-sans">Route Choice</label>
+                          <select 
+                            value={newBmkUrl}
+                            onChange={e => setNewBmkUrl(e.target.value)}
+                            className="w-full bg-background border border-border/80 rounded-lg px-2 text-[10px] h-[24px] focus:ring-1 focus:ring-primary outline-none"
+                          >
+                            <option value="/ledgers">Ledgers List</option>
+                            <option value="/vouchers/new">Create Voucher</option>
+                            <option value="/inventory/items">Items Index</option>
+                            <option value="/payroll/employees">Employees Master</option>
+                            <option value="/reports">Reports System</option>
+                            <option value="/settings">Settings</option>
+                          </select>
+                        </div>
+                        <div className="flex items-end">
+                          <button 
+                            type="submit"
+                            className={cn("w-full py-1 text-[10px] font-black uppercase rounded-lg border", scheme.badge, "hover:opacity-90")}
+                          >
+                            Pin Node
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* Interactive Selling Margin & markup Calculator */}
+              {showQuickCalculator && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/90 pl-1">Interactive Profit Calculator</h3>
+                  <div className={cn("p-5 rounded-2xl border space-y-4", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm")}>
+                    <div className="flex items-center gap-2">
+                      <Calculator className={cn("w-4 h-4", scheme.accentText)} />
+                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground">Aesthetic Margin Markup Calc</h4>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest block">Primary Cost (৳)</label>
+                        <input 
+                          type="number"
+                          value={calcCost}
+                          onChange={e => setCalcCost(Number(e.target.value))}
+                          className="w-full bg-background border border-border/80 rounded-lg px-2.5 py-1.5 text-xs font-mono focus:ring-1 focus:ring-primary outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest block">Profit Markup (%)</label>
+                        <input 
+                          type="range"
+                          min="1"
+                          max="200"
+                          value={calcMarkup}
+                          onChange={e => setCalcMarkup(Number(e.target.value))}
+                          className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                        />
+                        <div className="flex justify-between items-center text-[10px] font-mono text-muted-foreground mt-1">
+                          <span>1%</span>
+                          <span className="font-extrabold text-foreground">{calcMarkup}% Markup</span>
+                          <span>200%</span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-muted/35 border border-border/80 rounded-xl space-y-2 font-mono text-xs">
+                        <div className="flex justify-between items-center text-[10px]">
+                          <span className="text-muted-foreground uppercase font-black">Estimated Profit:</span>
+                          <span className="text-foreground tracking-tight font-black font-sans">৳{(parseInt(calculatedProfit.toFixed(0))).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center border-t border-border/40 pt-1.5">
+                          <span className="text-muted-foreground uppercase font-black leading-none mt-0.5">Recommended Price:</span>
+                          <span className={cn("text-sm font-black font-sans leading-none", scheme.accentText)}>
+                            ৳{(parseInt(calculatedPrice.toFixed(0))).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Compact Quick Guidelines Support Card */}
+              <div className={cn("p-4 rounded-xl border border-dashed", isDark ? "border-cyan-500/20" : "border-border")}>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black leading-none mb-1.5">Sandbox Operations Guide</p>
+                <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-mono">
+                  This console stores your bookmark configurations locally inside the Browser LocalStorage database. Any updates made in settings or menus are saved instantly without loading the cloud infrastructure.
+                </p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (dashboardDesign === 'Design 3') {
     return (
