@@ -76,7 +76,8 @@ export function Dashboard() {
     showQuickCalculator = true,
     showPinnedBookmarks = true,
     customControlCenterTheme = 'emerald',
-    customWelcomeMessage = 'Executive Command Center'
+    customWelcomeMessage = 'Executive Command Center',
+    splashSubDesign = 'grid'
   } = useSettings();
   
   const dashboardDesign = globalDashboardDesign || localDesign;
@@ -150,7 +151,7 @@ export function Dashboard() {
   useEffect(() => {
     async function fetchData() {
       if (!user?.companyId) return;
-      if (dashboardDesign === 'Design 5') {
+      if (dashboardDesign === 'Design 5' || dashboardDesign === 'Design 6') {
         setStats({
           revenue: 1250000,
           profit: 340000,
@@ -606,6 +607,337 @@ export function Dashboard() {
 
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (dashboardDesign === 'Design 6') {
+    const [splashTime, setSplashTime] = useState(new Date());
+    useEffect(() => {
+      const timer = setInterval(() => setSplashTime(new Date()), 1000);
+      return () => clearInterval(timer);
+    }, []);
+
+    const timeString = splashTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const dateString = splashTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    
+    // Day greeting
+    const hour = splashTime.getHours();
+    let greeting = "Good Day";
+    if (hour < 12) greeting = "Good Morning";
+    else if (hour < 17) greeting = "Good Afternoon";
+    else greeting = "Good Evening";
+
+    const shortcuts = [
+      {
+        id: 'vouchers',
+        title: 'New Voucher entry',
+        desc: 'Log sales, receipts, payments & purchases',
+        descNeon: 'DEPLOY TRANSACTION ENTRIES',
+        descEditorial: 'Compose journal ledger entries',
+        icon: FileText,
+        url: '/vouchers/new',
+        color: 'from-blue-500 to-indigo-500',
+        badge: 'Transactions'
+      },
+      {
+        id: 'ledgers',
+        title: 'Ledgers Registry',
+        desc: 'Monitor company accounts & opening credits',
+        descNeon: 'RESOLVE REGISTRY BALANCES',
+        descEditorial: 'Browse accounts and chart of balances',
+        icon: Users,
+        url: '/accounts',
+        color: 'from-emerald-500 to-teal-500',
+        badge: 'Accounting'
+      },
+      {
+        id: 'inventory',
+        title: 'Inventory stock',
+        desc: 'View active items, batch definitions & stores',
+        descNeon: 'QUERY RAW STORES & UNITS',
+        descEditorial: 'Oversee inventory and unit indices',
+        icon: Package,
+        url: '/inventory/items',
+        color: 'from-amber-500 to-orange-500',
+        badge: 'Inventory'
+      },
+      {
+        id: 'reports',
+        title: 'Reports Gateway',
+        desc: 'Unlock financial summaries & trial balances',
+        descNeon: 'COMPILE FISCAL TELEMETRIES',
+        descEditorial: 'Examine ledger books and statements',
+        icon: TrendingUp,
+        url: '/reports',
+        color: 'from-pink-500 to-rose-500',
+        badge: 'Analytics'
+      },
+      {
+        id: 'daybook',
+        title: 'Daybook stream',
+        desc: "Examine today's running register list",
+        descNeon: 'AUDIT HISTORICAL STREAM',
+        descEditorial: "Browse current day's business logs",
+        icon: Clock,
+        url: '/reports/daybook',
+        color: 'from-violet-500 to-fuchsia-500',
+        badge: 'Audit Trail'
+      },
+      {
+        id: 'settings',
+        title: 'General Configs',
+        desc: 'Adjust enterprise layouts, rules & metrics',
+        descNeon: 'MANAGE CENTRAL ENVIRONMENT',
+        descEditorial: 'Calibrate parameters & layouts',
+        icon: ShieldCheck,
+        url: '/settings',
+        color: 'from-cyan-500 to-sky-500',
+        badge: 'Preferences'
+      }
+    ];
+
+    if (splashSubDesign === 'neon') {
+      return (
+        <div className="flex flex-col min-h-[calc(100vh-120px)] bg-slate-950 text-cyan-100 p-6 sm:p-8 md:p-12 font-sans transition-all relative overflow-hidden">
+          {/* Futuristic corner glows */}
+          <div className="absolute top-0 left-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute bottom-0 right-0 w-80 h-80 bg-fuchsia-500/5 rounded-full blur-[100px] pointer-events-none" />
+          
+          <div className="max-w-5xl mx-auto w-full flex-grow flex flex-col justify-center space-y-10 relative z-10">
+            
+            {/* Cyber Header with neon decorations */}
+            <div className="text-center space-y-3">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-950/40 border border-cyan-500/30 rounded-lg text-[9px] font-black uppercase tracking-widest text-cyan-400 font-mono shadow-[0_0_15px_rgba(6,182,212,0.15)] animate-pulse">
+                <Cpu className="w-3.5 h-3.5 text-cyan-400 animate-spin" style={{ animationDuration: '4s' }} />
+                SYSTEM PORTAL ONLINE
+              </div>
+              
+              <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-fuchsia-200 tracking-tight leading-none uppercase">
+                {customWelcomeMessage || "Welcome to Headquarters"}
+              </h1>
+              
+              <p className="text-xs text-cyan-400/80 uppercase tracking-[0.25em] font-mono">
+                {companyName || "CORE SYSTEM"} // SECURE ACCESS NODES
+              </p>
+              
+              {/* Dynamic glass telemetry widget */}
+              <div className="inline-flex items-center gap-4 px-4 py-1.5 bg-slate-900/60 border border-slate-800 rounded-xl text-[11px] font-mono text-cyan-300 mt-2">
+                <span className="flex items-center gap-1.5 text-cyan-400"><Clock className="w-3.5 h-3.5" /> {timeString}</span>
+                <span className="text-slate-800">|</span>
+                <span className="text-fuchsia-400">{dateString.toUpperCase()}</span>
+                <span className="text-slate-800">|</span>
+                <span className="text-emerald-400 flex items-center gap-1 font-bold">● ACTIVE</span>
+              </div>
+            </div>
+
+            <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent w-full" />
+
+            {/* Bento cybergrid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {shortcuts.map(sc => {
+                const Icon = sc.icon;
+                return (
+                  <button
+                    key={sc.id}
+                    onClick={() => navigate(sc.url)}
+                    className="p-6 bg-slate-900/30 backdrop-blur-md border border-cyan-500/10 hover:border-cyan-400/80 rounded-2xl text-left flex flex-col justify-between group hover:shadow-[0_0_20px_rgba(6,182,212,0.12)] transition-all duration-300 transform hover:-translate-y-0.5 outline-none"
+                  >
+                    <div className="w-full">
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="p-2.5 rounded-xl bg-cyan-950/60 border border-cyan-500/20 text-cyan-400 group-hover:text-fuchsia-400 group-hover:border-fuchsia-500/30 transition-colors">
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <span className="text-[10px] font-mono uppercase font-black tracking-widest text-cyan-500/80">
+                          [{sc.badge}]
+                        </span>
+                      </div>
+                      <h3 className="text-xs font-black text-white hover:text-cyan-400 uppercase tracking-wider font-mono transition-colors">
+                        &gt;_ {sc.title}
+                      </h3>
+                      <p className="text-[10px] text-cyan-200/50 mt-1.5 font-mono leading-relaxed uppercase">
+                        {sc.descNeon}
+                      </p>
+                    </div>
+                    
+                    <div className="flex items-center gap-1.5 mt-5 text-[9px] uppercase font-black tracking-wider text-cyan-600 group-hover:text-cyan-300 font-mono transition-colors">
+                      INITIATE ACCESS
+                      <ChevronRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="text-center pt-4">
+              <span className="text-[10px] text-fuchsia-500/60 font-mono uppercase tracking-[0.18em]">
+                SYS_VER_1.01 // QUOTA_BYPASS: 100% // ENVIRONMENT: LOCAL_CACHE
+              </span>
+            </div>
+
+          </div>
+        </div>
+      );
+    }
+
+    if (splashSubDesign === 'editorial') {
+      return (
+        <div className="flex flex-col min-h-[calc(100vh-120px)] bg-[#faf8f5] text-stone-850 p-6 sm:p-8 md:p-14 font-sans transition-all">
+          <div className="max-w-4xl mx-auto w-full flex-grow flex flex-col justify-center space-y-12">
+            
+            {/* Elegant Top Meta line */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-stone-200 pb-5 gap-3">
+              <div className="text-[11px] font-medium tracking-[0.2em] text-stone-500 uppercase font-sans">
+                {companyName || "SYSTEM PORTAL"} • OFF-READ ENVIRONMENT
+              </div>
+              <div className="text-[11px] font-mono text-stone-500 flex items-center gap-2">
+                {dateString.toUpperCase()} &nbsp;—&nbsp; {timeString}
+              </div>
+            </div>
+
+            {/* Editorial Column Split */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
+              
+              {/* Left Column Welcome Message */}
+              <div className="lg:col-span-5 space-y-4">
+                <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-amber-700 font-serif italic">
+                  Atelier Executive Hub
+                </span>
+                
+                <h1 className="text-4xl md:text-5xl font-serif text-stone-900 tracking-tight leading-[1.05]">
+                  {customWelcomeMessage || "Welcome to Headquarters"}
+                </h1>
+                
+                <p className="text-xs text-stone-500 leading-relaxed font-serif italic">
+                  "Simplicity is the ultimate sophistication." A bespoke minimal directory crafted for quiet focus, instant performance, and smooth business administration.
+                </p>
+                
+                <div className="pt-2">
+                  <div className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-stone-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
+                    Local Cache Active
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column List Menu */}
+              <div className="lg:col-span-7 space-y-3">
+                {shortcuts.map(sc => {
+                  const Icon = sc.icon;
+                  return (
+                    <button
+                      key={sc.id}
+                      onClick={() => navigate(sc.url)}
+                      className="w-full text-left p-4.5 bg-stone-100 hover:bg-stone-200/55 border border-stone-200/40 hover:border-stone-300 rounded-xl flex items-center justify-between group transition-all duration-300 outline-none"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-2.5 rounded-lg bg-stone-200 text-stone-700 group-hover:bg-amber-100 group-hover:text-amber-800 transition-colors">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-widest text-stone-800 group-hover:text-amber-900 transition-colors">
+                            {sc.title}
+                          </p>
+                          <p className="text-[11px] text-stone-500 mt-0.5 leading-normal">
+                            {sc.descEditorial}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="p-1 rounded-full text-stone-400 group-hover:text-stone-700 group-hover:translate-x-0.5 transition-all">
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+            </div>
+
+            {/* Fine Print Footer */}
+            <div className="text-center border-t border-stone-200/60 pt-6">
+              <p className="text-[9px] text-stone-400 uppercase tracking-widest">
+                System optimized • All core accounting, stock, and directory records fully preserved.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      );
+    }
+
+    // Default 'grid' style
+    return (
+      <div className="flex flex-col min-h-[calc(100vh-120px)] bg-slate-50/50 text-slate-800 p-6 sm:p-8 md:p-12 font-sans transition-all">
+        <div className="max-w-5xl mx-auto w-full flex-grow flex flex-col justify-center space-y-10">
+          
+          {/* Header section with top badge */}
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-200/60 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-600 font-mono shadow-sm">
+              <Sparkles className="w-3.5 h-3.5 animate-pulse text-blue-500" />
+              Enterprise Hub
+            </div>
+            
+            <h1 className="text-3xl md:text-4.5xl font-black text-slate-900 tracking-tight leading-none">
+              {greeting}, {customWelcomeMessage || "Welcome to Headquarters"}
+            </h1>
+            
+            <p className="text-xs md:text-sm text-slate-500 uppercase tracking-[0.15em] font-medium">
+              {companyName || "COMPANY ERP"} • Portal Dashboard
+            </p>
+            
+            <div className="flex items-center justify-center gap-3 pt-2 text-xs text-muted-foreground font-mono">
+              <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-blue-500" /> {timeString}</span>
+              <span className="text-slate-300">|</span>
+              <span>{dateString}</span>
+            </div>
+          </div>
+
+          <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent w-full" />
+
+          {/* Main shortcuts grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {shortcuts.map(sc => {
+              const Icon = sc.icon;
+              return (
+                <button
+                  key={sc.id}
+                  onClick={() => navigate(sc.url)}
+                  className="p-6 bg-white border border-slate-200/80 rounded-2xl text-left flex flex-col justify-between group hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/[0.04] transition-all duration-300 transform hover:-translate-y-0.5 outline-none"
+                >
+                  <div className="w-full">
+                    <div className="flex justify-between items-center mb-4">
+                      <div className={cn("p-2.5 rounded-xl bg-gradient-to-br text-white shadow-md", sc.color)}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <span className="text-[9px] uppercase font-black tracking-widest bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                        {sc.badge}
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide group-hover:text-blue-600 transition-colors">
+                      {sc.title}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                      {sc.desc}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-1.5 mt-5 text-[10px] uppercase font-black tracking-wider text-slate-400 group-hover:text-blue-600 font-mono transition-colors">
+                    Launch Console
+                    <ChevronRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="text-center pt-4">
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">
+              System Active • Bypassing database counters to conserve daily usage quota
+            </p>
+          </div>
+
         </div>
       </div>
     );

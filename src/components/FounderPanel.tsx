@@ -323,7 +323,8 @@ export default function FounderPanel() {
     showQuickCalculator,
     showPinnedBookmarks,
     customControlCenterTheme,
-    customWelcomeMessage
+    customWelcomeMessage,
+    splashSubDesign
   } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
@@ -350,6 +351,7 @@ export default function FounderPanel() {
   const [localShowPinnedBookmarks, setLocalShowPinnedBookmarks] = useState(showPinnedBookmarks ?? true);
   const [localCustomControlCenterTheme, setLocalCustomControlCenterTheme] = useState(customControlCenterTheme || 'emerald');
   const [localCustomWelcomeMessage, setLocalCustomWelcomeMessage] = useState(customWelcomeMessage || 'Executive Command Center');
+  const [localSplashSubDesign, setLocalSplashSubDesign] = useState(splashSubDesign || 'grid');
   const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'branding' | 'search' | 'loader'>('general');
 
   useEffect(() => {
@@ -2566,7 +2568,8 @@ export default function FounderPanel() {
                       showQuickCalculator: localShowQuickCalculator,
                       showPinnedBookmarks: localShowPinnedBookmarks,
                       customControlCenterTheme: localCustomControlCenterTheme,
-                      customWelcomeMessage: localCustomWelcomeMessage
+                      customWelcomeMessage: localCustomWelcomeMessage,
+                      splashSubDesign: localSplashSubDesign
                     });
                     showNotification('System configuration updated successfully', 'success');
                   } catch (err) {
@@ -2808,7 +2811,8 @@ export default function FounderPanel() {
                         { id: 'Design 2', label: 'Modern Design', desc: 'Clean, modern look with focus on KPI cards and trends.' },
                         { id: 'Design 3', label: 'Minimalist (Quota Fix)', desc: 'High-performance, minimal charts. Saves 50% reads by reducing complexity.' },
                         { id: 'Design 4', label: 'Executive Executive', desc: 'Dark-themed, focused only on essential numbers. Lowest quota usage.' },
-                        { id: 'Design 5', label: 'Zero-Read Command Center', desc: 'No database queries printed on layout. Loaded locally with rich interactive workflow portals.' }
+                        { id: 'Design 5', label: 'Zero-Read Command Center', desc: 'No database queries printed on layout. Loaded locally with rich interactive workflow portals.' },
+                        { id: 'Design 6', label: 'Minimalist Splash', desc: 'A clean, lightweight layout containing only a centered header greeting card.' }
                       ].map(d => (
                         <button
                           key={d.id}
@@ -2915,6 +2919,51 @@ export default function FounderPanel() {
                                 localShowPinnedBookmarks ? "right-0.5" : "left-0.5"
                               )} />
                             </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {localDashboardDesign === 'Design 6' && (
+                      <div className="mt-4 p-4 bg-muted/20 border border-border rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center gap-2 pb-2 border-b border-border">
+                          <Palette className="w-4 h-4 text-primary" />
+                          <p className="text-[10px] font-black uppercase tracking-wider text-foreground">Splash Center Preferences</p>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Custom Splash Welcome Accent Message</label>
+                          <input 
+                            type="text"
+                            value={localCustomWelcomeMessage}
+                            onChange={(e) => setLocalCustomWelcomeMessage(e.target.value)}
+                            className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                            placeholder="Welcome to Headquarters"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Splash Welcome Page Sub-Design Style</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            {[
+                              { id: 'grid', label: 'Corporate Grid', desc: 'Sleek professional card layout with high-accessibility system link grids.' },
+                              { id: 'neon', label: 'Tech Cyber', desc: 'Vibrant neon cybertheme with glass backgrounds, glowing borders, and modern shadows.' },
+                              { id: 'editorial', label: 'Editorial Cozy', desc: 'Warm minimalist layout, rich typography, spacious elements, and classical serif headers.' }
+                            ].map(sub => (
+                              <button
+                                key={sub.id}
+                                type="button"
+                                onClick={() => setLocalSplashSubDesign(sub.id as any)}
+                                className={cn(
+                                  "p-2.5 border rounded-lg text-left transition-all space-y-1 outline-none",
+                                  localSplashSubDesign === sub.id
+                                    ? "border-blue-500 bg-blue-50/40 ring-1 ring-blue-500"
+                                    : "border-border bg-background hover:bg-muted"
+                                )}
+                              >
+                                <p className="text-[10px] font-bold text-foreground">{sub.label}</p>
+                                <p className="text-[9px] text-muted-foreground leading-normal">{sub.desc}</p>
+                              </button>
+                            ))}
                           </div>
                         </div>
                       </div>

@@ -21,7 +21,7 @@ interface FeatureSettings {
 
 export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11' | 'colorful';
 export type ReportLayout = 'Layout 1' | 'Layout 2';
-export type DashboardDesign = 'Design 1' | 'Design 2' | 'Design 3' | 'Design 4' | 'Design 5';
+export type DashboardDesign = 'Design 1' | 'Design 2' | 'Design 3' | 'Design 4' | 'Design 5' | 'Design 6';
 export type UIStyle = 'UI/UX 1' | 'UI/UX 2' | 'UI/UX 3' | 'UI/UX 4';
 export type NotificationAnimationStyle = 'default' | 'neon' | 'snake' | 'liquid' | 'glitch' | 'shimmer';
 export type GlassBackground = 'default' | 'sunset' | 'ocean' | 'aurora' | 'minimal';
@@ -120,6 +120,7 @@ interface SettingsContextType {
   showPinnedBookmarks?: boolean;
   customControlCenterTheme?: 'emerald' | 'indigo' | 'slate' | 'cyber';
   customWelcomeMessage?: string;
+  splashSubDesign?: 'grid' | 'neon' | 'editorial';
   features: FeatureSettings[];
   appFeatures: FeatureCategory[];
   subscriptionPlans: SubscriptionPlan[];
@@ -207,6 +208,7 @@ const defaultSettings: SettingsContextType = {
   showPinnedBookmarks: true,
   customControlCenterTheme: 'emerald',
   customWelcomeMessage: 'Executive Command Center',
+  splashSubDesign: 'grid',
   showGoToShortcut: true,
   showQuickActions: true,
   dashboardQuickActions: ['voucher', 'item', 'ledger', 'godown', 'users'],
@@ -294,6 +296,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             showPinnedBookmarks: data.showPinnedBookmarks !== undefined ? data.showPinnedBookmarks : prev.showPinnedBookmarks,
             customControlCenterTheme: data.customControlCenterTheme || prev.customControlCenterTheme || 'emerald',
             customWelcomeMessage: data.customWelcomeMessage || prev.customWelcomeMessage || 'Executive Command Center',
+            splashSubDesign: data.splashSubDesign || prev.splashSubDesign || 'grid',
             systemUiStyle: data.uiStyle || prev.systemUiStyle,
             systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
             globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign
