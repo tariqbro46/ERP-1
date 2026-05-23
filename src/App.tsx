@@ -1486,7 +1486,14 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 function AppContent() {
   const { user, loading, isSuperAdmin, logout, firebaseUser } = useAuth();
   const { language } = useLanguage();
-  const { englishFont = 'Inter', banglaFont = 'Hind Siliguri' } = useSettings();
+  const { 
+    englishFont = 'Inter', 
+    banglaFont = 'Hind Siliguri',
+    loaderBlurStyle = 'md',
+    loaderIconStyle = 'spinner',
+    loaderPhrases,
+    loaderTheme = 'glass'
+  } = useSettings();
 
   // Apply fonts globally
   React.useEffect(() => {
@@ -1495,9 +1502,71 @@ function AppContent() {
   }, [language, englishFont, banglaFont]);
   
   if (loading) {
+    const defaultPhrases = [
+      'Connecting to server...',
+      'Requesting to server...',
+      'Waiting for response...',
+      'Almost Done...',
+      'Here We go!'
+    ];
+    const phrases = loaderPhrases ? loaderPhrases.split(',').map(p => p.trim()).filter(Boolean) : defaultPhrases;
+    
+    // Choose icon based on user settings
+    const renderLoaderIcon = () => {
+      switch (loaderIconStyle) {
+        case 'dots':
+          return (
+            <div className="flex items-center gap-1.5 h-10">
+              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" />
+            </div>
+          );
+        case 'circle-bar':
+          return (
+            <div className="relative w-12 h-12 flex items-center justify-center">
+              <LucideIcons.RefreshCw className="w-8 h-8 animate-spin text-primary/80 stroke-[2]" />
+              <LucideIcons.CircleDot className="absolute w-4 h-4 text-primary animate-pulse" />
+            </div>
+          );
+        case 'quantum':
+          return (
+            <div className="relative w-12 h-12 flex items-center justify-center">
+              <div className="absolute inset-0 border-2 border-primary/20 rounded-full" />
+              <div className="absolute inset-0 border-2 border-t-primary rounded-full animate-spin" />
+              <div className="absolute inset-2 border-2 border-dashed border-primary/40 rounded-full animate-spin [animation-duration:3s]" />
+              <LucideIcons.Cpu className="w-4 h-4 text-primary animate-pulse" />
+            </div>
+          );
+        case 'spinner':
+        default:
+          return <LucideIcons.Loader2 className="w-10 h-10 animate-spin text-primary stroke-[1.5]" />;
+      }
+    };
+
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+      <div className="h-screen flex items-center justify-center bg-background relative overflow-hidden">
+        {/* Animated ambient backdrop halo */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-muted/20 opacity-40 animate-pulse [animation-duration:4s]" />
+        
+        <div className="flex flex-col items-center gap-3 relative z-10 animate-pulse [animation-duration:2.5s]">
+          {renderLoaderIcon()}
+          <span className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase mt-2">Loading Core Engine...</span>
+        </div>
+
+        {/* Floating status block on the bottom right corner */}
+        <div 
+          className="absolute bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl border border-border/50 font-mono text-[11px] uppercase tracking-widest shadow-lg bg-background/40 backdrop-blur-md text-foreground"
+        >
+          <div className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[9px] text-muted-foreground font-black tracking-tighter">BOOTING PIPELINE</span>
+            <span className="text-foreground font-bold">{phrases[0]}</span>
+          </div>
+        </div>
       </div>
     );
   }

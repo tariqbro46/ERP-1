@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
 import { SettingsProvider } from './contexts/SettingsContext.tsx';
+import { LoaderProvider } from './contexts/LoaderContext.tsx';
 import { NotificationProvider } from './contexts/NotificationContext.tsx';
 import { AuthProvider } from './contexts/AuthContext.tsx';
 
@@ -12,9 +13,11 @@ createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
       <AuthProvider>
         <SettingsProvider>
-          <NotificationProvider>
-            <App />
-          </NotificationProvider>
+          <LoaderProvider>
+            <NotificationProvider>
+              <App />
+            </NotificationProvider>
+          </LoaderProvider>
         </SettingsProvider>
       </AuthProvider>
     </ThemeProvider>

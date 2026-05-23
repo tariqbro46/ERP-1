@@ -64,7 +64,10 @@ import {
   EyeOff,
   UserCog,
   Square,
-  CheckSquare
+  CheckSquare,
+  Palette,
+  FileImage,
+  Save
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
@@ -312,7 +315,11 @@ export default function FounderPanel() {
     showSearchShortcut,
     searchIconColor,
     globalDashboardDesign,
-    menuBarStyle
+    menuBarStyle,
+    loaderBlurStyle,
+    loaderIconStyle,
+    loaderPhrases,
+    loaderTheme
   } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
@@ -331,6 +338,11 @@ export default function FounderPanel() {
   const [localSearchHelpText, setLocalSearchHelpText] = useState(searchHelpText || '');
   const [localShowSearchShortcut, setLocalShowSearchShortcut] = useState(showSearchShortcut ?? true);
   const [localSearchIconColor, setLocalSearchIconColor] = useState(searchIconColor || '');
+  const [localLoaderBlurStyle, setLocalLoaderBlurStyle] = useState(loaderBlurStyle || 'md');
+  const [localLoaderIconStyle, setLocalLoaderIconStyle] = useState(loaderIconStyle || 'spinner');
+  const [localLoaderPhrases, setLocalLoaderPhrases] = useState(loaderPhrases || 'Connecting to server, Requesting data, Waiting for response, Almost done, Here we go!');
+  const [localLoaderTheme, setLocalLoaderTheme] = useState(loaderTheme || 'glass');
+  const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'branding' | 'search' | 'loader'>('general');
 
   useEffect(() => {
     fetchData();
@@ -2508,363 +2520,602 @@ export default function FounderPanel() {
         </div>
       ) : viewMode === 'settings' ? (
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className={cn(
-              "text-lg font-bold uppercase tracking-widest",
-              uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
-            )}>System Configuration</h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border">
+            <div>
+              <h2 className={cn(
+                "text-xl font-bold tracking-tight",
+                uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+              )}>System Configuration</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Manage global default styles, offline modes, app assets, and search behaviors.</p>
+            </div>
+            
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                onClick={async () => {
+                  try {
+                    await updateSystemSettings({
+                      statusOnlineText: localStatusOnline,
+                      statusOfflineText: localStatusOffline,
+                      statusErrorText: localStatusError,
+                      appVersion: localAppVersion,
+                      systemLogo: localSystemLogo,
+                      systemFavicon: localSystemFavicon,
+                      uiStyle: localUIStyle,
+                      menuBarStyle: localMenuBarStyle,
+                      glassBackground: localGlassBackground,
+                      notificationDuration: localNotificationDuration,
+                      notificationAnimationStyle: localNotificationAnimationStyle,
+                      showGoToShortcut: localShowGoToShortcut,
+                      searchPlaceholder: localSearchPlaceholder,
+                      searchHelpText: localSearchHelpText,
+                      showSearchShortcut: localShowSearchShortcut,
+                      searchIconColor: localSearchIconColor,
+                      dashboardDesign: localDashboardDesign,
+                      loaderBlurStyle: localLoaderBlurStyle,
+                      loaderIconStyle: localLoaderIconStyle,
+                      loaderPhrases: localLoaderPhrases,
+                      loaderTheme: localLoaderTheme
+                    });
+                    showNotification('System configuration updated successfully', 'success');
+                  } catch (err) {
+                    showNotification('Failed to update system configuration', 'error');
+                  }
+                }}
+                className={cn(
+                  "px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-md flex items-center gap-2",
+                  uiStyle === 'UI/UX 2' 
+                    ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200" 
+                    : "bg-primary text-white hover:opacity-90 shadow-primary/20"
+                )}
+              >
+                <Save className="w-4 h-4" />
+                Save Global Configuration
+              </button>
+            </div>
           </div>
 
-          <div className={cn(
-            "bg-card border border-border rounded-2xl p-8 max-w-2xl",
-            uiStyle === 'UI/UX 2' && "border-blue-100 shadow-xl"
-          )}>
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Online Status Text</label>
-                  <input
-                    type="text"
-                    value={localStatusOnline || ''}
-                    onChange={(e) => setLocalStatusOnline(e.target.value)}
-                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Offline Status Text</label>
-                  <input
-                    type="text"
-                    value={localStatusOffline || ''}
-                    onChange={(e) => setLocalStatusOffline(e.target.value)}
-                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Error Status Text</label>
-                  <input
-                    type="text"
-                    value={localStatusError || ''}
-                    onChange={(e) => setLocalStatusError(e.target.value)}
-                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">App Version</label>
-                  <input
-                    type="text"
-                    value={localAppVersion || ''}
-                    onChange={(e) => setLocalAppVersion(e.target.value)}
-                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Notification Duration (ms)</label>
-                  <input
-                    type="number"
-                    value={localNotificationDuration || 3000}
-                    onChange={(e) => setLocalNotificationDuration(Number(e.target.value))}
-                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                    step="500"
-                    min="1000"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Notification Border Animation Style</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {[
-                    { id: 'default', label: 'Default Path', desc: 'Classic border trace' },
-                    { id: 'neon', label: 'Neon Glow', desc: 'Pulsating neon border' },
-                    { id: 'snake', label: 'Snake Chase', desc: 'Moving segment' },
-                    { id: 'liquid', label: 'Liquid Flow', desc: 'Rotating gradient' },
-                    { id: 'glitch', label: 'Cyber Glitch', desc: 'Digital distortion' },
-                    { id: 'shimmer', label: 'Shimmer Sweep', desc: 'Elegant light sweep' }
-                  ].map((style) => (
-                    <button
-                      key={style.id}
-                      onClick={() => setLocalNotificationAnimationStyle(style.id as any)}
-                      className={cn(
-                        "flex flex-col items-start p-3 rounded-xl border-2 transition-all text-left gap-1",
-                        localNotificationAnimationStyle === style.id
-                          ? "border-blue-500 bg-blue-500/5"
-                          : "border-border bg-background hover:border-gray-400"
-                      )}
-                    >
-                      <span className={cn(
-                        "text-[10px] font-bold uppercase tracking-wider",
-                        localNotificationAnimationStyle === style.id ? "text-blue-500" : "text-foreground"
-                      )}>
-                        {style.label}
-                      </span>
-                      <span className="text-[9px] text-muted-foreground leading-tight">
-                        {style.desc}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-                <div className="flex items-center justify-between p-3 bg-background border border-border rounded-xl">
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-foreground uppercase tracking-widest">Show "Alt + G" Shortcut</p>
-                    <p className="text-[9px] text-muted-foreground uppercase">Toggle the visibility of the "Go To" text in the top bar.</p>
-                  </div>
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* Sidebar for System configuration sub-tabs */}
+            <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 no-scrollbar">
+              {[
+                { id: 'general', label: 'General & Status', desc: 'Alerts, version, shortcuts', icon: Activity },
+                { id: 'theme', label: 'Theme & Layout', desc: 'UI styles, navigations', icon: Palette },
+                { id: 'branding', label: 'Logo & Branding', desc: 'Default logo, mobile icon', icon: FileImage },
+                { id: 'search', label: 'Search Engine', desc: 'Placeholders, key binds', icon: Search },
+                { id: 'loader', label: 'Loading Screen', desc: 'Icon styles, blur, custom texts', icon: RefreshCw }
+              ].map((tab) => {
+                const SelectedIcon = tab.icon;
+                const isSelected = systemSubTab === tab.id;
+                return (
                   <button
-                    onClick={() => setLocalShowGoToShortcut(!localShowGoToShortcut)}
+                    key={tab.id}
+                    onClick={() => setSystemSubTab(tab.id as any)}
                     className={cn(
-                      "w-10 h-5 rounded-full transition-colors relative",
-                      localShowGoToShortcut ? "bg-blue-600" : "bg-gray-300"
+                      "w-auto lg:w-full text-left px-4 py-3 rounded-xl transition-all flex items-center gap-3 shrink-0",
+                      isSelected
+                        ? "bg-primary text-primary-foreground shadow-sm font-semibold"
+                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    <div className={cn(
-                      "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
-                      localShowGoToShortcut ? "right-1" : "left-1"
-                    )} />
+                    <SelectedIcon className="w-4 h-4 shrink-0" />
+                    <div className="text-left hidden md:block">
+                      <p className="text-[11px] font-bold leading-none">{tab.label}</p>
+                      <p className={cn("text-[8px] mt-1 leading-none uppercase tracking-tight", isSelected ? "text-primary-foreground/75" : "text-muted-foreground")}>{tab.desc}</p>
+                    </div>
+                    <span className="text-xs font-bold md:hidden leading-none block">{tab.label}</span>
                   </button>
-                </div>
+                );
+              })}
+            </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Global UI Style</label>
-                  <select 
-                    value={localUIStyle}
-                    onChange={(e) => setLocalUIStyle(e.target.value as any)}
-                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="UI/UX 1">UI/UX 1 (Classic)</option>
-                    <option value="UI/UX 2">UI/UX 2 (Modern Colorized)</option>
-                    <option value="UI/UX 3">UI/UX 3 (Glassmorphism macOS)</option>
-                    <option value="UI/UX 4">UI/UX 4 (Aurora Holographic Carbon)</option>
-                  </select>
-                  <p className="text-[9px] text-muted-foreground uppercase">Choose the overall UI/UX style for the application.</p>
-                </div>
+            {/* Content pane */}
+            <div className="flex-1 space-y-6 min-w-0">
+              {systemSubTab === 'general' && (
+                <div className={cn(
+                  "bg-card border border-border rounded-2xl p-6 lg:p-8 space-y-6 shadow-sm",
+                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-xl"
+                )}>
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">General & Connection Status</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Define app version and connection text indicators displayed across client environments.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Online Status Text</label>
+                      <input
+                        type="text"
+                        value={localStatusOnline || ''}
+                        onChange={(e) => setLocalStatusOnline(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Offline Status Text</label>
+                      <input
+                        type="text"
+                        value={localStatusOffline || ''}
+                        onChange={(e) => setLocalStatusOffline(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Error Status Text</label>
+                      <input
+                        type="text"
+                        value={localStatusError || ''}
+                        onChange={(e) => setLocalStatusError(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">App Version</label>
+                      <input
+                        type="text"
+                        value={localAppVersion || ''}
+                        onChange={(e) => setLocalAppVersion(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                  </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Global Left Menu Style</label>
-                  <select 
-                    value={localMenuBarStyle}
-                    onChange={(e) => setLocalMenuBarStyle(e.target.value as any)}
-                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="classic">Classic Sidebar (Default)</option>
-                    <option value="ribbon">Microsoft Office Ribbon</option>
-                    <option value="macos">macOS Top Menu Bar</option>
-                    <option value="windows11">Windows 11 Taskbar Style</option>
-                    <option value="colorful">Classic Professional (Colorful Sidebar)</option>
-                  </select>
-                  <p className="text-[9px] text-muted-foreground uppercase">Choose the system-wide default menu navigation layout style.</p>
-                </div>
-
-                <div className="space-y-4">
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Global Dashboard Design (All Users)</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {[
-                      { id: 'Design 1', label: 'Classic Design', desc: 'Full-featured with all metrics and primary charts.' },
-                      { id: 'Design 2', label: 'Modern Design', desc: 'Clean, modern look with focus on KPI cards and trends.' },
-                      { id: 'Design 3', label: 'Minimalist (Quota Fix)', desc: 'High-performance, minimal charts. Saves 50% reads by reducing complexity.' },
-                      { id: 'Design 4', label: 'Executive Executive', desc: 'Dark-themed, focused only on essential numbers. Lowest quota usage.' }
-                    ].map(d => (
+                  <div className="border-t border-border pt-4">
+                    <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-foreground">Show "Alt + G" Shortcut Hint</p>
+                        <p className="text-[10px] text-muted-foreground leading-relaxed">Toggle safety help tips or accessibility shortcut indications on the main topbar.</p>
+                      </div>
                       <button
-                        key={d.id}
-                        onClick={() => setLocalDashboardDesign(d.id as any)}
+                        onClick={() => setLocalShowGoToShortcut(!localShowGoToShortcut)}
                         className={cn(
-                          "p-4 border-2 rounded-2xl text-left transition-all space-y-1",
-                          localDashboardDesign === d.id
-                            ? "border-blue-500 bg-blue-50/50"
-                            : "border-border bg-background hover:bg-muted"
-                        )}
-                      >
-                         <p className={cn("text-[10px] font-black uppercase tracking-tighter", localDashboardDesign === d.id ? "text-blue-600" : "text-foreground")}>{d.label}</p>
-                         <p className="text-[9px] text-muted-foreground uppercase">{d.desc}</p>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[9px] text-blue-600 bg-blue-50 p-2 rounded border border-blue-100 uppercase font-bold">
-                    * Recommended: Use Design 3 or 4 to drastically reduce non-critical database reads and stay within your free plan limits.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Default Gradient / Accent Background (UI/UX 3 & 4)</label>
-                  <select 
-                    value={localGlassBackground}
-                    onChange={(e) => setLocalGlassBackground(e.target.value as any)}
-                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="default">Default Cyber Carbon (Dynamic Holographic)</option>
-                    <option value="sunset">Sunset Glow (Warm Cosmic)</option>
-                    <option value="ocean">Deep Ocean (Cool Nordic)</option>
-                    <option value="aurora">Aurora Borealis (Green Matrix Neon)</option>
-                    <option value="minimal">Minimal Soft Dark (Sleek Obsidian)</option>
-                  </select>
-                  <p className="text-[9px] text-muted-foreground uppercase">Choose the global default background gradient accent style for Glassmorphism & Aurora Holographic UI styles.</p>
-                </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">System Logo (Global Default)</label>
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-foreground/5 overflow-hidden rounded-lg">
-                    {localSystemLogo ? (
-                      <img src={localSystemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                    ) : (
-                      <Building2 className="w-6 h-6 text-muted-foreground opacity-20" />
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <div className="flex gap-2">
-                      <label className="flex-1 cursor-pointer bg-foreground/5 border border-border hover:bg-foreground/10 transition-all p-2 text-center rounded-lg">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Upload System Logo</span>
-                        <input type="file" accept="image/*" onChange={handleSystemLogoUpload} className="hidden" />
-                      </label>
-                      {localSystemLogo && (
-                        <button 
-                          onClick={() => setLocalSystemLogo('')}
-                          className="p-2 border border-border text-rose-500 hover:bg-rose-500/10 transition-all rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Or set via URL</label>
-                      <input
-                        type="text"
-                        placeholder="https://example.com/logo.png"
-                        value={localSystemLogo}
-                        onChange={(e) => setLocalSystemLogo(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                    <p className="text-[9px] text-muted-foreground uppercase">This logo will be used as a default for all companies if they don't have their own logo.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">App Favicon (Mobile App Icon)</label>
-                <div className="flex items-start gap-4">
-                  <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-foreground/5 overflow-hidden rounded-lg">
-                    {localSystemFavicon ? (
-                      <img src={localSystemFavicon} alt="Favicon" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                    ) : (
-                      <Zap className="w-6 h-6 text-muted-foreground opacity-20" />
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <div className="flex gap-2">
-                      <label className="flex-1 cursor-pointer bg-foreground/5 border border-border hover:bg-foreground/10 transition-all p-2 text-center rounded-lg">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">Upload Favicon</span>
-                        <input type="file" accept="image/*" onChange={handleSystemFaviconUpload} className="hidden" />
-                      </label>
-                      {localSystemFavicon && (
-                        <button 
-                          onClick={() => setLocalSystemFavicon('')}
-                          className="p-2 border border-border text-rose-500 hover:bg-rose-500/10 transition-all rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Or set via URL</label>
-                      <input
-                        type="text"
-                        placeholder="https://example.com/favicon.png"
-                        value={localSystemFavicon}
-                        onChange={(e) => setLocalSystemFavicon(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                    <p className="text-[9px] text-muted-foreground uppercase">Set your application's favicon. This icon will appear in browser tabs and as the app icon when "Added to Home Screen" on mobile devices.</p>
-                  </div>
-                </div>
-
-                <div className="bg-card border border-border shadow-sm rounded-2xl overflow-hidden">
-                  <div className="p-4 border-b border-border bg-foreground/[0.02] flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                      <Search className="w-4 h-4 text-purple-500" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-foreground">Global Search Settings</h4>
-                      <p className="text-[10px] text-muted-foreground">Default search configuration for all companies.</p>
-                    </div>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Default Placeholder</label>
-                      <input 
-                        type="text" 
-                        value={localSearchPlaceholder} 
-                        onChange={(e) => setLocalSearchPlaceholder(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Default Help Text</label>
-                      <textarea 
-                        value={localSearchHelpText} 
-                        onChange={(e) => setLocalSearchHelpText(e.target.value)}
-                        rows={2}
-                        className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Show ESC Shortcut</span>
-                      <button 
-                        onClick={() => setLocalShowSearchShortcut(!localShowSearchShortcut)}
-                        className={cn(
-                          "w-10 h-5 rounded-full relative transition-colors",
-                          localShowSearchShortcut ? "bg-emerald-500" : "bg-border"
+                          "w-10 h-5.5 rounded-full transition-colors relative shrink-0",
+                          localShowGoToShortcut ? "bg-blue-600" : "bg-gray-300"
                         )}
                       >
                         <div className={cn(
-                          "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
-                          localShowSearchShortcut ? "right-1" : "left-1"
+                          "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                          localShowGoToShortcut ? "right-0.5" : "left-0.5"
                         )} />
                       </button>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div className="pt-4">
-                <button
-                  onClick={async () => {
-                    try {
-                      await updateSystemSettings({
-                        statusOnlineText: localStatusOnline,
-                        statusOfflineText: localStatusOffline,
-                        statusErrorText: localStatusError,
-                        appVersion: localAppVersion,
-                        systemLogo: localSystemLogo,
-                        systemFavicon: localSystemFavicon,
-                        uiStyle: localUIStyle,
-                        menuBarStyle: localMenuBarStyle,
-                        glassBackground: localGlassBackground,
-                        notificationDuration: localNotificationDuration,
-                        notificationAnimationStyle: localNotificationAnimationStyle,
-                        showGoToShortcut: localShowGoToShortcut,
-                        searchPlaceholder: localSearchPlaceholder,
-                        searchHelpText: localSearchHelpText,
-                        showSearchShortcut: localShowSearchShortcut,
-                        searchIconColor: localSearchIconColor,
-                        dashboardDesign: localDashboardDesign
-                      });
-                      showNotification('System configuration updated successfully', 'success');
-                    } catch (err) {
-                      showNotification('Failed to update system configuration', 'error');
-                    }
-                  }}
-                  className={cn(
-                    "w-full py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg",
-                    uiStyle === 'UI/UX 2' 
-                      ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200" 
-                      : "bg-primary text-white hover:opacity-90 shadow-primary/20"
-                  )}
-                >
-                  Save Global Configuration
-                </button>
-              </div>
+              {systemSubTab === 'theme' && (
+                <div className={cn(
+                  "bg-card border border-border rounded-2xl p-6 lg:p-8 space-y-6 shadow-sm",
+                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-xl"
+                )}>
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">UI Styles & Visual Default Parameters</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Select system-wide design specs, navigation patterns, and custom banner styles.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Global UI Style</label>
+                      <select 
+                        value={localUIStyle}
+                        onChange={(e) => setLocalUIStyle(e.target.value as any)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="UI/UX 1">UI/UX 1 (Classic)</option>
+                        <option value="UI/UX 2">UI/UX 2 (Modern Colorized)</option>
+                        <option value="UI/UX 3">UI/UX 3 (Glassmorphism macOS)</option>
+                        <option value="UI/UX 4">UI/UX 4 (Aurora Holographic Carbon)</option>
+                      </select>
+                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Controls borders, shadow depth, and micro gradients.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Global Left Menu Style</label>
+                      <select 
+                        value={localMenuBarStyle}
+                        onChange={(e) => setLocalMenuBarStyle(e.target.value as any)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="classic">Classic Sidebar (Default)</option>
+                        <option value="ribbon">Microsoft Office Ribbon</option>
+                        <option value="macos">macOS Top Menu Bar</option>
+                        <option value="windows11">Windows 11 Taskbar Style</option>
+                        <option value="colorful">Classic Professional (Colorful Sidebar)</option>
+                      </select>
+                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Changes default desktop-oriented frame configurations.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Default Canvas Gradient (UI/UX 3 & 4)</label>
+                      <select 
+                        value={localGlassBackground}
+                        onChange={(e) => setLocalGlassBackground(e.target.value as any)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="default">Default Cyber Carbon (Dynamic Holographic)</option>
+                        <option value="sunset">Sunset Glow (Warm Cosmic)</option>
+                        <option value="ocean">Deep Ocean (Cool Nordic)</option>
+                        <option value="aurora">Aurora Borealis (Green Matrix Neon)</option>
+                        <option value="minimal">Minimal Soft Dark (Sleek Obsidian)</option>
+                      </select>
+                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Applied as active backdrop vectors when holographic glass is chosen.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Notification Duration (ms)</label>
+                      <input
+                        type="number"
+                        value={localNotificationDuration || 3000}
+                        onChange={(e) => setLocalNotificationDuration(Number(e.target.value))}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                        step="500"
+                        min="1000"
+                      />
+                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Time for popup snackbars to remain on viewport before hiding.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 pt-2">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Notification Border Animation Style</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                      {[
+                        { id: 'default', label: 'Default Path', desc: 'Classic border trace' },
+                        { id: 'neon', label: 'Neon Glow', desc: 'Pulsating neon border' },
+                        { id: 'snake', label: 'Snake Chase', desc: 'Moving segment' },
+                        { id: 'liquid', label: 'Liquid Flow', desc: 'Rotating gradient' },
+                        { id: 'glitch', label: 'Cyber Glitch', desc: 'Digital distortion' },
+                        { id: 'shimmer', label: 'Shimmer Sweep', desc: 'Elegant light sweep' }
+                      ].map((style) => (
+                        <button
+                          key={style.id}
+                          onClick={() => setLocalNotificationAnimationStyle(style.id as any)}
+                          className={cn(
+                            "flex flex-col items-start p-2.5 rounded-lg border transition-all text-left gap-1",
+                            localNotificationAnimationStyle === style.id
+                              ? "border-blue-500 bg-blue-500/5 ring-1 ring-blue-500"
+                              : "border-border bg-background hover:border-gray-400"
+                          )}
+                        >
+                          <span className={cn(
+                            "text-[9px] font-black uppercase tracking-wider",
+                            localNotificationAnimationStyle === style.id ? "text-blue-500" : "text-foreground"
+                          )}>
+                            {style.label}
+                          </span>
+                          <span className="text-[8px] text-muted-foreground leading-tight">
+                            {style.desc}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border pt-4">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block mb-3">Dashboard Default Design Layouts</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        { id: 'Design 1', label: 'Classic Design', desc: 'Full-featured with all metrics and primary charts.' },
+                        { id: 'Design 2', label: 'Modern Design', desc: 'Clean, modern look with focus on KPI cards and trends.' },
+                        { id: 'Design 3', label: 'Minimalist (Quota Fix)', desc: 'High-performance, minimal charts. Saves 50% reads by reducing complexity.' },
+                        { id: 'Design 4', label: 'Executive Executive', desc: 'Dark-themed, focused only on essential numbers. Lowest quota usage.' }
+                      ].map(d => (
+                        <button
+                          key={d.id}
+                          onClick={() => setLocalDashboardDesign(d.id as any)}
+                          className={cn(
+                            "p-3 border rounded-xl text-left transition-all space-y-1",
+                            localDashboardDesign === d.id
+                              ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500"
+                              : "border-border bg-background hover:bg-muted"
+                          )}
+                        >
+                           <p className={cn("text-[10px] font-black uppercase tracking-tight", localDashboardDesign === d.id ? "text-blue-600" : "text-foreground")}>{d.label}</p>
+                           <p className="text-[9px] text-muted-foreground uppercase leading-tight">{d.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-blue-600 bg-blue-50 p-2.5 rounded border border-blue-100 uppercase font-bold mt-3">
+                      * Recommended: Use Design 3 or 4 to drastically reduce non-critical database reads and stay within your free plan limits.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {systemSubTab === 'branding' && (
+                <div className={cn(
+                  "bg-card border border-border rounded-2xl p-6 lg:p-8 space-y-6 shadow-sm",
+                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-xl"
+                )}>
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Global Logo & Asset Styling</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Upload or set custom URLs for branding assets applied when user tenants do not replace them.</p>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="p-4 bg-muted/10 border border-border rounded-xl space-y-3">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">System Logo (Global Default)</label>
+                      <div className="flex flex-col sm:flex-row items-start gap-4">
+                        <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-card overflow-hidden rounded-lg shrink-0">
+                          {localSystemLogo ? (
+                            <img src={localSystemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                          ) : (
+                            <Building2 className="w-6 h-6 text-muted-foreground opacity-20" />
+                          )}
+                        </div>
+                        <div className="flex-1 space-y-2 w-full">
+                          <div className="flex gap-2">
+                            <label className="flex-1 cursor-pointer bg-background border border-border hover:bg-muted transition-all p-2 text-center rounded-lg text-xs font-bold uppercase tracking-wider block">
+                              Upload System Logo
+                              <input type="file" accept="image/*" onChange={handleSystemLogoUpload} className="hidden" />
+                            </label>
+                            {localSystemLogo && (
+                              <button 
+                                onClick={() => setLocalSystemLogo('')}
+                                className="p-2 border border-border text-rose-500 hover:bg-rose-500/10 transition-all rounded-lg"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Or set via URL</label>
+                            <input
+                              type="text"
+                              placeholder="https://example.com/logo.png"
+                              value={localSystemLogo}
+                              onChange={(e) => setLocalSystemLogo(e.target.value)}
+                              className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                          <p className="text-[9px] text-muted-foreground uppercase leading-relaxed">This logo will be used as a default for all companies if they don't have their own logo.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-muted/10 border border-border rounded-xl space-y-3">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">App Favicon (Mobile App Icon)</label>
+                      <div className="flex flex-col sm:flex-row items-start gap-4">
+                        <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-card overflow-hidden rounded-lg shrink-0">
+                          {localSystemFavicon ? (
+                            <img src={localSystemFavicon} alt="Favicon" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                          ) : (
+                            <Zap className="w-6 h-6 text-muted-foreground opacity-20" />
+                          )}
+                        </div>
+                        <div className="flex-1 space-y-2 w-full">
+                          <div className="flex gap-2">
+                            <label className="flex-1 cursor-pointer bg-background border border-border hover:bg-muted transition-all p-2 text-center rounded-lg text-xs font-bold uppercase tracking-wider block">
+                              Upload Favicon
+                              <input type="file" accept="image/*" onChange={handleSystemFaviconUpload} className="hidden" />
+                            </label>
+                            {localSystemFavicon && (
+                              <button 
+                                onClick={() => setLocalSystemFavicon('')}
+                                className="p-2 border border-border text-rose-500 hover:bg-rose-500/10 transition-all rounded-lg"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Or set via URL</label>
+                            <input
+                              type="text"
+                              placeholder="https://example.com/favicon.png"
+                              value={localSystemFavicon}
+                              onChange={(e) => setLocalSystemFavicon(e.target.value)}
+                              className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                          <p className="text-[9px] text-muted-foreground uppercase leading-relaxed">Appears in browser tabs and as the launcher app icon when users "Add to Home Screen" on mobile devices.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {systemSubTab === 'search' && (
+                <div className={cn(
+                  "bg-card border border-border rounded-2xl p-6 lg:p-8 space-y-6 shadow-sm",
+                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-xl"
+                )}>
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Global Search Engine Configurations</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">Adjust topbar quick menu lookups and accessibility key shortcuts globally.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Default Placeholder Text</label>
+                      <input 
+                        type="text" 
+                        value={localSearchPlaceholder || ''} 
+                        onChange={(e) => setLocalSearchPlaceholder(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
+                        placeholder="Search system metrics..."
+                      />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Default Keyboard Help Text</label>
+                      <textarea 
+                        value={localSearchHelpText || ''} 
+                        onChange={(e) => setLocalSearchHelpText(e.target.value)}
+                        rows={2}
+                        className="w-full bg-background border border-border rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none resize-none" 
+                        placeholder="Press key bindings..."
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-foreground">Show "ESC" Key Shortcut Hint</p>
+                        <p className="text-[10px] text-muted-foreground">Renders hints on the search overlay to let users close it with ESC.</p>
+                      </div>
+                      <button 
+                        onClick={() => setLocalShowSearchShortcut(!localShowSearchShortcut)}
+                        className={cn(
+                          "w-10 h-5.5 rounded-full relative transition-colors shrink-0",
+                          localShowSearchShortcut ? "bg-emerald-500" : "bg-border"
+                        )}
+                      >
+                        <div className={cn(
+                          "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                          localShowSearchShortcut ? "right-0.5" : "left-0.5"
+                        )} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {systemSubTab === 'loader' && (
+                <div className={cn(
+                  "bg-card border border-border rounded-2xl p-6 lg:p-8 space-y-6 shadow-sm",
+                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-xl"
+                )}>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Adaptive Loading Screen Styling</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">Customize global backdrop glass blur depth, animation icon layouts, and footer progress texts.</p>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Temp test of loader
+                        // We can grab globalLoader if mounted or simulate it locally
+                        const testScreen = document.getElementById('global-loading-screen');
+                        if (testScreen) {
+                          showNotification("Preview triggered! Close/hide will complete automatically in 3.5s.", "info");
+                        }
+                        // Create deep local mock trigger
+                        const event = new CustomEvent('trigger-mock-loader', { 
+                          detail: { 
+                            phrases: localLoaderPhrases,
+                            blur: localLoaderBlurStyle,
+                            icon: localLoaderIconStyle,
+                            theme: localLoaderTheme
+                          } 
+                        });
+                        window.dispatchEvent(event);
+                      }}
+                      className="px-4 py-2 border border-border hover:bg-muted text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 shrink-0"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      Live Preview Loader
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                    {/* Backdrop Blur Selection */}
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Screen Glass Blur Intensity</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: 'none', label: 'Solid Flat', desc: 'Plain backdrop dimting' },
+                          { id: 'sm', label: 'Subtle Blur', desc: 'Soft 4px backdrop blur' },
+                          { id: 'md', label: 'Medium Blur', desc: 'Balanced 8px aesthetic' },
+                          { id: 'lg', label: 'Deep Frost', desc: 'Heavy 16px high-blur frosted' }
+                        ].map((b) => (
+                          <button
+                            key={b.id}
+                            onClick={() => setLocalLoaderBlurStyle(b.id as any)}
+                            className={cn(
+                              "p-3 border rounded-xl text-left transition-all space-y-1",
+                              localLoaderBlurStyle === b.id
+                                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                : "border-border bg-background hover:bg-muted"
+                            )}
+                          >
+                            <p className="text-[10px] font-black uppercase tracking-tight text-foreground">{b.label}</p>
+                            <p className="text-[9px] text-muted-foreground leading-tight uppercase">{b.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Loader Icon Selection */}
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Center Spinning Icon</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: 'spinner', label: 'Calm Spinner', desc: 'Classic clean spinning stroke' },
+                          { id: 'dots', label: 'Bouncing Dots', desc: 'Dynamic hopping loading beads' },
+                          { id: 'circle-bar', label: 'Metropolitan Bar', desc: 'Pulsating double rotation ring' },
+                          { id: 'quantum', label: 'Quantum Matrix', desc: 'Complex tech-themed particle spin' }
+                        ].map((i) => (
+                          <button
+                            key={i.id}
+                            onClick={() => setLocalLoaderIconStyle(i.id as any)}
+                            className={cn(
+                              "p-3 border rounded-xl text-left transition-all space-y-1",
+                              localLoaderIconStyle === i.id
+                                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                : "border-border bg-background hover:bg-muted"
+                            )}
+                          >
+                            <p className="text-[10px] font-black uppercase tracking-tight text-foreground">{i.label}</p>
+                            <p className="text-[9px] text-muted-foreground leading-tight uppercase">{i.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Loader Card Theme Selection */}
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Progress Box Panel Theme</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'glass', label: 'Aero Glass', desc: 'Holographic' },
+                          { id: 'dark', label: 'Cosmic Obsidian', desc: 'Pure Dark' },
+                          { id: 'light', label: 'Snow Alabaster', desc: 'Minimal Light' }
+                        ].map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => setLocalLoaderTheme(t.id as any)}
+                            className={cn(
+                              "p-2.5 border rounded-xl text-left transition-all space-y-1",
+                              localLoaderTheme === t.id
+                                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                : "border-border bg-background hover:bg-muted"
+                            )}
+                          >
+                            <p className="text-[10px] font-black uppercase tracking-tight text-foreground leading-none">{t.label}</p>
+                            <p className="text-[8px] text-muted-foreground uppercase leading-none mt-1">{t.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Loader Instruction Help Banner */}
+                    <div className="p-3.5 bg-muted/10 border border-border rounded-xl flex flex-col justify-center space-y-1">
+                      <h4 className="text-[10px] font-bold text-foreground uppercase tracking-widest flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                        Reactive Loading Pipeline
+                      </h4>
+                      <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-mono">
+                        When users trigger major tasks (indexing reports, exporting books, posting kontras, syncs), the system overlays a blurred frosted glass shroud & shifts through custom steps in real time.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Custom Progress Phrases input */}
+                  <div className="space-y-2 pt-2">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">
+                      Progress Text Transition Sequence (Comma Separated)
+                    </label>
+                    <textarea
+                      value={localLoaderPhrases}
+                      onChange={(e) => setLocalLoaderPhrases(e.target.value)}
+                      rows={3}
+                      className="w-full bg-background border border-border rounded-xl p-3 text-xs font-mono focus:ring-2 focus:ring-primary outline-none resize-none leading-relaxed"
+                      placeholder="Connecting to server, Requesting to server, Waiting for response, Almost Done, Welcoming back!"
+                    />
+                    <p className="text-[9px] text-muted-foreground uppercase font-semibold">
+                      * Separate each status message with a comma. The loader loops through these from left to right as the loading sequence completes.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

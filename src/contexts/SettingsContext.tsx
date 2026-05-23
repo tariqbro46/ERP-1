@@ -112,6 +112,10 @@ interface SettingsContextType {
   searchHelpText?: string;
   showSearchShortcut?: boolean;
   searchIconColor?: string;
+  loaderBlurStyle?: 'sm' | 'md' | 'lg' | 'none';
+  loaderIconStyle?: 'spinner' | 'dots' | 'circle-bar' | 'quantum';
+  loaderPhrases?: string;
+  loaderTheme?: 'dark' | 'light' | 'glass';
   features: FeatureSettings[];
   appFeatures: FeatureCategory[];
   subscriptionPlans: SubscriptionPlan[];
@@ -191,6 +195,10 @@ const defaultSettings: SettingsContextType = {
   statusOnlineText: 'Status: Online',
   statusOfflineText: 'Status: Offline',
   statusErrorText: 'Database Error',
+  loaderBlurStyle: 'md',
+  loaderIconStyle: 'spinner',
+  loaderPhrases: 'Connecting to server, Requesting data, Waiting for response, Almost done, Here we go!',
+  loaderTheme: 'glass',
   showGoToShortcut: true,
   showQuickActions: true,
   dashboardQuickActions: ['voucher', 'item', 'ledger', 'godown', 'users'],
@@ -270,6 +278,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             searchHelpText: data.searchHelpText || prev.searchHelpText,
             showSearchShortcut: data.showSearchShortcut !== undefined ? data.showSearchShortcut : prev.showSearchShortcut,
             searchIconColor: data.searchIconColor || prev.searchIconColor,
+            loaderBlurStyle: data.loaderBlurStyle || prev.loaderBlurStyle || 'md',
+            loaderIconStyle: data.loaderIconStyle || prev.loaderIconStyle || 'spinner',
+            loaderPhrases: data.loaderPhrases || prev.loaderPhrases || 'Connecting to server, Requesting data, Waiting for response, Almost done, Here we go!',
+            loaderTheme: data.loaderTheme || prev.loaderTheme || 'glass',
             systemUiStyle: data.uiStyle || prev.systemUiStyle,
             systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
             globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign
