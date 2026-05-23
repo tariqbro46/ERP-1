@@ -1492,7 +1492,8 @@ function AppContent() {
     loaderBlurStyle = 'md',
     loaderIconStyle = 'spinner',
     loaderPhrases,
-    loaderTheme = 'glass'
+    loaderTheme = 'glass',
+    loading: settingsLoading
   } = useSettings();
 
   // Apply fonts globally
@@ -1501,7 +1502,7 @@ function AppContent() {
     document.documentElement.style.setProperty('--app-font', `"${font}", sans-serif`);
   }, [language, englishFont, banglaFont]);
   
-  if (loading) {
+  if (loading || settingsLoading) {
     const defaultPhrases = [
       'Connecting to server...',
       'Requesting to server...',

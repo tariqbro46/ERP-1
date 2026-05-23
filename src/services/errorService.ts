@@ -79,6 +79,15 @@ class ErrorService {
     await updateDoc(docRef, { status });
   }
 
+  async updateLogAiStatus(logId: string, aiStatus: ErrorLog['aiStatus'], status?: ErrorLog['status']) {
+    const docRef = doc(db, this.collectionName, logId);
+    const updates: any = { aiStatus };
+    if (status) {
+      updates.status = status;
+    }
+    await updateDoc(docRef, updates);
+  }
+
   async deleteLog(logId: string) {
     const docRef = doc(db, this.collectionName, logId);
     await deleteDoc(docRef);

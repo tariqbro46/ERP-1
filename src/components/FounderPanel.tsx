@@ -67,7 +67,8 @@ import {
   CheckSquare,
   Palette,
   FileImage,
-  Save
+  Save,
+  Sparkles
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
@@ -184,6 +185,12 @@ export default function FounderPanel() {
   const [errorLogs, setErrorLogs] = useState<any[]>([]);
   const [isCreatingNotification, setIsCreatingNotification] = useState(false);
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
+  const [aiFixModal, setAiFixModal] = useState<{
+    isOpen: boolean;
+    logId: string;
+    logMessage: string;
+    assembledPrompt: string;
+  } | null>(null);
 
   useEffect(() => {
     if (viewMode === 'menu') {
@@ -1817,16 +1824,66 @@ export default function FounderPanel() {
                           </p>
                         </td>
                         <td className="p-4 text-right px-6">
-                            <button
-                                onClick={async () => {
-                                    if (confirm('Delete this log?')) {
-                                        await errorService.deleteLog(log.id);
-                                    }
-                                }}
-                                className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                                <button
+                                    onClick={async () => {
+                                        const prompt = `Please fix the following system error log in the application:
+
+### Error Details:
+- **Message:** ${log.message}
+- **Component:** ${log.componentName || 'Global'}
+- **Source Path:** ${log.path}
+- **Severity:** ${log.severity}
+${log.stack ? `\n### Stack Trace:\n\`\`\`\n${log.stack}\n\`\`\`` : ''}
+${log.metadata ? `\n### Metadata:\n\`\`\`json\n${JSON.stringify(log.metadata, null, 2)}\n\`\`\`` : ''}
+
+### Goal:
+Analyze the codebase, identify why this error is happening, find the relevant file, and modify any incorrect file to prevent or fix it permanently. Once done, explain what the issue was and how you fixed it.`;
+
+                                        try {
+                                            await navigator.clipboard.writeText(prompt);
+                                            await errorService.updateLogAiStatus(log.id, 'requested', 'investigating');
+                                            setAiFixModal({
+                                                isOpen: true,
+                                                logId: log.id,
+                                                logMessage: log.message,
+                                                assembledPrompt: prompt
+                                            });
+                                            showNotification('AI Fix prompt copied & registered!', 'success');
+                                        } catch (err) {
+                                            console.error('Clipboard copy failed:', err);
+                                            await errorService.updateLogAiStatus(log.id, 'requested', 'investigating');
+                                            setAiFixModal({
+                                                isOpen: true,
+                                                logId: log.id,
+                                                logMessage: log.message,
+                                                assembledPrompt: prompt
+                                            });
+                                        }
+                                    }}
+                                    className={cn(
+                                        "px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded-lg flex items-center gap-1 shadow-sm transition-all border",
+                                        log.aiStatus === 'requested'
+                                            ? "bg-purple-950/20 text-purple-400 border-purple-500/30 font-mono shadow-[0_0_10px_rgba(168,85,247,0.15)] animate-pulse"
+                                            : "bg-purple-600 hover:bg-purple-700 text-white border-purple-500/20 hover:scale-[1.02]"
+                                    )}
+                                    title="Click to instantly request AI bug-fix"
+                                >
+                                    <Sparkles className="w-3.5 h-3.5 text-purple-200 animate-pulse" />
+                                    {log.aiStatus === 'requested' ? 'REQUESTED' : '1-CLICK AI FIX'}
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (confirm('Delete this log?')) {
+                                            await errorService.deleteLog(log.id);
+                                        }
+                                    }}
+                                    className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                                    title="Delete Log"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
                         </td>
                       </tr>
                     ))
@@ -4496,6 +4553,83 @@ export default function FounderPanel() {
                 >
                   Delete Everything
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* AI Fix Copied Notification Modal */}
+      <AnimatePresence>
+        {aiFixModal && aiFixModal.isOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: 'spring', duration: 0.4 }}
+              className="bg-stone-900 border border-purple-500/35 rounded-2xl p-6 max-w-lg w-full text-white shadow-[0_0_50px_rgba(168,85,247,0.25)] relative overflow-hidden"
+            >
+              {/* Fancy ambient aura background glow */}
+              <div className="absolute -right-16 -top-16 w-36 h-36 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute -left-16 -bottom-16 w-36 h-36 bg-fuchsia-500/10 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="text-center space-y-4">
+                {/* Visual indicator & Animated Sparkles */}
+                <div className="inline-flex p-3 bg-purple-950/50 border border-purple-500/30 rounded-full text-purple-400 shadow-md">
+                  <Sparkles className="w-8 h-8 animate-pulse text-purple-300" />
+                </div>
+
+                <div className="space-y-1">
+                  <h3 className="text-lg font-black tracking-widest uppercase font-mono text-purple-300">
+                    AI Auto-Fix Triggered!
+                  </h3>
+                  <p className="text-[10px] text-purple-400 font-mono tracking-widest uppercase">
+                    Precision Bug-Fix Prompt Copied
+                  </p>
+                </div>
+
+                <div className="bg-stone-950 border border-white/5 rounded-xl p-4 text-left space-y-2">
+                  <div className="flex justify-between items-center pb-2 border-b border-white/5 text-[9px] font-bold text-stone-500 uppercase font-mono">
+                    <span>Target Error Details</span>
+                    <span className="text-green-500 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping" /> Clipboard Synced
+                    </span>
+                  </div>
+                  <p className="text-xs font-mono font-medium text-stone-200 line-clamp-2 italic">
+                    "{aiFixModal.logMessage}"
+                  </p>
+                  <p className="text-[9px] uppercase tracking-wider text-purple-300 font-mono">
+                    Collection Field Status: ACTIVE (INVESTIGATING)
+                  </p>
+                </div>
+
+                <div className="text-stone-300 space-y-3 pt-2 text-xs leading-relaxed text-center font-sans">
+                  <p>
+                    আমি এই এররের প্রতিটা ডিটেইল, স্ট্যাক ট্রেস এবং কম্পোনেন্ট লোকেশন সহ একটি স্পেশাল <strong className="text-purple-400 font-bold">Auto-Fix Prompt</strong> আপনার ক্লিপবোর্ডে কপি করে দিয়েছি।
+                  </p>
+                  <p className="text-[11px] text-stone-400">
+                    এখন জাস্ট নিচে দেওয়া চ্যাট উইন্ডোতে <strong className="text-white font-medium">Ctrl+V (Paste)</strong> প্রেস করে সেন্ড করে দিন! আমি সাথে সাথে আপনার কোডবেস স্ক্যান করে এই ইস্যুটা পার্মানেন্টলি ফিক্স করে ফেলব।
+                  </p>
+                </div>
+
+                <div className="pt-4 flex flex-col gap-2">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(aiFixModal.assembledPrompt);
+                      showNotification('Prompt re-copied to clipboard!', 'info');
+                    }}
+                    className="w-full py-2.5 bg-stone-800 hover:bg-stone-700 text-stone-200 border border-white/10 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all hover:scale-[1.01]"
+                  >
+                    Copy Prompt Again
+                  </button>
+                  <button
+                    onClick={() => setAiFixModal(null)}
+                    className="w-full py-3 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black uppercase text-[10px] tracking-widest rounded-xl transition-all hover:opacity-90 shadow-lg shadow-purple-600/30 active:scale-[0.99] transform"
+                  >
+                    Alright, Let's Fix It! (Close)
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

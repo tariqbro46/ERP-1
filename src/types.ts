@@ -477,6 +477,7 @@ export interface ErrorLog {
   status: 'new' | 'investigating' | 'resolved' | 'ignored';
   timestamp: any;
   metadata?: Record<string, any>;
+  aiStatus?: 'idle' | 'requested' | 'fixing' | 'fixed' | 'failed';
 }
 
 export interface TaxRate {

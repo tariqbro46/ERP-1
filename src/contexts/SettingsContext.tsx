@@ -126,6 +126,7 @@ interface SettingsContextType {
   subscriptionPlans: SubscriptionPlan[];
   activePlan?: SubscriptionPlan;
   userSettings: any;
+  loading?: boolean;
   updateSettings: (newSettings: Partial<SettingsContextType>) => void;
   updateSystemSettings: (newSettings: any) => Promise<void>;
   updateFeaturesSettings: (newFeatures: FeatureCategory[]) => Promise<void>;
@@ -229,6 +230,7 @@ const defaultSettings: SettingsContextType = {
   appFeatures: [],
   subscriptionPlans: [],
   userSettings: {},
+  loading: true,
   updateSettings: () => {},
   updateSystemSettings: async () => {},
   updateFeaturesSettings: async () => {},
@@ -355,6 +357,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         statusOfflineText: prev.statusOfflineText,
         statusErrorText: prev.statusErrorText,
         appVersion: prev.appVersion,
+        loading: false,
         updateSettings: prev.updateSettings,
         updateSystemSettings: prev.updateSystemSettings,
         updateFeaturesSettings: prev.updateFeaturesSettings,
@@ -370,6 +373,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         setSettings(prev => ({ 
           ...prev, 
           ...snap.data(), 
+          loading: false,
           updateSettings: prev.updateSettings,
           updateSystemSettings: prev.updateSystemSettings,
           updateFeaturesSettings: prev.updateFeaturesSettings,
@@ -384,6 +388,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           statusOfflineText: prev.statusOfflineText,
           statusErrorText: prev.statusErrorText,
           appVersion: prev.appVersion,
+          loading: false,
           updateSettings: prev.updateSettings,
           updateSystemSettings: prev.updateSystemSettings,
           updateFeaturesSettings: prev.updateFeaturesSettings,
@@ -393,6 +398,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }
     }, (error) => {
       console.error("Settings snapshot error:", error);
+      setSettings(prev => ({ ...prev, loading: false }));
     });
 
     return () => {

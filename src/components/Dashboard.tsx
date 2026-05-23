@@ -65,6 +65,7 @@ export function Dashboard() {
   const { t } = useLanguage();
   const { 
     companyName, 
+    slogan,
     financialYearStart, 
     financialYearEnd, 
     dashboardDesign: localDesign, 
@@ -246,6 +247,12 @@ export function Dashboard() {
   const [newBmkUrl, setNewBmkUrl] = useState('/accounts');
   const [calcCost, setCalcCost] = useState(1000);
   const [calcMarkup, setCalcMarkup] = useState(25);
+
+  const [splashTime, setSplashTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setSplashTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleAddBookmark = (e: React.FormEvent) => {
     e.preventDefault();
@@ -613,12 +620,6 @@ export function Dashboard() {
   }
 
   if (dashboardDesign === 'Design 6') {
-    const [splashTime, setSplashTime] = useState(new Date());
-    useEffect(() => {
-      const timer = setInterval(() => setSplashTime(new Date()), 1000);
-      return () => clearInterval(timer);
-    }, []);
-
     const timeString = splashTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const dateString = splashTime.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
     
@@ -710,16 +711,16 @@ export function Dashboard() {
             {/* Cyber Header with neon decorations */}
             <div className="text-center space-y-3">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-950/40 border border-cyan-500/30 rounded-lg text-[9px] font-black uppercase tracking-widest text-cyan-400 font-mono shadow-[0_0_15px_rgba(6,182,212,0.15)] animate-pulse">
-                <Cpu className="w-3.5 h-3.5 text-cyan-400 animate-spin" style={{ animationDuration: '4s' }} />
-                SYSTEM PORTAL ONLINE
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                ENTERPRISE HUB
               </div>
               
               <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-fuchsia-200 tracking-tight leading-none uppercase">
-                {customWelcomeMessage || "Welcome to Headquarters"}
+                {greeting}, {user?.displayName || "User"}
               </h1>
               
-              <p className="text-xs text-cyan-400/80 uppercase tracking-[0.25em] font-mono">
-                {companyName || "CORE SYSTEM"} // SECURE ACCESS NODES
+              <p className="text-xs text-cyan-400/80 uppercase tracking-wider font-mono">
+                {companyName || "Modina Enterprise"} {slogan ? `| ${slogan}` : ""}
               </p>
               
               {/* Dynamic glass telemetry widget */}
@@ -727,8 +728,6 @@ export function Dashboard() {
                 <span className="flex items-center gap-1.5 text-cyan-400"><Clock className="w-3.5 h-3.5" /> {timeString}</span>
                 <span className="text-slate-800">|</span>
                 <span className="text-fuchsia-400">{dateString.toUpperCase()}</span>
-                <span className="text-slate-800">|</span>
-                <span className="text-emerald-400 flex items-center gap-1 font-bold">● ACTIVE</span>
               </div>
             </div>
 
@@ -770,9 +769,9 @@ export function Dashboard() {
               })}
             </div>
 
-            <div className="text-center pt-4">
+            <div className="text-center pt-4 opacity-50">
               <span className="text-[10px] text-fuchsia-500/60 font-mono uppercase tracking-[0.18em]">
-                SYS_VER_1.01 // QUOTA_BYPASS: 100% // ENVIRONMENT: LOCAL_CACHE
+                Secure Enterprise Portal • Active Session
               </span>
             </div>
 
@@ -788,8 +787,8 @@ export function Dashboard() {
             
             {/* Elegant Top Meta line */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-stone-200 pb-5 gap-3">
-              <div className="text-[11px] font-medium tracking-[0.2em] text-stone-500 uppercase font-sans">
-                {companyName || "SYSTEM PORTAL"} • OFF-READ ENVIRONMENT
+              <div className="text-[11px] font-medium tracking-wider text-stone-500 uppercase font-sans">
+                {companyName || "Modina Enterprise"} {slogan ? `| ${slogan}` : ""}
               </div>
               <div className="text-[11px] font-mono text-stone-500 flex items-center gap-2">
                 {dateString.toUpperCase()} &nbsp;—&nbsp; {timeString}
@@ -806,19 +805,12 @@ export function Dashboard() {
                 </span>
                 
                 <h1 className="text-4xl md:text-5xl font-serif text-stone-900 tracking-tight leading-[1.05]">
-                  {customWelcomeMessage || "Welcome to Headquarters"}
+                  {greeting}, {user?.displayName || "User"}
                 </h1>
                 
                 <p className="text-xs text-stone-500 leading-relaxed font-serif italic">
                   "Simplicity is the ultimate sophistication." A bespoke minimal directory crafted for quiet focus, instant performance, and smooth business administration.
                 </p>
-                
-                <div className="pt-2">
-                  <div className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-stone-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
-                    Local Cache Active
-                  </div>
-                </div>
               </div>
 
               {/* Right Column List Menu */}
@@ -856,9 +848,9 @@ export function Dashboard() {
             </div>
 
             {/* Fine Print Footer */}
-            <div className="text-center border-t border-stone-200/60 pt-6">
+            <div className="text-center border-t border-stone-200/30 pt-6">
               <p className="text-[9px] text-stone-400 uppercase tracking-widest">
-                System optimized • All core accounting, stock, and directory records fully preserved.
+                BESPOKE ENTERPRISE SOLUTIONS • POWERED BY TALLYFLOW
               </p>
             </div>
 
@@ -880,11 +872,11 @@ export function Dashboard() {
             </div>
             
             <h1 className="text-3xl md:text-4.5xl font-black text-slate-900 tracking-tight leading-none">
-              {greeting}, {customWelcomeMessage || "Welcome to Headquarters"}
+              {greeting}, {user?.displayName || "User"}
             </h1>
             
-            <p className="text-xs md:text-sm text-slate-500 uppercase tracking-[0.15em] font-medium">
-              {companyName || "COMPANY ERP"} • Portal Dashboard
+            <p className="text-xs md:text-sm text-slate-500 font-medium uppercase tracking-wider">
+              {companyName || "Modina Enterprise"} {slogan ? `| ${slogan}` : ""}
             </p>
             
             <div className="flex items-center justify-center gap-3 pt-2 text-xs text-muted-foreground font-mono">
@@ -932,9 +924,9 @@ export function Dashboard() {
             })}
           </div>
 
-          <div className="text-center pt-4">
+          <div className="text-center pt-4 opacity-75">
             <p className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">
-              System Active • Bypassing database counters to conserve daily usage quota
+              Secure Cloud Enterprise Environment • Active Session
             </p>
           </div>
 
