@@ -118,83 +118,150 @@ import { About } from './pages/landing/About';
 import { Contact } from './pages/landing/Contact';
 import { Pricing } from './pages/landing/Pricing';
 
-const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => (
-  <Link
-    to={to}
-    className={cn(
-      "flex items-center justify-between px-4 py-2.5 transition-all group border-l-2",
-      active 
-        ? "bg-foreground/5 text-foreground border-foreground" 
-        : "text-gray-500 border-transparent hover:bg-card hover:text-foreground"
-    )}
-  >
-    <div className={cn("flex items-center gap-3", indent && "ml-4")}>
-      <Icon className={cn("w-3.5 h-3.5", active ? "text-foreground" : "text-gray-600 group-hover:text-gray-400")} />
-      <span className="text-[10px] font-mono uppercase tracking-widest">{label}</span>
-    </div>
-    {active && <div className="w-1 h-1 rounded-full bg-foreground" />}
-  </Link>
-);
+const getColorfulItemStyle = (to: string, active: boolean) => {
+  const isDashboard = to === '/dashboard';
+  const isMasters = to.includes('/item') || to.includes('/accounts') || to.includes('/godown');
+  const isVoucher = to.includes('/voucher') || to.includes('/invoice') || to.includes('/sales') || to.includes('/purchase');
+  const isBook = to.includes('/daybook') || to.includes('/trail') || to.includes('/ledger');
+  const isReport = to.includes('/balance') || to.includes('/profit') || to.includes('/ratio') || to.includes('/reports');
+  const isProduction = to.includes('/manufacturing') || to.includes('/machine') || to.includes('/production');
+  const isAdv = to.includes('/tax') || to.includes('/crm') || to.includes('/supply');
+  
+  if (active) {
+    if (isDashboard) return { bg: "bg-sky-500/10 text-sky-400 border-sky-500", icon: "text-sky-500", dot: "bg-sky-400" };
+    if (isMasters) return { bg: "bg-pink-500/10 text-pink-400 border-pink-500", icon: "text-pink-500", dot: "bg-pink-400" };
+    if (isVoucher) return { bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500", icon: "text-emerald-500", dot: "bg-emerald-400" };
+    if (isBook) return { bg: "bg-amber-500/10 text-amber-400 border-amber-500", icon: "text-amber-500", dot: "bg-amber-400" };
+    if (isReport) return { bg: "bg-teal-500/10 text-teal-400 border-teal-500", icon: "text-teal-500", dot: "bg-teal-400" };
+    if (isProduction) return { bg: "bg-orange-500/10 text-orange-400 border-orange-500", icon: "text-orange-500", dot: "bg-orange-400" };
+    if (isAdv) return { bg: "bg-indigo-500/10 text-indigo-400 border-indigo-500", icon: "text-indigo-500", dot: "bg-indigo-400" };
+    
+    return { bg: "bg-blue-500/10 text-blue-400 border-blue-500", icon: "text-blue-500", dot: "bg-blue-400" };
+  } else {
+    if (isDashboard) return { bg: "hover:bg-sky-500/5 text-slate-400 hover:text-sky-400 border-transparent", icon: "text-sky-500/70 group-hover:text-sky-500", dot: "bg-sky-400/50" };
+    if (isMasters) return { bg: "hover:bg-pink-500/5 text-slate-400 hover:text-pink-400 border-transparent", icon: "text-pink-500/70 group-hover:text-pink-500", dot: "bg-pink-400/50" };
+    if (isVoucher) return { bg: "hover:bg-emerald-500/5 text-slate-400 hover:text-emerald-400 border-transparent", icon: "text-emerald-500/70 group-hover:text-emerald-500", dot: "bg-emerald-400/50" };
+    if (isBook) return { bg: "hover:bg-amber-500/5 text-slate-400 hover:text-amber-400 border-transparent", icon: "text-amber-500/70 group-hover:text-amber-500", dot: "bg-amber-400/50" };
+    if (isReport) return { bg: "hover:bg-teal-500/5 text-slate-400 hover:text-teal-400 border-transparent", icon: "text-teal-500/70 group-hover:text-teal-500", dot: "bg-teal-400/50" };
+    if (isProduction) return { bg: "hover:bg-orange-500/5 text-slate-400 hover:text-orange-400 border-transparent", icon: "text-orange-500/70 group-hover:text-orange-500", dot: "bg-orange-400/50" };
+    if (isAdv) return { bg: "hover:bg-indigo-500/5 text-slate-400 hover:text-indigo-400 border-transparent", icon: "text-indigo-500/70 group-hover:text-indigo-500", dot: "bg-indigo-400/50" };
+    
+    return { bg: "hover:bg-blue-500/5 text-slate-400 hover:text-blue-400 border-transparent", icon: "text-blue-500/70 group-hover:text-blue-500", dot: "bg-blue-400/50" };
+  }
+};
 
-const SidebarGroup = ({ title, children, isOpen, onToggle, to }: { title: string, children: React.ReactNode, isOpen: boolean, onToggle: () => void, to?: string }) => (
-  <div className="mb-2">
-    <div className="flex items-center group transition-colors">
-      {to ? (
-        <Link 
-          to={to}
-          className={cn(
-            "flex-1 px-4 py-3 flex items-center justify-between transition-colors",
-            isOpen ? "bg-foreground/5" : "hover:bg-card"
-          )}
-        >
-          <div className="flex items-center gap-2">
-            <div className={cn("h-[1px] w-2 transition-all", isOpen ? "bg-foreground" : "bg-border")} />
-            <p className={cn(
-              "text-[9px] uppercase tracking-[0.2em] font-bold whitespace-nowrap transition-colors",
-              isOpen ? "text-foreground" : "text-gray-600 group-hover:text-gray-400"
-            )}>{title}</p>
-          </div>
-        </Link>
-      ) : (
+const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => {
+  const { menuBarStyle } = useSettings();
+  const isColorful = menuBarStyle === 'colorful';
+  const colorful = isColorful ? getColorfulItemStyle(to, active) : null;
+
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "flex items-center justify-between px-4 py-2.5 transition-all group border-l-2",
+        isColorful 
+          ? colorful.bg 
+          : active 
+            ? "bg-foreground/5 text-foreground border-foreground" 
+            : "text-gray-500 border-transparent hover:bg-card hover:text-foreground"
+      )}
+    >
+      <div className={cn("flex items-center gap-3", indent && "ml-4")}>
+        <Icon className={cn("w-3.5 h-3.5 transition-colors duration-200", isColorful ? colorful.icon : active ? "text-foreground" : "text-gray-600 group-hover:text-gray-400")} />
+        <span className={cn(
+          "text-[10px] font-mono uppercase tracking-widest transition-colors duration-200",
+          isColorful ? "font-semibold tracking-wider font-sans normal-case" : "",
+          isColorful && active && "font-black"
+        )}>{label}</span>
+      </div>
+      {active && (
+        <div className={cn("w-1.5 h-1.5 rounded-full shadow-sm", isColorful ? colorful.dot : "bg-foreground")} />
+      )}
+    </Link>
+  );
+};
+
+const SidebarGroup = ({ title, children, isOpen, onToggle, to }: { title: string, children: React.ReactNode, isOpen: boolean, onToggle: () => void, to?: string }) => {
+  const { menuBarStyle } = useSettings();
+  const isColorful = menuBarStyle === 'colorful';
+
+  return (
+    <div className="mb-2">
+      <div className="flex items-center group transition-colors">
+        {to ? (
+          <Link 
+            to={to}
+            className={cn(
+              "flex-1 px-4 py-3 flex items-center justify-between transition-colors",
+              isOpen ? "bg-foreground/5" : "hover:bg-card"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "h-[1.5px] w-3 transition-all", 
+                isOpen 
+                  ? isColorful ? "bg-indigo-500" : "bg-foreground" 
+                  : "bg-border"
+              )} />
+              <p className={cn(
+                "text-[9px] uppercase tracking-[0.2em] font-extrabold whitespace-nowrap transition-colors",
+                isOpen 
+                  ? isColorful ? "text-indigo-400" : "text-foreground" 
+                  : "text-gray-500 group-hover:text-gray-300"
+              )}>{title}</p>
+            </div>
+          </Link>
+        ) : (
+          <button 
+            onClick={onToggle}
+            className={cn(
+              "flex-1 px-4 py-3 flex items-center justify-between transition-colors",
+              isOpen ? "bg-foreground/5" : "hover:bg-card"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "h-[1.5px] w-3 transition-all", 
+                isOpen 
+                  ? isColorful ? "bg-indigo-500" : "bg-foreground" 
+                  : "bg-border"
+              )} />
+              <p className={cn(
+                "text-[9px] uppercase tracking-[0.2em] font-extrabold whitespace-nowrap transition-colors",
+                isOpen 
+                  ? isColorful ? "text-indigo-400" : "text-foreground" 
+                  : "text-gray-500 group-hover:text-gray-300"
+              )}>{title}</p>
+            </div>
+          </button>
+        )}
         <button 
           onClick={onToggle}
           className={cn(
-            "flex-1 px-4 py-3 flex items-center justify-between transition-colors",
+            "px-3 py-3 transition-colors",
             isOpen ? "bg-foreground/5" : "hover:bg-card"
           )}
         >
-          <div className="flex items-center gap-2">
-            <div className={cn("h-[1px] w-2 transition-all", isOpen ? "bg-foreground" : "bg-border")} />
-            <p className={cn(
-              "text-[9px] uppercase tracking-[0.2em] font-bold whitespace-nowrap transition-colors",
-              isOpen ? "text-foreground" : "text-gray-600 group-hover:text-gray-400"
-            )}>{title}</p>
-          </div>
+          <ChevronRight className={cn(
+            "w-3 h-3 transition-transform duration-300",
+            isOpen 
+              ? isColorful ? "rotate-90 text-indigo-400" : "rotate-90 text-foreground" 
+              : "text-gray-500 group-hover:text-gray-300"
+          )} />
         </button>
-      )}
-      <button 
-        onClick={onToggle}
-        className={cn(
-          "px-3 py-3 transition-colors",
-          isOpen ? "bg-foreground/5" : "hover:bg-card"
-        )}
-      >
-        <ChevronRight className={cn(
-          "w-3 h-3 transition-transform duration-300",
-          isOpen ? "rotate-90 text-foreground" : "text-gray-600"
-        )} />
-      </button>
-    </div>
-    <div className={cn(
-      "overflow-hidden transition-all duration-300 ease-in-out",
-      isOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
-    )}>
-      <div className="py-1 space-y-0.5">
-        {children}
+      </div>
+      <div className={cn(
+        "overflow-hidden transition-all duration-300 ease-in-out",
+        isOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
+      )}>
+        <div className="py-1 space-y-0.5">
+          {children}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 import { useTheme, Theme } from './contexts/ThemeContext';
 import { useSettings } from './contexts/SettingsContext';
@@ -407,117 +474,135 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     });
   };
 
-  const renderClassicSidebar = () => (
-    <aside className={cn(
-      "fixed inset-y-0 left-0 z-50 border-r border-border flex flex-col bg-background transition-all duration-300",
-      menuBarStyle === 'classic' ? "lg:relative lg:translate-x-0" : "lg:fixed lg:z-[60]",
-      isSidebarOpen ? "translate-x-0" : "-translate-x-full",
-      "w-64"
-    )}>
-      <div className={cn(
-        "p-6 border-b border-border flex items-center justify-between"
+  const renderClassicSidebar = () => {
+    const isColorful = menuBarStyle === 'colorful';
+
+    return (
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300",
+        isColorful 
+          ? "bg-slate-900 border-r border-[#1e1b4b]/40 text-slate-100 shadow-[4px_0_24px_rgba(8,10,30,0.3)]" 
+          : "bg-background border-r border-border text-foreground",
+        menuBarStyle === 'classic' || menuBarStyle === 'colorful' ? "lg:relative lg:translate-x-0" : "lg:fixed lg:z-[60]",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full",
+        "w-64"
       )}>
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-8 h-8 rounded-sm flex-shrink-0 flex items-center justify-center overflow-hidden">
-            {companyLogo || systemLogo ? (
-              <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-            ) : (
-              <div className="w-full h-full bg-foreground flex items-center justify-center">
-                <span className="text-background font-bold text-lg">{companyName.charAt(0)}</span>
-              </div>
-            )}
-          </div>
-          <div className="transition-opacity duration-300 relative group/logo">
-            <h1 className="text-sm font-bold text-foreground tracking-tighter truncate max-w-[120px]">{companyName}</h1>
-            <div className="flex items-center gap-2">
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest truncate max-w-[120px]">{slogan}</p>
-              {activePlan && (
-                <span className="text-[7px] font-bold text-primary uppercase tracking-tighter bg-primary/5 px-1 rounded">
-                  {activePlan.name}
-                </span>
+        <div className={cn(
+          "p-6 border-b flex items-center justify-between",
+          isColorful ? "border-[#1e1b4b]/40" : "border-border"
+        )}>
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div className="w-8 h-8 rounded-sm flex-shrink-0 flex items-center justify-center overflow-hidden">
+              {companyLogo || systemLogo ? (
+                <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+              ) : (
+                <div className={cn("w-full h-full flex items-center justify-center", isColorful ? "bg-indigo-600" : "bg-foreground")}>
+                  <span className={cn("font-bold text-lg", isColorful ? "text-white" : "text-background")}>{companyName.charAt(0)}</span>
+                </div>
               )}
             </div>
-            {isAdmin && (
-              <Link 
-                to="/settings/company" 
-                className="absolute -right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover/logo:opacity-100 transition-opacity p-1 hover:bg-foreground/5 rounded"
-                title="Edit Company Logo & Info"
+            <div className="transition-opacity duration-300 relative group/logo">
+              <h1 className={cn("text-xs font-black tracking-tight truncate max-w-[120px]", isColorful ? "text-slate-100" : "text-foreground")}>{companyName}</h1>
+              <div className="flex items-center gap-2">
+                <p className={cn("text-[9px] uppercase tracking-widest truncate max-w-[120px]", isColorful ? "text-slate-400" : "text-gray-500")}>{slogan}</p>
+                {activePlan && (
+                  <span className={cn(
+                    "text-[7px] font-bold uppercase tracking-tighter px-1 rounded",
+                    isColorful ? "text-indigo-400 bg-indigo-500/10 border border-indigo-500/20" : "text-primary bg-primary/5"
+                  )}>
+                    {activePlan.name}
+                  </span>
+                )}
+              </div>
+              {isAdmin && (
+                <Link 
+                  to="/settings/company" 
+                  className={cn(
+                    "absolute -right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover/logo:opacity-100 transition-opacity p-1 rounded",
+                    isColorful ? "hover:bg-slate-800" : "hover:bg-foreground/5"
+                  )}
+                  title="Edit Company Logo & Info"
+                >
+                  <SettingsIcon className={cn("w-3 h-3", isColorful ? "text-slate-400" : "text-gray-400")} />
+                </Link>
+              )}
+            </div>
+          </div>
+          <button 
+            onClick={() => setIsSidebarOpen(false)}
+            className={cn("p-1 rounded lg:hidden", isColorful ? "hover:bg-slate-800" : "hover:bg-foreground/5")}
+          >
+            <X className={cn("w-5 h-5", isColorful ? "text-slate-400" : "text-gray-500")} />
+          </button>
+        </div>
+
+        <nav className="flex-1 py-2 overflow-y-auto no-scrollbar overflow-x-hidden">
+          <div className="px-3 mb-2">
+              <SidebarItem 
+                to={DASHBOARD_ITEM.to} 
+                icon={DASHBOARD_ITEM.icon} 
+                label={isSidebarCollapsed ? "" : (DASHBOARD_ITEM.labelKey && t(DASHBOARD_ITEM.labelKey) !== DASHBOARD_ITEM.labelKey ? t(DASHBOARD_ITEM.labelKey) : DASHBOARD_ITEM.label)} 
+                active={location.pathname === DASHBOARD_ITEM.to} 
+              />
+          </div>
+
+          {menuGroups.map((group) => {
+            if (group.hidden) return null;
+            
+            // Check if at least one item in the group is visible to the user
+            const visibleItems = group.items.filter((item: any) => {
+              if (item.hidden) return false;
+              if (item.adminOnly && !isAdmin) return false;
+              if (item.superAdminOnly && !isSuperAdmin) return false;
+              if (item.permission && !hasPermission(item.permission)) return false;
+              return true;
+            });
+
+            if (visibleItems.length === 0) return null;
+
+            return (
+              <SidebarGroup 
+                key={group.id}
+                title={isSidebarCollapsed ? (group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey).charAt(0) : group.group.charAt(0)) : (group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey) : group.group)} 
+                isOpen={expandedGroups.has(group.group)} 
+                onToggle={() => toggleGroup(group.group)}
+                to={group.to}
               >
-                <SettingsIcon className="w-3 h-3 text-gray-400" />
-              </Link>
-            )}
+                {visibleItems.map((item: any) => {
+                  const isSubscribed = !item.feature || isFeatureEnabled(item.feature);
+                  
+                  return (
+                    <div key={item.id} className={cn(!isSubscribed && "opacity-50 grayscale-[0.5]")}>
+                      <SidebarItem 
+                        to={item.to} 
+                        icon={item.icon} 
+                        label={isSidebarCollapsed ? "" : (item.labelKey && t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.label)} 
+                        active={location.pathname === item.to} 
+                      />
+                    </div>
+                  );
+                })}
+              </SidebarGroup>
+            );
+          })}
+        </nav>
+
+        <div className={cn(
+          "p-4 border-t flex flex-col gap-2", 
+          isSidebarCollapsed && "p-2",
+          isColorful ? "border-slate-800 bg-slate-950/40" : "border-border"
+        )}>
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className={cn("text-[8px] font-mono uppercase tracking-widest", isColorful ? "text-slate-400" : "text-gray-400")}>{statusOnlineText}</span>
+            </div>
+            <span className={cn("text-[8px] font-mono uppercase tracking-widest", isColorful ? "text-slate-400" : "text-gray-400")}>{appVersion}</span>
           </div>
         </div>
-        <button 
-          onClick={() => setIsSidebarOpen(false)}
-          className="p-1 hover:bg-foreground/5 rounded lg:hidden"
-        >
-          <X className="w-5 h-5 text-gray-500" />
-        </button>
-      </div>
-
-      <nav className="flex-1 py-2 overflow-y-auto no-scrollbar overflow-x-hidden">
-        <div className="px-3 mb-2">
-            <SidebarItem 
-              to={DASHBOARD_ITEM.to} 
-              icon={DASHBOARD_ITEM.icon} 
-              label={isSidebarCollapsed ? "" : (DASHBOARD_ITEM.labelKey && t(DASHBOARD_ITEM.labelKey) !== DASHBOARD_ITEM.labelKey ? t(DASHBOARD_ITEM.labelKey) : DASHBOARD_ITEM.label)} 
-              active={location.pathname === DASHBOARD_ITEM.to} 
-            />
-        </div>
-
-        {menuGroups.map((group) => {
-          if (group.hidden) return null;
-          
-          // Check if at least one item in the group is visible to the user
-          const visibleItems = group.items.filter((item: any) => {
-            if (item.hidden) return false;
-            if (item.adminOnly && !isAdmin) return false;
-            if (item.superAdminOnly && !isSuperAdmin) return false;
-            if (item.permission && !hasPermission(item.permission)) return false;
-            return true;
-          });
-
-          if (visibleItems.length === 0) return null;
-
-          return (
-            <SidebarGroup 
-              key={group.id}
-              title={isSidebarCollapsed ? (group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey).charAt(0) : group.group.charAt(0)) : (group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey) : group.group)} 
-              isOpen={expandedGroups.has(group.group)} 
-              onToggle={() => toggleGroup(group.group)}
-              to={group.to}
-            >
-              {visibleItems.map((item: any) => {
-                const isSubscribed = !item.feature || isFeatureEnabled(item.feature);
-                
-                return (
-                  <div key={item.id} className={cn(!isSubscribed && "opacity-50 grayscale-[0.5]")}>
-                    <SidebarItem 
-                      to={item.to} 
-                      icon={item.icon} 
-                      label={isSidebarCollapsed ? "" : (item.labelKey && t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.label)} 
-                      active={location.pathname === item.to} 
-                    />
-                  </div>
-                );
-              })}
-            </SidebarGroup>
-          );
-        })}
-      </nav>
-
-      <div className={cn("p-4 border-t border-border flex flex-col gap-2", isSidebarCollapsed && "p-2")}>
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <div className={cn("h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse")} />
-            <span className="text-[9px] text-gray-400 font-mono uppercase tracking-widest">{statusOnlineText}</span>
-          </div>
-          <span className="text-[9px] text-gray-400 font-mono uppercase tracking-widest">{appVersion}</span>
-        </div>
-      </div>
-    </aside>
-  );
+      </aside>
+    );
+  };
 
   const renderRibbonMenu = () => {
     return (
@@ -1055,7 +1140,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       )}
 
       {/* Conditional Sidebar rendering */}
-      {(menuBarStyle === 'classic' || isSidebarOpen) && renderClassicSidebar()}
+      {(menuBarStyle === 'classic' || menuBarStyle === 'colorful' || isSidebarOpen) && renderClassicSidebar()}
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col w-full overflow-hidden h-full">
@@ -1066,7 +1151,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
           )}>
             <div className="flex items-center gap-3 lg:gap-4 z-10">
               {/* Desktop/Classic Menu Bar Style */}
-              {menuBarStyle !== 'classic' && (
+              {menuBarStyle !== 'classic' && menuBarStyle !== 'colorful' && (
                 <div className="flex items-center gap-3 hidden lg:flex">
                   <div className={cn(
                     "w-8 h-8 rounded-sm flex items-center justify-center overflow-hidden",

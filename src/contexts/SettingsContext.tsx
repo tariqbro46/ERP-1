@@ -19,10 +19,10 @@ interface FeatureSettings {
   enabled: boolean;
 }
 
-export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11';
+export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11' | 'colorful';
 export type ReportLayout = 'Layout 1' | 'Layout 2';
 export type DashboardDesign = 'Design 1' | 'Design 2' | 'Design 3' | 'Design 4';
-export type UIStyle = 'UI/UX 1' | 'UI/UX 2' | 'UI/UX 3';
+export type UIStyle = 'UI/UX 1' | 'UI/UX 2' | 'UI/UX 3' | 'UI/UX 4';
 export type NotificationAnimationStyle = 'default' | 'neon' | 'snake' | 'liquid' | 'glitch' | 'shimmer';
 export type GlassBackground = 'default' | 'sunset' | 'ocean' | 'aurora' | 'minimal';
 
@@ -90,6 +90,8 @@ interface SettingsContextType {
   enableHelpButton: boolean;
   pwaEnabled: boolean;
   uiStyle: UIStyle;
+  systemUiStyle?: UIStyle;
+  systemMenuBarStyle?: MenuBarStyle;
   glassBackground: GlassBackground;
   notificationDuration: number;
   notificationAnimationStyle: NotificationAnimationStyle;
@@ -178,6 +180,8 @@ const defaultSettings: SettingsContextType = {
   pwaEnabled: true,
   showScrollingBar: false,
   uiStyle: 'UI/UX 1',
+  systemUiStyle: undefined,
+  systemMenuBarStyle: undefined,
   glassBackground: 'default',
   notificationDuration: 5000,
   notificationAnimationStyle: 'default',
@@ -266,6 +270,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             searchHelpText: data.searchHelpText || prev.searchHelpText,
             showSearchShortcut: data.showSearchShortcut !== undefined ? data.showSearchShortcut : prev.showSearchShortcut,
             searchIconColor: data.searchIconColor || prev.searchIconColor,
+            systemUiStyle: data.uiStyle || prev.systemUiStyle,
+            systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
             globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign
           }));
           globalConfigLoaded.current = true;
@@ -445,6 +451,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setSettings(prev => ({
         ...prev,
         ...newSettings,
+        systemUiStyle: newSettings.uiStyle !== undefined ? newSettings.uiStyle : prev.systemUiStyle,
+        systemMenuBarStyle: newSettings.menuBarStyle !== undefined ? newSettings.menuBarStyle : prev.systemMenuBarStyle,
         // Map dashboardDesign back to globalDashboardDesign if it's in the payload
         globalDashboardDesign: newSettings.dashboardDesign || prev.globalDashboardDesign
       }));
@@ -474,6 +482,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     <SettingsContext.Provider value={{ 
       ...settings, 
       ...userSettings,
+      uiStyle: settings.systemUiStyle || userSettings.uiStyle || settings.uiStyle || 'UI/UX 1',
+      menuBarStyle: settings.systemMenuBarStyle || userSettings.menuBarStyle || settings.menuBarStyle || 'classic',
       userSettings,
       updateSettings, 
       updateSystemSettings, 

@@ -876,6 +876,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         <option value="ribbon">{t('settings.ribbonStyle')}</option>
                         <option value="macos">{t('settings.macosStyle')}</option>
                         <option value="windows11">{t('settings.windows11Style')}</option>
+                        <option value="colorful">{t('settings.colorfulStyle')}</option>
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">{t('settings.menuBarStyleDesc')}</p>
                     </div>
@@ -903,6 +904,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         <option value="UI/UX 1">{t('settings.uiStyleClassic')}</option>
                         <option value="UI/UX 2">{t('settings.uiStyleModern')}</option>
                         <option value="UI/UX 3">{t('settings.uiStyleGlass')}</option>
+                        <option value="UI/UX 4">{t('settings.uiStyleFuturistic')}</option>
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">{t('settings.uiStyleDesc')}</p>
                     </div>
@@ -938,21 +940,21 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       </div>
                     )}
 
-                    {localUIStyle === 'UI/UX 3' && (
+                    {(localUIStyle === 'UI/UX 3' || localUIStyle === 'UI/UX 4') && (
                       <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
-                        <label className="text-[10px] text-gray-500 uppercase">Glass Gradient Background</label>
+                        <label className="text-[10px] text-gray-500 uppercase">Background Gradient / Accent Style (UI/UX 3 & 4)</label>
                         <select 
                           value={localGlassBackground}
                           onChange={(e) => setLocalGlassBackground(e.target.value as any)}
                           className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
                         >
-                          <option value="default">Default (Dynamic Gradient)</option>
-                          <option value="sunset">Sunset Glow (Warm)</option>
-                          <option value="ocean">Deep Ocean (Cool)</option>
-                          <option value="aurora">Aurora Borealis (Green/Purple)</option>
-                          <option value="minimal">Minimal Soft Gray</option>
+                          <option value="default">Default Cyber Carbon (Dynamic Holographic)</option>
+                          <option value="sunset">Sunset Glow (Warm Cosmic)</option>
+                          <option value="ocean">Deep Ocean (Cool Nordic)</option>
+                          <option value="aurora">Aurora Borealis (Green Matrix Neon)</option>
+                          <option value="minimal">Minimal Soft Dark (Sleek Obsidian)</option>
                         </select>
-                        <p className="text-[9px] text-gray-500 uppercase">Choose the background gradient for Glassmorphism style.</p>
+                        <p className="text-[9px] text-gray-500 uppercase">Choose the background gradient accent style for Glassmorphism & Aurora Holographic UI styles.</p>
                       </div>
                     )}
 

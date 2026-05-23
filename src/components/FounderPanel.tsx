@@ -311,10 +311,12 @@ export default function FounderPanel() {
     searchHelpText,
     showSearchShortcut,
     searchIconColor,
-    globalDashboardDesign
+    globalDashboardDesign,
+    menuBarStyle
   } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
+  const [localMenuBarStyle, setLocalMenuBarStyle] = useState(menuBarStyle || 'classic');
   const [localDashboardDesign, setLocalDashboardDesign] = useState(globalDashboardDesign || 'Design 1');
   const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground || 'default');
   const [localStatusOnline, setLocalStatusOnline] = useState(statusOnlineText || 'Status: Online');
@@ -347,6 +349,10 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalUIStyle(uiStyle);
   }, [uiStyle]);
+
+  useEffect(() => {
+    setLocalMenuBarStyle(menuBarStyle || 'classic');
+  }, [menuBarStyle]);
 
   useEffect(() => {
     setLocalDashboardDesign(globalDashboardDesign || 'Design 1');
@@ -2628,8 +2634,25 @@ export default function FounderPanel() {
                     <option value="UI/UX 1">UI/UX 1 (Classic)</option>
                     <option value="UI/UX 2">UI/UX 2 (Modern Colorized)</option>
                     <option value="UI/UX 3">UI/UX 3 (Glassmorphism macOS)</option>
+                    <option value="UI/UX 4">UI/UX 4 (Aurora Holographic Carbon)</option>
                   </select>
                   <p className="text-[9px] text-muted-foreground uppercase">Choose the overall UI/UX style for the application.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Global Left Menu Style</label>
+                  <select 
+                    value={localMenuBarStyle}
+                    onChange={(e) => setLocalMenuBarStyle(e.target.value as any)}
+                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="classic">Classic Sidebar (Default)</option>
+                    <option value="ribbon">Microsoft Office Ribbon</option>
+                    <option value="macos">macOS Top Menu Bar</option>
+                    <option value="windows11">Windows 11 Taskbar Style</option>
+                    <option value="colorful">Classic Professional (Colorful Sidebar)</option>
+                  </select>
+                  <p className="text-[9px] text-muted-foreground uppercase">Choose the system-wide default menu navigation layout style.</p>
                 </div>
 
                 <div className="space-y-4">
@@ -2662,20 +2685,20 @@ export default function FounderPanel() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Default Glass Gradient Background (UI/UX 3)</label>
-                <select 
-                  value={localGlassBackground}
-                  onChange={(e) => setLocalGlassBackground(e.target.value as any)}
-                  className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                >
-                  <option value="default">Default (Dynamic Gradient)</option>
-                  <option value="sunset">Sunset Glow (Warm)</option>
-                  <option value="ocean">Deep Ocean (Cool)</option>
-                  <option value="aurora">Aurora Borealis (Green/Purple)</option>
-                  <option value="minimal">Minimal Soft Gray</option>
-                </select>
-                <p className="text-[9px] text-muted-foreground uppercase">Choose the global default background for Glassmorphism style.</p>
-              </div>
+                  <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Default Gradient / Accent Background (UI/UX 3 & 4)</label>
+                  <select 
+                    value={localGlassBackground}
+                    onChange={(e) => setLocalGlassBackground(e.target.value as any)}
+                    className="w-full bg-background border border-border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="default">Default Cyber Carbon (Dynamic Holographic)</option>
+                    <option value="sunset">Sunset Glow (Warm Cosmic)</option>
+                    <option value="ocean">Deep Ocean (Cool Nordic)</option>
+                    <option value="aurora">Aurora Borealis (Green Matrix Neon)</option>
+                    <option value="minimal">Minimal Soft Dark (Sleek Obsidian)</option>
+                  </select>
+                  <p className="text-[9px] text-muted-foreground uppercase">Choose the global default background gradient accent style for Glassmorphism & Aurora Holographic UI styles.</p>
+                </div>
 
               <div className="space-y-2">
                 <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">System Logo (Global Default)</label>
@@ -2816,6 +2839,7 @@ export default function FounderPanel() {
                         systemLogo: localSystemLogo,
                         systemFavicon: localSystemFavicon,
                         uiStyle: localUIStyle,
+                        menuBarStyle: localMenuBarStyle,
                         glassBackground: localGlassBackground,
                         notificationDuration: localNotificationDuration,
                         notificationAnimationStyle: localNotificationAnimationStyle,
