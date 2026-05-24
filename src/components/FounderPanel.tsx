@@ -335,6 +335,7 @@ export default function FounderPanel() {
     sidebarBgColor,
     sidebarTextColor,
     skeletonEnabled,
+    skeletonDashboardOnly,
     skeletonType,
     skeletonSpeed,
     skeletonTheme,
@@ -370,6 +371,7 @@ export default function FounderPanel() {
   const [localCustomWelcomeMessage, setLocalCustomWelcomeMessage] = useState(customWelcomeMessage || 'Executive Command Center');
   const [localSplashSubDesign, setLocalSplashSubDesign] = useState(splashSubDesign || 'grid');
   const [localSkeletonEnabled, setLocalSkeletonEnabled] = useState(skeletonEnabled ?? true);
+  const [localSkeletonDashboardOnly, setLocalSkeletonDashboardOnly] = useState(skeletonDashboardOnly ?? true);
   const [localSkeletonType, setLocalSkeletonType] = useState(skeletonType || 'automatic');
   const [localSkeletonSpeed, setLocalSkeletonSpeed] = useState(skeletonSpeed || 'normal');
   const [localSkeletonTheme, setLocalSkeletonTheme] = useState(skeletonTheme || 'modern');
@@ -2654,6 +2656,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       customWelcomeMessage: localCustomWelcomeMessage,
                       splashSubDesign: localSplashSubDesign,
                       skeletonEnabled: localSkeletonEnabled,
+                      skeletonDashboardOnly: localSkeletonDashboardOnly,
                       skeletonType: localSkeletonType,
                       skeletonSpeed: localSkeletonSpeed,
                       skeletonTheme: localSkeletonTheme,
@@ -3417,6 +3420,27 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                         <div className={cn(
                           "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
                           localSkeletonEnabled ? "right-0.5" : "left-0.5"
+                        )} />
+                      </button>
+                    </div>
+
+                    {/* Dashboard Only Toggle block */}
+                    <div className="flex items-center justify-between p-4 bg-muted/20 border border-border rounded-xl">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-foreground">Enable Dashboard-Only Skeleton Loading</p>
+                        <p className="text-[10px] text-muted-foreground">If App-Wide Skeletons is OFF, keeping this ON renders shimmer lists strictly on the principal dashboard.</p>
+                      </div>
+                      <button 
+                        onClick={() => setLocalSkeletonDashboardOnly(!localSkeletonDashboardOnly)}
+                        className={cn(
+                          "w-10 h-5.5 rounded-full relative transition-colors shrink-0",
+                          localSkeletonDashboardOnly ? "bg-emerald-500" : "bg-border"
+                        )}
+                        id="btn-skeleton-dashboard-toggle"
+                      >
+                        <div className={cn(
+                          "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                          localSkeletonDashboardOnly ? "right-0.5" : "left-0.5"
                         )} />
                       </button>
                     </div>

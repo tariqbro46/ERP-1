@@ -3,6 +3,7 @@ import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Package, Search, Edit2, Plus, Loader2, Filter, Activity } from 'lucide-react';
+import { SkeletonLoader } from './SkeletonLoader';
 import { useNavigate } from 'react-router-dom';
 import { cn, formatNumber } from '../lib/utils';
 
@@ -153,10 +154,7 @@ export function ItemMaster() {
         <div className="px-4 lg:px-6 pb-4 lg:pb-6">
           <div className="bg-card border border-border">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <Loader2 className="w-6 h-6 text-foreground animate-spin" />
-              <div className="text-[10px] text-gray-600 uppercase tracking-widest">{t('item.loadingInventory')}</div>
-            </div>
+            <SkeletonLoader type="table" />
           ) : filteredItems.length === 0 ? (
             <div className="text-center py-20">
               <Package className="w-12 h-12 text-border mx-auto mb-4" />

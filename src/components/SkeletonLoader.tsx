@@ -19,8 +19,18 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   const settings = useSettings();
   const { theme } = useTheme();
 
-  // If skeleton is disabled globally, we return null or a simple thin page loader
-  const isEnabled = settings.skeletonEnabled ?? true;
+  // Evaluate if skeleton loader should be displayed
+  let isEnabled = false;
+  if (settings.skeletonEnabled ?? true) {
+    isEnabled = true;
+  } else if (settings.skeletonDashboardOnly ?? true) {
+    const hash = window.location.hash || '';
+    const isDashboard = hash.includes('dashboard') || hash === '' || hash === '#/';
+    if (isDashboard || type === 'cards') {
+      isEnabled = true;
+    }
+  }
+
   const activeType = type || settings.skeletonType || 'automatic';
   const activeTheme = settings.skeletonTheme || 'modern';
   const activeSpeed = settings.skeletonSpeed || 'normal';

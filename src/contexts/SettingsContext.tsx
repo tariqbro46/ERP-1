@@ -164,6 +164,7 @@ interface SettingsContextType {
   customWelcomeMessage?: string;
   splashSubDesign?: 'grid' | 'neon' | 'editorial';
   skeletonEnabled?: boolean;
+  skeletonDashboardOnly?: boolean;
   skeletonType?: 'automatic' | 'table' | 'cards' | 'profile' | 'form';
   skeletonSpeed?: 'slow' | 'normal' | 'fast';
   skeletonTheme?: 'classic' | 'modern' | 'glass' | 'neon';
@@ -261,6 +262,7 @@ const defaultSettings: SettingsContextType = {
   customWelcomeMessage: 'Executive Command Center',
   splashSubDesign: 'grid',
   skeletonEnabled: true,
+  skeletonDashboardOnly: true,
   skeletonType: 'automatic',
   skeletonSpeed: 'normal',
   skeletonTheme: 'modern',
@@ -356,6 +358,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             customWelcomeMessage: data.customWelcomeMessage || prev.customWelcomeMessage || 'Executive Command Center',
             splashSubDesign: data.splashSubDesign || prev.splashSubDesign || 'grid',
             skeletonEnabled: data.skeletonEnabled !== undefined ? data.skeletonEnabled : prev.skeletonEnabled,
+            skeletonDashboardOnly: data.skeletonDashboardOnly !== undefined ? data.skeletonDashboardOnly : prev.skeletonDashboardOnly,
             skeletonType: data.skeletonType || prev.skeletonType || 'automatic',
             skeletonSpeed: data.skeletonSpeed || prev.skeletonSpeed || 'normal',
             skeletonTheme: data.skeletonTheme || prev.skeletonTheme || 'modern',

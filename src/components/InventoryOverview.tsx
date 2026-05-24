@@ -13,6 +13,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { SkeletonLoader } from './SkeletonLoader';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -54,11 +55,7 @@ export function InventoryOverview() {
   const totalStockValue = items.reduce((sum, item) => sum + (item.current_stock * (item.avg_cost || 0)), 0);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="w-8 h-8 text-foreground animate-spin" />
-      </div>
-    );
+    return <SkeletonLoader type="cards" />;
   }
 
   return (

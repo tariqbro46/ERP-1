@@ -173,6 +173,50 @@ export const erpService: any = {
 
   _pendingRequests: {} as Record<string, Promise<any>>,
 
+  // Browser Client/Session Cache for zero-flash transitions (SWR style)
+  _swrCache: {} as Record<string, any>,
+
+  getCachedData: function(key: string, companyId: string): any {
+    if (!companyId) return null;
+    const cacheKey = `${key}_${companyId}`;
+    if (this._swrCache[cacheKey]) {
+      return this._swrCache[cacheKey];
+    }
+    try {
+      const persisted = localStorage.getItem(`swr_${cacheKey}`);
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        this._swrCache[cacheKey] = parsed;
+        return parsed;
+      }
+    } catch (e) {}
+    return null;
+  },
+
+  setCachedData: function(key: string, companyId: string, data: any) {
+    if (!companyId) return;
+    const cacheKey = `${key}_${companyId}`;
+    this._swrCache[cacheKey] = data;
+    try {
+      localStorage.setItem(`swr_${cacheKey}`, JSON.stringify(data));
+    } catch (e) {}
+  },
+
+  hasCache: function(key: string, companyId: string): boolean {
+    if (!companyId) return false;
+    const cacheKey = `${key}_${companyId}`;
+    if (this._swrCache[cacheKey]) return true;
+    try {
+      const persisted = localStorage.getItem(`swr_${cacheKey}`);
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        this._swrCache[cacheKey] = parsed;
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  },
+
   getCollection: async function<T = any>(colName: string, companyId: string, limitCount: number = 5000, forceRefresh = false): Promise<T[]> {
     if (!companyId) return [];
     const cacheKey = `${colName}_${companyId}`;

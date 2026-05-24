@@ -17,6 +17,7 @@ import {
   CreditCard 
 } from 'lucide-react';
 import { erpService } from '../services/erpService';
+import { SkeletonLoader } from './SkeletonLoader';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -537,11 +538,7 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
     }
   };
 
-  if (loading) return (
-    <div className="flex h-[80vh] items-center justify-center uppercase font-bold text-gray-400 text-xs tracking-widest animate-pulse">
-      Initialising Payroll Engine...
-    </div>
-  );
+  if (loading) return <SkeletonLoader type="table" />;
 
   return (
     <div className="flex flex-col h-full bg-background font-mono transition-colors overflow-hidden">

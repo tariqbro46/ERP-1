@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, TrendingUp, Scale, Package, Loader2, Download, Printer, ArrowLeft, Info, BarChart2, Calendar } from 'lucide-react';
+import { SkeletonLoader } from './SkeletonLoader';
 import { useNavigate } from 'react-router-dom';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
@@ -137,11 +138,7 @@ export function RatioAnalysis() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background transition-colors">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
+    return <SkeletonLoader type="cards" />;
   }
 
   const renderGroups = () => (

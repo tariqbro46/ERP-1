@@ -11,6 +11,7 @@ import {
   Package,
   TrendingUp
 } from 'lucide-react';
+import { SkeletonLoader } from './SkeletonLoader';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -117,11 +118,7 @@ export function LocationStockReport() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
+    return <SkeletonLoader type="table" />;
   }
 
   return (

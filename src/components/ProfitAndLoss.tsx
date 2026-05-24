@@ -44,7 +44,17 @@ export function ProfitAndLoss() {
   useEffect(() => {
     async function fetchPL() {
       if (!user?.companyId) return;
-      setLoading(true);
+      
+      const cacheKey = `profitloss_${startDate}_${endDate}`;
+      const cached = erpService.getCachedData(cacheKey, user.companyId);
+      if (cached) {
+        setTradingData(cached.tradingData);
+        setPlData(cached.plData);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const [ledgers, allItems, invEntries, vEntries, allVoucherEntries, allVouchers] = await Promise.all([
           erpService.getLedgers(user.companyId),
@@ -189,18 +199,27 @@ export function ProfitAndLoss() {
         const indirectExpG = gList.filter(g => g.nature === 'Expense' && !g.name.toLowerCase().includes('direct') && !g.name.toLowerCase().includes('purchase')).sort((a,b) => a.name.localeCompare(b.name));
         const indirectIncG = gList.filter(g => g.nature === 'Income' && !g.name.toLowerCase().includes('direct') && !g.name.toLowerCase().includes('sales')).sort((a,b) => a.name.localeCompare(b.name));
 
-        setTradingData({
+        const tradingPayload = {
           openingStock: openingStockValue,
           closingStock: closingStockValue,
           purchaseGroups: purchaseG,
           salesGroups: salesG,
           directExpenseGroups: directExpG
-        });
+        };
 
-        setPlData({
+        const plPayload = {
           indirectExpenseGroups: indirectExpG,
           indirectIncomeGroups: indirectIncG
+        };
+
+        // Save fresh results to cache
+        erpService.setCachedData(`profitloss_${startDate}_${endDate}`, user.companyId, {
+          tradingData: tradingPayload,
+          plData: plPayload
         });
+
+        setTradingData(tradingPayload);
+        setPlData(plPayload);
 
       } catch (err) {
         console.error('Error fetching P&L:', err);

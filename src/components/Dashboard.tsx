@@ -84,7 +84,9 @@ export function Dashboard() {
   
   const dashboardDesign = globalDashboardDesign || localDesign;
   const { isAdmin, user } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    return !user?.companyId || !erpService.hasCache('dashboard_stats', user?.companyId);
+  });
   
   const cardConfigs: Record<string, any> = {
     sales: { title: t('dash.sales') || 'Sales', key: 'sales', icon: Activity, color: 'bg-blue-600' },
@@ -176,7 +178,20 @@ export function Dashboard() {
         setLoading(false);
         return;
       }
-      setLoading(true);
+
+      // Check cache to immediately display cached data without a loading flash
+      const cachedStats = erpService.getCachedData('dashboard_stats', user.companyId);
+      const cachedVouchers = erpService.getCachedData('dashboard_recent_vouchers', user.companyId);
+      const cachedOrders = erpService.getCachedData('dashboard_orders', user.companyId);
+      if (cachedStats) {
+        setStats(cachedStats);
+        setRecentVouchers(cachedVouchers || []);
+        setOrders(cachedOrders || []);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const isForced = !isInitialMount.current && refreshKey > 0;
         isInitialMount.current = false;
@@ -186,7 +201,7 @@ export function Dashboard() {
           erpService.getRecentVouchers(user.companyId, 5),
           erpService.getOrders(user.companyId)
         ]);
-        setStats(s);
+
         // Filter recent vouchers by period if needed, or keep latest 5
         const processed = (v || []).filter(vch => {
           if (!periodStart || !periodEnd) return true;
@@ -195,6 +210,13 @@ export function Dashboard() {
           ...vch,
           particulars: vch.party_ledger_name || vch.ledger_name || vch.ledgers || vch.particulars || vch.v_type || 'Voucher'
         }));
+
+        // Write fresh data to cache
+        erpService.setCachedData('dashboard_stats', user.companyId, s);
+        erpService.setCachedData('dashboard_recent_vouchers', user.companyId, processed);
+        erpService.setCachedData('dashboard_orders', user.companyId, o || []);
+
+        setStats(s);
         setRecentVouchers(processed);
         setOrders(o || []);
       } catch (err) {

@@ -6,6 +6,7 @@ import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { cn, formatNumber, formatQuantity, ensureDate, parseEntryDate, getMovementType, formatToYMD } from '../lib/utils';
+import { SkeletonLoader } from './SkeletonLoader';
 import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -298,11 +299,7 @@ export function StockSummary() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background transition-colors">
-        <Loader2 className="w-8 h-8 text-foreground animate-spin" />
-      </div>
-    );
+    return <SkeletonLoader type="table" />;
   }
 
   const now = new Date();

@@ -31,7 +31,17 @@ export function BalanceSheet() {
   useEffect(() => {
     async function fetchBalances() {
       if (!user?.companyId) return;
-      setLoading(true);
+      
+      const cached = erpService.getCachedData(`balancesheet_${asOnDate}`, user.companyId);
+      if (cached) {
+        setAssetGroups(cached.assetsFinal || []);
+        setLiabilityGroups(cached.liabilitiesFinal || []);
+        setOpeningBalanceDiff(cached.openingDiff || 0);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const [ledgers, vEntries, items, invEntries, groupsData, allVouchers] = await Promise.all([
           erpService.getLedgers(user.companyId),
@@ -203,6 +213,13 @@ export function BalanceSheet() {
         const totalOpeningDebit = ledgers.reduce((sum, l) => sum + (Number(l.opening_balance) > 0 ? Number(l.opening_balance) : 0), 0);
         const totalOpeningCredit = ledgers.reduce((sum, l) => sum + (Number(l.opening_balance) < 0 ? Math.abs(Number(l.opening_balance)) : 0), 0);
         const openingDiff = totalOpeningDebit - totalOpeningCredit;
+
+        // Save fresh results to cache
+        erpService.setCachedData(`balancesheet_${asOnDate}`, user.companyId, {
+          assetsFinal,
+          liabilitiesFinal,
+          openingDiff
+        });
 
         setAssetGroups(assetsFinal);
         setLiabilityGroups(liabilitiesFinal);
