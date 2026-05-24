@@ -2,6 +2,8 @@ import React from 'react';
 import { doc, getDocFromServer } from 'firebase/firestore';
 import { db } from './firebase';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS } from './contexts/SettingsContext';
+import { useTheme, Theme } from './contexts/ThemeContext';
 import * as LucideIcons from 'lucide-react';
 import { 
   LayoutDashboard, 
@@ -150,10 +152,41 @@ const getColorfulItemStyle = (to: string, active: boolean) => {
   }
 };
 
+const isSidebarReallyDark = (sidebarBgColor: string | undefined, currentTheme: string) => {
+  if (sidebarBgColor && sidebarBgColor !== 'default') {
+    const bgOpt = SIDEBAR_BG_OPTIONS.find(o => o.id === sidebarBgColor);
+    return bgOpt ? bgOpt.isDark : true;
+  }
+  return currentTheme !== 'classic' && currentTheme !== 'light';
+};
+
+const getTextColorOpt = (opt: any, isDark: boolean) => {
+  if (!opt) return null;
+  if (isDark) {
+    return {
+      textClass: opt.textClass,
+      activeClass: opt.activeClass,
+      mutedClass: opt.mutedClass
+    };
+  } else {
+    return {
+      textClass: opt.lightTextClass || opt.textClass || 'text-stone-600 hover:text-stone-900',
+      activeClass: opt.lightActiveClass || opt.activeClass || 'text-stone-950 bg-stone-100 border-stone-800',
+      mutedClass: opt.lightMutedClass || opt.mutedClass || 'text-stone-500'
+    };
+  }
+};
+
 const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => {
-  const { menuBarStyle } = useSettings();
+  const { theme } = useTheme();
+  const { menuBarStyle, sidebarBgColor, sidebarTextColor } = useSettings();
+  const isDark = isSidebarReallyDark(sidebarBgColor, theme);
   const isColorful = menuBarStyle === 'colorful';
   const colorful = isColorful ? getColorfulItemStyle(to, active) : null;
+  const baseCustomTextOpt = sidebarTextColor && sidebarTextColor !== 'default'
+    ? SIDEBAR_TEXT_OPTIONS.find(o => o.id === sidebarTextColor)
+    : null;
+  const customTextOpt = getTextColorOpt(baseCustomTextOpt, isDark);
 
   return (
     <Link
@@ -162,13 +195,24 @@ const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => {
         "flex items-center justify-between px-4 py-2.5 transition-all group border-l-2",
         isColorful 
           ? colorful.bg 
-          : active 
-            ? "bg-foreground/5 text-foreground border-foreground" 
-            : "text-gray-500 border-transparent hover:bg-card hover:text-foreground"
+          : customTextOpt
+            ? active
+              ? `${customTextOpt.activeClass} border-l-2`
+              : `${customTextOpt.textClass} border-transparent hover:bg-black/5 hover:dark:bg-white/5`
+            : active 
+              ? "bg-foreground/5 text-foreground border-foreground" 
+              : "text-gray-500 border-transparent hover:bg-card hover:text-foreground"
       )}
     >
       <div className={cn("flex items-center gap-3", indent && "ml-4")}>
-        <Icon className={cn("w-3.5 h-3.5 transition-colors duration-200", isColorful ? colorful.icon : active ? "text-foreground" : "text-gray-600 group-hover:text-gray-400")} />
+        <Icon className={cn(
+          "w-3.5 h-3.5 transition-colors duration-200", 
+          isColorful 
+            ? colorful.icon 
+            : customTextOpt
+              ? active ? "text-inherit" : "opacity-75 group-hover:opacity-100"
+              : active ? "text-foreground" : "text-gray-600 group-hover:text-gray-400"
+        )} />
         <span className={cn(
           "text-[10px] font-mono uppercase tracking-widest transition-colors duration-200",
           isColorful ? "font-semibold tracking-wider font-sans normal-case" : "",
@@ -176,39 +220,70 @@ const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => {
         )}>{label}</span>
       </div>
       {active && (
-        <div className={cn("w-1.5 h-1.5 rounded-full shadow-sm", isColorful ? colorful.dot : "bg-foreground")} />
+        <div className={cn(
+          "w-1.5 h-1.5 rounded-full shadow-sm", 
+          isColorful 
+            ? colorful.dot 
+            : customTextOpt
+              ? "bg-current"
+              : "bg-foreground"
+        )} />
       )}
     </Link>
   );
 };
 
 const SidebarGroup = ({ title, children, isOpen, onToggle, to }: { title: string, children: React.ReactNode, isOpen: boolean, onToggle: () => void, to?: string }) => {
-  const { menuBarStyle } = useSettings();
+  const { theme } = useTheme();
+  const { menuBarStyle, sidebarBgColor, sidebarTextColor } = useSettings();
+  const isDark = isSidebarReallyDark(sidebarBgColor, theme);
   const isColorful = menuBarStyle === 'colorful';
+  const baseCustomTextOpt = sidebarTextColor && sidebarTextColor !== 'default'
+    ? SIDEBAR_TEXT_OPTIONS.find(o => o.id === sidebarTextColor)
+    : null;
+  const customTextOpt = getTextColorOpt(baseCustomTextOpt, isDark);
+
+  const buttonBgClass = customTextOpt 
+    ? isOpen 
+      ? isDark ? "bg-white/5" : "bg-black/5" 
+      : isDark ? "hover:bg-white/5" : "hover:bg-black/5"
+    : isOpen 
+      ? "bg-foreground/5" 
+      : "hover:bg-card";
 
   return (
     <div className="mb-2">
-      <div className="flex items-center group transition-colors">
+      <div className="flex items-center group transition-colors select-none">
         {to ? (
           <Link 
             to={to}
             className={cn(
               "flex-1 px-4 py-3 flex items-center justify-between transition-colors",
-              isOpen ? "bg-foreground/5" : "hover:bg-card"
+              buttonBgClass
             )}
           >
             <div className="flex items-center gap-2">
               <div className={cn(
                 "h-[1.5px] w-3 transition-all", 
                 isOpen 
-                  ? isColorful ? "bg-indigo-500" : "bg-foreground" 
-                  : "bg-border"
+                  ? isColorful 
+                    ? "bg-indigo-500" 
+                    : customTextOpt 
+                      ? "bg-current" 
+                      : "bg-foreground" 
+                  : "bg-border/40"
               )} />
               <p className={cn(
                 "text-[9px] uppercase tracking-[0.2em] font-extrabold whitespace-nowrap transition-colors",
                 isOpen 
-                  ? isColorful ? "text-indigo-400" : "text-foreground" 
-                  : "text-gray-500 group-hover:text-gray-300"
+                  ? isColorful 
+                    ? "text-indigo-400" 
+                    : customTextOpt 
+                      ? "text-inherit" 
+                      : "text-foreground" 
+                  : customTextOpt 
+                    ? customTextOpt.mutedClass || "opacity-75"
+                    : "text-gray-500 group-hover:text-gray-300"
               )}>{title}</p>
             </div>
           </Link>
@@ -217,21 +292,31 @@ const SidebarGroup = ({ title, children, isOpen, onToggle, to }: { title: string
             onClick={onToggle}
             className={cn(
               "flex-1 px-4 py-3 flex items-center justify-between transition-colors",
-              isOpen ? "bg-foreground/5" : "hover:bg-card"
+              buttonBgClass
             )}
           >
             <div className="flex items-center gap-2">
               <div className={cn(
                 "h-[1.5px] w-3 transition-all", 
                 isOpen 
-                  ? isColorful ? "bg-indigo-500" : "bg-foreground" 
-                  : "bg-border"
+                  ? isColorful 
+                    ? "bg-indigo-500" 
+                    : customTextOpt 
+                      ? "bg-current" 
+                      : "bg-foreground" 
+                  : "bg-border/40"
               )} />
               <p className={cn(
                 "text-[9px] uppercase tracking-[0.2em] font-extrabold whitespace-nowrap transition-colors",
                 isOpen 
-                  ? isColorful ? "text-indigo-400" : "text-foreground" 
-                  : "text-gray-500 group-hover:text-gray-300"
+                  ? isColorful 
+                    ? "text-indigo-400" 
+                    : customTextOpt 
+                      ? "text-inherit" 
+                      : "text-foreground" 
+                  : customTextOpt 
+                    ? customTextOpt.mutedClass || "opacity-75"
+                    : "text-gray-500 group-hover:text-gray-300"
               )}>{title}</p>
             </div>
           </button>
@@ -240,14 +325,20 @@ const SidebarGroup = ({ title, children, isOpen, onToggle, to }: { title: string
           onClick={onToggle}
           className={cn(
             "px-3 py-3 transition-colors",
-            isOpen ? "bg-foreground/5" : "hover:bg-card"
+            buttonBgClass
           )}
         >
           <ChevronRight className={cn(
             "w-3 h-3 transition-transform duration-300",
             isOpen 
-              ? isColorful ? "rotate-90 text-indigo-400" : "rotate-90 text-foreground" 
-              : "text-gray-500 group-hover:text-gray-300"
+              ? isColorful 
+                ? "rotate-90 text-indigo-400" 
+                : customTextOpt 
+                  ? "rotate-90 text-inherit" 
+                  : "rotate-90 text-foreground" 
+              : customTextOpt 
+                ? "opacity-60" 
+                : "text-gray-500 group-hover:text-gray-300"
           )} />
         </button>
       </div>
@@ -263,8 +354,6 @@ const SidebarGroup = ({ title, children, isOpen, onToggle, to }: { title: string
   );
 };
 
-import { useTheme, Theme } from './contexts/ThemeContext';
-import { useSettings } from './contexts/SettingsContext';
 
 function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenSearch: () => void }) {
   const location = useLocation();
@@ -293,6 +382,8 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     showGoToShortcut = true,
     showScrollingBar = false,
     subscriptionPlans = [],
+    sidebarBgColor = 'default',
+    sidebarTextColor = 'default',
     updateSettings
   } = useSettings();
 
@@ -476,39 +567,54 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
   const renderClassicSidebar = () => {
     const isColorful = menuBarStyle === 'colorful';
+    const customBgOpt = sidebarBgColor && sidebarBgColor !== 'default'
+      ? SIDEBAR_BG_OPTIONS.find(o => o.id === sidebarBgColor)
+      : null;
+    const customTextOpt = sidebarTextColor && sidebarTextColor !== 'default'
+      ? SIDEBAR_TEXT_OPTIONS.find(o => o.id === sidebarTextColor)
+      : null;
 
     return (
       <aside className={cn(
         "fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300",
-        isColorful 
-          ? "bg-slate-900 border-r border-[#1e1b4b]/40 text-slate-100 shadow-[4px_0_24px_rgba(8,10,30,0.3)]" 
-          : "bg-background border-r border-border text-foreground",
+        customBgOpt
+          ? customBgOpt.className
+          : isColorful 
+            ? "bg-slate-900 border-r border-[#1e1b4b]/40 text-slate-100 shadow-[4px_0_24px_rgba(8,10,30,0.3)]" 
+            : "bg-background border-r border-border text-foreground",
+        customTextOpt && !customBgOpt ? "text-foreground" : "",
         menuBarStyle === 'classic' || menuBarStyle === 'colorful' ? "lg:relative lg:translate-x-0" : "lg:fixed lg:z-[60]",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full",
         "w-64"
       )}>
         <div className={cn(
           "p-6 border-b flex items-center justify-between",
-          isColorful ? "border-[#1e1b4b]/40" : "border-border"
+          customBgOpt ? "border-border/10" : isColorful ? "border-[#1e1b4b]/40" : "border-border"
         )}>
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="w-8 h-8 rounded-sm flex-shrink-0 flex items-center justify-center overflow-hidden">
               {companyLogo || systemLogo ? (
                 <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
               ) : (
-                <div className={cn("w-full h-full flex items-center justify-center", isColorful ? "bg-indigo-600" : "bg-foreground")}>
-                  <span className={cn("font-bold text-lg", isColorful ? "text-white" : "text-background")}>{companyName.charAt(0)}</span>
+                <div className={cn("w-full h-full flex items-center justify-center", customBgOpt ? "bg-white/10" : isColorful ? "bg-indigo-600" : "bg-foreground")}>
+                  <span className={cn("font-bold text-lg", customBgOpt ? "text-inherit" : isColorful ? "text-white" : "text-background")}>{companyName.charAt(0)}</span>
                 </div>
               )}
             </div>
             <div className="transition-opacity duration-300 relative group/logo">
-              <h1 className={cn("text-xs font-black tracking-tight truncate max-w-[120px]", isColorful ? "text-slate-100" : "text-foreground")}>{companyName}</h1>
+              <h1 className={cn(
+                "text-xs font-black tracking-tight truncate max-w-[120px]", 
+                customBgOpt ? (customBgOpt.isDark ? "text-slate-100" : "text-stone-900") : isColorful ? "text-slate-100" : "text-foreground"
+              )}>{companyName}</h1>
               <div className="flex items-center gap-2">
-                <p className={cn("text-[9px] uppercase tracking-widest truncate max-w-[120px]", isColorful ? "text-slate-400" : "text-gray-500")}>{slogan}</p>
+                <p className={cn(
+                  "text-[9px] uppercase tracking-widest truncate max-w-[120px]", 
+                  customBgOpt ? (customBgOpt.isDark ? "text-slate-400" : "text-stone-500") : isColorful ? "text-slate-400" : "text-gray-500"
+                )}>{slogan}</p>
                 {activePlan && (
                   <span className={cn(
                     "text-[7px] font-bold uppercase tracking-tighter px-1 rounded",
-                    isColorful ? "text-indigo-400 bg-indigo-500/10 border border-indigo-500/20" : "text-primary bg-primary/5"
+                    customBgOpt ? "text-indigo-400 bg-white/10" : isColorful ? "text-indigo-400 bg-indigo-500/10 border border-indigo-500/20" : "text-primary bg-primary/5"
                   )}>
                     {activePlan.name}
                   </span>
@@ -519,20 +625,20 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                   to="/settings/company" 
                   className={cn(
                     "absolute -right-6 top-1/2 -translate-y-1/2 opacity-0 group-hover/logo:opacity-100 transition-opacity p-1 rounded",
-                    isColorful ? "hover:bg-slate-800" : "hover:bg-foreground/5"
+                    customBgOpt ? "hover:bg-white/10" : isColorful ? "hover:bg-slate-800" : "hover:bg-foreground/5"
                   )}
                   title="Edit Company Logo & Info"
                 >
-                  <SettingsIcon className={cn("w-3 h-3", isColorful ? "text-slate-400" : "text-gray-400")} />
+                  <SettingsIcon className={cn("w-3 h-3", customBgOpt ? "text-inherit" : isColorful ? "text-slate-400" : "text-gray-400")} />
                 </Link>
               )}
             </div>
           </div>
           <button 
             onClick={() => setIsSidebarOpen(false)}
-            className={cn("p-1 rounded lg:hidden", isColorful ? "hover:bg-slate-800" : "hover:bg-foreground/5")}
+            className={cn("p-1 rounded lg:hidden", customBgOpt ? "hover:bg-white/10" : isColorful ? "hover:bg-slate-800" : "hover:bg-foreground/5")}
           >
-            <X className={cn("w-5 h-5", isColorful ? "text-slate-400" : "text-gray-500")} />
+            <X className={cn("w-5 h-5", customBgOpt ? "text-inherit" : isColorful ? "text-slate-400" : "text-gray-500")} />
           </button>
         </div>
 
@@ -590,14 +696,20 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         <div className={cn(
           "p-4 border-t flex flex-col gap-2", 
           isSidebarCollapsed && "p-2",
-          isColorful ? "border-slate-800 bg-slate-950/40" : "border-border"
+          customBgOpt ? "border-border/10 bg-black/10" : isColorful ? "border-slate-800 bg-slate-950/40" : "border-border"
         )}>
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
               <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className={cn("text-[8px] font-mono uppercase tracking-widest", isColorful ? "text-slate-400" : "text-gray-400")}>{statusOnlineText}</span>
+              <span className={cn(
+                "text-[8px] font-mono uppercase tracking-widest", 
+                customBgOpt ? (customBgOpt.isDark ? "text-slate-400" : "text-stone-500") : isColorful ? "text-slate-400" : "text-gray-400"
+              )}>{statusOnlineText}</span>
             </div>
-            <span className={cn("text-[8px] font-mono uppercase tracking-widest", isColorful ? "text-slate-400" : "text-gray-400")}>{appVersion}</span>
+            <span className={cn(
+              "text-[8px] font-mono uppercase tracking-widest", 
+              customBgOpt ? (customBgOpt.isDark ? "text-slate-400" : "text-stone-500") : isColorful ? "text-slate-400" : "text-gray-400"
+            )}>{appVersion}</span>
           </div>
         </div>
       </aside>

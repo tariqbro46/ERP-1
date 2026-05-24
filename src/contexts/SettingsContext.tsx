@@ -26,6 +26,46 @@ export type UIStyle = 'UI/UX 1' | 'UI/UX 2' | 'UI/UX 3' | 'UI/UX 4';
 export type NotificationAnimationStyle = 'default' | 'neon' | 'snake' | 'liquid' | 'glitch' | 'shimmer';
 export type GlassBackground = 'default' | 'sunset' | 'ocean' | 'aurora' | 'minimal';
 
+export interface SidebarBgOption {
+  id: string;
+  label: string;
+  labelBn: string;
+  className: string;
+  isDark: boolean;
+}
+
+export interface SidebarTextOption {
+  id: string;
+  label: string;
+  labelBn: string;
+  textClass: string;
+  activeClass: string;
+  mutedClass: string;
+  lightTextClass?: string;
+  lightActiveClass?: string;
+  lightMutedClass?: string;
+}
+
+export const SIDEBAR_BG_OPTIONS: SidebarBgOption[] = [
+  { id: 'default', label: 'Theme Default', labelBn: 'থিম ডিফল্ট', className: '', isDark: true },
+  { id: 'aurora-night', label: 'Midnight Aurora Navy', labelBn: 'মিডনাইট অরোরা নেভি', className: 'bg-gradient-to-b from-[#0a0f26] via-[#040614] to-[#0d0e23] border-r border-[#312e81]/40 shadow-[6px_0_30px_rgba(4,6,18,0.5)] text-slate-100', isDark: true },
+  { id: 'deep-forest', label: 'Imperial Emerald Jade', labelBn: 'ইম্পেরিয়াল এমারেল্ড জেড', className: 'bg-gradient-to-b from-[#02180e] via-[#010e09] to-[#042416] border-r border-emerald-900/40 shadow-[6px_0_30px_rgba(2,10,6,0.4)] text-emerald-100', isDark: true },
+  { id: 'burgundy-velvet', label: 'Burgundy Silk Velvet', labelBn: 'বারগান্ডি সিল্ক ভেলভেট', className: 'bg-gradient-to-b from-[#1c0209] via-[#0f0105] to-[#250310] border-r border-rose-950/40 shadow-[6px_0_30px_rgba(15,2,4,0.4)] text-rose-100', isDark: true },
+  { id: 'obsidian-gold', label: 'Obsidian & Liquid Gold', labelBn: 'অবসিডিয়ান ও লিকুইড গোল্ড', className: 'bg-gradient-to-b from-[#050505] via-[#121212] to-[#0a0a0a] border-r border-amber-950/30 shadow-[10px_0_40px_rgba(0,0,0,0.7)] text-[#fef3c7]', isDark: true },
+  { id: 'nordic-alabaster', label: 'Nordic Minimal Alabaster', labelBn: 'ক্লাসিক মিনিমাল আলবাস্টার', className: 'bg-[#fafaf9] border-r border-stone-200 text-stone-800 shadow-sm', isDark: false },
+  { id: 'cyberpunk-carbon', label: 'Cyberpunk Neon Carbon', labelBn: 'সাইবারপাঙ্ক নিওন কার্বন', className: 'bg-[#0b0e14] border-r border-cyan-500/20 text-[#22d3ee] shadow-[6px_0_24px_rgba(6,182,212,0.15)]', isDark: true }
+];
+
+export const SIDEBAR_TEXT_OPTIONS: SidebarTextOption[] = [
+  { id: 'default', label: 'Theme Default', labelBn: 'থিম ডিফল্ট', textClass: '', activeClass: '', mutedClass: '' },
+  { id: 'electric-cyan', label: 'Nebula Electric Cyan', labelBn: 'নেবুলা ইলেকট্রিক সায়ান', textClass: 'text-slate-400 hover:text-cyan-300', activeClass: 'text-cyan-400 bg-cyan-500/10 border-cyan-400', mutedClass: 'text-cyan-500/80', lightTextClass: 'text-stone-600 hover:text-cyan-600', lightActiveClass: 'text-cyan-700 bg-cyan-50 border-cyan-500', lightMutedClass: 'text-cyan-600' },
+  { id: 'emerald', label: 'Vaporwave Mint Green', labelBn: 'ভেপারওয়েভ মিন্ট গ্রিন', textClass: 'text-slate-400 hover:text-emerald-300', activeClass: 'text-emerald-400 bg-emerald-500/10 border-emerald-400', mutedClass: 'text-emerald-500/80', lightTextClass: 'text-stone-600 hover:text-emerald-600', lightActiveClass: 'text-emerald-700 bg-emerald-50 border-emerald-500', lightMutedClass: 'text-emerald-600' },
+  { id: 'gold-ink', label: 'Golden Imperial Ink', labelBn: 'গোল্ডেন ইম্পেরিয়াল ইঙ্ক', textClass: 'text-slate-400 hover:text-amber-200', activeClass: 'text-amber-400 bg-amber-500/10 border-amber-400', mutedClass: 'text-amber-500/80', lightTextClass: 'text-stone-600 hover:text-amber-700', lightActiveClass: 'text-amber-850 bg-amber-500/5 border-amber-600', lightMutedClass: 'text-amber-600' },
+  { id: 'royal-lilac', label: 'Royal Orchid Lilac', labelBn: 'রয়েল অর্কিড লাইলাক', textClass: 'text-slate-400 hover:text-indigo-300', activeClass: 'text-indigo-400 bg-indigo-500/10 border-indigo-400', mutedClass: 'text-indigo-500/80', lightTextClass: 'text-stone-600 hover:text-indigo-600', lightActiveClass: 'text-indigo-700 bg-indigo-50 border-indigo-500', lightMutedClass: 'text-indigo-600' },
+  { id: 'rose-cherry', label: 'Sunset Cherry Blossom', labelBn: 'সানসেট চেরি ব্লসম', textClass: 'text-slate-400 hover:text-rose-300', activeClass: 'text-rose-400 bg-rose-500/10 border-rose-400', mutedClass: 'text-rose-500/80', lightTextClass: 'text-stone-600 hover:text-rose-600', lightActiveClass: 'text-rose-700 bg-[#fff1f2] border-rose-500', lightMutedClass: 'text-rose-600' },
+  { id: 'sleek-stark', label: 'Minimal Stark Charcoal', labelBn: 'মিনিমাল ডার্ক চারকোল', textClass: 'text-slate-400 hover:text-white', activeClass: 'text-white bg-white/10 border-white', mutedClass: 'text-slate-400', lightTextClass: 'text-stone-600 hover:text-stone-900', lightActiveClass: 'text-stone-950 bg-stone-100 border-stone-800', lightMutedClass: 'text-stone-500' }
+];
+
 interface WhatsAppTemplates {
   Sales: string;
   Purchase: string;
@@ -92,6 +132,8 @@ interface SettingsContextType {
   uiStyle: UIStyle;
   systemUiStyle?: UIStyle;
   systemMenuBarStyle?: MenuBarStyle;
+  sidebarBgColor?: string;
+  sidebarTextColor?: string;
   glassBackground: GlassBackground;
   notificationDuration: number;
   notificationAnimationStyle: NotificationAnimationStyle;
@@ -121,6 +163,12 @@ interface SettingsContextType {
   customControlCenterTheme?: 'emerald' | 'indigo' | 'slate' | 'cyber';
   customWelcomeMessage?: string;
   splashSubDesign?: 'grid' | 'neon' | 'editorial';
+  skeletonEnabled?: boolean;
+  skeletonType?: 'automatic' | 'table' | 'cards' | 'profile' | 'form';
+  skeletonSpeed?: 'slow' | 'normal' | 'fast';
+  skeletonTheme?: 'classic' | 'modern' | 'glass' | 'neon';
+  skeletonRows?: number;
+  skeletonWaveColor?: string;
   features: FeatureSettings[];
   appFeatures: FeatureCategory[];
   subscriptionPlans: SubscriptionPlan[];
@@ -192,6 +240,8 @@ const defaultSettings: SettingsContextType = {
   uiStyle: 'UI/UX 1',
   systemUiStyle: undefined,
   systemMenuBarStyle: undefined,
+  sidebarBgColor: 'default',
+  sidebarTextColor: 'default',
   glassBackground: 'default',
   notificationDuration: 5000,
   notificationAnimationStyle: 'default',
@@ -210,6 +260,12 @@ const defaultSettings: SettingsContextType = {
   customControlCenterTheme: 'emerald',
   customWelcomeMessage: 'Executive Command Center',
   splashSubDesign: 'grid',
+  skeletonEnabled: true,
+  skeletonType: 'automatic',
+  skeletonSpeed: 'normal',
+  skeletonTheme: 'modern',
+  skeletonRows: 5,
+  skeletonWaveColor: 'indigo',
   showGoToShortcut: true,
   showQuickActions: true,
   dashboardQuickActions: ['voucher', 'item', 'ledger', 'godown', 'users'],
@@ -299,8 +355,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             customControlCenterTheme: data.customControlCenterTheme || prev.customControlCenterTheme || 'emerald',
             customWelcomeMessage: data.customWelcomeMessage || prev.customWelcomeMessage || 'Executive Command Center',
             splashSubDesign: data.splashSubDesign || prev.splashSubDesign || 'grid',
+            skeletonEnabled: data.skeletonEnabled !== undefined ? data.skeletonEnabled : prev.skeletonEnabled,
+            skeletonType: data.skeletonType || prev.skeletonType || 'automatic',
+            skeletonSpeed: data.skeletonSpeed || prev.skeletonSpeed || 'normal',
+            skeletonTheme: data.skeletonTheme || prev.skeletonTheme || 'modern',
+            skeletonRows: data.skeletonRows !== undefined ? Number(data.skeletonRows) : prev.skeletonRows,
+            skeletonWaveColor: data.skeletonWaveColor || prev.skeletonWaveColor || 'indigo',
             systemUiStyle: data.uiStyle || prev.systemUiStyle,
             systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
+            sidebarBgColor: data.sidebarBgColor || prev.sidebarBgColor || 'default',
+            sidebarTextColor: data.sidebarTextColor || prev.sidebarTextColor || 'default',
             globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign
           }));
           globalConfigLoaded.current = true;
@@ -517,6 +581,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       ...userSettings,
       uiStyle: settings.systemUiStyle || userSettings.uiStyle || settings.uiStyle || 'UI/UX 1',
       menuBarStyle: settings.systemMenuBarStyle || userSettings.menuBarStyle || settings.menuBarStyle || 'classic',
+      sidebarBgColor: userSettings.sidebarBgColor || settings.sidebarBgColor || 'default',
+      sidebarTextColor: userSettings.sidebarTextColor || settings.sidebarTextColor || 'default',
       userSettings,
       updateSettings, 
       updateSystemSettings, 

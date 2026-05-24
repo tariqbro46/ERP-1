@@ -73,7 +73,7 @@ import {
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
 import { erpService } from '../services/erpService';
-import { useSettings } from '../contexts/SettingsContext';
+import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
@@ -331,11 +331,21 @@ export default function FounderPanel() {
     showPinnedBookmarks,
     customControlCenterTheme,
     customWelcomeMessage,
-    splashSubDesign
+    splashSubDesign,
+    sidebarBgColor,
+    sidebarTextColor,
+    skeletonEnabled,
+    skeletonType,
+    skeletonSpeed,
+    skeletonTheme,
+    skeletonRows,
+    skeletonWaveColor
   } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
   const [localMenuBarStyle, setLocalMenuBarStyle] = useState(menuBarStyle || 'classic');
+  const [localSidebarBgColor, setLocalSidebarBgColor] = useState(sidebarBgColor || 'default');
+  const [localSidebarTextColor, setLocalSidebarTextColor] = useState(sidebarTextColor || 'default');
   const [localDashboardDesign, setLocalDashboardDesign] = useState(globalDashboardDesign || 'Design 1');
   const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground || 'default');
   const [localStatusOnline, setLocalStatusOnline] = useState(statusOnlineText || 'Status: Online');
@@ -359,7 +369,13 @@ export default function FounderPanel() {
   const [localCustomControlCenterTheme, setLocalCustomControlCenterTheme] = useState(customControlCenterTheme || 'emerald');
   const [localCustomWelcomeMessage, setLocalCustomWelcomeMessage] = useState(customWelcomeMessage || 'Executive Command Center');
   const [localSplashSubDesign, setLocalSplashSubDesign] = useState(splashSubDesign || 'grid');
-  const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'branding' | 'search' | 'loader'>('general');
+  const [localSkeletonEnabled, setLocalSkeletonEnabled] = useState(skeletonEnabled ?? true);
+  const [localSkeletonType, setLocalSkeletonType] = useState(skeletonType || 'automatic');
+  const [localSkeletonSpeed, setLocalSkeletonSpeed] = useState(skeletonSpeed || 'normal');
+  const [localSkeletonTheme, setLocalSkeletonTheme] = useState(skeletonTheme || 'modern');
+  const [localSkeletonRows, setLocalSkeletonRows] = useState(skeletonRows ?? 5);
+  const [localSkeletonWaveColor, setLocalSkeletonWaveColor] = useState(skeletonWaveColor || 'indigo');
+  const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'branding' | 'search' | 'loader' | 'skeleton'>('general');
 
   useEffect(() => {
     fetchData();
@@ -438,6 +454,14 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalGlassBackground(glassBackground);
   }, [glassBackground]);
+
+  useEffect(() => {
+    setLocalSidebarBgColor(sidebarBgColor || 'default');
+  }, [sidebarBgColor]);
+
+  useEffect(() => {
+    setLocalSidebarTextColor(sidebarTextColor || 'default');
+  }, [sidebarTextColor]);
 
   const safeFormat = (date: any, formatStr: string) => {
     try {
@@ -2609,6 +2633,8 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       systemFavicon: localSystemFavicon,
                       uiStyle: localUIStyle,
                       menuBarStyle: localMenuBarStyle,
+                      sidebarBgColor: localSidebarBgColor,
+                      sidebarTextColor: localSidebarTextColor,
                       glassBackground: localGlassBackground,
                       notificationDuration: localNotificationDuration,
                       notificationAnimationStyle: localNotificationAnimationStyle,
@@ -2626,7 +2652,13 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       showPinnedBookmarks: localShowPinnedBookmarks,
                       customControlCenterTheme: localCustomControlCenterTheme,
                       customWelcomeMessage: localCustomWelcomeMessage,
-                      splashSubDesign: localSplashSubDesign
+                      splashSubDesign: localSplashSubDesign,
+                      skeletonEnabled: localSkeletonEnabled,
+                      skeletonType: localSkeletonType,
+                      skeletonSpeed: localSkeletonSpeed,
+                      skeletonTheme: localSkeletonTheme,
+                      skeletonRows: Number(localSkeletonRows),
+                      skeletonWaveColor: localSkeletonWaveColor
                     });
                     showNotification('System configuration updated successfully', 'success');
                   } catch (err) {
@@ -2654,7 +2686,8 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                 { id: 'theme', label: 'Theme & Layout', desc: 'UI styles, navigations', icon: Palette },
                 { id: 'branding', label: 'Logo & Branding', desc: 'Default logo, mobile icon', icon: FileImage },
                 { id: 'search', label: 'Search Engine', desc: 'Placeholders, key binds', icon: Search },
-                { id: 'loader', label: 'Loading Screen', desc: 'Icon styles, blur, custom texts', icon: RefreshCw }
+                { id: 'loader', label: 'Loading Screen', desc: 'Icon styles, blur, custom texts', icon: RefreshCw },
+                { id: 'skeleton', label: 'Skeleton Shimmer', desc: 'Bone structures, speeds, designs', icon: Sparkles }
               ].map((tab) => {
                 const SelectedIcon = tab.icon;
                 const isSelected = systemSubTab === tab.id;
@@ -2793,6 +2826,34 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                         <option value="colorful">Classic Professional (Colorful Sidebar)</option>
                       </select>
                       <p className="text-[9px] text-muted-foreground uppercase leading-tight">Changes default desktop-oriented frame configurations.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Default Sidebar Background Style</label>
+                      <select 
+                        value={localSidebarBgColor}
+                        onChange={(e) => setLocalSidebarBgColor(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        {SIDEBAR_BG_OPTIONS.map(opt => (
+                          <option key={opt.id} value={opt.id}>{opt.label}</option>
+                        ))}
+                      </select>
+                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Applied as the global default sidebar background style.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Default Sidebar Text Accent</label>
+                      <select 
+                        value={localSidebarTextColor}
+                        onChange={(e) => setLocalSidebarTextColor(e.target.value)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        {SIDEBAR_TEXT_OPTIONS.map(opt => (
+                          <option key={opt.id} value={opt.id}>{opt.label}</option>
+                        ))}
+                      </select>
+                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Controls active links and inactive icon highlighting tones.</p>
                     </div>
 
                     <div className="space-y-1.5">
@@ -3327,6 +3388,255 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                     <p className="text-[9px] text-muted-foreground uppercase font-semibold">
                       * Separate each status message with a comma. The loader loops through these from left to right as the loading sequence completes.
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {systemSubTab === 'skeleton' && (
+                <div className="flex-1 space-y-6">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-sm font-black uppercase tracking-wider text-foreground">Skeleton Loading Configuration</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase">Control bone shimmer structures, wave speeds, themes, and layouts company-wide.</p>
+                  </div>
+
+                  <div className="p-5 bg-card border border-border rounded-2xl space-y-6">
+                    {/* Enable Toggle block */}
+                    <div className="flex items-center justify-between p-4 bg-muted/20 border border-border rounded-xl">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-foreground">Enable App-Wide Skeleton Loaders</p>
+                        <p className="text-[10px] text-muted-foreground">Swaps traditional boring spinner loaders with immersive glowing shimmer skeletons.</p>
+                      </div>
+                      <button 
+                        onClick={() => setLocalSkeletonEnabled(!localSkeletonEnabled)}
+                        className={cn(
+                          "w-10 h-5.5 rounded-full relative transition-colors shrink-0",
+                          localSkeletonEnabled ? "bg-emerald-500" : "bg-border"
+                        )}
+                        id="btn-skeleton-toggle"
+                      >
+                        <div className={cn(
+                          "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                          localSkeletonEnabled ? "right-0.5" : "left-0.5"
+                        )} />
+                      </button>
+                    </div>
+
+                    {/* Quick configs grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Theme selection */}
+                      <div className="space-y-2.5">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Skeleton Visual Theme</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[
+                            { id: 'classic', label: 'Classic Corporate', desc: 'Google & Facebook style' },
+                            { id: 'modern', label: 'Modern Elegant', desc: 'Sleek rounded lines' },
+                            { id: 'glass', label: 'Holographic Glass', desc: 'Translucent frosted UI' },
+                            { id: 'neon', label: 'Cyberpunk Neon', desc: 'Cyan & rose subtle glows' }
+                          ].map((themeOpt) => (
+                            <button
+                              key={themeOpt.id}
+                              type="button"
+                              onClick={() => setLocalSkeletonTheme(themeOpt.id as any)}
+                              className={cn(
+                                "p-3 border rounded-xl text-left transition-all space-y-1",
+                                localSkeletonTheme === themeOpt.id
+                                  ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                  : "border-border bg-background hover:bg-muted"
+                              )}
+                              id={`theme-${themeOpt.id}`}
+                            >
+                              <p className="text-[10px] font-black uppercase tracking-tight text-foreground leading-none">{themeOpt.label}</p>
+                              <p className="text-[8px] text-muted-foreground uppercase leading-none mt-1">{themeOpt.desc}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Wave tint selection */}
+                      <div className="space-y-2.5">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Shimmer Wave Color Hue</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { id: 'slate', label: 'Neutral Slate', bg: 'bg-slate-400' },
+                            { id: 'indigo', label: 'Indigo Wave', bg: 'bg-indigo-500' },
+                            { id: 'cyan', label: 'Cyan Aura', bg: 'bg-cyan-500' },
+                            { id: 'rose', label: 'Rose Gold', bg: 'bg-rose-500' },
+                            { id: 'emerald', label: 'Emerald Mint', bg: 'bg-emerald-500' },
+                            { id: 'amber', label: 'Amber Flame', bg: 'bg-amber-500' }
+                          ].map((colorOpt) => (
+                            <button
+                              key={colorOpt.id}
+                              type="button"
+                              onClick={() => setLocalSkeletonWaveColor(colorOpt.id as any)}
+                              className={cn(
+                                "p-2.5 border rounded-xl flex items-center gap-2 text-left transition-all",
+                                localSkeletonWaveColor === colorOpt.id
+                                  ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                  : "border-border bg-background hover:bg-muted"
+                              )}
+                              id={`color-${colorOpt.id}`}
+                            >
+                              <span className={cn("w-2 h-2 rounded-full shrink-0", colorOpt.bg)} />
+                              <span className="text-[9px] font-bold uppercase tracking-tight text-foreground truncate">{colorOpt.label.split(' ')[0]}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Speed config */}
+                      <div className="space-y-2.5">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Shimmer Movement Speed</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { id: 'slow', label: 'Slow Drift', desc: '3s transition' },
+                            { id: 'normal', label: 'Standard', desc: '2s wave rhythm' },
+                            { id: 'fast', label: 'High Speed', desc: '1.2s sweep' }
+                          ].map((speedOpt) => (
+                            <button
+                              key={speedOpt.id}
+                              type="button"
+                              onClick={() => setLocalSkeletonSpeed(speedOpt.id as any)}
+                              className={cn(
+                                "p-2.5 border rounded-xl text-left transition-all space-y-1",
+                                localSkeletonSpeed === speedOpt.id
+                                  ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                  : "border-border bg-background hover:bg-muted"
+                              )}
+                              id={`speed-${speedOpt.id}`}
+                            >
+                              <p className="text-[10px] font-black uppercase tracking-tight text-foreground leading-none">{speedOpt.label}</p>
+                              <p className="text-[8px] text-muted-foreground uppercase leading-none mt-1">{speedOpt.desc}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Default Rows selection */}
+                      <div className="space-y-2.5">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Skeletal Rows (Lists & Tables)</label>
+                        <div className="flex items-center gap-4">
+                          <input 
+                            type="range"
+                            min="3" 
+                            max="15" 
+                            value={localSkeletonRows} 
+                            onChange={(e) => setLocalSkeletonRows(Number(e.target.value))}
+                            className="flex-1 accent-indigo-600 h-1.5 bg-muted rounded-lg appearance-none cursor-pointer"
+                          />
+                          <span className="text-xs font-bold font-mono px-3 py-1 bg-muted border border-border rounded-lg text-foreground w-12 text-center select-none">
+                            {localSkeletonRows}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Layout selection */}
+                    <div className="space-y-2.5 pt-2">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Default Dashboard/Page Loading Layout</label>
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                        {[
+                          { id: 'automatic', label: 'Auto-Route', desc: 'Analyzes address' },
+                          { id: 'table', label: 'Table/Ledger', desc: 'Daybook, statement' },
+                          { id: 'cards', label: 'Bento Cards', desc: 'Overview, stats grid' },
+                          { id: 'profile', label: 'Profile/Detail', desc: 'Master info details' },
+                          { id: 'form', label: 'Form/Voucher', desc: 'Voucher item inserts' }
+                        ].map((layoutOpt) => (
+                          <button
+                            key={layoutOpt.id}
+                            type="button"
+                            onClick={() => setLocalSkeletonType(layoutOpt.id as any)}
+                            className={cn(
+                              "p-2.5 border rounded-xl text-left transition-all space-y-1",
+                              localSkeletonType === layoutOpt.id
+                                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                : "border-border bg-background hover:bg-muted"
+                            )}
+                            id={`layout-${layoutOpt.id}`}
+                          >
+                            <p className="text-[10px] font-black uppercase tracking-tight text-foreground leading-none">{layoutOpt.label}</p>
+                            <p className="text-[8px] text-muted-foreground uppercase leading-none mt-1 truncate">{layoutOpt.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Integrated LIVE PREVIEW widget */}
+                    {localSkeletonEnabled && (
+                      <div className="space-y-2.5 border-t border-border/80 pt-5">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] uppercase font-black text-indigo-500 tracking-widest block flex items-center gap-2 font-mono">
+                            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping shrink-0" />
+                            Live Shimmer Sandbox Preview
+                          </label>
+                          <span className="text-[8px] uppercase font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded-md font-mono">
+                            Interactive Sandbox
+                          </span>
+                        </div>
+                        
+                        {/* Sandboxed Skeleton rendering with current state values */}
+                        <div className="border border-border rounded-xl p-4 bg-background/60 shadow-inner">
+                          {/* Inject a tiny styled preview using the local state */}
+                          <div className="w-full h-40 overflow-hidden relative rounded-lg">
+                            <style dangerouslySetInnerHTML={{ __html: `
+                              @keyframes preview-shimmer-sweep {
+                                0% { background-position: -200% 0; }
+                                100% { background-position: 200% 0; }
+                              }
+                              .preview-shimmer {
+                                background-image: ${
+                                  localSkeletonTheme === 'glass'
+                                    ? `linear-gradient(90deg, rgba(255,255,255,0.02) 0%, ${
+                                        localSkeletonWaveColor === 'indigo' ? 'rgba(99,102,241,0.2)' :
+                                        localSkeletonWaveColor === 'cyan' ? 'rgba(6,182,212,0.2)' :
+                                        localSkeletonWaveColor === 'rose' ? 'rgba(244,63,94,0.15)' :
+                                        localSkeletonWaveColor === 'emerald' ? 'rgba(16,185,129,0.15)' :
+                                        localSkeletonWaveColor === 'amber' ? 'rgba(245,158,11,0.15)' :
+                                        'rgba(148,163,184,0.15)'
+                                      } 50%, rgba(255,255,255,0.02) 100%)`
+                                    : localSkeletonTheme === 'neon'
+                                    ? `linear-gradient(90deg, rgba(6,182,212,0.01) 0%, rgba(6,182,212,0.2) 50%, rgba(244,63,94,0.05) 100%)`
+                                    : localSkeletonTheme === 'classic'
+                                    ? 'linear-gradient(90deg, #e2e8f0 0%, #cbd5e1 50%, #e2e8f0 100%)'
+                                    : `linear-gradient(90deg, rgba(241,245,249,0.9) 0%, ${
+                                        localSkeletonWaveColor === 'indigo' ? 'rgba(99,102,241,0.2)' :
+                                        localSkeletonWaveColor === 'cyan' ? 'rgba(6,182,212,0.2)' :
+                                        localSkeletonWaveColor === 'rose' ? 'rgba(244,63,94,0.15)' :
+                                        localSkeletonWaveColor === 'emerald' ? 'rgba(16,185,129,0.15)' :
+                                        localSkeletonWaveColor === 'amber' ? 'rgba(245,158,11,0.15)' :
+                                        'rgba(148,163,184,0.15)'
+                                      } 50%, rgba(241,245,249,0.9) 100%)`
+                                };
+                                background-size: 200% 100%;
+                                animation: preview-shimmer-sweep ${
+                                  localSkeletonSpeed === 'fast' ? '1.2s' : 
+                                  localSkeletonSpeed === 'slow' ? '3s' : '2s'
+                                } infinite linear;
+                              }
+                            `}} />
+
+                            <div className={cn(
+                              "w-full h-full p-4 flex flex-col justify-between rounded-lg border",
+                              localSkeletonTheme === 'glass' ? "bg-white/[0.02] border-white/[0.05]" :
+                              localSkeletonTheme === 'neon' ? "bg-[#060814] border-cyan-500/10 shadow-[0_0_10px_rgba(6,182,212,0.02)]" :
+                              localSkeletonTheme === 'classic' ? "bg-slate-100 border-slate-200" : "bg-card border-border"
+                            )}>
+                              {/* Sub Header preview */}
+                              <div className="flex justify-between items-center">
+                                <div className={cn("h-4 w-24 rounded preview-shimmer", localSkeletonTheme === 'classic' ? 'bg-slate-200' : 'bg-slate-300/40')} />
+                                <div className={cn("h-7 w-7 rounded-full preview-shimmer", localSkeletonTheme === 'classic' ? 'bg-slate-200' : 'bg-slate-300/40')} />
+                              </div>
+
+                              {/* Body preview list */}
+                              <div className="space-y-2 mt-4 mt-auto">
+                                <div className={cn("h-3 w-full rounded preview-shimmer", localSkeletonTheme === 'classic' ? 'bg-slate-200' : 'bg-slate-300/40')} />
+                                <div className={cn("h-3 w-4/5 rounded-md preview-shimmer", localSkeletonTheme === 'classic' ? 'bg-slate-200' : 'bg-slate-300/40')} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                   </div>
                 </div>
               )}

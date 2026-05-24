@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2, Package } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { useSettings } from '../contexts/SettingsContext';
+import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { erpService } from '../services/erpService';
@@ -94,6 +94,10 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     whatsappTemplates,
     features = [], 
     activePlan,
+    sidebarBgColor,
+    sidebarTextColor,
+    systemUiStyle,
+    systemMenuBarStyle,
     updateSettings,
     updateUserSettings
   } = useSettings();
@@ -111,6 +115,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localCompanyAddress, setLocalCompanyAddress] = useState(companyAddress || '');
   const [localSlogan, setLocalSlogan] = useState(slogan || '');
   const [localMenuBarStyle, setLocalMenuBarStyle] = useState(menuBarStyle || 'classic');
+  const [localSidebarBgColor, setLocalSidebarBgColor] = useState(sidebarBgColor || 'default');
+  const [localSidebarTextColor, setLocalSidebarTextColor] = useState(sidebarTextColor || 'default');
   const [localLayoutWidth, setLocalLayoutWidth] = useState(layoutWidth || 'constrained');
   const [localPrintHeader, setLocalPrintHeader] = useState(printHeader || '');
   const [localPrintFooter, setLocalPrintFooter] = useState(printFooter || '');
@@ -247,6 +253,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalEnglishFont(englishFont || 'Inter');
     setLocalBanglaFont(banglaFont || 'Hind Siliguri');
     setLocalMenuBarStyle(menuBarStyle || 'classic');
+    setLocalSidebarBgColor(sidebarBgColor || 'default');
+    setLocalSidebarTextColor(sidebarTextColor || 'default');
     setLocalLayoutWidth(layoutWidth || 'constrained');
     setLocalNotifications(notifications);
     setLocalWhatsappTemplates(whatsappTemplates);
@@ -257,7 +265,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     printSignature3, showSignature1, showSignature2, showSignature3, 
     signatureAlignment, showDeveloperContact, financialYearStart, 
     baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
-    showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, dashboardDesign, uiStyle, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates
+    showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, dashboardDesign, uiStyle, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates, sidebarBgColor, sidebarTextColor
   ]);
 
   const handleSaveGeneral = () => {
@@ -287,6 +295,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       dashboardQuickActions: localDashboardQuickActions,
       dashboardCards: localDashboardCards,
       menuBarStyle: localMenuBarStyle,
+      sidebarBgColor: localSidebarBgColor,
+      sidebarTextColor: localSidebarTextColor,
       uiStyle: localUIStyle,
       glassBackground: localGlassBackground,
       dashboardDesign: localDashboardDesign,
@@ -865,12 +875,20 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       <p className="text-[9px] text-gray-500 uppercase">{t('common.selectFont')} (Bangla)</p>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.menuBarStyle')}</label>
+                    <div className={cn("space-y-2", systemMenuBarStyle && "opacity-50 pointer-events-none select-none")}>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.menuBarStyle')}</label>
+                        {systemMenuBarStyle && (
+                          <span className="text-[8px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded font-mono font-bold">
+                            Under Development
+                          </span>
+                        )}
+                      </div>
                       <select 
                         value={localMenuBarStyle}
+                        disabled={!!systemMenuBarStyle}
                         onChange={(e) => setLocalMenuBarStyle(e.target.value as any)}
-                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground disabled:opacity-80"
                       >
                         <option value="classic">{t('settings.classicSidebar')}</option>
                         <option value="ribbon">{t('settings.ribbonStyle')}</option>
@@ -882,7 +900,47 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.layoutWidth')}</label>
+                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                        {language === 'bn' ? 'সাইডবার ব্যাকগ্রাউন্ড কালার' : 'Sidebar Background Style'}
+                      </label>
+                      <select 
+                        value={localSidebarBgColor}
+                        onChange={(e) => setLocalSidebarBgColor(e.target.value)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        {SIDEBAR_BG_OPTIONS.map(opt => (
+                          <option key={opt.id} value={opt.id}>
+                            {language === 'bn' ? opt.labelBn : opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[9px] text-gray-500 uppercase">
+                        {language === 'bn' ? 'সাইডবারের ব্যাকগ্রাউন্ড থিম এবং ডিজাইন স্টাইল বেছে নিন' : 'Modify the primary theme and colors applied onto the main sidebar'}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                        {language === 'bn' ? 'সাইডবার টেক্সট কালার' : 'Sidebar Text & Icon Accent'}
+                      </label>
+                      <select 
+                        value={localSidebarTextColor}
+                        onChange={(e) => setLocalSidebarTextColor(e.target.value)}
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                      >
+                        {SIDEBAR_TEXT_OPTIONS.map(opt => (
+                          <option key={opt.id} value={opt.id}>
+                            {language === 'bn' ? opt.labelBn : opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[9px] text-gray-500 uppercase">
+                        {language === 'bn' ? 'সাইডবারের টেক্সট এবং সক্রিয় আইটেমের কালার ট্রিগার বেছে নিন' : 'Modify active text and navigation highlights for clear readability'}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                       <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.layoutWidth')}</label>
                       <select 
                         value={localLayoutWidth}
                         onChange={(e) => setLocalLayoutWidth(e.target.value as any)}
@@ -894,12 +952,20 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       <p className="text-[9px] text-gray-500 uppercase">{t('settings.layoutWidthDesc')}</p>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.uiStyle')}</label>
+                    <div className={cn("space-y-2", systemUiStyle && "opacity-50 pointer-events-none select-none")}>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.uiStyle')}</label>
+                        {systemUiStyle && (
+                          <span className="text-[8px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded font-mono font-bold">
+                            Under Development
+                          </span>
+                        )}
+                      </div>
                       <select 
                         value={localUIStyle}
+                        disabled={!!systemUiStyle}
                         onChange={(e) => setLocalUIStyle(e.target.value as any)}
-                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground disabled:opacity-80"
                       >
                         <option value="UI/UX 1">{t('settings.uiStyleClassic')}</option>
                         <option value="UI/UX 2">{t('settings.uiStyleModern')}</option>

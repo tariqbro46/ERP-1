@@ -11,6 +11,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { cn, formatNumber, ensureDate } from '../lib/utils';
+import { SkeletonLoader } from './SkeletonLoader';
 import { format, differenceInDays } from 'date-fns';
 import { EditableHeader } from './EditableHeader';
 
@@ -1330,6 +1331,10 @@ export function Dashboard() {
         </div>
       </div>
     );
+  }
+
+  if (loading) {
+    return <SkeletonLoader type="cards" />;
   }
 
   return (
