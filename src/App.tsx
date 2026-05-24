@@ -113,6 +113,7 @@ import { FeatureGuard } from './components/FeatureGuard';
 import { erpService } from './services/erpService';
 import { MenuConfig } from './types';
 import { useSubscription } from './hooks/useSubscription';
+import { SkeletonLoader } from './components/SkeletonLoader';
 
 import { Home } from './pages/landing/Home';
 import { Features } from './pages/landing/Features';
@@ -391,12 +392,29 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
   const navigate = useNavigate();
 
-  const [dynamicMenu, setDynamicMenu] = React.useState<MenuConfig | null>(null);
+  const [dynamicMenu, setDynamicMenu] = React.useState<MenuConfig | null>(() => {
+    try {
+      const persisted = localStorage.getItem('swr_system_menu');
+      return persisted ? JSON.parse(persisted) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const [menuLoading, setMenuLoading] = React.useState(() => {
+    try {
+      const persisted = localStorage.getItem('swr_system_menu');
+      return !persisted;
+    } catch (e) {
+      return true;
+    }
+  });
 
   React.useEffect(() => {
     const unsubscribe = erpService.subscribeToMenuConfig((config) => {
       if (config) {
         setDynamicMenu(config);
+        setMenuLoading(false);
       }
     });
     return () => unsubscribe();
@@ -643,54 +661,88 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         </div>
 
         <nav className="flex-1 py-2 overflow-y-auto no-scrollbar overflow-x-hidden">
-          <div className="px-3 mb-2">
-              <SidebarItem 
-                to={DASHBOARD_ITEM.to} 
-                icon={DASHBOARD_ITEM.icon} 
-                label={isSidebarCollapsed ? "" : (DASHBOARD_ITEM.labelKey && t(DASHBOARD_ITEM.labelKey) !== DASHBOARD_ITEM.labelKey ? t(DASHBOARD_ITEM.labelKey) : DASHBOARD_ITEM.label)} 
-                active={location.pathname === DASHBOARD_ITEM.to} 
-              />
-          </div>
+          {menuLoading ? (
+            <div className="px-4 py-3 space-y-6 animate-pulse">
+              {/* Dashboard item skeleton */}
+              <div className="flex items-center gap-3 py-2 px-2">
+                <div className="h-5 w-5 bg-muted/20 rounded-md"></div>
+                <div className="h-4 bg-muted/15 rounded-md w-28"></div>
+              </div>
+              
+              {/* Group 1 */}
+              <div className="space-y-3">
+                <div className="h-3 bg-muted/20 rounded-md w-16 px-2 mb-1"></div>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 py-1.5 px-3">
+                    <div className="h-4 w-4 bg-muted/10 rounded"></div>
+                    <div className="h-3.5 bg-muted/10 rounded-md w-24"></div>
+                  </div>
+                ))}
+              </div>
 
-          {menuGroups.map((group) => {
-            if (group.hidden) return null;
-            
-            // Check if at least one item in the group is visible to the user
-            const visibleItems = group.items.filter((item: any) => {
-              if (item.hidden) return false;
-              if (item.adminOnly && !isAdmin) return false;
-              if (item.superAdminOnly && !isSuperAdmin) return false;
-              if (item.permission && !hasPermission(item.permission)) return false;
-              return true;
-            });
+              {/* Group 2 */}
+              <div className="space-y-3">
+                <div className="h-3 bg-muted/20 rounded-md w-20 px-2 mb-1"></div>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 py-1.5 px-3">
+                    <div className="h-4 w-4 bg-muted/10 rounded"></div>
+                    <div className="h-3.5 bg-muted/10 rounded-md w-32"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="px-3 mb-2">
+                  <SidebarItem 
+                    to={DASHBOARD_ITEM.to} 
+                    icon={DASHBOARD_ITEM.icon} 
+                    label={isSidebarCollapsed ? "" : (DASHBOARD_ITEM.labelKey && t(DASHBOARD_ITEM.labelKey) !== DASHBOARD_ITEM.labelKey ? t(DASHBOARD_ITEM.labelKey) : DASHBOARD_ITEM.label)} 
+                    active={location.pathname === DASHBOARD_ITEM.to} 
+                  />
+              </div>
 
-            if (visibleItems.length === 0) return null;
+              {menuGroups.map((group) => {
+                if (group.hidden) return null;
+                
+                // Check if at least one item in the group is visible to the user
+                const visibleItems = group.items.filter((item: any) => {
+                  if (item.hidden) return false;
+                  if (item.adminOnly && !isAdmin) return false;
+                  if (item.superAdminOnly && !isSuperAdmin) return false;
+                  if (item.permission && !hasPermission(item.permission)) return false;
+                  return true;
+                });
 
-            return (
-              <SidebarGroup 
-                key={group.id}
-                title={isSidebarCollapsed ? (group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey).charAt(0) : group.group.charAt(0)) : (group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey) : group.group)} 
-                isOpen={expandedGroups.has(group.group)} 
-                onToggle={() => toggleGroup(group.group)}
-                to={group.to}
-              >
-                {visibleItems.map((item: any) => {
-                  const isSubscribed = !item.feature || isFeatureEnabled(item.feature);
-                  
-                  return (
-                    <div key={item.id} className={cn(!isSubscribed && "opacity-50 grayscale-[0.5]")}>
-                      <SidebarItem 
-                        to={item.to} 
-                        icon={item.icon} 
-                        label={isSidebarCollapsed ? "" : (item.labelKey && t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.label)} 
-                        active={location.pathname === item.to} 
-                      />
-                    </div>
-                  );
-                })}
-              </SidebarGroup>
-            );
-          })}
+                if (visibleItems.length === 0) return null;
+
+                return (
+                  <SidebarGroup 
+                    key={group.id}
+                    title={isSidebarCollapsed ? (group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey).charAt(0) : group.group.charAt(0)) : (group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey) : group.group)} 
+                    isOpen={expandedGroups.has(group.group)} 
+                    onToggle={() => toggleGroup(group.group)}
+                    to={group.to}
+                  >
+                    {visibleItems.map((item: any) => {
+                      const isSubscribed = !item.feature || isFeatureEnabled(item.feature);
+                      
+                      return (
+                        <div key={item.id} className={cn(!isSubscribed && "opacity-50 grayscale-[0.5]")}>
+                          <SidebarItem 
+                            to={item.to} 
+                            icon={item.icon} 
+                            label={isSidebarCollapsed ? "" : (item.labelKey && t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.label)} 
+                            active={location.pathname === item.to} 
+                          />
+                        </div>
+                      );
+                    })}
+                  </SidebarGroup>
+                );
+              })}
+            </>
+          )}
         </nav>
 
         <div className={cn(

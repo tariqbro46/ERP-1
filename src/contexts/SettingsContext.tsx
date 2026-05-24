@@ -326,10 +326,24 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     // Fetch global system config - One-time fetch to save quota
     const fetchSystemConfig = async () => {
       try {
+        const persisted = localStorage.getItem('swr_system_config');
+        if (persisted) {
+          const cachedSystem = JSON.parse(persisted);
+          setSettings(prev => ({
+            ...prev,
+            ...cachedSystem
+          }));
+        }
+      } catch (e) {}
+
+      try {
         const systemRef = doc(db, 'system', 'config');
         const snap = await getDocFromServer(systemRef);
         if (snap.exists()) {
           const data = snap.data();
+          try {
+            localStorage.setItem('swr_system_config', JSON.stringify(data));
+          } catch (e) {}
           setSettings(prev => ({
             ...prev,
             statusOnlineText: data.statusOnlineText || prev.statusOnlineText,
@@ -435,11 +449,34 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
 
     const ref = doc(db, 'settings', user.companyId);
+
+    // Try to load cached settings for this company first to avoid layout flashing
+    try {
+      const persisted = localStorage.getItem(`swr_settings_${user.companyId}`);
+      if (persisted) {
+        const cachedData = JSON.parse(persisted);
+        setSettings(prev => ({
+          ...prev,
+          ...cachedData,
+          loading: false,
+          updateSettings: prev.updateSettings,
+          updateSystemSettings: prev.updateSystemSettings,
+          updateFeaturesSettings: prev.updateFeaturesSettings,
+          appFeatures: prev.appFeatures,
+          subscriptionPlans: prev.subscriptionPlans
+        }));
+      }
+    } catch (e) {}
+
     const unsubscribe = onSnapshot(ref, (snap) => {
       if (snap.exists()) {
+        const snapData = snap.data();
+        try {
+          localStorage.setItem(`swr_settings_${user.companyId}`, JSON.stringify(snapData));
+        } catch (e) {}
         setSettings(prev => ({ 
           ...prev, 
-          ...snap.data(), 
+          ...snapData, 
           loading: false,
           updateSettings: prev.updateSettings,
           updateSystemSettings: prev.updateSystemSettings,

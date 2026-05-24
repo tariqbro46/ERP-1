@@ -3605,25 +3605,39 @@ export const erpService: any = {
 
   // Menu Configuration
   _menuConfigCache: null as MenuConfig | null,
-  async getMenuConfig(): Promise<MenuConfig | null> {
-    if (this._menuConfigCache) return this._menuConfigCache;
+  async getMenuConfig(forceRefresh = false): Promise<MenuConfig | null> {
+    if (this._menuConfigCache && !forceRefresh) return this._menuConfigCache;
+    
+    // Check localStorage first
+    try {
+      const persisted = localStorage.getItem('swr_system_menu');
+      if (persisted && !this._menuConfigCache) {
+        this._menuConfigCache = JSON.parse(persisted);
+      }
+    } catch (e) {}
+
     try {
       const menuDoc = await getDoc(doc(db, 'system', 'menu'));
       if (menuDoc.exists()) {
         const data = menuDoc.data() as MenuConfig;
         this._menuConfigCache = data;
+        try {
+          localStorage.setItem('swr_system_menu', JSON.stringify(data));
+        } catch (e) {}
         return data;
       }
-      return null;
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, 'system/menu');
-      return null;
     }
+    return this._menuConfigCache;
   },
 
   async updateMenuConfig(config: MenuConfig): Promise<void> {
     try {
       this._menuConfigCache = config;
+      try {
+        localStorage.setItem('swr_system_menu', JSON.stringify(config));
+      } catch (e) {}
       const cleanedConfig = cleanData(config);
       await setDoc(doc(db, 'system', 'menu'), {
         ...cleanedConfig,
@@ -3635,8 +3649,29 @@ export const erpService: any = {
   },
 
   subscribeToMenuConfig(callback: (config: MenuConfig | null) => void) {
-    // Return a dummy unsubscribe and call callback immediately to avoid breaking UI if it expects a listener
-    this.getMenuConfig().then(callback);
+    // 1. Immediately invoke with the memory or localStorage cache to prevent visual flashing
+    let cache: MenuConfig | null = this._menuConfigCache;
+    if (!cache) {
+      try {
+        const persisted = localStorage.getItem('swr_system_menu');
+        if (persisted) {
+          cache = JSON.parse(persisted);
+          this._menuConfigCache = cache;
+        }
+      } catch (e) {}
+    }
+
+    if (cache) {
+      callback(cache);
+    }
+
+    // 2. Fetch fresh config in the background and trigger callback if changed/loaded
+    this.getMenuConfig(true).then((fresh) => {
+      if (fresh) {
+        callback(fresh);
+      }
+    });
+
     return () => {};
   },
 
