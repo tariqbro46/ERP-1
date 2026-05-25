@@ -24,10 +24,41 @@ export const About = () => {
     leadershipTitle: t('about.leadershipTitle') || "Our Leadership Team",
     leadershipTitleColor: "#ffffff",
     showLeadership: true,
-    pageBgColor: "#020617"
+    pageBgColor: "#020617",
+    // Core Values Data
+    value1Title: t('about.value1Title') || "Operational Clarity",
+    value1Desc: t('about.value1Desc') || "We build intuitive interfaces allowing rapid understanding over double entry finances in milliseconds.",
+    value2Title: t('about.value2Title') || "Enterprise Growth",
+    value2Desc: t('about.value2Desc') || "Supporting scaling ventures across multi-godown networks without performance compromises.",
+    value3Title: t('about.value3Title') || "Global Alignment",
+    value3Desc: t('about.value3Desc') || "Engineered for international statutory regulations with support for multi-currency transactions.",
+    value4Title: t('about.value4Title') || "Uncompromised Trust",
+    value4Desc: t('about.value4Desc') || "Rigid compliance rules with role-based permissions preventing leakages and tracking actions.",
+    // Leadership Data
+    leader1Name: "John Doe",
+    leader1Role: t('about.roleCEO') || "Chief Executive Officer",
+    leader1Img: "https://api.dicebear.com/7.x/micah/svg?seed=John&backgroundType=gradientLinear&backgroundRotation=140",
+    leader2Name: "Jane Smith",
+    leader2Role: t('about.roleCTO') || "Chief Technology Officer",
+    leader2Img: "https://api.dicebear.com/7.x/micah/svg?seed=Jane&backgroundType=gradientLinear&backgroundRotation=140",
+    leader3Name: "Mike Johnson",
+    leader3Role: t('about.roleProduct') || "VP Product",
+    leader3Img: "https://api.dicebear.com/7.x/micah/svg?seed=Mike&backgroundType=gradientLinear&backgroundRotation=140"
   };
 
-  const { content } = useSiteContent('about', DEFAULT_CONTENT);
+  const { content: rawContent } = useSiteContent('about', DEFAULT_CONTENT);
+
+  // Normalize content to use consistent dark theme backgrounds and colors, matching other pages
+  const content = {
+    ...rawContent,
+    pageBgColor: "#020617",
+    missionTitleColor: rawContent.missionTitleColor === "#0a0a0a" ? "#ffffff" : rawContent.missionTitleColor || "#ffffff",
+    missionDescColor: rawContent.missionDescColor === "#64748b" ? "#94a3b8" : rawContent.missionDescColor || "#94a3b8",
+    bannerTitleColor: rawContent.bannerTitleColor === "#0a0a0a" ? "#ffffff" : rawContent.bannerTitleColor || "#ffffff",
+    bannerSubtitleColor: rawContent.bannerSubtitleColor === "rgba(255,255,255,0.8)" || rawContent.bannerSubtitleColor === "#64748b" ? "#94a3b8" : rawContent.bannerSubtitleColor || "#94a3b8",
+    bannerBgColor: "#020617",
+    leadershipTitleColor: rawContent.leadershipTitleColor === "#0a0a0a" ? "#ffffff" : rawContent.leadershipTitleColor || "#ffffff",
+  };
 
   return (
     <div className="min-h-screen flex flex-col selection:bg-blue-500/30" style={{ backgroundColor: content.pageBgColor || '#020617', color: '#ffffff' }}>
@@ -93,26 +124,26 @@ export const About = () => {
               {[
                 {
                   icon: Zap,
-                  title: t('about.value1Title') || "Operational Clarity",
-                  desc: t('about.value1Desc') || "We build intuitive interfaces allowing rapid understanding over double entry finances in milliseconds.",
+                  title: content.value1Title || "Operational Clarity",
+                  desc: content.value1Desc || "We build intuitive interfaces allowing rapid understanding over double entry finances in milliseconds.",
                   glow: 'from-blue-500/10 to-indigo-500/5 hover:border-blue-500/20'
                 },
                 {
                   icon: Users,
-                  title: t('about.value2Title') || "Enterprise Growth",
-                  desc: t('about.value2Desc') || "Supporting scaling ventures across multi-godown networks without performance compromises.",
+                  title: content.value2Title || "Enterprise Growth",
+                  desc: content.value2Desc || "Supporting scaling ventures across multi-godown networks without performance compromises.",
                   glow: 'from-purple-500/10 to-pink-500/5 hover:border-purple-500/20'
                 },
                 {
                   icon: Globe,
-                  title: t('about.value3Title') || "Global Alignment",
-                  desc: t('about.value3Desc') || "Engineered for international statutory regulations with support for multi-currency transactions.",
+                  title: content.value3Title || "Global Alignment",
+                  desc: content.value3Desc || "Engineered for international statutory regulations with support for multi-currency transactions.",
                   glow: 'from-emerald-500/10 to-teal-500/5 hover:border-emerald-500/20'
                 },
                 {
                   icon: Award,
-                  title: t('about.value4Title') || "Uncompromised Trust",
-                  desc: t('about.value4Desc') || "Rigid compliance rules with role-based permissions preventing leakages and tracking actions.",
+                  title: content.value4Title || "Uncompromised Trust",
+                  desc: content.value4Desc || "Rigid compliance rules with role-based permissions preventing leakages and tracking actions.",
                   glow: 'from-amber-500/10 to-yellow-500/5 hover:border-amber-500/20'
                 }
               ].map((value, i) => (
@@ -134,7 +165,7 @@ export const About = () => {
               ))}
             </div>
           </div>
-
+ 
           {/* Leaders Section */}
           {content.showLeadership && (
             <div className="py-24 border-t border-slate-900">
@@ -145,12 +176,12 @@ export const About = () => {
                 </h2>
                 <p className="text-slate-400 text-sm font-medium">Empowering local enterprise scalability through digital tools.</p>
               </div>
-
+ 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
                 {[
-                  { name: "John Doe", role: t('about.roleCEO') || "Chief Executive Officer", img: "https://api.dicebear.com/7.x/micah/svg?seed=John&backgroundType=gradientLinear&backgroundRotation=140" },
-                  { name: "Jane Smith", role: t('about.roleCTO') || "Chief Technology Officer", img: "https://api.dicebear.com/7.x/micah/svg?seed=Jane&backgroundType=gradientLinear&backgroundRotation=140" },
-                  { name: "Mike Johnson", role: t('about.roleProduct') || "VP Product", img: "https://api.dicebear.com/7.x/micah/svg?seed=Mike&backgroundType=gradientLinear&backgroundRotation=140" }
+                  { name: content.leader1Name || "John Doe", role: content.leader1Role || "Chief Executive Officer", img: content.leader1Img || "https://api.dicebear.com/7.x/micah/svg?seed=John&backgroundType=gradientLinear&backgroundRotation=140" },
+                  { name: content.leader2Name || "Jane Smith", role: content.leader2Role || "Chief Technology Officer", img: content.leader2Img || "https://api.dicebear.com/7.x/micah/svg?seed=Jane&backgroundType=gradientLinear&backgroundRotation=140" },
+                  { name: content.leader3Name || "Mike Johnson", role: content.leader3Role || "VP Product", img: content.leader3Img || "https://api.dicebear.com/7.x/micah/svg?seed=Mike&backgroundType=gradientLinear&backgroundRotation=140" }
                 ].map((member, i) => (
                   <div key={i} className="p-8 bg-slate-900/30 border border-slate-900 hover:border-slate-800 rounded-3xl text-center transition-all hover:bg-slate-900/50">
                     <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-6 border-2 border-indigo-500/20 shadow-xl bg-slate-950">
