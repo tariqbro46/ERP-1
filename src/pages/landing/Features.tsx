@@ -29,6 +29,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useSiteContent } from '../../hooks/useSiteContent';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useLandingTheme } from '../../hooks/useLandingTheme';
+import { cn } from '../../lib/utils';
 
 export const Features = () => {
   const { t } = useLanguage();
@@ -667,15 +669,24 @@ export const Features = () => {
     }
   ];
 
+  const landingTheme = useLandingTheme();
+  const isDark = landingTheme === 'dark';
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-white selection:bg-blue-500/30">
+    <div className="min-h-screen flex flex-col selection:bg-blue-500/30 transition-colors duration-300" style={{ backgroundColor: isDark ? '#020617' : '#f8fafc', color: isDark ? '#ffffff' : '#0f172a' }}>
       <Navbar />
       
-      <main className="flex-1 pt-32 pb-24 relative overflow-hidden">
+      <main className="flex-1 pt-32 pb-24 relative overflow-hidden transition-colors duration-300" style={{ backgroundColor: isDark ? '#020617' : '#f8fafc' }}>
         {/* Glow Effects */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] -z-10 pointer-events-none">
-          <div className="absolute top-12 left-1/4 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[140px] opacity-80 animate-pulse" />
-          <div className="absolute top-36 right-1/4 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] opacity-60" />
+          <div className={cn(
+            "absolute top-12 left-1/4 w-[600px] h-[600px] rounded-full blur-[140px] opacity-80 animate-pulse",
+            isDark ? "bg-blue-600/10" : "bg-blue-400/5"
+          )} />
+          <div className={cn(
+            "absolute top-36 right-1/4 w-[500px] h-[500px] rounded-full blur-[120px] opacity-60",
+            isDark ? "bg-emerald-500/5" : "bg-emerald-400/5"
+          )} />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -685,11 +696,14 @@ export const Features = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6 }}
             >
-              <span className="text-xs font-black uppercase tracking-[0.3em] bg-blue-500/10 text-blue-400 px-3 py-1.5 rounded-full border border-blue-500/20 mb-6 inline-block">EXPERIMENT PLATFORM</span>
-              <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight mb-6 bg-gradient-to-b from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+              <span className="text-xs font-black uppercase tracking-[0.3em] bg-blue-500/10 text-blue-500 px-3 py-1.5 rounded-full border border-blue-500/20 mb-6 inline-block">EXPERIMENT PLATFORM</span>
+              <h1 className={cn(
+                "text-4xl md:text-7xl font-extrabold tracking-tight mb-6 bg-gradient-to-b bg-clip-text text-transparent",
+                isDark ? "from-white via-slate-100 to-slate-400" : "from-slate-950 via-slate-800 to-slate-750"
+              )}>
                 {content.title}
               </h1>
-              <p className="text-base text-slate-400 max-w-2xl mx-auto leading-relaxed font-medium">
+              <p className={cn("text-base max-w-2xl mx-auto leading-relaxed font-semibold", isDark ? "text-slate-400" : "text-slate-600")}>
                 {content.subtitle}
               </p>
             </motion.div>
@@ -702,30 +716,33 @@ export const Features = () => {
               return (
                 <div 
                   key={i} 
-                  className={`flex flex-col ${i % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-16 items-center`}
+                  className={`flex flex-col ${i % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-16 items-center animate-fade-in`}
                 >
                   <div className="flex-1 space-y-6">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 bg-blue-400/5 border border-blue-400/10 px-3 py-1 rounded-full inline-block">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full inline-block">
                       MODULE 0{i + 1}
                     </span>
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-500/10 border border-blue-500/20">
-                        <Icon className="w-5 h-5 text-blue-400" />
+                      <div className={cn(
+                        "w-12 h-12 rounded-xl flex items-center justify-center border",
+                        isDark ? "bg-blue-500/10 border-blue-500/20" : "bg-blue-50 border-blue-200"
+                      )}>
+                        <Icon className="w-5 h-5 text-indigo-600" />
                       </div>
-                      <h2 className="text-2xl md:text-4xl font-extrabold tracking-tight text-white">{feature.title}</h2>
+                      <h2 className={cn("text-2xl md:text-4xl font-extrabold tracking-tight", isDark ? "text-white" : "text-slate-905")}>{feature.title}</h2>
                     </div>
-                    <p className="text-sm md:text-base leading-relaxed text-slate-400 font-medium">
+                    <p className={cn("text-sm md:text-base leading-relaxed font-semibold", isDark ? "text-slate-400" : "text-slate-650")}>
                       {feature.desc}
                     </p>
                     
-                    <div className="h-[1px] bg-slate-900" />
+                    <div className={cn("h-[1px]", isDark ? "bg-slate-900" : "bg-slate-200")} />
 
                     <div className="space-y-1">
                       <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 block mb-2">SYSTEM PARAMEDICS:</span>
                       <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {feature.details.map((detail, j) => (
-                          <li key={j} className="flex items-start gap-2.5 text-xs font-semibold text-slate-300 select-none">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                          <li key={j} className={cn("flex items-start gap-2.5 text-xs font-semibold select-none", isDark ? "text-slate-300" : "text-slate-700")}>
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
                             <span>{detail}</span>
                           </li>
                         ))}
@@ -734,7 +751,7 @@ export const Features = () => {
                   </div>
 
                   <div className="flex-1 w-full text-white relative">
-                    <div className="absolute -inset-1 rounded-2xl bg-gradient-to-tr from-blue-500/10 to-transparent blur-md opacity-70" />
+                    <div className={cn("absolute -inset-1 rounded-2xl blur-md opacity-70", isDark ? "bg-gradient-to-tr from-blue-500/10 to-transparent" : "bg-gradient-to-tr from-blue-100 to-transparent")} />
                     <motion.div
                       whileHover={{ scale: 1.005 }}
                       className="relative rounded-2xl overflow-hidden"
@@ -749,42 +766,50 @@ export const Features = () => {
 
           {/* Full Category Subsystem Directories */}
           {content.showMore && (
-            <div className="py-24 border-t border-slate-900">
+            <div className={cn("py-24 border-t transition-colors", isDark ? "border-slate-900" : "border-slate-200")}>
               <div className="text-center mb-16">
-                <span className="text-xs font-black uppercase tracking-[0.3em] bg-indigo-500/10 text-indigo-400 px-3 py-1.5 rounded-full border border-indigo-500/20 mb-6 inline-block">FULL DIRECTORY</span>
-                <h2 className="text-3xl md:text-4xl font-extrabold mb-4">{content.moreTitle}</h2>
-                <p className="text-slate-400 text-sm font-medium">{content.moreSubtitle}</p>
+                <span className="text-xs font-black uppercase tracking-[0.3em] bg-indigo-500/10 text-indigo-500 px-3 py-1.5 rounded-full border border-indigo-500/20 mb-6 inline-block">FULL DIRECTORY</span>
+                <h2 className={cn("text-3xl md:text-4xl font-extrabold mb-4", isDark ? "text-white" : "text-slate-900")}>{content.moreTitle}</h2>
+                <p className={cn("text-sm font-semibold", isDark ? "text-slate-400" : "text-slate-600")}>{content.moreSubtitle}</p>
               </div>
 
               <div className="space-y-16">
                 {appFeatures.map((category) => (
                   <div key={category.id} className="space-y-6">
                     <div className="flex items-center gap-4">
-                      <div className="h-[1px] flex-1 bg-slate-900" />
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400/80 whitespace-nowrap">
+                      <div className={cn("h-[1px] flex-1", isDark ? "bg-slate-900" : "bg-slate-200")} />
+                      <h3 className={cn("text-[10px] font-black uppercase tracking-[0.3em] whitespace-nowrap", isDark ? "text-indigo-400/80" : "text-indigo-600")}>
                         {category.label}
                       </h3>
-                      <div className="h-[1px] flex-1 bg-slate-900" />
+                      <div className={cn("h-[1px] flex-1", isDark ? "bg-slate-900" : "bg-slate-200")} />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                       {category.features.map((feature) => (
                         <div 
                           key={feature.id} 
-                          className="group relative p-6 border border-slate-900 hover:border-slate-800 rounded-2xl bg-slate-900/40 hover:bg-slate-900/60 transition-all hover:translate-y-[-4px]" 
+                          className={cn(
+                            "group relative p-6 border rounded-2xl transition-all hover:translate-y-[-4px]",
+                            isDark 
+                              ? "border-slate-900 bg-slate-900/40 hover:bg-slate-900/60 hover:border-slate-800" 
+                              : "border-slate-200 bg-white hover:border-slate-350 shadow-sm"
+                          )} 
                         >
                           <div className="flex items-center justify-between mb-4">
-                            <Zap className="w-5 h-5 text-blue-400" />
+                            <Zap className="w-5 h-5 text-indigo-650" />
                             {feature.description && (
                               <div className="relative group/info">
-                                <Info className="w-3.5 h-3.5 text-slate-500 cursor-help hover:text-blue-400 transition-colors" />
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-slate-950 text-slate-300 text-[10px] font-semibold leading-relaxed rounded-xl shadow-2xl border border-slate-850 opacity-0 group-hover/info:opacity-100 pointer-events-none transition-all z-50">
+                                <Info className="w-3.5 h-3.5 text-slate-500 cursor-help hover:text-indigo-500 transition-colors" />
+                                <div className={cn(
+                                  "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 text-[10px] font-semibold leading-relaxed rounded-xl shadow-2xl border opacity-0 group-hover/info:opacity-100 pointer-events-none transition-all z-50",
+                                  isDark ? "bg-slate-950 text-slate-300 border-slate-850" : "bg-white text-slate-700 border-slate-200"
+                                )}>
                                   {feature.description}
                                 </div>
                               </div>
                             )}
                           </div>
-                          <h4 className="text-sm font-bold mb-1 uppercase tracking-wider text-slate-200">{feature.label}</h4>
-                          <span className="text-[8px] font-mono text-slate-600 uppercase opacity-70">ID: {feature.id}</span>
+                          <h4 className={cn("text-sm font-bold mb-1 uppercase tracking-wider", isDark ? "text-slate-200" : "text-slate-850")}>{feature.label}</h4>
+                          <span className={cn("text-[8px] font-mono uppercase opacity-70", isDark ? "text-slate-600" : "text-slate-500")}>ID: {feature.id}</span>
                         </div>
                       ))}
                     </div>

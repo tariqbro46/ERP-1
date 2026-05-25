@@ -300,7 +300,7 @@ const defaultSettings: SettingsContextType = {
 const SettingsContext = createContext<SettingsContextType>(defaultSettings);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [settings, setSettings] = useState<SettingsContextType>(() => {
     try {
       const systemPersisted = localStorage.getItem('swr_system_config');
@@ -340,6 +340,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [userSettings, setUserSettings] = useState<any>({});
 
   useEffect(() => {
+    if (authLoading) return;
+
     if (!user?.uid) {
       setUserSettings({});
       return;
@@ -468,6 +470,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     fetchPlans();
     fetchFeatures();
 
+    if (authLoading) return;
+
     if (!user?.companyId) {
       // Keep system settings but reset company settings
       setSettings(prev => ({ 
@@ -546,7 +550,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return () => {
       unsubscribe();
     };
-  }, [user?.companyId]);
+  }, [user?.companyId, authLoading]);
 
   useEffect(() => {
     if (settings.systemFavicon) {

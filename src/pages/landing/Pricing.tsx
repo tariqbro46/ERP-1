@@ -23,6 +23,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { erpService } from '../../services/erpService';
 import { SubscriptionPlan } from '../../types';
 import { cn } from '../../lib/utils';
+import { useLandingTheme } from '../../hooks/useLandingTheme';
 
 export const Pricing = () => {
   const { t } = useLanguage();
@@ -131,15 +132,24 @@ export const Pricing = () => {
 
   const sortedPlans = [...plans].sort((a, b) => (a.tier || 0) - (b.tier || 0));
 
+  const landingTheme = useLandingTheme();
+  const isDark = landingTheme === 'dark';
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-white selection:bg-blue-500/30">
+    <div className="min-h-screen flex flex-col selection:bg-blue-500/30 transition-colors duration-300" style={{ backgroundColor: isDark ? '#020617' : '#f8fafc', color: isDark ? '#ffffff' : '#0f172a' }}>
       <Navbar />
       
-      <main className="flex-1 pt-32 pb-24 relative overflow-hidden">
+      <main className="flex-1 pt-32 pb-24 relative overflow-hidden transition-colors duration-300" style={{ backgroundColor: isDark ? '#020617' : '#f8fafc' }}>
         {/* Glow Effects */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[400px] -z-10 pointer-events-none">
-          <div className="absolute top-12 left-1/3 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[140px] opacity-80" />
-          <div className="absolute top-24 right-1/4 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[120px] opacity-60" />
+          <div className={cn(
+            "absolute top-12 left-1/3 w-[500px] h-[500px] rounded-full blur-[140px] opacity-80",
+            isDark ? "bg-indigo-600/10" : "bg-indigo-400/5"
+          )} />
+          <div className={cn(
+            "absolute top-24 right-1/4 w-[400px] h-[400px] rounded-full blur-[120px] opacity-60",
+            isDark ? "bg-emerald-500/5" : "bg-emerald-400/5"
+          )} />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -149,20 +159,26 @@ export const Pricing = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6 }}
             >
-              <span className="text-xs font-black uppercase tracking-[0.3em] bg-blue-500/10 text-blue-400 px-3 py-1.5 rounded-full border border-blue-500/20 mb-6 inline-block">FLEXIBLE MODELS</span>
-              <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight mb-6 bg-gradient-to-b from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+              <span className="text-xs font-black uppercase tracking-[0.3em] bg-indigo-500/10 text-indigo-500 px-3 py-1.5 rounded-full border border-indigo-500/20 mb-6 inline-block">FLEXIBLE MODELS</span>
+              <h1 className={cn(
+                "text-4xl md:text-7xl font-extrabold tracking-tight mb-6 bg-gradient-to-b bg-clip-text text-transparent",
+                isDark ? "from-white via-slate-100 to-slate-400" : "from-slate-950 via-slate-800 to-slate-755"
+              )}>
                 Simple, Transparent Pricing
               </h1>
-              <p className="text-base text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+              <p className={cn("text-base max-w-2xl mx-auto mb-10 leading-relaxed font-semibold", isDark ? "text-slate-400" : "text-slate-600")}>
                 Choose the plan that's right for your business. All plans include our core ERP features.
               </p>
 
-              <div className="inline-flex items-center justify-center gap-4 bg-slate-900 border border-slate-800 p-1.5 rounded-full shadow-inner select-none">
+              <div className={cn(
+                "inline-flex items-center justify-center gap-4 border p-1.5 rounded-full shadow-inner select-none transition-all duration-300",
+                isDark ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
+              )}>
                 <button
                   onClick={() => setBillingCycle('monthly')}
                   className={cn(
                     "px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer",
-                    billingCycle === 'monthly' ? "bg-slate-800 text-white shadow-md" : "text-slate-400 hover:text-white"
+                    billingCycle === 'monthly' ? (isDark ? "bg-slate-800 text-white shadow-md" : "bg-slate-100 text-slate-900 shadow-sm") : (isDark ? "text-slate-400 hover:text-white" : "text-slate-500 hover:text-slate-800")
                   )}
                 >
                   Monthly
@@ -171,11 +187,11 @@ export const Pricing = () => {
                   onClick={() => setBillingCycle('yearly')}
                   className={cn(
                     "px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5",
-                    billingCycle === 'yearly' ? "bg-slate-800 text-white shadow-md" : "text-slate-400 hover:text-white"
+                    billingCycle === 'yearly' ? (isDark ? "bg-slate-800 text-white shadow-md" : "bg-slate-100 text-slate-900 shadow-sm") : (isDark ? "text-slate-400 hover:text-white" : "text-slate-500 hover:text-slate-800")
                   )}
                 >
                   Yearly
-                  <span className="text-[9px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/25">Save 20%</span>
+                  <span className="text-[9px] bg-emerald-500/15 text-emerald-500 px-2 py-0.5 rounded-full border border-emerald-500/25">Save 20%</span>
                 </button>
               </div>
             </motion.div>
@@ -183,7 +199,7 @@ export const Pricing = () => {
 
           {loading ? (
             <div className="flex justify-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
@@ -204,10 +220,19 @@ export const Pricing = () => {
                     transition={{ duration: 0.5, delay: i * 0.1 }}
                     className={cn(
                       "relative p-8 rounded-3xl border flex flex-col justify-between transition-all hover:scale-101",
-                      isBronze && "bg-slate-900/30 border-slate-900 hover:border-slate-800",
-                      isSilver && "bg-slate-900/40 border-slate-900 hover:border-slate-800 shadow-sm",
-                      isGold && "bg-slate-900/50 border-amber-500/30 hover:border-amber-500/50 shadow-md",
-                      isPlatinum && "bg-slate-900 border-blue-500/60 shadow-xl z-10"
+                      isDark 
+                        ? cn(
+                            isBronze && "bg-slate-900/30 border-slate-900 hover:border-slate-800",
+                            isSilver && "bg-slate-900/40 border-slate-900 hover:border-slate-800 shadow-sm",
+                            isGold && "bg-slate-900/50 border-amber-500/30 hover:border-amber-500/50 shadow-md",
+                            isPlatinum && "bg-slate-900 border-blue-500/60 shadow-xl z-10"
+                          )
+                        : cn(
+                            isBronze && "bg-white border-slate-200 hover:border-slate-350 shadow-sm",
+                            isSilver && "bg-white border-slate-200 hover:border-slate-350 shadow-sm",
+                            isGold && "bg-white border-amber-300 hover:border-amber-400 shadow-md",
+                            isPlatinum && "bg-white border-indigo-500/50 shadow-xl z-10"
+                          )
                     )}
                   >
                     {isPlatinum && (
@@ -216,7 +241,7 @@ export const Pricing = () => {
                       </div>
                     )}
                     {isGold && (
-                      <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-500/10 text-amber-400 text-[9px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border border-amber-500/30">
+                      <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-500/10 text-amber-500 text-[9px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border border-amber-500/30">
                         Top Enterprise Value
                       </div>
                     )}
@@ -224,31 +249,33 @@ export const Pricing = () => {
                     <div>
                       <div className="mb-6">
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-xl font-black uppercase tracking-wider text-slate-100">{plan.name} {isBronze && <span className="text-[10px] text-amber-400/50">(Free)</span>}</h3>
+                          <h3 className={cn("text-xl font-black uppercase tracking-wider", isDark ? "text-slate-100" : "text-slate-900")}>
+                            {plan.name} {isBronze && <span className="text-[10px] text-amber-550">(Free)</span>}
+                          </h3>
                           {discount && discount.value > 0 && (
-                            <span className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest bg-emerald-500/15 text-emerald-500 border border-emerald-500/20">
                               {discount.type === 'percentage' ? `${discount.value}% OFF` : `৳${discount.value} OFF`}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs leading-relaxed text-slate-400 font-medium">
+                        <p className={cn("text-xs leading-relaxed font-semibold", isDark ? "text-slate-400" : "text-slate-600")}>
                           {plan.description}
                         </p>
                       </div>
 
-                      <div className="mb-8 py-4 border-y border-slate-900">
+                      <div className={cn("mb-8 py-4 border-y", isDark ? "border-slate-900" : "border-slate-200")}>
                         {isPlatinum ? (
-                          <div className="text-2xl font-extrabold tracking-tight text-white">Custom SLA Pricing</div>
+                          <div className={cn("text-2xl font-extrabold tracking-tight", isDark ? "text-white" : "text-slate-900")}>Custom SLA Pricing</div>
                         ) : (
                           <div className="flex flex-col">
                             <div className="flex items-baseline gap-1">
-                              <span className="text-4xl font-extrabold tracking-tight text-white">৳{price}</span>
-                              <span className="text-xs font-semibold text-slate-500">
+                              <span className={cn("text-4xl font-extrabold tracking-tight", isDark ? "text-white" : "text-slate-900")}>৳{price}</span>
+                              <span className={cn("text-xs font-semibold", isDark ? "text-slate-500" : "text-slate-450")}>
                                 /{billingCycle === 'monthly' ? 'mo' : 'yr'}
                               </span>
                             </div>
                             {discount && discount.value > 0 && (
-                              <p className="text-xs line-through text-slate-600 mt-1">
+                              <p className="text-xs line-through text-slate-500 mt-1">
                                 ৳{billingCycle === 'monthly' ? plan.priceMonthly + (discount.type === 'percentage' ? (plan.priceMonthly * discount.value / 100) : discount.value) : plan.priceYearly + (discount.type === 'percentage' ? (plan.priceYearly * discount.value / 100) : discount.value)}
                               </p>
                             )}
@@ -257,29 +284,29 @@ export const Pricing = () => {
                       </div>
 
                       <div className="space-y-4 mb-8">
-                        <p className="text-[10px] font-black tracking-widest uppercase text-slate-500">
+                        <p className="text-[10px] font-black tracking-widest uppercase text-slate-550">
                           Included Parameters:
                         </p>
                         <ul className="space-y-3.5">
-                          <li className="flex items-center gap-3 text-xs text-slate-300 font-semibold select-none">
-                            <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                          <li className={cn("flex items-center gap-3 text-xs font-semibold select-none", isDark ? "text-slate-300" : "text-slate-700")}>
+                            <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                             <span>{plan.limits.vouchers === -1 ? 'Unlimited' : plan.limits.vouchers} Vouchers</span>
                           </li>
-                          <li className="flex items-center gap-3 text-xs text-slate-300 font-semibold select-none">
-                            <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                          <li className={cn("flex items-center gap-3 text-xs font-semibold select-none", isDark ? "text-slate-300" : "text-slate-700")}>
+                            <Check className="w-4 h-4 text-emerald-505 flex-shrink-0" />
                             <span>{plan.limits.users === -1 ? 'Unlimited' : plan.limits.users} Staff Users</span>
                           </li>
-                          <li className="flex items-center gap-3 text-xs text-slate-300 font-semibold select-none">
-                            <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                          <li className={cn("flex items-center gap-3 text-xs font-semibold select-none", isDark ? "text-slate-300" : "text-slate-700")}>
+                            <Check className="w-4 h-4 text-emerald-505 flex-shrink-0" />
                             <span>{plan.supportType || 'Email'} Support <span className="text-slate-500 font-normal">({plan.supportHours || '24/7'})</span></span>
                           </li>
-                          <li className="flex items-center gap-3 text-xs text-slate-300 font-semibold select-none">
-                            <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                          <li className={cn("flex items-center gap-3 text-xs font-semibold select-none", isDark ? "text-slate-300" : "text-slate-700")}>
+                            <Check className="w-4 h-4 text-emerald-505 flex-shrink-0" />
                             <span>{plan.setupFee && plan.setupFee > 0 ? `Setup Fee: ৳${plan.setupFee}` : 'Free Deployment'}</span>
                           </li>
                           {plan.customDomain && (
-                            <li className="flex items-center gap-3 text-xs text-slate-300 font-semibold select-none">
-                              <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                            <li className={cn("flex items-center gap-3 text-xs font-semibold select-none", isDark ? "text-slate-300" : "text-slate-700")}>
+                              <Check className="w-4 h-4 text-emerald-505 flex-shrink-0" />
                               <span>Custom Domain Link</span>
                             </li>
                           )}
@@ -288,8 +315,11 @@ export const Pricing = () => {
                           {plan.features.slice(0, 5).map((fId) => {
                             const Icon = getFeatureIcon(fId);
                             return (
-                              <li key={fId} className="flex items-center gap-3 text-xs text-slate-300 font-semibold select-none">
-                                <div className="w-5 h-5 rounded-lg bg-slate-800 text-blue-400 flex items-center justify-center border border-slate-750">
+                              <li key={fId} className={cn("flex items-center gap-3 text-xs font-semibold select-none", isDark ? "text-slate-300" : "text-slate-700")}>
+                                <div className={cn(
+                                  "w-5 h-5 rounded-lg flex items-center justify-center border",
+                                  isDark ? "bg-slate-800 text-blue-400 border-slate-755" : "bg-slate-100 text-indigo-650 border-slate-200"
+                                )}>
                                   <Icon className="w-3 h-3" />
                                 </div>
                                 <span>{getFeatureLabel(fId)}</span>
@@ -301,7 +331,12 @@ export const Pricing = () => {
                             <li>
                               <button
                                 onClick={() => setSelectedPlanDetails(plan)}
-                                className="w-full text-left py-2 px-3 border border-blue-500/30 rounded-xl bg-blue-500/10 text-blue-400 text-[10px] font-black uppercase tracking-[0.1em] hover:bg-blue-500/20 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-2"
+                                className={cn(
+                                  "w-full text-left py-2 px-3 border rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-2",
+                                  isDark 
+                                    ? "border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20" 
+                                    : "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                                )}
                               >
                                 <Sparkles className="w-3.5 h-3.5" />
                                 + {plan.features.length - 5} advanced subsystems

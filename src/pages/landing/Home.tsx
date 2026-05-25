@@ -14,48 +14,53 @@ import {
 import { motion } from 'motion/react';
 import { useSiteContent } from '../../hooks/useSiteContent';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import { useLandingTheme } from '../../hooks/useLandingTheme';
+import { cn } from '../../lib/utils';
 
 export const Home = () => {
   const { t, language } = useLanguage();
+  const { adaptiveLoaderEnabled = true, skeletonEnabled = true, skeletonDashboardOnly = true } = useSettings();
+
   const DEFAULT_CONTENT = {
-    heroTitle: t('home.heroTitle'),
-    heroTitleColor: "#1e293b",
+    heroTitle: language === 'bn' ? 'বুদ্ধিমত্তার সাথে আপনার ব্যবসা পরিচালনা করুন' : 'Manage Your Business With Pure Intelligence',
+    heroTitleColor: "#ffffff",
     heroSubtitle: t('home.heroSubtitle'),
-    heroSubtitleColor: "#334155",
+    heroSubtitleColor: "#94a3b8",
     heroCtaPrimary: t('home.startTrial'),
-    heroCtaPrimaryBg: "#0f172a",
+    heroCtaPrimaryBg: "#3b82f6",
     heroCtaPrimaryText: "#ffffff",
-    heroCtaSecondary: t('home.viewFeatures'),
-    heroCtaSecondaryBg: "#ffffff",
-    heroCtaSecondaryText: "#0f172a",
+    heroCtaSecondary: "View Pricing Models",
+    heroCtaSecondaryBg: "transparent",
+    heroCtaSecondaryText: "#ffffff",
     heroImage: "https://picsum.photos/seed/erp-hero-dashboard/1600/900",
-    heroBgColor: "#f1f5f9",
+    heroBgColor: "#020617",
     showHero: true,
     statsClients: t('home.statsClientsVal'),
     statsUptime: t('home.statsUptimeVal'),
     statsSupport: t('home.statsSupportVal'),
     statsExperience: t('home.statsExperienceVal'),
-    statsSectionBg: "#f8fafc",
-    statsTitleColor: "#1e293b",
-    statsSubtitleColor: "#334155",
+    statsSectionBg: "#090d16",
+    statsTitleColor: "#ffffff",
+    statsSubtitleColor: "#64748b",
     showStats: true,
     featuresTitle: t('home.featuresTitle'),
-    featuresTitleColor: "#1e293b",
+    featuresTitleColor: "#ffffff",
     featuresSubtitle: t('home.featuresSubtitle'),
-    featuresSubtitleColor: "#334155",
-    featuresSectionBg: "#ffffff",
-    featureCardBg: "#ffffff",
-    featureCardTitleColor: "#1e293b",
-    featureCardDescColor: "#334155",
+    featuresSubtitleColor: "#94a3b8",
+    featuresSectionBg: "#020617",
+    featureCardBg: "#0b1329",
+    featureCardTitleColor: "#ffffff",
+    featureCardDescColor: "#94a3b8",
     showFeatures: true,
     ctaTitle: t('home.ctaTitle'),
     ctaTitleColor: "#ffffff",
     ctaSubtitle: t('home.ctaSubtitle'),
     ctaSubtitleColor: "rgba(255,255,255,0.8)",
-    ctaSectionBg: "#0f172a",
+    ctaSectionBg: "#020617",
     ctaButton: t('home.getStarted'),
     ctaButtonBg: "#ffffff",
-    ctaButtonText: "#0f172a",
+    ctaButtonText: "#020617",
     showCta: true,
     adaptiveLoaderEnabled: true,
     skeletonLoaderEnabled: true
@@ -65,10 +70,20 @@ export const Home = () => {
 
   const [activeTab, setActiveTab] = React.useState<'finance' | 'inventory' | 'production' | 'payroll'>('finance');
 
-  const isAdaptiveLoaderEnabled = content.adaptiveLoaderEnabled !== false;
-  const isSkeletonEnabled = content.skeletonLoaderEnabled !== false;
+  const isAdaptiveLoaderEnabled = content.adaptiveLoaderEnabled !== false && adaptiveLoaderEnabled !== false;
+  const isSkeletonEnabled = content.skeletonLoaderEnabled !== false && skeletonEnabled !== false && !skeletonDashboardOnly;
 
   const [loading, setLoading] = React.useState(() => {
+    try {
+      const persisted = localStorage.getItem('swr_site_content_home');
+      if (persisted) {
+        const data = JSON.parse(persisted);
+        const pageContent = data.content || {};
+        const localAdaptive = pageContent.adaptiveLoaderEnabled !== false && adaptiveLoaderEnabled !== false;
+        const localSkeleton = pageContent.skeletonLoaderEnabled !== false && skeletonEnabled !== false && !skeletonDashboardOnly;
+        return localAdaptive || localSkeleton;
+      }
+    } catch (e) {}
     return isAdaptiveLoaderEnabled || isSkeletonEnabled;
   });
   const [currentPhraseIdx, setCurrentPhraseIdx] = React.useState(0);
@@ -204,19 +219,31 @@ export const Home = () => {
     }
   }
 
+  const landingTheme = useLandingTheme();
+  const isDark = landingTheme === 'dark';
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-white selection:bg-blue-500/30 selection:text-white">
+    <div className="min-h-screen flex flex-col selection:bg-blue-500/30 selection:text-white transition-colors duration-300" style={{ backgroundColor: isDark ? '#020617' : '#f8fafc', color: isDark ? '#ffffff' : '#0f172a' }}>
       <Navbar />
       
       <main className="flex-1">
         {/* Hero Section */}
         {content.showHero && (
-          <section className="relative pt-32 pb-24 overflow-hidden bg-slate-950">
+          <section className="relative pt-32 pb-24 overflow-hidden transition-colors duration-300" style={{ backgroundColor: isDark ? '#020617' : '#f8fafc' }}>
             {/* Dark Cyber Mesh Background Grids */}
-            <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#1e293b1a_1px,transparent_1px),linear-gradient(to_bottom,#1e293b1a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]pointer-events-none" />
+            <div className={cn(
+              "absolute inset-0 z-0 bg-[linear-gradient(to_right,#1e293b1a_1px,transparent_1px),linear-gradient(to_bottom,#1e293b1a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none",
+              isDark ? "opacity-100" : "opacity-30"
+            )} />
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] -z-10 pointer-events-none">
-              <div className="absolute top-12 left-1/4 w-[500px] h-[500px] bg-gradient-to-tr from-blue-600/20 to-indigo-600/0 rounded-full blur-[140px] opacity-80" />
-              <div className="absolute top-24 right-1/4 w-[400px] h-[400px] bg-gradient-to-tl from-emerald-500/10 to-indigo-600/0 rounded-full blur-[120px] opacity-60" />
+              <div className={cn(
+                "absolute top-12 left-1/4 w-[500px] h-[500px] rounded-full blur-[140px] opacity-80",
+                isDark ? "bg-gradient-to-tr from-blue-600/20 to-indigo-600/0" : "bg-gradient-to-tr from-blue-400/10 to-indigo-400/0"
+              )} />
+              <div className={cn(
+                "absolute top-24 right-1/4 w-[400px] h-[400px] rounded-full blur-[120px] opacity-60",
+                isDark ? "bg-gradient-to-tl from-emerald-500/10 to-indigo-600/0" : "bg-gradient-to-tl from-emerald-400/10 to-indigo-400/0"
+              )} />
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -227,43 +254,46 @@ export const Home = () => {
                   transition={{ duration: 0.7 }}
                 >
                   {/* Inline trending announcement badge */}
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:border-slate-700/80 transition-all shadow-lg shadow-black/80 text-xs font-semibold text-slate-300 mb-8 select-none scale-95 sm:scale-100">
+                  <div className={cn(
+                    "inline-flex items-center gap-2 px-3 py-1.5 rounded-full border hover:border-slate-700/80 transition-all text-xs font-semibold mb-8 select-none scale-95 sm:scale-100",
+                    isDark ? "bg-slate-900 border-slate-800 text-slate-300 shadow-lg shadow-black/80" : "bg-white border-slate-200 text-slate-700 shadow shadow-slate-100"
+                  )}>
                     <span className="flex h-2 w-2 relative">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                     </span>
-                    <span className="text-slate-400 font-normal">✨ ERP Enterprise Intelligence</span>
-                    <span className="w-[1px] h-3 bg-slate-800" />
-                    <span className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer flex items-center gap-0.5">Explore Features <ArrowRight className="w-3 h-3" /></span>
+                    <span className={isDark ? "text-slate-400 font-normal" : "text-slate-500 font-normal"}>✨ ERP Enterprise Intelligence</span>
+                    <span className={cn("w-[1px] h-3", isDark ? "bg-slate-800" : "bg-slate-300")} />
+                    <span className="text-blue-500 hover:text-blue-600 transition-colors cursor-pointer flex items-center gap-0.5">Explore Features <ArrowRight className="w-3 h-3" /></span>
                   </div>
 
-                  <h1 className="text-4xl sm:text-6xl lg:text-8xl font-black tracking-tight mb-8">
-                    <span className="bg-gradient-to-b from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                      {language === 'bn' ? 'বুদ্ধিমত্তার সাথে' : 'Manage Your Business'}
-                    </span>
-                    <br />
-                    <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-emerald-400 bg-clip-text text-transparent">
-                      {language === 'bn' ? 'আপনার ব্যবসা পরিচালনা করুন' : 'With Pure Intelligence'}
-                    </span>
+                  <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight mb-8" style={{ color: isDark ? (content.heroTitleColor || '#ffffff') : '#0f172a' }}>
+                    {content.heroTitle}
                   </h1>
 
-                  <p className="text-lg sm:text-xl text-slate-400 max-w-3xl mx-auto mb-12 font-medium leading-relaxed">
+                  <p className="text-lg sm:text-xl max-w-3xl mx-auto mb-12 font-medium leading-relaxed" style={{ color: isDark ? (content.heroSubtitleColor || '#94a3b8') : '#475569' }}>
                     {content.heroSubtitle}
                   </p>
 
                   <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
                     <Link
                       to="/register"
-                      className="w-full sm:w-auto px-8 py-4 rounded-full text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white transition-all shadow-[0_4px_20px_rgba(37,99,235,0.3)] hover:shadow-[0_4px_25px_rgba(37,99,235,0.5)] hover:-translate-y-0.5 flex items-center justify-center gap-2 group"
+                      className="w-full sm:w-auto px-8 py-4 rounded-full text-base font-bold transition-all shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2 group hover:opacity-90"
+                      style={{ backgroundColor: content.heroCtaPrimaryBg || '#3b82f6', color: content.heroCtaPrimaryText || '#ffffff' }}
                     >
                       {content.heroCtaPrimary}
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Link>
                     <Link
                       to="/pricing"
-                      className="w-full sm:w-auto px-8 py-4 rounded-full text-base font-bold bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-800/80 text-slate-200 hover:text-white transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                      className="w-full sm:w-auto px-8 py-4 rounded-full text-base font-bold border transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 hover:bg-white/5"
+                      style={{ 
+                        backgroundColor: content.heroCtaSecondaryBg || 'transparent', 
+                        color: content.heroCtaSecondaryText || '#ffffff',
+                        borderColor: content.heroCtaSecondaryBg !== 'transparent' ? 'transparent' : (content.heroCtaSecondaryText || '#ffffff') 
+                      }}
                     >
-                      View Pricing Models
+                      {content.heroCtaSecondary || "View Pricing Models"}
                     </Link>
                   </div>
                 </motion.div>
@@ -523,7 +553,7 @@ export const Home = () => {
 
         {/* Stats Section */}
         {content.showStats && (
-          <section className="py-16 border-y border-slate-900 bg-slate-950/40 relative">
+          <section className={cn("py-16 border-y relative transition-colors duration-300", isDark ? "border-slate-900" : "border-slate-200")} style={{ backgroundColor: isDark ? '#090d16' : '#f1f5f9' }}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                 {[
@@ -533,10 +563,10 @@ export const Home = () => {
                   { value: content.statsExperience, label: t('home.statsExperience') },
                 ].map((stat, i) => (
                   <div key={i} className="group relative">
-                    <p className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-2 group-hover:text-blue-400 transition-colors duration-300 font-mono">
+                    <p className="text-4xl sm:text-5xl font-black tracking-tight mb-2 group-hover:text-blue-500 transition-colors duration-300 font-mono" style={{ color: isDark ? (content.statsTitleColor || '#ffffff') : '#0f172a' }}>
                       {stat.value}
                     </p>
-                    <p className="text-[10px] sm:text-xs tracking-[0.2em] uppercase font-black text-slate-500">
+                    <p className="text-[10px] sm:text-xs tracking-[0.2em] uppercase font-black" style={{ color: isDark ? (content.statsSubtitleColor || '#64748b') : '#64748b' }}>
                       {stat.label}
                     </p>
                   </div>
@@ -548,16 +578,19 @@ export const Home = () => {
 
         {/* Trending Bento Grid Features Section */}
         {content.showFeatures && (
-          <section className="py-32 bg-slate-950 relative overflow-hidden">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/5 rounded-full blur-[160px] pointer-events-none" />
+          <section className="py-32 relative overflow-hidden transition-colors duration-300" style={{ backgroundColor: isDark ? '#020617' : '#f8fafc' }}>
+            <div className={cn(
+              "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[160px] pointer-events-none",
+              isDark ? "bg-indigo-500/5" : "bg-indigo-400/5"
+            )} />
             
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
               <div className="text-center mb-24 max-w-2xl mx-auto">
-                <span className="text-xs font-black uppercase tracking-[0.3em] bg-indigo-500/10 text-indigo-400 px-3 py-1.5 rounded-full border border-indigo-500/20 mb-6 inline-block">MODULAR ECOSYSTEM</span>
-                <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-6">
+                <span className="text-xs font-black uppercase tracking-[0.3em] bg-indigo-500/10 text-indigo-500 px-3 py-1.5 rounded-full border border-indigo-500/20 mb-6 inline-block">MODULAR ECOSYSTEM</span>
+                <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-6 animate-fade-in" style={{ color: isDark ? (content.featuresTitleColor || '#ffffff') : '#0f172a' }}>
                   {content.featuresTitle}
                 </h2>
-                <p className="text-slate-400 text-lg leading-relaxed font-medium">
+                <p className="text-lg leading-relaxed font-medium" style={{ color: isDark ? (content.featuresSubtitleColor || '#94a3b8') : '#475569' }}>
                   {content.featuresSubtitle}
                 </p>
               </div>
@@ -568,16 +601,21 @@ export const Home = () => {
                 {/* Bento Cell 1: Wide financial card */}
                 <motion.div
                   whileHover={{ y: -4 }}
-                  className="md:col-span-4 p-8 rounded-3xl border border-slate-900 bg-slate-900/35 backdrop-blur-md flex flex-col justify-between hover:border-slate-800 transition-all group"
+                  className={cn(
+                    "md:col-span-4 p-8 rounded-3xl border backdrop-blur-md flex flex-col justify-between transition-all group",
+                    isDark 
+                      ? "border-slate-900 bg-slate-900/35 hover:border-slate-800" 
+                      : "border-slate-200 bg-white hover:border-slate-300 shadow-sm"
+                  )}
                 >
                   <div>
                     <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center border border-emerald-500/25 mb-6 group-hover:scale-110 transition-transform">
                       <BarChart3 className="w-6 h-6" />
                     </div>
-                    <h3 className="text-2xl font-bold mb-3 text-white">{t('home.feature1Title')}</h3>
-                    <p className="text-sm leading-relaxed text-slate-400 select-none">{t('home.feature1Desc')}</p>
+                    <h3 className={cn("text-2xl font-bold mb-3", isDark ? "text-white" : "text-slate-900")}>{t('home.feature1Title')}</h3>
+                    <p className={cn("text-sm leading-relaxed select-none", isDark ? "text-slate-450" : "text-slate-650")}>{t('home.feature1Desc')}</p>
                   </div>
-                  <div className="mt-8 pt-4 border-t border-slate-900 flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  <div className={cn("mt-8 pt-4 border-t flex items-center gap-2 text-xs font-bold uppercase tracking-widest", isDark ? "border-slate-900 text-slate-500" : "border-slate-200 text-slate-400")}>
                     <span>Live Tracking Activated</span>
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   </div>
@@ -586,16 +624,21 @@ export const Home = () => {
                 {/* Bento Cell 2: Secure card */}
                 <motion.div
                   whileHover={{ y: -4 }}
-                  className="md:col-span-2 p-8 rounded-3xl border border-slate-900 bg-slate-900/35 backdrop-blur-md flex flex-col justify-between hover:border-slate-800 transition-all group"
+                  className={cn(
+                    "md:col-span-2 p-8 rounded-3xl border backdrop-blur-md flex flex-col justify-between transition-all group",
+                    isDark 
+                      ? "border-slate-900 bg-slate-900/35 hover:border-slate-800" 
+                      : "border-slate-200 bg-white hover:border-slate-300 shadow-sm"
+                  )}
                 >
                   <div>
                     <div className="w-12 h-12 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center border border-blue-500/25 mb-6 group-hover:scale-110 transition-transform">
                       <Shield className="w-6 h-6" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3 text-white">{t('home.feature4Title')}</h3>
-                    <p className="text-xs leading-relaxed text-slate-400">{t('home.feature4Desc')}</p>
+                    <h3 className={cn("text-xl font-bold mb-3", isDark ? "text-white" : "text-slate-900")}>{t('home.feature4Title')}</h3>
+                    <p className={cn("text-xs leading-relaxed", isDark ? "text-slate-400" : "text-slate-500")}>{t('home.feature4Desc')}</p>
                   </div>
-                  <div className="mt-8 pt-4 border-t border-slate-900 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+                  <div className={cn("mt-8 pt-4 border-t text-[10px] font-mono uppercase tracking-widest", isDark ? "border-slate-900 text-slate-500" : "border-slate-200 text-slate-400")}>
                     AES-256 ENCRYPTION
                   </div>
                 </motion.div>
@@ -603,16 +646,21 @@ export const Home = () => {
                 {/* Bento Cell 3: Small Card */}
                 <motion.div
                   whileHover={{ y: -4 }}
-                  className="md:col-span-2 p-8 rounded-3xl border border-slate-900 bg-slate-900/35 backdrop-blur-md flex flex-col justify-between hover:border-slate-800 transition-all group"
+                  className={cn(
+                    "md:col-span-2 p-8 rounded-3xl border backdrop-blur-md flex flex-col justify-between transition-all group",
+                    isDark 
+                      ? "border-slate-900 bg-slate-900/35 hover:border-slate-800" 
+                      : "border-slate-200 bg-white hover:border-slate-300 shadow-sm"
+                  )}
                 >
                   <div>
                     <div className="w-12 h-12 bg-purple-500/10 text-purple-400 rounded-2xl flex items-center justify-center border border-purple-500/25 mb-6 group-hover:scale-110 transition-transform">
                       <Zap className="w-6 h-6" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3 text-white">{t('home.feature5Title')}</h3>
-                    <p className="text-xs leading-relaxed text-slate-400">{t('home.feature5Desc')}</p>
+                    <h3 className={cn("text-xl font-bold mb-3", isDark ? "text-white" : "text-slate-900")}>{t('home.feature5Title')}</h3>
+                    <p className={cn("text-xs leading-relaxed", isDark ? "text-slate-300" : "text-slate-500")}>{t('home.feature5Desc')}</p>
                   </div>
-                  <div className="mt-8 pt-4 border-t border-slate-900 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+                  <div className={cn("mt-8 pt-4 border-t text-[10px] font-mono uppercase tracking-widest", isDark ? "border-slate-900 text-slate-500" : "border-slate-200 text-slate-400")}>
                     0ms Latency Pipeline
                   </div>
                 </motion.div>
@@ -620,16 +668,21 @@ export const Home = () => {
                 {/* Bento Cell 4: Large Wide Warehouse card */}
                 <motion.div
                   whileHover={{ y: -4 }}
-                  className="md:col-span-4 p-8 rounded-3xl border border-slate-900 bg-slate-900/35 backdrop-blur-md flex flex-col justify-between hover:border-slate-800 transition-all group"
+                  className={cn(
+                    "md:col-span-4 p-8 rounded-3xl border backdrop-blur-md flex flex-col justify-between transition-all group",
+                    isDark 
+                      ? "border-slate-900 bg-slate-900/35 hover:border-slate-800" 
+                      : "border-slate-200 bg-white hover:border-slate-300 shadow-sm"
+                  )}
                 >
                   <div>
                     <div className="w-12 h-12 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center border border-amber-500/25 mb-6 group-hover:scale-110 transition-transform">
                       <Database className="w-6 h-6" />
                     </div>
-                    <h3 className="text-2xl font-bold mb-3 text-white">{t('home.feature2Title')}</h3>
-                    <p className="text-sm leading-relaxed text-slate-400 select-none">{t('home.feature2Desc')}</p>
+                    <h3 className={cn("text-2xl font-bold mb-3", isDark ? "text-white" : "text-slate-900")}>{t('home.feature2Title')}</h3>
+                    <p className={cn("text-sm leading-relaxed select-none", isDark ? "text-slate-400" : "text-slate-650")}>{t('home.feature2Desc')}</p>
                   </div>
-                  <div className="mt-8 pt-4 border-t border-slate-900 flex items-center justify-between text-xs font-bold text-slate-500">
+                  <div className={cn("mt-8 pt-4 border-t flex items-center justify-between text-xs font-bold", isDark ? "border-slate-900 text-slate-500" : "border-slate-200 text-slate-400")}>
                     <span className="uppercase tracking-widest">STOCK METRICS CONNECTED</span>
                     <span className="font-mono text-[10px]">DB_ACTIVE // SECURE_CON_99%</span>
                   </div>
@@ -638,28 +691,38 @@ export const Home = () => {
                 {/* Bento Cell 5: Small Card Users */}
                 <motion.div
                   whileHover={{ y: -4 }}
-                  className="md:col-span-3 p-8 rounded-3xl border border-slate-900 bg-slate-900/35 backdrop-blur-md flex flex-col justify-between hover:border-slate-800 transition-all group"
+                  className={cn(
+                    "md:col-span-3 p-8 rounded-3xl border backdrop-blur-md flex flex-col justify-between transition-all group",
+                    isDark 
+                      ? "border-slate-900 bg-slate-900/35 hover:border-slate-800" 
+                      : "border-slate-200 bg-white hover:border-slate-300 shadow-sm"
+                  )}
                 >
                   <div>
                     <div className="w-12 h-12 bg-sky-500/10 text-sky-400 rounded-2xl flex items-center justify-center border border-sky-500/25 mb-6 group-hover:scale-110 transition-transform">
                       <Users className="w-6 h-6" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3 text-white">{t('home.feature3Title')}</h3>
-                    <p className="text-xs leading-relaxed text-slate-400">{t('home.feature3Desc')}</p>
+                    <h3 className={cn("text-xl font-bold mb-3", isDark ? "text-white" : "text-slate-900")}>{t('home.feature3Title')}</h3>
+                    <p className={cn("text-xs leading-relaxed", isDark ? "text-slate-400" : "text-slate-500")}>{t('home.feature3Desc')}</p>
                   </div>
                 </motion.div>
 
                 {/* Bento Cell 6: Small Card Globe */}
                 <motion.div
                   whileHover={{ y: -4 }}
-                  className="md:col-span-3 p-8 rounded-3xl border border-slate-900 bg-slate-900/35 backdrop-blur-md flex flex-col justify-between hover:border-slate-800 transition-all group"
+                  className={cn(
+                    "md:col-span-3 p-8 rounded-3xl border backdrop-blur-md flex flex-col justify-between transition-all group",
+                    isDark 
+                      ? "border-slate-900 bg-slate-900/35 hover:border-slate-800" 
+                      : "border-slate-200 bg-white hover:border-slate-300 shadow-sm"
+                  )}
                 >
                   <div>
                     <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center border border-emerald-500/25 mb-6 group-hover:scale-110 transition-transform">
                       <Globe className="w-6 h-6" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3 text-white">{t('home.feature6Title')}</h3>
-                    <p className="text-xs leading-relaxed text-slate-400">{t('home.feature6Desc')}</p>
+                    <h3 className={cn("text-xl font-bold mb-3", isDark ? "text-white" : "text-slate-900")}>{t('home.feature6Title')}</h3>
+                    <p className={cn("text-xs leading-relaxed", isDark ? "text-slate-400" : "text-slate-500")}>{t('home.feature6Desc')}</p>
                   </div>
                 </motion.div>
 
@@ -670,22 +733,33 @@ export const Home = () => {
 
         {/* CTA Section */}
         {content.showCta && (
-          <section className="relative py-32 bg-slate-950 overflow-hidden text-center border-t border-slate-900">
-            <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#1e293b1a_1px,transparent_1px),linear-gradient(to_bottom,#1e293b1a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_100%,#000_70%,transparent_100%)] pointer-events-none" />
+          <section className={cn("relative py-32 overflow-hidden text-center border-t transition-colors duration-300", isDark ? "border-slate-900" : "border-slate-200")} style={{ backgroundColor: isDark ? '#020617' : '#f8fafc' }}>
+            <div className={cn(
+              "absolute inset-0 z-0 bg-[linear-gradient(to_right,#1e293b1a_1px,transparent_1px),linear-gradient(to_bottom,#1e293b1a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_100%,#000_70%,transparent_100%)] pointer-events-none",
+              isDark ? "opacity-100" : "opacity-30"
+            )} />
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[400px] -z-10 pointer-events-none">
-              <div className="absolute bottom-[-100px] left-1/3 w-[400px] h-[400px] bg-gradient-to-tr from-blue-600/15 to-indigo-600/0 rounded-full blur-[120px] opacity-80" />
+              <div className={cn(
+                "absolute bottom-[-100px] left-1/3 w-[400px] h-[400px] rounded-full blur-[120px] opacity-80",
+                isDark ? "bg-gradient-to-tr from-blue-600/15 to-indigo-600/0" : "bg-gradient-to-tr from-blue-400/10 to-indigo-400/0"
+              )} />
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-              <h2 className="text-4xl sm:text-6xl font-black mb-8 tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+              <h2 className="text-4xl sm:text-6xl font-black mb-8 tracking-tight animate-fade-in" style={{ color: isDark ? (content.ctaTitleColor || '#ffffff') : '#0f172a' }}>
                 {content.ctaTitle}
               </h2>
-              <p className="max-w-xl mx-auto mb-12 text-slate-400 text-lg leading-relaxed">
+              <p className="max-w-xl mx-auto mb-12 text-lg leading-relaxed font-semibold" style={{ color: isDark ? (content.ctaSubtitleColor || 'rgba(255,255,255,0.8)') : '#475569' }}>
                 {content.ctaSubtitle}
               </p>
               <Link
                 to="/register"
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-base font-bold bg-white text-slate-950 hover:bg-slate-100 hover:scale-103 transition-all font-sans tracking-wide shadow-xl hover:shadow-[0_20px_40px_rgba(255,255,255,0.06)]"
+                className={cn(
+                  "inline-flex items-center gap-2 px-8 py-4 rounded-full text-base font-bold transition-all font-sans tracking-wide shadow-xl hover:-translate-y-0.5 active:scale-95 cursor-pointer",
+                  isDark 
+                    ? "bg-slate-100 text-slate-950 hover:bg-white" 
+                    : "bg-slate-950 text-white hover:bg-slate-900"
+                )}
               >
                 {content.ctaButton}
                 <ArrowRight className="w-5 h-5" />
