@@ -25,7 +25,7 @@ const LoaderContext = createContext<LoaderContextType>({
 export function LoaderProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [currentPhrase, setCurrentPhrase] = useState('');
-  const { loaderBlurStyle = 'md', loaderIconStyle = 'spinner', loaderPhrases, loaderTheme = 'glass' } = useSettings();
+  const { loaderBlurStyle = 'md', loaderIconStyle = 'spinner', loaderPhrases, loaderTheme = 'glass', adaptiveLoaderEnabled = true } = useSettings();
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const phraseIndexRef = useRef(0);
@@ -221,22 +221,24 @@ export function LoaderProvider({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Bottom Right Corner Adaptive Loading text */}
-          <div 
-            className={cn(
-              "absolute bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl border font-mono text-[11px] uppercase tracking-widest transition-all duration-300 animate-in fade-in slide-in-from-bottom-2",
-              themeClasses[activeTheme] || themeClasses.glass
-            )}
-          >
-            <div className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+          {adaptiveLoaderEnabled && (
+            <div 
+              className={cn(
+                "absolute bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl border font-mono text-[11px] uppercase tracking-widest transition-all duration-300 animate-in fade-in slide-in-from-bottom-2",
+                themeClasses[activeTheme] || themeClasses.glass
+              )}
+            >
+              <div className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </div>
+              
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] text-muted-foreground font-black tracking-tighter">PROGRESS STATUS</span>
+                <span className="text-foreground font-bold">{currentPhrase}</span>
+              </div>
             </div>
-            
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[9px] text-muted-foreground font-black tracking-tighter">PROGRESS STATUS</span>
-              <span className="text-foreground font-bold">{currentPhrase}</span>
-            </div>
-          </div>
+          )}
         </div>
       )}
     </LoaderContext.Provider>

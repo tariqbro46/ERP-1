@@ -1657,6 +1657,7 @@ function AppContent() {
     loaderIconStyle = 'spinner',
     loaderPhrases,
     loaderTheme = 'glass',
+    adaptiveLoaderEnabled = true,
     loading: settingsLoading
   } = useSettings();
 
@@ -1720,18 +1721,20 @@ function AppContent() {
         </div>
 
         {/* Floating status block on the bottom right corner */}
-        <div 
-          className="absolute bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl border border-border/50 font-mono text-[11px] uppercase tracking-widest shadow-lg bg-background/40 backdrop-blur-md text-foreground"
-        >
-          <div className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+        {adaptiveLoaderEnabled && (
+          <div 
+            className="absolute bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl border border-border/50 font-mono text-[11px] uppercase tracking-widest shadow-lg bg-background/40 backdrop-blur-md text-foreground"
+          >
+            <div className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9px] text-muted-foreground font-black tracking-tighter">BOOTING PIPELINE</span>
+              <span className="text-foreground font-bold">{phrases[0]}</span>
+            </div>
           </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] text-muted-foreground font-black tracking-tighter">BOOTING PIPELINE</span>
-            <span className="text-foreground font-bold">{phrases[0]}</span>
-          </div>
-        </div>
+        )}
       </div>
     );
   }

@@ -332,6 +332,7 @@ export default function FounderPanel() {
     customControlCenterTheme,
     customWelcomeMessage,
     splashSubDesign,
+    adaptiveLoaderEnabled,
     sidebarBgColor,
     sidebarTextColor,
     skeletonEnabled,
@@ -365,6 +366,7 @@ export default function FounderPanel() {
   const [localLoaderIconStyle, setLocalLoaderIconStyle] = useState(loaderIconStyle || 'spinner');
   const [localLoaderPhrases, setLocalLoaderPhrases] = useState(loaderPhrases || 'Connecting to server, Requesting data, Waiting for response, Almost done, Here we go!');
   const [localLoaderTheme, setLocalLoaderTheme] = useState(loaderTheme || 'glass');
+  const [localAdaptiveLoaderEnabled, setLocalAdaptiveLoaderEnabled] = useState(adaptiveLoaderEnabled ?? true);
   const [localShowQuickCalculator, setLocalShowQuickCalculator] = useState(showQuickCalculator ?? true);
   const [localShowPinnedBookmarks, setLocalShowPinnedBookmarks] = useState(showPinnedBookmarks ?? true);
   const [localCustomControlCenterTheme, setLocalCustomControlCenterTheme] = useState(customControlCenterTheme || 'emerald');
@@ -2650,6 +2652,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       loaderIconStyle: localLoaderIconStyle,
                       loaderPhrases: localLoaderPhrases,
                       loaderTheme: localLoaderTheme,
+                      adaptiveLoaderEnabled: localAdaptiveLoaderEnabled,
                       showQuickCalculator: localShowQuickCalculator,
                       showPinnedBookmarks: localShowPinnedBookmarks,
                       customControlCenterTheme: localCustomControlCenterTheme,
@@ -3280,6 +3283,27 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                     >
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                       Live Preview Loader
+                    </button>
+                  </div>
+
+                  {/* Enable/Disable Adaptive Loading Screen Styling Switch */}
+                  <div className="flex items-center justify-between p-4 bg-muted/20 border border-border rounded-xl">
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-bold text-foreground">Adaptive Loading Screen Styling</p>
+                      <p className="text-[10px] text-muted-foreground">Toggles whether to ornament loading screens with dynamic bottom-right progressive step indicator widgets or use simple static overlays.</p>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setLocalAdaptiveLoaderEnabled(!localAdaptiveLoaderEnabled)}
+                      className={cn(
+                        "w-10 h-5.5 rounded-full relative transition-colors shrink-0",
+                        localAdaptiveLoaderEnabled ? "bg-emerald-500" : "bg-border"
+                      )}
+                    >
+                      <div className={cn(
+                        "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                        localAdaptiveLoaderEnabled ? "right-0.5" : "left-0.5"
+                      )} />
                     </button>
                   </div>
 

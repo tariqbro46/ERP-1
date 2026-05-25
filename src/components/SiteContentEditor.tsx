@@ -44,6 +44,8 @@ const PAGES: PageContent[] = [
       heroImage: "https://picsum.photos/seed/erp-hero/1200/800",
       heroBgColor: "#ffffff",
       showHero: true,
+      adaptiveLoaderEnabled: true,
+      skeletonLoaderEnabled: true,
       statsClients: "500+",
       statsUptime: "99.9%",
       statsSupport: "24/7",
@@ -204,7 +206,7 @@ export function SiteContentEditor() {
     setLoading(true);
     try {
       const saved = await erpService.getSiteContent(selectedPage.id);
-      setContent(saved || selectedPage.defaultContent);
+      setContent({ ...selectedPage.defaultContent, ...saved });
     } catch (error) {
       console.error('Error fetching site content:', error);
       showNotification('Failed to load content', 'error');

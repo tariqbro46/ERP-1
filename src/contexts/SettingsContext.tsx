@@ -158,6 +158,7 @@ interface SettingsContextType {
   loaderIconStyle?: 'spinner' | 'dots' | 'circle-bar' | 'quantum';
   loaderPhrases?: string;
   loaderTheme?: 'dark' | 'light' | 'glass';
+  adaptiveLoaderEnabled?: boolean;
   showQuickCalculator?: boolean;
   showPinnedBookmarks?: boolean;
   customControlCenterTheme?: 'emerald' | 'indigo' | 'slate' | 'cyber';
@@ -256,6 +257,7 @@ const defaultSettings: SettingsContextType = {
   loaderIconStyle: 'spinner',
   loaderPhrases: 'Connecting to server, Requesting data, Waiting for response, Almost done, Here we go!',
   loaderTheme: 'glass',
+  adaptiveLoaderEnabled: true,
   showQuickCalculator: true,
   showPinnedBookmarks: true,
   customControlCenterTheme: 'emerald',
@@ -299,7 +301,42 @@ const SettingsContext = createContext<SettingsContextType>(defaultSettings);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [settings, setSettings] = useState<SettingsContextType>(defaultSettings);
+  const [settings, setSettings] = useState<SettingsContextType>(() => {
+    try {
+      const systemPersisted = localStorage.getItem('swr_system_config');
+      const cachedSystem = systemPersisted ? JSON.parse(systemPersisted) : {};
+
+      const keys = Object.keys(localStorage);
+      const companyKey = keys.find(k => k.startsWith('swr_settings_'));
+      if (companyKey) {
+        const cachedCompany = localStorage.getItem(companyKey);
+        if (cachedCompany) {
+          const cachedData = JSON.parse(cachedCompany);
+          return {
+            ...defaultSettings,
+            ...cachedSystem,
+            ...cachedData,
+            loading: false,
+            // Keep actual handlers as they are initialized/replaced on render
+            updateSettings: defaultSettings.updateSettings,
+            updateSystemSettings: defaultSettings.updateSystemSettings,
+            updateFeaturesSettings: defaultSettings.updateFeaturesSettings,
+            appFeatures: defaultSettings.appFeatures,
+            subscriptionPlans: defaultSettings.subscriptionPlans
+          };
+        }
+      }
+
+      if (systemPersisted) {
+        return {
+          ...defaultSettings,
+          ...cachedSystem,
+          loading: false
+        };
+      }
+    } catch (e) {}
+    return defaultSettings;
+  });
   const [userSettings, setUserSettings] = useState<any>({});
 
   useEffect(() => {
@@ -366,6 +403,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             loaderIconStyle: data.loaderIconStyle || prev.loaderIconStyle || 'spinner',
             loaderPhrases: data.loaderPhrases || prev.loaderPhrases || 'Connecting to server, Requesting data, Waiting for response, Almost done, Here we go!',
             loaderTheme: data.loaderTheme || prev.loaderTheme || 'glass',
+            adaptiveLoaderEnabled: data.adaptiveLoaderEnabled !== undefined ? data.adaptiveLoaderEnabled : prev.adaptiveLoaderEnabled,
             showQuickCalculator: data.showQuickCalculator !== undefined ? data.showQuickCalculator : prev.showQuickCalculator,
             showPinnedBookmarks: data.showPinnedBookmarks !== undefined ? data.showPinnedBookmarks : prev.showPinnedBookmarks,
             customControlCenterTheme: data.customControlCenterTheme || prev.customControlCenterTheme || 'emerald',

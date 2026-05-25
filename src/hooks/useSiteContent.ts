@@ -12,8 +12,28 @@ const listeners: Record<string, {
 
 export function useSiteContent(pageId: string, defaultContent: any) {
   const { language } = useLanguage();
-  const [content, setContent] = useState(contentCache[pageId] || defaultContent);
-  const [loading, setLoading] = useState(!contentCache[pageId]);
+  
+  const [content, setContent] = useState(() => {
+    if (contentCache[pageId]) {
+      const data = contentCache[pageId];
+      const languageContent = data[`content_${language}`] || data.content || {};
+      return { ...defaultContent, ...languageContent };
+    }
+    try {
+      const persisted = localStorage.getItem(`swr_site_content_${pageId}`);
+      if (persisted) {
+        const data = JSON.parse(persisted);
+        contentCache[pageId] = data;
+        const languageContent = data[`content_${language}`] || data.content || {};
+        return { ...defaultContent, ...languageContent };
+      }
+    } catch (e) {}
+    return defaultContent;
+  });
+
+  const [loading, setLoading] = useState(() => {
+    return !contentCache[pageId] && !localStorage.getItem(`swr_site_content_${pageId}`);
+  });
 
   useEffect(() => {
     // If we've already cached something, use it as immediate state
@@ -21,6 +41,16 @@ export function useSiteContent(pageId: string, defaultContent: any) {
       const data = contentCache[pageId];
       const languageContent = data[`content_${language}`] || data.content || {};
       setContent({ ...defaultContent, ...languageContent });
+    } else {
+      try {
+        const persisted = localStorage.getItem(`swr_site_content_${pageId}`);
+        if (persisted) {
+          const data = JSON.parse(persisted);
+          contentCache[pageId] = data;
+          const languageContent = data[`content_${language}`] || data.content || {};
+          setContent({ ...defaultContent, ...languageContent });
+        }
+      } catch (e) {}
     }
 
     const updateContext = (data: any) => {
@@ -37,6 +67,9 @@ export function useSiteContent(pageId: string, defaultContent: any) {
         if (snap.exists()) {
           const data = snap.data();
           contentCache[pageId] = data;
+          try {
+            localStorage.setItem(`swr_site_content_${pageId}`, JSON.stringify(data));
+          } catch (e) {}
           subscribers.forEach(cb => cb(data));
         } else {
           subscribers.forEach(cb => cb({}));

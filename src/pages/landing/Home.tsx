@@ -56,12 +56,153 @@ export const Home = () => {
     ctaButton: t('home.getStarted'),
     ctaButtonBg: "#ffffff",
     ctaButtonText: "#0f172a",
-    showCta: true
+    showCta: true,
+    adaptiveLoaderEnabled: true,
+    skeletonLoaderEnabled: true
   };
 
   const { content } = useSiteContent('home', DEFAULT_CONTENT);
 
   const [activeTab, setActiveTab] = React.useState<'finance' | 'inventory' | 'production' | 'payroll'>('finance');
+
+  const isAdaptiveLoaderEnabled = content.adaptiveLoaderEnabled !== false;
+  const isSkeletonEnabled = content.skeletonLoaderEnabled !== false;
+
+  const [loading, setLoading] = React.useState(() => {
+    return isAdaptiveLoaderEnabled || isSkeletonEnabled;
+  });
+  const [currentPhraseIdx, setCurrentPhraseIdx] = React.useState(0);
+
+  const loadingPhrases = [
+    "Initializing Secure TLS Handshake...",
+    "Querying ERP Business Logic...",
+    "Binding Interactive Layout Components...",
+    "Finishing Assembly..."
+  ];
+
+  React.useEffect(() => {
+    if (!isAdaptiveLoaderEnabled && !isSkeletonEnabled) {
+      setLoading(false);
+      return;
+    }
+
+    const phraseInterval = setInterval(() => {
+      setCurrentPhraseIdx((prev) => (prev < loadingPhrases.length - 1 ? prev + 1 : prev));
+    }, 400);
+
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1200);
+
+    return () => {
+      clearInterval(phraseInterval);
+      clearTimeout(timer);
+    };
+  }, [isAdaptiveLoaderEnabled, isSkeletonEnabled]);
+
+  if (loading && (isAdaptiveLoaderEnabled || isSkeletonEnabled)) {
+    if (isSkeletonEnabled) {
+      return (
+        <div className="min-h-screen bg-slate-950 text-white flex flex-col relative overflow-hidden">
+          {/* Skeleton Navbar Header */}
+          <div className="h-20 border-b border-slate-900/50 bg-slate-950/80 backdrop-blur-md px-6 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-slate-850 rounded-xl animate-pulse" />
+              <div className="w-24 h-5 bg-slate-850 rounded-lg animate-pulse" />
+            </div>
+            <div className="hidden md:flex items-center gap-6">
+              <div className="w-16 h-4 bg-slate-900 rounded animate-pulse" />
+              <div className="w-16 h-4 bg-slate-900 rounded animate-pulse" />
+              <div className="w-16 h-4 bg-slate-900 rounded animate-pulse" />
+              <div className="w-16 h-4 bg-slate-900 rounded animate-pulse" />
+            </div>
+            <div className="w-24 h-10 bg-blue-600/20 rounded-xl animate-pulse" />
+          </div>
+
+          {/* Skeleton Hero Section */}
+          <div className="flex-1 max-w-7xl mx-auto px-6 pt-32 pb-24 text-center w-full space-y-8">
+            <div className="flex justify-center">
+              <div className="w-56 h-8 bg-slate-900 border border-slate-800 rounded-full animate-pulse" />
+            </div>
+            
+            <div className="space-y-4 max-w-4xl mx-auto animate-pulse">
+              <div className="h-16 md:h-20 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl" />
+              <div className="h-16 md:h-20 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl w-3/4 mx-auto" />
+            </div>
+
+            <div className="space-y-2.5 max-w-2xl mx-auto pt-4 animate-pulse">
+              <div className="h-4 bg-slate-900 rounded w-full" />
+              <div className="h-4 bg-slate-900 rounded w-5/6 mx-auto" />
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-center gap-4 pt-6 animate-pulse">
+              <div className="w-36 h-12 bg-blue-500/10 border border-blue-500/20 rounded-xl" />
+              <div className="w-36 h-12 bg-slate-900 border border-slate-800 rounded-xl" />
+            </div>
+
+            {/* Simulated app interface mockup skeleton */}
+            <div className="mt-16 border border-slate-800 bg-slate-900/10 rounded-2xl aspect-[16/9] w-full animate-pulse flex flex-col p-4 space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-900 pb-3">
+                <div className="flex gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-slate-850" />
+                  <span className="w-3 h-3 rounded-full bg-slate-850" />
+                  <span className="w-3 h-3 rounded-full bg-slate-850" />
+                </div>
+                <div className="w-32 h-4 bg-slate-900 rounded" />
+              </div>
+              <div className="flex-1 grid grid-cols-4 gap-4">
+                <div className="col-span-1 bg-slate-900/40 rounded-xl" />
+                <div className="col-span-3 bg-slate-900/40 rounded-xl" />
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Right Progressive Step Indicator */}
+          {isAdaptiveLoaderEnabled && (
+            <div 
+              className="absolute bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-800/80 bg-slate-950/90 text-slate-300 font-mono text-[11px] uppercase tracking-widest shadow-2xl animate-in fade-in duration-300"
+            >
+              <div className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              </div>
+              
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] text-slate-500 font-black tracking-tighter">PROGRESS STATUS</span>
+                <span className="text-white font-bold">{loadingPhrases[currentPhraseIdx]}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    } else {
+      return (
+        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center relative overflow-hidden text-white">
+          <div className="absolute inset-0 bg-gradient-to-tr from-blue-950/20 via-transparent to-slate-950 opacity-40 animate-pulse" />
+          
+          <div className="flex flex-col items-center gap-4 relative z-10">
+            <div className="w-12 h-12 rounded-full border-4 border-slate-800 border-t-blue-500 animate-spin" />
+            <span className="text-xs font-mono tracking-widest text-slate-400 uppercase">Loading Hero Portfolio...</span>
+          </div>
+
+          {isAdaptiveLoaderEnabled && (
+            <div 
+              className="absolute bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-900/80 bg-slate-950/90 text-slate-300 font-mono text-[11px] uppercase tracking-widest shadow-2xl"
+            >
+              <div className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] text-slate-500 font-black tracking-tighter">PROGRESS STATUS</span>
+                <span className="text-white font-bold">{loadingPhrases[currentPhraseIdx]}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-white selection:bg-blue-500/30 selection:text-white">
