@@ -1694,45 +1694,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return (saved as Language) || 'en';
   });
 
-  useEffect(() => {
-    const savedLang = localStorage.getItem('app_language') as Language || 'en';
-    const targetCookie = savedLang === 'bn' ? '/en/bn' : '/en/en';
-
-    // Helper to read cookie
-    const getGoogleTranslateCookie = () => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; googtrans=`);
-      if (parts.length === 2) return parts.pop()?.split(';').shift();
-      return undefined;
-    };
-
-    const currentCookie = getGoogleTranslateCookie();
-    if (currentCookie !== targetCookie) {
-      document.cookie = `googtrans=${targetCookie}; path=/`;
-      document.cookie = `googtrans=${targetCookie}; path=/; domain=${window.location.hostname}`;
-      const hostParts = window.location.hostname.split('.');
-      if (hostParts.length > 2) {
-        document.cookie = `googtrans=${targetCookie}; path=/; domain=.${hostParts.slice(-2).join('.')}`;
-      }
-      window.location.reload();
-    }
-  }, []);
-
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('app_language', lang);
-
-    const cookieValue = lang === 'bn' ? '/en/bn' : '/en/en';
-    document.cookie = `googtrans=${cookieValue}; path=/`;
-    document.cookie = `googtrans=${cookieValue}; path=/; domain=${window.location.hostname}`;
-    
-    const hostParts = window.location.hostname.split('.');
-    if (hostParts.length > 2) {
-      document.cookie = `googtrans=${cookieValue}; path=/; domain=.${hostParts.slice(-2).join('.')}`;
-    }
-
-    // Immediately reload to trigger translation cleanly
-    window.location.reload();
   };
 
   const t = (key: string, variables?: Record<string, string | number>): string => {
