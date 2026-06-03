@@ -9,7 +9,9 @@ import {
   orderBy,
   limit,
   Timestamp,
-  getDoc
+  getDoc,
+  onSnapshot,
+  deleteDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Company, UserRole, UserProfile, AppNotification, SubscriptionPlan, MenuConfig, MenuGroupConfig, MenuItemConfig } from '../types';
@@ -103,7 +105,9 @@ export default function FounderPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<CompanyStats | null>(null);
   const [isEditingSubscription, setIsEditingSubscription] = useState(false);
-  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent' | 'plans' | 'orders' | 'menu' | 'features' | 'errorLogs'>('companies');
+  const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent' | 'plans' | 'orders' | 'menu' | 'features' | 'errorLogs' | 'inquiries'>('companies');
+  const [inquiries, setInquiries] = useState<any[]>([]);
+  const [inquiriesLoading, setInquiriesLoading] = useState(false);
   const [menuConfig, setMenuConfig] = useState<MenuConfig | null>(null);
   const [isEditingMenu, setIsEditingMenu] = useState(false);
 
@@ -205,6 +209,25 @@ export default function FounderPanel() {
     if (viewMode === 'errorLogs') {
       const unsubscribe = errorService.subscribeToLogs((logs: any[]) => {
         setErrorLogs(logs);
+      });
+      return () => unsubscribe();
+    }
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (viewMode === 'inquiries') {
+      setInquiriesLoading(true);
+      const q = query(collection(db, 'inquiries'), orderBy('createdAt', 'desc'));
+      const unsubscribe = onSnapshot(q, (snap) => {
+        const list = snap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setInquiries(list);
+        setInquiriesLoading(false);
+      }, (err) => {
+        console.error("Error subscribing to inquiries:", err);
+        setInquiriesLoading(false);
       });
       return () => unsubscribe();
     }
@@ -341,9 +364,11 @@ export default function FounderPanel() {
     skeletonSpeed,
     skeletonTheme,
     skeletonRows,
-    skeletonWaveColor
+    skeletonWaveColor,
+    voucherLayout
   } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
+  const [localVoucherLayout, setLocalVoucherLayout] = useState(voucherLayout || 'Layout 1');
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
   const [localMenuBarStyle, setLocalMenuBarStyle] = useState(menuBarStyle || 'classic');
   const [localSidebarBgColor, setLocalSidebarBgColor] = useState(sidebarBgColor || 'default');
@@ -1136,7 +1161,7 @@ export default function FounderPanel() {
               <Zap className="w-4 h-4" />
               Features
             </button>
-            <button
+             <button
               onClick={() => setViewMode('errorLogs')}
               className={cn(
                 "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
@@ -1147,6 +1172,18 @@ export default function FounderPanel() {
             >
               <AlertCircle className="w-4 h-4" />
               Error Logs
+            </button>
+            <button
+              onClick={() => setViewMode('inquiries')}
+              className={cn(
+                "p-2 rounded-md transition-all flex items-center justify-center sm:justify-start gap-2 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap",
+                viewMode === 'inquiries' 
+                  ? uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white shadow-md" : "bg-background text-foreground shadow-sm"
+                  : uiStyle === 'UI/UX 2' ? "text-blue-400 hover:text-blue-600" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <MessageSquare className="w-4 h-4" />
+              Inquiries
             </button>
             <button
               onClick={() => setViewMode('settings')}
@@ -1756,6 +1793,97 @@ export default function FounderPanel() {
                       <td colSpan={6} className="p-12 text-center">
                         <ClipboardList className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
                         <p className="text-sm text-muted-foreground italic">No subscription orders found.</p>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : viewMode === 'inquiries' ? (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className={cn(
+              "text-lg font-bold uppercase tracking-widest",
+              uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
+            )}>Visitor Inquiries ({inquiries.length})</h2>
+            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+              Live updates via firestore
+            </div>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-muted/50 border-b border-border">
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Sender Info</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Inquiry Subject</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Message Details</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Timestamp</th>
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground text-right px-6">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {inquiriesLoading ? (
+                    <tr>
+                      <td colSpan={5} className="p-12 text-center text-sm text-muted-foreground italic">
+                        Loading inquiries details...
+                      </td>
+                    </tr>
+                  ) : inquiries.length > 0 ? (
+                    inquiries.map((inquiry) => {
+                      const date = inquiry.createdAt?.toDate 
+                        ? inquiry.createdAt.toDate().toLocaleString() 
+                        : inquiry.createdAt?.seconds 
+                          ? new Date(inquiry.createdAt.seconds * 1000).toLocaleString() 
+                          : 'N/A';
+                      return (
+                        <tr key={inquiry.id} className="hover:bg-muted/30 transition-colors group">
+                          <td className="p-4">
+                            <div className="space-y-0.5">
+                              <p className="text-sm font-bold text-foreground">{inquiry.name}</p>
+                              <p className="text-xs text-muted-foreground font-mono select-all">{inquiry.email}</p>
+                            </div>
+                          </td>
+                          <td className="p-4 font-semibold text-xs text-foreground">
+                            {inquiry.subject}
+                          </td>
+                          <td className="p-4 max-w-sm">
+                            <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                              {inquiry.message}
+                            </p>
+                          </td>
+                          <td className="p-4 text-xs font-mono text-muted-foreground">
+                            {date}
+                          </td>
+                          <td className="p-4 text-right px-6">
+                            <button
+                              onClick={async () => {
+                                if (confirm('Are you sure you want to delete this inquiry record?')) {
+                                  try {
+                                    await deleteDoc(doc(db, 'inquiries', inquiry.id));
+                                    showNotification('Inquiry deleted successfully');
+                                  } catch (err) {
+                                    showNotification('Failed to delete inquiry', 'error');
+                                  }
+                                }
+                              }}
+                              className="p-2 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                              title="Delete inquiry"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="p-12 text-center">
+                        <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                        <p className="text-sm text-muted-foreground italic">No inquiries found yet.</p>
                       </td>
                     </tr>
                   )}
@@ -2664,7 +2792,8 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       skeletonSpeed: localSkeletonSpeed,
                       skeletonTheme: localSkeletonTheme,
                       skeletonRows: Number(localSkeletonRows),
-                      skeletonWaveColor: localSkeletonWaveColor
+                      skeletonWaveColor: localSkeletonWaveColor,
+                      voucherLayout: localVoucherLayout
                     });
                     showNotification('System configuration updated successfully', 'success');
                   } catch (err) {
@@ -2889,6 +3018,19 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                         min="1000"
                       />
                       <p className="text-[9px] text-muted-foreground uppercase leading-tight">Time for popup snackbars to remain on viewport before hiding.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Voucher Entry Layout Model</label>
+                      <select 
+                        value={localVoucherLayout}
+                        onChange={(e) => setLocalVoucherLayout(e.target.value as any)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="Layout 1">Layout 1 (Corrected Headers & Scrolling)</option>
+                        <option value="Layout 2">Layout 2 (Compact Fields, Height Optimized)</option>
+                      </select>
+                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Select between original large scroll-corrected and compact optimized models.</p>
                     </div>
                   </div>
 

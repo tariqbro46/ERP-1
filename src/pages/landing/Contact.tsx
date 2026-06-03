@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useSiteContent } from '../../hooks/useSiteContent';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { cn } from '../../lib/utils';
+import { db } from '../../firebase';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
 
 export const Contact = () => {
   const { t } = useLanguage();
@@ -43,11 +45,22 @@ export const Contact = () => {
   });
   const [isSubmitted, setIsSubmitted] = React.useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
-    setFormState({ name: '', email: '', subject: '', message: '' });
-    setTimeout(() => setIsSubmitted(false), 8000);
+    try {
+      await addDoc(collection(db, 'inquiries'), {
+        name: formState.name,
+        email: formState.email,
+        subject: formState.subject,
+        message: formState.message,
+        createdAt: Timestamp.now()
+      });
+      setIsSubmitted(true);
+      setFormState({ name: '', email: '', subject: '', message: '' });
+      setTimeout(() => setIsSubmitted(false), 8000);
+    } catch (err) {
+      console.error('Error submitting inquiry:', err);
+    }
   };
 
   return (

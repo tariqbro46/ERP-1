@@ -19,12 +19,12 @@ const PAGES: PageContent[] = [
       primaryColor: '#3b82f6',
       accentColor: '#10b981',
       siteName: 'ERP System',
-      siteNameColor: '#0a0a0a',
-      navbarBgColor: 'rgba(255, 255, 255, 0.8)',
-      navbarTextColor: '#0a0a0a',
+      siteNameColor: '#ffffff',
+      navbarBgColor: 'rgba(2, 6, 23, 0.8)',
+      navbarTextColor: '#ffffff',
       footerText: '© 2026 ERP System. All rights reserved.',
-      footerTextColor: '#64748b',
-      footerBgColor: '#ffffff'
+      footerTextColor: '#94a3b8',
+      footerBgColor: '#020617'
     }
   },
   {

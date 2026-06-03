@@ -115,6 +115,7 @@ interface SettingsContextType {
   dateFormat: string;
   voucherHeaderCompact: boolean;
   voucherTableCompact: boolean;
+  voucherLayout: 'Layout 1' | 'Layout 2';
   reportLayout: ReportLayout;
   dashboardDesign: DashboardDesign;
   globalDashboardDesign?: DashboardDesign;
@@ -225,6 +226,7 @@ const defaultSettings: SettingsContextType = {
   dateFormat: 'DD-MM-YYYY',
   voucherHeaderCompact: false,
   voucherTableCompact: false,
+  voucherLayout: 'Layout 1',
   reportLayout: 'Layout 2',
   dashboardDesign: 'Design 1',
   menuBarStyle: 'classic',
@@ -418,6 +420,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             skeletonTheme: data.skeletonTheme || prev.skeletonTheme || 'modern',
             skeletonRows: data.skeletonRows !== undefined ? Number(data.skeletonRows) : prev.skeletonRows,
             skeletonWaveColor: data.skeletonWaveColor || prev.skeletonWaveColor || 'indigo',
+            voucherLayout: data.voucherLayout || prev.voucherLayout,
             systemUiStyle: data.uiStyle || prev.systemUiStyle,
             systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
             sidebarBgColor: data.sidebarBgColor || prev.sidebarBgColor || 'default',
