@@ -147,8 +147,8 @@ export function SearchableSelect({
   return (
     <div className={cn("relative w-full", className)} ref={containerRef}>
       <div className="relative flex items-center group">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-          <Search className="w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+        <div className={cn("absolute top-1/2 -translate-y-1/2 pointer-events-none", compact ? "left-1.5" : "left-3")}>
+          <Search className={cn("text-muted-foreground group-focus-within:text-primary transition-colors", compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
         </div>
         <input
           ref={inputRef}
@@ -165,13 +165,15 @@ export function SearchableSelect({
           placeholder={placeholder}
           tabIndex={tabIndex}
           className={cn(
-            "w-full bg-background border border-border text-xs transition-all outline-none uppercase tracking-widest font-bold",
-            compact ? "p-1 pl-7 pr-8" : "p-2.5 pl-9 pr-10",
+            "w-full bg-background border border-border transition-all outline-none uppercase tracking-widest font-bold",
+            compact 
+              ? "p-1 pl-5.5 pr-6 text-[11px] leading-tight" 
+              : "p-2.5 pl-9 pr-10 text-xs",
             isOpen ? "border-primary ring-1 ring-primary/20" : "hover:border-primary/50",
             disabled && "opacity-50 cursor-not-allowed"
           )}
         />
-        <div className="absolute right-2 flex items-center gap-1">
+        <div className={cn("absolute flex items-center gap-0.5", compact ? "right-1" : "right-2")}>
           {searchTerm && !disabled && (
             <button 
               type="button"
@@ -181,12 +183,12 @@ export function SearchableSelect({
                 onChange('');
                 inputRef.current?.focus();
               }}
-              className="p-1 hover:bg-foreground/10 rounded-full text-gray-400 hover:text-foreground"
+              className="p-0.5 hover:bg-foreground/10 rounded-full text-gray-400 hover:text-foreground"
             >
-              <X className="w-3 h-3" />
+              <X className={compact ? "w-2.5 h-2.5" : "w-3 h-3"} />
             </button>
           )}
-          <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform pointer-events-none", isOpen && "rotate-180")} />
+          <ChevronDown className={cn("text-gray-400 transition-transform pointer-events-none", compact ? "w-3 h-3" : "w-4 h-4", isOpen && "rotate-180")} />
         </div>
       </div>
 

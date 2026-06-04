@@ -116,6 +116,7 @@ interface SettingsContextType {
   voucherHeaderCompact: boolean;
   voucherTableCompact: boolean;
   voucherLayout: 'Layout 1' | 'Layout 2';
+  voucherFieldSize?: 'small' | 'medium' | 'large';
   reportLayout: ReportLayout;
   dashboardDesign: DashboardDesign;
   globalDashboardDesign?: DashboardDesign;
@@ -227,6 +228,7 @@ const defaultSettings: SettingsContextType = {
   voucherHeaderCompact: false,
   voucherTableCompact: false,
   voucherLayout: 'Layout 1',
+  voucherFieldSize: 'medium',
   reportLayout: 'Layout 2',
   dashboardDesign: 'Design 1',
   menuBarStyle: 'classic',
@@ -421,6 +423,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             skeletonRows: data.skeletonRows !== undefined ? Number(data.skeletonRows) : prev.skeletonRows,
             skeletonWaveColor: data.skeletonWaveColor || prev.skeletonWaveColor || 'indigo',
             voucherLayout: data.voucherLayout || prev.voucherLayout,
+            voucherFieldSize: data.voucherFieldSize || prev.voucherFieldSize || 'medium',
             systemUiStyle: data.uiStyle || prev.systemUiStyle,
             systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
             sidebarBgColor: data.sidebarBgColor || prev.sidebarBgColor || 'default',

@@ -91,6 +91,60 @@ export function VoucherEntry() {
   const { showNotification } = useNotification();
   const settings = useSettings();
   const isLayout2 = settings.voucherLayout === 'Layout 2';
+  
+  // Custom classes for Voucher Entry to scale down or up the entire page based on Founder select
+  const fieldSize = settings.voucherFieldSize || 'medium';
+  const isFieldCompact = fieldSize === 'small';
+  
+  const textLabelClass = cn(
+    "text-gray-500 uppercase font-bold tracking-widest block select-none leading-none",
+    fieldSize === 'small' ? "text-[8px] tracking-wider" : 
+    fieldSize === 'large' ? "text-[10px] tracking-widest" : 
+    "text-[9px] tracking-widest"
+  );
+  
+  const inputPaddingClass = cn(
+    "w-full bg-background border border-border text-foreground transition-all duration-150 outline-none focus:border-foreground",
+    fieldSize === 'small' ? "p-1 text-[11px] h-7" : 
+    fieldSize === 'large' ? "p-2 lg:p-2.5 text-sm h-11" : 
+    "p-1.5 lg:p-2 text-xs lg:text-sm h-9 md:h-10"
+  );
+  
+  const tablePaddingClass = cn(
+    "transition-all duration-150",
+    fieldSize === 'small' ? "px-1.5 py-0.5" : 
+    fieldSize === 'large' ? "px-4 lg:px-6 py-2.5" : 
+    (settings.voucherTableCompact ? "px-2 py-1" : "px-3.5 py-1.5")
+  );
+  
+  const tableHeaderPaddingClass = cn(
+    "transition-all duration-150 font-bold uppercase",
+    fieldSize === 'small' ? "px-1.5 py-1 text-[8px]" : 
+    fieldSize === 'large' ? "px-4 lg:px-6 py-3.5 text-[10px]" : 
+    (settings.voucherTableCompact ? "px-2 py-1.5 text-[9px]" : "px-3.5 py-2.5 text-[9px]")
+  );
+
+  const tableInputPaddingClass = cn(
+    "bg-background border border-border text-foreground transition-all duration-150 outline-none focus:border-foreground",
+    fieldSize === 'small' ? "p-0.5 text-[11px]" : 
+    fieldSize === 'large' ? "p-1.5 text-xs lg:text-sm" : 
+    "p-1 text-xs"
+  );
+
+  const tableTextClass = cn(
+    "transition-all duration-150",
+    fieldSize === 'small' ? "text-[11px]" : 
+    fieldSize === 'large' ? "text-sm" : 
+    "text-xs"
+  );
+
+  const tableSubTextClass = cn(
+    "transition-all duration-150",
+    fieldSize === 'small' ? "text-[8px]" : 
+    fieldSize === 'large' ? "text-xs" : 
+    "text-[9px]"
+  );
+
   const { 
     notifications, 
     features = [], 
@@ -962,8 +1016,8 @@ export function VoucherEntry() {
           {/* Row 1: Reference No., Date, Currency, Ex. Rate, Voucher Type (Desktop) */}
           <div className={cn("grid grid-cols-2 lg:grid-cols-5 gap-2 lg:gap-6", isLayout2 && "gap-1.5 lg:gap-3")}>
             <div className={cn("space-y-1", !isLayout2 && "lg:space-y-2")}>
-              <div className="flex justify-between items-center">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.referenceNo')}</label>
+              <div className="flex justify-between items-center h-4 mb-0.5">
+                <label className={textLabelClass}>{t('common.referenceNo')}</label>
               </div>
               <input 
                 ref={refNoInputRef}
@@ -973,24 +1027,27 @@ export function VoucherEntry() {
                 placeholder="e.g. REF-001"
                 tabIndex={1}
                 autoFocus
-                className={cn("w-full bg-background border border-border text-foreground p-1.5 outline-none focus:border-foreground", isLayout2 ? "p-1 text-[11px]" : "lg:p-2 text-xs lg:text-sm")} 
+                className={inputPaddingClass} 
               />
             </div>
             <div className={cn("space-y-1", !isLayout2 && "lg:space-y-2")}>
+              <div className="flex justify-between items-center h-4 mb-0.5">
+                <label className={textLabelClass}>{t('common.date')}</label>
+              </div>
               <DateInput 
-                label={t('common.date')}
                 value={vDate || ''}
                 onChange={setVDate}
                 tabIndex={2}
                 className="w-full"
+                compact={isFieldCompact}
               />
             </div>
 
             {isMultiCurrencyEnabled ? (
               <>
                 <div className={cn("space-y-1 transition-opacity", !isLayout2 && "lg:space-y-2", !showCurrency && "opacity-40 pointer-events-none")}>
-                  <div className="flex items-center h-4">
-                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.currency')}</label>
+                  <div className="flex items-center justify-between h-4 mb-0.5">
+                    <label className={textLabelClass}>{t('common.currency')}</label>
                   </div>
                   <select
                     value={currency}
@@ -1002,7 +1059,7 @@ export function VoucherEntry() {
                       setCurrency(e.target.value);
                     }}
                     tabIndex={showCurrency ? 3 : -1}
-                    className={cn("w-full bg-background border border-border text-foreground p-1.5 outline-none focus:border-foreground", isLayout2 ? "p-1 text-[11px]" : "lg:p-2 text-xs lg:text-sm")}
+                    className={inputPaddingClass}
                   >
                     <option value="BDT">BDT (৳)</option>
                     <option value="USD">USD ($)</option>
@@ -1011,9 +1068,9 @@ export function VoucherEntry() {
                   </select>
                 </div>
                 <div className={cn("space-y-1 transition-opacity", !isLayout2 && "lg:space-y-2", !showExRate && "opacity-40 pointer-events-none")}>
-                  <div className="flex items-center gap-2 h-4">
-                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.exchangeRate')}</label>
-                    <div className="group relative">
+                  <div className="flex items-center justify-between gap-1.5 h-4 mb-0.5">
+                    <label className={textLabelClass}>{t('common.exchangeRate')}</label>
+                    <div className="group relative flex items-center">
                       <AlertCircle className="w-3 h-3 text-gray-400 cursor-help" />
                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-foreground text-background text-[8px] uppercase tracking-widest rounded hidden group-hover:block z-50">
                         {t('common.exchangeRateDesc')}
@@ -1034,24 +1091,24 @@ export function VoucherEntry() {
                     }}
                     onFocus={e => e.target.value === '0' && e.target.select()}
                     tabIndex={showExRate ? 4 : -1}
-                    className={cn("w-full bg-background border border-border text-foreground p-1.5 outline-none focus:border-foreground", isLayout2 ? "p-1 text-[11px]" : "lg:p-2 text-xs lg:text-sm")}
+                    className={inputPaddingClass}
                   />
                 </div>
               </>
             ) : (
               <>
-                <div className="hidden lg:block"></div>
-                <div className="hidden lg:block"></div>
+                <div className="hidden lg:block col-span-1 text-xs"></div>
+                <div className="hidden lg:block col-span-1 text-xs"></div>
               </>
             )}
 
             {/* Voucher Type for Desktop (Row 1, Col 5) */}
             <div className={cn("hidden lg:block space-y-1", !isLayout2 && "lg:space-y-2")}>
-              <div className="flex justify-between items-center">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.voucherType')}</label>
+              <div className="flex justify-between items-center h-4 mb-0.5">
+                <label className={textLabelClass}>{t('common.voucherType')}</label>
                 <button 
                   onClick={() => setIsVoucherSettingsOpen(true)}
-                  className="text-[9px] text-blue-500 hover:underline font-bold uppercase"
+                  className="text-[9px] text-blue-500 hover:underline font-bold uppercase leading-none"
                 >
                   {t('nav.settings')}
                 </button>
@@ -1061,8 +1118,8 @@ export function VoucherEntry() {
                 onChange={e => setVType(e.target.value)}
                 tabIndex={5}
                 className={cn(
-                  "w-full bg-background border border-border p-1.5 outline-none focus:border-foreground font-bold uppercase",
-                  isLayout2 ? "p-1 text-[11px]" : "lg:p-2 text-xs lg:text-sm",
+                  inputPaddingClass,
+                  "font-bold uppercase",
                   getVoucherColor(vType)
                 )}
               >
@@ -1081,12 +1138,12 @@ export function VoucherEntry() {
                 {/* Slot 1: Party A/c Name or Account (Bank/Cash) */}
                 {(isInventory || isJournal) ? (
                   <div className={cn("space-y-1 col-span-2 lg:col-span-3", !isLayout2 && "lg:space-y-2")}>
-                    <div className="flex justify-between items-center">
-                      <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.partyName')}</label>
+                    <div className="flex justify-between items-center h-4 mb-0.5">
+                      <label className={textLabelClass}>{t('common.partyName')}</label>
                       <button 
                         type="button" 
                         onClick={() => openQuickLedger('Sundry', 'party')}
-                        className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
+                        className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1 leading-none"
                       >
                         <PlusCircle className="w-2 h-2" /> {t('common.quick')}
                       </button>
@@ -1098,22 +1155,22 @@ export function VoucherEntry() {
                       placeholder={t('voucher.selectParty')}
                       onQuickCreate={() => openQuickLedger('Sundry', 'party')}
                       tabIndex={6}
-                      compact={isLayout2}
+                      compact={isFieldCompact}
                     />
                     {partyLedgerId && balances[partyLedgerId] !== undefined && (
-                      <p className="text-[9px] text-gray-500 uppercase mt-0.5">
+                      <p className="text-[9px] text-gray-500 uppercase mt-0.5 whitespace-nowrap">
                         {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[partyLedgerId])}</span>
                       </p>
                     )}
                   </div>
                 ) : isSingleEntry ? (
                   <div className={cn("space-y-1 col-span-2 lg:col-span-3", !isLayout2 && "lg:space-y-2")}>
-                    <div className="flex justify-between items-center">
-                      <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.account')}</label>
+                    <div className="flex justify-between items-center h-4 mb-0.5">
+                      <label className={textLabelClass}>{t('common.account')}</label>
                       <button 
                         type="button" 
                         onClick={() => openQuickLedger('Bank', 'account')}
-                        className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
+                        className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1 leading-none"
                       >
                         <PlusCircle className="w-2 h-2" /> {t('common.quick')}
                       </button>
@@ -1125,10 +1182,10 @@ export function VoucherEntry() {
                       placeholder={t('voucher.selectAccount')}
                       onQuickCreate={() => openQuickLedger('Bank', 'account')}
                       tabIndex={6}
-                      compact={isLayout2}
+                      compact={isFieldCompact}
                     />
                     {bankCashLedgerId && balances[bankCashLedgerId] !== undefined && (
-                      <p className="text-[9px] text-gray-500 uppercase mt-0.5">
+                      <p className="text-[9px] text-gray-500 uppercase mt-0.5 whitespace-nowrap">
                         {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[bankCashLedgerId])}</span>
                       </p>
                     )}
@@ -1140,14 +1197,14 @@ export function VoucherEntry() {
                 {/* Slot 2: Sales/Purchase Ledger */}
                 {isInventory ? (
                   <div className={cn("space-y-1 col-span-1 lg:col-span-1", !isLayout2 && "lg:space-y-2")}>
-                    <div className="flex justify-between items-center">
-                      <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">
+                    <div className="flex justify-between items-center h-4 mb-0.5">
+                      <label className={textLabelClass}>
                         {vType === 'Sales' ? t('common.salesLedger') : t('common.purchaseLedger')}
                       </label>
                       <button 
                         type="button" 
                         onClick={() => openQuickLedger(vType, 'sales')}
-                        className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1"
+                        className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1 leading-none"
                       >
                         <PlusCircle className="w-2 h-2" /> {t('common.quick')}
                       </button>
@@ -1159,10 +1216,10 @@ export function VoucherEntry() {
                       placeholder={vType === 'Sales' ? t('common.salesLedger') : t('common.purchaseLedger')}
                       onQuickCreate={() => openQuickLedger(vType, 'sales')}
                       tabIndex={7}
-                      compact={isLayout2}
+                      compact={isFieldCompact}
                     />
                     {salesPurchaseLedgerId && balances[salesPurchaseLedgerId] !== undefined && (
-                      <p className="text-[9px] text-gray-500 uppercase mt-0.5">
+                      <p className="text-[9px] text-gray-500 uppercase mt-0.5 whitespace-nowrap">
                         {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[salesPurchaseLedgerId])}</span>
                       </p>
                     )}
@@ -1179,17 +1236,16 @@ export function VoucherEntry() {
                     !isLayout2 && "lg:space-y-2",
                     !showSalesperson && "opacity-40 pointer-events-none"
                   )}>
-                    <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">
-                      {vType === 'Sales' ? t('common.salesperson') : (vType === 'Payment' ? t('common.providedBy') : t('common.receivedBy'))}
-                    </label>
+                    <div className="flex justify-between items-center h-4 mb-0.5">
+                      <label className={textLabelClass}>
+                        {vType === 'Sales' ? t('common.salesperson') : (vType === 'Payment' ? t('common.providedBy') : t('common.receivedBy'))}
+                      </label>
+                    </div>
                     <select
                       value={salespersonId}
                       onChange={e => setSalespersonId(e.target.value)}
                       tabIndex={8}
-                      className={cn(
-                        "w-full bg-background border border-border text-foreground p-1.5 outline-none focus:border-foreground",
-                        isLayout2 ? "p-1 text-[11px]" : "lg:p-2 text-xs lg:text-sm"
-                      )}
+                      className={inputPaddingClass}
                     >
                       <option value="">{t('common.select')} {vType === 'Sales' ? t('common.salesperson') : (vType === 'Payment' ? t('common.providedBy') : t('common.receivedBy'))}...</option>
                       {users.map(u => (
@@ -1217,18 +1273,18 @@ export function VoucherEntry() {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-foreground/5 text-gray-500 uppercase text-[8px]">
                     <tr>
-                      <th className="px-2 py-2 border-b border-border tracking-wider text-left min-w-[15ch]">Item Name</th>
-                      <th className="px-2 py-2 border-b border-border tracking-wider text-left w-[25ch]">Godown</th>
-                      <th className="px-2 py-2 border-b border-border tracking-wider text-right w-16">Qty</th>
-                      <th className="px-2 py-2 border-b border-border tracking-wider text-right w-20">Rate</th>
-                      <th className="px-2 py-2 border-b border-border tracking-wider text-right w-20">Amount</th>
-                      <th className="px-2 py-2 border-b border-border w-8"></th>
+                      <th className={cn("border-b border-border tracking-wider text-left min-w-[15ch]", tableHeaderPaddingClass)}>Item Name</th>
+                      <th className={cn("border-b border-border tracking-wider text-left w-[25ch]", tableHeaderPaddingClass)}>Godown</th>
+                      <th className={cn("border-b border-border tracking-wider text-right w-16", tableHeaderPaddingClass)}>Qty</th>
+                      <th className={cn("border-b border-border tracking-wider text-right w-20", tableHeaderPaddingClass)}>Rate</th>
+                      <th className={cn("border-b border-border tracking-wider text-right w-20", tableHeaderPaddingClass)}>Amount</th>
+                      <th className={cn("border-b border-border w-8", tableHeaderPaddingClass)}></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
                     {consumptionEntries.map((e, idx) => (
                       <tr key={idx} className="group hover:bg-muted/80 transition-colors">
-                        <td className="px-1 py-1">
+                        <td className={tablePaddingClass}>
                           <SearchableSelect 
                             options={items} 
                             value={e.item_id} 
@@ -1238,9 +1294,10 @@ export function VoucherEntry() {
                               setConsumptionEntries(next);
                             }} 
                             tabIndex={100 + idx * 10}
+                            compact={isFieldCompact || voucherTableCompact}
                           />
                         </td>
-                        <td className="px-1 py-1">
+                        <td className={tablePaddingClass}>
                           <SearchableSelect 
                             options={godowns} 
                             value={e.godown_id} 
@@ -1250,26 +1307,27 @@ export function VoucherEntry() {
                               setConsumptionEntries(next);
                             }} 
                             tabIndex={101 + idx * 10}
+                            compact={isFieldCompact || voucherTableCompact}
                           />
                         </td>
-                        <td className="px-1 py-1 w-20">
-                          <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.qty || ''} onChange={val => {
+                        <td className={cn("w-20", tablePaddingClass)}>
+                          <input type="number" className={cn(tableInputPaddingClass, "text-right")} value={e.qty || ''} onChange={val => {
                             const next = [...consumptionEntries];
                             next[idx].qty = Number(val.target.value);
                             next[idx].amount = next[idx].qty * (next[idx].rate || 0);
                             setConsumptionEntries(next);
                           }} tabIndex={102 + idx * 10} />
                         </td>
-                        <td className="px-1 py-1 w-24">
-                          <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.rate || ''} onChange={val => {
+                        <td className={cn("w-24", tablePaddingClass)}>
+                          <input type="number" className={cn(tableInputPaddingClass, "text-right")} value={e.rate || ''} onChange={val => {
                             const next = [...consumptionEntries];
                             next[idx].rate = Number(val.target.value);
                             next[idx].amount = (next[idx].qty || 0) * next[idx].rate;
                             setConsumptionEntries(next);
                           }} tabIndex={103 + idx * 10} />
                         </td>
-                        <td className="px-1 py-1 w-24">
-                          <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.amount || ''} onFocus={e => e.target.value === '0' && e.target.select()} onChange={val => {
+                        <td className={cn("w-24", tablePaddingClass)}>
+                          <input type="number" className={cn(tableInputPaddingClass, "text-right")} value={e.amount || ''} onFocus={e => e.target.value === '0' && e.target.select()} onChange={val => {
                             const next = [...consumptionEntries];
                             const newAmount = Number(val.target.value);
                             next[idx].amount = newAmount;
@@ -1279,13 +1337,13 @@ export function VoucherEntry() {
                             setConsumptionEntries(next);
                           }} tabIndex={104 + idx * 10} />
                         </td>
-                        <td className="px-1 py-1 text-center">
+                        <td className={cn("text-center", tablePaddingClass)}>
                           <button onClick={() => setConsumptionEntries(consumptionEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-500/50 group-hover:text-rose-500" /></button>
                         </td>
                       </tr>
                     ))}
                     <tr className="border-t border-border/50">
-                      <td colSpan={6} className="p-2">
+                      <td colSpan={6} className={isLayout2 ? "p-1" : "p-2"}>
                         <button onClick={() => setConsumptionEntries([...consumptionEntries, { item_id: '', godown_id: '', qty: 0, rate: 0, amount: 0, unit: 'pcs', entry_type: 'Consumption' }])} className="text-[8px] font-bold text-rose-500 uppercase tracking-widest flex items-center gap-1 hover:underline">
                           <PlusCircle className="w-2 h-2" /> Add Item
                         </button>
@@ -1304,18 +1362,18 @@ export function VoucherEntry() {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-foreground/5 text-gray-500 uppercase text-[8px]">
                     <tr>
-                      <th className="px-2 py-2 border-b border-border tracking-wider text-left min-w-[15ch]">Item Name</th>
-                      <th className="px-2 py-2 border-b border-border tracking-wider text-left w-[25ch]">Godown</th>
-                      <th className="px-2 py-2 border-b border-border tracking-wider text-right w-16">Qty</th>
-                      <th className="px-2 py-2 border-b border-border tracking-wider text-right w-20">Rate</th>
-                      <th className="px-2 py-2 border-b border-border tracking-wider text-right w-20">Amount</th>
-                      <th className="px-2 py-2 border-b border-border w-8"></th>
+                      <th className={cn("border-b border-border tracking-wider text-left min-w-[15ch]", tableHeaderPaddingClass)}>Item Name</th>
+                      <th className={cn("border-b border-border tracking-wider text-left w-[25ch]", tableHeaderPaddingClass)}>Godown</th>
+                      <th className={cn("border-b border-border tracking-wider text-right w-16", tableHeaderPaddingClass)}>Qty</th>
+                      <th className={cn("border-b border-border tracking-wider text-right w-20", tableHeaderPaddingClass)}>Rate</th>
+                      <th className={cn("border-b border-border tracking-wider text-right w-20", tableHeaderPaddingClass)}>Amount</th>
+                      <th className={cn("border-b border-border w-8", tableHeaderPaddingClass)}></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
                     {productionEntries.map((e, idx) => (
                       <tr key={idx} className="group hover:bg-muted/80 transition-colors">
-                        <td className="px-1 py-1">
+                        <td className={tablePaddingClass}>
                           <SearchableSelect 
                             options={items} 
                             value={e.item_id} 
@@ -1325,9 +1383,10 @@ export function VoucherEntry() {
                               setProductionEntries(next);
                             }} 
                             tabIndex={500 + idx * 10}
+                            compact={isFieldCompact || voucherTableCompact}
                           />
                         </td>
-                        <td className="px-1 py-1">
+                        <td className={tablePaddingClass}>
                           <SearchableSelect 
                             options={godowns} 
                             value={e.godown_id} 
@@ -1337,26 +1396,27 @@ export function VoucherEntry() {
                               setProductionEntries(next);
                             }} 
                             tabIndex={501 + idx * 10}
+                            compact={isFieldCompact || voucherTableCompact}
                           />
                         </td>
-                        <td className="px-1 py-1 w-20">
-                          <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.qty || ''} onChange={val => {
+                        <td className={cn("w-20", tablePaddingClass)}>
+                          <input type="number" className={cn(tableInputPaddingClass, "text-right")} value={e.qty || ''} onChange={val => {
                             const next = [...productionEntries];
                             next[idx].qty = Number(val.target.value);
                             next[idx].amount = next[idx].qty * (next[idx].rate || 0);
                             setProductionEntries(next);
                           }} tabIndex={502 + idx * 10} />
                         </td>
-                        <td className="px-1 py-1 w-24">
-                          <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.rate || ''} onChange={val => {
+                        <td className={cn("w-24", tablePaddingClass)}>
+                          <input type="number" className={cn(tableInputPaddingClass, "text-right")} value={e.rate || ''} onChange={val => {
                             const next = [...productionEntries];
                             next[idx].rate = Number(val.target.value);
                             next[idx].amount = (next[idx].qty || 0) * next[idx].rate;
                             setProductionEntries(next);
                           }} tabIndex={503 + idx * 10} />
                         </td>
-                        <td className="px-1 py-1 w-24">
-                          <input type="number" className="w-full bg-background border border-border p-1 text-right text-xs outline-none focus:border-foreground" value={e.amount || ''} onFocus={e => e.target.value === '0' && e.target.select()} onChange={val => {
+                        <td className={cn("w-24", tablePaddingClass)}>
+                          <input type="number" className={cn(tableInputPaddingClass, "text-right")} value={e.amount || ''} onFocus={e => e.target.value === '0' && e.target.select()} onChange={val => {
                             const next = [...productionEntries];
                             const newAmount = Number(val.target.value);
                             next[idx].amount = newAmount;
@@ -1366,13 +1426,13 @@ export function VoucherEntry() {
                             setProductionEntries(next);
                           }} tabIndex={504 + idx * 10} />
                         </td>
-                        <td className="px-1 py-1 text-center">
+                        <td className={cn("text-center", tablePaddingClass)}>
                           <button onClick={() => setProductionEntries(productionEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-emerald-500/50 group-hover:text-emerald-500" /></button>
                         </td>
                       </tr>
                     ))}
                     <tr className="border-t border-border/50">
-                      <td colSpan={6} className="p-2">
+                      <td colSpan={6} className={isLayout2 ? "p-1" : "p-2"}>
                         <button onClick={() => setProductionEntries([...productionEntries, { item_id: '', godown_id: '', qty: 0, rate: 0, amount: 0, unit: 'pcs', entry_type: 'Production' }])} className="text-[8px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1 hover:underline">
                           <PlusCircle className="w-2 h-2" /> Add Item
                         </button>
@@ -1386,9 +1446,9 @@ export function VoucherEntry() {
             <div className="min-w-full">
               {/* Desktop Table Header */}
               <table className="w-full text-left text-xs border-collapse hidden lg:table">
-                <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px] sticky top-0 z-10 backdrop-blur-sm">
+                <thead className={cn("bg-foreground/5 text-gray-500 uppercase sticky top-0 z-10 backdrop-blur-sm", isLayout2 ? "text-[8px]" : "text-[9px]")}>
                   <tr>
-                    <th className={cn("border-b border-border min-w-[16ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>
+                    <th className={cn("border-b border-border min-w-[16ch]", tableHeaderPaddingClass)}>
                       <div className="flex justify-between items-center">
                         <span>{t('common.itemName')}</span>
                         <button 
@@ -1403,38 +1463,38 @@ export function VoucherEntry() {
                         </button>
                       </div>
                     </th>
-                    <th className={cn("border-b border-border w-[40ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.godown')}</th>
+                    <th className={cn("border-b border-border w-[40ch]", tableHeaderPaddingClass)}>{t('common.godown')}</th>
                     {isBatchEnabled && !isPhysicalStock && (
-                      <th className={cn("border-b border-border text-left w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.batch')}</th>
+                      <th className={cn("border-b border-border text-left w-32", tableHeaderPaddingClass)}>{t('common.batch')}</th>
                     )}
                     {isExpiryEnabled && !isPhysicalStock && (
-                      <th className={cn("border-b border-border text-left w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.expiry')}</th>
+                      <th className={cn("border-b border-border text-left w-32", tableHeaderPaddingClass)}>{t('common.expiry')}</th>
                     )}
-                    <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.quantity')}</th>
+                    <th className={cn("border-b border-border text-right w-32", tableHeaderPaddingClass)}>{t('common.quantity')}</th>
                     {showFreeQty && !isPhysicalStock && (
-                      <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.free')}</th>
+                      <th className={cn("border-b border-border text-right w-32", tableHeaderPaddingClass)}>{t('common.free')}</th>
                     )}
                     {!isPhysicalStock && (
                       <>
-                        <th className={cn("border-b border-border text-right w-40", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.rate')}</th>
-                        <th className={cn("border-b border-border text-center w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.per')}</th>
+                        <th className={cn("border-b border-border text-right w-40", tableHeaderPaddingClass)}>{t('common.rate')}</th>
+                        <th className={cn("border-b border-border text-center w-24", tableHeaderPaddingClass)}>{t('common.per')}</th>
                         {showDiscPercent && (
-                          <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.discPercent')}</th>
+                          <th className={cn("border-b border-border text-right w-32", tableHeaderPaddingClass)}>{t('common.discPercent')}</th>
                         )}
                         {isTaxEnabled && showTaxPercent && (
-                          <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.taxPercent')}</th>
+                          <th className={cn("border-b border-border text-right w-32", tableHeaderPaddingClass)}>{t('common.taxPercent')}</th>
                         )}
-                        <th className={cn("border-b border-border text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.amount')}</th>
+                        <th className={cn("border-b border-border text-right w-32", tableHeaderPaddingClass)}>{t('common.amount')}</th>
                       </>
                     )}
-                    <th className={cn("border-b border-border w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}></th>
+                    <th className={cn("border-b border-border w-10", tableHeaderPaddingClass)}></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {invEntries.map((entry, idx) => (
                     <tr key={idx} className="group hover:bg-muted/80 transition-colors">
-                      <td className={cn("min-w-[16ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
-                        <div className="flex flex-col gap-1">
+                      <td className={cn("min-w-[16ch]", tablePaddingClass)}>
+                        <div className="flex flex-col gap-0.5">
                           <SearchableSelect
                             options={items}
                             value={entry.item_id}
@@ -1455,15 +1515,16 @@ export function VoucherEntry() {
                               setIsQuickItemOpen(true);
                             }}
                             tabIndex={9 + idx * 10}
+                            compact={isFieldCompact || voucherTableCompact}
                           />
                           {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
-                            <p className="text-[8px] text-gray-500 uppercase">
+                            <p className={cn("text-gray-400 uppercase leading-none mt-1", tableSubTextClass)}>
                               {t('item.currentStock')}: <span className="font-bold text-foreground">{formatQuantity(itemStocks[`${entry.item_id}-${entry.godown_id}`], entry.unit)} {entry.unit}</span>
                             </p>
                           )}
                         </div>
                       </td>
-                      <td className={cn("w-[30ch] lg:w-[40ch]", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                      <td className={cn("w-[30ch] lg:w-[40ch]", tablePaddingClass)}>
                         <SearchableSelect
                           options={godowns}
                           value={entry.godown_id}
@@ -1474,13 +1535,14 @@ export function VoucherEntry() {
                           }}
                           placeholder={t('voucher.selectGodown')}
                           tabIndex={10 + idx * 10}
+                          compact={isFieldCompact || voucherTableCompact}
                         />
                       </td>
                       {isBatchEnabled && !isPhysicalStock && (
-                        <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                        <td className={cn("w-32", tablePaddingClass)}>
                           <input 
                             type="text" 
-                            className="bg-transparent border border-border text-foreground outline-none w-full text-xs p-1 focus:border-foreground" 
+                            className={tableInputPaddingClass}
                             placeholder={t('common.batch')}
                             value={entry.batch_no || ''} 
                             onChange={e => {
@@ -1492,7 +1554,7 @@ export function VoucherEntry() {
                         </td>
                       )}
                       {isExpiryEnabled && !isPhysicalStock && (
-                        <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                        <td className={cn("w-32", tablePaddingClass)}>
                           <DateInput 
                             value={entry.expiry_date || ''} 
                             onChange={val => {
@@ -1501,14 +1563,15 @@ export function VoucherEntry() {
                               setInvEntries(next);
                             }} 
                             className="w-full"
+                            compact={isFieldCompact}
                           />
                         </td>
                       )}
-                      <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                      <td className={cn("w-32", tablePaddingClass)}>
                         <input 
                           type="number" 
                           tabIndex={11 + idx * 10}
-                          className="bg-transparent border-none text-foreground outline-none w-full text-right" 
+                          className={cn("bg-transparent border-none text-foreground outline-none w-full text-right", tableTextClass)} 
                           value={entry.qty ?? ''} 
                           onFocus={e => e.target.value === '0' && e.target.select()}
                           onChange={e => {
@@ -1529,11 +1592,11 @@ export function VoucherEntry() {
                         />
                       </td>
                       {showFreeQty && !isPhysicalStock && (
-                        <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                        <td className={cn("w-32", tablePaddingClass)}>
                           <input 
                             type="number" 
                             tabIndex={12 + idx * 10}
-                            className="bg-transparent border-none text-foreground outline-none w-full text-right text-emerald-500 font-bold" 
+                            className={cn("bg-transparent border-none text-foreground outline-none w-full text-right text-emerald-500 font-bold", tableTextClass)} 
                             value={entry.free_qty ?? ''} 
                             onFocus={e => e.target.value === '0' && e.target.select()}
                             onChange={e => {
@@ -1546,11 +1609,11 @@ export function VoucherEntry() {
                       )}
                       {!isPhysicalStock && (
                         <>
-                          <td className={cn("w-40", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                          <td className={cn("w-40", tablePaddingClass)}>
                             <input 
                               type="number" 
                               tabIndex={13 + idx * 10}
-                              className="bg-transparent border-none text-foreground outline-none w-full text-right" 
+                              className={cn("bg-transparent border-none text-foreground outline-none w-full text-right", tableTextClass)} 
                               value={entry.rate ?? ''} 
                               onFocus={e => e.target.value === '0' && e.target.select()}
                               onChange={e => {
@@ -1561,20 +1624,20 @@ export function VoucherEntry() {
                               }} 
                             />
                           </td>
-                          <td className={cn("text-center text-gray-500 uppercase text-[10px] w-24", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                          <td className={cn("text-center text-gray-500 uppercase w-24", tablePaddingClass)}>
                             <span 
                               tabIndex={14 + idx * 10}
-                              className="outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded"
+                              className={cn("outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded", tableTextClass)}
                             >
                               {entry.unit}
                             </span>
                           </td>
                           {showDiscPercent && (
-                            <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                            <td className={cn("w-32", tablePaddingClass)}>
                               <input 
                                 type="number" 
                                 tabIndex={15 + idx * 10}
-                                className="bg-transparent border-none text-foreground outline-none w-full text-right" 
+                                className={cn("bg-transparent border-none text-foreground outline-none w-full text-right", tableTextClass)} 
                                 value={entry.disc_percent ?? ''} 
                                 onFocus={e => e.target.value === '0' && e.target.select()}
                                 onChange={e => {
@@ -1587,11 +1650,11 @@ export function VoucherEntry() {
                             </td>
                           )}
                           {isTaxEnabled && showTaxPercent && (
-                            <td className={cn("w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                            <td className={cn("w-32", tablePaddingClass)}>
                               <input 
                                 type="number" 
                                 tabIndex={16 + idx * 10}
-                                className="bg-transparent border border-border text-foreground outline-none w-full text-right p-1 focus:border-foreground" 
+                                className={cn(tableInputPaddingClass, "text-right")} 
                                 value={entry.tax_percent ?? ''} 
                                 onFocus={e => e.target.value === '0' && e.target.select()}
                                 onChange={e => {
@@ -1603,11 +1666,11 @@ export function VoucherEntry() {
                               />
                             </td>
                           )}
-                          <td className={cn("text-right text-foreground font-bold w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                          <td className={cn("text-right text-foreground font-bold w-32", tablePaddingClass)}>
                             <input 
                               type="number"
                               tabIndex={17 + idx * 10}
-                              className="bg-transparent border-none text-foreground outline-none w-full text-right font-bold"
+                              className={cn("bg-transparent border-none text-foreground outline-none w-full text-right font-bold", tableTextClass)} 
                               value={entry.amount || ''}
                               onFocus={e => e.target.value === '0' && e.target.select()}
                               onChange={e => {
@@ -1626,19 +1689,20 @@ export function VoucherEntry() {
                           </td>
                         </>
                       )}
-                      <td className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}><button onClick={() => setInvEntries(invEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
+                      <td className={tablePaddingClass}><button onClick={() => setInvEntries(invEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
                     </tr>
                   ))}
                   {/* ADD ITEM Button Row */}
                   <tr className="border-t border-border/50">
-                    <td colSpan={15} className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <td colSpan={15} className={tablePaddingClass}>
                       <div className="flex justify-end">
                         <button 
                           type="button"
                           onClick={() => setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'physical stock' ? 'Outward' : 'Inward' }])}
                           tabIndex={500}
                           className={cn(
-                            "px-4 py-1.5 text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
+                            "text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
+                            isLayout2 ? "px-2.5 py-1 text-[8px]" : "px-4 py-1.5 text-[9px]",
                             getVoucherBgColor(vType),
                             getVoucherHoverBgColor(vType)
                           )}
@@ -1880,17 +1944,17 @@ export function VoucherEntry() {
             </div>
           ) : isSingleEntry ? (
             <table className="w-full text-left text-xs border-collapse min-w-[600px]">
-              <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px]">
+              <thead className={cn("bg-foreground/5 text-gray-500 uppercase", isLayout2 ? "text-[8px]" : "text-[9px]")}>
                 <tr>
-                  <th className={cn("border-b border-border font-bold tracking-widest", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.particulars')}</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-32", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.amount')}</th>
-                  <th className={cn("border-b border-border w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}></th>
+                  <th className={cn("border-b border-border font-bold tracking-widest", tableHeaderPaddingClass)}>{t('common.particulars')}</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-32", tableHeaderPaddingClass)}>{t('common.amount')}</th>
+                  <th className={cn("border-b border-border w-10", tableHeaderPaddingClass)}></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {accEntries.map((entry, idx) => (
                   <tr key={idx} className="group hover:bg-muted/80 transition-colors">
-                    <td className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <td className={tablePaddingClass}>
                       <div className="flex items-center gap-2">
                         <SearchableSelect
                           options={ledgers}
@@ -1903,29 +1967,38 @@ export function VoucherEntry() {
                           placeholder={t('voucher.selectParticulars')}
                           onQuickCreate={() => openQuickLedger('', 'particulars', idx)}
                           tabIndex={100 + idx * 10}
+                          compact={isFieldCompact || voucherTableCompact}
                         />
                       </div>
                     </td>
-                    <td className={cn("w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
-                      <input type="number" tabIndex={101 + idx * 10} className="bg-transparent border-none text-foreground outline-none w-full text-right" value={entry.amount ?? ''} onFocus={e => e.target.value === '0' && e.target.select()} onChange={e => {
-                        const next = [...accEntries];
-                        next[idx].amount = Number(e.target.value);
-                        setAccEntries(next);
-                      }} />
+                    <td className={cn("w-48", tablePaddingClass)}>
+                      <input 
+                        type="number" 
+                        tabIndex={101 + idx * 10} 
+                        className={cn("bg-transparent border-none text-foreground outline-none w-full text-right", tableTextClass)} 
+                        value={entry.amount ?? ''} 
+                        onFocus={e => e.target.value === '0' && e.target.select()} 
+                        onChange={e => {
+                          const next = [...accEntries];
+                          next[idx].amount = Number(e.target.value);
+                          setAccEntries(next);
+                        }} 
+                      />
                     </td>
-                    <td className={cn("w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
+                    <td className={cn("w-10", tablePaddingClass)}><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
                   </tr>
                 ))}
                 {/* ADD ITEM Button Row */}
                 <tr className="border-t border-border/50">
-                  <td colSpan={3} className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                  <td colSpan={3} className={tablePaddingClass}>
                     <div className="flex justify-end">
                       <button 
                         type="button"
                         onClick={() => setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
                         tabIndex={500}
                         className={cn(
-                          "px-4 py-1.5 text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
+                          "text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
+                          isLayout2 ? "px-2.5 py-1 text-[8px]" : "px-4 py-1.5 text-[9px]",
                           getVoucherBgColor(vType),
                           getVoucherHoverBgColor(vType)
                         )}
@@ -1939,19 +2012,19 @@ export function VoucherEntry() {
             </table>
           ) : (
             <table className="w-full text-left text-xs border-collapse min-w-[800px]">
-              <thead className="bg-foreground/5 text-gray-500 uppercase text-[9px]">
+              <thead className={cn("bg-foreground/5 text-gray-500 uppercase", isLayout2 ? "text-[8px]" : "text-[9px]")}>
                 <tr>
-                  <th className={cn("border-b border-border w-20", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.drCr')}</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.particulars')}</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.debit')}</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}>{t('common.credit')}</th>
-                  <th className={cn("border-b border-border w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-3")}></th>
+                  <th className={cn("border-b border-border w-20", tableHeaderPaddingClass)}>{t('common.drCr')}</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest", tableHeaderPaddingClass)}>{t('common.particulars')}</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", tableHeaderPaddingClass)}>{t('common.debit')}</th>
+                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", tableHeaderPaddingClass)}>{t('common.credit')}</th>
+                  <th className={cn("border-b border-border w-10", tableHeaderPaddingClass)}></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {accEntries.map((entry, idx) => (
                   <tr key={idx} className="group hover:bg-muted/80 transition-colors">
-                    <td className={cn("w-20", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <td className={cn("w-20", tablePaddingClass)}>
                       <select 
                         value={entry.type}
                         tabIndex={100 + idx * 10}
@@ -1962,13 +2035,13 @@ export function VoucherEntry() {
                           else next[idx].debit = 0;
                           setAccEntries(next);
                         }}
-                        className="bg-transparent border-none text-foreground outline-none w-full"
+                        className={cn("bg-transparent border-none text-foreground outline-none w-full", isLayout2 ? "text-[11px]" : "text-xs")}
                       >
                         <option value="Dr">Dr</option>
                         <option value="Cr">Cr</option>
                       </select>
                     </td>
-                    <td className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <td className={tablePaddingClass}>
                       <div className="flex items-center gap-2">
                         <SearchableSelect
                           options={ledgers}
@@ -1981,16 +2054,18 @@ export function VoucherEntry() {
                           placeholder="Select Particulars..."
                           onQuickCreate={() => openQuickLedger('', 'particulars', idx)}
                           tabIndex={101 + idx * 10}
+                          compact={isFieldCompact || voucherTableCompact}
                         />
                       </div>
                     </td>
-                    <td className={cn("w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <td className={cn("w-48", tablePaddingClass)}>
                       <input 
                         type="number" 
                         disabled={entry.type === 'Cr'}
                         tabIndex={102 + idx * 10}
                         className={cn(
                           "bg-transparent border-none text-foreground outline-none w-full text-right",
+                          tableTextClass,
                           entry.type === 'Cr' && "opacity-20"
                         )} 
                         value={entry.debit ?? ''} 
@@ -2002,13 +2077,14 @@ export function VoucherEntry() {
                         }} 
                       />
                     </td>
-                    <td className={cn("w-48", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                    <td className={cn("w-48", tablePaddingClass)}>
                       <input 
                         type="number" 
                         disabled={entry.type === 'Dr'}
                         tabIndex={103 + idx * 10}
                         className={cn(
                           "bg-transparent border-none text-foreground outline-none w-full text-right",
+                          tableTextClass,
                           entry.type === 'Dr' && "opacity-20"
                         )} 
                         value={entry.credit ?? ''} 
@@ -2020,19 +2096,20 @@ export function VoucherEntry() {
                         }} 
                       />
                     </td>
-                    <td className={cn("w-10", voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
+                    <td className={cn("w-10", tablePaddingClass)}><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
                   </tr>
                 ))}
                 {/* ADD ITEM Button Row */}
                 <tr className="border-t border-border/50">
-                  <td colSpan={5} className={cn(voucherTableCompact ? "px-2 py-1" : "px-4 lg:px-6 py-2")}>
+                  <td colSpan={5} className={tablePaddingClass}>
                     <div className="flex justify-end">
                       <button 
                         type="button"
                         onClick={() => setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
                         tabIndex={500}
                         className={cn(
-                          "px-4 py-1.5 text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
+                          "text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
+                          isLayout2 ? "px-2.5 py-1 text-[8px]" : "px-4 py-1.5 text-[9px]",
                           getVoucherBgColor(vType),
                           getVoucherHoverBgColor(vType)
                         )}
@@ -2079,7 +2156,7 @@ export function VoucherEntry() {
                 <select
                   value={bankDetails.transaction_type}
                   onChange={(e) => setBankDetails({ ...bankDetails, transaction_type: e.target.value as any })}
-                  className="w-full bg-background border border-border p-1.5 lg:p-2 text-xs outline-none focus:border-foreground font-medium"
+                  className={cn("w-full bg-background border border-border text-xs outline-none focus:border-foreground font-medium", isLayout2 ? "p-1 text-[11px]" : "p-1.5 lg:p-2")}
                 >
                   <option value="Cheque">Cheque</option>
                   <option value="e-Fund Transfer">e-Fund Transfer</option>
@@ -2087,13 +2164,13 @@ export function VoucherEntry() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.instNo')}</label>
+                <label className={textLabelClass}>{t('common.instNo')}</label>
                 <input
                   type="text"
                   value={bankDetails.instrument_no}
                   onChange={(e) => setBankDetails({ ...bankDetails, instrument_no: e.target.value })}
                   placeholder={t('common.instNo')}
-                  className="w-full bg-background border border-border p-1.5 lg:p-2 text-xs outline-none focus:border-foreground font-medium"
+                  className={inputPaddingClass}
                 />
               </div>
               <div className="space-y-1">
@@ -2102,16 +2179,17 @@ export function VoucherEntry() {
                   value={bankDetails.instrument_date}
                   onChange={(val) => setBankDetails({ ...bankDetails, instrument_date: val })}
                   className="w-full"
+                  compact={isFieldCompact}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.bankName')}</label>
+                <label className={textLabelClass}>{t('common.bankName')}</label>
                 <input
                   type="text"
                   value={bankDetails.bank_name}
                   onChange={(e) => setBankDetails({ ...bankDetails, bank_name: e.target.value })}
                   placeholder={t('common.bankName')}
-                  className="w-full bg-background border border-border p-1.5 lg:p-2 text-xs outline-none focus:border-foreground font-medium"
+                  className={inputPaddingClass}
                 />
               </div>
             </div>

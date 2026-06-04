@@ -365,10 +365,12 @@ export default function FounderPanel() {
     skeletonTheme,
     skeletonRows,
     skeletonWaveColor,
-    voucherLayout
+    voucherLayout,
+    voucherFieldSize
   } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
   const [localVoucherLayout, setLocalVoucherLayout] = useState(voucherLayout || 'Layout 1');
+  const [localVoucherFieldSize, setLocalVoucherFieldSize] = useState(voucherFieldSize || 'medium');
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
   const [localMenuBarStyle, setLocalMenuBarStyle] = useState(menuBarStyle || 'classic');
   const [localSidebarBgColor, setLocalSidebarBgColor] = useState(sidebarBgColor || 'default');
@@ -2793,7 +2795,8 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       skeletonTheme: localSkeletonTheme,
                       skeletonRows: Number(localSkeletonRows),
                       skeletonWaveColor: localSkeletonWaveColor,
-                      voucherLayout: localVoucherLayout
+                      voucherLayout: localVoucherLayout,
+                      voucherFieldSize: localVoucherFieldSize
                     });
                     showNotification('System configuration updated successfully', 'success');
                   } catch (err) {
@@ -3031,6 +3034,20 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                         <option value="Layout 2">Layout 2 (Compact Fields, Height Optimized)</option>
                       </select>
                       <p className="text-[9px] text-muted-foreground uppercase leading-tight">Select between original large scroll-corrected and compact optimized models.</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Voucher Entry Field Size</label>
+                      <select 
+                        value={localVoucherFieldSize}
+                        onChange={(e) => setLocalVoucherFieldSize(e.target.value as any)}
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="small">Small (Extra Compact)</option>
+                        <option value="medium">Medium (Standard Compact)</option>
+                        <option value="large">Large (Spacious & Easy Read)</option>
+                      </select>
+                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Controls form input, padding and select element sizes on the Voucher Entry page.</p>
                     </div>
                   </div>
 
