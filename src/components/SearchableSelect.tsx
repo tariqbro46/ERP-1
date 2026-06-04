@@ -21,6 +21,7 @@ interface SearchableSelectProps {
   allowCustom?: boolean;
   onFocus?: () => void;
   compact?: boolean;
+  fieldSize?: 'small' | 'semi-compact' | 'medium' | 'large';
 }
 
 export function SearchableSelect({
@@ -35,7 +36,8 @@ export function SearchableSelect({
   tabIndex,
   allowCustom = false,
   onFocus,
-  compact = false
+  compact = false,
+  fieldSize
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -166,9 +168,12 @@ export function SearchableSelect({
           tabIndex={tabIndex}
           className={cn(
             "w-full bg-background border border-border transition-all outline-none uppercase tracking-widest font-bold",
+            fieldSize === 'small' ? "p-1 pl-5.5 pr-6 text-[11px] h-7" :
+            fieldSize === 'semi-compact' ? "p-1 lg:p-1.5 pl-6 pr-6 text-[11.5px] h-8" :
+            fieldSize === 'large' ? "p-2.5 pl-9 pr-10 text-sm h-11" :
             compact 
               ? "p-1 pl-5.5 pr-6 text-[11px] leading-tight" 
-              : "p-2.5 pl-9 pr-10 text-xs",
+              : "p-2.5 pl-9 pr-10 text-xs h-10",
             isOpen ? "border-primary ring-1 ring-primary/20" : "hover:border-primary/50",
             disabled && "opacity-50 cursor-not-allowed"
           )}

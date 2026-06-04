@@ -173,6 +173,29 @@ interface SettingsContextType {
   skeletonTheme?: 'classic' | 'modern' | 'glass' | 'neon';
   skeletonRows?: number;
   skeletonWaveColor?: string;
+  warningSelectItemsInPhysicalStock?: string;
+  warningInvalidQtyInPhysicalStock?: string;
+  warningPrefixSelectFill?: string;
+  warningPartyName?: string;
+  warningSupplierName?: string;
+  warningSalesLedger?: string;
+  warningPurchaseLedger?: string;
+  warningItemsListEmpty?: string;
+  warningItemNameEmpty?: string;
+  warningQuantityEmpty?: string;
+  warningRateEmpty?: string;
+  warningConsumptionItems?: string;
+  warningSourceItemName?: string;
+  warningSourceItemQty?: string;
+  warningProductionItems?: string;
+  warningDestItemName?: string;
+  warningDestItemQty?: string;
+  warningSingleAccount?: string;
+  warningSingleParticulars?: string;
+  warningSingleAmount?: string;
+  warningJournalLedgerName?: string;
+  warningJournalDebitCreditAmount?: string;
+  warningJournalNotBalanced?: string;
   features: FeatureSettings[];
   appFeatures: FeatureCategory[];
   subscriptionPlans: SubscriptionPlan[];
@@ -290,6 +313,29 @@ const defaultSettings: SettingsContextType = {
     itemCreated: 'Stock item added to inventory.',
     settingsUpdated: 'System settings updated.'
   },
+  warningSelectItemsInPhysicalStock: 'Please select Item Name in the item table.',
+  warningInvalidQtyInPhysicalStock: 'Please fill in a valid Quantity for all selected items.',
+  warningPrefixSelectFill: 'Please select or fill in:',
+  warningPartyName: 'Party Name',
+  warningSupplierName: 'Supplier Name',
+  warningSalesLedger: 'Sales Ledger',
+  warningPurchaseLedger: 'Purchase Ledger',
+  warningItemsListEmpty: 'Items List (Please add at least one item)',
+  warningItemNameEmpty: 'Item Name',
+  warningQuantityEmpty: 'Quantity (for all items)',
+  warningRateEmpty: 'Rate (for all items)',
+  warningConsumptionItems: 'Consumption Items',
+  warningSourceItemName: 'Source Item Name',
+  warningSourceItemQty: 'Source Item Quantity',
+  warningProductionItems: 'Production Items',
+  warningDestItemName: 'Destination Item Name',
+  warningDestItemQty: 'Destination Item Quantity',
+  warningSingleAccount: 'Account (Bank/Cash)',
+  warningSingleParticulars: 'Particulars Ledger',
+  warningSingleAmount: 'Amount for Particulars',
+  warningJournalLedgerName: 'Please select Ledger Name under Particulars.',
+  warningJournalDebitCreditAmount: 'Please enter Debit or Credit Amount.',
+  warningJournalNotBalanced: 'Voucher is not balanced. Difference: ৳ {DIFF} (Debit: ৳ {DEBIT}, Credit: ৳ {CREDIT})',
   features: [],
   appFeatures: [],
   subscriptionPlans: [],
@@ -424,6 +470,29 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             skeletonWaveColor: data.skeletonWaveColor || prev.skeletonWaveColor || 'indigo',
             voucherLayout: data.voucherLayout || prev.voucherLayout,
             voucherFieldSize: data.voucherFieldSize || prev.voucherFieldSize || 'medium',
+            warningSelectItemsInPhysicalStock: data.warningSelectItemsInPhysicalStock || prev.warningSelectItemsInPhysicalStock,
+            warningInvalidQtyInPhysicalStock: data.warningInvalidQtyInPhysicalStock || prev.warningInvalidQtyInPhysicalStock,
+            warningPrefixSelectFill: data.warningPrefixSelectFill || prev.warningPrefixSelectFill,
+            warningPartyName: data.warningPartyName || prev.warningPartyName,
+            warningSupplierName: data.warningSupplierName || prev.warningSupplierName,
+            warningSalesLedger: data.warningSalesLedger || prev.warningSalesLedger,
+            warningPurchaseLedger: data.warningPurchaseLedger || prev.warningPurchaseLedger,
+            warningItemsListEmpty: data.warningItemsListEmpty || prev.warningItemsListEmpty,
+            warningItemNameEmpty: data.warningItemNameEmpty || prev.warningItemNameEmpty,
+            warningQuantityEmpty: data.warningQuantityEmpty || prev.warningQuantityEmpty,
+            warningRateEmpty: data.warningRateEmpty || prev.warningRateEmpty,
+            warningConsumptionItems: data.warningConsumptionItems || prev.warningConsumptionItems,
+            warningSourceItemName: data.warningSourceItemName || prev.warningSourceItemName,
+            warningSourceItemQty: data.warningSourceItemQty || prev.warningSourceItemQty,
+            warningProductionItems: data.warningProductionItems || prev.warningProductionItems,
+            warningDestItemName: data.warningDestItemName || prev.warningDestItemName,
+            warningDestItemQty: data.warningDestItemQty || prev.warningDestItemQty,
+            warningSingleAccount: data.warningSingleAccount || prev.warningSingleAccount,
+            warningSingleParticulars: data.warningSingleParticulars || prev.warningSingleParticulars,
+            warningSingleAmount: data.warningSingleAmount || prev.warningSingleAmount,
+            warningJournalLedgerName: data.warningJournalLedgerName || prev.warningJournalLedgerName,
+            warningJournalDebitCreditAmount: data.warningJournalDebitCreditAmount || prev.warningJournalDebitCreditAmount,
+            warningJournalNotBalanced: data.warningJournalNotBalanced || prev.warningJournalNotBalanced,
             systemUiStyle: data.uiStyle || prev.systemUiStyle,
             systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
             sidebarBgColor: data.sidebarBgColor || prev.sidebarBgColor || 'default',

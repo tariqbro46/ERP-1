@@ -166,7 +166,30 @@ export function VoucherEntry() {
     showSalesperson = true,
     updateSettings, 
     voucherHeaderCompact, 
-    voucherTableCompact 
+    voucherTableCompact,
+    warningSelectItemsInPhysicalStock = 'Please select Item Name in the item table.',
+    warningInvalidQtyInPhysicalStock = 'Please fill in a valid Quantity for all selected items.',
+    warningPrefixSelectFill = 'Please select or fill in:',
+    warningPartyName = 'Party Name',
+    warningSupplierName = 'Supplier Name',
+    warningSalesLedger = 'Sales Ledger',
+    warningPurchaseLedger = 'Purchase Ledger',
+    warningItemsListEmpty = 'Items List (Please add at least one item)',
+    warningItemNameEmpty = 'Item Name',
+    warningQuantityEmpty = 'Quantity (for all items)',
+    warningRateEmpty = 'Rate (for all items)',
+    warningConsumptionItems = 'Consumption Items',
+    warningSourceItemName = 'Source Item Name',
+    warningSourceItemQty = 'Source Item Quantity',
+    warningProductionItems = 'Production Items',
+    warningDestItemName = 'Destination Item Name',
+    warningDestItemQty = 'Destination Item Quantity',
+    warningSingleAccount = 'Account (Bank/Cash)',
+    warningSingleParticulars = 'Particulars Ledger',
+    warningSingleAmount = 'Amount for Particulars',
+    warningJournalLedgerName = 'Please select Ledger Name under Particulars.',
+    warningJournalDebitCreditAmount = 'Please enter Debit or Credit Amount.',
+    warningJournalNotBalanced = 'Voucher is not balanced. Difference: ৳ {DIFF} (Debit: ৳ {DEBIT}, Credit: ৳ {CREDIT})'
   } = settings;
   const [vType, setVType] = useState('Sales');
 
@@ -694,21 +717,21 @@ export function VoucherEntry() {
       if (isPhysicalStock) {
         const activeEntries = invEntries.filter(i => i.item_id);
         if (invEntries.length === 0 || activeEntries.length === 0) {
-          return "Please select Item Name in the item table.";
+          return warningSelectItemsInPhysicalStock;
         }
         const missingQty = activeEntries.some(i => i.item_id && (isNaN(Number(i.qty)) || Number(i.qty) < 0));
         if (missingQty) {
-          return "Please fill in a valid Quantity for all selected items.";
+          return warningInvalidQtyInPhysicalStock;
         }
         return "";
       }
 
       const missing: string[] = [];
       if (!partyLedgerId) {
-        missing.push(vType === 'Sales' ? "Party Name" : "Supplier Name");
+        missing.push(vType === 'Sales' ? warningPartyName : warningSupplierName);
       }
       if (!salesPurchaseLedgerId) {
-        missing.push(vType === 'Sales' ? "Sales Ledger" : "Purchase Ledger");
+        missing.push(vType === 'Sales' ? warningSalesLedger : warningPurchaseLedger);
       }
 
       // Check items list
@@ -718,16 +741,16 @@ export function VoucherEntry() {
       const hasZeroRate = invEntries.some(i => i.item_id && (!i.rate || Number(i.rate) <= 0));
 
       if (!hasEntries) {
-        missing.push("Items List (Please add at least one item)");
+        missing.push(warningItemsListEmpty);
       } else if (hasUnselectedItem) {
-        missing.push("Item Name");
+        missing.push(warningItemNameEmpty);
       } else {
-        if (hasZeroQty) missing.push("Quantity (for all items)");
-        if (hasZeroRate) missing.push("Rate (for all items)");
+        if (hasZeroQty) missing.push(warningQuantityEmpty);
+        if (hasZeroRate) missing.push(warningRateEmpty);
       }
 
       if (missing.length > 0) {
-        return `Please select or fill in: ${missing.join(', ')}`;
+        return `${warningPrefixSelectFill} ${missing.join(', ')}`;
       }
       return "";
     }
@@ -743,21 +766,21 @@ export function VoucherEntry() {
       const prodMissingQty = productionEntries.some(e => e.item_id && (!e.qty || Number(e.qty) <= 0));
 
       if (!hasCons) {
-        missing.push("Consumption Items");
+        missing.push(warningConsumptionItems);
       } else {
-        if (consMissingItem) missing.push("Source Item Name");
-        if (consMissingQty) missing.push("Source Item Quantity");
+        if (consMissingItem) missing.push(warningSourceItemName);
+        if (consMissingQty) missing.push(warningSourceItemQty);
       }
 
       if (!hasProd) {
-        missing.push("Production Items");
+        missing.push(warningProductionItems);
       } else {
-        if (prodMissingItem) missing.push("Destination Item Name");
-        if (prodMissingQty) missing.push("Destination Item Quantity");
+        if (prodMissingItem) missing.push(warningDestItemName);
+        if (prodMissingQty) missing.push(warningDestItemQty);
       }
 
       if (missing.length > 0) {
-        return `Please select or fill in: ${missing.join(', ')}`;
+        return `${warningPrefixSelectFill} ${missing.join(', ')}`;
       }
       return "";
     }
@@ -765,20 +788,20 @@ export function VoucherEntry() {
     if (isSingleEntry) {
       const missing: string[] = [];
       if (!bankCashLedgerId) {
-        missing.push("Account (Bank/Cash)");
+        missing.push(warningSingleAccount);
       }
 
       const hasParticularsLedger = accEntries.some(e => e.ledger_id);
       const hasParticularsAmount = accEntries.some(e => e.ledger_id && e.amount > 0);
 
       if (!hasParticularsLedger) {
-        missing.push("Particulars Ledger");
+        missing.push(warningSingleParticulars);
       } else if (!hasParticularsAmount) {
-        missing.push("Amount for Particulars");
+        missing.push(warningSingleAmount);
       }
 
       if (missing.length > 0) {
-        return `Please select or fill in: ${missing.join(', ')}`;
+        return `${warningPrefixSelectFill} ${missing.join(', ')}`;
       }
       return "";
     }
@@ -786,13 +809,20 @@ export function VoucherEntry() {
     if (isJournal) {
       const hasLedger = accEntries.some(e => e.ledger_id);
       if (!hasLedger) {
-        return "Please select Ledger Name under Particulars.";
+        return warningJournalLedgerName;
       }
       if (totalDebit === 0 && totalCredit === 0) {
-        return "Please enter Debit or Credit Amount.";
+        return warningJournalDebitCreditAmount;
       }
       if (Math.abs(totalDebit - totalCredit) >= 0.01) {
-        return `Voucher is not balanced. Difference: ৳ ${formatNumber(Math.abs(totalDebit - totalCredit))} (Debit: ৳ ${formatNumber(totalDebit)}, Credit: ৳ ${formatNumber(totalCredit)})`;
+        const diffStr = formatNumber(Math.abs(totalDebit - totalCredit));
+        const drStr = formatNumber(totalDebit);
+        const crStr = formatNumber(totalCredit);
+        return warningJournalNotBalanced
+          .replace(/{DIFF}/g, diffStr)
+          .replace(/{DEBIT}/g, drStr)
+          .replace(/{CREDIT}/g, crStr)
+          .replace(/{SYMBOL}/g, baseCurrencySymbol);
       }
       return "";
     }
@@ -1158,6 +1188,7 @@ export function VoucherEntry() {
                 tabIndex={2}
                 className="w-full"
                 compact={isFieldCompact}
+                fieldSize={fieldSize}
               />
             </div>
 
@@ -1274,6 +1305,7 @@ export function VoucherEntry() {
                       onQuickCreate={() => openQuickLedger('Sundry', 'party')}
                       tabIndex={6}
                       compact={isFieldCompact}
+                      fieldSize={fieldSize}
                     />
                     {partyLedgerId && balances[partyLedgerId] !== undefined && (
                       <p className="text-[9px] text-gray-500 uppercase mt-0.5 whitespace-nowrap">
@@ -1301,6 +1333,7 @@ export function VoucherEntry() {
                       onQuickCreate={() => openQuickLedger('Bank', 'account')}
                       tabIndex={6}
                       compact={isFieldCompact}
+                      fieldSize={fieldSize}
                     />
                     {bankCashLedgerId && balances[bankCashLedgerId] !== undefined && (
                       <p className="text-[9px] text-gray-500 uppercase mt-0.5 whitespace-nowrap">
@@ -1335,6 +1368,7 @@ export function VoucherEntry() {
                       onQuickCreate={() => openQuickLedger(vType, 'sales')}
                       tabIndex={7}
                       compact={isFieldCompact}
+                      fieldSize={fieldSize}
                     />
                     {salesPurchaseLedgerId && balances[salesPurchaseLedgerId] !== undefined && (
                       <p className="text-[9px] text-gray-500 uppercase mt-0.5 whitespace-nowrap">
@@ -1413,6 +1447,7 @@ export function VoucherEntry() {
                             }} 
                             tabIndex={100 + idx * 10}
                             compact={isFieldCompact || voucherTableCompact}
+                            fieldSize={fieldSize}
                           />
                         </td>
                         <td className={tablePaddingClass}>
@@ -1426,6 +1461,7 @@ export function VoucherEntry() {
                             }} 
                             tabIndex={101 + idx * 10}
                             compact={isFieldCompact || voucherTableCompact}
+                            fieldSize={fieldSize}
                           />
                         </td>
                         <td className={cn("w-20", tablePaddingClass)}>
@@ -1502,6 +1538,7 @@ export function VoucherEntry() {
                             }} 
                             tabIndex={500 + idx * 10}
                             compact={isFieldCompact || voucherTableCompact}
+                            fieldSize={fieldSize}
                           />
                         </td>
                         <td className={tablePaddingClass}>
@@ -1515,6 +1552,7 @@ export function VoucherEntry() {
                             }} 
                             tabIndex={501 + idx * 10}
                             compact={isFieldCompact || voucherTableCompact}
+                            fieldSize={fieldSize}
                           />
                         </td>
                         <td className={cn("w-20", tablePaddingClass)}>
@@ -1634,6 +1672,7 @@ export function VoucherEntry() {
                             }}
                             tabIndex={9 + idx * 10}
                             compact={isFieldCompact || voucherTableCompact}
+                            fieldSize={fieldSize}
                           />
                           {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
                             <p className={cn("text-gray-400 uppercase leading-none mt-1", tableSubTextClass)}>
@@ -1654,6 +1693,7 @@ export function VoucherEntry() {
                           placeholder={t('voucher.selectGodown')}
                           tabIndex={10 + idx * 10}
                           compact={isFieldCompact || voucherTableCompact}
+                          fieldSize={fieldSize}
                         />
                       </td>
                       {isBatchEnabled && !isPhysicalStock && (
@@ -1682,6 +1722,7 @@ export function VoucherEntry() {
                             }} 
                             className="w-full"
                             compact={isFieldCompact}
+                            fieldSize={fieldSize}
                           />
                         </td>
                       )}
@@ -1866,6 +1907,8 @@ export function VoucherEntry() {
                           setPendingRowIdx(idx);
                           setIsQuickItemOpen(true);
                         }}
+                        compact={isFieldCompact}
+                        fieldSize={fieldSize}
                       />
                       {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
                         <p className="text-[8px] text-gray-500 uppercase">
@@ -1886,6 +1929,8 @@ export function VoucherEntry() {
                             setInvEntries(next);
                           }}
                           placeholder={t('voucher.selectGodown')}
+                          compact={isFieldCompact}
+                          fieldSize={fieldSize}
                         />
                       </div>
                       <div className="flex-1 min-w-[100px] space-y-1">
@@ -2086,6 +2131,7 @@ export function VoucherEntry() {
                           onQuickCreate={() => openQuickLedger('', 'particulars', idx)}
                           tabIndex={100 + idx * 10}
                           compact={isFieldCompact || voucherTableCompact}
+                          fieldSize={fieldSize}
                         />
                       </div>
                     </td>
@@ -2173,6 +2219,7 @@ export function VoucherEntry() {
                           onQuickCreate={() => openQuickLedger('', 'particulars', idx)}
                           tabIndex={101 + idx * 10}
                           compact={isFieldCompact || voucherTableCompact}
+                          fieldSize={fieldSize}
                         />
                       </div>
                     </td>
@@ -2298,6 +2345,7 @@ export function VoucherEntry() {
                   onChange={(val) => setBankDetails({ ...bankDetails, instrument_date: val })}
                   className="w-full"
                   compact={isFieldCompact}
+                  fieldSize={fieldSize}
                 />
               </div>
               <div className="space-y-1">

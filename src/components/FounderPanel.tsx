@@ -366,11 +366,59 @@ export default function FounderPanel() {
     skeletonRows,
     skeletonWaveColor,
     voucherLayout,
-    voucherFieldSize
+    voucherFieldSize,
+    warningSelectItemsInPhysicalStock,
+    warningInvalidQtyInPhysicalStock,
+    warningPrefixSelectFill,
+    warningPartyName,
+    warningSupplierName,
+    warningSalesLedger,
+    warningPurchaseLedger,
+    warningItemsListEmpty,
+    warningItemNameEmpty,
+    warningQuantityEmpty,
+    warningRateEmpty,
+    warningConsumptionItems,
+    warningSourceItemName,
+    warningSourceItemQty,
+    warningProductionItems,
+    warningDestItemName,
+    warningDestItemQty,
+    warningSingleAccount,
+    warningSingleParticulars,
+    warningSingleAmount,
+    warningJournalLedgerName,
+    warningJournalDebitCreditAmount,
+    warningJournalNotBalanced
   } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
   const [localVoucherLayout, setLocalVoucherLayout] = useState(voucherLayout || 'Layout 1');
   const [localVoucherFieldSize, setLocalVoucherFieldSize] = useState(voucherFieldSize || 'medium');
+  const [localWarnings, setLocalWarnings] = useState({
+    warningSelectItemsInPhysicalStock: warningSelectItemsInPhysicalStock || 'Please select Item Name in the item table.',
+    warningInvalidQtyInPhysicalStock: warningInvalidQtyInPhysicalStock || 'Please fill in a valid Quantity for all selected items.',
+    warningPrefixSelectFill: warningPrefixSelectFill || 'Please select or fill in:',
+    warningPartyName: warningPartyName || 'Party Name',
+    warningSupplierName: warningSupplierName || 'Supplier Name',
+    warningSalesLedger: warningSalesLedger || 'Sales Ledger',
+    warningPurchaseLedger: warningPurchaseLedger || 'Purchase Ledger',
+    warningItemsListEmpty: warningItemsListEmpty || 'Items List (Please add at least one item)',
+    warningItemNameEmpty: warningItemNameEmpty || 'Item Name',
+    warningQuantityEmpty: warningQuantityEmpty || 'Quantity (for all items)',
+    warningRateEmpty: warningRateEmpty || 'Rate (for all items)',
+    warningConsumptionItems: warningConsumptionItems || 'Consumption Items',
+    warningSourceItemName: warningSourceItemName || 'Source Item Name',
+    warningSourceItemQty: warningSourceItemQty || 'Source Item Quantity',
+    warningProductionItems: warningProductionItems || 'Production Items',
+    warningDestItemName: warningDestItemName || 'Destination Item Name',
+    warningDestItemQty: warningDestItemQty || 'Destination Item Quantity',
+    warningSingleAccount: warningSingleAccount || 'Account (Bank/Cash)',
+    warningSingleParticulars: warningSingleParticulars || 'Particulars Ledger',
+    warningSingleAmount: warningSingleAmount || 'Amount for Particulars',
+    warningJournalLedgerName: warningJournalLedgerName || 'Please select Ledger Name under Particulars.',
+    warningJournalDebitCreditAmount: warningJournalDebitCreditAmount || 'Please enter Debit or Credit Amount.',
+    warningJournalNotBalanced: warningJournalNotBalanced || 'Voucher is not balanced. Difference: ৳ {DIFF} (Debit: ৳ {DEBIT}, Credit: ৳ {CREDIT})'
+  });
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
   const [localMenuBarStyle, setLocalMenuBarStyle] = useState(menuBarStyle || 'classic');
   const [localSidebarBgColor, setLocalSidebarBgColor] = useState(sidebarBgColor || 'default');
@@ -406,7 +454,7 @@ export default function FounderPanel() {
   const [localSkeletonTheme, setLocalSkeletonTheme] = useState(skeletonTheme || 'modern');
   const [localSkeletonRows, setLocalSkeletonRows] = useState(skeletonRows ?? 5);
   const [localSkeletonWaveColor, setLocalSkeletonWaveColor] = useState(skeletonWaveColor || 'indigo');
-  const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'branding' | 'search' | 'loader' | 'skeleton'>('general');
+  const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'branding' | 'search' | 'loader' | 'skeleton' | 'warnings'>('general');
 
   useEffect(() => {
     fetchData();
@@ -493,6 +541,58 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalSidebarTextColor(sidebarTextColor || 'default');
   }, [sidebarTextColor]);
+
+  useEffect(() => {
+    setLocalWarnings({
+      warningSelectItemsInPhysicalStock: warningSelectItemsInPhysicalStock || 'Please select Item Name in the item table.',
+      warningInvalidQtyInPhysicalStock: warningInvalidQtyInPhysicalStock || 'Please fill in a valid Quantity for all selected items.',
+      warningPrefixSelectFill: warningPrefixSelectFill || 'Please select or fill in:',
+      warningPartyName: warningPartyName || 'Party Name',
+      warningSupplierName: warningSupplierName || 'Supplier Name',
+      warningSalesLedger: warningSalesLedger || 'Sales Ledger',
+      warningPurchaseLedger: warningPurchaseLedger || 'Purchase Ledger',
+      warningItemsListEmpty: warningItemsListEmpty || 'Items List (Please add at least one item)',
+      warningItemNameEmpty: warningItemNameEmpty || 'Item Name',
+      warningQuantityEmpty: warningQuantityEmpty || 'Quantity (for all items)',
+      warningRateEmpty: warningRateEmpty || 'Rate (for all items)',
+      warningConsumptionItems: warningConsumptionItems || 'Consumption Items',
+      warningSourceItemName: warningSourceItemName || 'Source Item Name',
+      warningSourceItemQty: warningSourceItemQty || 'Source Item Quantity',
+      warningProductionItems: warningProductionItems || 'Production Items',
+      warningDestItemName: warningDestItemName || 'Destination Item Name',
+      warningDestItemQty: warningDestItemQty || 'Destination Item Quantity',
+      warningSingleAccount: warningSingleAccount || 'Account (Bank/Cash)',
+      warningSingleParticulars: warningSingleParticulars || 'Particulars Ledger',
+      warningSingleAmount: warningSingleAmount || 'Amount for Particulars',
+      warningJournalLedgerName: warningJournalLedgerName || 'Please select Ledger Name under Particulars.',
+      warningJournalDebitCreditAmount: warningJournalDebitCreditAmount || 'Please enter Debit or Credit Amount.',
+      warningJournalNotBalanced: warningJournalNotBalanced || 'Voucher is not balanced. Difference: ৳ {DIFF} (Debit: ৳ {DEBIT}, Credit: ৳ {CREDIT})'
+    });
+  }, [
+    warningSelectItemsInPhysicalStock,
+    warningInvalidQtyInPhysicalStock,
+    warningPrefixSelectFill,
+    warningPartyName,
+    warningSupplierName,
+    warningSalesLedger,
+    warningPurchaseLedger,
+    warningItemsListEmpty,
+    warningItemNameEmpty,
+    warningQuantityEmpty,
+    warningRateEmpty,
+    warningConsumptionItems,
+    warningSourceItemName,
+    warningSourceItemQty,
+    warningProductionItems,
+    warningDestItemName,
+    warningDestItemQty,
+    warningSingleAccount,
+    warningSingleParticulars,
+    warningSingleAmount,
+    warningJournalLedgerName,
+    warningJournalDebitCreditAmount,
+    warningJournalNotBalanced
+  ]);
 
   const safeFormat = (date: any, formatStr: string) => {
     try {
@@ -2796,7 +2896,30 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       skeletonRows: Number(localSkeletonRows),
                       skeletonWaveColor: localSkeletonWaveColor,
                       voucherLayout: localVoucherLayout,
-                      voucherFieldSize: localVoucherFieldSize
+                      voucherFieldSize: localVoucherFieldSize,
+                      warningSelectItemsInPhysicalStock: localWarnings.warningSelectItemsInPhysicalStock,
+                      warningInvalidQtyInPhysicalStock: localWarnings.warningInvalidQtyInPhysicalStock,
+                      warningPrefixSelectFill: localWarnings.warningPrefixSelectFill,
+                      warningPartyName: localWarnings.warningPartyName,
+                      warningSupplierName: localWarnings.warningSupplierName,
+                      warningSalesLedger: localWarnings.warningSalesLedger,
+                      warningPurchaseLedger: localWarnings.warningPurchaseLedger,
+                      warningItemsListEmpty: localWarnings.warningItemsListEmpty,
+                      warningItemNameEmpty: localWarnings.warningItemNameEmpty,
+                      warningQuantityEmpty: localWarnings.warningQuantityEmpty,
+                      warningRateEmpty: localWarnings.warningRateEmpty,
+                      warningConsumptionItems: localWarnings.warningConsumptionItems,
+                      warningSourceItemName: localWarnings.warningSourceItemName,
+                      warningSourceItemQty: localWarnings.warningSourceItemQty,
+                      warningProductionItems: localWarnings.warningProductionItems,
+                      warningDestItemName: localWarnings.warningDestItemName,
+                      warningDestItemQty: localWarnings.warningDestItemQty,
+                      warningSingleAccount: localWarnings.warningSingleAccount,
+                      warningSingleParticulars: localWarnings.warningSingleParticulars,
+                      warningSingleAmount: localWarnings.warningSingleAmount,
+                      warningJournalLedgerName: localWarnings.warningJournalLedgerName,
+                      warningJournalDebitCreditAmount: localWarnings.warningJournalDebitCreditAmount,
+                      warningJournalNotBalanced: localWarnings.warningJournalNotBalanced
                     });
                     showNotification('System configuration updated successfully', 'success');
                   } catch (err) {
@@ -2825,7 +2948,8 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                 { id: 'branding', label: 'Logo & Branding', desc: 'Default logo, mobile icon', icon: FileImage },
                 { id: 'search', label: 'Search Engine', desc: 'Placeholders, key binds', icon: Search },
                 { id: 'loader', label: 'Loading Screen', desc: 'Icon styles, blur, custom texts', icon: RefreshCw },
-                { id: 'skeleton', label: 'Skeleton Shimmer', desc: 'Bone structures, speeds, designs', icon: Sparkles }
+                { id: 'skeleton', label: 'Skeleton Shimmer', desc: 'Bone structures, speeds, designs', icon: Sparkles },
+                { id: 'warnings', label: 'Voucher Warnings', desc: 'Customizable warning messages', icon: AlertCircle }
               ].map((tab) => {
                 const SelectedIcon = tab.icon;
                 const isSelected = systemSubTab === tab.id;
@@ -3844,6 +3968,256 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                         </div>
                       </div>
                     )}
+
+                  </div>
+                </div>
+              )}
+
+              {systemSubTab === 'warnings' && (
+                <div className="flex-1 space-y-6">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-sm font-black uppercase tracking-wider text-foreground">Customizable Voucher Warnings</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase">Translate, rephrase, or completely customize the validation error messages on the Voucher Entry page.</p>
+                  </div>
+
+                  <div className="p-6 bg-card border border-border rounded-2xl space-y-8">
+                    
+                    {/* Section 1: Common Prefix & Fields */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wide border-b border-border/60 pb-1.5 animate-pulse">1. Common Error Prefix & Field Labels</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Error Message Prefix</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningPrefixSelectFill || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningPrefixSelectFill: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                          <p className="text-[9px] text-muted-foreground">Appended before list-based missing fields. (e.g., "Please select or fill in:")</p>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Party Name Label</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningPartyName || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningPartyName: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Supplier Name Label</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningSupplierName || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSupplierName: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Sales Ledger Label</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningSalesLedger || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSalesLedger: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Purchase Ledger Label</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningPurchaseLedger || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningPurchaseLedger: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 2: Inventory & Physical Stock */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wide border-b border-border/60 pb-1.5">2. Inventory & Physical Stock Warnings</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Physical Stock: Missing Item</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningSelectItemsInPhysicalStock || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSelectItemsInPhysicalStock: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Physical Stock: Invalid Qty</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningInvalidQtyInPhysicalStock || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningInvalidQtyInPhysicalStock: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Empty Items List</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningItemsListEmpty || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningItemsListEmpty: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Item Name</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningItemNameEmpty || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningItemNameEmpty: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Quantity (Inventory items)</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningQuantityEmpty || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningQuantityEmpty: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Rate (Inventory items)</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningRateEmpty || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningRateEmpty: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Stock Journal Entries */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wide border-b border-border/60 pb-1.5">3. Stock Journal Warnings</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Consumption Section</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningConsumptionItems || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningConsumptionItems: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Source Item Name</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningSourceItemName || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSourceItemName: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Source Item Quantity</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningSourceItemQty || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSourceItemQty: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Production Section</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningProductionItems || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningProductionItems: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Destination Item Name</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningDestItemName || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningDestItemName: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Destination Item Quantity</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningDestItemQty || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningDestItemQty: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 4: Single Entry & Journal (Debit/Credit) Warnings */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wide border-b border-border/60 pb-1.5">4. Single Entry & Journal Warnings</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Single Entry: Account (Bank/Cash)</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningSingleAccount || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSingleAccount: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Single Entry: Particulars Ledger</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningSingleParticulars || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSingleParticulars: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Single Entry: Particulars Amount</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningSingleAmount || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSingleAmount: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Journal: Missing Ledger Name</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningJournalLedgerName || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningJournalLedgerName: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Journal: Missing Debit/Credit Amount</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningJournalDebitCreditAmount || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningJournalDebitCreditAmount: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1.5 md:col-span-2">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Journal: Balanced Difference warning</label>
+                          <input
+                            type="text"
+                            value={localWarnings.warningJournalNotBalanced || ''}
+                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningJournalNotBalanced: e.target.value }))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                          />
+                          <p className="text-[9px] text-muted-foreground uppercase">Template tags supported: <code className="font-mono bg-muted px-1 rounded">{'{DIFF}'}</code>, <code className="font-mono bg-muted px-1 rounded">{'{DEBIT}'}</code>, <code className="font-mono bg-muted px-1 rounded">{'{CREDIT}'}</code>, <code className="font-mono bg-muted px-1 rounded">{'{SYMBOL}'}</code></p>
+                        </div>
+                      </div>
+                    </div>
 
                   </div>
                 </div>

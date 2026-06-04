@@ -14,9 +14,10 @@ interface DateInputProps {
   disabled?: boolean;
   tabIndex?: number;
   compact?: boolean;
+  fieldSize?: 'small' | 'semi-compact' | 'medium' | 'large';
 }
 
-export function DateInput({ value, onChange, className, placeholder, label, disabled, tabIndex, compact }: DateInputProps) {
+export function DateInput({ value, onChange, className, placeholder, label, disabled, tabIndex, compact, fieldSize }: DateInputProps) {
   const { dateFormat } = useSettings();
   const [inputValue, setInputValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -67,9 +68,12 @@ export function DateInput({ value, onChange, className, placeholder, label, disa
           placeholder={placeholder || dateFormat.toLowerCase()}
           className={cn(
             "w-full bg-background border border-border transition-all outline-none uppercase font-bold tracking-widest",
+            fieldSize === 'small' ? "p-1 pr-6 text-[11px] h-7" :
+            fieldSize === 'semi-compact' ? "p-1 lg:p-1.5 pr-6 text-[11.5px] h-8" :
+            fieldSize === 'large' ? "p-2 pr-10 text-sm h-11" :
             compact 
               ? "p-1 pr-6 text-[11px] leading-tight" 
-              : "p-2.5 pr-10 text-xs",
+              : "p-2.5 pr-10 text-xs h-10",
             "focus:border-foreground focus:ring-1 focus:ring-foreground/10",
             disabled && "opacity-50 cursor-not-allowed"
           )}
