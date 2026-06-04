@@ -94,18 +94,20 @@ export function VoucherEntry() {
   
   // Custom classes for Voucher Entry to scale down or up the entire page based on Founder select
   const fieldSize = settings.voucherFieldSize || 'medium';
-  const isFieldCompact = fieldSize === 'small';
+  const isFieldCompact = fieldSize === 'small' || fieldSize === 'semi-compact';
   
   const textLabelClass = cn(
     "text-gray-500 uppercase font-bold tracking-widest block select-none leading-none",
     fieldSize === 'small' ? "text-[8px] tracking-wider" : 
+    fieldSize === 'semi-compact' ? "text-[8.5px] tracking-wider" :
     fieldSize === 'large' ? "text-[10px] tracking-widest" : 
     "text-[9px] tracking-widest"
   );
   
   const inputPaddingClass = cn(
-    "w-full bg-background border border-border text-foreground transition-all duration-150 outline-none focus:border-foreground",
+    "w-full bg-background border border-border text-foreground transition-all duration-150 outline-none focus:border-foreground font-medium",
     fieldSize === 'small' ? "p-1 text-[11px] h-7" : 
+    fieldSize === 'semi-compact' ? "p-1 lg:p-1.5 text-[11.5px] h-8 md:h-8.5" : 
     fieldSize === 'large' ? "p-2 lg:p-2.5 text-sm h-11" : 
     "p-1.5 lg:p-2 text-xs lg:text-sm h-9 md:h-10"
   );
@@ -113,6 +115,7 @@ export function VoucherEntry() {
   const tablePaddingClass = cn(
     "transition-all duration-150",
     fieldSize === 'small' ? "px-1.5 py-0.5" : 
+    fieldSize === 'semi-compact' ? "px-2 py-0.75" : 
     fieldSize === 'large' ? "px-4 lg:px-6 py-2.5" : 
     (settings.voucherTableCompact ? "px-2 py-1" : "px-3.5 py-1.5")
   );
@@ -120,27 +123,31 @@ export function VoucherEntry() {
   const tableHeaderPaddingClass = cn(
     "transition-all duration-150 font-bold uppercase",
     fieldSize === 'small' ? "px-1.5 py-1 text-[8px]" : 
+    fieldSize === 'semi-compact' ? "px-2 py-1 lg:py-1.5 text-[8.5px]" : 
     fieldSize === 'large' ? "px-4 lg:px-6 py-3.5 text-[10px]" : 
     (settings.voucherTableCompact ? "px-2 py-1.5 text-[9px]" : "px-3.5 py-2.5 text-[9px]")
   );
-
+ 
   const tableInputPaddingClass = cn(
     "bg-background border border-border text-foreground transition-all duration-150 outline-none focus:border-foreground",
     fieldSize === 'small' ? "p-0.5 text-[11px]" : 
+    fieldSize === 'semi-compact' ? "p-0.75 text-[11.5px]" : 
     fieldSize === 'large' ? "p-1.5 text-xs lg:text-sm" : 
     "p-1 text-xs"
   );
-
+ 
   const tableTextClass = cn(
     "transition-all duration-150",
     fieldSize === 'small' ? "text-[11px]" : 
+    fieldSize === 'semi-compact' ? "text-[11.5px]" : 
     fieldSize === 'large' ? "text-sm" : 
     "text-xs"
   );
-
+ 
   const tableSubTextClass = cn(
     "transition-all duration-150",
     fieldSize === 'small' ? "text-[8px]" : 
+    fieldSize === 'semi-compact' ? "text-[8.5px]" : 
     fieldSize === 'large' ? "text-xs" : 
     "text-[9px]"
   );
@@ -680,6 +687,117 @@ export function VoucherEntry() {
     if (isSingleEntry) return bankCashLedgerId && accEntries.some(e => e.ledger_id && e.amount > 0);
     if (isJournal) return Math.abs(totalDebit - totalCredit) < 0.01 && totalDebit > 0;
     return false;
+  };
+
+  const getValidationError = () => {
+    if (isInventory) {
+      if (isPhysicalStock) {
+        const activeEntries = invEntries.filter(i => i.item_id);
+        if (invEntries.length === 0 || activeEntries.length === 0) {
+          return "Please select Item Name in the item table.";
+        }
+        const missingQty = activeEntries.some(i => i.item_id && (isNaN(Number(i.qty)) || Number(i.qty) < 0));
+        if (missingQty) {
+          return "Please fill in a valid Quantity for all selected items.";
+        }
+        return "";
+      }
+
+      const missing: string[] = [];
+      if (!partyLedgerId) {
+        missing.push(vType === 'Sales' ? "Party Name" : "Supplier Name");
+      }
+      if (!salesPurchaseLedgerId) {
+        missing.push(vType === 'Sales' ? "Sales Ledger" : "Purchase Ledger");
+      }
+
+      // Check items list
+      const hasEntries = invEntries.length > 0;
+      const hasUnselectedItem = invEntries.some(i => !i.item_id);
+      const hasZeroQty = invEntries.some(i => i.item_id && (!i.qty || Number(i.qty) <= 0));
+      const hasZeroRate = invEntries.some(i => i.item_id && (!i.rate || Number(i.rate) <= 0));
+
+      if (!hasEntries) {
+        missing.push("Items List (Please add at least one item)");
+      } else if (hasUnselectedItem) {
+        missing.push("Item Name");
+      } else {
+        if (hasZeroQty) missing.push("Quantity (for all items)");
+        if (hasZeroRate) missing.push("Rate (for all items)");
+      }
+
+      if (missing.length > 0) {
+        return `Please select or fill in: ${missing.join(', ')}`;
+      }
+      return "";
+    }
+
+    if (isStockJournal) {
+      const missing: string[] = [];
+      const hasCons = consumptionEntries.length > 0;
+      const consMissingItem = consumptionEntries.some(e => !e.item_id);
+      const consMissingQty = consumptionEntries.some(e => e.item_id && (!e.qty || Number(e.qty) <= 0));
+
+      const hasProd = productionEntries.length > 0;
+      const prodMissingItem = productionEntries.some(e => !e.item_id);
+      const prodMissingQty = productionEntries.some(e => e.item_id && (!e.qty || Number(e.qty) <= 0));
+
+      if (!hasCons) {
+        missing.push("Consumption Items");
+      } else {
+        if (consMissingItem) missing.push("Source Item Name");
+        if (consMissingQty) missing.push("Source Item Quantity");
+      }
+
+      if (!hasProd) {
+        missing.push("Production Items");
+      } else {
+        if (prodMissingItem) missing.push("Destination Item Name");
+        if (prodMissingQty) missing.push("Destination Item Quantity");
+      }
+
+      if (missing.length > 0) {
+        return `Please select or fill in: ${missing.join(', ')}`;
+      }
+      return "";
+    }
+
+    if (isSingleEntry) {
+      const missing: string[] = [];
+      if (!bankCashLedgerId) {
+        missing.push("Account (Bank/Cash)");
+      }
+
+      const hasParticularsLedger = accEntries.some(e => e.ledger_id);
+      const hasParticularsAmount = accEntries.some(e => e.ledger_id && e.amount > 0);
+
+      if (!hasParticularsLedger) {
+        missing.push("Particulars Ledger");
+      } else if (!hasParticularsAmount) {
+        missing.push("Amount for Particulars");
+      }
+
+      if (missing.length > 0) {
+        return `Please select or fill in: ${missing.join(', ')}`;
+      }
+      return "";
+    }
+
+    if (isJournal) {
+      const hasLedger = accEntries.some(e => e.ledger_id);
+      if (!hasLedger) {
+        return "Please select Ledger Name under Particulars.";
+      }
+      if (totalDebit === 0 && totalCredit === 0) {
+        return "Please enter Debit or Credit Amount.";
+      }
+      if (Math.abs(totalDebit - totalCredit) >= 0.01) {
+        return `Voucher is not balanced. Difference: ৳ ${formatNumber(Math.abs(totalDebit - totalCredit))} (Debit: ৳ ${formatNumber(totalDebit)}, Credit: ৳ ${formatNumber(totalCredit)})`;
+      }
+      return "";
+    }
+
+    return "";
   };
 
   const isBankLedger = (ledgerId: string) => {
@@ -2347,11 +2465,25 @@ export function VoucherEntry() {
       </div>
 
       {/* Validation Error Bar */}
-      {!isBalanced() && (totalDebit > 0 || totalInvAmount > 0 || totalSingleAmount > 0) && (
-        <div className="bg-rose-950/30 border-t border-rose-900/50 px-6 py-2 text-[9px] text-rose-400 uppercase tracking-widest text-center">
-          {isInventory ? 'Please select Party, Ledger and Items' : isSingleEntry ? 'Please select Account and Particulars' : `Voucher is not balanced. Difference: ৳ ${formatNumber(Math.abs(totalDebit - totalCredit))}`}
-        </div>
-      )}
+      {!isBalanced() && (
+        partyLedgerId ||
+        bankCashLedgerId ||
+        totalDebit > 0 ||
+        totalInvAmount > 0 ||
+        totalSingleAmount > 0 ||
+        invEntries.some(i => i.item_id) ||
+        consumptionEntries.some(e => e.item_id) ||
+        productionEntries.some(e => e.item_id)
+      ) && (() => {
+        const errorMsg = getValidationError();
+        if (!errorMsg) return null;
+        return (
+          <div className="bg-red-50 border-t border-red-200 dark:bg-red-950/60 dark:border-red-900/50 px-6 py-2.5 text-[10px] md:text-[11px] text-red-800 dark:text-red-300 tracking-wider text-center flex items-center justify-center gap-2 font-bold uppercase">
+            <AlertCircle className="w-3.5 h-3.5 text-red-500 dark:text-red-400 shrink-0 animate-pulse" />
+            <span>{errorMsg}</span>
+          </div>
+        );
+      })()}
       
       <QuickLedgerModal
       isOpen={isQuickLedgerOpen}

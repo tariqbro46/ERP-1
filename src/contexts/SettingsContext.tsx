@@ -116,7 +116,7 @@ interface SettingsContextType {
   voucherHeaderCompact: boolean;
   voucherTableCompact: boolean;
   voucherLayout: 'Layout 1' | 'Layout 2';
-  voucherFieldSize?: 'small' | 'medium' | 'large';
+  voucherFieldSize?: 'small' | 'semi-compact' | 'medium' | 'large';
   reportLayout: ReportLayout;
   dashboardDesign: DashboardDesign;
   globalDashboardDesign?: DashboardDesign;

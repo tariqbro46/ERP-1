@@ -3044,6 +3044,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                         className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
                       >
                         <option value="small">Small (Extra Compact)</option>
+                        <option value="semi-compact">Semi-Compact (Balanced)</option>
                         <option value="medium">Medium (Standard Compact)</option>
                         <option value="large">Large (Spacious & Easy Read)</option>
                       </select>
