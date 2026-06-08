@@ -285,15 +285,15 @@ export const UserManagement: React.FC = () => {
 
       <div className="flex-1 p-4 lg:p-8">
         <div className={cn(
-          "bg-card border border-border rounded-xl overflow-visible shadow-sm",
+          "bg-card border border-border rounded-xl overflow-hidden shadow-sm",
           uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
         )}>
           {activeTab === 'users' ? (
-            <div className="overflow-x-auto no-scrollbar">
+            <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-240px)] sm:max-h-[calc(100vh-280px)] lg:max-h-[calc(100vh-220px)] no-scrollbar relative">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className={cn(
-                    "border-b border-border sticky top-[108px] sm:top-[128px] lg:top-[88px] z-20",
+                    "border-b border-border sticky top-0 z-20",
                     uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-card shadow-sm"
                   )}>
                     <th className={cn(
@@ -425,7 +425,7 @@ export const UserManagement: React.FC = () => {
           </table>
         </div>
       ) : (
-          <div className="p-0 overflow-x-auto">
+          <div className="flex flex-col h-full bg-card">
             <div className="p-6 border-b border-border bg-foreground/5 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-bold text-foreground">Role Permissions</h3>
@@ -442,18 +442,19 @@ export const UserManagement: React.FC = () => {
               </button>
             </div>
 
-            <div className="min-w-[800px]">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-foreground/[0.02] border-b border-border">
-                    <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 w-1/4">Feature</th>
-                    {['Staff', 'Manager', 'Admin', 'Marketing Manager'].map(role => (
-                      <th key={role} className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 text-center">
-                        {role}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
+            <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-270px)] sm:max-h-[calc(100vh-310px)] lg:max-h-[calc(100vh-250px)] relative">
+              <div className="min-w-[800px]">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-card border-b border-border sticky top-0 z-20 shadow-sm">
+                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 w-1/4">Feature</th>
+                      {['Staff', 'Manager', 'Admin', 'Marketing Manager'].map(role => (
+                        <th key={role} className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 text-center">
+                          {role}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
                 <tbody className="divide-y divide-border">
                   {APP_FEATURES.map(category => (
                     <React.Fragment key={category.id}>
@@ -502,8 +503,9 @@ export const UserManagement: React.FC = () => {
               </table>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+    </div>
 
       {/* Add User Modal */}
       {showAddModal && (

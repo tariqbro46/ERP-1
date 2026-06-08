@@ -149,8 +149,18 @@ export function SearchableSelect({
   return (
     <div className={cn("relative w-full", className)} ref={containerRef}>
       <div className="relative flex items-center group">
-        <div className={cn("absolute top-1/2 -translate-y-1/2 pointer-events-none", compact ? "left-1.5" : "left-3")}>
-          <Search className={cn("text-muted-foreground group-focus-within:text-primary transition-colors", compact ? "w-3 h-3" : "w-3.5 h-3.5")} />
+        <div className={cn(
+          "absolute top-1/2 -translate-y-1/2 pointer-events-none flex items-center justify-center text-muted-foreground group-focus-within:text-primary transition-colors", 
+          fieldSize === 'small' || compact ? "left-2" :
+          fieldSize === 'semi-compact' ? "left-2.5" :
+          fieldSize === 'large' ? "left-3.5" : "left-3"
+        )}>
+          <Search className={cn(
+            "transition-all", 
+            fieldSize === 'small' || compact ? "w-3 h-3" :
+            fieldSize === 'semi-compact' ? "w-3.5 h-3.5" :
+            fieldSize === 'large' ? "w-4 h-4" : "w-3.5 h-3.5"
+          )} />
         </div>
         <input
           ref={inputRef}
@@ -168,17 +178,22 @@ export function SearchableSelect({
           tabIndex={tabIndex}
           className={cn(
             "w-full bg-background border border-border transition-all outline-none uppercase tracking-widest font-bold",
-            fieldSize === 'small' ? "p-1 pl-5.5 pr-6 text-[11px] h-7" :
-            fieldSize === 'semi-compact' ? "p-1 lg:p-1.5 pl-6 pr-6 text-[11.5px] h-8" :
-            fieldSize === 'large' ? "p-2.5 pl-9 pr-10 text-sm h-11" :
+            fieldSize === 'small' ? "py-0.5 pl-7 pr-7 text-[11px] h-7" :
+            fieldSize === 'semi-compact' ? "py-1 lg:py-1.5 pl-8 pr-8 text-[11.5px] h-8" :
+            fieldSize === 'large' ? "py-2 pl-12 pr-12 text-sm h-11" :
             compact 
-              ? "p-1 pl-5.5 pr-6 text-[11px] leading-tight" 
-              : "p-2.5 pl-9 pr-10 text-xs h-10",
+              ? "py-0.5 pl-7 pr-7 text-[11px] h-7 leading-tight" 
+              : "py-2 pl-9 pr-9 text-xs h-10",
             isOpen ? "border-primary ring-1 ring-primary/20" : "hover:border-primary/50",
             disabled && "opacity-50 cursor-not-allowed"
           )}
         />
-        <div className={cn("absolute flex items-center gap-0.5", compact ? "right-1" : "right-2")}>
+        <div className={cn(
+          "absolute flex items-center gap-0.5", 
+          fieldSize === 'small' || compact ? "right-1.5" :
+          fieldSize === 'semi-compact' ? "right-2" :
+          fieldSize === 'large' ? "right-3.5" : "right-3"
+        )}>
           {searchTerm && !disabled && (
             <button 
               type="button"
@@ -190,10 +205,21 @@ export function SearchableSelect({
               }}
               className="p-0.5 hover:bg-foreground/10 rounded-full text-gray-400 hover:text-foreground"
             >
-              <X className={compact ? "w-2.5 h-2.5" : "w-3 h-3"} />
+              <X className={cn(
+                "transition-all", 
+                fieldSize === 'small' || compact ? "w-2.5 h-2.5" :
+                fieldSize === 'semi-compact' ? "w-3 h-3" :
+                fieldSize === 'large' ? "w-3.5 h-3.5" : "w-3 h-3"
+              )} />
             </button>
           )}
-          <ChevronDown className={cn("text-gray-400 transition-transform pointer-events-none", compact ? "w-3 h-3" : "w-4 h-4", isOpen && "rotate-180")} />
+          <ChevronDown className={cn(
+            "text-gray-400 transition-transform pointer-events-none", 
+            fieldSize === 'small' || compact ? "w-3 h-3" :
+            fieldSize === 'semi-compact' ? "w-3.5 h-3.5" :
+            fieldSize === 'large' ? "w-4 h-4" : "w-4 h-4", 
+            isOpen && "rotate-180"
+          )} />
         </div>
       </div>
 
