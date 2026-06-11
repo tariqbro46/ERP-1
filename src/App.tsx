@@ -73,7 +73,11 @@ import SubscriptionRequired from './components/SubscriptionRequired';
 import { SubscriptionPage } from './components/SubscriptionPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import NotificationCenter from './components/NotificationCenter';
+import FacebookProfileMenu from './components/FacebookProfileMenu';
 import NotificationPage from './components/NotificationPage';
+import SearchPage from './components/SearchPage';
+import HelpPage from './components/HelpPage';
+import UserProfile from './components/UserProfile';
 import { AlterMaster } from './components/AlterMaster';
 import { ReportsMenu } from './components/ReportsMenu';
 import { GlobalSearch } from './components/GlobalSearch';
@@ -93,6 +97,7 @@ import { InventoryOverview } from './components/InventoryOverview';
 import { StockGroupSummary } from './components/StockGroupSummary';
 import { StockCategorySummary } from './components/StockCategorySummary';
 import { InventoryBooks } from './components/InventoryBooks';
+import { AccountBooks } from './components/AccountBooks';
 import { ReportPlaceholder } from './components/ReportPlaceholder';
 import { GroupDashboard } from './components/GroupDashboard';
 import { VoucherDetail } from './components/VoucherDetail';
@@ -375,12 +380,16 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     showMobileNav = false,
     mobileBottomNavItems = [],
     uiStyle = 'UI/UX 1',
+    reportsPageUiStyle = 'modern',
     glassBackground = 'default',
     englishFont = 'Inter',
     banglaFont = 'Hind Siliguri',
     appVersion = 'v1.0.1',
     statusOnlineText = 'Status: Online',
     showGoToShortcut = true,
+    showTopbarSearch = true,
+    showTopbarNotifications = true,
+    showTopbarInstructions = true,
     showScrollingBar = false,
     subscriptionPlans = [],
     sidebarBgColor = 'default',
@@ -476,8 +485,115 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     }));
   }, [dynamicMenu, getIcon]);
 
-  const currentPageTitleKey = PAGE_TITLES[location.pathname] || (location.pathname.includes('/edit/') ? 'Edit Record' : 'ERP System');
-  const currentPageTitle = currentPageTitleKey.startsWith('nav.') ? t(currentPageTitleKey) : currentPageTitleKey;
+  const getPageTitle = (): string => {
+    // 1. Exact match for reports page Create / Alter
+    if (location.pathname === '/reports') {
+      return 'Create / Alter';
+    }
+
+    // 2. Exact match for search page
+    if (location.pathname === '/search') {
+      return 'Search';
+    }
+
+    // 3. Exact match for instructions page
+    if (location.pathname === '/instructions') {
+      return 'System Guide';
+    }
+
+    // 4. Exact match for notifications page
+    if (location.pathname === '/notifications') {
+      return 'Notifications';
+    }
+
+    // 5. Direct match in PAGE_TITLES
+    if (PAGE_TITLES[location.pathname]) {
+      const key = PAGE_TITLES[location.pathname];
+      return key.startsWith('nav.') ? t(key) : key;
+    }
+
+    // 6. Dynamic group route: /group/:groupId
+    if (location.pathname.startsWith('/group/')) {
+      const gId = location.pathname.slice(7); // "/group/" has length 7
+      const foundGroup = menuGroups.find(g => g.id === gId);
+      if (foundGroup) {
+        return foundGroup.groupKey && t(foundGroup.groupKey) !== foundGroup.groupKey 
+          ? t(foundGroup.groupKey) 
+          : foundGroup.group;
+      }
+    }
+
+    // 7. Edit routes
+    if (location.pathname.includes('/edit/')) {
+      return t('nav.editRecord') || 'Edit Record';
+    }
+
+    // 8. Try scanning for matching navigate route inside NAV_ITEMS or menuGroups
+    for (const group of menuGroups) {
+      if (group.id === 'group-' + location.pathname.split('/').filter(Boolean).pop()) {
+        return group.groupKey && t(group.groupKey) !== group.groupKey ? t(group.groupKey) : group.group;
+      }
+      for (const item of group.items) {
+        if (item.to === location.pathname || item.to === '/' + location.pathname.split('/').filter(Boolean).join('/')) {
+          return item.labelKey && t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.label;
+        }
+      }
+    }
+
+    // 9. General nested reports or secondary routes mapping
+    const segments = location.pathname.split('/').filter(Boolean);
+    if (segments.length > 0) {
+      const subRouteMap: Record<string, string> = {
+        'cash-bank': 'Cash/Bank Books',
+        'stock-item': 'Stock Item Report',
+        'location': 'Location Stock Report',
+        'stock-group-summary': 'Stock Group Summary',
+        'stock-category-summary': 'Stock Category Summary',
+        'stock-transfer-register': 'Stock Transfer Register',
+        'physical-stock-register': 'Physical Stock Register',
+        'contra-register': 'Contra Register',
+        'payment-register': 'Payment Register',
+        'receipt-register': 'Receipt Register',
+        'sales-register': 'Sales Register',
+        'purchase-register': 'Purchase Register',
+        'journal-register': 'Journal Register',
+        'pay-slip': 'Pay Slip',
+        'pay-sheet': 'Pay Sheet',
+        'attendance-sheet': 'Attendance Sheet',
+        'payment-advice': 'Payment Advice',
+        'payroll-statement': 'Payroll Statement',
+        'payroll-register': 'Payroll Register',
+        'attendance-register': 'Attendance Register',
+        'employee-profile': 'Employee Profile',
+        'employee-head-count': 'Employee Head Count',
+        'cash-flow': 'Cash Flow',
+        'funds-flow': 'Funds Flow',
+        'ageing-analysis': 'Ageing Analysis',
+        'movement': 'Movement Analysis',
+        'stock-query': 'Stock Query',
+        'group-summary': 'Group Summary',
+        'group-voucher': 'Group Voucher',
+        'statistics': 'Statistics',
+        'notifications': 'Notifications',
+      };
+      
+      const lastSegment = segments[segments.length - 1];
+      if (subRouteMap[lastSegment]) {
+        return subRouteMap[lastSegment];
+      }
+
+      // Fallback: Capitalize and space separate
+      const readable = lastSegment
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      return readable;
+    }
+
+    return 'Dashboard';
+  };
+
+  const currentPageTitle = getPageTitle();
 
   // If access is disabled and user is not a super admin, show subscription required page
   // We only block if isAccessEnabled is explicitly false
@@ -490,6 +606,39 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!user) {
+      setUnreadNotificationCount(0);
+      return;
+    }
+    const fetchUnreadCount = async () => {
+      try {
+        const list = await erpService.getNotifications(user.uid, user.companyId, isSuperAdmin);
+        const unreadList = list.filter(n => !n.readBy?.includes(user.uid));
+        setUnreadNotificationCount(unreadList.length);
+      } catch (err) {
+        console.error('Error fetching unread count in App layout:', err);
+      }
+    };
+    fetchUnreadCount();
+    // Refresh every 2 minutes
+    const interval = setInterval(fetchUnreadCount, 120000);
+    return () => clearInterval(interval);
+  }, [user?.uid, user?.companyId, isSuperAdmin]);
+
+  const refreshUnreadNotificationCount = React.useCallback(async () => {
+    if (!user) return;
+    try {
+      const list = await erpService.getNotifications(user.uid, user.companyId, isSuperAdmin);
+      const unreadList = list.filter(n => !n.readBy?.includes(user.uid));
+      setUnreadNotificationCount(unreadList.length);
+    } catch (err) {
+      console.error('Error refreshing unread count:', err);
+    }
+  }, [user?.uid, user?.companyId, isSuperAdmin]);
+
   const [activeRibbonTab, setActiveRibbonTab] = React.useState('Dashboard');
   const [hoveredMacGroup, setHoveredMacGroup] = React.useState<string | null>(null);
   const [isWinStartOpen, setIsWinStartOpen] = React.useState(false);
@@ -693,12 +842,18 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
             </div>
           ) : (
             <>
-              <div className="px-3 mb-2">
+              <div className="px-3 mb-2 space-y-1">
                   <SidebarItem 
                     to={DASHBOARD_ITEM.to} 
                     icon={DASHBOARD_ITEM.icon} 
                     label={isSidebarCollapsed ? "" : (DASHBOARD_ITEM.labelKey && t(DASHBOARD_ITEM.labelKey) !== DASHBOARD_ITEM.labelKey ? t(DASHBOARD_ITEM.labelKey) : DASHBOARD_ITEM.label)} 
                     active={location.pathname === DASHBOARD_ITEM.to} 
+                  />
+                  <SidebarItem 
+                    to="/search" 
+                    icon={LucideIcons.Search} 
+                    label={isSidebarCollapsed ? "" : t('common.search') || "Search"} 
+                    active={location.pathname === '/search'} 
                   />
               </div>
 
@@ -971,122 +1126,49 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
       {/* Right side controls for macOS */}
       <div className="flex items-center gap-4">
-        <button 
-          onClick={onOpenSearch}
-          className="p-2 hover:bg-foreground/5 rounded-full transition-colors group flex items-center gap-2"
-          title="Search (Cmd+K or /)"
-          style={searchIconColor ? { color: searchIconColor } : {}}
-        >
-          <Search className="w-5 h-5 text-gray-500 group-hover:text-foreground" />
-          <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-            /
-          </kbd>
-        </button>
-        <PageHelp />
-        <NotificationCenter />
+        {showTopbarSearch && (
+          <button 
+            onClick={onOpenSearch}
+            className="p-2 hover:bg-foreground/5 rounded-full transition-colors group flex items-center gap-2"
+            title="Search (Cmd+K or /)"
+            style={searchIconColor ? { color: searchIconColor } : {}}
+          >
+            <Search className="w-5 h-5 text-gray-500 group-hover:text-foreground" />
+            <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              /
+            </kbd>
+          </button>
+        )}
+        {showTopbarInstructions && <PageHelp />}
         
         <div className="relative" ref={dropdownRef}>
           <button 
             onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-            className="flex items-center gap-2 hover:bg-foreground/5 px-2 py-1 rounded transition-colors"
+            className="flex items-center hover:bg-foreground/5 p-1 rounded-full transition-colors relative"
           >
-            <div className="w-5 h-5 rounded-full border border-border overflow-hidden bg-card">
-              <img 
-                src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
-                alt="Profile"
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
+            <div className="relative shrink-0">
+              <div className="w-8 h-8 rounded-full border border-border overflow-hidden bg-card">
+                <img 
+                  src={user?.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              {showTopbarNotifications && unreadNotificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[9px] font-black font-mono w-4 h-4 flex items-center justify-center border border-background shadow-sm animate-pulse z-20">
+                  {unreadNotificationCount}
+                </span>
+              )}
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{user?.displayName || 'User'}</span>
           </button>
 
-          {isProfileDropdownOpen && (
-            <div className="absolute top-full right-0 mt-1 w-56 bg-card border border-border shadow-2xl z-[110] py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="px-4 py-3 border-b border-border mb-2">
-                <p className="text-[10px] font-bold text-foreground uppercase tracking-widest truncate">{user?.displayName || 'User'}</p>
-                <p className="text-[9px] text-gray-500 truncate">{user?.email}</p>
-              </div>
-              
-              {isSuperAdmin && (
-                <Link to="/founder" className="flex items-center gap-3 px-4 py-2 text-[10px] text-primary hover:bg-primary/5 uppercase tracking-widest transition-colors font-bold">
-                  <Shield className="w-3.5 h-3.5" /> {t('nav.founderPanel')}
-                </Link>
-              )}
-              
-              {isAdmin && (
-                <Link to="/users" className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors">
-                  <Users className="w-3.5 h-3.5" /> {t('nav.userManagement')}
-                </Link>
-              )}
-
-              <Link to="/companies" className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors">
-                <Building2 className="w-3.5 h-3.5" /> {t('nav.companyManagement')}
-              </Link>
-
-              <div className="h-[1px] bg-border my-2" />
-
-              <div className="px-4 py-2">
-                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">{t('settings.language')}</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setLanguage('en')}
-                    className={cn(
-                      "flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded border transition-all",
-                      language === 'en' ? "bg-primary text-white border-primary" : "text-gray-500 border-border hover:bg-foreground/5"
-                    )}
-                  >
-                    English
-                  </button>
-                  <button
-                    onClick={() => setLanguage('bn')}
-                    className={cn(
-                      "flex-1 py-1.5 text-[9px] font-bold uppercase tracking-widest rounded border transition-all",
-                      language === 'bn' ? "bg-primary text-white border-primary" : "text-gray-500 border-border hover:bg-foreground/5"
-                    )}
-                  >
-                    বাংলা
-                  </button>
-                </div>
-              </div>
-
-              <div className="h-[1px] bg-border my-2" />
-
-              <div className="px-4 py-2">
-                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">{t('common.selectTheme')}</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {(['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'] as Theme[]).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setTheme(t)}
-                      className={cn(
-                        "w-full aspect-square rounded-md border-2 transition-all flex items-center justify-center",
-                        theme === t ? "border-primary scale-110 shadow-lg" : "border-transparent hover:border-border"
-                      )}
-                      title={t.charAt(0).toUpperCase() + t.slice(1)}
-                    >
-                      <div className={cn(
-                        "w-full h-full rounded-sm",
-                        t === 'light' ? "bg-white border border-gray-200" : 
-                        t === 'dark' ? "bg-zinc-900" : 
-                        t === 'emerald' ? "bg-emerald-500" : 
-                        t === 'amber' ? "bg-amber-500" : 
-                        t === 'rose' ? "bg-rose-500" : 
-                        t === 'slate' ? "bg-slate-500" : 
-                        "bg-zinc-800"
-                      )} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="h-[1px] bg-border my-2" />
-
-              <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2 text-[10px] text-red-500 hover:bg-red-500/5 uppercase tracking-widest transition-colors">
-                <LogOut className="w-3.5 h-3.5" /> {t('nav.logout')}
-              </button>
-            </div>
-          )}
+          <FacebookProfileMenu 
+            isOpen={isProfileDropdownOpen} 
+            onClose={() => setIsProfileDropdownOpen(false)} 
+            uiStyle={uiStyle} 
+            onNotificationsUpdated={refreshUnreadNotificationCount}
+          />
         </div>
       </div>
     </div>
@@ -1216,19 +1298,19 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         )}
         
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-xl border border-border/50 h-14 px-2 rounded-2xl flex items-center gap-1 shadow-2xl z-50 hidden lg:flex">
-          <button 
-            onClick={onOpenSearch}
-            className="p-2.5 rounded-xl transition-all hover:bg-foreground/10 group text-gray-500 hover:text-foreground"
-            title="Search (Cmd+K or /)"
-            style={searchIconColor ? { color: searchIconColor } : {}}
-          >
-            <Search className="w-6 h-6" />
-          </button>
-          <div className="w-[1px] h-6 bg-border mx-2" />
-          <PageHelp />
-          <div className="w-[1px] h-6 bg-border mx-2" />
-          <NotificationCenter position="bottom" />
-          <div className="w-[1px] h-6 bg-border mx-2" />
+          {showTopbarSearch && (
+            <button 
+              onClick={onOpenSearch}
+              className="p-2.5 rounded-xl transition-all hover:bg-foreground/10 group text-gray-500 hover:text-foreground"
+              title="Search (Cmd+K or /)"
+              style={searchIconColor ? { color: searchIconColor } : {}}
+            >
+              <Search className="w-6 h-6" />
+            </button>
+          )}
+          {showTopbarSearch && showTopbarInstructions && <div className="w-[1px] h-6 bg-border mx-2" />}
+          {showTopbarInstructions && <PageHelp />}
+          {showTopbarInstructions && <div className="w-[1px] h-6 bg-border mx-2" />}
           <button 
             onClick={() => setIsWinStartOpen(!isWinStartOpen)}
             className={cn(
@@ -1283,6 +1365,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       className="flex h-screen h-[100dvh] bg-background text-foreground overflow-hidden relative"
       data-ui-style={uiStyle}
       data-glass-bg={glassBackground}
+      data-reports-style={reportsPageUiStyle}
     >
       {/* Placeholder Warning Banner */}
       {user?.companyId === 'placeholder' && (
@@ -1310,10 +1393,10 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       <main className="flex-1 flex flex-col w-full overflow-hidden h-full">
         {menuBarStyle !== 'macos' && (
           <header className={cn(
-            "h-14 flex-none border-b border-border bg-background flex items-center px-4 lg:px-6 z-[500] transition-colors",
+            "h-14 flex-none border-b border-border bg-background flex items-center px-4 lg:px-6 z-[500] transition-colors relative",
             uiStyle === 'UI/UX 2' && "bg-blue-600 border-blue-700 text-white"
           )}>
-            <div className="flex items-center gap-3 lg:gap-4 z-10">
+            <div className="flex-1 flex items-center justify-start gap-3 lg:gap-4 z-10 min-w-0">
               {/* Desktop/Classic Menu Bar Style */}
               {menuBarStyle !== 'classic' && menuBarStyle !== 'colorful' && (
                 <div className="flex items-center gap-3 hidden lg:flex">
@@ -1403,36 +1486,42 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
               )}
             </div>
 
-            {/* Center Title */}
-            <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none">
+            {/* Center Title - Perfectly centered excluding sidebar by taking the absolute center of the header bar */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none z-0">
               <h2 className={cn(
-                "text-[10px] sm:text-sm font-bold uppercase tracking-widest text-center truncate max-w-[120px] sm:max-w-none",
+                "text-xs sm:text-sm font-bold uppercase tracking-widest text-center truncate max-w-[150px] sm:max-w-md",
                 uiStyle === 'UI/UX 2' ? "text-white" : "text-primary"
               )}>
                 {currentPageTitle}
               </h2>
             </div>
 
-            <div className="ml-auto flex items-center gap-3 lg:gap-6 z-[510]">
-              <button 
-                onClick={onOpenSearch}
-                className={cn(
-                  "p-2 rounded-full transition-colors group flex items-center gap-2",
-                  uiStyle === 'UI/UX 2' ? "hover:bg-white/10" : "hover:bg-foreground/5"
-                )}
-                title="Search (Cmd+K or /)"
-                style={searchIconColor ? { color: searchIconColor } : {}}
-              >
-                <Search className={cn("w-5 h-5", uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500 group-hover:text-foreground")} />
-                <kbd className={cn(
-                  "hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium transition-colors",
-                  uiStyle === 'UI/UX 2' ? "bg-white/20 border-white/20 text-white" : "border-border bg-muted text-muted-foreground"
-                )}>
-                  /
-                </kbd>
-              </button>
-              <PageHelp />
-              <NotificationCenter />
+            <div className="flex-1 flex items-center justify-end gap-3 lg:gap-6 z-[510] min-w-0">
+              {showTopbarSearch && (
+                <button 
+                  onClick={onOpenSearch}
+                  className={cn(
+                    "hidden md:flex p-2 rounded-full transition-colors group items-center gap-2",
+                    uiStyle === 'UI/UX 2' ? "hover:bg-white/10" : "hover:bg-foreground/5"
+                  )}
+                  title="Search (Cmd+K or /)"
+                  style={searchIconColor ? { color: searchIconColor } : {}}
+                >
+                  <Search className={cn("w-5 h-5", uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500 group-hover:text-foreground")} />
+                  <kbd className={cn(
+                    "hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium transition-colors",
+                    uiStyle === 'UI/UX 2' ? "bg-white/20 border-white/20 text-white" : "border-border bg-muted text-muted-foreground"
+                  )}>
+                    /
+                  </kbd>
+                </button>
+              )}
+              
+              {showTopbarInstructions && (
+                <div className="hidden md:block">
+                  <PageHelp />
+                </div>
+              )}
               
               {showGoToShortcut && (
                 <div className={cn(
@@ -1455,121 +1544,36 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                 "flex items-center gap-3 border-l pl-4 lg:pl-6 relative",
                 uiStyle === 'UI/UX 2' ? "border-white/20" : "border-border"
               )} ref={dropdownRef}>
-                <div className="text-right hidden sm:block">
-                  <p className={cn(
-                    "text-[10px] font-mono",
-                    uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground"
-                  )}>{user?.displayName || user?.email || t('common.user')}</p>
-                  <p className={cn(
-                    "text-[9px] uppercase font-mono",
-                    uiStyle === 'UI/UX 2' ? "text-blue-100" : "text-gray-500"
-                  )}>{user?.role || t('common.staff')}</p>
-                </div>
                 <button 
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className="relative group"
                 >
                   <div className={cn(
-                    "w-8 h-8 rounded-full border overflow-hidden bg-card transition-all",
-                    uiStyle === 'UI/UX 2' ? "border-white/40 hover:border-white" : "border-border hover:border-foreground"
+                    "w-8 h-8 rounded-full border overflow-hidden bg-card transition-all relative",
+                    uiStyle === 'UI/UX 2' ? "border-white/40 hover:border-white" : "border-border hover:border-foreground relative"
                   )}>
                     <img 
-                      src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
+                      src={user?.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
                       alt="Profile"
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
                   </div>
+                  {showTopbarNotifications && unreadNotificationCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[9px] font-black font-mono w-4 h-4 flex items-center justify-center border border-background shadow-sm animate-pulse z-20">
+                      {unreadNotificationCount}
+                    </span>
+                  )}
                   {isSuperAdmin && <div className="absolute -top-1 -left-1 w-3 h-3 bg-primary rounded-full border-2 border-background" title="Founder/Marketing Manager" />}
                   <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-background rounded-full" />
                 </button>
 
-                {isProfileDropdownOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-56 bg-card border border-border shadow-2xl z-[520] py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="px-4 py-3 border-b border-border mb-2">
-                      <p className="text-[10px] font-bold text-foreground uppercase tracking-widest truncate">{user?.displayName || t('common.user')}</p>
-                      <p className="text-[9px] text-gray-500 truncate">{user?.email}</p>
-                      <div className="mt-2 inline-block px-2 py-0.5 bg-foreground/5 rounded text-[8px] font-bold text-foreground uppercase tracking-widest">
-                        {user?.role || t('common.staff')}
-                      </div>
-                    </div>
-                    
-                    {isSuperAdmin && (
-                      <Link 
-                        to="/founder" 
-                        className="flex items-center gap-3 px-4 py-2 text-[10px] text-primary hover:bg-primary/5 uppercase tracking-widest transition-colors font-bold"
-                      >
-                        <Shield className="w-3.5 h-3.5" />
-                        {t('nav.founderPanel')}
-                      </Link>
-                    )}
-                    
-                    {isAdmin && (
-                      <Link 
-                        to="/users" 
-                        className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
-                      >
-                        <Users className="w-3.5 h-3.5" />
-                        {t('nav.userManagement')}
-                      </Link>
-                    )}
-
-                    <Link 
-                      to="/companies" 
-                      className="flex items-center gap-3 px-4 py-2 text-[10px] text-gray-500 hover:text-foreground hover:bg-foreground/5 uppercase tracking-widest transition-colors"
-                    >
-                      <Building2 className="w-3.5 h-3.5" />
-                      {t('nav.companyManagement')}
-                    </Link>
-
-                    <div className="h-[1px] bg-border my-2" />
-                    
-                    {uiStyle === 'UI/UX 1' && (
-                      <div className="px-4 py-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-2">Select Theme</p>
-                        <div className="grid grid-cols-4 gap-2">
-                          {(['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'] as Theme[]).map((t) => (
-                            <button
-                              key={t}
-                              onClick={() => {
-                                setTheme(t);
-                                if (uiStyle !== 'UI/UX 1') {
-                                  updateSettings({ uiStyle: 'UI/UX 1' });
-                                }
-                              }}
-                              className={cn(
-                                "w-full aspect-square rounded-md border-2 transition-all flex items-center justify-center",
-                                theme === t ? "border-primary scale-110 shadow-lg" : "border-transparent hover:border-border"
-                              )}
-                              title={t.charAt(0).toUpperCase() + t.slice(1)}
-                            >
-                              <div className={cn(
-                                "w-full h-full rounded-sm",
-                                t === 'light' ? "bg-white border border-gray-200" : 
-                                t === 'dark' ? "bg-zinc-900" : 
-                                t === 'emerald' ? "bg-emerald-500" : 
-                                t === 'amber' ? "bg-amber-500" : 
-                                t === 'rose' ? "bg-rose-500" : 
-                                t === 'slate' ? "bg-slate-500" : 
-                                "bg-zinc-800"
-                              )} />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="h-[1px] bg-border my-2" />
-
-                    <button 
-                      onClick={logout}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-[10px] text-red-500 hover:bg-red-500/5 uppercase tracking-widest transition-colors"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      {t('nav.logout')}
-                    </button>
-                  </div>
-                )}
+                <FacebookProfileMenu 
+                  isOpen={isProfileDropdownOpen} 
+                  onClose={() => setIsProfileDropdownOpen(false)} 
+                  uiStyle={uiStyle} 
+                  onNotificationsUpdated={refreshUnreadNotificationCount}
+                />
               </div>
             </div>
           </header>
@@ -1603,41 +1607,56 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
           <Link 
             to="/dashboard" 
             className={cn(
-              "flex flex-col items-center gap-1 px-3 py-1 transition-colors",
-              location.pathname === '/dashboard' ? "text-foreground" : "text-gray-500"
+              "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors",
+              location.pathname === '/dashboard' ? "text-primary font-extrabold" : "text-gray-500"
             )}
           >
             <LayoutDashboard className="w-5 h-5" />
-            <span className="text-[9px] font-bold uppercase tracking-tighter">{t('nav.dashboard')}</span>
+            <span className="text-[9px] font-black uppercase tracking-tighter">Dashboard</span>
           </Link>
 
-          {menuGroups.flatMap(g => g.items).filter(item => {
-            return mobileBottomNavItems.includes(item.label) && item.label !== 'Dashboard';
-          }).map(item => (
-            <Link 
-              key={item.id}
-              to={item.to} 
-              className={cn(
-                "flex flex-col items-center gap-1 px-3 py-1 transition-colors",
-                location.pathname === item.to ? "text-foreground" : "text-gray-500"
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-                      <span className="text-[9px] font-bold uppercase tracking-tighter truncate max-w-[60px]">
-                        {t(item.labelKey).split(' ')[0]}
-                      </span>
-            </Link>
-          ))}
+          <Link 
+            to="/search" 
+            className={cn(
+              "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors",
+              location.pathname === '/search' ? "text-primary font-extrabold" : "text-gray-500"
+            )}
+          >
+            <Search className="w-5 h-5" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">Search</span>
+          </Link>
+
+          <Link 
+            to="/instructions" 
+            className={cn(
+              "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors",
+              location.pathname === '/instructions' ? "text-primary font-extrabold" : "text-gray-500"
+            )}
+          >
+            <BookOpen className="w-5 h-5" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">Guide</span>
+          </Link>
+
+          <Link 
+            to="/notifications" 
+            className={cn(
+              "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors",
+              location.pathname === '/notifications' ? "text-primary font-extrabold" : "text-gray-500"
+            )}
+          >
+            <LucideIcons.Bell className="w-5 h-5" />
+            <span className="text-[9px] font-black uppercase tracking-tighter">Alerts</span>
+          </Link>
 
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className={cn(
-              "flex flex-col items-center gap-1 px-3 py-1 transition-colors",
-              isSidebarOpen ? "text-foreground" : "text-gray-500"
+              "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors",
+              isSidebarOpen ? "text-primary font-extrabold" : "text-gray-500"
             )}
           >
             <Menu className="w-5 h-5" />
-            <span className="text-[9px] font-bold uppercase tracking-tighter">{t('nav.menu')}</span>
+            <span className="text-[9px] font-black uppercase tracking-tighter">{t('nav.menu')}</span>
           </button>
         </nav>
       </main>
@@ -1910,7 +1929,7 @@ function ProtectedRoute() {
           <Route path="/reports/statistics" element={<FeatureGuard permission="ana_dashboard"><Statistics /></FeatureGuard>} />
           <Route path="/reports" element={<ReportsMenu />} />
           <Route path="/reports/inventory-books" element={<FeatureGuard feature="inv"><InventoryBooks /></FeatureGuard>} />
-          <Route path="/reports/account-books" element={<ReportPlaceholder title="Account Books" />} />
+          <Route path="/reports/account-books" element={<FeatureGuard permission="acc_reports_view"><AccountBooks /></FeatureGuard>} />
           <Route path="/alter" element={<FeatureGuard permission="acc_masters_alter"><AlterMaster /></FeatureGuard>} />
           <Route path="/group/:groupId" element={<GroupDashboard />} />
           <Route path="/notes" element={<Notes />} />
@@ -1928,7 +1947,10 @@ function ProtectedRoute() {
           <Route path="/companies" element={<CompanyManagement />} />
           <Route path="/users" element={<UserManagement />} />
           <Route path="/founder" element={<FounderPanel />} />
-          <Route path="/notifications" element={<NotificationPage />} />
+           <Route path="/notifications" element={<NotificationPage />} />
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/instructions" element={<HelpPage />} />
+          <Route path="/profile" element={<UserProfile />} />
           <Route path="*" element={
             <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
               <div className="w-24 h-24 bg-rose-500/10 rounded-3xl flex items-center justify-center mb-8">

@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Montserrat:wght@400;600;700&family=Lato:wght@400;700&family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;700&family=Tiro+Bangla&family=Mina:wght@400;700&family=Anek+Bangla:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
 
 @theme {
   --font-sans: var(--app-font), ui-sans-serif, system-ui, sans-serif;
@@ -727,7 +727,7 @@
   /* Ensure hover effect pops nicely for list controls and dropdown items */
   [data-ui-style="UI/UX 4"] .hover\:text-foreground:hover,
   [data-ui-style="UI/UX 4"] .hover\:text-gray-900:hover,
-  [data-ui-style="UI/UX 4"] .group-hover\:text-foreground:group-hover {
+  [data-ui-style="UI/UX 4"] .group:hover .group-hover\:text-foreground {
     color: #ffffff !important;
   }
 
@@ -779,5 +779,121 @@
   }
   [data-ui-style="UI/UX 4"] ::-webkit-scrollbar-thumb:hover {
     background: rgba(99, 102, 241, 0.45);
+  }
+}
+
+/* ==========================================================================
+   Modern UI/UX Style Overrides for Sub-Reports (reportsPageUiStyle === 'modern')
+   ========================================================================== */
+[data-reports-style="modern"] {
+  /* Elegant Soft Workspace Background for reports */
+  & .bg-background {
+    background-color: #f8fafc !important;
+  }
+
+  /* Sticky/Fixed headers in reports subpages become floating, polished acrylic panels */
+  & div.sticky, 
+  & div.flex-none {
+    &.bg-background, 
+    &.bg-card {
+      background-color: rgba(255, 255, 255, 0.96) !important;
+      border-color: #e2e8f0 !important;
+      backdrop-filter: blur(12px) !important;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+    }
+  }
+
+  /* Polish report utility blocks as sleek white floating bars */
+  & .flex-col.sm\:flex-row.justify-between.items-stretch.sm\:items-center.bg-card {
+    background-color: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    border-radius: 0.75rem !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+    padding: 0.75rem 1.25rem !important;
+  }
+
+  /* Make date pickers and standard textual input fields look premium and rounded */
+  & input, 
+  & select {
+    border-radius: 0.75rem !important;
+    border-color: #cbd5e1 !important;
+    background-color: #f8fafc !important;
+    font-size: 0.75rem !important;
+    transition: all 0.2s ease-in-out !important;
+    
+    &:focus {
+      background-color: #ffffff !important;
+      border-color: #3b82f6 !important;
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
+    }
+  }
+
+  /* Modernize simple back buttons styled with rounded-full originally */
+  & button.rounded-full {
+    border-radius: 0.75rem !important;
+    border: 1px solid #cbd5e1 !important;
+    background-color: #f8fafc !important;
+    color: #475569 !important;
+    padding: 0.55rem !important;
+    transition: all 0.2s ease-in-out !important;
+    
+    &:hover {
+      background-color: #f1f5f9 !important;
+      color: #0f172a !important;
+      border-color: #94a3b8 !important;
+      transform: scale(1.02);
+    }
+  }
+
+  /* Clean up tables with sleek borders, Inter/Mono, and comfortable readable rows */
+  & table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    background-color: #ffffff !important;
+    border-radius: 1rem !important;
+    overflow: hidden !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
+    
+    & thead {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 20 !important;
+    }
+
+    & thead th {
+      background-color: #f8fafc !important;
+      font-weight: 700 !important;
+      font-size: 0.65rem !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.05em !important;
+      color: #64748b !important;
+      border-bottom: 2px solid #e2e8f0 !important;
+      padding: 0.95rem 1.5rem !important;
+    }
+
+    & tbody tr {
+      background-color: #ffffff !important;
+      transition: background-color 0.15s ease-in-out !important;
+      
+      &:hover {
+        background-color: #f8fafc !important;
+      }
+      
+      & td {
+        border-bottom: 1px solid #f1f5f9 !important;
+        padding: 0.95rem 1.5rem !important;
+        font-size: 0.75rem !important;
+      }
+    }
+  }
+
+  /* Give cards inside report bodies soft round modern outer shadows and double borders */
+  & .bg-card.border.border-border {
+    background-color: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    border-radius: 1rem !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05) !important;
   }
 }

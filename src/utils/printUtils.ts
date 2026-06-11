@@ -108,7 +108,15 @@ export function printVoucher(voucher: any, settings: any = {}) {
           th { background-color: #f2f2f2; font-size: 12px; }
           .amount { text-align: right; }
           .print-footer { margin-top: 30px; text-align: center; font-size: 10px; border-top: 1px solid #ccc; padding-top: 10px; color: #666; position: relative; }
-          .dev-contact { position: absolute; right: 0; bottom: 0; text-align: right; font-size: 7px; color: #999; line-height: 1.2; }
+          .dev-contact {
+            position: absolute;
+            ${settings.developerContactAlignment === 'left' ? 'left: 0; text-align: left;' : settings.developerContactAlignment === 'right' ? 'right: 0; text-align: right;' : 'left: 0; right: 0; text-align: center;'}
+            bottom: -8px;
+            font-size: 7px;
+            color: #999;
+            line-height: 1.2;
+            white-space: pre-line;
+          }
           .signature { border-top: 1px solid #000; width: 180px; text-align: center; padding-top: 5px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
           @media print {
             .no-print { display: none; }
@@ -188,8 +196,7 @@ export function printVoucher(voucher: any, settings: any = {}) {
           ${settings.showPrintFooter !== false ? (settings.printFooter || '') : ''}
           ${settings.showDeveloperContact ? `
             <div class="dev-contact">
-              Software by TallyFlow<br/>
-              +880 1234 567890
+              ${settings.developerContactText || 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000'}
             </div>
           ` : ''}
         </div>
@@ -227,7 +234,15 @@ export function printProfitAndLoss(data: any, settings: any = {}) {
           .total-row { border-top: 1px solid #000; font-weight: bold; padding: 8px; display: flex; justify-content: space-between; font-size: 12px; }
           .signature { border-top: 1px solid #000; width: 180px; text-align: center; padding-top: 5px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
           .print-footer { margin-top: 30px; text-align: center; font-size: 10px; border-top: 1px solid #ccc; padding-top: 10px; color: #666; position: relative; }
-          .dev-contact { position: absolute; right: 0; bottom: 0; text-align: right; font-size: 7px; color: #999; line-height: 1.2; }
+          .dev-contact {
+            position: absolute;
+            ${settings.developerContactAlignment === 'left' ? 'left: 0; text-align: left;' : settings.developerContactAlignment === 'right' ? 'right: 0; text-align: right;' : 'left: 0; right: 0; text-align: center;'}
+            bottom: -8px;
+            font-size: 7px;
+            color: #999;
+            line-height: 1.2;
+            white-space: pre-line;
+          }
           @media print { .no-print { display: none; } }
         </style>
       </head>
@@ -301,7 +316,15 @@ export function printBalanceSheet(data: any, settings: any = {}) {
           .total-row { border-top: 1px solid #000; font-weight: bold; padding: 8px; display: flex; justify-content: space-between; font-size: 12px; }
           .signature { border-top: 1px solid #000; width: 180px; text-align: center; padding-top: 5px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
           .print-footer { margin-top: 30px; text-align: center; font-size: 10px; border-top: 1px solid #ccc; padding-top: 10px; color: #666; position: relative; }
-          .dev-contact { position: absolute; right: 0; bottom: 0; text-align: right; font-size: 7px; color: #999; line-height: 1.2; }
+          .dev-contact {
+            position: absolute;
+            ${settings.developerContactAlignment === 'left' ? 'left: 0; text-align: left;' : settings.developerContactAlignment === 'right' ? 'right: 0; text-align: right;' : 'left: 0; right: 0; text-align: center;'}
+            bottom: -8px;
+            font-size: 7px;
+            color: #999;
+            line-height: 1.2;
+            white-space: pre-line;
+          }
           @media print { .no-print { display: none; } }
         </style>
       </head>
@@ -331,8 +354,7 @@ export function printBalanceSheet(data: any, settings: any = {}) {
           ${settings.showPrintFooter !== false ? (settings.printFooter || '') : ''}
           ${settings.showDeveloperContact ? `
             <div class="dev-contact">
-              Software by TallyFlow<br/>
-              +880 1234 567890
+              ${settings.developerContactText || 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000'}
             </div>
           ` : ''}
         </div>
@@ -361,7 +383,15 @@ export function printReport(title: string, data: any[], columns: string[], setti
           .amount { text-align: right; }
           .signature { border-top: 1px solid #000; width: 180px; text-align: center; padding-top: 5px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
           .print-footer { margin-top: 30px; text-align: center; font-size: 10px; border-top: 1px solid #ccc; padding-top: 10px; color: #666; position: relative; }
-          .dev-contact { position: absolute; right: 0; bottom: 0; text-align: right; font-size: 7px; color: #999; line-height: 1.2; }
+          .dev-contact {
+            position: absolute;
+            ${settings.developerContactAlignment === 'left' ? 'left: 0; text-align: left;' : settings.developerContactAlignment === 'right' ? 'right: 0; text-align: right;' : 'left: 0; right: 0; text-align: center;'}
+            bottom: -8px;
+            font-size: 7px;
+            color: #999;
+            line-height: 1.2;
+            white-space: pre-line;
+          }
           @media print { .no-print { display: none; } }
         </style>
       </head>
@@ -394,8 +424,7 @@ export function printReport(title: string, data: any[], columns: string[], setti
           ${settings.showPrintFooter !== false ? (settings.printFooter || '') : ''}
           ${settings.showDeveloperContact ? `
             <div class="dev-contact">
-              Software by TallyFlow<br/>
-              +880 1234 567890
+              ${settings.developerContactText || 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000'}
             </div>
           ` : ''}
         </div>

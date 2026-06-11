@@ -20,16 +20,38 @@ export function EditableHeader({ pageId, defaultTitle, defaultSubtitle, classNam
 
   useEffect(() => {
     async function fetchHeader() {
-      if (!user?.companyId) return;
+      const cleanText = (text: string, isSubtitle = false) => {
+        if (!text) return '';
+        let cleaned = text;
+        // Strip unwanted strings
+        cleaned = cleaned.replace(/Dynamic Alignment Active/gi, '');
+        cleaned = cleaned.replace(/Columns: 4/gi, '');
+        cleaned = cleaned.replace(/Modules Dashboard\/Statement of Account/gi, isSubtitle ? '' : 'Statement of Account');
+        cleaned = cleaned.replace(/Modules Dashboard/gi, isSubtitle ? '' : 'Statement of Account');
+        cleaned = cleaned.replace(/1 Sections/gi, '');
+        return cleaned.trim();
+      };
+
+      if (!user?.companyId) {
+        setTitle(cleanText(defaultTitle));
+        setSubtitle(cleanText(defaultSubtitle || '', true));
+        return;
+      }
       try {
         const settings = await erpService.getSettings(user.companyId);
         if (settings?.pageHeaders?.[pageId]) {
-          setTitle(settings.pageHeaders[pageId].title || defaultTitle);
-          setSubtitle(settings.pageHeaders[pageId].subtitle || defaultSubtitle || '');
+          const rawTitle = settings.pageHeaders[pageId].title || defaultTitle;
+          const rawSubtitle = settings.pageHeaders[pageId].subtitle || defaultSubtitle || '';
+          
+          setTitle(cleanText(rawTitle));
+          setSubtitle(cleanText(rawSubtitle, true));
+          return;
         }
       } catch (err) {
         console.error('Error fetching page header:', err);
       }
+      setTitle(cleanText(defaultTitle));
+      setSubtitle(cleanText(defaultSubtitle || '', true));
     }
     fetchHeader();
   }, [user?.companyId, pageId, defaultTitle, defaultSubtitle]);

@@ -107,18 +107,29 @@ export function TrialBalance() {
   const lastDay = formatReportDate(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0], settings.dateFormat);
 
   return (
-    <div className="flex flex-col min-h-full bg-background transition-colors">
+    <div className={cn(
+      "flex flex-col min-h-full transition-colors",
+      settings.reportsPageUiStyle === 'modern' ? "bg-slate-50/50" : "bg-background"
+    )}>
       {/* Sticky Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-[40]">
+      <div className={cn(
+        "flex-none border-b shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-[40]",
+        settings.reportsPageUiStyle === 'modern'
+          ? "bg-white/95 backdrop-blur-md border-slate-200/60"
+          : "bg-background border-border"
+      )}>
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
           <div className="flex-1 w-full sm:max-w-2xl space-y-4">
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => navigate(-1)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className={settings.reportsPageUiStyle === 'modern'
+                  ? "p-2.5 bg-slate-50 border border-slate-200/60 hover:bg-slate-100 rounded-xl transition-all text-slate-600 shadow-sm"
+                  : "p-2 hover:bg-gray-100 rounded-full transition-colors"
+                }
               >
-                <ArrowLeft className="w-6 h-6" />
+                <ArrowLeft className={settings.reportsPageUiStyle === 'modern' ? "w-5 h-5" : "w-6 h-6"} />
               </button>
               <EditableHeader 
                 pageId="trial_balance"

@@ -242,6 +242,7 @@ export const NAV_ITEMS: NavGroup[] = [
       { id: 'util-users', to: '/users', icon: Users, iconName: 'Users', label: 'User Management', labelKey: 'nav.userManagement', adminOnly: true },
       { id: 'util-founder', to: '/founder', icon: Shield, iconName: 'Shield', label: 'Founder Panel', labelKey: 'nav.founderPanel', superAdminOnly: true },
       { id: 'util-subscription', to: '/subscription', icon: Award, iconName: 'Award', label: 'Subscription', labelKey: 'nav.subscription' },
+      { id: 'util-instructions', to: '/instructions', icon: BookOpen, iconName: 'BookOpen', label: 'System Guide', labelKey: 'nav.systemGuide' },
     ]
   }
 ];

@@ -328,7 +328,17 @@ export default function FounderPanel() {
 
   const { 
     showGoToShortcut, 
+    showTopbarSearch,
+    showTopbarNotifications,
+    showTopbarInstructions,
     appVersion, 
+    developerContactText,
+    developerContactAlignment,
+    alterPageUiStyle,
+    reportsPageUiStyle,
+    reportsColumnsPerRow,
+    alterColumnsPerRow,
+    enableUserSortViewPref,
     updateSettings, 
     updateSystemSettings, 
     uiStyle, 
@@ -392,6 +402,8 @@ export default function FounderPanel() {
     warningJournalNotBalanced
   } = useSettings();
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
+  const [localDeveloperContactText, setLocalDeveloperContactText] = useState(developerContactText || 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000');
+  const [localDeveloperContactAlignment, setLocalDeveloperContactAlignment] = useState(developerContactAlignment || 'center');
   const [localVoucherLayout, setLocalVoucherLayout] = useState(voucherLayout || 'Layout 1');
   const [localVoucherFieldSize, setLocalVoucherFieldSize] = useState(voucherFieldSize || 'medium');
   const [localWarnings, setLocalWarnings] = useState({
@@ -419,6 +431,11 @@ export default function FounderPanel() {
     warningJournalDebitCreditAmount: warningJournalDebitCreditAmount || 'Please enter Debit or Credit Amount.',
     warningJournalNotBalanced: warningJournalNotBalanced || 'Voucher is not balanced. Difference: ৳ {DIFF} (Debit: ৳ {DEBIT}, Credit: ৳ {CREDIT})'
   });
+  const [localAlterPageUiStyle, setLocalAlterPageUiStyle] = useState<'classic' | 'modern'>(alterPageUiStyle || 'classic');
+  const [localReportsPageUiStyle, setLocalReportsPageUiStyle] = useState<'classic' | 'modern' | 'grid'>(reportsPageUiStyle || 'classic');
+  const [localReportsColumnsPerRow, setLocalReportsColumnsPerRow] = useState<number>(reportsColumnsPerRow || 4);
+  const [localAlterColumnsPerRow, setLocalAlterColumnsPerRow] = useState<number>(alterColumnsPerRow || 3);
+  const [localEnableUserSortViewPref, setLocalEnableUserSortViewPref] = useState<boolean>(enableUserSortViewPref || false);
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
   const [localMenuBarStyle, setLocalMenuBarStyle] = useState(menuBarStyle || 'classic');
   const [localSidebarBgColor, setLocalSidebarBgColor] = useState(sidebarBgColor || 'default');
@@ -433,6 +450,9 @@ export default function FounderPanel() {
   const [localNotificationDuration, setLocalNotificationDuration] = useState(notificationDuration || 5000);
   const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle || 'default');
   const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut ?? true);
+  const [localShowTopbarSearch, setLocalShowTopbarSearch] = useState(showTopbarSearch ?? true);
+  const [localShowTopbarNotifications, setLocalShowTopbarNotifications] = useState(showTopbarNotifications ?? true);
+  const [localShowTopbarInstructions, setLocalShowTopbarInstructions] = useState(showTopbarInstructions ?? true);
   const [localSearchPlaceholder, setLocalSearchPlaceholder] = useState(searchPlaceholder || '');
   const [localSearchHelpText, setLocalSearchHelpText] = useState(searchHelpText || '');
   const [localShowSearchShortcut, setLocalShowSearchShortcut] = useState(showSearchShortcut ?? true);
@@ -455,6 +475,7 @@ export default function FounderPanel() {
   const [localSkeletonRows, setLocalSkeletonRows] = useState(skeletonRows ?? 5);
   const [localSkeletonWaveColor, setLocalSkeletonWaveColor] = useState(skeletonWaveColor || 'indigo');
   const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'branding' | 'search' | 'loader' | 'skeleton' | 'warnings'>('general');
+  const [settingsFilterQuery, setSettingsFilterQuery] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -469,6 +490,14 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalAppVersion(appVersion);
   }, [appVersion]);
+
+  useEffect(() => {
+    setLocalDeveloperContactText(developerContactText || 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000');
+  }, [developerContactText]);
+
+  useEffect(() => {
+    setLocalDeveloperContactAlignment(developerContactAlignment || 'center');
+  }, [developerContactAlignment]);
 
   useEffect(() => {
     setLocalUIStyle(uiStyle);
@@ -503,6 +532,32 @@ export default function FounderPanel() {
   }, [systemFavicon]);
 
   useEffect(() => {
+    setLocalAlterPageUiStyle(alterPageUiStyle || 'classic');
+  }, [alterPageUiStyle]);
+
+  useEffect(() => {
+    setLocalReportsPageUiStyle(reportsPageUiStyle || 'classic');
+  }, [reportsPageUiStyle]);
+
+  useEffect(() => {
+    if (reportsColumnsPerRow !== undefined) {
+      setLocalReportsColumnsPerRow(reportsColumnsPerRow);
+    }
+  }, [reportsColumnsPerRow]);
+
+  useEffect(() => {
+    if (alterColumnsPerRow !== undefined) {
+      setLocalAlterColumnsPerRow(alterColumnsPerRow);
+    }
+  }, [alterColumnsPerRow]);
+
+  useEffect(() => {
+    if (enableUserSortViewPref !== undefined) {
+      setLocalEnableUserSortViewPref(enableUserSortViewPref);
+    }
+  }, [enableUserSortViewPref]);
+
+  useEffect(() => {
     setLocalNotificationDuration(notificationDuration);
   }, [notificationDuration]);
 
@@ -513,6 +568,18 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalShowGoToShortcut(showGoToShortcut);
   }, [showGoToShortcut]);
+
+  useEffect(() => {
+    setLocalShowTopbarSearch(showTopbarSearch ?? true);
+  }, [showTopbarSearch]);
+
+  useEffect(() => {
+    setLocalShowTopbarNotifications(showTopbarNotifications ?? true);
+  }, [showTopbarNotifications]);
+
+  useEffect(() => {
+    setLocalShowTopbarInstructions(showTopbarInstructions ?? true);
+  }, [showTopbarInstructions]);
 
   useEffect(() => {
     setLocalSearchPlaceholder(searchPlaceholder || '');
@@ -1604,6 +1671,56 @@ export default function FounderPanel() {
                           exit={{ height: 0, opacity: 0 }}
                           className="border-t border-border bg-muted/10"
                         >
+                          <div className="border-b border-border bg-muted/20 p-4">
+                            <div className="bg-card border border-border rounded-xl p-4 shadow-sm flex flex-col md:flex-row gap-5">
+                              {/* Left Profile Summary */}
+                              <div className="flex items-center md:items-start gap-4">
+                                <img 
+                                  src={user.photoURL || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user.email || 'default'}`}
+                                  alt={user.displayName}
+                                  className="w-16 h-16 rounded-full border border-border object-cover bg-background shrink-0 shadow-sm"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="space-y-1 min-w-0">
+                                  <h4 className="text-sm font-bold text-foreground">User Profile Information</h4>
+                                  <p className="text-[11px] font-medium text-muted-foreground truncate">
+                                    <span className="font-semibold text-foreground">Designation:</span> {user.designation || 'Not specified'}
+                                  </p>
+                                  <p className="text-[11px] font-medium text-muted-foreground truncate">
+                                    <span className="font-semibold text-foreground">Department:</span> {user.department || 'Not specified'}
+                                  </p>
+                                  <p className="text-[11px] font-medium text-muted-foreground truncate">
+                                    <span className="font-semibold text-foreground">Phone:</span> {user.phone || 'Not specified'}
+                                  </p>
+                                </div>
+                              </div>
+                              {/* Right Bio & Info */}
+                              <div className="flex-1 space-y-1.5 md:border-l md:border-border md:pl-5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                                  <p className="text-muted-foreground">
+                                    <span className="font-semibold text-foreground">City:</span> {user.city || 'N/A'}
+                                  </p>
+                                  <p className="text-muted-foreground">
+                                    <span className="font-semibold text-foreground">State:</span> {user.state || 'N/A'}
+                                  </p>
+                                  <p className="text-muted-foreground">
+                                    <span className="font-semibold text-foreground">Country:</span> {user.country || 'N/A'}
+                                  </p>
+                                </div>
+                                {user.address && (
+                                  <p className="text-[11px] text-muted-foreground leading-normal italic pl-2 border-l-2 border-primary/40 mt-1">
+                                    {user.address}
+                                  </p>
+                                )}
+                                <div className="pt-1.5 border-t border-border mt-2">
+                                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                    <span className="font-semibold text-foreground block mb-0.5">Bio / Summary:</span>
+                                    <span className="italic">{user.bio || 'No bio provided.'}</span>
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                           {userCompanies.length > 0 ? (
                             <div className="p-4 space-y-4">
                               {userCompanies.map((company) => (
@@ -2863,16 +2980,26 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       statusOfflineText: localStatusOffline,
                       statusErrorText: localStatusError,
                       appVersion: localAppVersion,
+                      developerContactText: localDeveloperContactText,
+                      developerContactAlignment: localDeveloperContactAlignment,
                       systemLogo: localSystemLogo,
                       systemFavicon: localSystemFavicon,
                       uiStyle: localUIStyle,
                       menuBarStyle: localMenuBarStyle,
+                      alterPageUiStyle: localAlterPageUiStyle,
+                      reportsPageUiStyle: localReportsPageUiStyle,
+                      reportsColumnsPerRow: localReportsColumnsPerRow,
+                      alterColumnsPerRow: localAlterColumnsPerRow,
+                      enableUserSortViewPref: localEnableUserSortViewPref,
                       sidebarBgColor: localSidebarBgColor,
                       sidebarTextColor: localSidebarTextColor,
                       glassBackground: localGlassBackground,
                       notificationDuration: localNotificationDuration,
                       notificationAnimationStyle: localNotificationAnimationStyle,
                       showGoToShortcut: localShowGoToShortcut,
+                      showTopbarSearch: localShowTopbarSearch,
+                      showTopbarNotifications: localShowTopbarNotifications,
+                      showTopbarInstructions: localShowTopbarInstructions,
                       searchPlaceholder: localSearchPlaceholder,
                       searchHelpText: localSearchHelpText,
                       showSearchShortcut: localShowSearchShortcut,
@@ -2977,740 +3104,1213 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
 
             {/* Content pane */}
             <div className="flex-1 space-y-6 min-w-0">
-              {systemSubTab === 'general' && (
-                <div className={cn(
-                  "bg-card border border-border rounded-2xl p-6 lg:p-8 space-y-6 shadow-sm",
-                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-xl"
-                )}>
-                  <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">General & Connection Status</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">Define app version and connection text indicators displayed across client environments.</p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Online Status Text</label>
-                      <input
-                        type="text"
-                        value={localStatusOnline || ''}
-                        onChange={(e) => setLocalStatusOnline(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Offline Status Text</label>
-                      <input
-                        type="text"
-                        value={localStatusOffline || ''}
-                        onChange={(e) => setLocalStatusOffline(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Error Status Text</label>
-                      <input
-                        type="text"
-                        value={localStatusError || ''}
-                        onChange={(e) => setLocalStatusError(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">App Version</label>
-                      <input
-                        type="text"
-                        value={localAppVersion || ''}
-                        onChange={(e) => setLocalAppVersion(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="border-t border-border pt-4">
-                    <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
-                      <div className="space-y-0.5">
-                        <p className="text-xs font-bold text-foreground">Show "Alt + G" Shortcut Hint</p>
-                        <p className="text-[10px] text-muted-foreground leading-relaxed">Toggle safety help tips or accessibility shortcut indications on the main topbar.</p>
-                      </div>
-                      <button
-                        onClick={() => setLocalShowGoToShortcut(!localShowGoToShortcut)}
-                        className={cn(
-                          "w-10 h-5.5 rounded-full transition-colors relative shrink-0",
-                          localShowGoToShortcut ? "bg-blue-600" : "bg-gray-300"
-                        )}
-                      >
-                        <div className={cn(
-                          "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
-                          localShowGoToShortcut ? "right-0.5" : "left-0.5"
-                        )} />
-                      </button>
-                    </div>
-                  </div>
+              {/* Settings Search bar */}
+              <div className="relative bg-card border border-border rounded-xl p-3 flex flex-col sm:flex-row sm:items-center gap-3 shadow-xs">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Search or filter option configurations instantly..."
+                    value={settingsFilterQuery}
+                    onChange={(e) => setSettingsFilterQuery(e.target.value)}
+                    className="w-full bg-background border border-border rounded-lg pl-9 pr-8 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  {settingsFilterQuery && (
+                    <button
+                      onClick={() => setSettingsFilterQuery('')}
+                      className="absolute right-3 top-1.5 text-muted-foreground hover:text-foreground text-xs uppercase font-bold"
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
-              )}
+                <div className="text-[9px] font-black tracking-widest text-muted-foreground uppercase bg-muted/80 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 shrink-0 select-none">
+                  <Settings className="w-3.5 h-3.5 text-primary" />
+                  <span>FILTER ENGINE LIVE</span>
+                </div>
+              </div>
 
-              {systemSubTab === 'theme' && (
-                <div className={cn(
-                  "bg-card border border-border rounded-2xl p-6 lg:p-8 space-y-6 shadow-sm",
-                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-xl"
-                )}>
-                  <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">UI Styles & Visual Default Parameters</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">Select system-wide design specs, navigation patterns, and custom banner styles.</p>
-                  </div>
+              {systemSubTab === 'general' && (() => {
+                const checkFilter = (labels: string[]) => {
+                  if (!settingsFilterQuery) return true;
+                  const q = settingsFilterQuery.toLowerCase();
+                  return labels.some(l => l && l.toLowerCase().includes(q));
+                };
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Global UI Style</label>
-                      <select 
-                        value={localUIStyle}
-                        onChange={(e) => setLocalUIStyle(e.target.value as any)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      >
-                        <option value="UI/UX 1">UI/UX 1 (Classic)</option>
-                        <option value="UI/UX 2">UI/UX 2 (Modern Colorized)</option>
-                        <option value="UI/UX 3">UI/UX 3 (Glassmorphism macOS)</option>
-                        <option value="UI/UX 4">UI/UX 4 (Aurora Holographic Carbon)</option>
-                      </select>
-                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Controls borders, shadow depth, and micro gradients.</p>
+                const showIdentity = checkFilter(['app version', 'identity', 'build', 'version']);
+                const showConnection = checkFilter(['online', 'offline', 'error', 'connection', 'status', 'text', 'network', 'sentinel']);
+                const showHeader = checkFilter(['shortcut', 'g', 'search icon', 'notifications icon', 'instructions', 'guide', 'header', 'topbar', 'toggle']);
+                const showDeveloper = checkFilter(['developer', 'footer', 'alignment', 'attribution', 'contact']);
+
+                if (!showIdentity && !showConnection && !showHeader && !showDeveloper) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card border border-border border-dashed rounded-xl">
+                      <Search className="w-8 h-8 text-muted-foreground opacity-30 mb-2 animate-bounce" />
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">No matching options</h4>
+                      <p className="text-[10px] text-muted-foreground mt-1 max-w-xs leading-relaxed uppercase">
+                        We couldn't find any general settings matching your keyword.
+                      </p>
                     </div>
+                  );
+                }
 
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Global Left Menu Style</label>
-                      <select 
-                        value={localMenuBarStyle}
-                        onChange={(e) => setLocalMenuBarStyle(e.target.value as any)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      >
-                        <option value="classic">Classic Sidebar (Default)</option>
-                        <option value="ribbon">Microsoft Office Ribbon</option>
-                        <option value="macos">macOS Top Menu Bar</option>
-                        <option value="windows11">Windows 11 Taskbar Style</option>
-                        <option value="colorful">Classic Professional (Colorful Sidebar)</option>
-                      </select>
-                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Changes default desktop-oriented frame configurations.</p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Default Sidebar Background Style</label>
-                      <select 
-                        value={localSidebarBgColor}
-                        onChange={(e) => setLocalSidebarBgColor(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      >
-                        {SIDEBAR_BG_OPTIONS.map(opt => (
-                          <option key={opt.id} value={opt.id}>{opt.label}</option>
-                        ))}
-                      </select>
-                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Applied as the global default sidebar background style.</p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Default Sidebar Text Accent</label>
-                      <select 
-                        value={localSidebarTextColor}
-                        onChange={(e) => setLocalSidebarTextColor(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      >
-                        {SIDEBAR_TEXT_OPTIONS.map(opt => (
-                          <option key={opt.id} value={opt.id}>{opt.label}</option>
-                        ))}
-                      </select>
-                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Controls active links and inactive icon highlighting tones.</p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Default Canvas Gradient (UI/UX 3 & 4)</label>
-                      <select 
-                        value={localGlassBackground}
-                        onChange={(e) => setLocalGlassBackground(e.target.value as any)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      >
-                        <option value="default">Default Cyber Carbon (Dynamic Holographic)</option>
-                        <option value="sunset">Sunset Glow (Warm Cosmic)</option>
-                        <option value="ocean">Deep Ocean (Cool Nordic)</option>
-                        <option value="aurora">Aurora Borealis (Green Matrix Neon)</option>
-                        <option value="minimal">Minimal Soft Dark (Sleek Obsidian)</option>
-                      </select>
-                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Applied as active backdrop vectors when holographic glass is chosen.</p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Notification Duration (ms)</label>
-                      <input
-                        type="number"
-                        value={localNotificationDuration || 3000}
-                        onChange={(e) => setLocalNotificationDuration(Number(e.target.value))}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                        step="500"
-                        min="1000"
-                      />
-                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Time for popup snackbars to remain on viewport before hiding.</p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Voucher Entry Layout Model</label>
-                      <select 
-                        value={localVoucherLayout}
-                        onChange={(e) => setLocalVoucherLayout(e.target.value as any)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      >
-                        <option value="Layout 1">Layout 1 (Corrected Headers & Scrolling)</option>
-                        <option value="Layout 2">Layout 2 (Compact Fields, Height Optimized)</option>
-                      </select>
-                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Select between original large scroll-corrected and compact optimized models.</p>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Voucher Entry Field Size</label>
-                      <select 
-                        value={localVoucherFieldSize}
-                        onChange={(e) => setLocalVoucherFieldSize(e.target.value as any)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                      >
-                        <option value="small">Small (Extra Compact)</option>
-                        <option value="semi-compact">Semi-Compact (Balanced)</option>
-                        <option value="medium">Medium (Standard Compact)</option>
-                        <option value="large">Large (Spacious & Easy Read)</option>
-                      </select>
-                      <p className="text-[9px] text-muted-foreground uppercase leading-tight">Controls form input, padding and select element sizes on the Voucher Entry page.</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 pt-2">
-                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Notification Border Animation Style</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                      {[
-                        { id: 'default', label: 'Default Path', desc: 'Classic border trace' },
-                        { id: 'neon', label: 'Neon Glow', desc: 'Pulsating neon border' },
-                        { id: 'snake', label: 'Snake Chase', desc: 'Moving segment' },
-                        { id: 'liquid', label: 'Liquid Flow', desc: 'Rotating gradient' },
-                        { id: 'glitch', label: 'Cyber Glitch', desc: 'Digital distortion' },
-                        { id: 'shimmer', label: 'Shimmer Sweep', desc: 'Elegant light sweep' }
-                      ].map((style) => (
-                        <button
-                          key={style.id}
-                          onClick={() => setLocalNotificationAnimationStyle(style.id as any)}
-                          className={cn(
-                            "flex flex-col items-start p-2.5 rounded-lg border transition-all text-left gap-1",
-                            localNotificationAnimationStyle === style.id
-                              ? "border-blue-500 bg-blue-500/5 ring-1 ring-blue-500"
-                              : "border-border bg-background hover:border-gray-400"
-                          )}
-                        >
-                          <span className={cn(
-                            "text-[9px] font-black uppercase tracking-wider",
-                            localNotificationAnimationStyle === style.id ? "text-blue-500" : "text-foreground"
-                          )}>
-                            {style.label}
-                          </span>
-                          <span className="text-[8px] text-muted-foreground leading-tight">
-                            {style.desc}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="border-t border-border pt-4">
-                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block mb-3">Dashboard Default Design Layouts</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {[
-                        { id: 'Design 1', label: 'Classic Design', desc: 'Full-featured with all metrics and primary charts.' },
-                        { id: 'Design 2', label: 'Modern Design', desc: 'Clean, modern look with focus on KPI cards and trends.' },
-                        { id: 'Design 3', label: 'Minimalist (Quota Fix)', desc: 'High-performance, minimal charts. Saves 50% reads by reducing complexity.' },
-                        { id: 'Design 4', label: 'Executive Executive', desc: 'Dark-themed, focused only on essential numbers. Lowest quota usage.' },
-                        { id: 'Design 5', label: 'Zero-Read Command Center', desc: 'No database queries printed on layout. Loaded locally with rich interactive workflow portals.' },
-                        { id: 'Design 6', label: 'Minimalist Splash', desc: 'A clean, lightweight layout containing only a centered header greeting card.' }
-                      ].map(d => (
-                        <button
-                          key={d.id}
-                          onClick={() => setLocalDashboardDesign(d.id as any)}
-                          className={cn(
-                            "p-3 border rounded-xl text-left transition-all space-y-1",
-                            localDashboardDesign === d.id
-                              ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500"
-                              : "border-border bg-background hover:bg-muted"
-                          )}
-                        >
-                           <p className={cn("text-[10px] font-black uppercase tracking-tight", localDashboardDesign === d.id ? "text-blue-600" : "text-foreground")}>{d.label}</p>
-                           <p className="text-[9px] text-muted-foreground uppercase leading-tight">{d.desc}</p>
-                        </button>
-                      ))}
-                    </div>
-
-                    {localDashboardDesign === 'Design 5' && (
-                      <div className="mt-4 p-4 bg-muted/20 border border-border rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2">
-                        <div className="flex items-center gap-2 pb-2 border-b border-border">
-                          <Palette className="w-4 h-4 text-primary" />
-                          <p className="text-[10px] font-black uppercase tracking-wider text-foreground">Zero-Read Command Center Preferences</p>
+                return (
+                  <div className="space-y-6">
+                    {/* Group 1: General Info & Identity */}
+                    {showIdentity && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Activity className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">App Version & Identity</h4>
                         </div>
-
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Welcome message */}
                           <div className="space-y-1.5">
-                            <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Custom Splash Welcome Accent</label>
-                            <input 
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">App Version</label>
+                            <input
                               type="text"
-                              value={localCustomWelcomeMessage}
-                              onChange={(e) => setLocalCustomWelcomeMessage(e.target.value)}
-                              className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-                              placeholder="Executive Command Center"
+                              value={localAppVersion || ''}
+                              onChange={(e) => setLocalAppVersion(e.target.value)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
                             />
                           </div>
+                        </div>
+                      </div>
+                    )}
 
-                          {/* Theme Selection */}
+                    {/* Group 2: Connection Status Indicators */}
+                    {showConnection && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Globe className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Connection Status Indicators</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="space-y-1.5">
-                            <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Theme Accent Profile</label>
-                            <div className="grid grid-cols-4 gap-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Online Status Text</label>
+                            <input
+                              type="text"
+                              value={localStatusOnline || ''}
+                              onChange={(e) => setLocalStatusOnline(e.target.value)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Offline Status Text</label>
+                            <input
+                              type="text"
+                              value={localStatusOffline || ''}
+                              onChange={(e) => setLocalStatusOffline(e.target.value)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Error Status Text</label>
+                            <input
+                              type="text"
+                              value={localStatusError || ''}
+                              onChange={(e) => setLocalStatusError(e.target.value)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Group 3: Header Features & Toggles */}
+                    {showHeader && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Sparkles className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Header Features & Interactive Toggle Switches</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
+                            <div className="space-y-0.5">
+                              <p className="text-xs font-bold text-foreground">Show "Alt + G" Shortcut Hint</p>
+                              <p className="text-[10px] text-muted-foreground leading-relaxed">Toggle safety help tips or accessibility indications on the topbar.</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setLocalShowGoToShortcut(!localShowGoToShortcut)}
+                              className={cn(
+                                "w-10 h-5.5 rounded-full transition-colors relative shrink-0",
+                                localShowGoToShortcut ? "bg-blue-600" : "bg-gray-300"
+                              )}
+                            >
+                              <div className={cn(
+                                "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                                localShowGoToShortcut ? "right-0.5" : "left-0.5"
+                              )} />
+                            </button>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
+                            <div className="space-y-0.5">
+                              <p className="text-xs font-bold text-foreground">Show Search Icon in Top Bar</p>
+                              <p className="text-[10px] text-muted-foreground leading-relaxed">Display or hide the search feature trigger button in the main header.</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setLocalShowTopbarSearch(!localShowTopbarSearch)}
+                              className={cn(
+                                "w-10 h-5.5 rounded-full transition-colors relative shrink-0",
+                                localShowTopbarSearch ? "bg-blue-600" : "bg-gray-300"
+                              )}
+                            >
+                              <div className={cn(
+                                "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                                localShowTopbarSearch ? "right-0.5" : "left-0.5"
+                              )} />
+                            </button>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
+                            <div className="space-y-0.5">
+                              <p className="text-xs font-bold text-foreground">Show Notifications Icon in Top Bar</p>
+                              <p className="text-[10px] text-muted-foreground leading-relaxed">Display or hide the notifications menu button from the navigation.</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setLocalShowTopbarNotifications(!localShowTopbarNotifications)}
+                              className={cn(
+                                "w-10 h-5.5 rounded-full transition-colors relative shrink-0",
+                                localShowTopbarNotifications ? "bg-blue-600" : "bg-gray-300"
+                              )}
+                            >
+                              <div className={cn(
+                                "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                                localShowTopbarNotifications ? "right-0.5" : "left-0.5"
+                              )} />
+                            </button>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
+                            <div className="space-y-0.5">
+                              <p className="text-xs font-bold text-foreground">Show Instructions/Guide Icon in Top Bar</p>
+                              <p className="text-[10px] text-muted-foreground leading-relaxed">Display or hide the help and system guide/documentation trigger button.</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setLocalShowTopbarInstructions(!localShowTopbarInstructions)}
+                              className={cn(
+                                "w-10 h-5.5 rounded-full transition-colors relative shrink-0",
+                                localShowTopbarInstructions ? "bg-blue-600" : "bg-gray-300"
+                              )}
+                            >
+                              <div className={cn(
+                                "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                                localShowTopbarInstructions ? "right-0.5" : "left-0.5"
+                              )} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Group 4: Developer Contact */}
+                    {showDeveloper && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Info className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Developer Contact Options</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Developer Contact Footer Text</label>
+                            <input
+                              type="text"
+                              value={localDeveloperContactText || ''}
+                              onChange={(e) => setLocalDeveloperContactText(e.target.value)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none font-mono"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Text Alignment</label>
+                            <select
+                              value={localDeveloperContactAlignment}
+                              onChange={(e) => setLocalDeveloperContactAlignment(e.target.value as any)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="left font-sans">Left</option>
+                              <option value="center font-sans">Center</option>
+                              <option value="right font-sans">Right</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {systemSubTab === 'theme' && (() => {
+                const checkFilter = (labels: string[]) => {
+                  if (!settingsFilterQuery) return true;
+                  const q = settingsFilterQuery.toLowerCase();
+                  return labels.some(l => l && l.toLowerCase().includes(q));
+                };
+
+                const showProfile = checkFilter(['style', 'gradient', 'canvas', 'carbon', 'sunset', 'ocean', 'aurora', 'obsidian', 'glass bg', 'aesthetic']);
+                const showNav = checkFilter(['sidebar', 'left menu', 'ribbon', 'macos font', 'windows11', 'taskbar', 'navigation', 'shell']);
+                const showGrids = checkFilter(['alter', 'reports', 'columns', 'grid layout', 'interactivity', 'sort view']);
+                const showForm = checkFilter(['duration', 'snackbars', 'voucher layout', 'field size', 'border animation', 'popup', 'warnings']);
+                const showDash = checkFilter(['dashboard', 'quota fix', 'minimalist', 'splash welcome', 'design layout', 'books', 'pin bookmarks', 'bookmarks', 'zero read', 'command center']);
+
+                if (!showProfile && !showNav && !showGrids && !showForm && !showDash) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card border border-border border-dashed rounded-xl">
+                      <Search className="w-8 h-8 text-muted-foreground opacity-30 mb-2 animate-bounce" />
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">No matching options</h4>
+                      <p className="text-[10px] text-muted-foreground mt-1 max-w-xs leading-relaxed uppercase">
+                        We couldn't find any theme configurations matching your keyword.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-6">
+                    {/* Group 1: Visual Aesthetic Profile & Canvas Backdrop */}
+                    {showProfile && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Palette className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Visual Aesthetic Profile & Active Canvas</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Global UI Style</label>
+                            <select 
+                              value={localUIStyle}
+                              onChange={(e) => setLocalUIStyle(e.target.value as any)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="UI/UX 1">UI/UX 1 (Classic)</option>
+                              <option value="UI/UX 2">UI/UX 2 (Modern Colorized)</option>
+                              <option value="UI/UX 3">UI/UX 3 (Glassmorphism macOS)</option>
+                              <option value="UI/UX 4">UI/UX 4 (Aurora Holographic Carbon)</option>
+                            </select>
+                            <p className="text-[9px] text-muted-foreground uppercase leading-tight font-black">Controls borders, shadow depth, and micro gradients.</p>
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Default Canvas Gradient (UI/UX 3 & 4)</label>
+                            <select 
+                              value={localGlassBackground}
+                              onChange={(e) => setLocalGlassBackground(e.target.value as any)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="default">Default Cyber Carbon (Dynamic Holographic)</option>
+                              <option value="sunset">Sunset Glow (Warm Cosmic)</option>
+                              <option value="ocean">Deep Ocean (Cool Nordic)</option>
+                              <option value="aurora">Aurora Borealis (Green Matrix Neon)</option>
+                              <option value="minimal">Minimal Soft Dark (Sleek Obsidian)</option>
+                            </select>
+                            <p className="text-[9px] text-muted-foreground uppercase leading-tight font-black font-mono">Applied as active backdrop vectors when holographic glass is chosen.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Group 2: Navigation & Desktop Frame Layout */}
+                    {showNav && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <ListTree className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Navigation & Desktop Frame Layout</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Left Menu Style</label>
+                            <select 
+                              value={localMenuBarStyle}
+                              onChange={(e) => setLocalMenuBarStyle(e.target.value as any)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="classic">Classic Sidebar (Default)</option>
+                              <option value="ribbon">Microsoft Office Ribbon</option>
+                              <option value="macos">macOS Top Menu Bar</option>
+                              <option value="windows11">Windows 11 Taskbar Style</option>
+                              <option value="colorful">Classic Professional (Colorful Sidebar)</option>
+                            </select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Sidebar Background Style</label>
+                            <select 
+                              value={localSidebarBgColor}
+                              onChange={(e) => setLocalSidebarBgColor(e.target.value)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              {SIDEBAR_BG_OPTIONS.map(opt => (
+                                <option key={opt.id} value={opt.id}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Sidebar Text Accent</label>
+                            <select 
+                              value={localSidebarTextColor}
+                              onChange={(e) => setLocalSidebarTextColor(e.target.value)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              {SIDEBAR_TEXT_OPTIONS.map(opt => (
+                                <option key={opt.id} value={opt.id}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Group 3: Alter & Reports Presentation Grids */}
+                    {showGrids && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <LayoutGrid className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Alter & Reports Presentation Grids</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Create & Alteration Page UI</label>
+                            <select 
+                              value={localAlterPageUiStyle}
+                              onChange={(e) => setLocalAlterPageUiStyle(e.target.value as any)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="classic">Classic UI/UX Layout (Standard)</option>
+                              <option value="modern">Modern UI/UX Layout (Upgraded Visuals)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Alter Columns per Row</label>
+                            <select 
+                              value={localAlterColumnsPerRow}
+                              onChange={(e) => setLocalAlterColumnsPerRow(Number(e.target.value))}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value={1}>1 Column (Full Width List)</option>
+                              <option value={2}>2 Columns (Dual Grid Layout)</option>
+                              <option value={3}>3 Columns (Triple Grid Layout)</option>
+                              <option value={4}>4 Columns (Quad Grid Layout - Standard Auto)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Reports Page UI Style</label>
+                            <select 
+                              value={localReportsPageUiStyle}
+                              onChange={(e) => setLocalReportsPageUiStyle(e.target.value as any)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="classic">Classic UI/UX Layout (Standard)</option>
+                              <option value="modern">Modern UI/UX Layout (Upgraded Visuals)</option>
+                              <option value="grid">Modern Dynamic Grid Layout (Custom Alignment/Tabs)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Reports Columns per Row</label>
+                            <select 
+                              value={localReportsColumnsPerRow}
+                              onChange={(e) => setLocalReportsColumnsPerRow(Number(e.target.value))}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value={1}>1 Column (Full Width List)</option>
+                              <option value={2}>2 Columns (Dual Grid Layout)</option>
+                              <option value={3}>3 Columns (Triple Grid Layout)</option>
+                              <option value={4}>4 Columns (Quad Grid Layout - Standard Auto)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Alter & Reports Interactivity Override</label>
+                            <select 
+                              value={localEnableUserSortViewPref ? "true" : "false"}
+                              onChange={(e) => setLocalEnableUserSortViewPref(e.target.value === "true")}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="false">Disabled (Default Classic/Modern layout styles)</option>
+                              <option value="true">Enabled (Allow custom User "Sort By" and "Column View" dropdowns)</option>
+                            </select>
+                            <p className="text-[9px] text-muted-foreground uppercase leading-tight font-black mt-1">Enables active User-specific dropdown options for sorting and custom column layouts on both /#/alter and /#/reports pages.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Group 4: Form Entry Dimensions & Screen Popups */}
+                    {showForm && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Clock className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Form Entry Dimensions & Screen Popups</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Voucher Entry Layout Model</label>
+                            <select 
+                              value={localVoucherLayout}
+                              onChange={(e) => setLocalVoucherLayout(e.target.value as any)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="Layout 1">Layout 1 (Corrected Headers & Scrolling)</option>
+                              <option value="Layout 2">Layout 2 (Compact Fields, Height Optimized)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Voucher Entry Field Size</label>
+                            <select 
+                              value={localVoucherFieldSize}
+                              onChange={(e) => setLocalVoucherFieldSize(e.target.value as any)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="small">Small (Extra Compact)</option>
+                              <option value="semi-compact">Semi-Compact (Balanced)</option>
+                              <option value="medium">Medium (Standard Compact)</option>
+                              <option value="large">Large (Spacious & Easy Read)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Notification Duration (ms)</label>
+                            <input
+                              type="number"
+                              value={localNotificationDuration || 3000}
+                              onChange={(e) => setLocalNotificationDuration(Number(e.target.value))}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              step="500"
+                              min="1000"
+                            />
+                            <p className="text-[9px] text-muted-foreground uppercase leading-tight font-black mt-1">Time for popup snackbars to remain on viewport before hiding.</p>
+                          </div>
+
+                          <div className="space-y-3 pt-2 md:col-span-2">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Notification Border Animation Style</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                               {[
-                                { id: 'emerald', label: 'Emerald' },
-                                { id: 'indigo', label: 'Indigo' },
-                                { id: 'slate', label: 'Slate' },
-                                { id: 'cyber', label: 'Cyber' }
-                              ].map((t) => (
+                                { id: 'default', label: 'Default Path', desc: 'Classic border trace' },
+                                { id: 'neon', label: 'Neon Glow', desc: 'Pulsating neon border' },
+                                { id: 'snake', label: 'Snake Chase', desc: 'Moving segment' },
+                                { id: 'liquid', label: 'Liquid Flow', desc: 'Rotating gradient' },
+                                { id: 'glitch', label: 'Cyber Glitch', desc: 'Digital distortion' },
+                                { id: 'shimmer', label: 'Shimmer Sweep', desc: 'Elegant light sweep' }
+                              ].map((style) => (
                                 <button
-                                  key={t.id}
+                                  key={style.id}
                                   type="button"
-                                  onClick={() => setLocalCustomControlCenterTheme(t.id as any)}
+                                  onClick={() => setLocalNotificationAnimationStyle(style.id as any)}
                                   className={cn(
-                                    "py-1 px-1 border text-[9px] font-black uppercase rounded text-center transition-all",
-                                    localCustomControlCenterTheme === t.id
-                                      ? "bg-foreground text-background border-foreground font-black"
-                                      : "bg-background text-muted-foreground border-border hover:text-foreground"
+                                    "flex flex-col items-start p-2.5 rounded-lg border transition-all text-left gap-1 opacity-90 hover:opacity-100",
+                                    localNotificationAnimationStyle === style.id
+                                      ? "border-blue-500 bg-blue-500/5 ring-1 ring-blue-500"
+                                      : "border-border bg-background hover:border-gray-400"
                                   )}
                                 >
-                                  {t.label}
+                                  <span className={cn(
+                                    "text-[9px] font-black uppercase tracking-wider",
+                                    localNotificationAnimationStyle === style.id ? "text-blue-500" : "text-foreground"
+                                  )}>
+                                    {style.label}
+                                  </span>
+                                  <span className="text-[8px] text-muted-foreground leading-tight font-black">
+                                    {style.desc}
+                                  </span>
                                 </button>
                               ))}
                             </div>
                           </div>
                         </div>
-
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-border/40">
-                          {/* Toggle Calculator */}
-                          <div className="flex items-center justify-between gap-4 p-2.5 bg-background border border-border/50 rounded-lg grow">
-                            <div>
-                              <p className="text-[10px] font-bold text-foreground leading-none">Interactive Margin Calc</p>
-                              <p className="text-[8px] text-muted-foreground uppercase mt-0.5">Show calculator tool on widget board</p>
-                            </div>
-                            <button 
-                              type="button"
-                              onClick={() => setLocalShowQuickCalculator(!localShowQuickCalculator)}
-                              className={cn(
-                                "w-8 h-4.5 rounded-full relative transition-colors shrink-0",
-                                localShowQuickCalculator ? "bg-emerald-500" : "bg-border"
-                              )}
-                            >
-                              <div className={cn(
-                                "absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all",
-                                localShowQuickCalculator ? "right-0.5" : "left-0.5"
-                              )} />
-                            </button>
-                          </div>
-
-                          {/* Toggle Local Bookmarks */}
-                          <div className="flex items-center justify-between gap-4 p-2.5 bg-background border border-border/50 rounded-lg grow">
-                            <div>
-                              <p className="text-[10px] font-bold text-foreground leading-none">Local Pin Bookmarks</p>
-                              <p className="text-[8px] text-muted-foreground uppercase mt-0.5">Let users bookmark pages in LocalStorage</p>
-                            </div>
-                            <button 
-                              type="button"
-                              onClick={() => setLocalShowPinnedBookmarks(!localShowPinnedBookmarks)}
-                              className={cn(
-                                "w-8 h-4.5 rounded-full relative transition-colors shrink-0",
-                                localShowPinnedBookmarks ? "bg-emerald-500" : "bg-border"
-                              )}
-                            >
-                              <div className={cn(
-                                "absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all",
-                                localShowPinnedBookmarks ? "right-0.5" : "left-0.5"
-                              )} />
-                            </button>
-                          </div>
-                        </div>
                       </div>
                     )}
 
-                    {localDashboardDesign === 'Design 6' && (
-                      <div className="mt-4 p-4 bg-muted/20 border border-border rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2">
-                        <div className="flex items-center gap-2 pb-2 border-b border-border">
-                          <Palette className="w-4 h-4 text-primary" />
-                          <p className="text-[10px] font-black uppercase tracking-wider text-foreground">Splash Center Preferences</p>
+                    {/* Group 5: Principal Workspace Dashboard Layout */}
+                    {showDash && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <LayoutDashboard className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Principal Workspace Dashboard Layout</h4>
                         </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Custom Splash Welcome Accent Message</label>
-                          <input 
-                            type="text"
-                            value={localCustomWelcomeMessage}
-                            onChange={(e) => setLocalCustomWelcomeMessage(e.target.value)}
-                            className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
-                            placeholder="Welcome to Headquarters"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Splash Welcome Page Sub-Design Style</label>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div className="space-y-4">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Dashboard Default Design Layouts</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {[
-                              { id: 'grid', label: 'Corporate Grid', desc: 'Sleek professional card layout with high-accessibility system link grids.' },
-                              { id: 'neon', label: 'Tech Cyber', desc: 'Vibrant neon cybertheme with glass backgrounds, glowing borders, and modern shadows.' },
-                              { id: 'editorial', label: 'Editorial Cozy', desc: 'Warm minimalist layout, rich typography, spacious elements, and classical serif headers.' }
-                            ].map(sub => (
+                              { id: 'Design 1', label: 'Classic Design', desc: 'Full-featured with all metrics and primary charts.' },
+                              { id: 'Design 2', label: 'Modern Design', desc: 'Clean, modern look with focus on KPI cards and trends.' },
+                              { id: 'Design 3', label: 'Minimalist (Quota Fix)', desc: 'High-performance, minimal charts. Saves 50% reads by reducing complexity.' },
+                              { id: 'Design 4', label: 'Executive Executive', desc: 'Dark-themed, focused only on essential numbers. Lowest quota usage.' },
+                              { id: 'Design 5', label: 'Zero-Read Command Center', desc: 'No database queries printed on layout. Loaded locally with rich interactive workflow portals.' },
+                              { id: 'Design 6', label: 'Minimalist Splash', desc: 'A clean, lightweight layout containing only a centered header greeting card.' }
+                            ].map(d => (
                               <button
-                                key={sub.id}
+                                key={d.id}
                                 type="button"
-                                onClick={() => setLocalSplashSubDesign(sub.id as any)}
+                                onClick={() => setLocalDashboardDesign(d.id as any)}
                                 className={cn(
-                                  "p-2.5 border rounded-lg text-left transition-all space-y-1 outline-none",
-                                  localSplashSubDesign === sub.id
-                                    ? "border-blue-500 bg-blue-50/40 ring-1 ring-blue-500"
+                                  "p-3 border rounded-xl text-left transition-all space-y-1 outline-none",
+                                  localDashboardDesign === d.id
+                                    ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500"
                                     : "border-border bg-background hover:bg-muted"
                                 )}
                               >
-                                <p className="text-[10px] font-bold text-foreground">{sub.label}</p>
-                                <p className="text-[9px] text-muted-foreground leading-normal">{sub.desc}</p>
+                                 <p className={cn("text-[10px] font-black uppercase tracking-tight", localDashboardDesign === d.id ? "text-blue-600" : "text-foreground")}>{d.label}</p>
+                                 <p className="text-[8px] text-muted-foreground uppercase leading-tight font-black">{d.desc}</p>
                               </button>
                             ))}
+                          </div>
+
+                          {localDashboardDesign === 'Design 5' && (
+                            <div className="p-4 bg-muted/20 border border-border rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2">
+                              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                                <Palette className="w-4 h-4 text-primary" />
+                                <p className="text-[10px] font-black uppercase tracking-wider text-foreground">Zero-Read Command Center Preferences</p>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Custom Splash Welcome Accent</label>
+                                  <input 
+                                    type="text"
+                                    value={localCustomWelcomeMessage}
+                                    onChange={(e) => setLocalCustomWelcomeMessage(e.target.value)}
+                                    className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                                    placeholder="Executive Command Center"
+                                  />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                  <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Theme Accent Profile</label>
+                                  <div className="grid grid-cols-4 gap-1.5">
+                                    {[
+                                      { id: 'emerald', label: 'Emerald' },
+                                      { id: 'indigo', label: 'Indigo' },
+                                      { id: 'slate', label: 'Slate' },
+                                      { id: 'cyber', label: 'Cyber' }
+                                    ].map((t) => (
+                                      <button
+                                        key={t.id}
+                                        type="button"
+                                        onClick={() => setLocalCustomControlCenterTheme(t.id as any)}
+                                        className={cn(
+                                          "py-1 px-1 border text-[9px] font-black uppercase rounded text-center transition-all",
+                                          localCustomControlCenterTheme === t.id
+                                            ? "bg-foreground text-background border-foreground font-black font-mono"
+                                            : "bg-background text-muted-foreground border-border hover:text-foreground"
+                                        )}
+                                      >
+                                        {t.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-border/40">
+                                <div className="flex items-center justify-between gap-4 p-2.5 bg-background border border-border/50 rounded-lg grow">
+                                  <div>
+                                    <p className="text-[10px] font-bold text-foreground leading-none">Interactive Margin Calc</p>
+                                    <p className="text-[8px] text-muted-foreground uppercase mt-0.5 font-black">Show calculator tool on widget board</p>
+                                  </div>
+                                  <button 
+                                    type="button"
+                                    onClick={() => setLocalShowQuickCalculator(!localShowQuickCalculator)}
+                                    className={cn(
+                                      "w-8 h-4.5 rounded-full relative transition-colors shrink-0",
+                                      localShowQuickCalculator ? "bg-emerald-500" : "bg-border"
+                                    )}
+                                  >
+                                    <div className={cn(
+                                      "absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all",
+                                      localShowQuickCalculator ? "right-0.5" : "left-0.5"
+                                    )} />
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center justify-between gap-4 p-2.5 bg-background border border-border/50 rounded-lg grow">
+                                  <div>
+                                    <p className="text-[10px] font-bold text-foreground leading-none">Local Pin Bookmarks</p>
+                                    <p className="text-[8px] text-muted-foreground uppercase mt-0.5 font-black font-mono">Let users bookmark pages in LocalStorage</p>
+                                  </div>
+                                  <button 
+                                    type="button"
+                                    onClick={() => setLocalShowPinnedBookmarks(!localShowPinnedBookmarks)}
+                                    className={cn(
+                                      "w-8 h-4.5 rounded-full relative transition-colors shrink-0",
+                                      localShowPinnedBookmarks ? "bg-emerald-500" : "bg-border"
+                                    )}
+                                  >
+                                    <div className={cn(
+                                      "absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-all",
+                                      localShowPinnedBookmarks ? "right-0.5" : "left-0.5"
+                                    )} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {localDashboardDesign === 'Design 6' && (
+                            <div className="p-4 bg-muted/20 border border-border rounded-xl space-y-4 animate-in fade-in slide-in-from-top-2">
+                              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                                <Palette className="w-4 h-4 text-primary" />
+                                <p className="text-[10px] font-black uppercase tracking-wider text-foreground">Splash Center Preferences</p>
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Custom Splash Welcome Accent Message</label>
+                                <input 
+                                  type="text"
+                                  value={localCustomWelcomeMessage}
+                                  onChange={(e) => setLocalCustomWelcomeMessage(e.target.value)}
+                                  className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+                                  placeholder="Welcome to Headquarters"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Splash Welcome Page Sub-Design Style</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                  {[
+                                    { id: 'grid', label: 'Corporate Grid', desc: 'Sleek professional card layout with high-accessibility system link grids.' },
+                                    { id: 'neon', label: 'Tech Cyber', desc: 'Vibrant neon cybertheme with glass backgrounds, glowing borders, and modern shadows.' },
+                                    { id: 'editorial', label: 'Editorial Cozy', desc: 'Warm minimalist layout, rich typography, spacious elements, and classical serif headers.' }
+                                  ].map(sub => (
+                                    <button
+                                      key={sub.id}
+                                      type="button"
+                                      onClick={() => setLocalSplashSubDesign(sub.id as any)}
+                                      className={cn(
+                                        "p-2.5 border rounded-lg text-left transition-all space-y-1 outline-none",
+                                        localSplashSubDesign === sub.id
+                                          ? "border-blue-500 bg-blue-50/40 ring-1 ring-blue-500"
+                                          : "border-border bg-background hover:bg-muted"
+                                      )}
+                                    >
+                                      <p className="text-[10px] font-bold text-foreground">{sub.label}</p>
+                                      <p className="text-[9px] text-muted-foreground leading-normal font-black">{sub.desc}</p>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <p className="text-[9px] text-blue-600 bg-blue-50 dark:bg-blue-950/20 dark:text-blue-400 p-2.5 rounded border border-blue-100 dark:border-blue-900/50 uppercase font-bold font-mono">
+                            * Recommended: Use Design 3 or 4 to drastically reduce non-critical database reads and stay within your free plan limits.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {systemSubTab === 'branding' && (() => {
+                const checkFilter = (labels: string[]) => {
+                  if (!settingsFilterQuery) return true;
+                  const q = settingsFilterQuery.toLowerCase();
+                  return labels.some(l => l && l.toLowerCase().includes(q));
+                };
+
+                const showLogos = checkFilter(['logo', 'asset', 'upload logo', 'set via url', 'system logo', 'building']);
+                const showFavicon = checkFilter(['favicon', 'app icon', 'mobile app icon', 'launcher', 'upload favicon', 'home screen', 'tab']);
+
+                if (!showLogos && !showFavicon) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card border border-border border-dashed rounded-xl">
+                      <Search className="w-8 h-8 text-muted-foreground opacity-30 mb-2 animate-bounce" />
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">No matching options</h4>
+                      <p className="text-[10px] text-muted-foreground mt-1 max-w-xs leading-relaxed uppercase">
+                        We couldn't find any branding configurations matching your keyword.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-6">
+                    {/* Group 1: Global Identity & Logo Asset Styling */}
+                    {showLogos && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Building2 className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Global Identity & Logo Asset Styling</h4>
+                        </div>
+                        <div className="p-4 bg-muted/10 border border-border rounded-xl space-y-3">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">System Logo (Global Default)</label>
+                          <div className="flex flex-col sm:flex-row items-start gap-4">
+                            <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-card overflow-hidden rounded-lg shrink-0">
+                              {localSystemLogo ? (
+                                <img src={localSystemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                              ) : (
+                                <Building2 className="w-6 h-6 text-muted-foreground opacity-20" />
+                              )}
+                            </div>
+                            <div className="flex-1 space-y-2 w-full">
+                              <div className="flex gap-2">
+                                <label className="flex-1 cursor-pointer bg-background border border-border hover:bg-muted transition-all p-2 text-center rounded-lg text-xs font-bold uppercase tracking-wider block">
+                                  Upload System Logo
+                                  <input type="file" accept="image/*" onChange={handleSystemLogoUpload} className="hidden" />
+                                </label>
+                                {localSystemLogo && (
+                                  <button 
+                                    onClick={() => setLocalSystemLogo('')}
+                                    className="p-2 border border-border text-rose-500 hover:bg-rose-500/10 transition-all rounded-lg"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Or set via URL</label>
+                                <input
+                                  type="text"
+                                  placeholder="https://example.com/logo.png"
+                                  value={localSystemLogo}
+                                  onChange={(e) => setLocalSystemLogo(e.target.value)}
+                                  className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                              </div>
+                              <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-black">This logo will be used as a default for all companies if they don't have their own logo.</p>
+                            </div>
                           </div>
                         </div>
                       </div>
                     )}
 
-                    <p className="text-[9px] text-blue-600 bg-blue-50 p-2.5 rounded border border-blue-100 uppercase font-bold mt-3">
-                      * Recommended: Use Design 3 or 4 to drastically reduce non-critical database reads and stay within your free plan limits.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {systemSubTab === 'branding' && (
-                <div className={cn(
-                  "bg-card border border-border rounded-2xl p-6 lg:p-8 space-y-6 shadow-sm",
-                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-xl"
-                )}>
-                  <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Global Logo & Asset Styling</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">Upload or set custom URLs for branding assets applied when user tenants do not replace them.</p>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="p-4 bg-muted/10 border border-border rounded-xl space-y-3">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">System Logo (Global Default)</label>
-                      <div className="flex flex-col sm:flex-row items-start gap-4">
-                        <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-card overflow-hidden rounded-lg shrink-0">
-                          {localSystemLogo ? (
-                            <img src={localSystemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                          ) : (
-                            <Building2 className="w-6 h-6 text-muted-foreground opacity-20" />
-                          )}
-                        </div>
-                        <div className="flex-1 space-y-2 w-full">
-                          <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-background border border-border hover:bg-muted transition-all p-2 text-center rounded-lg text-xs font-bold uppercase tracking-wider block">
-                              Upload System Logo
-                              <input type="file" accept="image/*" onChange={handleSystemLogoUpload} className="hidden" />
-                            </label>
-                            {localSystemLogo && (
-                              <button 
-                                onClick={() => setLocalSystemLogo('')}
-                                className="p-2 border border-border text-rose-500 hover:bg-rose-500/10 transition-all rounded-lg"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Or set via URL</label>
-                            <input
-                              type="text"
-                              placeholder="https://example.com/logo.png"
-                              value={localSystemLogo}
-                              onChange={(e) => setLocalSystemLogo(e.target.value)}
-                              className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                            />
-                          </div>
-                          <p className="text-[9px] text-muted-foreground uppercase leading-relaxed">This logo will be used as a default for all companies if they don't have their own logo.</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-muted/10 border border-border rounded-xl space-y-3">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">App Favicon (Mobile App Icon)</label>
-                      <div className="flex flex-col sm:flex-row items-start gap-4">
-                        <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-card overflow-hidden rounded-lg shrink-0">
-                          {localSystemFavicon ? (
-                            <img src={localSystemFavicon} alt="Favicon" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                          ) : (
-                            <Zap className="w-6 h-6 text-muted-foreground opacity-20" />
-                          )}
-                        </div>
-                        <div className="flex-1 space-y-2 w-full">
-                          <div className="flex gap-2">
-                            <label className="flex-1 cursor-pointer bg-background border border-border hover:bg-muted transition-all p-2 text-center rounded-lg text-xs font-bold uppercase tracking-wider block">
-                              Upload Favicon
-                              <input type="file" accept="image/*" onChange={handleSystemFaviconUpload} className="hidden" />
-                            </label>
-                            {localSystemFavicon && (
-                              <button 
-                                onClick={() => setLocalSystemFavicon('')}
-                                className="p-2 border border-border text-rose-500 hover:bg-rose-500/10 transition-all rounded-lg"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Or set via URL</label>
-                            <input
-                              type="text"
-                              placeholder="https://example.com/favicon.png"
-                              value={localSystemFavicon}
-                              onChange={(e) => setLocalSystemFavicon(e.target.value)}
-                              className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                            />
-                          </div>
-                          <p className="text-[9px] text-muted-foreground uppercase leading-relaxed">Appears in browser tabs and as the launcher app icon when users "Add to Home Screen" on mobile devices.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {systemSubTab === 'search' && (
-                <div className={cn(
-                  "bg-card border border-border rounded-2xl p-6 lg:p-8 space-y-6 shadow-sm",
-                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-xl"
-                )}>
-                  <div>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Global Search Engine Configurations</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">Adjust topbar quick menu lookups and accessibility key shortcuts globally.</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Default Placeholder Text</label>
-                      <input 
-                        type="text" 
-                        value={localSearchPlaceholder || ''} 
-                        onChange={(e) => setLocalSearchPlaceholder(e.target.value)}
-                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
-                        placeholder="Search system metrics..."
-                      />
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Default Keyboard Help Text</label>
-                      <textarea 
-                        value={localSearchHelpText || ''} 
-                        onChange={(e) => setLocalSearchHelpText(e.target.value)}
-                        rows={2}
-                        className="w-full bg-background border border-border rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none resize-none" 
-                        placeholder="Press key bindings..."
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
-                      <div className="space-y-0.5">
-                        <p className="text-xs font-bold text-foreground">Show "ESC" Key Shortcut Hint</p>
-                        <p className="text-[10px] text-muted-foreground">Renders hints on the search overlay to let users close it with ESC.</p>
-                      </div>
-                      <button 
-                        onClick={() => setLocalShowSearchShortcut(!localShowSearchShortcut)}
-                        className={cn(
-                          "w-10 h-5.5 rounded-full relative transition-colors shrink-0",
-                          localShowSearchShortcut ? "bg-emerald-500" : "bg-border"
-                        )}
-                      >
-                        <div className={cn(
-                          "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
-                          localShowSearchShortcut ? "right-0.5" : "left-0.5"
-                        )} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {systemSubTab === 'loader' && (
-                <div className={cn(
-                  "bg-card border border-border rounded-2xl p-6 lg:p-8 space-y-6 shadow-sm",
-                  uiStyle === 'UI/UX 2' && "border-blue-100 shadow-xl"
-                )}>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Adaptive Loading Screen Styling</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">Customize global backdrop glass blur depth, animation icon layouts, and footer progress texts.</p>
-                    </div>
-                    
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Temp test of loader
-                        // We can grab globalLoader if mounted or simulate it locally
-                        const testScreen = document.getElementById('global-loading-screen');
-                        if (testScreen) {
-                          showNotification("Preview triggered! Close/hide will complete automatically in 3.5s.", "info");
-                        }
-                        // Create deep local mock trigger
-                        const event = new CustomEvent('trigger-mock-loader', { 
-                          detail: { 
-                            phrases: localLoaderPhrases,
-                            blur: localLoaderBlurStyle,
-                            icon: localLoaderIconStyle,
-                            theme: localLoaderTheme
-                          } 
-                        });
-                        window.dispatchEvent(event);
-                      }}
-                      className="px-4 py-2 border border-border hover:bg-muted text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 shrink-0"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      Live Preview Loader
-                    </button>
-                  </div>
-
-                  {/* Enable/Disable Adaptive Loading Screen Styling Switch */}
-                  <div className="flex items-center justify-between p-4 bg-muted/20 border border-border rounded-xl">
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-foreground">Adaptive Loading Screen Styling</p>
-                      <p className="text-[10px] text-muted-foreground">Toggles whether to ornament loading screens with dynamic bottom-right progressive step indicator widgets or use simple static overlays.</p>
-                    </div>
-                    <button 
-                      type="button"
-                      onClick={() => setLocalAdaptiveLoaderEnabled(!localAdaptiveLoaderEnabled)}
-                      className={cn(
-                        "w-10 h-5.5 rounded-full relative transition-colors shrink-0",
-                        localAdaptiveLoaderEnabled ? "bg-emerald-500" : "bg-border"
-                      )}
-                    >
+                    {/* Group 2: App Favicon & Launcher Metadata */}
+                    {showFavicon && (
                       <div className={cn(
-                        "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
-                        localAdaptiveLoaderEnabled ? "right-0.5" : "left-0.5"
-                      )} />
-                    </button>
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Zap className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">App Favicon & Launcher Metadata</h4>
+                        </div>
+                        <div className="p-4 bg-muted/10 border border-border rounded-xl space-y-3">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">App Favicon (Mobile App Icon)</label>
+                          <div className="flex flex-col sm:flex-row items-start gap-4">
+                            <div className="w-16 h-16 border border-dashed border-border flex items-center justify-center bg-card overflow-hidden rounded-lg shrink-0">
+                              {localSystemFavicon ? (
+                                <img src={localSystemFavicon} alt="Favicon" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                              ) : (
+                                <Zap className="w-6 h-6 text-muted-foreground opacity-20" />
+                              )}
+                            </div>
+                            <div className="flex-1 space-y-2 w-full">
+                              <div className="flex gap-2">
+                                <label className="flex-1 cursor-pointer bg-background border border-border hover:bg-muted transition-all p-2 text-center rounded-lg text-xs font-bold uppercase tracking-wider block">
+                                  Upload Favicon
+                                  <input type="file" accept="image/*" onChange={handleSystemFaviconUpload} className="hidden" />
+                                </label>
+                                {localSystemFavicon && (
+                                  <button 
+                                    onClick={() => setLocalSystemFavicon('')}
+                                    className="p-2 border border-border text-rose-500 hover:bg-rose-500/10 transition-all rounded-lg"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Or set via URL</label>
+                                <input
+                                  type="text"
+                                  placeholder="https://example.com/favicon.png"
+                                  value={localSystemFavicon}
+                                  onChange={(e) => setLocalSystemFavicon(e.target.value)}
+                                  className="w-full bg-background border border-border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                              </div>
+                              <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-black">Appears in browser tabs and as the launcher app icon when users "Add to Home Screen" on mobile devices.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                );
+              })()}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                    {/* Backdrop Blur Selection */}
-                    <div className="space-y-2.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Screen Glass Blur Intensity</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { id: 'none', label: 'Solid Flat', desc: 'Plain backdrop dimting' },
-                          { id: 'sm', label: 'Subtle Blur', desc: 'Soft 4px backdrop blur' },
-                          { id: 'md', label: 'Medium Blur', desc: 'Balanced 8px aesthetic' },
-                          { id: 'lg', label: 'Deep Frost', desc: 'Heavy 16px high-blur frosted' }
-                        ].map((b) => (
-                          <button
-                            key={b.id}
-                            onClick={() => setLocalLoaderBlurStyle(b.id as any)}
-                            className={cn(
-                              "p-3 border rounded-xl text-left transition-all space-y-1",
-                              localLoaderBlurStyle === b.id
-                                ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                : "border-border bg-background hover:bg-muted"
-                            )}
-                          >
-                            <p className="text-[10px] font-black uppercase tracking-tight text-foreground">{b.label}</p>
-                            <p className="text-[9px] text-muted-foreground leading-tight uppercase">{b.desc}</p>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+              {systemSubTab === 'search' && (() => {
+                const checkFilter = (labels: string[]) => {
+                  if (!settingsFilterQuery) return true;
+                  const q = settingsFilterQuery.toLowerCase();
+                  return labels.some(l => l && l.toLowerCase().includes(q));
+                };
 
-                    {/* Loader Icon Selection */}
-                    <div className="space-y-2.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Center Spinning Icon</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { id: 'spinner', label: 'Calm Spinner', desc: 'Classic clean spinning stroke' },
-                          { id: 'dots', label: 'Bouncing Dots', desc: 'Dynamic hopping loading beads' },
-                          { id: 'circle-bar', label: 'Metropolitan Bar', desc: 'Pulsating double rotation ring' },
-                          { id: 'quantum', label: 'Quantum Matrix', desc: 'Complex tech-themed particle spin' }
-                        ].map((i) => (
-                          <button
-                            key={i.id}
-                            onClick={() => setLocalLoaderIconStyle(i.id as any)}
-                            className={cn(
-                              "p-3 border rounded-xl text-left transition-all space-y-1",
-                              localLoaderIconStyle === i.id
-                                ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                : "border-border bg-background hover:bg-muted"
-                            )}
-                          >
-                            <p className="text-[10px] font-black uppercase tracking-tight text-foreground">{i.label}</p>
-                            <p className="text-[9px] text-muted-foreground leading-tight uppercase">{i.desc}</p>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                const showMainSearch = checkFilter(['placeholder', 'search', 'default placeholder', 'metrics', 'search menu']);
+                const showShortcutSearch = checkFilter(['keyboard', 'help text', 'esc key', 'shortcut hint', 'keyboard bindings', 'overlay']);
 
-                    {/* Loader Card Theme Selection */}
-                    <div className="space-y-2.5">
-                      <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Progress Box Panel Theme</label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { id: 'glass', label: 'Aero Glass', desc: 'Holographic' },
-                          { id: 'dark', label: 'Cosmic Obsidian', desc: 'Pure Dark' },
-                          { id: 'light', label: 'Snow Alabaster', desc: 'Minimal Light' }
-                        ].map((t) => (
-                          <button
-                            key={t.id}
-                            onClick={() => setLocalLoaderTheme(t.id as any)}
-                            className={cn(
-                              "p-2.5 border rounded-xl text-left transition-all space-y-1",
-                              localLoaderTheme === t.id
-                                ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                : "border-border bg-background hover:bg-muted"
-                            )}
-                          >
-                            <p className="text-[10px] font-black uppercase tracking-tight text-foreground leading-none">{t.label}</p>
-                            <p className="text-[8px] text-muted-foreground uppercase leading-none mt-1">{t.desc}</p>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Loader Instruction Help Banner */}
-                    <div className="p-3.5 bg-muted/10 border border-border rounded-xl flex flex-col justify-center space-y-1">
-                      <h4 className="text-[10px] font-bold text-foreground uppercase tracking-widest flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
-                        Reactive Loading Pipeline
-                      </h4>
-                      <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-mono">
-                        When users trigger major tasks (indexing reports, exporting books, posting kontras, syncs), the system overlays a blurred frosted glass shroud & shifts through custom steps in real time.
+                if (!showMainSearch && !showShortcutSearch) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card border border-border border-dashed rounded-xl">
+                      <Search className="w-8 h-8 text-muted-foreground opacity-30 mb-2 animate-bounce" />
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">No matching options</h4>
+                      <p className="text-[10px] text-muted-foreground mt-1 max-w-xs leading-relaxed uppercase">
+                        We couldn't find any search engine configurations matching your keyword.
                       </p>
                     </div>
-                  </div>
+                  );
+                }
 
-                  {/* Custom Progress Phrases input */}
-                  <div className="space-y-2 pt-2">
-                    <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">
-                      Progress Text Transition Sequence (Comma Separated)
-                    </label>
-                    <textarea
-                      value={localLoaderPhrases}
-                      onChange={(e) => setLocalLoaderPhrases(e.target.value)}
-                      rows={3}
-                      className="w-full bg-background border border-border rounded-xl p-3 text-xs font-mono focus:ring-2 focus:ring-primary outline-none resize-none leading-relaxed"
-                      placeholder="Connecting to server, Requesting to server, Waiting for response, Almost Done, Welcoming back!"
-                    />
-                    <p className="text-[9px] text-muted-foreground uppercase font-semibold">
-                      * Separate each status message with a comma. The loader loops through these from left to right as the loading sequence completes.
-                    </p>
-                  </div>
-                </div>
-              )}
+                return (
+                  <div className="space-y-6">
+                    {/* Group 1: Global Search Placeholder & Tones */}
+                    {showMainSearch && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Search className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Global Search Placeholder & Language Tones</h4>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Default Placeholder Text</label>
+                          <input 
+                            type="text" 
+                            value={localSearchPlaceholder || ''} 
+                            onChange={(e) => setLocalSearchPlaceholder(e.target.value)}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none" 
+                            placeholder="Search system metrics..."
+                          />
+                        </div>
+                      </div>
+                    )}
 
-              {systemSubTab === 'skeleton' && (
-                <div className="flex-1 space-y-6">
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-black uppercase tracking-wider text-foreground">Skeleton Loading Configuration</h3>
-                    <p className="text-[10px] text-muted-foreground uppercase">Control bone shimmer structures, wave speeds, themes, and layouts company-wide.</p>
+                    {/* Group 2: Keyboard Bindings & Accessibility Overlays */}
+                    {showShortcutSearch && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Zap className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Keyboard Bindings & Accessibility Overlays</h4>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Default Keyboard Help Text</label>
+                            <textarea 
+                              value={localSearchHelpText || ''} 
+                              onChange={(e) => setLocalSearchHelpText(e.target.value)}
+                              rows={2}
+                              className="w-full bg-background border border-border rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none resize-none" 
+                              placeholder="Press key bindings..."
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
+                            <div className="space-y-0.5">
+                              <p className="text-xs font-bold text-foreground">Show "ESC" Key Shortcut Hint</p>
+                              <p className="text-[10px] text-muted-foreground">Renders hints on the search overlay to let users close it with ESC.</p>
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => setLocalShowSearchShortcut(!localShowSearchShortcut)}
+                              className={cn(
+                                "w-10 h-5.5 rounded-full relative transition-colors shrink-0",
+                                localShowSearchShortcut ? "bg-emerald-500" : "bg-border"
+                              )}
+                            >
+                              <div className={cn(
+                                "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                                localShowSearchShortcut ? "right-0.5" : "left-0.5"
+                              )} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                );
+              })()}
 
-                  <div className="p-5 bg-card border border-border rounded-2xl space-y-6">
+              {systemSubTab === 'loader' && (() => {
+                const checkFilter = (labels: string[]) => {
+                  if (!settingsFilterQuery) return true;
+                  const q = settingsFilterQuery.toLowerCase();
+                  return labels.some(l => l && l.toLowerCase().includes(q));
+                };
+
+                const showActivation = checkFilter(['adaptive', 'shroud', 'loading screen', 'loading screen styling', 'status bottom-right', 'progressive step indicator']);
+                const showLoaderAesthetic = checkFilter(['glass blur', 'intensity', 'flat solid', 'subtle blur', 'medium blur', 'deep frost', 'center spinning', 'spinner', 'dots', 'circle-bar', 'quantum matrix', 'progress box', 'aero glass', 'cosmic obsidian', 'snow alabaster']);
+                const showLoaderPhrases = checkFilter(['phrases', 'progress text', 'comma separated', 'transition sequence', 'sequence', 'status message']);
+
+                if (!showActivation && !showLoaderAesthetic && !showLoaderPhrases) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card border border-border border-dashed rounded-xl">
+                      <Search className="w-8 h-8 text-muted-foreground opacity-30 mb-2 animate-bounce" />
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">No matching options</h4>
+                      <p className="text-[10px] text-muted-foreground mt-1 max-w-xs leading-relaxed uppercase">
+                        We couldn't find any loader configurations matching your keyword.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-6">
+                    {/* Live Preview & Activation Status */}
+                    <div className={cn(
+                      "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                      uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                    )}>
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border pb-3">
+                        <div className="flex items-center gap-2">
+                          <RefreshCw className="w-4 h-4 text-primary animate-spin" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Adaptive Loading Activation & Realtime Preview</h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const testScreen = document.getElementById('global-loading-screen');
+                            if (testScreen) {
+                              showNotification("Preview triggered! Close/hide will complete automatically in 3.5s.", "info");
+                            }
+                            const event = new CustomEvent('trigger-mock-loader', { 
+                              detail: { 
+                                phrases: localLoaderPhrases,
+                                blur: localLoaderBlurStyle,
+                                icon: localLoaderIconStyle,
+                                theme: localLoaderTheme
+                              } 
+                            });
+                            window.dispatchEvent(event);
+                          }}
+                          className="px-4 py-2 bg-foreground text-background hover:opacity-95 text-[10px] font-bold uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 shrink-0"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          Live Preview Loader
+                        </button>
+                      </div>
+
+                      {showActivation && (
+                        <div className="flex items-center justify-between p-4 bg-muted/20 border border-border rounded-xl">
+                          <div className="space-y-0.5">
+                            <p className="text-xs font-bold text-foreground">Adaptive Loading Screen Styling</p>
+                            <p className="text-[10px] text-muted-foreground">Toggles whether to ornament loading screens with dynamic bottom-right progressive step indicator widgets or use simple static overlays.</p>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => setLocalAdaptiveLoaderEnabled(!localAdaptiveLoaderEnabled)}
+                            className={cn(
+                              "w-10 h-5.5 rounded-full relative transition-colors shrink-0",
+                              localAdaptiveLoaderEnabled ? "bg-emerald-500" : "bg-border"
+                            )}
+                          >
+                            <div className={cn(
+                              "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                              localAdaptiveLoaderEnabled ? "right-0.5" : "left-0.5"
+                            )} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Group 2: Visual Backdrop Blur, Spinning Shapes & Panel Themes */}
+                    {showLoaderAesthetic && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Palette className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Glass Backdrops & Center Spinning Shapes</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Backdrop Blur Selection */}
+                          <div className="space-y-2.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Screen Glass Blur Intensity</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {[
+                                { id: 'none', label: 'Solid Flat', desc: 'Plain backdrop dimting' },
+                                { id: 'sm', label: 'Subtle Blur', desc: 'Soft 4px backdrop blur' },
+                                { id: 'md', label: 'Medium Blur', desc: 'Balanced 8px aesthetic' },
+                                { id: 'lg', label: 'Deep Frost', desc: 'Heavy 16px high-blur frosted' }
+                              ].map((b) => (
+                                <button
+                                  key={b.id}
+                                  type="button"
+                                  onClick={() => setLocalLoaderBlurStyle(b.id as any)}
+                                  className={cn(
+                                    "p-3 border rounded-xl text-left transition-all space-y-1 outline-none",
+                                    localLoaderBlurStyle === b.id
+                                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                      : "border-border bg-background hover:bg-muted"
+                                  )}
+                                >
+                                  <p className="text-[10px] font-black uppercase tracking-tight text-foreground">{b.label}</p>
+                                  <p className="text-[9px] text-muted-foreground leading-tight uppercase font-mono">{b.desc}</p>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Loader Icon Selection */}
+                          <div className="space-y-2.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Center Spinning Icon</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {[
+                                { id: 'spinner', label: 'Calm Spinner', desc: 'Classic clean spinning stroke' },
+                                { id: 'dots', label: 'Bouncing Dots', desc: 'Dynamic hopping loading beads' },
+                                { id: 'circle-bar', label: 'Metropolitan Bar', desc: 'Pulsating double rotation ring' },
+                                { id: 'quantum', label: 'Quantum Matrix', desc: 'Complex tech-themed particle spin' }
+                              ].map((i) => (
+                                <button
+                                  key={i.id}
+                                  type="button"
+                                  onClick={() => setLocalLoaderIconStyle(i.id as any)}
+                                  className={cn(
+                                    "p-3 border rounded-xl text-left transition-all space-y-1 outline-none",
+                                    localLoaderIconStyle === i.id
+                                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                      : "border-border bg-background hover:bg-muted"
+                                  )}
+                                >
+                                  <p className="text-[10px] font-black uppercase tracking-tight text-foreground">{i.label}</p>
+                                  <p className="text-[9px] text-muted-foreground leading-tight uppercase font-mono">{i.desc}</p>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Loader Card Theme Selection */}
+                          <div className="space-y-2.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Progress Box Panel Theme</label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {[
+                                { id: 'glass', label: 'Aero Glass', desc: 'Holographic' },
+                                { id: 'dark', label: 'Cosmic Obsidian', desc: 'Pure Dark' },
+                                { id: 'light', label: 'Snow Alabaster', desc: 'Minimal Light' }
+                              ].map((t) => (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => setLocalLoaderTheme(t.id as any)}
+                                  className={cn(
+                                    "p-2.5 border rounded-xl text-left transition-all space-y-1 outline-none",
+                                    localLoaderTheme === t.id
+                                      ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                      : "border-border bg-background hover:bg-muted"
+                                  )}
+                                >
+                                  <p className="text-[10px] font-black uppercase tracking-tight text-foreground leading-none">{t.label}</p>
+                                  <p className="text-[8px] text-muted-foreground uppercase leading-none mt-1 font-mono">{t.desc}</p>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Loader Instruction Help Banner */}
+                          <div className="p-3.5 bg-muted/10 border border-border rounded-xl flex flex-col justify-center space-y-1">
+                            <h4 className="text-[10px] font-bold text-foreground uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                              Reactive Loading Pipeline
+                            </h4>
+                            <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-black font-mono">
+                              When users trigger major tasks (indexing reports, exporting books, posting kontras, syncs), the system overlays a blurred frosted glass shroud & shifts through custom steps in real time.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Group 3: Progress status text sequence */}
+                    {showLoaderPhrases && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <ListTree className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Progressive Status Text Chain</h4>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">
+                            Progress Text Transition Sequence (Comma Separated)
+                          </label>
+                          <textarea
+                            value={localLoaderPhrases}
+                            onChange={(e) => setLocalLoaderPhrases(e.target.value)}
+                            rows={3}
+                            className="w-full bg-background border border-border rounded-xl p-3 text-xs font-mono focus:ring-2 focus:ring-primary outline-none resize-none leading-relaxed"
+                            placeholder="Connecting to server, Requesting to server, Waiting for response, Almost Done, Welcoming back!"
+                          />
+                          <p className="text-[9px] text-muted-foreground uppercase font-black leading-tight">
+                            * Separate each status message with a comma. The loader loops through these from left to right as the loading sequence completes.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {systemSubTab === 'skeleton' && (() => {
+                const checkFilter = (labels: string[]) => {
+                  if (!settingsFilterQuery) return true;
+                  const q = settingsFilterQuery.toLowerCase();
+                  return labels.some(l => l && l.toLowerCase().includes(q));
+                };
+
+                const showActivation = checkFilter(['enable', 'skeleton loaders', 'app-wide skeleton', 'dashboard-only', 'toggle skeleton', 'shimmer skeletons']);
+                const showThemes = checkFilter(['visual theme', 'shimmer wave', 'color hue', 'movement speed', 'indigo wave', 'cyan aura', 'rose gold', 'emerald mint', 'amber flame', 'slate', 'slow drift', 'standard speed', 'high speed', 'cyberpunk neon', 'holographic glass', 'modern elegant']);
+                const showSizing = checkFilter(['rows', 'skeletal rows', 'slider', 'row limits']);
+                const showLayouts = checkFilter(['default dashboard/page loading layout', 'loading layout', 'auto-route', 'table/ledger', 'bento cards', 'profile/detail', 'form/voucher']);
+                const showSandbox = checkFilter(['sandbox', 'preview sandbox', 'live shimmer', 'interactivity sandbox', 'wave sweep']);
+
+                if (!showActivation && !showThemes && !showSizing && !showLayouts && !showSandbox) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card border border-border border-dashed rounded-xl">
+                      <Search className="w-8 h-8 text-muted-foreground opacity-30 mb-2 animate-bounce" />
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">No matching options</h4>
+                      <p className="text-[10px] text-muted-foreground mt-1 max-w-xs leading-relaxed uppercase">
+                        We couldn't find any skeleton configurations matching your keyword.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-6">
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-sm font-black uppercase tracking-wider text-foreground">Skeleton Loading Configuration</h3>
+                      <p className="text-[10px] text-muted-foreground uppercase">Control bone shimmer structures, wave speeds, themes, and layouts company-wide.</p>
+                    </div>
+
+                    <div className="p-5 bg-card border border-border rounded-xl space-y-6">
                     {/* Enable Toggle block */}
                     <div className="flex items-center justify-between p-4 bg-muted/20 border border-border rounded-xl">
                       <div className="space-y-0.5">
@@ -3968,260 +4568,315 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                         </div>
                       </div>
                     )}
-
                   </div>
                 </div>
-              )}
+              );
+            })()}
 
-              {systemSubTab === 'warnings' && (
-                <div className="flex-1 space-y-6">
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-black uppercase tracking-wider text-foreground">Customizable Voucher Warnings</h3>
-                    <p className="text-[10px] text-muted-foreground uppercase">Translate, rephrase, or completely customize the validation error messages on the Voucher Entry page.</p>
+              {systemSubTab === 'warnings' && (() => {
+                const checkFilter = (labels: string[]) => {
+                  if (!settingsFilterQuery) return true;
+                  const q = settingsFilterQuery.toLowerCase();
+                  return labels.some(l => l && l.toLowerCase().includes(q));
+                };
+
+                const showGroup1 = checkFilter(['prefix', 'party name', 'supplier', 'sales ledger', 'purchase ledger', 'validation', 'error prefix', 'party', 'supplier', 'ledger']);
+                const showGroup2 = checkFilter(['physical stock', 'invalid qty', 'missing item', 'empty item', 'item name', 'quantity', 'rate empty', 'rate', 'stock']);
+                const showGroup3 = checkFilter(['stock journal', 'consumption', 'production', 'source item', 'destination item', 'manufacturing', 'material', 'source name', 'destination name']);
+                const showGroup4 = checkFilter(['single entry', 'journal', 'ledger name', 'account', 'particulars', 'amount', 'difference', 'debit', 'credit', 'balanced', 'debit/credit']);
+
+                if (!showGroup1 && !showGroup2 && !showGroup3 && !showGroup4) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card border border-border border-dashed rounded-xl">
+                      <Search className="w-8 h-8 text-muted-foreground opacity-30 mb-2 animate-bounce" />
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">No matching warnings</h4>
+                      <p className="text-[10px] text-muted-foreground mt-1 max-w-xs leading-relaxed uppercase">
+                        We couldn't find any voucher warnings matching your keyword.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-6">
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-sm font-black uppercase tracking-wider text-foreground">Customizable Voucher Warnings</h3>
+                      <p className="text-[10px] text-muted-foreground uppercase">Translate, rephrase, or completely customize the validation error messages on the Voucher Entry page.</p>
+                    </div>
+
+                    <div className="space-y-6">
+                      {/* Section 1: Common Prefix & Fields */}
+                      {showGroup1 && (
+                        <div className={cn(
+                          "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                          uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                        )}>
+                          <div className="flex items-center gap-2 border-b border-border pb-3">
+                            <AlertCircle className="w-4 h-4 text-primary" />
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">1. Common Error Prefix & Field Labels</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Error Message Prefix</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningPrefixSelectFill || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningPrefixSelectFill: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                              <p className="text-[9px] text-muted-foreground">Appended before list-based missing fields. (e.g., "Please select or fill in:")</p>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Party Name Label</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningPartyName || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningPartyName: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Supplier Name Label</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningSupplierName || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSupplierName: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Sales Ledger Label</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningSalesLedger || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSalesLedger: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Purchase Ledger Label</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningPurchaseLedger || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningPurchaseLedger: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Section 2: Inventory & Physical Stock */}
+                      {showGroup2 && (
+                        <div className={cn(
+                          "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                          uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                        )}>
+                          <div className="flex items-center gap-2 border-b border-border pb-3">
+                            <Package className="w-4 h-4 text-primary" />
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">2. Inventory & Physical Stock Warnings</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Physical Stock: Missing Item</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningSelectItemsInPhysicalStock || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSelectItemsInPhysicalStock: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Physical Stock: Invalid Qty</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningInvalidQtyInPhysicalStock || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningInvalidQtyInPhysicalStock: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Empty Items List</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningItemsListEmpty || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningItemsListEmpty: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Item Name</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningItemNameEmpty || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningItemNameEmpty: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Quantity (Inventory items)</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningQuantityEmpty || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningQuantityEmpty: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Rate (Inventory items)</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningRateEmpty || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningRateEmpty: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Section 3: Stock Journal Entries */}
+                      {showGroup3 && (
+                        <div className={cn(
+                          "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                          uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                        )}>
+                          <div className="flex items-center gap-2 border-b border-border pb-3">
+                            <Cpu className="w-4 h-4 text-primary" />
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">3. Stock Journal Warnings</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Consumption Section</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningConsumptionItems || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningConsumptionItems: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Source Item Name</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningSourceItemName || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSourceItemName: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Source Item Quantity</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningSourceItemQty || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSourceItemQty: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Production Section</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningProductionItems || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningProductionItems: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Destination Item Name</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningDestItemName || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningDestItemName: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Destination Item Quantity</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningDestItemQty || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningDestItemQty: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Section 4: Single Entry & Journal (Debit/Credit) Warnings */}
+                      {showGroup4 && (
+                        <div className={cn(
+                          "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                          uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                        )}>
+                          <div className="flex items-center gap-2 border-b border-border pb-3">
+                            <ClipboardList className="w-4 h-4 text-primary" />
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">4. Single Entry & Journal Warnings</h4>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Single Entry: Account (Bank/Cash)</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningSingleAccount || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSingleAccount: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Single Entry: Particulars Ledger</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningSingleParticulars || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSingleParticulars: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Single Entry: Particulars Amount</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningSingleAmount || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSingleAmount: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Journal: Missing Ledger Name</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningJournalLedgerName || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningJournalLedgerName: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Journal: Missing Debit/Credit Amount</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningJournalDebitCreditAmount || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningJournalDebitCreditAmount: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5 md:col-span-2">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Journal: Balanced Difference warning</label>
+                              <input
+                                type="text"
+                                value={localWarnings.warningJournalNotBalanced || ''}
+                                onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningJournalNotBalanced: e.target.value }))}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                              />
+                              <p className="text-[9px] text-muted-foreground uppercase mt-1">Template tags supported: <code className="font-mono bg-muted px-1 rounded">{'{DIFF}'}</code>, <code className="font-mono bg-muted px-1 rounded">{'{DEBIT}'}</code>, <code className="font-mono bg-muted px-1 rounded">{'{CREDIT}'}</code>, <code className="font-mono bg-muted px-1 rounded">{'{SYMBOL}'}</code></p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-
-                  <div className="p-6 bg-card border border-border rounded-2xl space-y-8">
-                    
-                    {/* Section 1: Common Prefix & Fields */}
-                    <div className="space-y-4">
-                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wide border-b border-border/60 pb-1.5 animate-pulse">1. Common Error Prefix & Field Labels</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Error Message Prefix</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningPrefixSelectFill || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningPrefixSelectFill: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                          <p className="text-[9px] text-muted-foreground">Appended before list-based missing fields. (e.g., "Please select or fill in:")</p>
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Party Name Label</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningPartyName || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningPartyName: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Supplier Name Label</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningSupplierName || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSupplierName: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Sales Ledger Label</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningSalesLedger || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSalesLedger: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Purchase Ledger Label</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningPurchaseLedger || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningPurchaseLedger: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Section 2: Inventory & Physical Stock */}
-                    <div className="space-y-4">
-                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wide border-b border-border/60 pb-1.5">2. Inventory & Physical Stock Warnings</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Physical Stock: Missing Item</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningSelectItemsInPhysicalStock || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSelectItemsInPhysicalStock: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Physical Stock: Invalid Qty</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningInvalidQtyInPhysicalStock || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningInvalidQtyInPhysicalStock: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Empty Items List</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningItemsListEmpty || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningItemsListEmpty: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Item Name</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningItemNameEmpty || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningItemNameEmpty: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Quantity (Inventory items)</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningQuantityEmpty || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningQuantityEmpty: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Rate (Inventory items)</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningRateEmpty || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningRateEmpty: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Section 3: Stock Journal Entries */}
-                    <div className="space-y-4">
-                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wide border-b border-border/60 pb-1.5">3. Stock Journal Warnings</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Consumption Section</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningConsumptionItems || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningConsumptionItems: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Source Item Name</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningSourceItemName || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSourceItemName: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Source Item Quantity</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningSourceItemQty || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSourceItemQty: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Production Section</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningProductionItems || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningProductionItems: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Destination Item Name</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningDestItemName || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningDestItemName: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Missing Destination Item Quantity</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningDestItemQty || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningDestItemQty: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Section 4: Single Entry & Journal (Debit/Credit) Warnings */}
-                    <div className="space-y-4">
-                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wide border-b border-border/60 pb-1.5">4. Single Entry & Journal Warnings</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Single Entry: Account (Bank/Cash)</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningSingleAccount || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSingleAccount: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Single Entry: Particulars Ledger</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningSingleParticulars || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSingleParticulars: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Single Entry: Particulars Amount</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningSingleAmount || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningSingleAmount: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Journal: Missing Ledger Name</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningJournalLedgerName || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningJournalLedgerName: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Journal: Missing Debit/Credit Amount</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningJournalDebitCreditAmount || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningJournalDebitCreditAmount: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                        </div>
-                        <div className="space-y-1.5 md:col-span-2">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Journal: Balanced Difference warning</label>
-                          <input
-                            type="text"
-                            value={localWarnings.warningJournalNotBalanced || ''}
-                            onChange={(e) => setLocalWarnings(prev => ({ ...prev, warningJournalNotBalanced: e.target.value }))}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none font-medium"
-                          />
-                          <p className="text-[9px] text-muted-foreground uppercase">Template tags supported: <code className="font-mono bg-muted px-1 rounded">{'{DIFF}'}</code>, <code className="font-mono bg-muted px-1 rounded">{'{DEBIT}'}</code>, <code className="font-mono bg-muted px-1 rounded">{'{CREDIT}'}</code>, <code className="font-mono bg-muted px-1 rounded">{'{SYMBOL}'}</code></p>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         </div>

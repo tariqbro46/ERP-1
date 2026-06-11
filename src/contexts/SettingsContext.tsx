@@ -100,6 +100,8 @@ interface SettingsContextType {
   showSignature3: boolean;
   signatureAlignment: 'left' | 'center' | 'right' | 'spread';
   showDeveloperContact: boolean;
+  developerContactText: string;
+  developerContactAlignment: 'left' | 'center' | 'right';
   baseCurrencySymbol: string;
   timezone: string;
   refNoFormat: string;
@@ -134,6 +136,11 @@ interface SettingsContextType {
   uiStyle: UIStyle;
   systemUiStyle?: UIStyle;
   systemMenuBarStyle?: MenuBarStyle;
+  alterPageUiStyle?: 'classic' | 'modern';
+  reportsPageUiStyle?: 'classic' | 'modern' | 'grid';
+  reportsColumnsPerRow?: number;
+  alterColumnsPerRow?: number;
+  enableUserSortViewPref?: boolean;
   sidebarBgColor?: string;
   sidebarTextColor?: string;
   glassBackground: GlassBackground;
@@ -147,6 +154,9 @@ interface SettingsContextType {
   statusErrorText: string;
   showGoToShortcut: boolean;
   showScrollingBar: boolean;
+  showTopbarSearch: boolean;
+  showTopbarNotifications: boolean;
+  showTopbarInstructions: boolean;
   showQuickActions: boolean;
   dashboardQuickActions: string[];
   dashboardCards: string[];
@@ -235,6 +245,8 @@ const defaultSettings: SettingsContextType = {
   showSignature3: true,
   signatureAlignment: 'spread',
   showDeveloperContact: true,
+  developerContactText: 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000',
+  developerContactAlignment: 'center',
   baseCurrencySymbol: '৳',
   timezone: 'UTC+06:00 (Dhaka)',
   refNoFormat: 'SAL/{YEAR}/{NO}',
@@ -269,6 +281,11 @@ const defaultSettings: SettingsContextType = {
   uiStyle: 'UI/UX 1',
   systemUiStyle: undefined,
   systemMenuBarStyle: undefined,
+  alterPageUiStyle: 'modern',
+  reportsPageUiStyle: 'modern' as any,
+  reportsColumnsPerRow: 4,
+  alterColumnsPerRow: 3,
+  enableUserSortViewPref: false,
   sidebarBgColor: 'default',
   sidebarTextColor: 'default',
   glassBackground: 'default',
@@ -298,6 +315,9 @@ const defaultSettings: SettingsContextType = {
   skeletonRows: 5,
   skeletonWaveColor: 'indigo',
   showGoToShortcut: true,
+  showTopbarSearch: true,
+  showTopbarNotifications: true,
+  showTopbarInstructions: true,
   showQuickActions: true,
   dashboardQuickActions: ['voucher', 'item', 'ledger', 'godown', 'users'],
   dashboardCards: ['revenue', 'profit', 'ledgers', 'stock'],
@@ -439,6 +459,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             statusOfflineText: data.statusOfflineText || prev.statusOfflineText,
             statusErrorText: data.statusErrorText || prev.statusErrorText,
             showGoToShortcut: data.showGoToShortcut !== undefined ? data.showGoToShortcut : prev.showGoToShortcut,
+            showTopbarSearch: data.showTopbarSearch !== undefined ? data.showTopbarSearch : true,
+            showTopbarNotifications: data.showTopbarNotifications !== undefined ? data.showTopbarNotifications : true,
+            showTopbarInstructions: data.showTopbarInstructions !== undefined ? data.showTopbarInstructions : true,
+            developerContactText: data.developerContactText || prev.developerContactText,
+            developerContactAlignment: data.developerContactAlignment || prev.developerContactAlignment,
             appVersion: data.appVersion || prev.appVersion,
             englishFont: data.englishFont || prev.englishFont,
             banglaFont: data.banglaFont || prev.banglaFont,
@@ -495,6 +520,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             warningJournalNotBalanced: data.warningJournalNotBalanced || prev.warningJournalNotBalanced,
             systemUiStyle: data.uiStyle || prev.systemUiStyle,
             systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
+            alterPageUiStyle: data.alterPageUiStyle || 'modern',
+            reportsPageUiStyle: (data.reportsPageUiStyle as any) || 'modern',
+            reportsColumnsPerRow: Number(data.reportsColumnsPerRow || 4),
+            alterColumnsPerRow: Number(data.alterColumnsPerRow || 3),
+            enableUserSortViewPref: data.enableUserSortViewPref !== undefined ? !!data.enableUserSortViewPref : false,
             sidebarBgColor: data.sidebarBgColor || prev.sidebarBgColor || 'default',
             sidebarTextColor: data.sidebarTextColor || prev.sidebarTextColor || 'default',
             globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign
@@ -736,6 +766,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     <SettingsContext.Provider value={{ 
       ...settings, 
       ...userSettings,
+      alterPageUiStyle: settings.alterPageUiStyle || 'modern',
+      reportsPageUiStyle: settings.reportsPageUiStyle || 'modern',
+      reportsColumnsPerRow: settings.reportsColumnsPerRow || 4,
+      alterColumnsPerRow: settings.alterColumnsPerRow || 3,
+      enableUserSortViewPref: settings.enableUserSortViewPref !== undefined ? settings.enableUserSortViewPref : false,
       uiStyle: settings.systemUiStyle || userSettings.uiStyle || settings.uiStyle || 'UI/UX 1',
       menuBarStyle: settings.systemMenuBarStyle || userSettings.menuBarStyle || settings.menuBarStyle || 'classic',
       sidebarBgColor: userSettings.sidebarBgColor || settings.sidebarBgColor || 'default',

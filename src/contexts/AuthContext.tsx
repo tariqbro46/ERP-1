@@ -13,6 +13,7 @@ export interface Profile {
   companyId: string;
   target_amount?: number;
   permissions?: string[];
+  photoURL?: string;
 }
 
 export interface CompanyData {

@@ -364,35 +364,39 @@ export function LedgerStatement() {
       }
 
       const reportRows = [
-        `<tr style="border-bottom: 0.1mm solid #333;">
-          <td style="color: #000;">${formatDate(startDate)}</td>
-          <td style="color: #000;"><b>Opening Balance</b></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td style="text-align: right; color: #000;"><b>${openingBalance > 0 ? formatNumber(openingBalance) : ''}</b></td>
-          <td style="text-align: right; color: #000;">${openingBalance < 0 ? formatNumber(Math.abs(openingBalance)) : ''}</td>
-          <td style="text-align: right; color: #000;"></td>
-        </tr>`,
+        `<tbody style="page-break-inside: avoid; break-inside: avoid;">
+          <tr style="border-bottom: 0.1mm solid #333;">
+            <td style="color: #000;">${formatDate(startDate)}</td>
+            <td style="color: #000;"><b>Opening Balance</b></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td style="text-align: right; color: #000;"><b>${openingBalance > 0 ? formatNumber(openingBalance) : ''}</b></td>
+            <td style="text-align: right; color: #000;">${openingBalance < 0 ? formatNumber(Math.abs(openingBalance)) : ''}</td>
+            <td style="text-align: right; color: #000;"></td>
+          </tr>
+        </tbody>`,
         ...entries.map(e => {
           rb += (e.debit || 0) - (e.credit || 0);
           totalDebitCounter += (e.debit || 0);
           totalCreditCounter += (e.credit || 0);
           const creator = users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System';
           
-          let row = `<tr style="border-bottom: 0.1mm solid #333;">
-            <td style="color: #000;">${formatDate(e.vouchers?.v_date)}</td>
-            <td style="color: #000;">
-              <div>Dr <b>${e.particulars}</b></div>
-              ${config.showNarration && e.vouchers?.narration ? `<div style="font-size: 10px; font-style: italic; margin-left: 10px; color: #000;">${e.vouchers.narration}</div>` : ''}
-            </td>
-            <td style="color: #000;">${e.vouchers?.v_type}</td>
-            <td style="color: #000;">${e.vouchers?.v_no || e.vouchers?.reference_no || ''}</td>
-            <td style="color: #000;">${e.vouchers?.serial_no || e.vouchers?.auto_serial_no || ''}</td>
-            <td style="text-align: right; color: #000;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
-            <td style="text-align: right; color: #000;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
-            <td style="text-align: right; color: #000;">${config.showRunningBalance ? `${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
-          </tr>`;
+          let row = `
+            <tbody style="page-break-inside: avoid; break-inside: avoid;">
+              <tr style="border-bottom: 0.1mm solid #333;">
+                <td style="color: #000;">${formatDate(e.vouchers?.v_date)}</td>
+                <td style="color: #000;">
+                  <div>Dr <b>${e.particulars}</b></div>
+                  ${config.showNarration && e.vouchers?.narration ? `<div style="font-size: 10px; font-style: italic; margin-left: 10px; color: #000;">${e.vouchers.narration}</div>` : ''}
+                </td>
+                <td style="color: #000;">${e.vouchers?.v_type}</td>
+                <td style="color: #000;">${e.vouchers?.v_no || e.vouchers?.reference_no || ''}</td>
+                <td style="color: #000;">${e.vouchers?.serial_no || e.vouchers?.auto_serial_no || ''}</td>
+                <td style="text-align: right; color: #000;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
+                <td style="text-align: right; color: #000;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
+                <td style="text-align: right; color: #000;">${config.showRunningBalance ? `${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}` : ''}</td>
+              </tr>`;
 
           if (config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.length > 0) {
             const inventoryRows = e.vouchers.inventory.map((item: any) => {
@@ -425,6 +429,7 @@ export function LedgerStatement() {
             </tr>`;
           }
           
+          row += `</tbody>`;
           return row;
         })
       ].join('');
@@ -458,8 +463,22 @@ export function LedgerStatement() {
               .ledger-name { font-size: 16px; font-weight: bold; text-transform: uppercase; }
               .period-box { text-align: center; margin-bottom: 10px; }
               .period-label { border: 1px solid #000; padding: 2px 15px; font-size: 12px; font-weight: bold; }
-              .page-num { text-align: right; font-size: 11px; margin-bottom: 5px; }
-              .page-num span { border: 1px solid #000; padding: 2px 10px; }
+              .page-num { display: none !important; }
+              .page-num-fixed {
+                position: fixed;
+                top: 1cm;
+                right: 1cm;
+                font-size: 11px;
+                font-family: inherit;
+              }
+              .page-num-fixed span {
+                border: 1px solid #000;
+                padding: 2px 10px;
+                font-weight: bold;
+              }
+              .page-num-fixed span::after {
+                content: "Page " counter(page);
+              }
               
               table { width: 100%; border-collapse: collapse; margin-top: 5px; border-top: 1px solid #333; border-bottom: 1px solid #333; table-layout: fixed; }
               th { border: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; text-transform: capitalize; }
@@ -472,8 +491,8 @@ export function LedgerStatement() {
             </style>
           </head>
           <body>
+            <div class="page-num-fixed"><span></span></div>
             <div class="container">
-              <div class="page-num"><span>Page 1</span></div>
               
               <div class="header-box" style="display: grid; grid-template-columns: 100px 1fr 100px; align-items: center; border-bottom: 2px solid #000; padding: 5px; margin-bottom: 10px;">
                 <div style="width: 100px; display: flex; justify-content: flex-start;">
@@ -513,8 +532,8 @@ export function LedgerStatement() {
                     <th style="width: 10%; text-align: right;">Balance</th>
                   </tr>
                 </thead>
-                <tbody>
-                  ${reportRows}
+                ${reportRows}
+                <tbody style="page-break-inside: avoid; break-inside: avoid;">
                   ${closingBalanceRow}
                 </tbody>
               </table>
@@ -608,20 +627,22 @@ export function LedgerStatement() {
         }
         
         return `
-          <tr class="${mainRowIsStripe ? 'stripe-row' : ''}" style="border-bottom: 0.1mm solid #333;">
-            <td style="padding: 2px 5px; white-space: nowrap; color: #000;">${formatDate(e.vouchers?.v_date)}</td>
-            <td style="padding: 2px 5px; color: #000;">
-              <div>Dr <b>${e.particulars}</b></div>
-            </td>
-            <td style="padding: 2px 5px; color: #000;">${e.vouchers?.v_type}</td>
-            <td style="padding: 2px 5px; color: #000;">${e.vouchers?.v_no || e.vouchers?.reference_no || ''}</td>
-            <td style="padding: 2px 5px; color: #000;">${e.vouchers?.serial_no || e.vouchers?.auto_serial_no || ''}</td>
-            <td style="padding: 2px 5px; text-align: right; color: #000;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
-            <td style="padding: 2px 5px; text-align: right; color: #000;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
-            ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right; font-weight: 500; color: #000;">${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}</td>` : ''}
-          </tr>
-          ${inventoryRows}
-          ${extraRows}
+          <tbody style="page-break-inside: avoid; break-inside: avoid;">
+            <tr class="${mainRowIsStripe ? 'stripe-row' : ''}" style="border-bottom: 0.1mm solid #333;">
+              <td style="padding: 2px 5px; white-space: nowrap; color: #000;">${formatDate(e.vouchers?.v_date)}</td>
+              <td style="padding: 2px 5px; color: #000;">
+                <div>Dr <b>${e.particulars}</b></div>
+              </td>
+              <td style="padding: 2px 5px; color: #000;">${e.vouchers?.v_type}</td>
+              <td style="padding: 2px 5px; color: #000;">${e.vouchers?.v_no || e.vouchers?.reference_no || ''}</td>
+              <td style="padding: 2px 5px; color: #000;">${e.vouchers?.serial_no || e.vouchers?.auto_serial_no || ''}</td>
+              <td style="padding: 2px 5px; text-align: right; color: #000;">${e.debit > 0 ? formatNumber(e.debit) : ''}</td>
+              <td style="padding: 2px 5px; text-align: right; color: #000;">${e.credit > 0 ? formatNumber(e.credit) : ''}</td>
+              ${config.showRunningBalance ? `<td style="padding: 2px 5px; text-align: right; font-weight: 500; color: #000;">${formatNumber(Math.abs(rb))} ${rb >= 0 ? 'Dr' : 'Cr'}</td>` : ''}
+            </tr>
+            ${inventoryRows}
+            ${extraRows}
+          </tbody>
         `;
       }).join('');
 
@@ -643,7 +664,7 @@ export function LedgerStatement() {
       const footerHtml = `
         <div class="footer">
           ${settings.showPrintFooter ? `<div style="font-size: 10px; color: #000;">${settings.printFooter}</div>` : ''}
-          ${settings.showDeveloperContact ? `<div style="font-size: 8px; color: #000; margin-top: 2px;">Powered by TallyFlow ERP | Developer Contact: +880 1700 000000</div>` : ''}
+          ${settings.showDeveloperContact ? `<div class="dev-contact">${settings.developerContactText || 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000'}</div>` : ''}
         </div>
       `;
 
@@ -653,8 +674,8 @@ export function LedgerStatement() {
             <title>Ledger Statement - ${ledgerName}</title>
             <style>
               @page { size: A4; margin: 1.5cm 1cm; }
-              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; color: #000; min-height: 100vh; position: relative; }
-              .container { max-width: 100%; position: relative; padding-bottom: 60px; }
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; color: #000; }
+              .container { max-width: 100%; }
               
               .header-section { text-align: center; margin-bottom: 20px; }
               .company-name { font-size: 18px; font-weight: bold; margin-bottom: 2px; }
@@ -667,7 +688,18 @@ export function LedgerStatement() {
               
               .period-text { font-size: 12px; margin-bottom: 10px; }
               
-              .page-num { text-align: right; font-size: 11px; margin-bottom: 2px; }
+              .page-num { display: none !important; }
+              .page-num-fixed {
+                position: fixed;
+                top: 1.5cm;
+                right: 1.5cm;
+                font-size: 11px;
+                font-family: inherit;
+                font-weight: bold;
+              }
+              .page-num-fixed::after {
+                content: "Page " counter(page);
+              }
               
               table { width: 100%; border-collapse: collapse; border-top: 1px solid #000; border-bottom: 1px solid #000; }
               th { border-bottom: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; }
@@ -685,6 +717,13 @@ export function LedgerStatement() {
                 border-top: 1px solid #eee;
                 background: white;
               }
+              .dev-contact {
+                font-size: 8px;
+                color: #555;
+                margin-top: 4px;
+                text-align: ${settings.developerContactAlignment || 'center'};
+                white-space: pre-line;
+              }
               
               @media print {
                 .footer { position: fixed; bottom: 0; }
@@ -692,6 +731,7 @@ export function LedgerStatement() {
             </style>
           </head>
           <body>
+            <div class="page-num-fixed"></div>
             <div class="container">
               <div class="header-section" style="display: grid; grid-template-columns: 100px 1fr 100px; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px;">
                 <div style="width: 100px; display: flex; justify-content: flex-start;">
@@ -713,8 +753,6 @@ export function LedgerStatement() {
                 <div class="period-text" style="font-weight: bold;">${period}</div>
               </div>
               
-              <div class="page-num">Page 1</div>
-              
               <table>
                 <thead>
                   <tr>
@@ -728,11 +766,18 @@ export function LedgerStatement() {
                     ${config.showRunningBalance ? '<th style="width: 14%; text-align: right;">Balance</th>' : ''}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody style="page-break-inside: avoid; break-inside: avoid;">
                   ${openingBalanceRow}
-                  ${reportRows}
+                </tbody>
+                ${reportRows}
+                <tbody style="page-break-inside: avoid; break-inside: avoid;">
                   ${closingBalanceRow}
                 </tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="${config.showRunningBalance ? '8' : '7'}" style="border: none; padding: 0; height: 45px;"></td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
             ${footerHtml}
@@ -752,11 +797,28 @@ export function LedgerStatement() {
   };
 
   return (
-    <div className="bg-background h-screen flex flex-col font-mono transition-colors overflow-hidden">
+    <div className={cn(
+      "h-screen flex flex-col font-mono transition-colors overflow-hidden",
+      settings.reportsPageUiStyle === 'modern' ? "bg-slate-50/50" : "bg-background"
+    )}>
       {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+      <div className={cn(
+        "flex-none border-b shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30",
+        settings.reportsPageUiStyle === 'modern'
+          ? "bg-white/95 backdrop-blur-md border-slate-200/60"
+          : "bg-background border-border"
+      )}>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className={settings.reportsPageUiStyle === 'modern'
+                ? "p-2.5 bg-slate-50 border border-slate-200/60 hover:bg-slate-100 rounded-xl transition-all text-slate-600 shadow-sm"
+                : "p-2 hover:bg-gray-100 rounded-full transition-colors"
+              }
+            >
+              <ArrowLeft className={settings.reportsPageUiStyle === 'modern' ? "w-5 h-5" : "w-6 h-6"} />
+            </button>
             <EditableHeader 
               pageId="ledger_statement"
               defaultTitle={t('ledger.statement')}
@@ -1074,7 +1136,7 @@ export function LedgerStatement() {
                                     settings.reportLayout === 'Layout 2' && narrationRowIsStripe && "bg-[#F3F4F6]"
                                   )}>
                                     <td></td>
-                                    <td colSpan={config.showRunningBalance ? 6 : 5} className="px-6 py-1 pl-10 italic text-[10px] text-black">
+                                    <td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-1 pl-10 italic text-[10px] text-black">
                                       {e.vouchers.narration}
                                     </td>
                                   </tr>
@@ -1090,7 +1152,7 @@ export function LedgerStatement() {
                                     settings.reportLayout === 'Layout 2' && enteredByRowIsStripe && "bg-[#F3F4F6]"
                                   )}>
                                     <td></td>
-                                    <td colSpan={config.showRunningBalance ? 6 : 5} className="px-6 py-1 pl-16 uppercase text-[8px] text-gray-400">
+                                    <td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-1 pl-16 uppercase text-[8px] text-gray-400">
                                       By: {users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System'}
                                     </td>
                                   </tr>
@@ -1132,7 +1194,16 @@ export function LedgerStatement() {
           {settings.reportLayout === 'Layout 2' && (
             <div className="absolute bottom-4 left-8 right-8 text-center border-t border-gray-100 pt-4">
               {settings.showPrintFooter && <p className="text-[10px] text-gray-600">{settings.printFooter}</p>}
-              {settings.showDeveloperContact && <p className="text-[8px] text-gray-400 mt-1">Powered by TallyFlow ERP | Developer Contact: +880 1700 000000</p>}
+              {settings.showDeveloperContact && (
+                <p 
+                  className={cn(
+                    "text-[8px] text-gray-400 mt-1 whitespace-pre-line",
+                    settings.developerContactAlignment === 'left' ? "text-left" : settings.developerContactAlignment === 'right' ? "text-right" : "text-center"
+                  )}
+                >
+                  {settings.developerContactText || 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000'}
+                </p>
+              )}
             </div>
           )}
         </div>
