@@ -1562,10 +1562,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                   <span className="ml-1 uppercase tracking-widest">{t('common.goTo')}</span>
                 </div>
               )}
-              <div className={cn(
-                "flex items-center gap-3 border-l pl-4 lg:pl-6 relative",
-                uiStyle === 'UI/UX 2' ? "border-white/20" : "border-border"
-              )} ref={dropdownRef}>
+              <div className="flex items-center gap-3 relative" ref={dropdownRef}>
                 <button 
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className="relative group"
