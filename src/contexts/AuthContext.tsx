@@ -14,6 +14,7 @@ export interface Profile {
   target_amount?: number;
   permissions?: string[];
   photoURL?: string;
+  showSystemGuide?: boolean;
 }
 
 export interface CompanyData {

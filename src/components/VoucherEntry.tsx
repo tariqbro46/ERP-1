@@ -210,6 +210,44 @@ export function VoucherEntry() {
       setVType('Payment');
     }
   }, [isInventoryEnabled, vType]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      
+      let targetVType = '';
+      if (e.key === 'F4') {
+        targetVType = 'Contra';
+      } else if (e.key === 'F5') {
+        targetVType = 'Payment';
+      } else if (e.key === 'F6') {
+        targetVType = 'Receipt';
+      } else if (e.key === 'F7') {
+        targetVType = 'Journal';
+      } else if (e.key === 'F8') {
+        targetVType = 'Sales';
+      } else if (e.key === 'F9') {
+        targetVType = 'Purchase';
+      } else if (e.key === 'F10') {
+        targetVType = 'Physical Stock';
+      }
+
+      if (targetVType) {
+        if (!isInventoryEnabled && ['Sales', 'Purchase', 'Physical Stock'].includes(targetVType)) {
+          showNotification('Inventory is currently disabled in Features', 'error');
+          return;
+        }
+        e.preventDefault();
+        setVType(targetVType);
+        showNotification(`${targetVType} Voucher Selected`, 'success');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isInventoryEnabled, showNotification]);
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [itemStats, setItemStats] = useState<any>(null);
 

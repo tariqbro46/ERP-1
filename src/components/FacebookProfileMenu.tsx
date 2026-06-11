@@ -403,6 +403,48 @@ export default function FacebookProfileMenu({ isOpen, onClose, uiStyle, onNotifi
                   <p className="text-[10px] text-muted-foreground">Change currency, print outlays, templates</p>
                 </div>
               </button>
+
+              {/* SYSTEM GUIDE BUTTON TOGGLE - USER REQUEST */}
+              <div className="border-t border-border/60 my-2 pt-2" />
+              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/20 border border-border/80">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                    <BookOpen className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-foreground leading-tight">System Guide Button</h4>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Show button on Dashboard</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  id="system-guide-toggle-btn"
+                  onClick={async () => {
+                    if (!user) return;
+                    try {
+                      const userRef = doc(db, 'users', user.uid);
+                      const currentVal = user.showSystemGuide ?? true;
+                      await updateDoc(userRef, {
+                        showSystemGuide: !currentVal
+                      });
+                    } catch (e) {
+                      console.error("Failed to update system guide visibility:", e);
+                    }
+                  }}
+                  className={cn(
+                    "relative inline-flex h-5.5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out bg-slate-200 dark:bg-slate-800",
+                    (user?.showSystemGuide ?? true) ? "bg-emerald-500 dark:bg-emerald-600" : "bg-slate-300 dark:bg-slate-700"
+                  )}
+                  title="Toggle System Guide Button on Dashboard"
+                >
+                  <span
+                    className={cn(
+                      "pointer-events-none inline-block h-4.5 w-4.5 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out",
+                      (user?.showSystemGuide ?? true) ? "translate-x-4.5" : "translate-x-0"
+                    )}
+                  />
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

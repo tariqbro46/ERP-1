@@ -108,6 +108,7 @@ import PurchaseManagement from './pages/PurchaseManagement';
 import InventoryAdvanced from './pages/InventoryAdvanced';
 import DataCenter from './pages/DataCenter';
 import AIInsights from './pages/AIInsights';
+import SystemGuideFloatingButton from './components/SystemGuideFloatingButton';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
@@ -667,6 +668,27 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     document.addEventListener("mousedown", handleClickOutside);
     
     const handleGlobalShortcut = (e: KeyboardEvent) => {
+      // ALT SHORTCUTS FOR FAST ACTION NAVIGATION
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        const key = e.key.toLowerCase();
+        if (key === 'd') {
+          e.preventDefault();
+          navigate('/dashboard');
+        } else if (key === 'v') {
+          e.preventDefault();
+          navigate('/vouchers/new');
+        } else if (key === 'l') {
+          e.preventDefault();
+          navigate('/accounts/ledgers/new');
+        } else if (key === 'i') {
+          e.preventDefault();
+          navigate('/inventory/items');
+        } else if (key === 's') {
+          e.preventDefault();
+          navigate('/settings');
+        }
+      }
+
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         onOpenSearch();
@@ -684,7 +706,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener('keydown', handleGlobalShortcut);
     };
-  }, []);
+  }, [navigate, onOpenSearch]);
 
   // Initialize expandedGroups based on sidebarDefaultExpanded
   React.useEffect(() => {
@@ -1596,6 +1618,9 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
             (location.pathname === '/dashboard' || location.pathname.startsWith('/reports/') || location.pathname === '/daybook' || location.pathname.startsWith('/inventory/') || location.pathname.startsWith('/vouchers/')) && "min-h-full"
           )}>
             {children}
+            {location.pathname === '/dashboard' && (user?.showSystemGuide ?? true) && (
+              <SystemGuideFloatingButton />
+            )}
           </div>
         </div>
 
