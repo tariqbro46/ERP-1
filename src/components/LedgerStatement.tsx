@@ -454,7 +454,17 @@ export function LedgerStatement() {
           <head>
             <title>Ledger Statement - ${ledgerName}</title>
             <style>
-              @page { size: A4; margin: 1cm; }
+              @page {
+                size: A4;
+                margin: 1.5cm 1cm;
+                @top-right {
+                  content: "Page " counter(page);
+                  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                  font-size: 11px;
+                  font-weight: bold;
+                  color: #000;
+                }
+              }
               body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; color: #000; }
               .container { max-width: 100%; }
               .header-box { border: 1px solid #000; padding: 10px; margin-bottom: 5px; text-align: center; }
@@ -464,24 +474,13 @@ export function LedgerStatement() {
               .period-box { text-align: center; margin-bottom: 10px; }
               .period-label { border: 1px solid #000; padding: 2px 15px; font-size: 12px; font-weight: bold; }
               .page-num { display: none !important; }
-              .page-num-fixed {
-                position: fixed;
-                top: 1cm;
-                right: 1cm;
-                font-size: 11px;
-                font-family: inherit;
-              }
-              .page-num-fixed span {
-                border: 1px solid #000;
-                padding: 2px 10px;
-                font-weight: bold;
-              }
-              .page-num-fixed span::after {
-                content: "Page " counter(page);
-              }
               
-              table { width: 100%; border-collapse: collapse; margin-top: 5px; border-top: 1px solid #333; border-bottom: 1px solid #333; table-layout: fixed; }
+              table { width: 100%; border-collapse: collapse; margin-top: 5px; border-bottom: 1px solid #333; table-layout: fixed; }
               th { border: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; text-transform: capitalize; }
+              .header-columns-row th { border-top: 1px solid #333; border-bottom: 1px solid #333; }
+              .print-page-number::after {
+                content: counter(page);
+              }
               td { padding: 5px; text-align: left; font-size: 12px; vertical-align: top; }
               .stripe-row { background-color: #F3F4F6 !important; -webkit-print-color-adjust: exact; }
               .border-all td { border: 1px solid #000; }
@@ -491,7 +490,6 @@ export function LedgerStatement() {
             </style>
           </head>
           <body>
-            <div class="page-num-fixed"><span></span></div>
             <div class="container">
               
               <div class="header-box" style="display: grid; grid-template-columns: 100px 1fr 100px; align-items: center; border-bottom: 2px solid #000; padding: 5px; margin-bottom: 10px;">
@@ -521,15 +519,20 @@ export function LedgerStatement() {
               
               <table>
                 <thead>
-                  <tr>
-                    <th style="width: 10%;">Date</th>
-                    <th style="width: 33%;">Particulars</th>
-                    <th style="width: 10%; white-space: nowrap;">Vch Type</th>
-                    <th style="width: 9%;">Ref No</th>
-                    <th style="width: 6%;">Serial No</th>
-                    <th style="width: 11%; text-align: right;">Debit</th>
-                    <th style="width: 11%; text-align: right;">Credit</th>
-                    <th style="width: 10%; text-align: right;">Balance</th>
+                  <tr style="border: none !important;">
+                    <td colspan="8" style="text-align: right; border: none !important; padding: 2px 2px 6px 0; font-size: 11px; font-weight: bold; font-family: 'Segoe UI', sans-serif; color: #000; direction: ltr;">
+                      Page <span class="print-page-number"></span>
+                    </td>
+                  </tr>
+                  <tr class="header-columns-row">
+                    <th style="width: 10%; border-top: 1px solid #333; border-bottom: 1px solid #333; border-left: 1px solid #000; border-right: 1px solid #000;">Date</th>
+                    <th style="width: 33%; border-top: 1px solid #333; border-bottom: 1px solid #333; border-left: 1px solid #000; border-right: 1px solid #000;">Particulars</th>
+                    <th style="width: 10%; white-space: nowrap; border-top: 1px solid #333; border-bottom: 1px solid #333; border-left: 1px solid #000; border-right: 1px solid #000;">Vch Type</th>
+                    <th style="width: 9%; border-top: 1px solid #333; border-bottom: 1px solid #333; border-left: 1px solid #000; border-right: 1px solid #000;">Ref No</th>
+                    <th style="width: 6%; border-top: 1px solid #333; border-bottom: 1px solid #333; border-left: 1px solid #000; border-right: 1px solid #000;">Serial No</th>
+                    <th style="width: 11%; text-align: right; border-top: 1px solid #333; border-bottom: 1px solid #333; border-left: 1px solid #000; border-right: 1px solid #000;">Debit</th>
+                    <th style="width: 11%; text-align: right; border-top: 1px solid #333; border-bottom: 1px solid #333; border-left: 1px solid #000; border-right: 1px solid #000;">Credit</th>
+                    <th style="width: 10%; text-align: right; border-top: 1px solid #333; border-bottom: 1px solid #333; border-left: 1px solid #000; border-right: 1px solid #000;">Balance</th>
                   </tr>
                 </thead>
                 ${reportRows}
@@ -673,7 +676,17 @@ export function LedgerStatement() {
           <head>
             <title>Ledger Statement - ${ledgerName}</title>
             <style>
-              @page { size: A4; margin: 1.5cm 1cm; }
+              @page {
+                size: A4;
+                margin: 1.5cm 1cm;
+                @top-right {
+                  content: "Page " counter(page);
+                  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                  font-size: 11px;
+                  font-weight: bold;
+                  color: #000;
+                }
+              }
               body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; color: #000; }
               .container { max-width: 100%; }
               
@@ -689,20 +702,13 @@ export function LedgerStatement() {
               .period-text { font-size: 12px; margin-bottom: 10px; }
               
               .page-num { display: none !important; }
-              .page-num-fixed {
-                position: fixed;
-                top: 1.5cm;
-                right: 1.5cm;
-                font-size: 11px;
-                font-family: inherit;
-                font-weight: bold;
-              }
-              .page-num-fixed::after {
-                content: "Page " counter(page);
-              }
               
-              table { width: 100%; border-collapse: collapse; border-top: 1px solid #000; border-bottom: 1px solid #000; }
+              table { width: 100%; border-collapse: collapse; border-bottom: 1px solid #000; }
               th { border-bottom: 1px solid #000; padding: 5px; text-align: left; font-size: 12px; }
+              .header-columns-row th { border-top: 1px solid #000; border-bottom: 1px solid #000; }
+              .print-page-number::after {
+                content: counter(page);
+              }
               td { padding: 2px 5px; text-align: left; font-size: 12px; vertical-align: top; }
               
               .stripe-row { background-color: #F3F4F6 !important; -webkit-print-color-adjust: exact; }
@@ -731,7 +737,6 @@ export function LedgerStatement() {
             </style>
           </head>
           <body>
-            <div class="page-num-fixed"></div>
             <div class="container">
               <div class="header-section" style="display: grid; grid-template-columns: 100px 1fr 100px; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px;">
                 <div style="width: 100px; display: flex; justify-content: flex-start;">
@@ -755,7 +760,12 @@ export function LedgerStatement() {
               
               <table>
                 <thead>
-                  <tr>
+                  <tr style="border: none !important;">
+                    <td colspan="${config.showRunningBalance ? '8' : '7'}" style="text-align: right; border: none !important; padding: 2px 2px 6px 0; font-size: 11px; font-weight: bold; font-family: 'Segoe UI', sans-serif; color: #000; direction: ltr;">
+                      Page <span class="print-page-number"></span>
+                    </td>
+                  </tr>
+                  <tr class="header-columns-row">
                     <th style="width: 12%;">Date</th>
                     <th style="width: 29%;">Particulars</th>
                     <th style="width: 10%; white-space: nowrap;">Vch Type</th>

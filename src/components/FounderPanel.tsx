@@ -74,7 +74,7 @@ import {
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
-import { erpService } from '../services/erpService';
+import { erpService, deduplicateMenuConfig } from '../services/erpService';
 import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -113,67 +113,8 @@ export default function FounderPanel() {
 
   const displayMenuGroups = React.useMemo(() => {
     if (!menuConfig) return [];
-    
-    // Create a map of dynamic groups for easy updates
-    const dynamicGroupsMap = new Map(menuConfig.groups.map(g => [g.id, { ...g, items: [...g.items] }]));
-    
-    // Track all item IDs already in the dynamic menu to avoid duplicates across any group
-    const allItemIds = new Set();
-    menuConfig.groups.forEach(group => {
-      group.items.forEach(item => allItemIds.add(item.id));
-    });
-    
-    // Ensure all core groups from NAV_ITEMS exist
-    NAV_ITEMS.forEach(coreGroup => {
-      if (!dynamicGroupsMap.has(coreGroup.id)) {
-        // Group completely missing, filter out items that are already somewhere else
-        const uniqueItems = coreGroup.items.filter(item => !allItemIds.has(item.id));
-        
-        // We ALWAYS add the group if it's from core NAV_ITEMS so it can be managed
-        const newGroup: MenuGroupConfig = {
-          id: coreGroup.id,
-          group: coreGroup.group,
-          groupKey: coreGroup.groupKey,
-          hidden: coreGroup.hidden || false,
-          items: uniqueItems.map(item => ({
-            id: item.id,
-            to: item.to,
-            icon: item.iconName,
-            label: item.label,
-            labelKey: item.labelKey,
-            feature: item.feature,
-            permission: item.permission,
-            adminOnly: item.adminOnly,
-            superAdminOnly: item.superAdminOnly,
-            hidden: item.hidden || false
-          }))
-        };
-        dynamicGroupsMap.set(coreGroup.id, newGroup);
-        uniqueItems.forEach(item => allItemIds.add(item.id));
-      } else {
-        const dynamicGroup = dynamicGroupsMap.get(coreGroup.id)!;
-        const missingCoreItems = coreGroup.items.filter(item => !allItemIds.has(item.id));
-        
-        if (missingCoreItems.length > 0) {
-          const newItems = missingCoreItems.map(item => ({
-            id: item.id,
-            to: item.to,
-            icon: item.iconName,
-            label: item.label,
-            labelKey: item.labelKey,
-            feature: item.feature,
-            permission: item.permission,
-            adminOnly: item.adminOnly,
-            superAdminOnly: item.superAdminOnly,
-            hidden: item.hidden || false
-          }));
-          dynamicGroup.items = [...dynamicGroup.items, ...newItems];
-          missingCoreItems.forEach(item => allItemIds.add(item.id));
-        }
-      }
-    });
-    
-    return Array.from(dynamicGroupsMap.values());
+    const cleaned = deduplicateMenuConfig(menuConfig);
+    return cleaned ? cleaned.groups : [];
   }, [menuConfig]);
 
   // Features editing state
@@ -243,7 +184,8 @@ export default function FounderPanel() {
       const [removed] = newGroups.splice(source.index, 1);
       newGroups.splice(destination.index, 0, removed);
 
-      const newConfig = { ...menuConfig, groups: newGroups };
+      const rawConfig = { ...menuConfig, groups: newGroups };
+      const newConfig = deduplicateMenuConfig(rawConfig) as MenuConfig;
       setMenuConfig(newConfig);
       erpService.updateMenuConfig(newConfig);
       showNotification('Menu groups reordered', 'success');
@@ -271,7 +213,8 @@ export default function FounderPanel() {
       newGroups[destGroupIndex] = destGroup;
     }
 
-    const newConfig = { ...menuConfig, groups: newGroups };
+    const rawConfig = { ...menuConfig, groups: newGroups };
+    const newConfig = deduplicateMenuConfig(rawConfig) as MenuConfig;
     setMenuConfig(newConfig);
     erpService.updateMenuConfig(newConfig);
     showNotification('Menu items reordered', 'success');
@@ -737,20 +680,12 @@ export default function FounderPanel() {
     if (!menuConfig) return;
     try {
       setLoading(true);
-      const updatedGroups = menuConfig.groups.map(group => {
-        const seenPaths = new Set<string>();
-        const uniqueItems = group.items.filter(item => {
-          if (seenPaths.has(item.to)) return false;
-          seenPaths.add(item.to);
-          return true;
-        });
-        return { ...group, items: uniqueItems };
-      });
-
-      const newConfig = { ...menuConfig, groups: updatedGroups, updatedAt: new Date() };
-      await erpService.updateMenuConfig(newConfig);
-      setMenuConfig(newConfig);
-      showNotification('Menu deduplicated successfully', 'success');
+      const cleaned = deduplicateMenuConfig(menuConfig);
+      if (cleaned) {
+        await erpService.updateMenuConfig(cleaned);
+        setMenuConfig(cleaned);
+        showNotification('Menu deduplicated and consolidated successfully', 'success');
+      }
     } catch (error) {
       showNotification('Failed to cleanup duplicates', 'error');
     } finally {
@@ -827,14 +762,15 @@ export default function FounderPanel() {
       });
 
       if (updated) {
-        const newConfig: MenuConfig = {
+        const rawConfig: MenuConfig = {
           ...menuConfig,
           groups: Array.from(dynamicGroupsMap.values()),
           updatedAt: new Date()
         };
-        await erpService.updateMenuConfig(newConfig);
-        setMenuConfig(newConfig);
-        showNotification('Menu synchronized with defaults successfully', 'success');
+        const cleaned = deduplicateMenuConfig(rawConfig) as MenuConfig;
+        await erpService.updateMenuConfig(cleaned);
+        setMenuConfig(cleaned);
+        showNotification('Menu synchronized and consolidated successfully', 'success');
       } else {
         showNotification('Menu is already up to date with defaults', 'info');
       }

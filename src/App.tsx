@@ -116,7 +116,7 @@ import { Login, Register } from './components/Auth';
 import { useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, PAGE_TITLES, DASHBOARD_ITEM } from './constants/navigation';
 import { FeatureGuard } from './components/FeatureGuard';
-import { erpService } from './services/erpService';
+import { erpService, deduplicateMenuConfig } from './services/erpService';
 import { MenuConfig } from './types';
 import { useSubscription } from './hooks/useSubscription';
 import { SkeletonLoader } from './components/SkeletonLoader';
@@ -441,39 +441,28 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     if (!dynamicMenu) {
       finalGroups = NAV_ITEMS;
     } else {
-      // Create a map of dynamic groups for easy updates
-      const dynamicGroupsMap = new Map(dynamicMenu.groups.map(g => [g.id, { ...g, items: [...g.items] }]));
-      
-      // Track all item IDs already in the dynamic menu to avoid duplicates across any group
-      const allItemIds = new Set();
-      dynamicMenu.groups.forEach(group => {
-        group.items.forEach(item => allItemIds.add(item.id));
-      });
-      
-      // Ensure all core groups from NAV_ITEMS exist, and merge missing items
-      NAV_ITEMS.forEach(coreGroup => {
-        if (!dynamicGroupsMap.has(coreGroup.id)) {
-          // Group completely missing, filter out items that are already somewhere else
-          const uniqueItems = coreGroup.items.filter(item => !allItemIds.has(item.id));
-          if (uniqueItems.length > 0) {
-            const newGroup = { ...coreGroup, items: uniqueItems };
-            dynamicGroupsMap.set(coreGroup.id, newGroup);
-            uniqueItems.forEach(item => allItemIds.add(item.id));
-          }
-        } else {
-          // Group exists, check for missing items (that aren't anywhere else)
-          const dynamicGroup = dynamicGroupsMap.get(coreGroup.id)!;
-          const missingCoreItems = coreGroup.items.filter(item => !allItemIds.has(item.id));
-          
-          if (missingCoreItems.length > 0) {
-            dynamicGroup.items = [...dynamicGroup.items, ...missingCoreItems];
-            missingCoreItems.forEach(item => allItemIds.add(item.id));
-          }
-        }
-      });
-      
-      finalGroups = Array.from(dynamicGroupsMap.values());
+      const cleanedMenu = deduplicateMenuConfig(dynamicMenu);
+      finalGroups = cleanedMenu ? cleanedMenu.groups : [];
     }
+
+    // Merges groups with the same group name to avoid duplicate sections and resolve React key warnings
+    const mergedGroupsMap = new Map<string, any>();
+    finalGroups.forEach(g => {
+      const existing = mergedGroupsMap.get(g.group);
+      if (existing) {
+        const existingItemIds = new Set(existing.items.map((i: any) => i.id || i.to));
+        g.items.forEach((item: any) => {
+          const key = item.id || item.to;
+          if (!existingItemIds.has(key)) {
+            existing.items.push(item);
+            existingItemIds.add(key);
+          }
+        });
+      } else {
+        mergedGroupsMap.set(g.group, { ...g, items: [...g.items] });
+      }
+    });
+    finalGroups = Array.from(mergedGroupsMap.values());
 
     return finalGroups
       .filter(group => !group.hidden)

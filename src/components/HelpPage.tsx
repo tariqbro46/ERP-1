@@ -4,11 +4,12 @@ import {
   ArrowLeft, BookOpen, Search, Languages, HelpCircle, 
   Rocket, FileText, Package, Users, BarChart2, Keyboard, 
   AlertTriangle, Lightbulb, ChevronRight, CheckCircle2,
-  Info, ExternalLink
+  Info, ExternalLink, Sparkles
 } from 'lucide-react';
 import { HELP_DOCS, DocCategory, DocSubSection } from '../constants/helpContent';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import InteractiveScreenMockup from './InteractiveScreenMockup';
 
 export default function HelpPage() {
   const navigate = useNavigate();
@@ -306,6 +307,30 @@ export default function HelpPage() {
                     ))}
                   </div>
                 </div>
+
+                {/* INTERACTIVE APPLICATION SCREENSHOT / MODEL EMULATOR */}
+                {activeCategoryId !== 'faq' && activeCategoryId !== 'shortcuts' && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-extrabold uppercase tracking-widest text-slate-500 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                        <span>
+                          {activeLang === 'en' 
+                            ? 'Interactive Screen Mockup & Field Guidelines' 
+                            : 'ইন্টারেক্টিভ স্ক্রিন ও টেকনিক্যাল গাইডলাইন (ট্যালি সলিউশন)'
+                          }
+                        </span>
+                      </h3>
+                      <span className="text-[10px] text-slate-400 font-semibold bg-white border border-slate-200 shadow-xs px-2 py-0.5 rounded-full">
+                        {activeLang === 'en' ? 'Interactive ① - ④' : 'ইন্টারেক্টিভ ① - ④'}
+                      </span>
+                    </div>
+                    <InteractiveScreenMockup 
+                      categoryId={activeCategoryId} 
+                      lang={activeLang} 
+                    />
+                  </div>
+                )}
 
                 {/* Subsections Content List */}
                 <div className="space-y-5">

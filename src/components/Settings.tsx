@@ -184,22 +184,43 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   }, []);
 
   const menuGroups = React.useMemo(() => {
+    let rawGroups = [];
     if (!dynamicMenu) {
-      return NAV_ITEMS.map((group) => ({
+      rawGroups = NAV_ITEMS.map((group) => ({
         ...group,
         items: group.items.map((item) => ({
           ...item,
           icon: item.icon // Static items already have the component
         }))
       }));
+    } else {
+      rawGroups = dynamicMenu.groups.map(group => ({
+        ...group,
+        items: group.items.map(item => ({
+          ...item,
+          icon: LucideIcons[item.icon as keyof typeof LucideIcons] || LucideIcons.Package
+        }))
+      }));
     }
-    return dynamicMenu.groups.map(group => ({
-      ...group,
-      items: group.items.map(item => ({
-        ...item,
-        icon: LucideIcons[item.icon as keyof typeof LucideIcons] || LucideIcons.Package
-      }))
-    }));
+
+    // Merge groups by name to prevent duplicate sections and ensure unique keys
+    const mergedGroupsMap = new Map<string, any>();
+    rawGroups.forEach(g => {
+      const existing = mergedGroupsMap.get(g.group);
+      if (existing) {
+        const existingItemIds = new Set(existing.items.map((i: any) => i.id));
+        g.items.forEach((item: any) => {
+          if (!existingItemIds.has(item.id)) {
+            existing.items.push(item);
+            existingItemIds.add(item.id);
+          }
+        });
+      } else {
+        mergedGroupsMap.set(g.group, { ...g, items: [...g.items] });
+      }
+    });
+
+    return Array.from(mergedGroupsMap.values());
   }, [dynamicMenu]);
 
   // Sync local state when settings change (e.g. after registration or initial load)

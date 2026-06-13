@@ -153,6 +153,68 @@ function cleanData(data: any): any {
   return data;
 }
 
+export function deduplicateMenuConfig(config: MenuConfig | null): MenuConfig | null {
+  if (!config || !Array.isArray(config.groups)) return config;
+
+  const mergedGroupsMap = new Map<string, MenuGroupConfig>();
+
+  config.groups.forEach((group) => {
+    if (!group || !group.group) return;
+    
+    // Normalize group name as key for merging (e.g., masters)
+    const normalizedGroupName = group.group.trim().toLowerCase();
+
+    // Deduplicate items inside this group:
+    const seenPathsAndIds = new Set<string>();
+    const uniqueItems: MenuItemConfig[] = [];
+    
+    if (Array.isArray(group.items)) {
+      group.items.forEach((item) => {
+        if (!item) return;
+        const key = ((item.id || '').trim().toLowerCase() + '||' + (item.to || '').trim().toLowerCase());
+        const toUrl = (item.to || '').trim().toLowerCase();
+        
+        if (key && !seenPathsAndIds.has(key) && !seenPathsAndIds.has(toUrl)) {
+          seenPathsAndIds.add(key);
+          seenPathsAndIds.add(toUrl);
+          uniqueItems.push(item);
+        }
+      });
+    }
+
+    const existingGroup = mergedGroupsMap.get(normalizedGroupName);
+    if (existingGroup) {
+      // Merge items from group into existingGroup
+      uniqueItems.forEach((item) => {
+        const key = ((item.id || '').trim().toLowerCase() + '||' + (item.to || '').trim().toLowerCase());
+        const toUrl = (item.to || '').trim().toLowerCase();
+        
+        const existingItemKeys = new Set(
+          existingGroup.items.map(i => (i.id || '').trim().toLowerCase() + '||' + (i.to || '').trim().toLowerCase())
+        );
+        const existingItemPaths = new Set(
+          existingGroup.items.map(i => (i.to || '').trim().toLowerCase())
+        );
+
+        if (!existingItemKeys.has(key) && !existingItemPaths.has(toUrl)) {
+          existingGroup.items.push(item);
+        }
+      });
+    } else {
+      mergedGroupsMap.set(normalizedGroupName, {
+        ...group,
+        items: uniqueItems
+      });
+    }
+  });
+
+  return {
+    ...config,
+    groups: Array.from(mergedGroupsMap.values()),
+    updatedAt: config.updatedAt ? (typeof config.updatedAt.toDate === 'function' ? config.updatedAt.toDate() : config.updatedAt) : new Date()
+  };
+}
+
 export const erpService: any = {
   // Caching mechanism for voucher serials and common collections to significantly reduce reads
   _serialsCache: {} as Record<string, { data: Record<string, number>, timestamp: number }>,
@@ -3612,7 +3674,7 @@ export const erpService: any = {
     try {
       const persisted = localStorage.getItem('swr_system_menu');
       if (persisted && !this._menuConfigCache) {
-        this._menuConfigCache = JSON.parse(persisted);
+        this._menuConfigCache = deduplicateMenuConfig(JSON.parse(persisted));
       }
     } catch (e) {}
 
@@ -3620,11 +3682,12 @@ export const erpService: any = {
       const menuDoc = await getDoc(doc(db, 'system', 'menu'));
       if (menuDoc.exists()) {
         const data = menuDoc.data() as MenuConfig;
-        this._menuConfigCache = data;
+        const cleaned = deduplicateMenuConfig(data);
+        this._menuConfigCache = cleaned;
         try {
-          localStorage.setItem('swr_system_menu', JSON.stringify(data));
+          localStorage.setItem('swr_system_menu', JSON.stringify(cleaned));
         } catch (e) {}
-        return data;
+        return cleaned;
       }
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, 'system/menu');
@@ -3634,11 +3697,12 @@ export const erpService: any = {
 
   async updateMenuConfig(config: MenuConfig): Promise<void> {
     try {
-      this._menuConfigCache = config;
+      const cleaned = deduplicateMenuConfig(config);
+      this._menuConfigCache = cleaned;
       try {
-        localStorage.setItem('swr_system_menu', JSON.stringify(config));
+        localStorage.setItem('swr_system_menu', JSON.stringify(cleaned));
       } catch (e) {}
-      const cleanedConfig = cleanData(config);
+      const cleanedConfig = cleanData(cleaned);
       await setDoc(doc(db, 'system', 'menu'), {
         ...cleanedConfig,
         updatedAt: serverTimestamp()
@@ -3655,7 +3719,7 @@ export const erpService: any = {
       try {
         const persisted = localStorage.getItem('swr_system_menu');
         if (persisted) {
-          cache = JSON.parse(persisted);
+          cache = deduplicateMenuConfig(JSON.parse(persisted));
           this._menuConfigCache = cache;
         }
       } catch (e) {}
