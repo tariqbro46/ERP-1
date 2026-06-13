@@ -1618,56 +1618,96 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
           <Link 
             to="/dashboard" 
             className={cn(
-              "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors",
+              "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors flex-1 min-w-0",
               location.pathname === '/dashboard' ? "text-primary font-extrabold" : "text-gray-500"
             )}
           >
-            <LayoutDashboard className="w-5 h-5" />
-            <span className="text-[9px] font-black uppercase tracking-tighter">Dashboard</span>
+            <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
+            <span className="text-[9px] font-black uppercase tracking-tighter truncate w-full text-center">Dashboard</span>
           </Link>
 
-          <Link 
-            to="/search" 
-            className={cn(
-              "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors",
-              location.pathname === '/search' ? "text-primary font-extrabold" : "text-gray-500"
-            )}
-          >
-            <Search className="w-5 h-5" />
-            <span className="text-[9px] font-black uppercase tracking-tighter">Search</span>
-          </Link>
+          {(() => {
+            const seenLabels = new Set<string>();
+            const mobileNavLinks = menuGroups
+              .flatMap(g => g.items)
+              .filter(item => {
+                if (!item) return false;
+                if (!mobileBottomNavItems.includes(item.label) || item.label === 'Dashboard') return false;
+                if (seenLabels.has(item.label)) return false;
+                seenLabels.add(item.label);
+                return true;
+              })
+              .slice(0, 4);
 
-          <Link 
-            to="/instructions" 
-            className={cn(
-              "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors",
-              location.pathname === '/instructions' ? "text-primary font-extrabold" : "text-gray-500"
-            )}
-          >
-            <BookOpen className="w-5 h-5" />
-            <span className="text-[9px] font-black uppercase tracking-tighter">Guide</span>
-          </Link>
+            if (mobileNavLinks.length > 0) {
+              return mobileNavLinks.map(item => {
+                const IconComponent = item.icon || LucideIcons.Package;
+                const isActive = location.pathname === item.to;
+                return (
+                  <Link 
+                    key={item.id || item.to}
+                    to={item.to} 
+                    className={cn(
+                      "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors flex-1 min-w-0",
+                      isActive ? "text-primary font-extrabold" : "text-gray-500"
+                    )}
+                  >
+                    <IconComponent className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-[9px] font-black uppercase tracking-tighter truncate w-full text-center">
+                      {item.labelKey && t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.label}
+                    </span>
+                  </Link>
+                );
+              });
+            } else {
+              return (
+                <>
+                  <Link 
+                    to="/search" 
+                    className={cn(
+                      "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors flex-1 min-w-0",
+                      location.pathname === '/search' ? "text-primary font-extrabold" : "text-gray-500"
+                    )}
+                  >
+                    <Search className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-[9px] font-black uppercase tracking-tighter truncate w-full text-center">Search</span>
+                  </Link>
 
-          <Link 
-            to="/notifications" 
-            className={cn(
-              "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors",
-              location.pathname === '/notifications' ? "text-primary font-extrabold" : "text-gray-500"
-            )}
-          >
-            <LucideIcons.Bell className="w-5 h-5" />
-            <span className="text-[9px] font-black uppercase tracking-tighter">Alerts</span>
-          </Link>
+                  <Link 
+                    to="/instructions" 
+                    className={cn(
+                      "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors flex-1 min-w-0",
+                      location.pathname === '/instructions' ? "text-primary font-extrabold" : "text-gray-500"
+                    )}
+                  >
+                    <BookOpen className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-[9px] font-black uppercase tracking-tighter truncate w-full text-center">Guide</span>
+                  </Link>
+
+                  <Link 
+                    to="/notifications" 
+                    className={cn(
+                      "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors flex-1 min-w-0",
+                      location.pathname === '/notifications' ? "text-primary font-extrabold" : "text-gray-500"
+                    )}
+                  >
+                    <LucideIcons.Bell className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-[9px] font-black uppercase tracking-tighter truncate w-full text-center">Alerts</span>
+                  </Link>
+                </>
+              );
+            }
+          })()}
 
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className={cn(
-              "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors",
+              "flex flex-col items-center gap-1 px-2.5 py-1 transition-colors flex-1 min-w-0",
               isSidebarOpen ? "text-primary font-extrabold" : "text-gray-500"
             )}
           >
-            <Menu className="w-5 h-5" />
-            <span className="text-[9px] font-black uppercase tracking-tighter">{t('nav.menu')}</span>
+            <Menu className="w-5 h-5 flex-shrink-0" />
+            <span className="text-[9px] font-black uppercase tracking-tighter truncate w-full text-center">{t('nav.menu')}</span>
           </button>
         </nav>
       </main>

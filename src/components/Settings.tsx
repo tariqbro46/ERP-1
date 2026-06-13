@@ -328,6 +328,18 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       showScrollingBar: localShowScrollingBar,
       notificationAnimationStyle: localNotificationAnimationStyle
     });
+
+    updateSettings({
+      showMobileNav: localShowMobileNav,
+      mobileBottomNavItems: localMobileBottomNavItems,
+      showScrollingBar: localShowScrollingBar,
+      sidebarDefaultExpanded: localSidebarDefaultExpanded,
+      layoutWidth: localLayoutWidth,
+      dashboardDesign: localDashboardDesign,
+      uiStyle: localUIStyle,
+      menuBarStyle: localMenuBarStyle
+    });
+
     showNotification('UI Customization saved successfully!');
   };
 
@@ -1222,43 +1234,49 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                               <span className="text-[8px] uppercase font-bold ml-auto">(Default)</span>
                             </div>
 
-                            {menuGroups.map(group => (
-                              <React.Fragment key={group.group}>
-                                {group.items.map(item => {
-                                  if (item.label === 'Dashboard') return null;
-                                  return (
-                                    <label 
-                                      key={item.id}
-                                      className={cn(
-                                        "flex items-center gap-2 p-2 border cursor-pointer transition-all",
-                                        localMobileBottomNavItems.includes(item.label)
-                                          ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-500"
-                                          : "bg-background border-border text-gray-500 hover:border-gray-400"
-                                      )}
-                                    >
-                                      <input 
-                                        type="checkbox"
-                                        className="hidden"
-                                        checked={localMobileBottomNavItems.includes(item.label)}
-                                        onChange={() => {
-                                          if (localMobileBottomNavItems.includes(item.label)) {
-                                            setLocalMobileBottomNavItems(localMobileBottomNavItems.filter(i => i !== item.label));
-                                          } else {
-                                            if (localMobileBottomNavItems.length < 4) {
-                                              setLocalMobileBottomNavItems([...localMobileBottomNavItems, item.label]);
+                            {(() => {
+                              const seenLabels = new Set<string>();
+                              return menuGroups.map(group => (
+                                <React.Fragment key={group.group}>
+                                  {group.items.map(item => {
+                                    if (item.label === 'Dashboard') return null;
+                                    if (seenLabels.has(item.label)) return null;
+                                    seenLabels.add(item.label);
+                                    return (
+                                      <label 
+                                        key={item.id}
+                                        className={cn(
+                                          "flex items-center gap-2 p-2 border cursor-pointer transition-all",
+                                          localMobileBottomNavItems.includes(item.label)
+                                            ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-500"
+                                            : "bg-background border-border text-gray-500 hover:border-gray-400"
+                                        )}
+                                      >
+                                        <input 
+                                          type="checkbox"
+                                          className="hidden"
+                                          checked={localMobileBottomNavItems.includes(item.label)}
+                                          onChange={() => {
+                                            if (localMobileBottomNavItems.includes(item.label)) {
+                                              setLocalMobileBottomNavItems(localMobileBottomNavItems.filter(i => i !== item.label));
                                             } else {
-                                              showNotification('You can only select up to 4 items.', 'info');
+                                              const customItemsCount = localMobileBottomNavItems.filter(i => i !== 'Dashboard').length;
+                                              if (customItemsCount < 4) {
+                                                setLocalMobileBottomNavItems([...localMobileBottomNavItems, item.label]);
+                                              } else {
+                                                showNotification('You can only select up to 4 items.', 'info');
+                                              }
                                             }
-                                          }
-                                        }}
-                                      />
-                                      <item.icon className="w-3 h-3" />
-                                      <span className="text-[10px] font-medium truncate">{item.label}</span>
-                                    </label>
-                                  );
-                                })}
-                              </React.Fragment>
-                            ))}
+                                          }}
+                                        />
+                                        <item.icon className="w-3 h-3" />
+                                        <span className="text-[10px] font-medium truncate">{item.label}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </React.Fragment>
+                              ));
+                            })()}
                           </div>
                         </div>
                       )}
