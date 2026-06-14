@@ -104,9 +104,28 @@ export function StockItemReport() {
       
       // Calculate Auto Serial Numbers
       const sortedVouchers = [...allVouchers].sort((a, b) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
+        const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
+        if (dateComp !== 0) return dateComp;
+
+        // Try numeric sort for Ref No (v_no)
+        const numA = parseInt(a.v_no?.toString().replace(/\D/g, '') || '0') || 0;
+        const numB = parseInt(b.v_no?.toString().replace(/\D/g, '') || '0') || 0;
+        if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+        // Fallback to saved serial_no
+        const sA = Number(a.serial_no || a.auto_serial_no) || 0;
+        const sB = Number(b.serial_no || b.auto_serial_no) || 0;
+        if (sA !== sB) return sA - sB;
+
+        // Lexicographical fallback
+        const vNoComp = (a.v_no || '').toString().localeCompare((b.v_no || '').toString());
+        if (vNoComp !== 0) return vNoComp;
+
+        // Time fallback
+        const timeA = ensureDate(a.createdAt || a.created_at).getTime();
+        const timeB = ensureDate(b.createdAt || b.created_at).getTime();
         if (timeA !== timeB) return timeA - timeB;
+
         return a.id.localeCompare(b.id);
       });
 
@@ -121,6 +140,44 @@ export function StockItemReport() {
         acc[v.id] = { ...v, serial_no: serialMap[v.id] || v.serial_no || v.auto_serial_no };
         return acc;
       }, {});
+
+      const compareRecordSequence = (a: any, b: any) => {
+        // 1. Midnight local date comparison (for dates themselves)
+        const d_a = parseEntryDate(a.date, a.v_createdAt || a.created_at);
+        const d_b = parseEntryDate(b.date, b.v_createdAt || b.created_at);
+        if (d_a.getTime() !== d_b.getTime()) return d_a.getTime() - d_b.getTime();
+        
+        // 2. Movement type (Inward viz. Purchase/Inward first, outward viz. Sales/Outward later)
+        const mTypeA = a.m_type || getMovementType(a);
+        const mTypeB = b.m_type || getMovementType(b);
+        if (mTypeA !== mTypeB) {
+          return mTypeA === 'inward' ? -1 : 1;
+        }
+
+        // 3. Try numeric sort for Ref No (v_no)
+        const vNoA = String(a.v_no || '');
+        const vNoB = String(b.v_no || '');
+        const numA = parseInt(vNoA.replace(/\D/g, '') || '0') || 0;
+        const numB = parseInt(vNoB.replace(/\D/g, '') || '0') || 0;
+        if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+        // 4. Try auto-serial numbers
+        const seqA = a.v_serial_no || a.serial_no || 0;
+        const seqB = b.v_serial_no || b.serial_no || 0;
+        if (seqA !== seqB) return seqA - seqB;
+
+        // 5. Lexicographical fallback of v_no
+        const vNoComp = vNoA.localeCompare(vNoB);
+        if (vNoComp !== 0) return vNoComp;
+
+        // 6. Time fallback
+        const tsA = ensureDate(a.v_createdAt || a.created_at).getTime();
+        const tsB = ensureDate(b.v_createdAt || b.created_at).getTime();
+        if (tsA !== tsB) return tsA - tsB;
+
+        // 7. Hard ID fallback
+        return (a.id || '').localeCompare(b.id || '');
+      };
 
       // Enrich entries with voucher data for more robust reporting
       const enrichedInvEntries = allInvEntries.map((e: any) => {
@@ -137,7 +194,10 @@ export function StockItemReport() {
           ...e,
           v_type: vType,
           date: e.date || v.v_date || '',
-          m_type: getMovementType(movementData)
+          m_type: getMovementType(movementData),
+          v_no: v.v_no || 'N/A',
+          v_serial_no: v.serial_no || e.serial_no || 0,
+          v_createdAt: v.createdAt || v.created_at || null
         };
       });
 
@@ -155,12 +215,7 @@ export function StockItemReport() {
       // Filter and sort ALL entries for this item to correctly simulate history
       const sortedHistory = enrichedInvEntries
         .filter((e: any) => String(e.item_id) === String(item.id))
-        .sort((a, b) => {
-          const d_a = parseEntryDate(a.date, a.created_at);
-          const d_b = parseEntryDate(b.date, b.created_at);
-          if (d_a.getTime() !== d_b.getTime()) return d_a.getTime() - d_b.getTime();
-          return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
-        });
+        .sort(compareRecordSequence);
 
       let openingBalance = selectedGodown ? (godownBalances[selectedGodown] || 0) : runningTotal;
       let openingValue = openingBalance * (Number(item.opening_rate) || 0);
@@ -423,12 +478,7 @@ export function StockItemReport() {
             v_id: v.id,
             created_at_time: e.created_at?.seconds || 0
           };
-        }).sort((a, b) => {
-          const dateA = a.date || '';
-          const dateB = b.date || '';
-          if (dateA !== dateB) return dateA.localeCompare(dateB);
-          return a.created_at_time - b.created_at_time;
-        });
+        }).sort(compareRecordSequence);
 
       const transactionsWithBalance = sortedEntries.map(tx => {
         const total = (tx.qty || 0) + (tx.free_qty || 0);
