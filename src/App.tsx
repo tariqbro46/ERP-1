@@ -478,7 +478,12 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   const getPageTitle = (): string => {
     // 1. Exact match for reports page Create / Alter
     if (location.pathname === '/reports') {
-      return 'Create / Alter';
+      return t('nav.reports') || 'Reports';
+    }
+
+    // 1b. Exact match for alter page
+    if (location.pathname === '/alter') {
+      return t('nav.createAlter') || 'Create / Alter';
     }
 
     // 2. Exact match for search page
