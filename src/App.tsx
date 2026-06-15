@@ -487,6 +487,11 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       return t('nav.createAlter') || 'Create / Alter';
     }
 
+    // 1c. Match for voucher details route
+    if (location.pathname.startsWith('/vouchers/view/')) {
+      return 'Voucher Details';
+    }
+
     // 2. Exact match for search page
     if (location.pathname === '/search') {
       return 'Search';

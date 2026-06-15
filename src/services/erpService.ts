@@ -23,7 +23,8 @@ import {
   arrayUnion,
   arrayRemove,
   DocumentReference,
-  DocumentSnapshot
+  DocumentSnapshot,
+  getCountFromServer
 } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
 import { 
@@ -3793,10 +3794,11 @@ export const erpService: any = {
     if (!companyId) return 0;
     try {
       const q = query(collection(db, colName), where('companyId', '==', companyId));
-      const snapshot = await getDocs(q);
-      return snapshot.size;
+      const snapshot = await getCountFromServer(q);
+      return snapshot.data().count;
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, colName);
+      console.warn(`Error getting server count for ${colName}:`, error);
+      // Fallback: If quota has been exceeded or database is offline, catch silently and return 0
       return 0;
     }
   },
