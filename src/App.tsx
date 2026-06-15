@@ -98,6 +98,7 @@ import { StockGroupSummary } from './components/StockGroupSummary';
 import { StockCategorySummary } from './components/StockCategorySummary';
 import { InventoryBooks } from './components/InventoryBooks';
 import { AccountBooks } from './components/AccountBooks';
+import MaintenancePage from './components/MaintenancePage';
 import { ReportPlaceholder } from './components/ReportPlaceholder';
 import { GroupDashboard } from './components/GroupDashboard';
 import { VoucherDetail } from './components/VoucherDetail';
@@ -1723,7 +1724,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 }
 
 function AppContent() {
-  const { user, loading, isSuperAdmin, logout, firebaseUser } = useAuth();
+  const { user, loading, isSuperAdmin, isFounder, logout, firebaseUser } = useAuth();
   const { language } = useLanguage();
   const { 
     englishFont = 'Inter', 
@@ -1733,6 +1734,7 @@ function AppContent() {
     loaderPhrases,
     loaderTheme = 'glass',
     adaptiveLoaderEnabled = true,
+    maintenanceEnabled = false,
     loading: settingsLoading
   } = useSettings();
 
@@ -1812,6 +1814,10 @@ function AppContent() {
         )}
       </div>
     );
+  }
+
+  if (maintenanceEnabled && !isFounder && user) {
+    return <MaintenancePage />;
   }
 
   return (

@@ -71,6 +71,7 @@ import {
   Palette,
   FileImage,
   Save,
+  Wrench,
   Sparkles
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -278,6 +279,10 @@ export default function FounderPanel() {
     showTopbarInstructions,
     appVersion, 
     developerContactText,
+    maintenanceEnabled,
+    maintenanceEndTime,
+    maintenanceReason,
+    maintenanceUpdates,
     developerContactAlignment,
     alterPageUiStyle,
     reportsPageUiStyle,
@@ -421,6 +426,10 @@ export default function FounderPanel() {
   const [localSkeletonTheme, setLocalSkeletonTheme] = useState(skeletonTheme || 'modern');
   const [localSkeletonRows, setLocalSkeletonRows] = useState(skeletonRows ?? 5);
   const [localSkeletonWaveColor, setLocalSkeletonWaveColor] = useState(skeletonWaveColor || 'indigo');
+  const [localMaintenanceEnabled, setLocalMaintenanceEnabled] = useState(maintenanceEnabled || false);
+  const [localMaintenanceEndTime, setLocalMaintenanceEndTime] = useState(maintenanceEndTime || '');
+  const [localMaintenanceReason, setLocalMaintenanceReason] = useState(maintenanceReason || '');
+  const [localMaintenanceUpdates, setLocalMaintenanceUpdates] = useState(maintenanceUpdates || '');
   const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'branding' | 'search' | 'loader' | 'skeleton' | 'warnings'>('general');
   const [settingsFilterQuery, setSettingsFilterQuery] = useState('');
 
@@ -469,6 +478,22 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalStatusError(statusErrorText);
   }, [statusErrorText]);
+
+  useEffect(() => {
+    setLocalMaintenanceEnabled(maintenanceEnabled || false);
+  }, [maintenanceEnabled]);
+
+  useEffect(() => {
+    setLocalMaintenanceEndTime(maintenanceEndTime || '');
+  }, [maintenanceEndTime]);
+
+  useEffect(() => {
+    setLocalMaintenanceReason(maintenanceReason || '');
+  }, [maintenanceReason]);
+
+  useEffect(() => {
+    setLocalMaintenanceUpdates(maintenanceUpdates || '');
+  }, [maintenanceUpdates]);
 
   useEffect(() => {
     setLocalSystemLogo(systemLogo || '');
@@ -2914,6 +2939,10 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                 onClick={async () => {
                   try {
                     await updateSystemSettings({
+                      maintenanceEnabled: localMaintenanceEnabled,
+                      maintenanceEndTime: localMaintenanceEndTime,
+                      maintenanceReason: localMaintenanceReason,
+                      maintenanceUpdates: localMaintenanceUpdates,
                       statusOnlineText: localStatusOnline,
                       statusOfflineText: localStatusOffline,
                       statusErrorText: localStatusError,
@@ -3077,11 +3106,12 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                 };
 
                 const showIdentity = checkFilter(['app version', 'identity', 'build', 'version']);
+                const showMaintenance = checkFilter(['maintenance', 'break', 'timer', 'downtime', 'updates', 'reason']);
                 const showConnection = checkFilter(['online', 'offline', 'error', 'connection', 'status', 'text', 'network', 'sentinel']);
                 const showHeader = checkFilter(['shortcut', 'g', 'search icon', 'notifications icon', 'instructions', 'guide', 'header', 'topbar', 'toggle']);
                 const showDeveloper = checkFilter(['developer', 'footer', 'alignment', 'attribution', 'contact']);
 
-                if (!showIdentity && !showConnection && !showHeader && !showDeveloper) {
+                if (!showIdentity && !showMaintenance && !showConnection && !showHeader && !showDeveloper) {
                   return (
                     <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card border border-border border-dashed rounded-xl">
                       <Search className="w-8 h-8 text-muted-foreground opacity-30 mb-2 animate-bounce" />
@@ -3113,6 +3143,96 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               value={localAppVersion || ''}
                               onChange={(e) => setLocalAppVersion(e.target.value)}
                               className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Group 1.5: Maintenance Break System Settings */}
+                    {showMaintenance && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-5 shadow-xs relative overflow-hidden",
+                        uiStyle === 'UI/UX 2' && "border-amber-100 shadow-md"
+                      )}>
+                        {/* Decorative side accent */}
+                        <div className={cn(
+                          "absolute left-0 top-0 bottom-0 w-1 bg-amber-500",
+                          !localMaintenanceEnabled && "bg-slate-500"
+                        )} />
+                        
+                        <div className="flex items-center justify-between border-b border-border pb-3">
+                          <div className="flex items-center gap-2">
+                            <Wrench className={cn("w-4 h-4", localMaintenanceEnabled ? "text-amber-500 animate-spin [animation-duration:10s]" : "text-slate-400")} />
+                            <div>
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Maintenance Break System</h4>
+                              <p className="text-[9px] uppercase tracking-wide text-muted-foreground font-medium mt-0.5">Toggle live lockout, set countdown timers & display updates info.</p>
+                            </div>
+                          </div>
+                          
+                          {/* Modern toggle switch */}
+                          <button
+                            onClick={() => setLocalMaintenanceEnabled(!localMaintenanceEnabled)}
+                            className={cn(
+                              "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2",
+                              localMaintenanceEnabled ? "bg-amber-500" : "bg-neutral-600"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
+                                localMaintenanceEnabled ? "translate-x-5" : "translate-x-0"
+                              )}
+                            />
+                          </button>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Maintenance State Badge */}
+                            <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                              <span className="text-[10px] font-mono uppercase tracking-wider font-semibold text-muted-foreground">Current State:</span>
+                              <span className={cn(
+                                "text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full",
+                                localMaintenanceEnabled ? "bg-amber-500/15 text-amber-500 border border-amber-500/20" : "bg-slate-500/10 text-slate-400 border border-slate-500/15"
+                              )}>
+                                {localMaintenanceEnabled ? "Maintenance Active" : "Online/Normal Mode"}
+                              </span>
+                            </div>
+
+                            {/* Scheduled End Datetime picker */}
+                            <div className="space-y-1.5/4">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Scheduled End Time (Optional Timer)</label>
+                              <input
+                                type="datetime-local"
+                                value={localMaintenanceEndTime}
+                                onChange={(e) => setLocalMaintenanceEndTime(e.target.value)}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-amber-500 outline-none font-mono text-foreground"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Reason for Maintenance Break */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Reason / Purpose of Maintenance Break</label>
+                            <textarea
+                              value={localMaintenanceReason}
+                              onChange={(e) => setLocalMaintenanceReason(e.target.value)}
+                              rows={3}
+                              placeholder="Describe why the system is offline (e.g. We are moving our transaction log servers to high-performance SSD pools to ensure instant sub-millisecond reports calculations...)"
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-amber-500 outline-none leading-relaxed text-foreground"
+                            />
+                          </div>
+
+                          {/* Anticipated Features or upcoming updates info */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Expected Future Upgrades Preview (Display list to users)</label>
+                            <textarea
+                              value={localMaintenanceUpdates}
+                              onChange={(e) => setLocalMaintenanceUpdates(e.target.value)}
+                              rows={4}
+                              placeholder="Brief description of new features / fixes coming in this update... (e.g. 1. Instant Ledger Statements\n2. Real-time Voucher Autocomplete\n3. Responsive Founder Metrics)"
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-amber-500 outline-none leading-relaxed font-mono text-foreground"
                             />
                           </div>
                         </div>

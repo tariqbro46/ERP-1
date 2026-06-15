@@ -35,7 +35,8 @@ interface SearchResult {
 }
 
 export default function SearchPage() {
-  const [query, setQuery] = useState('');
+  const [inputValue, setInputValue] = useState('');
+  const [lastSearchedQuery, setLastSearchedQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'voucher' | 'ledger' | 'item' | 'employee'>('all');
@@ -45,26 +46,38 @@ export default function SearchPage() {
 
   const searchPageUiStyle = settings?.searchPageUiStyle || 'classic';
 
-  useEffect(() => {
-    const handler = setTimeout(async () => {
-      if (!query || query.length < 2) {
-        setResults([]);
-        return;
-      }
-      
-      setLoading(true);
-      try {
-        const data = await erpService.searchCompanyData(company?.id || '', query);
-        setResults(data as SearchResult[]);
-      } catch (err) {
-        console.error('Search failed:', err);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
+  const executeSearch = async (term: string) => {
+    const trimmed = term.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setResults([]);
+      setLastSearchedQuery(trimmed);
+      return;
+    }
 
-    return () => clearTimeout(handler);
-  }, [query, company?.id]);
+    setLoading(true);
+    setLastSearchedQuery(trimmed);
+    try {
+      const data = await erpService.searchCompanyData(company?.id || '', trimmed);
+      setResults(data as SearchResult[]);
+    } catch (err) {
+      console.error('Search failed:', err);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      executeSearch(inputValue);
+    }
+  };
+
+  const handleClear = () => {
+    setInputValue('');
+    setLastSearchedQuery('');
+    setResults([]);
+  };
 
   const filteredResults = results.filter(r => activeTab === 'all' || r.type === activeTab);
 
@@ -129,36 +142,39 @@ export default function SearchPage() {
     }
   };
 
-  const popularSearches = [
-    { label: 'Bank Cash', query: 'Cash' },
-    { label: 'Sales Account', query: 'Sales' },
-    { label: 'Salary Ledger', query: 'Salary' },
-    { label: 'Inventory Items', query: 'Item' },
-    { label: 'Active Employees', query: 'Employee' }
-  ];
-
   // ==================== RENDERING CLASSIC VIEW ====================
   const renderClassic = () => (
-    <div className="flex flex-col min-h-screen bg-slate-50/50">
+    <div className="flex flex-col h-screen overflow-hidden bg-slate-50/50 font-sans">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/60 shadow-sm px-4 lg:px-6 py-4 space-y-4">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
-          </button>
-          <div className="flex-1 relative">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search vouchers, ledgers, stock items..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
-              autoFocus
-            />
+      <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/60 shadow-sm px-4 lg:px-6 py-4 space-y-4 flex-shrink-0">
+        <div className="flex items-center">
+          <div className="flex-1 flex items-stretch h-12">
+            <div className="relative flex-1 h-full">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search vouchers, ledgers, stock items..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="w-full h-full bg-slate-50 border-2 border-r-0 border-slate-200 rounded-l-xl pl-10 pr-12 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all duration-300"
+                autoFocus
+              />
+              {inputValue && (
+                <button 
+                  onClick={handleClear}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 font-bold uppercase transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => executeSearch(inputValue)}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-r-xl px-5 flex items-center justify-center text-sm font-bold shadow-sm transition-all duration-300 shrink-0 cursor-pointer hover:shadow-md active:scale-95"
+            >
+              Enter / Search
+            </button>
           </div>
         </div>
 
@@ -182,7 +198,7 @@ export default function SearchPage() {
       </div>
 
       {/* Main results list */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 max-w-2xl mx-auto w-full">
+      <div className="flex-1 overflow-y-auto px-4 py-6 max-w-2xl mx-auto w-full no-scrollbar">
         {loading ? (
           <div className="flex justify-center items-center py-12">
             <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
@@ -221,14 +237,14 @@ export default function SearchPage() {
               );
             })}
           </div>
-        ) : query.length >= 2 ? (
+        ) : lastSearchedQuery.length >= 2 ? (
           <div className="text-center py-12">
-            <p className="text-sm text-slate-500">No results found for "{query}"</p>
+            <p className="text-sm text-slate-500">No results found for "{lastSearchedQuery}"</p>
           </div>
         ) : (
           <div className="text-center py-12">
             <SearchIcon className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-sm text-slate-500 font-medium">Type at least 2 characters to search</p>
+            <p className="text-sm text-slate-500 font-medium font-sans">Type search query and press Enter</p>
             <p className="text-xs text-slate-400 mt-1">Search vouchers, ledgers, items, and employees quickly.</p>
           </div>
         )}
@@ -248,103 +264,91 @@ export default function SearchPage() {
     };
 
     return (
-      <div className="flex flex-col min-h-screen bg-slate-50/60 transition-all duration-300 font-sans">
+      <div className="flex flex-col h-screen overflow-hidden bg-slate-50/60 transition-all duration-300 font-sans">
         {/* Sticky Header Row */}
-        <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/60 shadow-md px-5 lg:px-8 py-5 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => navigate(-1)}
-                className="p-2.5 bg-slate-100 hover:bg-slate-200/80 rounded-xl text-slate-700 transition-all shadow-sm hover:scale-105 active:scale-95"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-blue-600 animate-pulse" />
-                  Smart Advanced Finder
-                </h1>
-                <p className="text-xs text-slate-500">Instant database lookups and module indexing.</p>
+        <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/60 shadow-md px-5 lg:px-8 py-3.5 flex-shrink-0">
+          <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between w-full">
+            
+            {/* Large Integrated Search Bar */}
+            <div className="flex-1 min-w-0 flex items-stretch h-12">
+              <div className="relative flex-1 h-full">
+                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                  <SearchIcon className={cn(
+                    "w-5 h-5 transition-colors duration-300",
+                    lastSearchedQuery ? "text-blue-600" : "text-slate-400"
+                  )} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Query ledgers, voucher vouchers, stock items, employee names..."
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-full h-full bg-slate-50 hover:bg-slate-100/70 focus:bg-white border-2 border-r-0 border-slate-200/80 focus:border-blue-500 rounded-l-2xl pl-12 pr-12 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all duration-300"
+                  autoFocus
+                />
+                {inputValue && (
+                  <button 
+                    onClick={handleClear}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 font-bold uppercase transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
+              <button 
+                onClick={() => executeSearch(inputValue)}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-r-2xl px-6 flex items-center justify-center text-sm font-bold tracking-wide shadow-sm transition-all duration-300 shrink-0 cursor-pointer hover:shadow-md active:scale-95 whitespace-nowrap"
+              >
+                Enter / Search
+              </button>
+            </div>
+
+            {/* Segmented Filter Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 shrink-0">
+              {(['all', 'voucher', 'ledger', 'item', 'employee'] as const).map((tab) => {
+                const isActive = activeTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={cn(
+                      "relative px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 whitespace-nowrap flex items-center gap-2",
+                      isActive
+                        ? "bg-slate-900 text-white shadow-md scale-[1.02]"
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 border border-slate-200/50"
+                    )}
+                  >
+                    <span>{tab === 'all' ? 'All Indexes' : `${tab}s`}</span>
+                    {lastSearchedQuery.length >= 2 && (
+                      <span className={cn(
+                        "text-[9px] px-1.5 py-0.5 rounded-md font-extrabold font-mono",
+                        isActive 
+                          ? "bg-blue-500 text-white" 
+                          : "bg-slate-200 text-slate-700"
+                      )}>
+                        {counts[tab]}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Quick Stats Indicator */}
-            {query.length >= 2 && (
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                <div className="bg-blue-50 text-blue-600 rounded-xl px-4 py-2 border border-blue-100/50 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider shadow-xs animate-pulse">
+            {lastSearchedQuery.length >= 2 && results.length > 0 && (
+              <div className="flex items-center gap-2 shrink-0 hidden lg:flex">
+                <div className="bg-blue-50 text-blue-600 rounded-xl px-4 py-2.5 border border-blue-100/50 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider shadow-xs animate-pulse whitespace-nowrap">
                   <Database className="w-3.5 h-3.5" />
                   <span>Found: {results.length} Matches</span>
                 </div>
               </div>
             )}
           </div>
-
-          {/* Large Modern Search Bar */}
-          <div className="relative w-full">
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <SearchIcon className={cn(
-                "w-5.5 h-5.5 transition-colors duration-300",
-                query ? "text-blue-600" : "text-slate-400"
-              )} />
-            </div>
-            <input
-              type="text"
-              placeholder="Query ledgers, voucher vouchers, stock items, employee names..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="w-full bg-slate-50 hover:bg-slate-100/70 focus:bg-white border-2 border-slate-200/80 focus:border-blue-500 rounded-2xl pl-12 pr-16 py-3.5 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 shadow-sm transition-all duration-300"
-              autoFocus
-            />
-            {query && (
-              <button 
-                onClick={() => setQuery('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-slate-100 hover:bg-slate-200 text-slate-550 rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors"
-              >
-                Clear
-              </button>
-            )}
-            {!query && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 text-[10px] font-bold text-slate-400 border border-slate-200 bg-slate-50 px-2 py-1 rounded-md uppercase tracking-wider select-none">
-                <span>Type min 2 char</span>
-              </div>
-            )}
-          </div>
-
-          {/* Segmented Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-            {(['all', 'voucher', 'ledger', 'item', 'employee'] as const).map((tab) => {
-              const isActive = activeTab === tab;
-              const hasCount = counts[tab] > 0;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={cn(
-                    "relative px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 whitespace-nowrap flex items-center gap-2",
-                    isActive
-                      ? "bg-slate-900 text-white shadow-md scale-[1.02]"
-                      : "bg-slate-100 hover:bg-slate-250 text-slate-600 hover:text-slate-800 border border-slate-200/50"
-                  )}
-                >
-                  <span>{tab === 'all' ? 'All Indexes' : `${tab}s`}</span>
-                  {query.length >= 2 && (
-                    <span className={cn(
-                      "text-[9px] px-1.5 py-0.5 rounded-md font-extrabold font-mono",
-                      isActive 
-                        ? "bg-blue-500 text-white" 
-                        : "bg-slate-200 text-slate-700"
-                    )}>
-                      {counts[tab]}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {/* Main Content Layout Grid */}
-        <div className="flex-1 w-full max-w-7xl mx-auto px-5 lg:px-8 py-6">
+        <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-5 lg:px-8 py-6 no-scrollbar">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             {/* Left Column: Search Results List */}
@@ -401,7 +405,15 @@ export default function SearchPage() {
 
                           <div className="flex items-center gap-2">
                             <span className="opacity-0 group-hover:opacity-100 text-[10px] text-blue-600 font-extrabold uppercase tracking-widest transition-opacity duration-300 hidden sm:inline">
-                              View Profile
+                              {result.type === 'voucher' 
+                                ? 'View Voucher' 
+                                : result.type === 'ledger' 
+                                ? 'View Ledger' 
+                                : result.type === 'item' 
+                                ? 'View Item' 
+                                : result.type === 'employee' 
+                                ? 'View Employee' 
+                                : 'View Profile'}
                             </span>
                             <div className="p-1.5 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 group-hover:translate-x-1">
                               <ArrowRight className="w-4 h-4" />
@@ -412,38 +424,16 @@ export default function SearchPage() {
                     })}
                   </AnimatePresence>
                 </div>
-              ) : query.length >= 2 ? (
+              ) : lastSearchedQuery.length >= 2 ? (
                 <div className="text-center py-20 bg-white border border-slate-200/60 rounded-2xl shadow-xs">
                   <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
                     <Info className="w-6 h-6 text-slate-400" />
                   </div>
                   <p className="text-sm font-bold text-slate-800">No matching indexes found</p>
-                  <p className="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto">We couldn't search any ledger, voucher, stock item or employee matching "{query}". Check spelling and retry.</p>
+                  <p className="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto">We couldn't search any ledger, voucher, stock item or employee matching "{lastSearchedQuery}". Check spelling and retry.</p>
                 </div>
               ) : (
                 <div className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-xs space-y-6">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-blue-500" />
-                      Popular ERP Search Queries
-                    </h3>
-                    <p className="text-xs text-slate-500 mb-4">Click any frequent ERP ledger or stock index shortcut to search instantly:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {popularSearches.map((ps) => (
-                        <button
-                          key={ps.label}
-                          onClick={() => setQuery(ps.query)}
-                          className="flex items-center gap-1.5 bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-600 border border-slate-200 hover:border-blue-100 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-tight transition-all active:scale-95 duration-200 shadow-xs"
-                        >
-                          <TrendingUp className="w-3.5 h-3.5 opacity-70" />
-                          <span>{ps.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <hr className="border-slate-100" />
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="p-4 bg-slate-50/55 border border-slate-100 rounded-xl space-y-2">
                       <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
@@ -458,7 +448,7 @@ export default function SearchPage() {
                         <Database className="w-3.5 h-3.5 text-slate-500" />
                         Live Synced Modules
                       </h4>
-                      <p className="text-[11px] text-slate-500 leading-relaxed">Search profiles remain fully synchronized with live cloud records, ensuring you query and navigate directly to your destination with absolute certainty.</p>
+                      <p className="text-[11px] text-slate-550 leading-relaxed">Search profiles remain fully synchronized with live cloud records, ensuring you query and navigate directly to your destination with absolute certainty.</p>
                     </div>
                   </div>
                 </div>
@@ -521,7 +511,7 @@ export default function SearchPage() {
                   ERP Database Synced
                 </h4>
                 <p className="text-[11px] text-blue-700/90 leading-relaxed">
-                  Every typed character indexes active vouchers, stock registries, ledger profiles, or employee dossiers seamlessly. Hit <strong>Enter</strong> or click any row to navigate straight to transactions.
+                  Hitting <strong>Enter</strong> or click <strong>Enter / Search</strong> indexes active vouchers, stock registries, ledger profiles, or employee dossiers seamlessly. Click any row to navigate straight to transactions.
                 </p>
               </div>
             </div>

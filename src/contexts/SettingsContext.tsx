@@ -207,6 +207,10 @@ interface SettingsContextType {
   warningJournalLedgerName?: string;
   warningJournalDebitCreditAmount?: string;
   warningJournalNotBalanced?: string;
+  maintenanceEnabled?: boolean;
+  maintenanceEndTime?: string;
+  maintenanceReason?: string;
+  maintenanceUpdates?: string;
   features: FeatureSettings[];
   appFeatures: FeatureCategory[];
   subscriptionPlans: SubscriptionPlan[];
@@ -358,6 +362,10 @@ const defaultSettings: SettingsContextType = {
   warningJournalLedgerName: 'Please select Ledger Name under Particulars.',
   warningJournalDebitCreditAmount: 'Please enter Debit or Credit Amount.',
   warningJournalNotBalanced: 'Voucher is not balanced. Difference: ৳ {DIFF} (Debit: ৳ {DEBIT}, Credit: ৳ {CREDIT})',
+  maintenanceEnabled: false,
+  maintenanceEndTime: '',
+  maintenanceReason: '',
+  maintenanceUpdates: '',
   features: [],
   appFeatures: [],
   subscriptionPlans: [],
@@ -432,10 +440,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribeUser();
   }, [user?.uid]);    // Cache for global settings to avoid redundant fetches across tabs/sessions
     const globalConfigLoaded = React.useRef(false);
+    let unsubSystem: (() => void) | null = null;
 
     useEffect(() => {
-    // Fetch global system config - One-time fetch to save quota
-    const fetchSystemConfig = async () => {
+    // Fetch global system config - Live subscription to reflect maintenance changes immediately
+    const fetchSystemConfig = () => {
       try {
         const persisted = localStorage.getItem('swr_system_config');
         if (persisted) {
@@ -449,96 +458,101 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const systemRef = doc(db, 'system', 'config');
-        const snap = await getDocFromServer(systemRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          try {
-            localStorage.setItem('swr_system_config', JSON.stringify(data));
-          } catch (e) {}
-          setSettings(prev => ({
-            ...prev,
-            statusOnlineText: data.statusOnlineText || prev.statusOnlineText,
-            statusOfflineText: data.statusOfflineText || prev.statusOfflineText,
-            statusErrorText: data.statusErrorText || prev.statusErrorText,
-            showGoToShortcut: data.showGoToShortcut !== undefined ? data.showGoToShortcut : prev.showGoToShortcut,
-            showTopbarSearch: data.showTopbarSearch !== undefined ? data.showTopbarSearch : true,
-            showTopbarNotifications: data.showTopbarNotifications !== undefined ? data.showTopbarNotifications : true,
-            showTopbarInstructions: data.showTopbarInstructions !== undefined ? data.showTopbarInstructions : true,
-            developerContactText: data.developerContactText || prev.developerContactText,
-            developerContactAlignment: data.developerContactAlignment || prev.developerContactAlignment,
-            appVersion: data.appVersion || prev.appVersion,
-            englishFont: data.englishFont || prev.englishFont,
-            banglaFont: data.banglaFont || prev.banglaFont,
-            systemLogo: data.systemLogo || prev.systemLogo,
-            systemFavicon: data.systemFavicon || prev.systemFavicon,
-            glassBackground: data.glassBackground || prev.glassBackground,
-            notificationDuration: data.notificationDuration || prev.notificationDuration,
-            notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle,
-            searchPlaceholder: data.searchPlaceholder || prev.searchPlaceholder,
-            searchHelpText: data.searchHelpText || prev.searchHelpText,
-            showSearchShortcut: data.showSearchShortcut !== undefined ? data.showSearchShortcut : prev.showSearchShortcut,
-            searchIconColor: data.searchIconColor || prev.searchIconColor,
-            loaderBlurStyle: data.loaderBlurStyle || prev.loaderBlurStyle || 'md',
-            loaderIconStyle: data.loaderIconStyle || prev.loaderIconStyle || 'spinner',
-            loaderPhrases: data.loaderPhrases || prev.loaderPhrases || 'Connecting to server, Requesting data, Waiting for response, Almost done, Here we go!',
-            loaderTheme: data.loaderTheme || prev.loaderTheme || 'glass',
-            adaptiveLoaderEnabled: data.adaptiveLoaderEnabled !== undefined ? data.adaptiveLoaderEnabled : prev.adaptiveLoaderEnabled,
-            showQuickCalculator: data.showQuickCalculator !== undefined ? data.showQuickCalculator : prev.showQuickCalculator,
-            showPinnedBookmarks: data.showPinnedBookmarks !== undefined ? data.showPinnedBookmarks : prev.showPinnedBookmarks,
-            customControlCenterTheme: data.customControlCenterTheme || prev.customControlCenterTheme || 'emerald',
-            customWelcomeMessage: data.customWelcomeMessage || prev.customWelcomeMessage || 'Executive Command Center',
-            splashSubDesign: data.splashSubDesign || prev.splashSubDesign || 'grid',
-            skeletonEnabled: data.skeletonEnabled !== undefined ? data.skeletonEnabled : prev.skeletonEnabled,
-            skeletonDashboardOnly: data.skeletonDashboardOnly !== undefined ? data.skeletonDashboardOnly : prev.skeletonDashboardOnly,
-            skeletonType: data.skeletonType || prev.skeletonType || 'automatic',
-            skeletonSpeed: data.skeletonSpeed || prev.skeletonSpeed || 'normal',
-            skeletonTheme: data.skeletonTheme || prev.skeletonTheme || 'modern',
-            skeletonRows: data.skeletonRows !== undefined ? Number(data.skeletonRows) : prev.skeletonRows,
-            skeletonWaveColor: data.skeletonWaveColor || prev.skeletonWaveColor || 'indigo',
-            voucherLayout: data.voucherLayout || prev.voucherLayout,
-            voucherFieldSize: data.voucherFieldSize || prev.voucherFieldSize || 'medium',
-            warningSelectItemsInPhysicalStock: data.warningSelectItemsInPhysicalStock || prev.warningSelectItemsInPhysicalStock,
-            warningInvalidQtyInPhysicalStock: data.warningInvalidQtyInPhysicalStock || prev.warningInvalidQtyInPhysicalStock,
-            warningPrefixSelectFill: data.warningPrefixSelectFill || prev.warningPrefixSelectFill,
-            warningPartyName: data.warningPartyName || prev.warningPartyName,
-            warningSupplierName: data.warningSupplierName || prev.warningSupplierName,
-            warningSalesLedger: data.warningSalesLedger || prev.warningSalesLedger,
-            warningPurchaseLedger: data.warningPurchaseLedger || prev.warningPurchaseLedger,
-            warningItemsListEmpty: data.warningItemsListEmpty || prev.warningItemsListEmpty,
-            warningItemNameEmpty: data.warningItemNameEmpty || prev.warningItemNameEmpty,
-            warningQuantityEmpty: data.warningQuantityEmpty || prev.warningQuantityEmpty,
-            warningRateEmpty: data.warningRateEmpty || prev.warningRateEmpty,
-            warningConsumptionItems: data.warningConsumptionItems || prev.warningConsumptionItems,
-            warningSourceItemName: data.warningSourceItemName || prev.warningSourceItemName,
-            warningSourceItemQty: data.warningSourceItemQty || prev.warningSourceItemQty,
-            warningProductionItems: data.warningProductionItems || prev.warningProductionItems,
-            warningDestItemName: data.warningDestItemName || prev.warningDestItemName,
-            warningDestItemQty: data.warningDestItemQty || prev.warningDestItemQty,
-            warningSingleAccount: data.warningSingleAccount || prev.warningSingleAccount,
-            warningSingleParticulars: data.warningSingleParticulars || prev.warningSingleParticulars,
-            warningSingleAmount: data.warningSingleAmount || prev.warningSingleAmount,
-            warningJournalLedgerName: data.warningJournalLedgerName || prev.warningJournalLedgerName,
-            warningJournalDebitCreditAmount: data.warningJournalDebitCreditAmount || prev.warningJournalDebitCreditAmount,
-            warningJournalNotBalanced: data.warningJournalNotBalanced || prev.warningJournalNotBalanced,
-            systemUiStyle: data.uiStyle || prev.systemUiStyle,
-            systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
-            alterPageUiStyle: data.alterPageUiStyle || 'modern',
-            reportsPageUiStyle: (data.reportsPageUiStyle as any) || 'modern',
-            searchPageUiStyle: data.searchPageUiStyle || 'classic',
-            reportsColumnsPerRow: Number(data.reportsColumnsPerRow || 4),
-            alterColumnsPerRow: Number(data.alterColumnsPerRow || 3),
-            enableUserSortViewPref: data.enableUserSortViewPref !== undefined ? !!data.enableUserSortViewPref : false,
-            sidebarBgColor: data.sidebarBgColor || prev.sidebarBgColor || 'default',
-            sidebarTextColor: data.sidebarTextColor || prev.sidebarTextColor || 'default',
-            globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign
-          }));
-          globalConfigLoaded.current = true;
-        }
-      } catch (error: any) {
-        if (!error.message?.includes('Quota exceeded')) {
-          console.error("System settings fetch error:", error);
-        }
-      }
+        unsubSystem = onSnapshot(systemRef, (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            try {
+              localStorage.setItem('swr_system_config', JSON.stringify(data));
+            } catch (e) {}
+            setSettings(prev => ({
+              ...prev,
+              statusOnlineText: data.statusOnlineText || prev.statusOnlineText,
+              statusOfflineText: data.statusOfflineText || prev.statusOfflineText,
+              statusErrorText: data.statusErrorText || prev.statusErrorText,
+              showGoToShortcut: data.showGoToShortcut !== undefined ? data.showGoToShortcut : prev.showGoToShortcut,
+              showTopbarSearch: data.showTopbarSearch !== undefined ? data.showTopbarSearch : true,
+              showTopbarNotifications: data.showTopbarNotifications !== undefined ? data.showTopbarNotifications : true,
+              showTopbarInstructions: data.showTopbarInstructions !== undefined ? data.showTopbarInstructions : true,
+              developerContactText: data.developerContactText || prev.developerContactText,
+              developerContactAlignment: data.developerContactAlignment || prev.developerContactAlignment,
+              appVersion: data.appVersion || prev.appVersion,
+              englishFont: data.englishFont || prev.englishFont,
+              banglaFont: data.banglaFont || prev.banglaFont,
+              systemLogo: data.systemLogo || prev.systemLogo,
+              systemFavicon: data.systemFavicon || prev.systemFavicon,
+              glassBackground: data.glassBackground || prev.glassBackground,
+              notificationDuration: data.notificationDuration || prev.notificationDuration,
+              notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle,
+              searchPlaceholder: data.searchPlaceholder || prev.searchPlaceholder,
+              searchHelpText: data.searchHelpText || prev.searchHelpText,
+              showSearchShortcut: data.showSearchShortcut !== undefined ? data.showSearchShortcut : prev.showSearchShortcut,
+              searchIconColor: data.searchIconColor || prev.searchIconColor,
+              loaderBlurStyle: data.loaderBlurStyle || prev.loaderBlurStyle || 'md',
+              loaderIconStyle: data.loaderIconStyle || prev.loaderIconStyle || 'spinner',
+              loaderPhrases: data.loaderPhrases || prev.loaderPhrases || 'Connecting to server, Requesting data, Waiting for response, Almost done, Here we go!',
+              loaderTheme: data.loaderTheme || prev.loaderTheme || 'glass',
+              adaptiveLoaderEnabled: data.adaptiveLoaderEnabled !== undefined ? data.adaptiveLoaderEnabled : prev.adaptiveLoaderEnabled,
+              showQuickCalculator: data.showQuickCalculator !== undefined ? data.showQuickCalculator : prev.showQuickCalculator,
+              showPinnedBookmarks: data.showPinnedBookmarks !== undefined ? data.showPinnedBookmarks : prev.showPinnedBookmarks,
+              customControlCenterTheme: data.customControlCenterTheme || prev.customControlCenterTheme || 'emerald',
+              customWelcomeMessage: data.customWelcomeMessage || prev.customWelcomeMessage || 'Executive Command Center',
+              splashSubDesign: data.splashSubDesign || prev.splashSubDesign || 'grid',
+              skeletonEnabled: data.skeletonEnabled !== undefined ? data.skeletonEnabled : prev.skeletonEnabled,
+              skeletonDashboardOnly: data.skeletonDashboardOnly !== undefined ? data.skeletonDashboardOnly : prev.skeletonDashboardOnly,
+              skeletonType: data.skeletonType || prev.skeletonType || 'automatic',
+              skeletonSpeed: data.skeletonSpeed || prev.skeletonSpeed || 'normal',
+              skeletonTheme: data.skeletonTheme || prev.skeletonTheme || 'modern',
+              skeletonRows: data.skeletonRows !== undefined ? Number(data.skeletonRows) : prev.skeletonRows,
+              skeletonWaveColor: data.skeletonWaveColor || prev.skeletonWaveColor || 'indigo',
+              voucherLayout: data.voucherLayout || prev.voucherLayout,
+              voucherFieldSize: data.voucherFieldSize || prev.voucherFieldSize || 'medium',
+              warningSelectItemsInPhysicalStock: data.warningSelectItemsInPhysicalStock || prev.warningSelectItemsInPhysicalStock,
+              warningInvalidQtyInPhysicalStock: data.warningInvalidQtyInPhysicalStock || prev.warningInvalidQtyInPhysicalStock,
+              warningPrefixSelectFill: data.warningPrefixSelectFill || prev.warningPrefixSelectFill,
+              warningPartyName: data.warningPartyName || prev.warningPartyName,
+              warningSupplierName: data.warningSupplierName || prev.warningSupplierName,
+              warningSalesLedger: data.warningSalesLedger || prev.warningSalesLedger,
+              warningPurchaseLedger: data.warningPurchaseLedger || prev.warningPurchaseLedger,
+              warningItemsListEmpty: data.warningItemsListEmpty || prev.warningItemsListEmpty,
+              warningItemNameEmpty: data.warningItemNameEmpty || prev.warningItemNameEmpty,
+              warningQuantityEmpty: data.warningQuantityEmpty || prev.warningQuantityEmpty,
+              warningRateEmpty: data.warningRateEmpty || prev.warningRateEmpty,
+              warningConsumptionItems: data.warningConsumptionItems || prev.warningConsumptionItems,
+              warningSourceItemName: data.warningSourceItemName || prev.warningSourceItemName,
+              warningSourceItemQty: data.warningSourceItemQty || prev.warningSourceItemQty,
+              warningProductionItems: data.warningProductionItems || prev.warningProductionItems,
+              warningDestItemName: data.warningDestItemName || prev.warningDestItemName,
+              warningDestItemQty: data.warningDestItemQty || prev.warningDestItemQty,
+              warningSingleAccount: data.warningSingleAccount || prev.warningSingleAccount,
+              warningSingleParticulars: data.warningSingleParticulars || prev.warningSingleParticulars,
+              warningSingleAmount: data.warningSingleAmount || prev.warningSingleAmount,
+              warningJournalLedgerName: data.warningJournalLedgerName || prev.warningJournalLedgerName,
+              warningJournalDebitCreditAmount: data.warningJournalDebitCreditAmount || prev.warningJournalDebitCreditAmount,
+              warningJournalNotBalanced: data.warningJournalNotBalanced || prev.warningJournalNotBalanced,
+              systemUiStyle: data.uiStyle || prev.systemUiStyle,
+              systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
+              alterPageUiStyle: data.alterPageUiStyle || 'modern',
+              reportsPageUiStyle: (data.reportsPageUiStyle as any) || 'modern',
+              searchPageUiStyle: data.searchPageUiStyle || 'classic',
+              reportsColumnsPerRow: Number(data.reportsColumnsPerRow || 4),
+              alterColumnsPerRow: Number(data.alterColumnsPerRow || 3),
+              enableUserSortViewPref: data.enableUserSortViewPref !== undefined ? !!data.enableUserSortViewPref : false,
+              sidebarBgColor: data.sidebarBgColor || prev.sidebarBgColor || 'default',
+              sidebarTextColor: data.sidebarTextColor || prev.sidebarTextColor || 'default',
+              globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign,
+              maintenanceEnabled: data.maintenanceEnabled !== undefined ? !!data.maintenanceEnabled : false,
+              maintenanceEndTime: data.maintenanceEndTime || '',
+              maintenanceReason: data.maintenanceReason || '',
+              maintenanceUpdates: data.maintenanceUpdates || ''
+            }));
+            globalConfigLoaded.current = true;
+          }
+        }, (error) => {
+          if (!error.message?.includes('Quota exceeded')) {
+            console.error("System settings fetch error:", error);
+          }
+        });
+      } catch (error) {}
     };
 
     // Fetch subscription plans - One-time fetch
@@ -656,7 +670,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => {
-      unsubscribe();
+      if (unsubscribe) unsubscribe();
+      if (unsubSystem) unsubSystem();
     };
   }, [user?.companyId, authLoading]);
 
