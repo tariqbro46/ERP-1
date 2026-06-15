@@ -14,6 +14,7 @@ import {
   deleteDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { Company, UserRole, UserProfile, AppNotification, SubscriptionPlan, MenuConfig, MenuGroupConfig, MenuItemConfig } from '../types';
 import { NAV_ITEMS } from '../constants/navigation';
 import { motion, AnimatePresence } from 'motion/react';
@@ -169,6 +170,7 @@ export default function FounderPanel() {
       }, (err) => {
         console.error("Error subscribing to inquiries:", err);
         setInquiriesLoading(false);
+        handleFirestoreError(err, OperationType.GET, 'inquiries');
       });
       return () => unsubscribe();
     }
@@ -280,6 +282,7 @@ export default function FounderPanel() {
     alterPageUiStyle,
     reportsPageUiStyle,
     reportsColumnsPerRow,
+    searchPageUiStyle,
     alterColumnsPerRow,
     enableUserSortViewPref,
     updateSettings, 
@@ -376,6 +379,7 @@ export default function FounderPanel() {
   });
   const [localAlterPageUiStyle, setLocalAlterPageUiStyle] = useState<'classic' | 'modern'>(alterPageUiStyle || 'classic');
   const [localReportsPageUiStyle, setLocalReportsPageUiStyle] = useState<'classic' | 'modern' | 'grid'>(reportsPageUiStyle || 'classic');
+  const [localSearchPageUiStyle, setLocalSearchPageUiStyle] = useState<'classic' | 'modern'>(searchPageUiStyle || 'classic');
   const [localReportsColumnsPerRow, setLocalReportsColumnsPerRow] = useState<number>(reportsColumnsPerRow || 4);
   const [localAlterColumnsPerRow, setLocalAlterColumnsPerRow] = useState<number>(alterColumnsPerRow || 3);
   const [localEnableUserSortViewPref, setLocalEnableUserSortViewPref] = useState<boolean>(enableUserSortViewPref || false);
@@ -481,6 +485,10 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalReportsPageUiStyle(reportsPageUiStyle || 'classic');
   }, [reportsPageUiStyle]);
+
+  useEffect(() => {
+    setLocalSearchPageUiStyle(searchPageUiStyle || 'classic');
+  }, [searchPageUiStyle]);
 
   useEffect(() => {
     if (reportsColumnsPerRow !== undefined) {
@@ -632,41 +640,41 @@ export default function FounderPanel() {
       setGlobalActivity(activityData);
       setSubscriptionPlans(plansData);
       setSubscriptionOrders(ordersData);
-      const companyData: CompanyStats[] = [];
-
-      for (const data of companiesSnap) {
-        const creatorId = data.createdBy || data.ownerId;
-        
-        // Fetch Creator Email
-        let creatorEmail = 'Unknown';
-        if (creatorId) {
-          const user = usersSnap.find(u => u.uid === creatorId);
-          if (user) {
-            creatorEmail = user.email;
+      const companyData = await Promise.all(
+        companiesSnap.map(async (data) => {
+          const creatorId = data.createdBy || data.ownerId;
+          
+          // Fetch Creator Email
+          let creatorEmail = 'Unknown';
+          if (creatorId) {
+            const user = usersSnap.find(u => u.uid === creatorId);
+            if (user) {
+              creatorEmail = user.email;
+            }
           }
-        }
 
-        // Fetch User Count (from pre-fetched users)
-        const userCount = usersSnap.filter(u => u.companyId === data.id).length;
-        
-        // Fetch Voucher Count (as a proxy for DB size/usage)
-        const [vCount, lCount, iCount, lastActData] = await Promise.all([
-          erpService.getCollectionCount('vouchers', data.id),
-          erpService.getCollectionCount('ledgers', data.id),
-          erpService.getCollectionCount('items', data.id),
-          erpService.getActivityLogs(data.id, 1)
-        ]);
-        
-        companyData.push({
-          ...data,
-          userCount,
-          voucherCount: vCount,
-          ledgerCount: lCount,
-          itemCount: iCount,
-          lastActivity: lastActData?.[0],
-          creatorEmail
-        });
-      }
+          // Fetch User Count (from pre-fetched users)
+          const userCount = usersSnap.filter(u => u.companyId === data.id).length;
+          
+          // Fetch Voucher Count (as a proxy for DB size/usage)
+          const [vCount, lCount, iCount, lastActData] = await Promise.all([
+            erpService.getCollectionCount('vouchers', data.id),
+            erpService.getCollectionCount('ledgers', data.id),
+            erpService.getCollectionCount('items', data.id),
+            erpService.getActivityLogs(data.id, 1)
+          ]);
+          
+          return {
+            ...data,
+            userCount,
+            voucherCount: vCount,
+            ledgerCount: lCount,
+            itemCount: iCount,
+            lastActivity: lastActData?.[0],
+            creatorEmail
+          } as CompanyStats;
+        })
+      );
 
       setCompanies(companyData);
     } catch (error) {
@@ -1142,18 +1150,8 @@ export default function FounderPanel() {
         "sticky top-0 bg-background/80 backdrop-blur-xl border-b border-border shadow-sm px-4 lg:px-6 py-4 z-40",
         uiStyle === 'UI/UX 2' && "bg-white/80 border-blue-100 shadow-blue-500/5"
       )}>
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className={cn(
-              "text-2xl font-bold flex items-center gap-2",
-              uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-foreground"
-            )}>
-              <Shield className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-primary")} />
-              Founder Dashboard
-            </h1>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+        <header className="flex flex-col md:flex-row md:items-center justify-start gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full">
           <div className={cn(
             "grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap rounded-lg p-1 w-full sm:w-auto gap-1",
             uiStyle === 'UI/UX 2' ? "bg-blue-50" : "bg-muted"
@@ -1304,99 +1302,103 @@ export default function FounderPanel() {
             </button>
           </div>
 
-          {(viewMode === 'companies' || viewMode === 'users') && (
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder={viewMode === 'companies' ? "Search companies..." : "Search users..."}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none w-64"
-              />
-            </div>
-          )}
-          <button 
-            onClick={fetchData}
-            className="p-2 hover:bg-foreground/5 rounded-lg transition-colors"
-            title="Refresh Data"
-          >
-            <Activity className="w-5 h-5" />
-          </button>
+          <div className="sm:ml-auto flex items-center gap-4">
+            {(viewMode === 'companies' || viewMode === 'users') && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder={viewMode === 'companies' ? "Search companies..." : "Search users..."}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none w-64"
+                />
+              </div>
+            )}
+            <button 
+              onClick={fetchData}
+              className="p-2 hover:bg-foreground/5 rounded-lg transition-colors"
+              title="Refresh Data"
+            >
+              <Activity className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </header>
     </div>
 
     <div className="p-4 lg:p-6 space-y-6">
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className={cn(
-          "bg-card border border-border rounded-xl p-6 shadow-sm transition-all",
-          uiStyle === 'UI/UX 2' ? "bg-blue-600 border-blue-700 text-white shadow-blue-200" : ""
-        )}>
-          <div className="flex items-center gap-4">
-            <div className={cn(
-              "p-3 rounded-lg",
-              uiStyle === 'UI/UX 2' ? "bg-white/20" : "bg-primary/10"
-            )}>
-              <Users className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-white" : "text-primary")} />
-            </div>
-            <div>
-              <p className={cn(
-                "text-sm",
-                uiStyle === 'UI/UX 2' ? "text-blue-100" : "text-muted-foreground"
-              )}>Total Users</p>
-              <p className="text-2xl font-bold">{allUsers.length}</p>
+      {(viewMode === 'companies' || viewMode === 'users') && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className={cn(
+            "bg-card border border-border rounded-xl p-6 shadow-sm transition-all",
+            uiStyle === 'UI/UX 2' ? "bg-blue-600 border-blue-700 text-white shadow-blue-200" : ""
+          )}>
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "p-3 rounded-lg",
+                uiStyle === 'UI/UX 2' ? "bg-white/20" : "bg-primary/10"
+              )}>
+                <Users className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-white" : "text-primary")} />
+              </div>
+              <div>
+                <p className={cn(
+                  "text-sm",
+                  uiStyle === 'UI/UX 2' ? "text-blue-100" : "text-muted-foreground"
+                )}>Total Users</p>
+                <p className="text-2xl font-bold">{allUsers.length}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className={cn(
-          "bg-card border border-border rounded-xl p-6 shadow-sm transition-all",
-          uiStyle === 'UI/UX 2' ? "bg-emerald-600 border-emerald-700 text-white shadow-emerald-200" : ""
-        )}>
-          <div className="flex items-center gap-4">
-            <div className={cn(
-              "p-3 rounded-lg",
-              uiStyle === 'UI/UX 2' ? "bg-white/20" : "bg-emerald-500/10"
-            )}>
-              <CheckCircle2 className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-white" : "text-emerald-500")} />
-            </div>
-            <div>
-              <p className={cn(
-                "text-sm",
-                uiStyle === 'UI/UX 2' ? "text-emerald-100" : "text-muted-foreground"
-              )}>Active Subscriptions</p>
-              <p className="text-2xl font-bold">
-                {companies.filter(c => c.subscriptionStatus?.toLowerCase() === 'active').length}
-              </p>
+          <div className={cn(
+            "bg-card border border-border rounded-xl p-6 shadow-sm transition-all",
+            uiStyle === 'UI/UX 2' ? "bg-emerald-600 border-emerald-700 text-white shadow-emerald-200" : ""
+          )}>
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "p-3 rounded-lg",
+                uiStyle === 'UI/UX 2' ? "bg-white/20" : "bg-emerald-500/10"
+              )}>
+                <CheckCircle2 className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-white" : "text-emerald-500")} />
+              </div>
+              <div>
+                <p className={cn(
+                  "text-sm",
+                  uiStyle === 'UI/UX 2' ? "text-emerald-100" : "text-muted-foreground"
+                )}>Active Subscriptions</p>
+                <p className="text-2xl font-bold">
+                  {companies.filter(c => c.subscriptionStatus?.toLowerCase() === 'active').length}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className={cn(
-          "bg-card border border-border rounded-xl p-6 shadow-sm transition-all",
-          uiStyle === 'UI/UX 2' ? "bg-amber-500 border-amber-600 text-white shadow-amber-200" : ""
-        )}>
-          <div className="flex items-center gap-4">
-            <div className={cn(
-              "p-3 rounded-lg",
-              uiStyle === 'UI/UX 2' ? "bg-white/20" : "bg-amber-500/10"
-            )}>
-              <AlertCircle className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-white" : "text-amber-500")} />
-            </div>
-            <div>
-              <p className={cn(
-                "text-sm",
-                uiStyle === 'UI/UX 2' ? "text-amber-100" : "text-muted-foreground"
-              )}>Trial Users</p>
-              <p className="text-2xl font-bold">
-                {companies.filter(c => c.subscriptionStatus?.toLowerCase() === 'trial').length}
-              </p>
+          <div className={cn(
+            "bg-card border border-border rounded-xl p-6 shadow-sm transition-all",
+            uiStyle === 'UI/UX 2' ? "bg-amber-500 border-amber-600 text-white shadow-amber-200" : ""
+          )}>
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "p-3 rounded-lg",
+                uiStyle === 'UI/UX 2' ? "bg-white/20" : "bg-amber-500/10"
+              )}>
+                <AlertCircle className={cn("w-6 h-6", uiStyle === 'UI/UX 2' ? "text-white" : "text-amber-500")} />
+              </div>
+              <div>
+                <p className={cn(
+                  "text-sm",
+                  uiStyle === 'UI/UX 2' ? "text-amber-100" : "text-muted-foreground"
+                )}>Trial Users</p>
+                <p className="text-2xl font-bold">
+                  {companies.filter(c => c.subscriptionStatus?.toLowerCase() === 'trial').length}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {viewMode === 'companies' ? (
         <div className={cn(
@@ -2924,6 +2926,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       menuBarStyle: localMenuBarStyle,
                       alterPageUiStyle: localAlterPageUiStyle,
                       reportsPageUiStyle: localReportsPageUiStyle,
+                      searchPageUiStyle: localSearchPageUiStyle,
                       reportsColumnsPerRow: localReportsColumnsPerRow,
                       alterColumnsPerRow: localAlterColumnsPerRow,
                       enableUserSortViewPref: localEnableUserSortViewPref,
@@ -3423,9 +3426,21 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       )}>
                         <div className="flex items-center gap-2 border-b border-border pb-3">
                           <LayoutGrid className="w-4 h-4 text-primary" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Alter & Reports Presentation Grids</h4>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Alter, Reports & Search Presentation Grids</h4>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Search Page UI Style</label>
+                            <select 
+                              value={localSearchPageUiStyle}
+                              onChange={(e) => setLocalSearchPageUiStyle(e.target.value as any)}
+                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                              <option value="classic">Classic UI/UX Layout (Standard)</option>
+                              <option value="modern">Modern UI/UX Layout (Premium Bento + Stats)</option>
+                            </select>
+                          </div>
+
                           <div className="space-y-1.5">
                             <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">Create & Alteration Page UI</label>
                             <select 

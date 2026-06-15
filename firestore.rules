@@ -347,6 +347,11 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    match /inquiries/{inquiryId} {
+      allow create: if true;
+      allow read, delete: if isSuperAdmin();
+    }
+
     // Default deny ALL remaining
     match /{document=**} {
       allow read, write: if false;

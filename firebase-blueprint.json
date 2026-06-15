@@ -591,6 +591,20 @@
         "metadata": { "type": "object" }
       },
       "required": ["message", "path", "severity", "status", "timestamp"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Visitor contact/help inquiry.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "subject", "message"]
     }
   },
   "firestore": {
@@ -745,6 +759,10 @@
     "/system/menu": {
       "schema": "MenuConfig",
       "description": "Dynamic sidebar menu configuration."
+    },
+    "/inquiries/{id}": {
+      "schema": "Inquiry",
+      "description": "Inquiries submitted by landing page visitors."
     }
   }
 }

@@ -138,6 +138,7 @@ interface SettingsContextType {
   systemMenuBarStyle?: MenuBarStyle;
   alterPageUiStyle?: 'classic' | 'modern';
   reportsPageUiStyle?: 'classic' | 'modern' | 'grid';
+  searchPageUiStyle?: 'classic' | 'modern';
   reportsColumnsPerRow?: number;
   alterColumnsPerRow?: number;
   enableUserSortViewPref?: boolean;
@@ -283,6 +284,7 @@ const defaultSettings: SettingsContextType = {
   systemMenuBarStyle: undefined,
   alterPageUiStyle: 'modern',
   reportsPageUiStyle: 'modern' as any,
+  searchPageUiStyle: 'classic',
   reportsColumnsPerRow: 4,
   alterColumnsPerRow: 3,
   enableUserSortViewPref: false,
@@ -522,6 +524,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
             alterPageUiStyle: data.alterPageUiStyle || 'modern',
             reportsPageUiStyle: (data.reportsPageUiStyle as any) || 'modern',
+            searchPageUiStyle: data.searchPageUiStyle || 'classic',
             reportsColumnsPerRow: Number(data.reportsColumnsPerRow || 4),
             alterColumnsPerRow: Number(data.alterColumnsPerRow || 3),
             enableUserSortViewPref: data.enableUserSortViewPref !== undefined ? !!data.enableUserSortViewPref : false,
@@ -768,6 +771,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       ...userSettings,
       alterPageUiStyle: settings.alterPageUiStyle || 'modern',
       reportsPageUiStyle: settings.reportsPageUiStyle || 'modern',
+      searchPageUiStyle: settings.searchPageUiStyle || 'classic',
       reportsColumnsPerRow: settings.reportsColumnsPerRow || 4,
       alterColumnsPerRow: settings.alterColumnsPerRow || 3,
       enableUserSortViewPref: settings.enableUserSortViewPref !== undefined ? settings.enableUserSortViewPref : false,
