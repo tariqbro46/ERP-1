@@ -51,12 +51,12 @@ export const About = () => {
   // Normalize content to use consistent dark theme backgrounds and colors, matching other pages
   const content = {
     ...rawContent,
-    pageBgColor: rawContent.pageBgColor || "#020617",
+    pageBgColor: !rawContent.pageBgColor || rawContent.pageBgColor === "#ffffff" ? "#020617" : rawContent.pageBgColor,
     missionTitleColor: rawContent.missionTitleColor === "#0a0a0a" ? "#ffffff" : rawContent.missionTitleColor || "#ffffff",
     missionDescColor: rawContent.missionDescColor === "#64748b" ? "#94a3b8" : rawContent.missionDescColor || "#94a3b8",
     bannerTitleColor: rawContent.bannerTitleColor === "#0a0a0a" ? "#ffffff" : rawContent.bannerTitleColor || "#ffffff",
     bannerSubtitleColor: rawContent.bannerSubtitleColor === "rgba(255,255,255,0.8)" || rawContent.bannerSubtitleColor === "#64748b" ? "#94a3b8" : rawContent.bannerSubtitleColor || "#94a3b8",
-    bannerBgColor: rawContent.bannerBgColor || "#020617",
+    bannerBgColor: !rawContent.bannerBgColor || rawContent.bannerBgColor === "#ffffff" ? "#020617" : rawContent.bannerBgColor,
     leadershipTitleColor: rawContent.leadershipTitleColor === "#0a0a0a" ? "#ffffff" : rawContent.leadershipTitleColor || "#ffffff",
   };
 
