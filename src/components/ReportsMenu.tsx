@@ -797,7 +797,7 @@ export const ReportsMenu: React.FC = () => {
     return (
       <div className="flex flex-col min-h-full bg-slate-50/50 transition-colors">
         {/* Sticky Header Row */}
-        <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/60 shadow-sm px-5 lg:px-6 py-4">
+        <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/60 shadow-sm px-5 lg:px-6 py-4 space-y-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 w-full">
             {/* Group Menu */}
             <div className="flex items-center bg-slate-100/80 p-1 rounded-xl overflow-x-auto self-start md:self-auto max-w-full shrink-0">
@@ -839,7 +839,7 @@ export const ReportsMenu: React.FC = () => {
             </div>
 
             {/* Metrics Quick Indicator */}
-            <div className="bg-blue-50 text-blue-600 rounded-xl px-4 py-2 border border-blue-105 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide shrink-0">
+            <div className="bg-blue-50 text-blue-600 rounded-xl px-4 py-2 border border-blue-100 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide shrink-0">
               <LayoutGrid className="w-3.5 h-3.5" />
               <span>Total: {categories.length} Modules</span>
             </div>
