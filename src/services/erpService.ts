@@ -234,6 +234,51 @@ export const erpService: any = {
   _employeeGroupsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _usersCache: {} as Record<string, { data: any[], timestamp: number }>,
 
+  _genericCollectionsCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _vouchersByDateRangeCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _vouchersByTypeCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _vouchersByGroupCache: {} as Record<string, { data: any[], timestamp: number }>,
+
+  invalidateAllCaches(companyId: string) {
+    if (!companyId) return;
+    this._serialsCache[companyId] = { data: {}, timestamp: 0 };
+    this._ledgersCache[companyId] = { data: [], timestamp: 0 };
+    this._itemsCache[companyId] = { data: [], timestamp: 0 };
+    this._ledgerGroupsCache[companyId] = { data: [], timestamp: 0 };
+    this._voucherTypesCache[companyId] = { data: [], timestamp: 0 };
+    this._stockGroupsCache[companyId] = { data: [], timestamp: 0 };
+    this._stockCategoriesCache[companyId] = { data: [], timestamp: 0 };
+    this._employeeGroupsCache[companyId] = { data: [], timestamp: 0 };
+    this._godownsCache[companyId] = { data: [], timestamp: 0 };
+    this._employeesCache[companyId] = { data: [], timestamp: 0 };
+    this._unitsCache[companyId] = { data: [], timestamp: 0 };
+    this._usersCache[companyId] = { data: [], timestamp: 0 };
+    this._dashboardStatsCache = {};
+    this._recentVouchersCache = {};
+    if (this._searchVouchersCache.companyId === companyId) {
+      this._searchVouchersCache = { companyId: '', data: [], timestamp: 0 };
+    }
+    this._vouchersByDateRangeCache = {};
+    this._vouchersByTypeCache = {};
+    this._vouchersByGroupCache = {};
+
+    const suffix = `_${companyId}`;
+    Object.keys(this._genericCollectionsCache).forEach(key => {
+      if (key.endsWith(suffix)) {
+        delete this._genericCollectionsCache[key];
+      }
+    });
+
+    Object.keys(this._swrCache).forEach(key => {
+      if (key.endsWith(suffix)) {
+        delete this._swrCache[key];
+        try {
+          localStorage.removeItem(`swr_${key}`);
+        } catch (e) {}
+      }
+    });
+  },
+
   _pendingRequests: {} as Record<string, Promise<any>>,
 
   // Browser Client/Session Cache for zero-flash transitions (SWR style)
@@ -299,6 +344,12 @@ export const erpService: any = {
     else if (colName === 'units') cache = (this as any)._unitsCache[companyId];
     else if (colName === 'ledger_groups') cache = (this as any)._ledgerGroupsCache[companyId];
     else if (colName === 'voucher_types') cache = (this as any)._voucherTypesCache[companyId];
+    else if (colName === 'stock_groups') cache = (this as any)._stockGroupsCache[companyId];
+    else if (colName === 'stock_categories') cache = (this as any)._stockCategoriesCache[companyId];
+    else if (colName === 'employee_groups') cache = (this as any)._employeeGroupsCache[companyId];
+    else {
+      cache = (this as any)._genericCollectionsCache[cacheKey];
+    }
 
     if (!forceRefresh && cache && (now - cache.timestamp < (this as any)._collectionTTL)) {
       return cache.data;
@@ -326,6 +377,12 @@ export const erpService: any = {
         else if (colName === 'units') (this as any)._unitsCache[companyId] = { data: data as any, timestamp: now };
         else if (colName === 'ledger_groups') (this as any)._ledgerGroupsCache[companyId] = { data: data as any, timestamp: now };
         else if (colName === 'voucher_types') (this as any)._voucherTypesCache[companyId] = { data: data as any, timestamp: now };
+        else if (colName === 'stock_groups') (this as any)._stockGroupsCache[companyId] = { data: data as any, timestamp: now };
+        else if (colName === 'stock_categories') (this as any)._stockCategoriesCache[companyId] = { data: data as any, timestamp: now };
+        else if (colName === 'employee_groups') (this as any)._employeeGroupsCache[companyId] = { data: data as any, timestamp: now };
+        else {
+          (this as any)._genericCollectionsCache[cacheKey] = { data: data as any, timestamp: now };
+        }
 
         return data;
       } finally {
@@ -576,19 +633,7 @@ export const erpService: any = {
     }
   },
   async createVoucher(companyId: string, userId: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
-    this._serialsCache[companyId] = { data: {}, timestamp: 0 }; 
-    this._ledgersCache[companyId] = { data: [], timestamp: 0 }; 
-    this._itemsCache[companyId] = { data: [], timestamp: 0 };
-    this._ledgerGroupsCache[companyId] = { data: [], timestamp: 0 };
-    this._voucherTypesCache[companyId] = { data: [], timestamp: 0 };
-    this._stockGroupsCache[companyId] = { data: [], timestamp: 0 };
-    this._stockCategoriesCache[companyId] = { data: [], timestamp: 0 };
-    this._employeeGroupsCache[companyId] = { data: [], timestamp: 0 };
-    this._godownsCache[companyId] = { data: [], timestamp: 0 };
-    this._employeesCache[companyId] = { data: [], timestamp: 0 };
-    this._unitsCache[companyId] = { data: [], timestamp: 0 };
-    this._dashboardStatsCache = { key: '', data: null as any, timestamp: 0 };
-    this._recentVouchersCache = {};
+    this.invalidateAllCaches(companyId);
     // Track Firestore operations used
     this.trackQuota(companyId, 5, 5);
     try {
@@ -805,6 +850,11 @@ export const erpService: any = {
   },
 
   async getVouchersByType(companyId: string, type: string, from: string, to: string) {
+    const cacheKey = `${companyId}_${type}_${from}_${to}`;
+    const now = Date.now();
+    if (this._vouchersByTypeCache[cacheKey] && (now - this._vouchersByTypeCache[cacheKey].timestamp < this._collectionTTL)) {
+      return this._vouchersByTypeCache[cacheKey].data;
+    }
     try {
       const [snap, serialMap] = await Promise.all([
         getDocs(query(
@@ -847,6 +897,8 @@ export const erpService: any = {
         return a.id.localeCompare(b.id);
       });
       
+      this.trackQuota(companyId, vouchers.length || 1, 0);
+
       if (vouchers.length === 0) return [];
 
       // Fetch entries for these vouchers
@@ -859,13 +911,17 @@ export const erpService: any = {
           where('voucher_id', 'in', chunk),
           where('companyId', '==', companyId)
         ));
+        this.trackQuota(companyId, eSnap.size || 1, 0);
         allEntries.push(...eSnap.docs.map(d => ({ ...d.data(), id: d.id })));
       }
 
-      return vouchers.map(v => ({
+      const result = vouchers.map(v => ({
         ...v,
         entries: allEntries.filter(e => e.voucher_id === v.id)
       }));
+
+      this._vouchersByTypeCache[cacheKey] = { data: result, timestamp: now };
+      return result;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'vouchers');
       return [];
@@ -873,6 +929,11 @@ export const erpService: any = {
   },
 
   async getVouchersByGroup(companyId: string, groupId: string, from: string, to: string) {
+    const cacheKey = `${companyId}_${groupId}_${from}_${to}`;
+    const now = Date.now();
+    if (this._vouchersByGroupCache[cacheKey] && (now - this._vouchersByGroupCache[cacheKey].timestamp < this._collectionTTL)) {
+      return this._vouchersByGroupCache[cacheKey].data;
+    }
     try {
       // Get all groups to build hierarchy
       const allGroups = await this.getCollection('ledger_groups', companyId);
@@ -914,6 +975,8 @@ export const erpService: any = {
         };
       });
 
+      this.trackQuota(companyId, allVouchersInRange.length || 1, 0);
+
       if (allVouchersInRange.length === 0) return [];
 
       // Find which vouchers have entries for our group ledgers
@@ -927,6 +990,7 @@ export const erpService: any = {
           where('voucher_id', 'in', chunk),
           where('companyId', '==', companyId)
         ));
+        this.trackQuota(companyId, eSnap.size || 1, 0);
         
         eSnap.docs.forEach(d => {
           const entry = d.data();
@@ -972,6 +1036,7 @@ export const erpService: any = {
           where('voucher_id', 'in', chunk),
           where('companyId', '==', companyId)
         ));
+        this.trackQuota(companyId, eSnap.size || 1, 0);
         allEntries.push(...eSnap.docs.map(d => ({ ...d.data(), id: d.id })));
       }
 
@@ -1197,9 +1262,7 @@ export const erpService: any = {
     const voucher = await this.getVoucherById(id);
     if (!voucher) throw new Error('Voucher not found');
     const companyId = voucher.companyId;
-    this._serialsCache[companyId] = { data: {}, timestamp: 0 }; // Invalidate cache
-    this._ledgersCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
-    this._itemsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
+    this.invalidateAllCaches(companyId);
     const batch = writeBatch(db);
 
     // Check existence of ledgers and items
@@ -1269,11 +1332,9 @@ export const erpService: any = {
       
       const vType = (voucher.v_type || '').toString().trim();
       const companyId = oldVoucher.companyId;
+      this.invalidateAllCaches(companyId);
       // Track Firestore operations used
       this.trackQuota(companyId, 5, 5);
-      this._serialsCache[companyId] = { data: {}, timestamp: 0 }; // Invalidate cache
-      this._ledgersCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
-      this._itemsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
 
       const res = await runTransaction(db, async (transaction) => {
         // Collect all IDs
@@ -2689,6 +2750,11 @@ export const erpService: any = {
   },
 
   async getVouchersByDateRange(companyId: string, startDate: string, endDate: string): Promise<any[]> {
+    const cacheKey = `${companyId}_${startDate}_${endDate}`;
+    const now = Date.now();
+    if (this._vouchersByDateRangeCache[cacheKey] && (now - this._vouchersByDateRangeCache[cacheKey].timestamp < this._collectionTTL)) {
+      return this._vouchersByDateRangeCache[cacheKey].data;
+    }
     try {
       const [vSnap, serialMap] = await Promise.all([
         getDocs(query(
@@ -2731,6 +2797,8 @@ export const erpService: any = {
         return a.id.localeCompare(b.id);
       });
       
+      this.trackQuota(companyId, vouchers.length || 1, 0);
+
       if (vouchers.length === 0) return [];
 
       // Fetch entries and inventory for these vouchers
@@ -2747,15 +2815,20 @@ export const erpService: any = {
           getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId)))
         ]);
         
+        this.trackQuota(companyId, (eSnap.size + iSnap.size) || 1, 0);
+
         allAccEntries.push(...eSnap.docs.map(d => ({ ...(d.data() as any), id: d.id })));
         allInvEntries.push(...iSnap.docs.map(d => ({ ...(d.data() as any), id: d.id })));
       }
 
-      return vouchers.map(v => ({
+      const result = vouchers.map(v => ({
         ...v,
         entries: allAccEntries.filter((e: any) => e.voucher_id === v.id),
         inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id)
       }));
+
+      this._vouchersByDateRangeCache[cacheKey] = { data: result, timestamp: now };
+      return result;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'vouchers');
       return [];
