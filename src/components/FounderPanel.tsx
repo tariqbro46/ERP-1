@@ -3584,6 +3584,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               <option value={2}>2 Columns (Dual Grid Layout)</option>
                               <option value={3}>3 Columns (Triple Grid Layout)</option>
                               <option value={4}>4 Columns (Quad Grid Layout - Standard Auto)</option>
+                              <option value={5}>5 Columns (Quad Grid Layout - Standard Auto)</option>
                             </select>
                           </div>
 
@@ -3611,6 +3612,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               <option value={2}>2 Columns (Dual Grid Layout)</option>
                               <option value={3}>3 Columns (Triple Grid Layout)</option>
                               <option value={4}>4 Columns (Quad Grid Layout - Standard Auto)</option>
+                              <option value={5}>5 Columns (Quad Grid Layout - Standard Auto)</option>
                             </select>
                           </div>
 

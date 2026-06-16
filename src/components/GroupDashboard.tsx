@@ -72,6 +72,9 @@ const getGroupConfig = (id: string, groupName: string) => {
 
 export const GroupDashboard: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
+  const isSpecialGroupPage = groupId === 'group-statement-of-account' || 
+                             groupId === 'group-account-books' || 
+                             groupId === 'group-inventory-books';
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { isSuperAdmin } = useAuth();
@@ -138,34 +141,36 @@ export const GroupDashboard: React.FC = () => {
     <div className="flex flex-col min-h-full bg-slate-50/50 transition-colors">
       {/* Dynamic Sticky Header & Filter Row -- Keeping layout fixed as per rules */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/60 shadow-sm px-5 lg:px-6 py-4.5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate(-1)}
-              className="p-2.5 bg-slate-50 border border-slate-200/60 hover:bg-slate-100 rounded-xl transition-colors text-slate-600 shadow-sm"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </motion.button>
-            
-            <div>
-              <EditableHeader 
-                pageId={`group_${groupId}`}
-                defaultTitle={groupTitle}
-                defaultSubtitle="Quick access to all items in this segment."
-              />
+        {!isSpecialGroupPage && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate(-1)}
+                className="p-2.5 bg-slate-50 border border-slate-200/60 hover:bg-slate-100 rounded-xl transition-colors text-slate-600 shadow-sm"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </motion.button>
+              
+              <div>
+                <EditableHeader 
+                  pageId={`group_${groupId}`}
+                  defaultTitle={groupTitle}
+                  defaultSubtitle="Quick access to all items in this segment."
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {isSuperAdmin && (
+                <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider bg-slate-100/80 px-2.5 py-1 rounded-full border border-slate-200">
+                  Hidden from sidebar
+                </span>
+              )}
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            {isSuperAdmin && (
-              <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider bg-slate-100/80 px-2.5 py-1 rounded-full border border-slate-200">
-                Hidden from sidebar
-              </span>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Dynamic Inner Section Search Box */}
         <div className="relative animate-in fade-in duration-200">

@@ -506,6 +506,7 @@ export const ReportsMenu: React.FC = () => {
                   <option value={2}>2 Columns Grid</option>
                   <option value={3}>3 Columns Grid</option>
                   <option value={4}>4 Columns Grid</option>
+                  <option value={5}>5 Columns (Quad Grid Layout - Standard Auto)</option>
                 </select>
               </div>
             </div>
@@ -676,13 +677,14 @@ export const ReportsMenu: React.FC = () => {
       return label.includes(q) || localizedLabel.includes(q) || idStr.includes(q);
     };
 
-    // Columns CSS class generator (1 to 4)
+    // Columns CSS class generator (1 to 5)
     const getGridColsClass = (cols: number) => {
       switch (cols) {
         case 1: return 'grid-cols-1';
         case 2: return 'grid-cols-1 md:grid-cols-2';
         case 3: return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
-        case 4: 
+        case 4: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
+        case 5: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
         default:
           return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
       }
@@ -877,6 +879,7 @@ export const ReportsMenu: React.FC = () => {
                   <option value={2}>2 Columns Grid</option>
                   <option value={3}>3 Columns Grid</option>
                   <option value={4}>4 Columns Grid</option>
+                  <option value={5}>5 Columns (Quad Grid Layout - Standard Auto)</option>
                 </select>
               </div>
             </div>
