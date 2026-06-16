@@ -930,7 +930,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         </nav>
 
         <div className={cn(
-          "p-3 border-t flex flex-col gap-1.5", 
+          "px-3 py-1.5 border-t flex flex-col gap-1", 
           isSidebarCollapsed && "p-2",
           customBgOpt ? "border-border/10 bg-black/10" : isColorful ? "border-slate-800 bg-slate-950/40" : "border-border"
         )}>
@@ -944,10 +944,10 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
             if (!shouldShow) return null;
 
             return (
-              <div className="pt-0.5 pb-1 font-mono space-y-1 bg-transparent border-none">
+              <div className="pt-0 pb-0.5 font-mono space-y-1 bg-transparent border-none">
                 <div className="flex items-center justify-between text-[10px] tracking-wider text-white uppercase p-0 m-0 font-bold">
                   <span className="select-none text-white">
-                    DB Quota:
+                    Usage (Today):
                   </span>
                   <span className={cn(
                     "font-extrabold",
@@ -969,7 +969,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                   />
                 </div>
                 <div className="text-[8px] text-white/90 text-right p-0 m-0 font-bold tracking-tight">
-                  {used.toLocaleString()} / {limitVal.toLocaleString()} limit
+                  {used.toLocaleString()} / {limitVal.toLocaleString()}
                 </div>
               </div>
             );
