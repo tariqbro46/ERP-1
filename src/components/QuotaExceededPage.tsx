@@ -101,20 +101,28 @@ export default function QuotaExceededPage({ company }: { company: any }) {
             Quota Limitation Details
           </h3>
           <div className="text-xs text-slate-300 space-y-3 font-light leading-relaxed">
-            <p>
-              To ensure pristine performance and enforce strict server cost bounds, our system mandates Firebase Firestore transaction limits (operations) on a per-company basis.
-            </p>
-            <p className="p-2 border-l-2 border-rose-500/40 bg-rose-500/5 rounded text-rose-300">
-              <strong>Your company "{company?.name}" has exhausted its quota.</strong> Submitting transactions, fetching ledger reports, exporting files, and other real-time sync capabilities have been put on safety brake preventatively.
-            </p>
-            <p>
-              To restore standard workflows:
-            </p>
-            <ul className="list-disc pl-4 space-y-1.5 text-slate-400">
-              <li>Contact your company owner to upgrade or increase limits.</li>
-              <li>Reach out to the system founder or administrator to request a custom boundary increase.</li>
-              <li>Wait for the administrator to manually reset or clear your transactions log.</li>
-            </ul>
+            {company?.quotaExceededMsg ? (
+              <div className="whitespace-pre-wrap p-2 border-l-2 border-indigo-500/40 bg-indigo-500/5 rounded text-slate-200">
+                {company.quotaExceededMsg}
+              </div>
+            ) : (
+              <>
+                <p>
+                  To ensure pristine performance and enforce strict server cost bounds, our system mandates Firebase Firestore transaction limits (operations) on a per-company basis.
+                </p>
+                <p className="p-2 border-l-2 border-rose-500/40 bg-rose-500/5 rounded text-rose-300">
+                  <strong>Your company "{company?.name}" has exhausted its quota.</strong> Submitting transactions, fetching ledger reports, exporting files, and other real-time sync capabilities have been put on safety brake preventatively.
+                </p>
+                <p>
+                  To restore standard workflows:
+                </p>
+                <ul className="list-disc pl-4 space-y-1.5 text-slate-400">
+                  <li>Contact your company owner to upgrade or increase limits.</li>
+                  <li>Reach out to the system founder or administrator to request a custom boundary increase.</li>
+                  <li>Wait for the administrator to manually reset or clear your transactions log.</li>
+                </ul>
+              </>
+            )}
           </div>
         </div>
 

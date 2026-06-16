@@ -28,6 +28,8 @@ export interface CompanyData {
   extraFeatures?: string[];
   quotaLimit?: number;
   quotaUsed?: number;
+  quotaDisplayRule?: 'always' | 'exceed_50';
+  quotaExceededMsg?: string;
   customLimits?: {
     vouchers?: number;
     items?: number;

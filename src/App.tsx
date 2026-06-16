@@ -930,36 +930,50 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         </nav>
 
         <div className={cn(
-          "p-4 border-t flex flex-col gap-2", 
+          "p-3 border-t flex flex-col gap-1.5", 
           isSidebarCollapsed && "p-2",
           customBgOpt ? "border-border/10 bg-black/10" : isColorful ? "border-slate-800 bg-slate-950/40" : "border-border"
         )}>
-          {company && !isSidebarCollapsed && (
-            <div className="mt-1 pb-1 space-y-1 border-b border-border/10">
-              <div className="flex items-center justify-between text-[8px] font-mono tracking-wider text-muted-foreground uppercase p-0 m-0">
-                <span>DB Quota:</span>
-                <span className={cn(
-                  ((company.quotaUsed || 0) / (company.quotaLimit || 10000)) >= 0.9 ? "text-rose-500 font-bold animate-pulse" : "text-gray-400"
-                )}>
-                  {Math.round(((company.quotaUsed || 0) / (company.quotaLimit || 10000)) * 100)}%
-                </span>
+          {company && !isSidebarCollapsed && (() => {
+            const used = company.quotaUsed || 0;
+            const limitVal = company.quotaLimit || 10000;
+            const pct = Math.round((used / limitVal) * 100);
+            const displayRule = company.quotaDisplayRule || 'exceed_50';
+            const shouldShow = displayRule === 'always' || pct >= 50;
+
+            if (!shouldShow) return null;
+
+            return (
+              <div className="pt-0.5 pb-1 font-mono space-y-1 bg-transparent border-none">
+                <div className="flex items-center justify-between text-[10px] tracking-wider text-white uppercase p-0 m-0 font-bold">
+                  <span className="select-none text-white">
+                    DB Quota:
+                  </span>
+                  <span className={cn(
+                    "font-extrabold",
+                    pct >= 90 ? "text-rose-400 animate-pulse" : 
+                    pct >= 75 ? "text-amber-400" : "text-emerald-400"
+                  )}>
+                    {pct}%
+                  </span>
+                </div>
+                <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                  <div 
+                    className={cn(
+                      "h-full rounded-full transition-all duration-500",
+                      pct >= 90 ? "bg-rose-500" :
+                      pct >= 75 ? "bg-amber-500" :
+                      "bg-emerald-500"
+                    )}
+                    style={{ width: `${Math.min(100, pct)}%` }}
+                  />
+                </div>
+                <div className="text-[8px] text-white/90 text-right p-0 m-0 font-bold tracking-tight">
+                  {used.toLocaleString()} / {limitVal.toLocaleString()} limit
+                </div>
               </div>
-              <div className="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full overflow-hidden">
-                <div 
-                  className={cn(
-                    "h-full rounded-full transition-all duration-500",
-                    ((company.quotaUsed || 0) / (company.quotaLimit || 10000)) >= 0.9 ? "bg-rose-500" :
-                    ((company.quotaUsed || 0) / (company.quotaLimit || 10000)) >= 0.75 ? "bg-amber-500" :
-                    "bg-emerald-500"
-                  )}
-                  style={{ width: `${Math.min(100, Math.round(((company.quotaUsed || 0) / (company.quotaLimit || 10000)) * 100))}%` }}
-                />
-              </div>
-              <div className="text-[7px] font-mono text-muted-foreground text-right p-0 m-0">
-                {(company.quotaUsed || 0).toLocaleString()} / {(company.quotaLimit || 10000).toLocaleString()} limit
-              </div>
-            </div>
-          )}
+            );
+          })()}
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
               <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />

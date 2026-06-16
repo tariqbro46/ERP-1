@@ -6113,6 +6113,26 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                                 </button>
                               </div>
                             </div>
+                            <div className="space-y-1 sm:col-span-2">
+                              <label className="text-[9px] uppercase font-bold text-muted-foreground">Sidebar Quota Display Rule</label>
+                              <select
+                                value={selectedCompany.quotaDisplayRule || 'exceed_50'}
+                                onChange={(e) => updateSubscription(selectedCompany.id, { quotaDisplayRule: e.target.value })}
+                                className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary font-medium"
+                              >
+                                <option value="always">Always Show Quota Indicator in Sidebar</option>
+                                <option value="exceed_50">Only Show When Usage Exceeds 50%</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1 sm:col-span-2">
+                              <label className="text-[9px] uppercase font-bold text-muted-foreground">Maintenance Break Custom Message</label>
+                              <textarea
+                                value={selectedCompany.quotaExceededMsg || ''}
+                                placeholder="Enter custom message or custom support guidelines here. If left empty, default templates will be used."
+                                onChange={(e) => updateSubscription(selectedCompany.id, { quotaExceededMsg: e.target.value })}
+                                className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary h-20 resize-y font-normal"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -6155,11 +6175,19 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
 
                         <div className="space-y-2 border-t border-border pt-3 mt-3">
                           <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Firebase/Firestore Quota (Operations):</p>
-                          <div className="flex items-center justify-between text-xs font-mono bg-muted/40 p-2.5 rounded-lg border border-border">
-                            <span className="text-muted-foreground">Usage Stat:</span>
-                            <span className={selectedCompany && selectedCompany.quotaLimit && selectedCompany.quotaUsed !== undefined && selectedCompany.quotaUsed >= selectedCompany.quotaLimit ? "text-rose-500 font-bold animate-pulse" : "text-emerald-500 font-bold"}>
-                              {(selectedCompany.quotaUsed || 0).toLocaleString()} / {(selectedCompany.quotaLimit || 10000).toLocaleString()} ops ({Math.round(((selectedCompany.quotaUsed || 0) / (selectedCompany.quotaLimit || 10000)) * 100)}%)
-                            </span>
+                          <div className="space-y-1.5Packed">
+                            <div className="flex items-center justify-between text-xs font-mono bg-muted/40 p-2.5 rounded-lg border border-border">
+                              <span className="text-muted-foreground">Usage Stat:</span>
+                              <span className={selectedCompany && selectedCompany.quotaLimit && selectedCompany.quotaUsed !== undefined && selectedCompany.quotaUsed >= selectedCompany.quotaLimit ? "text-rose-500 font-bold animate-pulse" : "text-emerald-500 font-bold"}>
+                                {(selectedCompany.quotaUsed || 0).toLocaleString()} / {(selectedCompany.quotaLimit || 10000).toLocaleString()} ops ({Math.round(((selectedCompany.quotaUsed || 0) / (selectedCompany.quotaLimit || 10000)) * 100)}%)
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] font-mono bg-muted/20 px-2.5 py-1.5 rounded-lg border border-dashed border-border text-muted-foreground">
+                              <span>Display Rule:</span>
+                              <span className="text-foreground capitalize font-semibold">
+                                {selectedCompany.quotaDisplayRule === 'always' ? 'Always Show' : 'Show Over 50% only'}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>

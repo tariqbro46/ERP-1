@@ -32,6 +32,8 @@ export interface Company {
   ownerId?: string;
   quotaLimit?: number;
   quotaUsed?: number;
+  quotaDisplayRule?: 'always' | 'exceed_50';
+  quotaExceededMsg?: string;
   search_config?: {
     placeholder?: string;
     showShortcut?: boolean;
