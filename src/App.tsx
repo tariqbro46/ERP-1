@@ -200,16 +200,16 @@ const SidebarItem = ({ to, icon: Icon, label, active, indent }: any) => {
     <Link
       to={to}
       className={cn(
-        "flex items-center justify-between px-4 py-2.5 transition-all group border-l-2",
+        "flex items-center justify-between px-4 py-2.5 transition-colors duration-150 group border-l-2 border-transparent",
         isColorful 
           ? colorful.bg 
           : customTextOpt
             ? active
-              ? `${customTextOpt.activeClass} border-l-2`
-              : `${customTextOpt.textClass} border-transparent hover:bg-black/5 hover:dark:bg-white/5`
+              ? `${customTextOpt.activeClass}`
+              : `${customTextOpt.textClass} hover:bg-black/5 hover:dark:bg-white/5`
             : active 
               ? "bg-foreground/5 text-foreground border-foreground" 
-              : "text-gray-500 border-transparent hover:bg-card hover:text-foreground"
+              : "text-gray-500 hover:bg-card hover:text-foreground"
       )}
     >
       <div className={cn("flex items-center gap-3", indent && "ml-4")}>
@@ -765,7 +765,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
     return (
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300",
+        "fixed inset-y-0 left-0 z-50 flex flex-col transition-transform duration-300",
         customBgOpt
           ? customBgOpt.className
           : isColorful 
