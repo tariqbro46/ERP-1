@@ -238,6 +238,8 @@ export const erpService: any = {
   _vouchersByDateRangeCache: {} as Record<string, { data: any[], timestamp: number }>,
   _vouchersByTypeCache: {} as Record<string, { data: any[], timestamp: number }>,
   _vouchersByGroupCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _ledgerBalanceCache: {} as Record<string, { data: number, timestamp: number }>,
+  _voucherDetailCache: {} as Record<string, { data: any, timestamp: number }>,
 
   invalidateAllCaches(companyId: string) {
     if (!companyId) return;
@@ -255,6 +257,8 @@ export const erpService: any = {
     this._usersCache[companyId] = { data: [], timestamp: 0 };
     this._dashboardStatsCache = {};
     this._recentVouchersCache = {};
+    this._ledgerBalanceCache = {};
+    this._voucherDetailCache = {};
     if (this._searchVouchersCache.companyId === companyId) {
       this._searchVouchersCache = { companyId: '', data: [], timestamp: 0 };
     }
@@ -1214,6 +1218,10 @@ export const erpService: any = {
     }
   },
    async getVoucherById(id: string): Promise<any> {
+     const now = Date.now();
+     if (this._voucherDetailCache[id] && (now - this._voucherDetailCache[id].timestamp < this._collectionTTL)) {
+       return this._voucherDetailCache[id].data;
+     }
      try {
        const vSnap = await getDoc(doc(db, 'vouchers', id));
        if (!vSnap.exists()) return null;
@@ -1228,6 +1236,8 @@ export const erpService: any = {
          this.getGodowns(companyId),
          this.getVoucherSerials(companyId)
        ]);
+
+       this.trackQuota(companyId, (1 + eSnap.size + iSnap.size) || 1, 0);
 
        const entries = eSnap.docs.map(d => {
          const data = d.data();
@@ -1251,7 +1261,9 @@ export const erpService: any = {
          };
        });
 
-       return { ...voucher, entries, inventory, id: vSnap.id, serial_no: serialMap[vSnap.id] || voucher.serial_no || voucher.auto_serial_no || 0 };
+       const result = { ...voucher, entries, inventory, id: vSnap.id, serial_no: serialMap[vSnap.id] || voucher.serial_no || voucher.auto_serial_no || 0 };
+       this._voucherDetailCache[id] = { data: result, timestamp: now };
+       return result;
      } catch (error) {
        handleFirestoreError(error, OperationType.GET, `vouchers/${id}`);
        throw error;
@@ -1872,7 +1884,7 @@ export const erpService: any = {
   },
 
   async createLedger(companyId: string, ledger: any) {
-    this._ledgersCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
+    this.invalidateAllCaches(companyId);
     try {
       const isDuplicate = await this.checkDuplicate('ledgers', companyId, 'name', ledger.name);
       if (isDuplicate) throw new Error(`Ledger "${ledger.name}" already exists.`);
@@ -1897,7 +1909,7 @@ export const erpService: any = {
       const snap = await getDoc(ref);
       if (snap.exists()) {
         const companyId = snap.data().companyId;
-        if (companyId) this._ledgersCache[companyId] = { data: [], timestamp: 0 };
+        if (companyId) this.invalidateAllCaches(companyId);
       }
       await updateDoc(ref, ledger);
       return { id, ...ledger };
@@ -1907,7 +1919,7 @@ export const erpService: any = {
   },
 
   async deleteLedger(id: string, companyId: string) {
-    this._ledgersCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
+    this.invalidateAllCaches(companyId);
     const hasTransactions = await this.checkLedgerTransactions(id, companyId);
     if (hasTransactions) {
       throw new Error('Cannot delete ledger with transactions. Please delete all vouchers associated with this ledger first.');
@@ -1979,7 +1991,7 @@ export const erpService: any = {
   },
 
   async createItem(companyId: string, item: any) {
-    this._itemsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
+    this.invalidateAllCaches(companyId);
     const isDuplicate = await this.checkDuplicate('items', companyId, 'name', item.name);
     if (isDuplicate) throw new Error(`Stock Item "${item.name}" already exists.`);
 
@@ -2007,7 +2019,7 @@ export const erpService: any = {
     
     const oldData = oldSnap.data();
     if (oldData.companyId) {
-      this._itemsCache[oldData.companyId] = { data: [], timestamp: 0 }; // Invalidate cache
+      this.invalidateAllCaches(oldData.companyId);
     }
     const updates: any = { ...item };
     
@@ -2023,7 +2035,7 @@ export const erpService: any = {
   },
 
   async deleteItem(id: string, companyId: string) {
-    this._itemsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
+    this.invalidateAllCaches(companyId);
     const hasTransactions = await this.checkItemTransactions(id, companyId);
     if (hasTransactions) {
       throw new Error('Cannot delete item with transactions. Please delete all vouchers associated with this item first.');
@@ -3038,19 +3050,32 @@ export const erpService: any = {
   },
 
   async getLedgerBalance(ledgerId: string, companyId: string): Promise<number> {
+    const cacheKey = `${companyId}_${ledgerId}`;
+    const now = Date.now();
+    if (this._ledgerBalanceCache[cacheKey] && (now - this._ledgerBalanceCache[cacheKey].timestamp < this._collectionTTL)) {
+      return this._ledgerBalanceCache[cacheKey].data;
+    }
     try {
-      const [ledger, entries] = await Promise.all([
-        this.getLedgerById(ledgerId),
-        getDocs(query(collection(db, 'voucher_entries'), where('ledger_id', '==', ledgerId), where('companyId', '==', companyId)))
+      let ledger: any = null;
+      if (companyId && this._ledgersCache[companyId]?.data?.length > 0) {
+        ledger = this._ledgersCache[companyId].data.find((l: any) => l.id === ledgerId);
+      }
+
+      const [entries] = await Promise.all([
+        getDocs(query(collection(db, 'voucher_entries'), where('ledger_id', '==', ledgerId), where('companyId', '==', companyId))),
+        ledger ? Promise.resolve(ledger) : this.getLedgerById(ledgerId).then(l => { ledger = l; })
       ]);
       
+      this.trackQuota(companyId, (entries.size || 1) + (ledger ? 0 : 1), 0);
+
       const movement = entries.docs.reduce((sum, doc) => {
         const data = doc.data();
         return sum + (data.debit || 0) - (data.credit || 0);
       }, 0);
       
-      if (!ledger) return movement;
-      return (ledger.opening_balance || 0) + movement;
+      const bal = ledger ? ((ledger.opening_balance || 0) + movement) : movement;
+      this._ledgerBalanceCache[cacheKey] = { data: bal, timestamp: now };
+      return bal;
     } catch (err) {
       console.error('Error getting ledger balance:', err);
       return 0;
