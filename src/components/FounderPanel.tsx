@@ -6074,6 +6074,47 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                             ))}
                           </div>
                         </div>
+
+                        <div className="space-y-3 border-t border-border pt-4">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Firebase/Firestore Quota (Operations Limit)</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-[9px] uppercase font-bold text-muted-foreground">Firestore Quota Limit (Ops)</label>
+                              <input
+                                type="number"
+                                value={selectedCompany.quotaLimit ?? 10000}
+                                placeholder="10000"
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? 10000 : Number(e.target.value);
+                                  updateSubscription(selectedCompany.id, { quotaLimit: val });
+                                }}
+                                className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[9px] uppercase font-bold text-muted-foreground">Firestore Quota Used (Ops)</label>
+                              <div className="flex gap-2">
+                                <input
+                                  type="number"
+                                  value={selectedCompany.quotaUsed ?? 0}
+                                  placeholder="0"
+                                  onChange={(e) => {
+                                    const val = e.target.value === '' ? 0 : Number(e.target.value);
+                                    updateSubscription(selectedCompany.id, { quotaUsed: val });
+                                  }}
+                                  className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary flex-1"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => updateSubscription(selectedCompany.id, { quotaUsed: 0 })}
+                                  className="px-3 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors"
+                                >
+                                  Reset
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -6111,6 +6152,16 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                         {(!selectedCompany.extraFeatures?.length && !selectedCompany.customLimits) && (
                           <p className="text-xs text-muted-foreground italic">No extra features or custom limits assigned.</p>
                         )}
+
+                        <div className="space-y-2 border-t border-border pt-3 mt-3">
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Firebase/Firestore Quota (Operations):</p>
+                          <div className="flex items-center justify-between text-xs font-mono bg-muted/40 p-2.5 rounded-lg border border-border">
+                            <span className="text-muted-foreground">Usage Stat:</span>
+                            <span className={selectedCompany && selectedCompany.quotaLimit && selectedCompany.quotaUsed !== undefined && selectedCompany.quotaUsed >= selectedCompany.quotaLimit ? "text-rose-500 font-bold animate-pulse" : "text-emerald-500 font-bold"}>
+                              {(selectedCompany.quotaUsed || 0).toLocaleString()} / {(selectedCompany.quotaLimit || 10000).toLocaleString()} ops ({Math.round(((selectedCompany.quotaUsed || 0) / (selectedCompany.quotaLimit || 10000)) * 100)}%)
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

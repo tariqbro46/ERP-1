@@ -99,6 +99,7 @@ import { StockCategorySummary } from './components/StockCategorySummary';
 import { InventoryBooks } from './components/InventoryBooks';
 import { AccountBooks } from './components/AccountBooks';
 import MaintenancePage from './components/MaintenancePage';
+import QuotaExceededPage from './components/QuotaExceededPage';
 import { ReportPlaceholder } from './components/ReportPlaceholder';
 import { GroupDashboard } from './components/GroupDashboard';
 import { VoucherDetail } from './components/VoucherDetail';
@@ -602,6 +603,12 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     return <SubscriptionRequired />;
   }
 
+  // Quota Exceeded Block
+  const isQuotaExceeded = company && company.quotaLimit && company.quotaUsed !== undefined && company.quotaUsed >= company.quotaLimit;
+  if (isQuotaExceeded && !isSuperAdmin) {
+    return <QuotaExceededPage company={company} />;
+  }
+
   const isInventoryEnabled = features.find(f => f.id === 'inv')?.enabled ?? true;
   const [expandedGroups, setExpandedGroups] = React.useState<Set<string>>(new Set());
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
@@ -927,6 +934,32 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
           isSidebarCollapsed && "p-2",
           customBgOpt ? "border-border/10 bg-black/10" : isColorful ? "border-slate-800 bg-slate-950/40" : "border-border"
         )}>
+          {company && !isSidebarCollapsed && (
+            <div className="mt-1 pb-1 space-y-1 border-b border-border/10">
+              <div className="flex items-center justify-between text-[8px] font-mono tracking-wider text-muted-foreground uppercase p-0 m-0">
+                <span>DB Quota:</span>
+                <span className={cn(
+                  ((company.quotaUsed || 0) / (company.quotaLimit || 10000)) >= 0.9 ? "text-rose-500 font-bold animate-pulse" : "text-gray-400"
+                )}>
+                  {Math.round(((company.quotaUsed || 0) / (company.quotaLimit || 10000)) * 100)}%
+                </span>
+              </div>
+              <div className="w-full bg-slate-200 dark:bg-slate-800 h-1 rounded-full overflow-hidden">
+                <div 
+                  className={cn(
+                    "h-full rounded-full transition-all duration-500",
+                    ((company.quotaUsed || 0) / (company.quotaLimit || 10000)) >= 0.9 ? "bg-rose-500" :
+                    ((company.quotaUsed || 0) / (company.quotaLimit || 10000)) >= 0.75 ? "bg-amber-500" :
+                    "bg-emerald-500"
+                  )}
+                  style={{ width: `${Math.min(100, Math.round(((company.quotaUsed || 0) / (company.quotaLimit || 10000)) * 100))}%` }}
+                />
+              </div>
+              <div className="text-[7px] font-mono text-muted-foreground text-right p-0 m-0">
+                {(company.quotaUsed || 0).toLocaleString()} / {(company.quotaLimit || 10000).toLocaleString()} limit
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
               <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />

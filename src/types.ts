@@ -30,6 +30,8 @@ export interface Company {
   };
   createdBy?: string;
   ownerId?: string;
+  quotaLimit?: number;
+  quotaUsed?: number;
   search_config?: {
     placeholder?: string;
     showShortcut?: boolean;

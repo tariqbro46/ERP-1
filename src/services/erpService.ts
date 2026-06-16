@@ -312,6 +312,10 @@ export const erpService: any = {
           limit(limitCount)
         );
         const snapshot = await getDocs(q);
+        
+        // Track real-time reads in database quota
+        this.trackQuota(companyId, snapshot.size || 1, 0);
+
         const data = snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id } as unknown as T));
         
         // Update specific cache if applicable
@@ -585,6 +589,8 @@ export const erpService: any = {
     this._unitsCache[companyId] = { data: [], timestamp: 0 };
     this._dashboardStatsCache = { key: '', data: null as any, timestamp: 0 };
     this._recentVouchersCache = {};
+    // Track Firestore operations used
+    this.trackQuota(companyId, 5, 5);
     try {
       const vType = (voucher.v_type || '').toString().trim();
       const typeKey = vType.toLowerCase().replace(/\s+/g, '_');
@@ -1263,6 +1269,8 @@ export const erpService: any = {
       
       const vType = (voucher.v_type || '').toString().trim();
       const companyId = oldVoucher.companyId;
+      // Track Firestore operations used
+      this.trackQuota(companyId, 5, 5);
       this._serialsCache[companyId] = { data: {}, timestamp: 0 }; // Invalidate cache
       this._ledgersCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
       this._itemsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
@@ -4187,6 +4195,19 @@ export const erpService: any = {
     } catch (error) {
       console.error('AI Insights Error:', error);
       return 'AI Insights service is temporarily unavailable.';
+    }
+  },
+
+  // --- QUOTA TRACKING ---
+  trackQuota: async function(companyId: string | undefined, reads: number, writes: number) {
+    if (!companyId || companyId === 'placeholder' || companyId === 'test') return;
+    try {
+      const companyRef = doc(db, 'companies', companyId);
+      await updateDoc(companyRef, {
+        quotaUsed: increment(reads + writes * 5)
+      });
+    } catch (e) {
+      console.warn('Quota tracking error:', e);
     }
   },
 

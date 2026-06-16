@@ -26,6 +26,8 @@ export interface CompanyData {
   expiryDate: string;
   isAccessEnabled: boolean;
   extraFeatures?: string[];
+  quotaLimit?: number;
+  quotaUsed?: number;
   customLimits?: {
     vouchers?: number;
     items?: number;
