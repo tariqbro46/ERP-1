@@ -225,7 +225,7 @@ export const erpService: any = {
   _employeesCache: {} as Record<string, { data: any[], timestamp: number }>,
   _unitsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _dashboardStatsCache: {} as Record<string, { data: any, timestamp: number }>,
-  _collectionTTL: 600000, // 10 minutes for collections (increased from 5)
+  _collectionTTL: 3600000, // 1 hour for collections (increased from 10m to dramatically save reads)
   _SERIALS_CACHE_TTL: 1800000, // 30 minutes for serials cache
   _ledgerGroupsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _voucherTypesCache: {} as Record<string, { data: any[], timestamp: number }>,
@@ -233,6 +233,9 @@ export const erpService: any = {
   _stockCategoriesCache: {} as Record<string, { data: any[], timestamp: number }>,
   _employeeGroupsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _usersCache: {} as Record<string, { data: any[], timestamp: number }>,
+
+  _singleLedgerCache: {} as Record<string, { data: Ledger, timestamp: number }>,
+  _singleItemCache: {} as Record<string, { data: Item, timestamp: number }>,
 
   _genericCollectionsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _vouchersByDateRangeCache: {} as Record<string, { data: any[], timestamp: number }>,
@@ -259,6 +262,8 @@ export const erpService: any = {
     this._recentVouchersCache = {};
     this._ledgerBalanceCache = {};
     this._voucherDetailCache = {};
+    this._singleLedgerCache = {};
+    this._singleItemCache = {};
     if (this._searchVouchersCache.companyId === companyId) {
       this._searchVouchersCache = { companyId: '', data: [], timestamp: 0 };
     }
@@ -280,6 +285,18 @@ export const erpService: any = {
           localStorage.removeItem(`swr_${key}`);
         } catch (e) {}
       }
+    });
+
+    // Clear collection localstorage caches
+    const collectionsToClear = [
+      'ledgers', 'items', 'godowns', 'employees', 'units', 
+      'ledger_groups', 'voucher_types', 'stock_groups', 
+      'stock_categories', 'employee_groups'
+    ];
+    collectionsToClear.forEach(col => {
+      try {
+        localStorage.removeItem(`col_cache_${col}_${companyId}`);
+      } catch (e) {}
     });
   },
 
@@ -359,6 +376,35 @@ export const erpService: any = {
       return cache.data;
     }
 
+    // Try hydrating from localStorage if memory cache is stale/empty to avoid fetching from server
+    if (!forceRefresh && !cache) {
+      try {
+        const item = localStorage.getItem(`col_cache_${cacheKey}`);
+        if (item) {
+          const parsed = JSON.parse(item);
+          if (parsed && typeof parsed.timestamp === 'number' && (now - parsed.timestamp < (this as any)._collectionTTL)) {
+            const data = parsed.data;
+            if (colName === 'ledgers') (this as any)._ledgersCache[companyId] = { data, timestamp: parsed.timestamp };
+            else if (colName === 'items') (this as any)._itemsCache[companyId] = { data, timestamp: parsed.timestamp };
+            else if (colName === 'godowns') (this as any)._godownsCache[companyId] = { data, timestamp: parsed.timestamp };
+            else if (colName === 'employees') (this as any)._employeesCache[companyId] = { data, timestamp: parsed.timestamp };
+            else if (colName === 'units') (this as any)._unitsCache[companyId] = { data, timestamp: parsed.timestamp };
+            else if (colName === 'ledger_groups') (this as any)._ledgerGroupsCache[companyId] = { data, timestamp: parsed.timestamp };
+            else if (colName === 'voucher_types') (this as any)._voucherTypesCache[companyId] = { data, timestamp: parsed.timestamp };
+            else if (colName === 'stock_groups') (this as any)._stockGroupsCache[companyId] = { data, timestamp: parsed.timestamp };
+            else if (colName === 'stock_categories') (this as any)._stockCategoriesCache[companyId] = { data, timestamp: parsed.timestamp };
+            else if (colName === 'employee_groups') (this as any)._employeeGroupsCache[companyId] = { data, timestamp: parsed.timestamp };
+            else {
+              (this as any)._genericCollectionsCache[cacheKey] = { data, timestamp: parsed.timestamp };
+            }
+            return data;
+          }
+        }
+      } catch (err) {
+        console.warn('Error reviving collection cache:', err);
+      }
+    }
+
     const fetchPromise = (async () => {
       try {
         const q = query(
@@ -387,6 +433,11 @@ export const erpService: any = {
         else {
           (this as any)._genericCollectionsCache[cacheKey] = { data: data as any, timestamp: now };
         }
+
+        // Cache persistent copy in localStorage for high-performance zero-fetch reloads
+        try {
+          localStorage.setItem(`col_cache_${cacheKey}`, JSON.stringify({ data, timestamp: now }));
+        } catch (e) {}
 
         return data;
       } finally {
@@ -1580,10 +1631,16 @@ export const erpService: any = {
   },
 
   async getLedgerById(id: string): Promise<Ledger | null> {
+    const now = Date.now();
+    if (this._singleLedgerCache[id] && (now - this._singleLedgerCache[id].timestamp < 300000)) { // 5-minute single ledger cache TTL
+      return this._singleLedgerCache[id].data;
+    }
     try {
       const snap = await getDoc(doc(db, 'ledgers', id));
       if (!snap.exists()) return null;
-      return { ...(snap.data() as any), id: snap.id } as Ledger;
+      const data = { ...(snap.data() as any), id: snap.id } as Ledger;
+      this._singleLedgerCache[id] = { data, timestamp: now };
+      return data;
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, `ledgers/${id}`);
       return null;
@@ -1931,10 +1988,16 @@ export const erpService: any = {
 
   // Items
   async getItemById(id: string): Promise<Item | null> {
+    const now = Date.now();
+    if (this._singleItemCache[id] && (now - this._singleItemCache[id].timestamp < 300000)) { // 5-minute single item cache TTL
+      return this._singleItemCache[id].data;
+    }
     try {
       const snap = await getDoc(doc(db, 'items', id));
       if (!snap.exists()) return null;
-      return { ...(snap.data() as any), id: snap.id } as Item;
+      const data = { ...(snap.data() as any), id: snap.id } as Item;
+      this._singleItemCache[id] = { data, timestamp: now };
+      return data;
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, `items/${id}`);
       return null;
@@ -2717,7 +2780,7 @@ export const erpService: any = {
     const cacheKey = `${companyId}_${limitCount}`;
     const now = Date.now();
     
-    if (this._recentVouchersCache[cacheKey] && (now - this._recentVouchersCache[cacheKey].timestamp < 30000)) {
+    if (this._recentVouchersCache[cacheKey] && (now - this._recentVouchersCache[cacheKey].timestamp < 600000)) { // 10 minutes TTL (increased from 30s)
       return this._recentVouchersCache[cacheKey].data;
     }
 
@@ -3901,6 +3964,23 @@ export const erpService: any = {
 
   async getCollectionCount(colName: string, companyId: string): Promise<number> {
     if (!companyId) return 0;
+
+    // Fast cache-hit bypass: check if we have the collection cached in-memory
+    let cachedLength: number | null = null;
+    if (colName === 'ledgers' && this._ledgersCache[companyId]) cachedLength = this._ledgersCache[companyId].data.length;
+    else if (colName === 'items' && this._itemsCache[companyId]) cachedLength = this._itemsCache[companyId].data.length;
+    else if (colName === 'godowns' && this._godownsCache[companyId]) cachedLength = this._godownsCache[companyId].data.length;
+    else if (colName === 'employees' && this._employeesCache[companyId]) cachedLength = this._employeesCache[companyId].data.length;
+    else if (colName === 'units' && this._unitsCache[companyId]) cachedLength = this._unitsCache[companyId].data.length;
+    else if (colName === 'ledger_groups' && this._ledgerGroupsCache[companyId]) cachedLength = this._ledgerGroupsCache[companyId].data.length;
+    else if (colName === 'voucher_types' && this._voucherTypesCache[companyId]) cachedLength = this._voucherTypesCache[companyId].data.length;
+    else if (colName === 'stock_groups' && this._stockGroupsCache[companyId]) cachedLength = this._stockGroupsCache[companyId].data.length;
+    else if (colName === 'stock_categories' && this._stockCategoriesCache[companyId]) cachedLength = this._stockCategoriesCache[companyId].data.length;
+    
+    if (cachedLength !== null) {
+      return cachedLength;
+    }
+
     try {
       const q = query(collection(db, colName), where('companyId', '==', companyId));
       const snapshot = await getCountFromServer(q);
