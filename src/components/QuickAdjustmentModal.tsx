@@ -25,6 +25,17 @@ export function QuickAdjustmentModal({ isOpen, onClose, onSuccess, partyLedgerId
 
   useEffect(() => {
     if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
       fetchAdjustmentLedgers();
     }
   }, [isOpen]);
@@ -112,9 +123,9 @@ export function QuickAdjustmentModal({ isOpen, onClose, onSuccess, partyLedgerId
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card border border-border w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+    <div className="fixed top-14 left-0 lg:left-64 right-0 bottom-0 z-40 flex justify-center items-center p-4 md:p-6 bg-slate-950/30 backdrop-blur-[1px]">
+      <div className="bg-card border border-border w-full max-w-xl max-h-[calc(100vh-8rem)] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
             <Calculator className="w-4 h-4 text-emerald-500" />
             <h2 className="text-xs font-bold text-foreground uppercase tracking-widest">Quick Balance Adjustment</h2>
@@ -124,7 +135,7 @@ export function QuickAdjustmentModal({ isOpen, onClose, onSuccess, partyLedgerId
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
           <div className="p-4 bg-foreground/5 border border-border space-y-1">
             <div className="text-[10px] text-gray-500 uppercase tracking-widest">Party Name</div>
             <div className="text-sm font-bold text-foreground">{partyName}</div>

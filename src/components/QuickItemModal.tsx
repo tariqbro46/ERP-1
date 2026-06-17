@@ -26,6 +26,17 @@ export function QuickItemModal({ isOpen, onClose, onSuccess }: QuickItemModalPro
 
   useEffect(() => {
     if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
       fetchData();
     }
   }, [isOpen]);
@@ -90,9 +101,9 @@ export function QuickItemModal({ isOpen, onClose, onSuccess }: QuickItemModalPro
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start md:items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-card border border-border w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200 my-auto md:my-8">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
+    <div className="fixed top-14 left-0 lg:left-64 right-0 bottom-0 z-40 flex justify-center items-center p-4 md:p-6 bg-slate-950/30 backdrop-blur-[1px]">
+      <div className="bg-card border border-border w-full max-w-xl max-h-[calc(100vh-8rem)] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/95 backdrop-blur-sm shrink-0">
           <div className="flex items-center gap-2">
             <Package className="w-4 h-4 text-amber-500" />
             <h2 className="text-xs font-bold text-foreground uppercase tracking-widest">Quick Item Creation</h2>
@@ -102,7 +113,7 @@ export function QuickItemModal({ isOpen, onClose, onSuccess }: QuickItemModalPro
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
           <div className="space-y-2">
             <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Item Name</label>
             <input

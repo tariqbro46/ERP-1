@@ -53,7 +53,7 @@ export default function QuotaExceededPage({ company }: { company: any }) {
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-rose-400" />
               <span className="text-[10px] font-mono uppercase tracking-widest text-slate-400">
-                Firestore Usage Statistics
+                Database Usage Statistics
               </span>
             </div>
             <span className="text-xs font-mono font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/10">
@@ -108,7 +108,7 @@ export default function QuotaExceededPage({ company }: { company: any }) {
             ) : (
               <>
                 <p>
-                  To ensure pristine performance and enforce strict server cost bounds, our system mandates Firebase Firestore transaction limits (operations) on a per-company basis.
+                  To ensure pristine performance and enforce strict server cost bounds, our system mandates Database transaction limits (operations) on a per-company basis.
                 </p>
                 <p className="p-2 border-l-2 border-rose-500/40 bg-rose-500/5 rounded text-rose-300">
                   <strong>Your company "{company?.name}" has exhausted its quota.</strong> Submitting transactions, fetching ledger reports, exporting files, and other real-time sync capabilities have been put on safety brake preventatively.

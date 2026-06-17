@@ -57,6 +57,17 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
   };
 
   useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!isOpen) return;
 
     const updateCountdown = () => {
@@ -98,14 +109,14 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
 
   return (
     <AnimatePresence>
-      <div id="quota-dashboard-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div id="quota-dashboard-overlay" className="fixed top-14 left-0 lg:left-64 right-0 bottom-0 z-40 flex justify-center items-center p-4 md:p-6 bg-slate-950/30">
         {/* Backdrop overlay */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+          className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs"
         />
 
         {/* Modal Card */}
@@ -113,15 +124,15 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
           initial={{ scale: 0.95, opacity: 0, y: 15 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 15 }}
-          className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden font-sans select-none"
+          className="relative w-full max-w-2xl max-h-[calc(100vh-8rem)] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden font-sans select-none z-10 flex flex-col"
         >
           {/* Header Bar */}
-          <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/50">
+          <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/50 shrink-0">
             <div className="flex items-center gap-2">
               <Database className="w-5 h-5 text-indigo-400" />
               <div>
                 <h2 className="text-sm font-bold text-slate-100 flex items-center gap-1.5 uppercase tracking-wider">
-                  Firestore Quota Metrics
+                  Database Quota Metrics
                   <span className="text-[9px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-mono font-bold tracking-tight normal-case">
                     Live Dashboard
                   </span>
@@ -140,7 +151,7 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
             </button>
           </div>
 
-          <div className="p-5 space-y-5 overflow-y-auto max-h-[75vh]">
+          <div className="p-5 space-y-5 overflow-y-auto flex-1 no-scrollbar">
             {/* Auto Reset Banner */}
             <div className="bg-slate-950/40 border border-indigo-500/10 rounded-xl p-3 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -286,7 +297,7 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
               <div className="text-[11px] text-slate-400 space-y-2 leading-relaxed">
                 <div className="flex gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
-                  <span>Our UI implements aggressive 10-minute caching policies on ledger reports and vouchers, reducing redundant Firestore reads in normal cycles.</span>
+                  <span>Our UI implements aggressive 10-minute caching policies on ledger reports and vouchers, reducing redundant database reads in normal cycles.</span>
                 </div>
                 <div className="flex gap-2">
                   <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />

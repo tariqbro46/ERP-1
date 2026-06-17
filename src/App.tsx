@@ -950,7 +950,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                 id="interactive-quota-sidebar-trigger"
                 onClick={() => setIsQuotaDashboardOpen(true)}
                 className="pt-1 pb-1 px-1.5 font-mono space-y-1 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 cursor-pointer hover:border-white/10 transition-all duration-200 group"
-                title="Click to view detailed Firestore operational metrics"
+                title="Click to view detailed Database operational metrics"
               >
                 <div className="flex items-center justify-between text-[10px] tracking-wider text-slate-300 uppercase p-0 m-0 font-bold group-hover:text-white">
                   <span className="select-none flex items-center gap-1 text-slate-300">

@@ -14,6 +14,17 @@ export function ReportConfigModal({ isOpen, onClose, config, onSave, title }: Re
   const [localConfig, setLocalConfig] = React.useState<ReportConfig>(config);
 
   React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  React.useEffect(() => {
     setLocalConfig(config);
   }, [config, isOpen]);
 
@@ -36,16 +47,16 @@ export function ReportConfigModal({ isOpen, onClose, config, onSave, title }: Re
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-xl bg-background shadow-2xl border border-border overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border p-4">
-          <h2 className="text-lg font-bold text-foreground">Configuration: {title}</h2>
+    <div className="fixed top-14 left-0 lg:left-64 right-0 bottom-0 z-40 flex justify-center items-center p-4 md:p-6 bg-slate-950/30 backdrop-blur-[1px]">
+      <div className="w-full max-w-xl max-h-[calc(100vh-8rem)] rounded-2xl bg-background shadow-2xl border border-border overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between border-b border-border p-4 shrink-0">
+          <h2 className="text-[11px] font-bold text-foreground uppercase tracking-wider">Configuration: {title}</h2>
           <button onClick={onClose} className="rounded-full p-1 hover:bg-muted transition-colors">
-            <X className="h-5 w-5 text-muted-foreground" />
+            <X className="h-4 w-4 text-muted-foreground" />
           </button>
         </div>
 
-        <div className="max-h-[70vh] overflow-y-auto p-4 space-y-1 no-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 space-y-1 no-scrollbar">
           <Toggle 
             label="Show Narration" 
             value={localConfig.showNarration} 
