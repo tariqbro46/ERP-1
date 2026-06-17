@@ -617,6 +617,20 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = React.useState(0);
   const [isQuotaDashboardOpen, setIsQuotaDashboardOpen] = React.useState(false);
+  const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
+
+  React.useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!user) {
@@ -1781,6 +1795,21 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       
       <GoToSearch />
       <QuotaDashboardModal isOpen={isQuotaDashboardOpen} onClose={() => setIsQuotaDashboardOpen(false)} company={company} />
+      {isOffline && (
+        <div id="offline-toast" className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <div className="bg-slate-900 border border-slate-800 text-slate-100 pl-4 pr-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 select-none">
+            <div className="p-1.5 bg-slate-950 rounded-lg text-rose-400">
+              <LucideIcons.CloudOff className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-[12px] font-bold text-slate-100 flex items-center gap-2">
+                You are currently offline
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
