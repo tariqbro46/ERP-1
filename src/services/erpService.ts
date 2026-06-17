@@ -1330,6 +1330,7 @@ export const erpService: any = {
     batch.delete(doc(db, 'vouchers', id));
 
     await batch.commit();
+    this.trackQuota(companyId, 0, 0, 1 + eSnap.size + iSnap.size);
 
     // Trigger recalculation for affected items
     for (const itemId of itemIdsToRecalc) {
@@ -1925,6 +1926,7 @@ export const erpService: any = {
       throw new Error('Cannot delete ledger with transactions. Please delete all vouchers associated with this ledger first.');
     }
     await deleteDoc(doc(db, 'ledgers', id));
+    this.trackQuota(companyId, 0, 0, 1);
   },
 
   // Items
@@ -2041,6 +2043,7 @@ export const erpService: any = {
       throw new Error('Cannot delete item with transactions. Please delete all vouchers associated with this item first.');
     }
     await deleteDoc(doc(db, 'items', id));
+    this.trackQuota(companyId, 0, 0, 1);
   },
 
   // Godowns
@@ -4297,15 +4300,94 @@ export const erpService: any = {
   },
 
   // --- QUOTA TRACKING ---
-  trackQuota: async function(companyId: string | undefined, reads: number, writes: number) {
-    if (!companyId || companyId === 'placeholder' || companyId === 'test') return;
+  getMostRecent130PM(now: Date): Date {
+    const tz = "Asia/Dhaka";
     try {
-      const companyRef = doc(db, 'companies', companyId);
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: tz,
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+      });
+      const parts = formatter.formatToParts(now);
+      const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+
+      const today130PM = new Date(
+        Date.UTC(
+          parseInt(map.year),
+          parseInt(map.month) - 1,
+          parseInt(map.day),
+          7,
+          30,
+          0,
+          0
+        )
+      );
+
+      if (now.getTime() >= today130PM.getTime()) {
+        return today130PM;
+      } else {
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const yParts = formatter.formatToParts(yesterday);
+        const yMap = Object.fromEntries(yParts.map((p) => [p.type, p.value]));
+        return new Date(
+          Date.UTC(
+            parseInt(yMap.year),
+            parseInt(yMap.month) - 1,
+            parseInt(yMap.day),
+            7,
+            30,
+            0,
+            0
+          )
+        );
+      }
+    } catch (e) {
+      const fallback = new Date(now);
+      fallback.setUTCHours(7, 30, 0, 0);
+      if (now.getTime() >= fallback.getTime()) {
+        return fallback;
+      } else {
+        return new Date(fallback.getTime() - 24 * 60 * 60 * 1000);
+      }
+    }
+  },
+
+  async resetCompanyQuota(companyId: string, resetTimestamp: number) {
+    if (!companyId || companyId === "placeholder" || companyId === "test") return;
+    try {
+      const companyRef = doc(db, "companies", companyId);
       await updateDoc(companyRef, {
-        quotaUsed: increment(reads + writes * 5)
+        quotaUsed: 0,
+        quotaReads: 0,
+        quotaWrites: 0,
+        quotaDeletes: 0,
+        quotaLastReset: resetTimestamp,
+        quotaLastResetDateStr: new Date(resetTimestamp).toISOString(),
+      });
+      console.log(`[QUOTA] Successfully reset daily quota in Firestore for company ${companyId}.`);
+    } catch (err) {
+      console.warn("[QUOTA] Error in resetCompanyQuota:", err);
+    }
+  },
+
+  trackQuota: async function(
+    companyId: string | undefined,
+    reads: number,
+    writes: number,
+    deletes: number = 0
+  ) {
+    if (!companyId || companyId === "placeholder" || companyId === "test") return;
+    try {
+      const companyRef = doc(db, "companies", companyId);
+      await updateDoc(companyRef, {
+        quotaReads: increment(reads),
+        quotaWrites: increment(writes),
+        quotaDeletes: increment(deletes),
+        quotaUsed: increment(reads + writes * 5 + deletes * 2), // standard weighted calculation
       });
     } catch (e) {
-      console.warn('Quota tracking error:', e);
+      console.warn("Quota tracking error:", e);
     }
   },
 

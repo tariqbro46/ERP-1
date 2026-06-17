@@ -74,6 +74,7 @@ import { SubscriptionPage } from './components/SubscriptionPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import NotificationCenter from './components/NotificationCenter';
 import FacebookProfileMenu from './components/FacebookProfileMenu';
+import QuotaDashboardModal from './components/QuotaDashboardModal';
 import NotificationPage from './components/NotificationPage';
 import SearchPage from './components/SearchPage';
 import HelpPage from './components/HelpPage';
@@ -615,6 +616,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = React.useState(0);
+  const [isQuotaDashboardOpen, setIsQuotaDashboardOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (!user) {
@@ -944,9 +946,15 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
             if (!shouldShow) return null;
 
             return (
-              <div className="pt-0 pb-0.5 font-mono space-y-1 bg-transparent border-none">
-                <div className="flex items-center justify-between text-[10px] tracking-wider text-white uppercase p-0 m-0 font-bold">
-                  <span className="select-none text-white">
+              <div 
+                id="interactive-quota-sidebar-trigger"
+                onClick={() => setIsQuotaDashboardOpen(true)}
+                className="pt-1 pb-1 px-1.5 font-mono space-y-1 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 cursor-pointer hover:border-white/10 transition-all duration-200 group"
+                title="Click to view detailed Firestore operational metrics"
+              >
+                <div className="flex items-center justify-between text-[10px] tracking-wider text-slate-300 uppercase p-0 m-0 font-bold group-hover:text-white">
+                  <span className="select-none flex items-center gap-1 text-slate-300">
+                    <Database className="w-3 h-3 text-indigo-400 group-hover:animate-pulse" />
                     Usage (Today):
                   </span>
                   <span className={cn(
@@ -968,8 +976,9 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                     style={{ width: `${Math.min(100, pct)}%` }}
                   />
                 </div>
-                <div className="text-[8px] text-white/90 text-right p-0 m-0 font-bold tracking-tight">
-                  {used.toLocaleString()} / {limitVal.toLocaleString()}
+                <div className="flex justify-between text-[8px] text-slate-400 p-0 m-0 font-bold tracking-tight">
+                  <span className="text-slate-500 group-hover:text-slate-300 transition-colors">Details ↗</span>
+                  <span>{used.toLocaleString()} / {limitVal.toLocaleString()}</span>
                 </div>
               </div>
             );
@@ -1771,6 +1780,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       </main>
       
       <GoToSearch />
+      <QuotaDashboardModal isOpen={isQuotaDashboardOpen} onClose={() => setIsQuotaDashboardOpen(false)} company={company} />
     </div>
   );
 }

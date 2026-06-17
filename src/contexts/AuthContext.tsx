@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc, getDocs, collection, query, where, limit } from 'firebase/firestore';
+import { erpService } from '../services/erpService';
 
 export type UserRole = 'Founder' | 'Marketing Manager' | 'Admin' | 'Manager' | 'Staff';
 
@@ -28,6 +29,11 @@ export interface CompanyData {
   extraFeatures?: string[];
   quotaLimit?: number;
   quotaUsed?: number;
+  quotaReads?: number;
+  quotaWrites?: number;
+  quotaDeletes?: number;
+  quotaLastReset?: number;
+  quotaLastResetDateStr?: string;
   quotaDisplayRule?: 'always' | 'exceed_50';
   quotaExceededMsg?: string;
   customLimits?: {
@@ -118,7 +124,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const companyRef = doc(db, 'companies', userData.companyId);
                 unsubCompany = onSnapshot(companyRef, (compSnap) => {
                   if (compSnap.exists()) {
-                    setCompany(compSnap.data() as CompanyData);
+                    const compData = compSnap.data() as CompanyData;
+                    const mostRecentResetTime = erpService.getMostRecent130PM(new Date()).getTime();
+                    const lastReset = compData.quotaLastReset || 0;
+                    if (lastReset < mostRecentResetTime) {
+                      erpService.resetCompanyQuota(userData.companyId, mostRecentResetTime);
+                    } else {
+                      setCompany(compData);
+                    }
                   } else {
                     setCompany(null);
                   }
