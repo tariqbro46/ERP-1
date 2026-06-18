@@ -243,6 +243,8 @@ export const erpService: any = {
   _vouchersByGroupCache: {} as Record<string, { data: any[], timestamp: number }>,
   _ledgerBalanceCache: {} as Record<string, { data: number, timestamp: number }>,
   _voucherDetailCache: {} as Record<string, { data: any, timestamp: number }>,
+  _voucherWithEntriesCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _ledgerMovementBeforeDateCache: {} as Record<string, { data: number, timestamp: number }>,
 
   invalidateAllCaches(companyId: string) {
     if (!companyId) return;
@@ -264,6 +266,8 @@ export const erpService: any = {
     this._voucherDetailCache = {};
     this._singleLedgerCache = {};
     this._singleItemCache = {};
+    this._voucherWithEntriesCache = {};
+    this._ledgerMovementBeforeDateCache = {};
     if (this._searchVouchersCache.companyId === companyId) {
       this._searchVouchersCache = { companyId: '', data: [], timestamp: 0 };
     }
@@ -2573,6 +2577,11 @@ export const erpService: any = {
   },
 
   async getLedgerMovementBeforeDate(companyId: string, ledgerId: string, date: string): Promise<number> {
+    const cacheKey = `${companyId}_${ledgerId}_${date}`;
+    const now = Date.now();
+    if (this._ledgerMovementBeforeDateCache[cacheKey] && (now - this._ledgerMovementBeforeDateCache[cacheKey].timestamp < 3600000)) {
+      return this._ledgerMovementBeforeDateCache[cacheKey].data;
+    }
     try {
       // Use only equality filters that are more likely to have indexes
       const q = query(
@@ -2589,7 +2598,9 @@ export const erpService: any = {
           movement += (data.debit || 0) - (data.credit || 0);
         }
       });
-      return movement;
+      const result = movement;
+      this._ledgerMovementBeforeDateCache[cacheKey] = { data: result, timestamp: now };
+      return result;
     } catch (error) {
       console.error('Error calculating movement before date:', error);
       return 0;
@@ -2597,6 +2608,12 @@ export const erpService: any = {
   },
 
   async getVoucherWithEntries(companyId: string, ledgerId: string, startDate: string, endDate: string): Promise<any[]> {
+    const cacheKey = `${companyId}_${ledgerId}_${startDate}_${endDate}`;
+    const now = Date.now();
+    if (this._voucherWithEntriesCache[cacheKey] && (now - this._voucherWithEntriesCache[cacheKey].timestamp < 3600000)) {
+      return this._voucherWithEntriesCache[cacheKey].data;
+    }
+
     const [vouchersSnap, serialMap] = await Promise.all([
       getDocs(query(
         collection(db, 'vouchers'),
@@ -2639,7 +2656,7 @@ export const erpService: any = {
     );
     
     // Map them together
-    return filteredVouchers.map((v: any) => ({
+    const result = filteredVouchers.map((v: any) => ({
       ...v,
       voucher_entries: allEntries.filter((e: any) => e.voucher_id === v.id),
       inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id)
@@ -2661,6 +2678,9 @@ export const erpService: any = {
       const serialB = b.serial_no || b.auto_serial_no || 0;
       return serialA - serialB;
     });
+
+    this._voucherWithEntriesCache[cacheKey] = { data: result, timestamp: now };
+    return result;
   },
 
   // Dashboard Stats

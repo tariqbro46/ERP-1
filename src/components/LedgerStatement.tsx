@@ -37,16 +37,38 @@ export function LedgerStatement() {
   const { t } = useLanguage();
   const settings = useSettings();
   const [ledgers, setLedgers] = useState<any[]>([]);
-  const [selectedLedger, setSelectedLedger] = useState<string>(searchParams.get('ledgerId') || '');
+  const [selectedLedger, setSelectedLedger] = useState<string>(() => {
+    return searchParams.get('ledgerId') || sessionStorage.getItem('last_selected_ledger_id') || '';
+  });
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [showLedgerList, setShowLedgerList] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [startDate, setStartDate] = useState(() => {
-    return searchParams.get('from') || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA');
+    return searchParams.get('from') || sessionStorage.getItem('last_selected_ledger_from') || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA');
   });
   const [endDate, setEndDate] = useState(() => {
-    return searchParams.get('to') || new Date().toLocaleDateString('en-CA');
+    return searchParams.get('to') || sessionStorage.getItem('last_selected_ledger_to') || new Date().toLocaleDateString('en-CA');
   });
+
+  useEffect(() => {
+    if (selectedLedger) {
+      sessionStorage.setItem('last_selected_ledger_id', selectedLedger);
+    } else {
+      sessionStorage.removeItem('last_selected_ledger_id');
+    }
+  }, [selectedLedger]);
+
+  useEffect(() => {
+    if (startDate) {
+      sessionStorage.setItem('last_selected_ledger_from', startDate);
+    }
+  }, [startDate]);
+
+  useEffect(() => {
+    if (endDate) {
+      sessionStorage.setItem('last_selected_ledger_to', endDate);
+    }
+  }, [endDate]);
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<any[]>([]);
@@ -855,7 +877,11 @@ export function LedgerStatement() {
                   placeholder={t('ledger.searchLedgers')}
                   value={ledgerSearch || ''}
                   onChange={(e) => {
-                    setLedgerSearch(e.target.value);
+                    const val = e.target.value;
+                    setLedgerSearch(val);
+                    if (!val) {
+                      setSelectedLedger('');
+                    }
                     setShowLedgerList(true);
                     setActiveIndex(-1);
                   }}
