@@ -304,6 +304,368 @@ export const erpService: any = {
     });
   },
 
+  _patchCachesOnCreate(companyId: string, voucher: any, entries: any[], inventoryEntries: any[]) {
+    if (!companyId) return;
+
+    // 1. Update in-memory & localstorage ledgers cache
+    const ledgersCache = this._ledgersCache[companyId];
+    if (ledgersCache && Array.isArray(ledgersCache.data)) {
+      ledgersCache.data = ledgersCache.data.map((l: any) => {
+        const entry = entries?.find((e: any) => e.ledger_id === l.id);
+        if (entry) {
+          const balanceChange = (entry.debit || 0) - (entry.credit || 0);
+          return { ...l, current_balance: (l.current_balance || 0) + balanceChange };
+        }
+        return l;
+      });
+      try {
+        localStorage.setItem(`col_cache_ledgers_${companyId}`, JSON.stringify(ledgersCache));
+      } catch (e) {}
+    }
+
+    // 2. Update in-memory & localstorage items cache
+    const itemsCache = this._itemsCache[companyId];
+    if (itemsCache && Array.isArray(itemsCache.data)) {
+      itemsCache.data = itemsCache.data.map((item: any) => {
+        const invEntry = inventoryEntries?.find((i: any) => i.item_id === item.id);
+        if (invEntry) {
+          const vTypeLower = (voucher.v_type || '').toLowerCase();
+          let isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes(vTypeLower) || 
+                         ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((invEntry.entry_type || '').toLowerCase()) ||
+                         ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((invEntry.m_type || '').toLowerCase());
+
+          const totalEntryQty = (Number(invEntry.qty) || 0) + (Number(invEntry.free_qty) || 0);
+          const stockChange = isOutward ? -totalEntryQty : totalEntryQty;
+          return { ...item, current_stock: (item.current_stock || 0) + stockChange };
+        }
+        return item;
+      });
+      try {
+        localStorage.setItem(`col_cache_items_${companyId}`, JSON.stringify(itemsCache));
+      } catch (e) {}
+    }
+
+    // 3. Add/Update in voucherDetailCache
+    this._voucherDetailCache[voucher.id] = {
+      data: {
+        ...voucher,
+        entries,
+        inventory: inventoryEntries
+      },
+      timestamp: Date.now()
+    };
+
+    // 4. Insert into appropriate positions of the voucherWithEntriesCache lists
+    for (const key of Object.keys(this._voucherWithEntriesCache)) {
+      if (key.startsWith(companyId)) {
+        const parts = key.split('_');
+        if (parts.length >= 4) {
+          const ledgerId = parts[1];
+          const startDate = parts[2];
+          const endDate = parts[3];
+
+          const hasLedger = entries.some(e => e.ledger_id === ledgerId);
+          const inRange = voucher.v_date >= startDate && voucher.v_date <= endDate;
+
+          if (hasLedger && inRange) {
+            const cached = this._voucherWithEntriesCache[key];
+            if (cached && Array.isArray(cached.data)) {
+              const fullVoucher = {
+                ...voucher,
+                voucher_entries: entries,
+                inventory: inventoryEntries
+              };
+              const filtered = cached.data.filter((v: any) => v.id !== voucher.id);
+              filtered.push(fullVoucher);
+              
+              filtered.sort((a: any, b: any) => {
+                const serialA = a.serial_no || a.auto_serial_no || 0;
+                const serialB = b.serial_no || b.auto_serial_no || 0;
+                return serialA - serialB;
+              });
+
+              cached.data = filtered;
+            }
+          }
+        }
+      }
+    }
+
+    // 5. Adjust ledgerMovementBeforeDateCache
+    for (const key of Object.keys(this._ledgerMovementBeforeDateCache)) {
+      if (key.startsWith(companyId)) {
+        const parts = key.split('_');
+        if (parts.length >= 3) {
+          const ledgerId = parts[1];
+          const date = parts[2];
+          if (voucher.v_date < date) {
+            const entry = entries?.find((e: any) => e.ledger_id === ledgerId);
+            if (entry) {
+              const prevMovement = this._ledgerMovementBeforeDateCache[key].data;
+              const movementChange = (entry.debit || 0) - (entry.credit || 0);
+              this._ledgerMovementBeforeDateCache[key].data = prevMovement + movementChange;
+            }
+          }
+        }
+      }
+    }
+
+    // 6. Update search and recent vouchers cached arrays
+    if (this._searchVouchersCache.companyId === companyId) {
+      const idx = this._searchVouchersCache.data.findIndex((v: any) => v.id === voucher.id);
+      if (idx === -1) {
+        this._searchVouchersCache.data.unshift(voucher);
+      } else {
+        this._searchVouchersCache.data[idx] = voucher;
+      }
+    }
+    for (const key of Object.keys(this._recentVouchersCache)) {
+      if (key.startsWith(companyId)) {
+        const cached = this._recentVouchersCache[key];
+        if (cached && Array.isArray(cached.data)) {
+          const idx = cached.data.findIndex((v: any) => v.id === voucher.id);
+          if (idx === -1) {
+            cached.data.unshift(voucher);
+          } else {
+            cached.data[idx] = voucher;
+          }
+        }
+      }
+    }
+  },
+
+  _patchCachesOnUpdate(companyId: string, id: string, oldVoucher: any, newVoucher: any, newEntries: any[], newInventory: any[]) {
+    if (!companyId) return;
+
+    // 1. Update in-memory & localstorage ledgers cache
+    const ledgersCache = this._ledgersCache[companyId];
+    if (ledgersCache && Array.isArray(ledgersCache.data)) {
+      ledgersCache.data = ledgersCache.data.map((l: any) => {
+        const oldEntry = oldVoucher.entries?.find((e: any) => e.ledger_id === l.id);
+        const newEntry = newEntries?.find((e: any) => e.ledger_id === l.id);
+        
+        let balanceChange = 0;
+        if (oldEntry) {
+          balanceChange += (oldEntry.credit || 0) - (oldEntry.debit || 0);
+        }
+        if (newEntry) {
+          balanceChange += (newEntry.debit || 0) - (newEntry.credit || 0);
+        }
+
+        if (balanceChange !== 0) {
+          return { ...l, current_balance: (l.current_balance || 0) + balanceChange };
+        }
+        return l;
+      });
+      try {
+        localStorage.setItem(`col_cache_ledgers_${companyId}`, JSON.stringify(ledgersCache));
+      } catch (e) {}
+    }
+
+    // 2. Update in-memory & localstorage items cache
+    const itemsCache = this._itemsCache[companyId];
+    if (itemsCache && Array.isArray(itemsCache.data)) {
+      itemsCache.data = itemsCache.data.map((item: any) => {
+        const oldInvEntry = oldVoucher.inventory?.find((i: any) => i.item_id === item.id);
+        const newInvEntry = newInventory?.find((i: any) => i.item_id === item.id);
+        
+        let stockChange = 0;
+        if (oldInvEntry) {
+          const vTypeLower = (oldVoucher.v_type || '').toLowerCase();
+          let isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes(vTypeLower) || 
+                         ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((oldInvEntry.entry_type || '').toLowerCase()) ||
+                         ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((oldInvEntry.m_type || '').toLowerCase());
+          const totalQty = (oldInvEntry.qty || 0) + (oldInvEntry.free_qty || 0);
+          stockChange += isOutward ? totalQty : -totalQty;
+        }
+
+        if (newInvEntry) {
+          const vTypeLower = (newVoucher.v_type || '').toLowerCase();
+          let isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes(vTypeLower) || 
+                         ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((newInvEntry.entry_type || '').toLowerCase()) ||
+                         ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((newInvEntry.m_type || '').toLowerCase());
+          const totalQty = (newInvEntry.qty || 0) + (newInvEntry.free_qty || 0);
+          stockChange += isOutward ? -totalQty : totalQty;
+        }
+
+        if (stockChange !== 0) {
+          return { ...item, current_stock: (item.current_stock || 0) + stockChange };
+        }
+        return item;
+      });
+      try {
+        localStorage.setItem(`col_cache_items_${companyId}`, JSON.stringify(itemsCache));
+      } catch (e) {}
+    }
+
+    // 3. Update in voucherDetailCache
+    this._voucherDetailCache[id] = {
+      data: {
+        ...newVoucher,
+        entries: newEntries,
+        inventory: newInventory
+      },
+      timestamp: Date.now()
+    };
+
+    // 4. Update in voucherWithEntriesCache
+    for (const key of Object.keys(this._voucherWithEntriesCache)) {
+      if (key.startsWith(companyId)) {
+        const parts = key.split('_');
+        if (parts.length >= 4) {
+          const ledgerId = parts[1];
+          const startDate = parts[2];
+          const endDate = parts[3];
+
+          const hasLedger = newEntries.some(e => e.ledger_id === ledgerId);
+          const inRange = newVoucher.v_date >= startDate && newVoucher.v_date <= endDate;
+
+          const cached = this._voucherWithEntriesCache[key];
+          if (cached && Array.isArray(cached.data)) {
+            let filtered = cached.data.filter((v: any) => v.id !== id);
+
+            if (hasLedger && inRange) {
+              const fullVoucher = {
+                ...newVoucher,
+                voucher_entries: newEntries,
+                inventory: newInventory
+              };
+              filtered.push(fullVoucher);
+              
+              filtered.sort((a: any, b: any) => {
+                const serialA = a.serial_no || a.auto_serial_no || 0;
+                const serialB = b.serial_no || b.auto_serial_no || 0;
+                return serialA - serialB;
+              });
+            }
+
+            cached.data = filtered;
+          }
+        }
+      }
+    }
+
+    // 5. Adjust ledgerMovementBeforeDateCache
+    for (const key of Object.keys(this._ledgerMovementBeforeDateCache)) {
+      if (key.startsWith(companyId)) {
+        const parts = key.split('_');
+        if (parts.length >= 3) {
+          const ledgerId = parts[1];
+          const date = parts[2];
+
+          let adjustment = 0;
+          if (oldVoucher.v_date < date) {
+            const oldEntry = oldVoucher.entries?.find((e: any) => e.ledger_id === ledgerId);
+            if (oldEntry) {
+              adjustment -= (oldEntry.debit || 0) - (oldEntry.credit || 0);
+            }
+          }
+          if (newVoucher.v_date < date) {
+            const newEntry = newEntries?.find((e: any) => e.ledger_id === ledgerId);
+            if (newEntry) {
+              adjustment += (newEntry.debit || 0) - (newEntry.credit || 0);
+            }
+          }
+
+          if (adjustment !== 0) {
+            this._ledgerMovementBeforeDateCache[key].data += adjustment;
+          }
+        }
+      }
+    }
+
+    // 6. Update search and recent vouchers cached arrays
+    if (this._searchVouchersCache.companyId === companyId) {
+      this._searchVouchersCache.data = this._searchVouchersCache.data.map((v: any) => v.id === id ? newVoucher : v);
+    }
+    for (const key of Object.keys(this._recentVouchersCache)) {
+      if (key.startsWith(companyId)) {
+        const cached = this._recentVouchersCache[key];
+        if (cached && Array.isArray(cached.data)) {
+          cached.data = cached.data.map((v: any) => v.id === id ? { ...v, ...newVoucher } : v);
+        }
+      }
+    }
+  },
+
+  _patchCachesOnDelete(companyId: string, id: string, voucher: any) {
+    if (!companyId) return;
+
+    // Remove from ledgers cache
+    const ledgersCache = this._ledgersCache[companyId];
+    if (ledgersCache && Array.isArray(ledgersCache.data)) {
+      ledgersCache.data = ledgersCache.data.map((l: any) => {
+        const entry = voucher.entries?.find((e: any) => e.ledger_id === l.id);
+        if (entry) {
+          const balanceChange = (entry.credit || 0) - (entry.debit || 0);
+          return { ...l, current_balance: (l.current_balance || 0) + balanceChange };
+        }
+        return l;
+      });
+      try {
+        localStorage.setItem(`col_cache_ledgers_${companyId}`, JSON.stringify(ledgersCache));
+      } catch (e) {}
+    }
+
+    // Remove from items cache
+    const itemsCache = this._itemsCache[companyId];
+    if (itemsCache && Array.isArray(itemsCache.data)) {
+      itemsCache.data = itemsCache.data.map((item: any) => {
+        const invEntry = voucher.inventory?.find((i: any) => i.item_id === item.id);
+        if (invEntry) {
+          const totalQty = (invEntry.qty || 0) + (invEntry.free_qty || 0);
+          const stockChange = invEntry.movement_type === 'Inward' ? -totalQty : totalQty;
+          return { ...item, current_stock: (item.current_stock || 0) + stockChange };
+        }
+        return item;
+      });
+      try {
+        localStorage.setItem(`col_cache_items_${companyId}`, JSON.stringify(itemsCache));
+      } catch (e) {}
+    }
+
+    delete this._voucherDetailCache[id];
+
+    for (const key of Object.keys(this._voucherWithEntriesCache)) {
+      if (key.startsWith(companyId)) {
+        const cached = this._voucherWithEntriesCache[key];
+        if (cached && Array.isArray(cached.data)) {
+          cached.data = cached.data.filter((v: any) => v.id !== id);
+        }
+      }
+    }
+
+    for (const key of Object.keys(this._ledgerMovementBeforeDateCache)) {
+      if (key.startsWith(companyId)) {
+        const parts = key.split('_');
+        if (parts.length >= 3) {
+          const ledgerId = parts[1];
+          const date = parts[2];
+          if (voucher.v_date < date) {
+            const entry = voucher.entries?.find((e: any) => e.ledger_id === ledgerId);
+            if (entry) {
+              const prevMovement = this._ledgerMovementBeforeDateCache[key].data;
+              const movementChange = (entry.debit || 0) - (entry.credit || 0);
+              this._ledgerMovementBeforeDateCache[key].data = prevMovement - movementChange;
+            }
+          }
+        }
+      }
+    }
+
+    if (this._searchVouchersCache.companyId === companyId) {
+      this._searchVouchersCache.data = this._searchVouchersCache.data.filter((v: any) => v.id !== id);
+    }
+    for (const key of Object.keys(this._recentVouchersCache)) {
+      if (key.startsWith(companyId)) {
+        const cached = this._recentVouchersCache[key];
+        if (cached && Array.isArray(cached.data)) {
+          cached.data = cached.data.filter((v: any) => v.id !== id);
+        }
+      }
+    }
+  },
+
   _pendingRequests: {} as Record<string, Promise<any>>,
 
   // Browser Client/Session Cache for zero-flash transitions (SWR style)
@@ -692,7 +1054,6 @@ export const erpService: any = {
     }
   },
   async createVoucher(companyId: string, userId: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
-    this.invalidateAllCaches(companyId);
     // Track Firestore operations used
     this.trackQuota(companyId, 5, 5);
     try {
@@ -879,12 +1240,29 @@ export const erpService: any = {
           updatedAt: serverTimestamp()
         }, { merge: true });
 
-        return { success: true, id: vRef.id, itemIds: Array.from(new Set(inventoryEntries?.map(i => i.item_id).filter(Boolean) || [])) };
+        return { success: true, id: vRef.id, serial_no: nextSerial, v_date: vDateYMD, itemIds: Array.from(new Set(inventoryEntries?.map(i => i.item_id).filter(Boolean) || [])) };
       });
 
-      if (res && res.success && res.itemIds.length > 0) {
-        for (const itemId of res.itemIds) {
-          this.recalculateItemStats(itemId as string, companyId).catch(console.error);
+      if (res && res.success) {
+        // Construct full voucher
+        const createdVoucher = {
+          ...voucher,
+          id: res.id,
+          serial_no: res.serial_no,
+          v_date: res.v_date,
+          reference_no: voucher.v_no || '',
+          v_no: voucher.v_no || '',
+          companyId
+        };
+        const mappedEntries = entries.map(e => ({ ...e, voucher_id: res.id, date: res.v_date, companyId }));
+        const mappedInventory = (inventoryEntries || []).map(i => ({ ...i, voucher_id: res.id, companyId }));
+        
+        this._patchCachesOnCreate(companyId, createdVoucher, mappedEntries, mappedInventory);
+
+        if (res.itemIds.length > 0) {
+          for (const itemId of res.itemIds) {
+            this.recalculateItemStats(itemId as string, companyId).catch(console.error);
+          }
         }
       }
       return true;
@@ -1329,7 +1707,7 @@ export const erpService: any = {
     const voucher = await this.getVoucherById(id);
     if (!voucher) throw new Error('Voucher not found');
     const companyId = voucher.companyId;
-    this.invalidateAllCaches(companyId);
+    this._patchCachesOnDelete(companyId, id, voucher);
     const batch = writeBatch(db);
 
     // Check existence of ledgers and items
@@ -1400,7 +1778,14 @@ export const erpService: any = {
       
       const vType = (voucher.v_type || '').toString().trim();
       const companyId = oldVoucher.companyId;
-      this.invalidateAllCaches(companyId);
+      const updatedVoucher = {
+        ...oldVoucher,
+        ...voucher,
+        v_date: formatToYMD(voucher.v_date || oldVoucher.v_date),
+        id,
+        companyId
+      };
+      this._patchCachesOnUpdate(companyId, id, oldVoucher, updatedVoucher, entries, inventoryEntries || []);
       // Track Firestore operations used
       this.trackQuota(companyId, 5, 5);
 
