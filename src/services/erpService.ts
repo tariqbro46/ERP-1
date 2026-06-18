@@ -245,9 +245,29 @@ export const erpService: any = {
   _voucherDetailCache: {} as Record<string, { data: any, timestamp: number }>,
   _voucherWithEntriesCache: {} as Record<string, { data: any[], timestamp: number }>,
   _ledgerMovementBeforeDateCache: {} as Record<string, { data: number, timestamp: number }>,
+  _itemStatsCache: {} as Record<string, { data: any, timestamp: number }>,
+
+  invalidateLedgersCache(companyId: string) {
+    if (!companyId) return;
+    this._ledgersCache[companyId] = { data: [], timestamp: 0 };
+    this._singleLedgerCache = {};
+    try {
+      localStorage.removeItem(`col_cache_ledgers_${companyId}`);
+    } catch (e) {}
+  },
+
+  invalidateItemsCache(companyId: string) {
+    if (!companyId) return;
+    this._itemsCache[companyId] = { data: [], timestamp: 0 };
+    this._singleItemCache = {};
+    try {
+      localStorage.removeItem(`col_cache_items_${companyId}`);
+    } catch (e) {}
+  },
 
   invalidateAllCaches(companyId: string) {
     if (!companyId) return;
+    this._itemStatsCache = {};
     this._serialsCache[companyId] = { data: {}, timestamp: 0 };
     this._ledgersCache[companyId] = { data: [], timestamp: 0 };
     this._itemsCache[companyId] = { data: [], timestamp: 0 };
@@ -432,6 +452,45 @@ export const erpService: any = {
         }
       }
     }
+
+    // 7. Inject into generic collection caches to keep general reports (like Daybook, Summary, Register, StockItemReport) fully up-to-date instantly!
+    const colVouchersKey = `vouchers_${companyId}`;
+    const vCache = this._genericCollectionsCache[colVouchersKey];
+    if (vCache && Array.isArray(vCache.data)) {
+      if (!vCache.data.some((v: any) => v.id === voucher.id)) {
+        vCache.data.push(voucher);
+        try {
+          localStorage.setItem(`col_cache_${colVouchersKey}`, JSON.stringify(vCache));
+        } catch (e) {}
+      }
+    }
+
+    const colEntriesKey = `voucher_entries_${companyId}`;
+    const eCache = this._genericCollectionsCache[colEntriesKey];
+    if (eCache && Array.isArray(eCache.data)) {
+      eCache.data.push(...entries);
+      try {
+        localStorage.setItem(`col_cache_${colEntriesKey}`, JSON.stringify(eCache));
+      } catch (e) {}
+    }
+
+    const colInvKey = `inventory_entries_${companyId}`;
+    const invCache = this._genericCollectionsCache[colInvKey];
+    if (invCache && Array.isArray(invCache.data)) {
+      invCache.data.push(...inventoryEntries);
+      try {
+        localStorage.setItem(`col_cache_${colInvKey}`, JSON.stringify(invCache));
+      } catch (e) {}
+    }
+
+    // 8. Delete cache entries for item stats so they dynamically recalculate accurate stats based on updated inventory_entries
+    if (inventoryEntries && inventoryEntries.length > 0) {
+      inventoryEntries.forEach(i => {
+        if (i.item_id) {
+          delete this._itemStatsCache[`${companyId}_${i.item_id}`];
+        }
+      });
+    }
   },
 
   _patchCachesOnUpdate(companyId: string, id: string, oldVoucher: any, newVoucher: any, newEntries: any[], newInventory: any[]) {
@@ -586,6 +645,46 @@ export const erpService: any = {
         }
       }
     }
+
+    // 7. Inject / Update generic Collection Caches
+    const colVouchersKey = `vouchers_${companyId}`;
+    const vCache = this._genericCollectionsCache[colVouchersKey];
+    if (vCache && Array.isArray(vCache.data)) {
+      vCache.data = vCache.data.map((v: any) => v.id === id ? newVoucher : v);
+      try {
+        localStorage.setItem(`col_cache_${colVouchersKey}`, JSON.stringify(vCache));
+      } catch (e) {}
+    }
+
+    const colEntriesKey = `voucher_entries_${companyId}`;
+    const eCache = this._genericCollectionsCache[colEntriesKey];
+    if (eCache && Array.isArray(eCache.data)) {
+      const filtered = eCache.data.filter((e: any) => e.voucher_id !== id);
+      filtered.push(...newEntries);
+      eCache.data = filtered;
+      try {
+        localStorage.setItem(`col_cache_${colEntriesKey}`, JSON.stringify(eCache));
+      } catch (e) {}
+    }
+
+    const colInvKey = `inventory_entries_${companyId}`;
+    const invCache = this._genericCollectionsCache[colInvKey];
+    if (invCache && Array.isArray(invCache.data)) {
+      const filtered = invCache.data.filter((i: any) => i.voucher_id !== id);
+      filtered.push(...newInventory);
+      invCache.data = filtered;
+      try {
+        localStorage.setItem(`col_cache_${colInvKey}`, JSON.stringify(invCache));
+      } catch (e) {}
+    }
+
+    // 8. Delete cache entries for item stats so they dynamically recalculate
+    const oldItemIds = oldVoucher.inventory?.map((i: any) => i.item_id).filter(Boolean) || [];
+    const newItemIds = newInventory?.map(i => i.item_id).filter(Boolean) || [];
+    const allItemIds = Array.from(new Set([...oldItemIds, ...newItemIds]));
+    allItemIds.forEach(itemId => {
+      delete this._itemStatsCache[`${companyId}_${itemId}`];
+    });
   },
 
   _patchCachesOnDelete(companyId: string, id: string, voucher: any) {
@@ -664,6 +763,40 @@ export const erpService: any = {
         }
       }
     }
+
+    // 7. Remove from generic Collection Caches
+    const colVouchersKey = `vouchers_${companyId}`;
+    const vCache = this._genericCollectionsCache[colVouchersKey];
+    if (vCache && Array.isArray(vCache.data)) {
+      vCache.data = vCache.data.filter((v: any) => v.id !== id);
+      try {
+        localStorage.setItem(`col_cache_${colVouchersKey}`, JSON.stringify(vCache));
+      } catch (e) {}
+    }
+
+    const colEntriesKey = `voucher_entries_${companyId}`;
+    const eCache = this._genericCollectionsCache[colEntriesKey];
+    if (eCache && Array.isArray(eCache.data)) {
+      eCache.data = eCache.data.filter((e: any) => e.voucher_id !== id);
+      try {
+        localStorage.setItem(`col_cache_${colEntriesKey}`, JSON.stringify(eCache));
+      } catch (e) {}
+    }
+
+    const colInvKey = `inventory_entries_${companyId}`;
+    const invCache = this._genericCollectionsCache[colInvKey];
+    if (invCache && Array.isArray(invCache.data)) {
+      invCache.data = invCache.data.filter((i: any) => i.voucher_id !== id);
+      try {
+        localStorage.setItem(`col_cache_${colInvKey}`, JSON.stringify(invCache));
+      } catch (e) {}
+    }
+
+    // 8. Delete cache entries for item stats so they dynamically recalculate
+    const itemIds = voucher.inventory?.map((i: any) => i.item_id).filter(Boolean) || [];
+    itemIds.forEach((itemId: string) => {
+      delete this._itemStatsCache[`${companyId}_${itemId}`];
+    });
   },
 
   _pendingRequests: {} as Record<string, Promise<any>>,
@@ -2331,7 +2464,7 @@ export const erpService: any = {
   },
 
   async createLedger(companyId: string, ledger: any) {
-    this.invalidateAllCaches(companyId);
+    this.invalidateLedgersCache(companyId);
     try {
       const isDuplicate = await this.checkDuplicate('ledgers', companyId, 'name', ledger.name);
       if (isDuplicate) throw new Error(`Ledger "${ledger.name}" already exists.`);
@@ -2356,7 +2489,7 @@ export const erpService: any = {
       const snap = await getDoc(ref);
       if (snap.exists()) {
         const companyId = snap.data().companyId;
-        if (companyId) this.invalidateAllCaches(companyId);
+        if (companyId) this.invalidateLedgersCache(companyId);
       }
       await updateDoc(ref, ledger);
       return { id, ...ledger };
@@ -2366,7 +2499,7 @@ export const erpService: any = {
   },
 
   async deleteLedger(id: string, companyId: string) {
-    this.invalidateAllCaches(companyId);
+    this.invalidateLedgersCache(companyId);
     const hasTransactions = await this.checkLedgerTransactions(id, companyId);
     if (hasTransactions) {
       throw new Error('Cannot delete ledger with transactions. Please delete all vouchers associated with this ledger first.');
@@ -2445,7 +2578,7 @@ export const erpService: any = {
   },
 
   async createItem(companyId: string, item: any) {
-    this.invalidateAllCaches(companyId);
+    this.invalidateItemsCache(companyId);
     const isDuplicate = await this.checkDuplicate('items', companyId, 'name', item.name);
     if (isDuplicate) throw new Error(`Stock Item "${item.name}" already exists.`);
 
@@ -2473,7 +2606,7 @@ export const erpService: any = {
     
     const oldData = oldSnap.data();
     if (oldData.companyId) {
-      this.invalidateAllCaches(oldData.companyId);
+      this.invalidateItemsCache(oldData.companyId);
     }
     const updates: any = { ...item };
     
@@ -2489,7 +2622,7 @@ export const erpService: any = {
   },
 
   async deleteItem(id: string, companyId: string) {
-    this.invalidateAllCaches(companyId);
+    this.invalidateItemsCache(companyId);
     const hasTransactions = await this.checkItemTransactions(id, companyId);
     if (hasTransactions) {
       throw new Error('Cannot delete item with transactions. Please delete all vouchers associated with this item first.');
@@ -2716,6 +2849,11 @@ export const erpService: any = {
   },
 
   async getItemStats(itemId: string, companyId: string) {
+    const cacheKey = `${companyId}_${itemId}`;
+    const now = Date.now();
+    if (this._itemStatsCache[cacheKey] && (now - this._itemStatsCache[cacheKey].timestamp < 3600000)) {
+      return this._itemStatsCache[cacheKey].data;
+    }
     try {
       const item = await this.getItemById(itemId);
       if (!item) return null;
@@ -2757,12 +2895,14 @@ export const erpService: any = {
         }
       }
       
-      return {
+      const result = {
         currentStock,
         totalInward,
         totalOutward,
         lastRate: sortedEntries.length > 0 ? sortedEntries[sortedEntries.length - 1].rate : item.opening_rate
       };
+      this._itemStatsCache[cacheKey] = { data: result, timestamp: now };
+      return result;
     } catch (error) {
       console.error('Error fetching item stats:', error);
       return null;
