@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2, Package } from 'lucide-react';
+import { Search, Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2, Package, Volume2 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -13,6 +13,7 @@ import { NAV_ITEMS } from '../constants/navigation';
 import { MenuConfig } from '../types';
 import { useTheme, Theme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { soundService } from '../services/soundService';
 
 export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const { user, logout } = useAuth();
@@ -98,6 +99,15 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     sidebarTextColor,
     systemUiStyle,
     systemMenuBarStyle,
+    soundEnabled,
+    soundVolume,
+    soundScheme,
+    soundSuccess,
+    soundError,
+    soundWarning,
+    soundDelete,
+    soundClick,
+    soundNavigation,
     updateSettings,
     updateUserSettings
   } = useSettings();
@@ -162,6 +172,16 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localDashboardCards, setLocalDashboardCards] = useState<string[]>(dashboardCards || ['revenue', 'profit', 'ledgers', 'stock']);
   const [localEnglishFont, setLocalEnglishFont] = useState(englishFont || 'Inter');
   const [localBanglaFont, setLocalBanglaFont] = useState(banglaFont || 'Hind Siliguri');
+
+  const [localSoundEnabled, setLocalSoundEnabled] = useState(soundEnabled ?? true);
+  const [localSoundVolume, setLocalSoundVolume] = useState(soundVolume ?? 0.5);
+  const [localSoundScheme, setLocalSoundScheme] = useState(soundScheme || 'system');
+  const [localSoundSuccess, setLocalSoundSuccess] = useState(soundSuccess || '');
+  const [localSoundError, setLocalSoundError] = useState(soundError || '');
+  const [localSoundWarning, setLocalSoundWarning] = useState(soundWarning || '');
+  const [localSoundDelete, setLocalSoundDelete] = useState(soundDelete || '');
+  const [localSoundClick, setLocalSoundClick] = useState(soundClick || '');
+  const [localSoundNavigation, setLocalSoundNavigation] = useState(soundNavigation || '');
 
   // Apply fonts immediately for preview
   React.useEffect(() => {
@@ -279,6 +299,15 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalLayoutWidth(layoutWidth || 'constrained');
     setLocalNotifications(notifications);
     setLocalWhatsappTemplates(whatsappTemplates);
+    setLocalSoundEnabled(soundEnabled ?? true);
+    setLocalSoundVolume(soundVolume ?? 0.5);
+    setLocalSoundScheme(soundScheme || 'system');
+    setLocalSoundSuccess(soundSuccess || '');
+    setLocalSoundError(soundError || '');
+    setLocalSoundWarning(soundWarning || '');
+    setLocalSoundDelete(soundDelete || '');
+    setLocalSoundClick(soundClick || '');
+    setLocalSoundNavigation(soundNavigation || '');
   }, [
     companyName, companyAddress, slogan, printHeader, printFooter, printPhone, 
     printEmail, printWebsite, showPrintHeader, showPrintPhone, showPrintEmail, 
@@ -286,8 +315,24 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     printSignature3, showSignature1, showSignature2, showSignature3, 
     signatureAlignment, showDeveloperContact, financialYearStart, 
     baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
-    showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, dashboardDesign, uiStyle, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates, sidebarBgColor, sidebarTextColor
+    showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, dashboardDesign, uiStyle, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates, sidebarBgColor, sidebarTextColor,
+    soundEnabled, soundVolume, soundScheme, soundSuccess, soundError, soundWarning, soundDelete, soundClick, soundNavigation
   ]);
+
+  const handleSaveSounds = () => {
+    updateUserSettings({
+      soundEnabled: localSoundEnabled,
+      soundVolume: localSoundVolume,
+      soundScheme: localSoundScheme,
+      soundSuccess: localSoundSuccess,
+      soundError: localSoundError,
+      soundWarning: localSoundWarning,
+      soundDelete: localSoundDelete,
+      soundClick: localSoundClick,
+      soundNavigation: localSoundNavigation
+    });
+    showNotification('Sound Scheme saved and updated successfully!');
+  };
 
   const handleSaveGeneral = () => {
     updateSettings({ 
@@ -474,6 +519,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     { id: 'features', label: t('settings.f11Features'), icon: Database },
     { id: 'security', label: t('settings.security'), icon: Shield },
     { id: 'search', label: 'Global Search', icon: Search },
+    { id: 'sounds', label: 'Sound Schemes', icon: Volume2 },
     { id: 'notifications', label: t('settings.notifications'), icon: Bell },
     { id: 'whatsapp', label: t('settings.whatsappTemplates'), icon: MessageSquare },
     { id: 'subscription', label: 'Subscription', icon: CreditCard },
@@ -2317,7 +2363,189 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                 </div>
               </div>
             )}
+
+            {activeTab === 'sounds' && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center border-b border-border pb-2">
+                  <div className="space-y-0.5">
+                    <h3 className="text-foreground text-sm font-bold uppercase tracking-widest">Sound Scheme Configuration</h3>
+                    <p className="text-[10px] text-gray-400 font-mono">Personalize computer software-style sound effects & audio cues</p>
+                  </div>
+                  <button 
+                    onClick={handleSaveSounds}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all font-mono"
+                  >
+                    <Save className="w-3 h-3" /> Save Audio Profile
+                  </button>
+                </div>
+
+                <div className="bg-foreground/5 border border-border p-5 rounded-lg space-y-6 font-mono">
+                  {/* General Controls */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex items-center justify-between p-4 bg-background border border-border">
+                      <div>
+                        <h4 className="text-xs font-bold text-foreground uppercase">Enable Sound Effects</h4>
+                        <p className="text-[10px] text-gray-500">Mute or play application operational sounds.</p>
+                      </div>
+                      <button 
+                        onClick={() => setLocalSoundEnabled(!localSoundEnabled)}
+                        type="button"
+                        className={cn(
+                          "w-10 h-5 rounded-full transition-colors relative",
+                          localSoundEnabled ? "bg-emerald-500" : "bg-gray-600"
+                        )}
+                      >
+                        <div className={cn(
+                          "absolute top-1 w-3 h-3 rounded-full bg-white transition-all",
+                          localSoundEnabled ? "right-1" : "left-1"
+                        )} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 p-4 bg-background border border-border">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] text-gray-500 uppercase font-bold">Main Volume</label>
+                        <span className="text-[10px] text-primary font-bold">{Math.round(localSoundVolume * 100)}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="1" 
+                        step="0.05"
+                        value={localSoundVolume} 
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          setLocalSoundVolume(val);
+                          // Temporarily update soundService volume for live testing
+                          soundService.setSettings(localSoundEnabled, val, localSoundScheme, {
+                            success: localSoundSuccess,
+                            error: localSoundError,
+                            warning: localSoundWarning,
+                            delete: localSoundDelete,
+                            click: localSoundClick,
+                            navigation: localSoundNavigation
+                          });
+                        }}
+                        className="w-full accent-primary bg-foreground/10 h-1.5 rounded-sm outline-none cursor-pointer" 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Scheme Switcher */}
+                  <div className="space-y-2 p-4 bg-background border border-border">
+                    <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Active Audio Scheme</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['system', 'custom', 'off'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => {
+                            setLocalSoundScheme(mode);
+                            // Temporarily update soundService for live testing
+                            soundService.setSettings(localSoundEnabled, localSoundVolume, mode, {
+                              success: localSoundSuccess,
+                              error: localSoundError,
+                              warning: localSoundWarning,
+                              delete: localSoundDelete,
+                              click: localSoundClick,
+                              navigation: localSoundNavigation
+                            });
+                          }}
+                          className={cn(
+                            "py-2 text-[10px] uppercase font-bold tracking-widest border transition-all text-center",
+                            localSoundScheme === mode 
+                              ? "bg-foreground text-background border-foreground" 
+                              : "bg-background text-gray-500 border-border hover:border-gray-400"
+                          )}
+                        >
+                          {mode === 'system' ? '💻 Procedural' : mode === 'custom' ? '🔗 Custom URLs' : '🔇 Mute'}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-gray-500 uppercase italic leading-relaxed mt-1">
+                      {localSoundScheme === 'system' && "Procedural: Sounds are synthesized in real-time with Web Audio API (extremely fast and lightweight)."}
+                      {localSoundScheme === 'custom' && "Custom URLs: Sounds are loaded dynamically from direct web resource links (supports custom mp3/wav links)."}
+                      {localSoundScheme === 'off' && "Mute: Disables all software operational sound feedback."}
+                    </p>
+                  </div>
+
+                  {/* Sound Links Config */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-bold text-foreground uppercase tracking-wider border-b border-border/50 pb-1">Sound Links Mapping</h4>
+                    
+                    {[
+                      { key: 'success', label: 'Success Operation Chime', val: localSoundSuccess, set: setLocalSoundSuccess, placeholder: 'https://assets.mixkit.co/active_storage/sfx/2013/2013-84.wav' },
+                      { key: 'error', label: 'Critical Error Buzz', val: localSoundError, set: setLocalSoundError, placeholder: 'https://assets.mixkit.co/active_storage/sfx/951/951-84.wav' },
+                      { key: 'warning', label: 'Alert / Verification Warning', val: localSoundWarning, set: setLocalSoundWarning, placeholder: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav' },
+                      { key: 'delete', label: 'Deletion swoosh', val: localSoundDelete, set: setLocalSoundDelete, placeholder: 'https://assets.mixkit.co/active_storage/sfx/2205/2205-84.wav' },
+                      { key: 'click', label: 'Element click / Tap', val: localSoundClick, set: setLocalSoundClick, placeholder: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav' },
+                      { key: 'navigation', label: 'Page Sweep / Tab Switch', val: localSoundNavigation, set: setLocalSoundNavigation, placeholder: 'https://assets.mixkit.co/active_storage/sfx/2324/2324-84.wav' }
+                    ].map((item) => (
+                      <div key={item.key} className="space-y-1 p-3 bg-background border border-border/60">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] text-foreground uppercase font-bold">{item.label}</label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Direct test play
+                              soundService.play(item.key as any);
+                            }}
+                            className="px-2 py-0.5 bg-foreground/10 text-foreground border border-border/80 text-[8px] uppercase tracking-wider hover:bg-foreground hover:text-background transition-colors font-bold font-mono"
+                          >
+                            ▶ Play Test
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            disabled={localSoundScheme !== 'custom'}
+                            value={item.val} 
+                            onChange={(e) => {
+                              item.set(e.target.value);
+                              // Sync temporarily on change
+                              soundService.setSettings(localSoundEnabled, localSoundVolume, localSoundScheme, {
+                                success: item.key === 'success' ? e.target.value : localSoundSuccess,
+                                error: item.key === 'error' ? e.target.value : localSoundError,
+                                warning: item.key === 'warning' ? e.target.value : localSoundWarning,
+                                delete: item.key === 'delete' ? e.target.value : localSoundDelete,
+                                click: item.key === 'click' ? e.target.value : localSoundClick,
+                                navigation: item.key === 'navigation' ? e.target.value : localSoundNavigation
+                              });
+                            }}
+                            placeholder={localSoundScheme === 'custom' ? item.placeholder : `Using default procedural synthesizer tone`}
+                            className="flex-1 bg-background border border-border text-foreground p-2 text-xs outline-none focus:border-foreground disabled:bg-gray-500/10 disabled:text-gray-500 disabled:border-border/30" 
+                          />
+                          {localSoundScheme === 'custom' && item.val && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                item.set('');
+                                soundService.setSettings(localSoundEnabled, localSoundVolume, localSoundScheme, {
+                                  success: item.key === 'success' ? '' : localSoundSuccess,
+                                  error: item.key === 'error' ? '' : localSoundError,
+                                  warning: item.key === 'warning' ? '' : localSoundWarning,
+                                  delete: item.key === 'delete' ? '' : localSoundDelete,
+                                  click: item.key === 'click' ? '' : localSoundClick,
+                                  navigation: item.key === 'navigation' ? '' : localSoundNavigation
+                                });
+                              }}
+                              className="px-2 border border-rose-500 text-rose-500 text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-colors"
+                            >
+                              Reset
+                            </button>
+                          )}
+                        </div>
+                        {localSoundScheme === 'custom' && (
+                          <p className="text-[8px] text-gray-500 font-sans mt-0.5">Paste any direct audio file URL ending in .mp3, .wav, or .ogg</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
+
         </div>
       </div>
     </div>

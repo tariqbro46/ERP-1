@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useSettings } from './SettingsContext';
+import { soundService } from '../services/soundService';
 
 interface Notification {
   id: string;
@@ -24,6 +25,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const showNotification = (message: React.ReactNode, type: 'success' | 'error' | 'info' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
     setNotifications(prev => [...prev, { id, message, type }]);
+    
+    // Trigger sound effects for notifications
+    if (type === 'success') {
+      soundService.play('success');
+    } else if (type === 'error') {
+      soundService.play('error');
+    } else {
+      soundService.play('warning');
+    }
     
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));

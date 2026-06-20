@@ -1,6 +1,7 @@
 import React from 'react';
 import { doc, getDocFromServer } from 'firebase/firestore';
 import { db } from './firebase';
+import { soundService } from './services/soundService';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS } from './contexts/SettingsContext';
 import { useTheme, Theme } from './contexts/ThemeContext';
@@ -679,6 +680,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     if (scrollRef.current) {
       scrollRef.current.scrollTo(0, 0);
     }
+    soundService.play('navigation');
   }, [location.pathname]);
 
   // Handle click outside for profile dropdown

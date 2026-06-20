@@ -5,6 +5,7 @@ import { doc, onSnapshot, collection, getDocFromServer, getDocs } from 'firebase
 import { db, auth } from '../firebase';
 import { SubscriptionPlan } from '../types';
 import { FeatureCategory, APP_FEATURES } from '../constants/features';
+import { soundService } from '../services/soundService';
 
 interface NotificationSettings {
   voucherSaved: string;
@@ -217,6 +218,15 @@ interface SettingsContextType {
   activePlan?: SubscriptionPlan;
   userSettings: any;
   loading?: boolean;
+  soundEnabled?: boolean;
+  soundVolume?: number;
+  soundScheme?: 'system' | 'custom' | 'off';
+  soundSuccess?: string;
+  soundError?: string;
+  soundWarning?: string;
+  soundDelete?: string;
+  soundClick?: string;
+  soundNavigation?: string;
   updateSettings: (newSettings: Partial<SettingsContextType>) => void;
   updateSystemSettings: (newSettings: any) => Promise<void>;
   updateFeaturesSettings: (newFeatures: FeatureCategory[]) => Promise<void>;
@@ -238,6 +248,15 @@ const defaultSettings: SettingsContextType = {
   printEmail: 'info@tallyflow.erp',
   printWebsite: 'www.tallyflow.erp',
   showPrintHeader: true,
+  soundEnabled: true,
+  soundVolume: 0.5,
+  soundScheme: 'system',
+  soundSuccess: '',
+  soundError: '',
+  soundWarning: '',
+  soundDelete: '',
+  soundClick: '',
+  soundNavigation: '',
   showPrintPhone: true,
   showPrintEmail: true,
   showPrintWebsite: true,
@@ -418,6 +437,32 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return defaultSettings;
   });
   const [userSettings, setUserSettings] = useState<any>({});
+
+  // Synchronize soundService state dynamically with audio preferences
+  useEffect(() => {
+    const soundEnabled = userSettings.soundEnabled !== undefined ? userSettings.soundEnabled : (settings.soundEnabled ?? true);
+    const soundVolume = userSettings.soundVolume !== undefined ? userSettings.soundVolume : (settings.soundVolume ?? 0.5);
+    const soundScheme = userSettings.soundScheme || settings.soundScheme || 'system';
+    const customSounds = {
+      success: userSettings.soundSuccess || settings.soundSuccess || '',
+      error: userSettings.soundError || settings.soundError || '',
+      warning: userSettings.soundWarning || settings.soundWarning || '',
+      delete: userSettings.soundDelete || settings.soundDelete || '',
+      click: userSettings.soundClick || settings.soundClick || '',
+      navigation: userSettings.soundNavigation || settings.soundNavigation || '',
+    };
+    soundService.setSettings(soundEnabled, soundVolume, soundScheme, customSounds);
+  }, [
+    userSettings.soundEnabled, settings.soundEnabled,
+    userSettings.soundVolume, settings.soundVolume,
+    userSettings.soundScheme, settings.soundScheme,
+    userSettings.soundSuccess, settings.soundSuccess,
+    userSettings.soundError, settings.soundError,
+    userSettings.soundWarning, settings.soundWarning,
+    userSettings.soundDelete, settings.soundDelete,
+    userSettings.soundClick, settings.soundClick,
+    userSettings.soundNavigation, settings.soundNavigation
+  ]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -794,6 +839,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       menuBarStyle: settings.systemMenuBarStyle || userSettings.menuBarStyle || settings.menuBarStyle || 'classic',
       sidebarBgColor: userSettings.sidebarBgColor || settings.sidebarBgColor || 'default',
       sidebarTextColor: userSettings.sidebarTextColor || settings.sidebarTextColor || 'default',
+      soundEnabled: userSettings.soundEnabled !== undefined ? userSettings.soundEnabled : (settings.soundEnabled ?? true),
+      soundVolume: userSettings.soundVolume !== undefined ? userSettings.soundVolume : (settings.soundVolume ?? 0.5),
+      soundScheme: userSettings.soundScheme || settings.soundScheme || 'system',
+      soundSuccess: userSettings.soundSuccess || settings.soundSuccess || '',
+      soundError: userSettings.soundError || settings.soundError || '',
+      soundWarning: userSettings.soundWarning || settings.soundWarning || '',
+      soundDelete: userSettings.soundDelete || settings.soundDelete || '',
+      soundClick: userSettings.soundClick || settings.soundClick || '',
+      soundNavigation: userSettings.soundNavigation || settings.soundNavigation || '',
       userSettings,
       updateSettings, 
       updateSystemSettings, 
