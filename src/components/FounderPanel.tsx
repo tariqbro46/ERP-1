@@ -72,8 +72,10 @@ import {
   FileImage,
   Save,
   Wrench,
-  Sparkles
+  Sparkles,
+  Volume2
 } from 'lucide-react';
+import { soundService } from '../services/soundService';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format } from 'date-fns';
 import { erpService, deduplicateMenuConfig } from '../services/erpService';
@@ -350,8 +352,27 @@ export default function FounderPanel() {
     warningSingleAmount,
     warningJournalLedgerName,
     warningJournalDebitCreditAmount,
-    warningJournalNotBalanced
+    warningJournalNotBalanced,
+    soundEnabled,
+    soundVolume,
+    soundScheme,
+    soundSuccess,
+    soundError,
+    soundWarning,
+    soundDelete,
+    soundClick,
+    soundNavigation
   } = useSettings();
+  const [localSoundEnabled, setLocalSoundEnabled] = useState(soundEnabled ?? true);
+  const [localSoundVolume, setLocalSoundVolume] = useState(soundVolume ?? 0.5);
+  const [localSoundScheme, setLocalSoundScheme] = useState(soundScheme || 'system');
+  const [localSoundSuccess, setLocalSoundSuccess] = useState(soundSuccess || '');
+  const [localSoundError, setLocalSoundError] = useState(soundError || '');
+  const [localSoundWarning, setLocalSoundWarning] = useState(soundWarning || '');
+  const [localSoundDelete, setLocalSoundDelete] = useState(soundDelete || '');
+  const [localSoundClick, setLocalSoundClick] = useState(soundClick || '');
+  const [localSoundNavigation, setLocalSoundNavigation] = useState(soundNavigation || '');
+
   const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
   const [localDeveloperContactText, setLocalDeveloperContactText] = useState(developerContactText || 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000');
   const [localDeveloperContactAlignment, setLocalDeveloperContactAlignment] = useState(developerContactAlignment || 'center');
@@ -430,7 +451,7 @@ export default function FounderPanel() {
   const [localMaintenanceEndTime, setLocalMaintenanceEndTime] = useState(maintenanceEndTime || '');
   const [localMaintenanceReason, setLocalMaintenanceReason] = useState(maintenanceReason || '');
   const [localMaintenanceUpdates, setLocalMaintenanceUpdates] = useState(maintenanceUpdates || '');
-  const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'branding' | 'search' | 'loader' | 'skeleton' | 'warnings'>('general');
+  const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'branding' | 'search' | 'loader' | 'skeleton' | 'warnings' | 'sounds'>('general');
   const [settingsFilterQuery, setSettingsFilterQuery] = useState('');
 
   useEffect(() => {
@@ -636,6 +657,42 @@ export default function FounderPanel() {
     warningJournalDebitCreditAmount,
     warningJournalNotBalanced
   ]);
+
+  useEffect(() => {
+    setLocalSoundEnabled(soundEnabled ?? true);
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    setLocalSoundVolume(soundVolume ?? 0.5);
+  }, [soundVolume]);
+
+  useEffect(() => {
+    setLocalSoundScheme(soundScheme || 'system');
+  }, [soundScheme]);
+
+  useEffect(() => {
+    setLocalSoundSuccess(soundSuccess || '');
+  }, [soundSuccess]);
+
+  useEffect(() => {
+    setLocalSoundError(soundError || '');
+  }, [soundError]);
+
+  useEffect(() => {
+    setLocalSoundWarning(soundWarning || '');
+  }, [soundWarning]);
+
+  useEffect(() => {
+    setLocalSoundDelete(soundDelete || '');
+  }, [soundDelete]);
+
+  useEffect(() => {
+    setLocalSoundClick(soundClick || '');
+  }, [soundClick]);
+
+  useEffect(() => {
+    setLocalSoundNavigation(soundNavigation || '');
+  }, [soundNavigation]);
 
   const safeFormat = (date: any, formatStr: string) => {
     try {
@@ -3014,7 +3071,16 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       warningSingleAmount: localWarnings.warningSingleAmount,
                       warningJournalLedgerName: localWarnings.warningJournalLedgerName,
                       warningJournalDebitCreditAmount: localWarnings.warningJournalDebitCreditAmount,
-                      warningJournalNotBalanced: localWarnings.warningJournalNotBalanced
+                      warningJournalNotBalanced: localWarnings.warningJournalNotBalanced,
+                      soundEnabled: localSoundEnabled,
+                      soundVolume: localSoundVolume,
+                      soundScheme: localSoundScheme,
+                      soundSuccess: localSoundSuccess,
+                      soundError: localSoundError,
+                      soundWarning: localSoundWarning,
+                      soundDelete: localSoundDelete,
+                      soundClick: localSoundClick,
+                      soundNavigation: localSoundNavigation
                     });
                     showNotification('System configuration updated successfully', 'success');
                   } catch (err) {
@@ -3044,7 +3110,8 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                 { id: 'search', label: 'Search Engine', desc: 'Placeholders, key binds', icon: Search },
                 { id: 'loader', label: 'Loading Screen', desc: 'Icon styles, blur, custom texts', icon: RefreshCw },
                 { id: 'skeleton', label: 'Skeleton Shimmer', desc: 'Bone structures, speeds, designs', icon: Sparkles },
-                { id: 'warnings', label: 'Voucher Warnings', desc: 'Customizable warning messages', icon: AlertCircle }
+                { id: 'warnings', label: 'Voucher Warnings', desc: 'Customizable warning messages', icon: AlertCircle },
+                { id: 'sounds', label: 'Sound Schemes', desc: 'Global audio setups & links', icon: Volume2 }
               ].map((tab) => {
                 const SelectedIcon = tab.icon;
                 const isSelected = systemSubTab === tab.id;
@@ -4946,6 +5013,196 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                           </div>
                         </div>
                       )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {systemSubTab === 'sounds' && (() => {
+                const playTestSound = (eventKey: 'success' | 'error' | 'warning' | 'delete' | 'click' | 'navigation') => {
+                  // Temporarily sync settings to play with active inputs
+                  const customSoundsDict = {
+                    success: localSoundSuccess,
+                    error: localSoundError,
+                    warning: localSoundWarning,
+                    delete: localSoundDelete,
+                    click: localSoundClick,
+                    navigation: localSoundNavigation
+                  };
+                  soundService.setSettings(
+                    localSoundEnabled,
+                    localSoundVolume,
+                    localSoundScheme as any,
+                    customSoundsDict
+                  );
+                  soundService.play(eventKey);
+                };
+
+                const resetToDefaultUrls = () => {
+                  setLocalSoundSuccess('https://assets.mixkit.co/active_storage/sfx/2013/2013-84.wav');
+                  setLocalSoundError('https://assets.mixkit.co/active_storage/sfx/951/951-84.wav');
+                  setLocalSoundWarning('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
+                  setLocalSoundDelete('https://assets.mixkit.co/active_storage/sfx/2205/2205-84.wav');
+                  setLocalSoundClick('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
+                  setLocalSoundNavigation('https://assets.mixkit.co/active_storage/sfx/2324/2324-84.wav');
+                  showNotification('Sound URL links reset to recommendation list. Remember to save global configuration to persist.', 'info');
+                };
+
+                return (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex flex-col gap-1">
+                        <h3 className="text-sm font-black uppercase tracking-wider text-foreground flex items-center gap-2">
+                          <Volume2 className="w-4 h-4 text-primary animate-pulse" />
+                          Global Sound Scheme Configuration
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground uppercase">Configure default operations audio feedback, toggle synthesizer vs web links, and preview tones instantly.</p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={resetToDefaultUrls}
+                        className="px-3 py-1.5 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground text-[9px] uppercase tracking-wider font-extrabold rounded-lg transition-all border border-border flex items-center gap-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        Load Preset URLs
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Left: Global Audio Settings */}
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-5 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Settings className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Global Controls & Defaults</h4>
+                        </div>
+
+                        <div className="space-y-4">
+                          {/* Audio Master On/Off */}
+                          <div className="flex items-center justify-between p-3 bg-background border border-border/60 rounded-xl">
+                            <div>
+                              <p className="text-[11px] font-bold text-foreground uppercase tracking-wider">Default Operational Sound State</p>
+                              <p className="text-[9px] text-muted-foreground mt-0.5">Enables voice, beep, or operation click tones for all newly created accounts by default.</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setLocalSoundEnabled(!localSoundEnabled)}
+                              className={cn(
+                                "w-11 h-6 rounded-full transition-all relative flex items-center",
+                                localSoundEnabled ? "bg-primary" : "bg-muted"
+                              )}
+                            >
+                              <span className={cn(
+                                "w-4 h-4 bg-white rounded-full shadow-sm transition-all absolute",
+                                localSoundEnabled ? "right-1" : "left-1"
+                              )} />
+                            </button>
+                          </div>
+
+                          {/* Master Volume Slider */}
+                          <div className="space-y-1.5 p-3 bg-background border border-border/60 rounded-xl">
+                            <div className="flex justify-between items-center">
+                              <p className="text-[11px] font-bold text-foreground uppercase tracking-wider">Master Default Audio Volume</p>
+                              <span className="text-xs font-mono font-bold bg-primary/15 text-primary px-2 py-0.5 rounded-md">
+                                {Math.round(localSoundVolume * 100)}%
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="1"
+                              step="0.05"
+                              value={localSoundVolume}
+                              onChange={(e) => setLocalSoundVolume(parseFloat(e.target.value))}
+                              disabled={!localSoundEnabled}
+                              className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary disabled:opacity-50"
+                            />
+                            <p className="text-[8px] text-muted-foreground uppercase leading-none mt-1">Sets the baseline audio output amplitude across the platform.</p>
+                          </div>
+
+                          {/* Sound Mode Scheme Selection */}
+                          <div className="space-y-2 p-3 bg-background border border-border/60 rounded-xl">
+                            <div>
+                              <p className="text-[11px] font-bold text-foreground uppercase tracking-wider">Default Operational Audio Engine</p>
+                              <p className="text-[9px] text-muted-foreground mt-0.5">Define if sounds must use client-side Real-time Web wave oscillators ('Procedural') or web media targets ('Custom URLs').</p>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 pt-1">
+                              {[
+                                { key: 'system', label: '💻 Synthesized (Failsafe)', desc: 'Web oscillator' },
+                                { key: 'custom', label: '🔗 Custom URLs', desc: 'Wav/MP3 media' },
+                                { key: 'off', label: '🔇 Full Mute', desc: 'No sounds' }
+                              ].map((mode) => (
+                                <button
+                                  key={mode.key}
+                                  type="button"
+                                  disabled={!localSoundEnabled}
+                                  onClick={() => setLocalSoundScheme(mode.key as any)}
+                                  className={cn(
+                                    "p-2.5 rounded-lg border text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1",
+                                    localSoundScheme === mode.key 
+                                      ? "bg-primary text-primary-foreground border-primary shadow-sm" 
+                                      : "bg-background text-muted-foreground border-border hover:bg-muted"
+                                  )}
+                                >
+                                  <span>{mode.label}</span>
+                                  <span className="text-[7px] opacity-75 font-normal tracking-tight uppercase">{mode.desc}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Sound Links Setup */}
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Volume2 className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground font-sans">Sound Event Mappings</h4>
+                        </div>
+
+                        <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 no-scrollbar text-left">
+                          {[
+                            { key: 'click', label: '1. Button Tap / Element Click', val: localSoundClick, set: setLocalSoundClick, placeholder: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav', icon: '⚡' },
+                            { key: 'navigation', label: '2. Page / Menu Navigation', val: localSoundNavigation, set: setLocalSoundNavigation, placeholder: 'https://assets.mixkit.co/active_storage/sfx/2324/2324-84.wav', icon: '📂' },
+                            { key: 'success', label: '3. Process / Operation Success', val: localSoundSuccess, set: setLocalSoundSuccess, placeholder: 'https://assets.mixkit.co/active_storage/sfx/2013/2013-84.wav', icon: '✅' },
+                            { key: 'warning', label: '4. Warning Validation Triggered', val: localSoundWarning, set: setLocalSoundWarning, placeholder: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav', icon: '⚠️' },
+                            { key: 'error', label: '5. Technical / Critical Process Error', val: localSoundError, set: setLocalSoundError, placeholder: 'https://assets.mixkit.co/active_storage/sfx/951/951-84.wav', icon: '🚨' },
+                            { key: 'delete', label: '6. Ledger / Voucher Deletion', val: localSoundDelete, set: setLocalSoundDelete, placeholder: 'https://assets.mixkit.co/active_storage/sfx/2205/2205-84.wav', icon: '🗑️' },
+                          ].map((item) => (
+                            <div key={item.key} className="p-3 bg-background border border-border/60 rounded-xl space-y-1.5">
+                              <div className="flex justify-between items-center">
+                                <label className="text-[10px] text-foreground uppercase font-black tracking-tight flex items-center gap-1.5">
+                                  <span>{item.icon}</span>
+                                  {item.label}
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => playTestSound(item.key as any)}
+                                  className="px-2 py-0.5 bg-foreground/10 text-foreground hover:bg-foreground hover:text-background border border-border/80 text-[8px] uppercase tracking-wider transition-colors duration-100 font-extrabold rounded flex items-center gap-1"
+                                >
+                                  ▶ Play Tone
+                                </button>
+                              </div>
+                              <div className="flex gap-1.5">
+                                <input
+                                  type="url"
+                                  disabled={localSoundScheme !== 'custom' || !localSoundEnabled}
+                                  value={item.val}
+                                  onChange={(e) => item.set(e.target.value)}
+                                  placeholder={localSoundScheme === 'custom' ? item.placeholder : 'Using procedural synthesizer theme'}
+                                  className="flex-1 bg-background border border-border/60 rounded-lg px-2.5 py-1.5 text-[10px] focus:ring-2 focus:ring-primary outline-none disabled:opacity-50"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );

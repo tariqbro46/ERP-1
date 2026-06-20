@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import db from "./db.ts";
 import admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
 
 const firebaseConfig = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "firebase-applet-config.json"), "utf8"));
@@ -25,6 +26,12 @@ try {
     });
   }
 }
+
+// Helper to access custom Firestore database instance
+const getFirestoreInstance = () => {
+  const app = admin.apps[0] || admin.app();
+  return getFirestore(app, firebaseConfig.firestoreDatabaseId);
+};
 
 const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
 
@@ -77,7 +84,7 @@ async function startServer() {
       });
 
       // 2. Create User Profile in Firestore
-      await admin.firestore().collection('users').doc(userRecord.uid).set({
+      await getFirestoreInstance().collection('users').doc(userRecord.uid).set({
         uid: userRecord.uid,
         email,
         displayName,
@@ -102,7 +109,7 @@ async function startServer() {
       await admin.auth().deleteUser(uid);
 
       // 2. Delete from Firestore
-      await admin.firestore().collection('users').doc(uid).delete();
+      await getFirestoreInstance().collection('users').doc(uid).delete();
 
       res.json({ message: "User deleted successfully" });
     } catch (error: any) {
@@ -300,7 +307,7 @@ async function startServer() {
         )).getTime();
       }
 
-      const compSnap = await admin.firestore().collection('companies').get();
+      const compSnap = await getFirestoreInstance().collection('companies').get();
       for (const doc of compSnap.docs) {
         const data = doc.data();
         const lastReset = data.quotaLastReset || 0;
