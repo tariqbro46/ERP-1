@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { convertNumberToWords } from './printUtils';
 
 export function exportToCSV(filename: string, title: string, data: any[], headers: string[], settings: any = {}) {
   const csvRows = [];
@@ -308,8 +309,359 @@ export function exportElementToPDF(elementId: string, filename: string) {
   doc.save(`${filename}.pdf`);
 }
 
+export function exportVoucherToPDF(voucher: any, settings: any = {}) {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = doc.internal.pageSize.width; // A4 width: 210mm
+  const pageHeight = doc.internal.pageSize.height; // A4 height: 297mm
+  
+  // Font courier matches accounting style
+  doc.setFont('courier');
+  
+  let currentY = 15;
+  
+  // 1. Draw Company Logo on left independently (doesn't affect center alignment of text)
+  if (settings.companyLogo) {
+    try {
+      doc.addImage(settings.companyLogo, 'PNG', 15, 12, 18, 18, undefined, 'FAST');
+    } catch (e) {
+      console.error('Error adding logo to PDF:', e);
+    }
+  }
+  
+  // 2. Draw Center Aligned Company Header Text
+  doc.setFont('courier', 'bold');
+  doc.setFontSize(18);
+  const compName = (settings.companyName || 'SAPIENT ERP').toUpperCase();
+  // Center is (pageWidth / 2)
+  doc.text(compName, pageWidth / 2, currentY + 4, { align: 'center' });
+  currentY += 9;
+  
+  doc.setFont('courier', 'normal');
+  doc.setFontSize(9);
+  
+  if (settings.companyAddress) {
+    const addressLines = doc.splitTextToSize(settings.companyAddress, 140);
+    addressLines.forEach((line: string) => {
+      doc.text(line, pageWidth / 2, currentY, { align: 'center' });
+      currentY += 4;
+    });
+  }
+  
+  const contactParts = [];
+  if (settings.printPhone) contactParts.push(`Phone: ${settings.printPhone}`);
+  if (settings.printEmail) contactParts.push(`Email: ${settings.printEmail}`);
+  if (settings.printWebsite) contactParts.push(`Web: ${settings.printWebsite}`);
+  
+  if (contactParts.length > 0) {
+    const contactStr = contactParts.join(' | ');
+    doc.text(contactStr, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 5;
+  }
+  
+  if (settings.printHeader) {
+    doc.setFont('courier', 'italic');
+    doc.text(settings.printHeader, pageWidth / 2, currentY, { align: 'center' });
+    currentY += 5;
+  }
+  
+  // Draw header bottom solid separator
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.5);
+  doc.line(15, currentY + 1, pageWidth - 15, currentY + 1);
+  currentY += 10;
+  
+  // 3. Draw Bold Voucher Title (Centred & positioned below header)
+  doc.setFont('courier', 'bold');
+  doc.setFontSize(13);
+  const titleText = `${voucher.v_type.toUpperCase()} VOUCHER`;
+  const titleWidth = doc.getTextWidth(titleText);
+  // Draw small outline box around the bold title
+  doc.rect((pageWidth - titleWidth) / 2 - 4, currentY - 4, titleWidth + 8, 7);
+  doc.text(titleText, pageWidth / 2, currentY, { align: 'center' });
+  currentY += 12;
+  
+  // 4. Draw Metadata & Party Info
+  doc.setFontSize(9);
+  
+  const col1X = 15;
+  const col2X = pageWidth - 15;
+  
+  const partyNameStr = voucher.party_ledger_name || voucher.ledger_name || 'N/A';
+  const partyAddressStr = voucher.party_address || 'N/A';
+  
+  // Left meta details: Party & Address left-aligned
+  doc.setFont('courier', 'bold');
+  doc.setFontSize(11);
+  doc.text(`Party: ${partyNameStr}`, col1X, currentY);
+  
+  doc.setFontSize(9);
+  doc.text('Address: ', col1X, currentY + 5);
+  doc.setFont('courier', 'normal');
+  
+  const addressLines = doc.splitTextToSize(partyAddressStr, 100);
+  let addrOffset = 0;
+  addressLines.forEach((line: string) => {
+    doc.text(line, col1X + 20, currentY + 5 + addrOffset);
+    addrOffset += 4;
+  });
+  
+  // Right meta details: Date, Serial, Voucher No, Ref No - all right-aligned
+  doc.setFontSize(9);
+  let rightY = currentY;
+  
+  doc.setFont('courier', 'bold');
+  const dateStr = `Date: ${new Date(voucher.v_date).toLocaleDateString()}`;
+  doc.text(dateStr, col2X, rightY, { align: 'right' });
+  rightY += 5;
+  
+  if (voucher.serial_no || voucher.auto_serial_no) {
+    const serialStr = `Serial No: ${voucher.serial_no || voucher.auto_serial_no}`;
+    doc.text(serialStr, col2X, rightY, { align: 'right' });
+    rightY += 5;
+  }
+  
+  const vNoStr = `Voucher No: ${voucher.v_no}`;
+  doc.text(vNoStr, col2X, rightY, { align: 'right' });
+  rightY += 5;
+  
+  if (voucher.reference_no) {
+    const refStr = `Ref No: ${voucher.reference_no}`;
+    doc.text(refStr, col2X, rightY, { align: 'right' });
+    rightY += 5;
+  }
+  
+  currentY = Math.max(currentY + 5 + addrOffset, rightY) + 6;
+  
+  // Helper to format quantity
+  const formatQty = (q: number, u: string = '') => {
+    const norm = u.toLowerCase();
+    if (norm === 'pcs' || norm === 'pc' || norm === 'nos') return Math.round(q).toString();
+    return Number(q.toFixed(2)).toString();
+  };
+  
+  const formatAmt = (a: number) => a.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  
+  // 5. Draw Table based on Voucher Type
+  const type = voucher.v_type;
+  
+  if (type === 'Sales' || type === 'Purchase') {
+    // Generate Inventory Table without Location details in Item Description
+    const headers = [['Item Description', 'Qty', 'Rate', 'Amount']];
+    const body = (voucher.inventory || []).map((item: any) => [
+      item.item_name,
+      `${formatQty(item.qty, item.unit)} ${item.unit || ''}`,
+      formatAmt(item.rate),
+      formatAmt(item.qty * item.rate)
+    ]);
+    
+    // Add Total row
+    body.push([
+      'TOTAL',
+      '',
+      '',
+      `৳ ${formatAmt(voucher.total_amount)}`
+    ]);
+    
+    autoTable(doc, {
+      head: headers,
+      body: body,
+      startY: currentY,
+      theme: 'grid',
+      headStyles: { fillColor: [242, 242, 242], textColor: 0, font: 'courier', fontStyle: 'bold' },
+      bodyStyles: { font: 'courier', textColor: 0 },
+      styles: { fontSize: 8 },
+      columnStyles: {
+        0: { halign: 'left' },
+        1: { halign: 'right', cellWidth: 35 },
+        2: { halign: 'right', cellWidth: 35 },
+        3: { halign: 'right', cellWidth: 40 }
+      },
+      didParseCell: (data) => {
+        if (data.row.index === body.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+    
+  } else if (type === 'Stock Journal') {
+    // Stock Journal Layout is split. In PDF, we render Consumption and Production as two sub-tables without Location
+    const consumption = (voucher.inventory || []).filter((i: any) => i.entry_type === 'Consumption');
+    const production = (voucher.inventory || []).filter((i: any) => i.entry_type === 'Production');
+    const totalConsumption = consumption.reduce((acc: number, item: any) => acc + (item.qty * item.rate), 0);
+    const totalProduction = production.reduce((acc: number, item: any) => acc + (item.qty * item.rate), 0);
+    
+    // Title row 1
+    doc.setFont('courier', 'bold');
+    doc.text('SOURCE (CONSUMPTION)', 15, currentY);
+    currentY += 3;
+    
+    const consBody = consumption.map((item: any) => [
+      item.item_name,
+      `${formatQty(item.qty, item.unit)} ${item.unit || ''}`,
+      formatAmt(item.qty * item.rate)
+    ]);
+    consBody.push(['TOTAL CONSUMPTION', '', `৳ ${formatAmt(totalConsumption)}`]);
+    
+    autoTable(doc, {
+      head: [['Item Name', 'Qty', 'Amount']],
+      body: consBody,
+      startY: currentY,
+      theme: 'grid',
+      headStyles: { fillColor: [242, 242, 242], textColor: 0, font: 'courier', fontStyle: 'bold' },
+      bodyStyles: { font: 'courier', textColor: 0 },
+      styles: { fontSize: 8 },
+      columnStyles: {
+        0: { halign: 'left' },
+        1: { halign: 'right', cellWidth: 40 },
+        2: { halign: 'right', cellWidth: 45 }
+      },
+      didParseCell: (data) => {
+        if (data.row.index === consBody.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+    
+    // @ts-ignore
+    currentY = doc.lastAutoTable.finalY + 8;
+    
+    doc.setFont('courier', 'bold');
+    doc.text('DESTINATION (PRODUCTION)', 15, currentY);
+    currentY += 3;
+    
+    const prodBody = production.map((item: any) => [
+      item.item_name,
+      `${formatQty(item.qty, item.unit)} ${item.unit || ''}`,
+      formatAmt(item.qty * item.rate)
+    ]);
+    prodBody.push(['TOTAL PRODUCTION', '', `৳ ${formatAmt(totalProduction)}`]);
+    
+    autoTable(doc, {
+      head: [['Item Name', 'Qty', 'Amount']],
+      body: prodBody,
+      startY: currentY,
+      theme: 'grid',
+      headStyles: { fillColor: [242, 242, 242], textColor: 0, font: 'courier', fontStyle: 'bold' },
+      bodyStyles: { font: 'courier', textColor: 0 },
+      styles: { fontSize: 8 },
+      columnStyles: {
+        0: { halign: 'left' },
+        1: { halign: 'right', cellWidth: 40 },
+        2: { halign: 'right', cellWidth: 45 }
+      },
+      didParseCell: (data) => {
+        if (data.row.index === prodBody.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+    
+  } else {
+    // Payment, Receipt, Journal, Contra Vouchers
+    const headers = [['Particulars', 'Debit', 'Credit']];
+    const body = (voucher.entries || []).map((entry: any) => [
+      entry.ledger_name + (entry.narration ? `\n(${entry.narration})` : ''),
+      entry.debit > 0 ? formatAmt(entry.debit) : '',
+      entry.credit > 0 ? formatAmt(entry.credit) : ''
+    ]);
+    
+    body.push([
+      'TOTAL',
+      `৳ ${formatAmt(voucher.total_amount)}`,
+      `৳ ${formatAmt(voucher.total_amount)}`
+    ]);
+    
+    autoTable(doc, {
+      head: headers,
+      body: body,
+      startY: currentY,
+      theme: 'grid',
+      headStyles: { fillColor: [242, 242, 242], textColor: 0, font: 'courier', fontStyle: 'bold' },
+      bodyStyles: { font: 'courier', textColor: 0 },
+      styles: { fontSize: 8 },
+      columnStyles: {
+        0: { halign: 'left' },
+        1: { halign: 'right', cellWidth: 40 },
+        2: { halign: 'right', cellWidth: 40 }
+      },
+      didParseCell: (data) => {
+        if (data.row.index === body.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+  }
+  
+  // @ts-ignore
+  currentY = doc.lastAutoTable.finalY + 12;
+  
+  // 6. Draw Amount in Words (Above narration!)
+  doc.setFont('courier', 'bold');
+  doc.text('Amount in words:', 15, currentY);
+  doc.setFont('courier', 'italic');
+  const amountStr = convertNumberToWords(voucher.total_amount);
+  const wordsLines = doc.splitTextToSize(amountStr, pageWidth - 30);
+  wordsLines.forEach((line: string) => {
+    currentY += 4;
+    doc.text(line, 15, currentY);
+  });
+  
+  currentY += 8;
+  
+  // 7. Draw Narration Section (Below Amount in Words)
+  doc.setFont('courier', 'bold');
+  doc.text('Narration:', 15, currentY);
+  doc.setFont('courier', 'italic');
+  const narrationStr = voucher.narration || 'N/A';
+  const narrLines = doc.splitTextToSize(narrationStr, pageWidth - 30);
+  narrLines.forEach((line: string) => {
+    currentY += 4;
+    doc.text(line, 15, currentY);
+  });
+  
+  // 8. Signatures at bottom of page
+  const sigY = pageHeight - 35;
+  doc.setLineWidth(0.3);
+  doc.setFont('courier', 'bold');
+  doc.setFontSize(8);
+  
+  // Prepared by
+  doc.line(15, sigY, 65, sigY);
+  doc.text('PREPARED BY', 40, sigY + 4, { align: 'center' });
+  
+  // Authorized Signatory
+  doc.line(85, sigY, 135, sigY);
+  doc.text('AUTHORIZED SIGNATORY', 110, sigY + 4, { align: 'center' });
+  
+  // Receiver's signature
+  doc.line(155, sigY, 195, sigY);
+  doc.text("RECEIVER'S SIGNATURE", 175, sigY + 4, { align: 'center' });
+  
+  // 9. Footer Text at absolute bottom
+  let footY = pageHeight - 15;
+  doc.setLineWidth(0.2);
+  doc.setDrawColor(180);
+  doc.line(15, footY, pageWidth - 15, footY);
+  
+  doc.setFont('courier', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(100);
+  
+  if (settings.showPrintFooter !== false && settings.printFooter) {
+    doc.text(settings.printFooter, 15, footY + 4);
+  }
+  
+  if (settings.showDeveloperContact !== false) {
+    const devText = settings.developerContactText || 'TallyFlow ERP | +880 1742 058246';
+    doc.text(devText, pageWidth - 15, footY + 4, { align: 'right' });
+  }
+  
+  doc.save(`Voucher_${voucher.v_no}.pdf`);
+}
+
 export const exportUtils = {
   exportToCSV,
   exportToPDF,
-  exportElementToPDF
+  exportElementToPDF,
+  exportVoucherToPDF
 };

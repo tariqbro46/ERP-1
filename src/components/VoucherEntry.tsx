@@ -944,6 +944,8 @@ export function VoucherEntry() {
 
       const itemNames = isInventory ? invEntries.map(i => items.find(item => item.id === i.item_id)?.name).filter(Boolean).join(', ') : (isStockJournal ? [...consumptionEntries, ...productionEntries].map(i => items.find(item => item.id === i.item_id)?.name).filter(Boolean).join(', ') : '');
 
+      const partyAddress = ledgers.find(l => l.id === partyLedgerId || l.id === bankCashLedgerId)?.address || '';
+
       const voucher: any = {
         v_no: refNo,
         v_type: vType,
@@ -952,6 +954,7 @@ export function VoucherEntry() {
         particulars: partyLedgerName || vType,
         party_ledger_name: partyLedgerName,
         ledger_name: partyLedgerName,
+        party_address: partyAddress,
         item_names: itemNames,
         total_amount: finalTotal,
         tax_amount: totalTaxAmount,

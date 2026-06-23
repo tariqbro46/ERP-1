@@ -21,6 +21,7 @@ export function VoucherDetail() {
   const [loading, setLoading] = useState(true);
   const [voucher, setVoucher] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [partyAddress, setPartyAddress] = useState<string>('');
 
   useEffect(() => {
     async function fetchVoucher() {
@@ -40,15 +41,53 @@ export function VoucherDetail() {
     fetchVoucher();
   }, [id]);
 
+  useEffect(() => {
+    async function fetchPartyAddress() {
+      if (!voucher || !user?.companyId) return;
+      try {
+        if (voucher.party_address) {
+          setPartyAddress(voucher.party_address);
+          return;
+        }
+        const partyId = voucher.party_ledger_id;
+        if (partyId) {
+          const ledger = await erpService.getLedgerById(partyId);
+          if (ledger && ledger.address) {
+            setPartyAddress(ledger.address);
+            return;
+          }
+        }
+        // Fallback: search ledgers by name
+        const partyName = voucher.party_ledger_name || voucher.ledger_name;
+        if (partyName) {
+          const ledgers = await erpService.getLedgers(user.companyId);
+          const matched = ledgers.find((l: any) => l.name === partyName);
+          if (matched && matched.address) {
+            setPartyAddress(matched.address);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching party address:', err);
+      }
+    }
+    fetchPartyAddress();
+  }, [voucher, user?.companyId]);
+
   const handlePrint = () => {
     if (voucher) {
-      printUtils.printVoucher(voucher, settings);
+      printUtils.printVoucher({
+        ...voucher,
+        party_address: partyAddress || voucher.party_address || ''
+      }, settings);
     }
   };
 
   const handleDownload = () => {
     if (voucher) {
-      exportUtils.exportElementToPDF('voucher-print-area', `Voucher_${voucher.v_no}`);
+      exportUtils.exportVoucherToPDF({
+        ...voucher,
+        party_address: partyAddress || voucher.party_address || ''
+      }, settings);
     }
   };
 
@@ -164,9 +203,14 @@ export function VoucherDetail() {
                   <User className="w-4 h-4 text-gray-400 mt-1" />
                   <div>
                     <span className="text-[10px] uppercase text-gray-500 block mb-1">Particulars</span>
-                    <span className="font-bold text-foreground text-base">
+                    <span className="font-bold text-foreground text-base block">
                       {voucher.party_ledger_name || voucher.ledger_name || 'Generic Transaction'}
                     </span>
+                    {(partyAddress || voucher.party_address) && (
+                      <span className="text-xs text-muted-foreground block mt-1">
+                        Address: {partyAddress || voucher.party_address}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

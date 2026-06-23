@@ -18,7 +18,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   // Use Network-First strategy for index.html and other sensitive files
   if (event.request.mode === 'navigate' || 
-      (event.request.method === 'GET' && event.request.headers.get('accept').includes('text/html'))) {
+      (event.request.method === 'GET' && event.request.headers.get('accept')?.includes('text/html'))) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {

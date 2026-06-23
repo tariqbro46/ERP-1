@@ -15,3 +15,10 @@
 - Quantity values for items with units like "Pcs", "Pc", or "Nos" MUST NOT show any decimal places.
 - All other numeric values (Rate, Amount, Totals, or non-Pcs quantities) MUST NOT show more than 2 decimal places.
 - Use the `formatQuantity` utility for quantities and `formatNumber`/`formatCurrency` for financial values to ensure consistency.
+
+## Caching & Quota Optimization
+- Read requests are cached for up to 30 minutes to prevent Firestore read quota consumption and extend service stability.
+- All search results must be securely cached to prevent unnecessary database queries.
+- Fallback mechanics should be maintained when the database quota is reached or offline, ensuring read/write operations fail gracefully (with proper UI notification) rather than crashing the system.
+- Severely limit the number of documents retrieved during non-critical operations to maintain database performance and stay within free tier limits.
+

@@ -274,60 +274,6 @@ async function startServer() {
     });
   }
 
-  // --- BACKGROUND DAILY QUOTA RESET ROUTINE (1:30 PM BST / Asia/Dhaka) ---
-  setInterval(async () => {
-    try {
-      const tz = 'Asia/Dhaka';
-      const now = new Date();
-      
-      const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: tz,
-        year: 'numeric', month: 'numeric', day: 'numeric'
-      });
-      const parts = formatter.formatToParts(now);
-      const map = Object.fromEntries(parts.map(p => [p.type, p.value]));
-      
-      const today130PM = new Date(Date.UTC(
-        parseInt(map.year),
-        parseInt(map.month) - 1,
-        parseInt(map.day),
-        7, 30, 0, 0
-      ));
-      
-      let mostRecentResetTime = today130PM.getTime();
-      if (now.getTime() < today130PM.getTime()) {
-        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        const yParts = formatter.formatToParts(yesterday);
-        const yMap = Object.fromEntries(yParts.map(p => [p.type, p.value]));
-        mostRecentResetTime = new Date(Date.UTC(
-          parseInt(yMap.year),
-          parseInt(yMap.month) - 1,
-          parseInt(yMap.day),
-          7, 30, 0, 0
-        )).getTime();
-      }
-
-      const compSnap = await getFirestoreInstance().collection('companies').get();
-      for (const doc of compSnap.docs) {
-        const data = doc.data();
-        const lastReset = data.quotaLastReset || 0;
-        if (lastReset < mostRecentResetTime) {
-          await doc.ref.update({
-            quotaUsed: 0,
-            quotaReads: 0,
-            quotaWrites: 0,
-            quotaDeletes: 0,
-            quotaLastReset: mostRecentResetTime,
-            quotaLastResetDateStr: new Date(mostRecentResetTime).toISOString()
-          });
-          console.log(`[SERVER QUOTA RESET WORKER] Handled schedule reset for: ${data.name || doc.id}`);
-        }
-      }
-    } catch (err) {
-      console.error("[SERVER QUOTA RESET WORKER ERROR]", err);
-    }
-  }, 10 * 60 * 1000); // Check every 10 minutes
-
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
