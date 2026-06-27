@@ -835,160 +835,155 @@ export function LedgerStatement() {
     )}>
       {/* Fixed Header Section */}
       <div className={cn(
-        "flex-none border-b shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30",
+        "flex-none border-b shadow-sm px-4 lg:px-6 py-4 space-y-4 z-30",
         settings.reportsPageUiStyle === 'modern'
           ? "bg-white/95 backdrop-blur-md border-slate-200/60"
           : "bg-background border-border"
       )}>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-border pb-4 gap-4">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate(-1)}
-              className={settings.reportsPageUiStyle === 'modern'
-                ? "p-2.5 bg-slate-50 border border-slate-200/60 hover:bg-slate-100 rounded-xl transition-all text-slate-600 shadow-sm"
-                : "p-2 hover:bg-gray-100 rounded-full transition-colors"
-              }
-            >
-              <ArrowLeft className={settings.reportsPageUiStyle === 'modern' ? "w-5 h-5" : "w-6 h-6"} />
-            </button>
-            <EditableHeader 
-              pageId="ledger_statement"
-              defaultTitle={t('ledger.statement')}
-              defaultSubtitle={settings.companyName}
-            />
+        {/* Line 1: Search box and From-to date picker in 1 line */}
+        <div className="flex flex-col md:flex-row items-end gap-4 w-full">
+          {/* Search box */}
+          <div className="flex-1 w-full relative">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder={t('ledger.searchLedgers')}
+                value={ledgerSearch || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setLedgerSearch(val);
+                  if (!val) {
+                    setSelectedLedger('');
+                  }
+                  setShowLedgerList(true);
+                  setActiveIndex(-1);
+                }}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setShowLedgerList(true)}
+                className="w-full bg-gray-50 border border-border text-foreground pl-11 pr-4 py-2.5 text-sm outline-none focus:border-foreground transition-all rounded-lg"
+              />
+            </div>
+            
+            {showLedgerList && ledgerSearch && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-border shadow-xl max-h-60 overflow-y-auto rounded-lg">
+                {filteredLedgers.length > 0 ? (
+                  filteredLedgers.map((l, idx) => (
+                    <button
+                      key={l.id}
+                      onClick={() => handleLedgerSelect(l)}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                      className={cn(
+                        "w-full text-left px-4 py-3 text-sm text-foreground hover:bg-gray-50 border-b border-border/50 last:border-none transition-colors",
+                        activeIndex === idx && "bg-blue-50 text-blue-700"
+                      )}
+                    >
+                      {l.name}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-sm text-gray-500">No matching ledgers</div>
+                )}
+              </div>
+            )}
+            {showLedgerList && (
+              <div 
+                className="fixed inset-0 z-40" 
+                onClick={() => setShowLedgerList(false)}
+              />
+            )}
           </div>
+
+          {/* From-to date picker */}
+          <div className="flex items-center gap-2 w-full md:w-auto md:shrink-0">
+            <div className="w-full sm:w-40">
+              <DateInput
+                label={t('common.from')}
+                value={startDate}
+                onChange={setStartDate}
+                className="w-full"
+              />
+            </div>
+            <div className="w-full sm:w-40">
+              <DateInput
+                label={t('common.to')}
+                value={endDate}
+                onChange={setEndDate}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Line 2: Other buttons aligned right */}
+        <div className="flex flex-wrap gap-2 justify-end items-center w-full">
+          {/* Adjust Button */}
           <button 
             onClick={() => setShowAdjustmentModal(true)}
             disabled={!selectedLedger}
-            className="px-3 py-1.5 bg-emerald-600/10 border border-emerald-600/20 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-[9px] font-bold uppercase tracking-widest"
+            className="px-3 py-2 bg-emerald-600/10 border border-emerald-600/20 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase tracking-widest"
             title="Quick Adjustment"
           >
-            <Calculator className="w-3 h-3" /> Adjust
+            <Calculator className="w-3.5 h-3.5" /> Adjust
           </button>
-        </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-          <div className="flex-1 w-full sm:max-w-3xl space-y-4">
-            <div className="relative">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder={t('ledger.searchLedgers')}
-                  value={ledgerSearch || ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setLedgerSearch(val);
-                    if (!val) {
-                      setSelectedLedger('');
-                    }
-                    setShowLedgerList(true);
-                    setActiveIndex(-1);
-                  }}
-                  onKeyDown={handleKeyDown}
-                  onFocus={() => setShowLedgerList(true)}
-                  className="w-full bg-gray-50 border border-border text-foreground pl-11 pr-4 py-3 text-sm outline-none focus:border-foreground transition-all rounded-lg"
-                />
-              </div>
-              
-              {showLedgerList && ledgerSearch && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-border shadow-xl max-h-60 overflow-y-auto rounded-lg">
-                  {filteredLedgers.length > 0 ? (
-                    filteredLedgers.map((l, idx) => (
-                      <button
-                        key={l.id}
-                        onClick={() => handleLedgerSelect(l)}
-                        onMouseEnter={() => setActiveIndex(idx)}
-                        className={cn(
-                          "w-full text-left px-4 py-3 text-sm text-foreground hover:bg-gray-50 border-b border-border/50 last:border-none transition-colors",
-                          activeIndex === idx && "bg-blue-50 text-blue-700"
-                        )}
-                      >
-                        {l.name}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-4 py-3 text-sm text-gray-500">No matching ledgers</div>
-                  )}
-                </div>
-              )}
-              {showLedgerList && (
-                <div 
-                  className="fixed inset-0 z-40" 
-                  onClick={() => setShowLedgerList(false)}
-                />
-              )}
-            </div>
+          {/* Configure Button */}
+          <button 
+            onClick={() => setIsConfigOpen(true)}
+            className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
+            title="Configure Report"
+          >
+            <SettingsIcon className="w-3 h-3" /> F12: CONFIGURE
+          </button>
 
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <DateInput
-                  label={t('common.from')}
-                  value={startDate}
-                  onChange={setStartDate}
-                  className="w-full"
-                />
-              </div>
-              <div className="flex-1">
-                <DateInput
-                  label={t('common.to')}
-                  value={endDate}
-                  onChange={setEndDate}
-                  className="w-full"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
-            <div className="flex flex-wrap gap-2 justify-end">
-              <button 
-                onClick={() => setIsConfigOpen(true)}
-                className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
-                title="Configure Report"
-              >
-                <SettingsIcon className="w-3 h-3" /> F12: CONFIGURE
-              </button>
-              <button 
-                onClick={fetchEntries}
-                disabled={loading || !selectedLedger}
-                className="p-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center disabled:opacity-50"
-                title="Refresh Data"
-              >
-                <Search className={cn("w-4 h-4", loading && "animate-spin")} />
-              </button>
-              <button 
-                onClick={handlePrint}
-                disabled={!selectedLedger}
-                className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-              >
-                <Printer className="w-4 h-4" />
-                {t('common.print')}
-              </button>
-              <button 
-                onClick={handleDownload}
-                disabled={!selectedLedger || entries.length === 0}
-                className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-                title={t('common.downloadPdf')}
-              >
-                <Download className="w-3 h-3" /> CSV
-              </button>
-              <button 
-                onClick={handleDownloadPDF}
-                disabled={!selectedLedger || entries.length === 0}
-                className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-                title={t('common.downloadPdf')}
-              >
-                <Download className="w-3 h-3" /> PDF
-              </button>
-            </div>
-            <button 
-              onClick={handleFullPageView}
-              disabled={!selectedLedger}
-              className="w-full sm:w-auto px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <FileText className="w-3 h-3" /> Full Page View
-            </button>
-          </div>
+          {/* Refresh/Search Button */}
+          <button 
+            onClick={fetchEntries}
+            disabled={loading || !selectedLedger}
+            className="p-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center disabled:opacity-50"
+            title="Refresh Data"
+          >
+            <Search className={cn("w-4 h-4", loading && "animate-spin")} />
+          </button>
+
+          {/* Print Button */}
+          <button 
+            onClick={handlePrint}
+            disabled={!selectedLedger}
+            className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+          >
+            <Printer className="w-4 h-4" />
+            {t('common.print')}
+          </button>
+
+          {/* CSV/Excel Button */}
+          <button 
+            onClick={handleDownload}
+            disabled={!selectedLedger || entries.length === 0}
+            className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+            title={t('common.downloadPdf')}
+          >
+            <Download className="w-3 h-3" /> CSV
+          </button>
+
+          {/* PDF Button */}
+          <button 
+            onClick={handleDownloadPDF}
+            disabled={!selectedLedger || entries.length === 0}
+            className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+            title={t('common.downloadPdf')}
+          >
+            <Download className="w-3 h-3" /> PDF
+          </button>
+
+          {/* Full Page View Button */}
+          <button 
+            onClick={handleFullPageView}
+            disabled={!selectedLedger}
+            className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <FileText className="w-3.5 h-3.5" /> Full Page View
+          </button>
         </div>
       </div>
 
