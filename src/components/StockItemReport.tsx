@@ -743,7 +743,7 @@ export function StockItemReport() {
               
               <div id="stock-item-report-table" className="flex-1 overflow-x-auto print:p-8 overflow-y-auto no-scrollbar">
                 {viewMode === 'summary' ? (
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full min-h-full text-left border-collapse">
                     <thead>
                       <tr className="bg-gray-100 border-b border-gray-200 text-[10px] uppercase font-bold tracking-widest text-gray-500 sticky top-0 z-10 h-10">
                         <th rowSpan={2} className="px-6 py-0 border-r border-gray-100 bg-gray-100 align-middle">
@@ -818,6 +818,10 @@ export function StockItemReport() {
                           </td>
                         </tr>
                       ))}
+                      {/* Spacer row to push footer to the absolute bottom of the container */}
+                      <tr className="h-full border-none pointer-events-none">
+                        <td colSpan={6} className="p-0 border-none bg-transparent"></td>
+                      </tr>
                     </tbody>
                     <tfoot className="bg-gray-50 font-bold border-t border-gray-200 sticky bottom-0">
                       <tr>
