@@ -247,6 +247,75 @@ export const erpService: any = {
   _ledgerMovementBeforeDateCache: {} as Record<string, { data: number, timestamp: number }>,
   _itemStatsCache: {} as Record<string, { data: any, timestamp: number }>,
 
+  _updateCachedCollection(colName: string, companyId: string, item: any, op: 'add' | 'update' | 'delete') {
+    if (!companyId) return;
+    try {
+      const cacheKey = `${colName}_${companyId}`;
+      let data: any[] = [];
+      const cachedStr = localStorage.getItem(`col_cache_${cacheKey}`);
+      if (cachedStr) {
+        const parsed = JSON.parse(cachedStr);
+        if (parsed && Array.isArray(parsed.data)) {
+          data = parsed.data;
+        }
+      }
+      
+      if (op === 'add') {
+        if (!data.some(existing => existing.id === item.id)) {
+          data.push(item);
+        }
+      } else if (op === 'update') {
+        data = data.map(existing => existing.id === item.id ? { ...existing, ...item } : existing);
+      } else if (op === 'delete') {
+        data = data.filter(existing => existing.id !== item.id);
+      }
+
+      const timestamp = Date.now();
+      localStorage.setItem(`col_cache_${cacheKey}`, JSON.stringify({ data, timestamp }));
+
+      // Update in-memory caches as well
+      if (colName === 'ledgers') this._ledgersCache[companyId] = { data, timestamp };
+      else if (colName === 'items') this._itemsCache[companyId] = { data, timestamp };
+      else if (colName === 'godowns') this._godownsCache[companyId] = { data, timestamp };
+      else if (colName === 'employees') this._employeesCache[companyId] = { data, timestamp };
+      else if (colName === 'units') this._unitsCache[companyId] = { data, timestamp };
+      else if (colName === 'ledger_groups') this._ledgerGroupsCache[companyId] = { data, timestamp };
+      else if (colName === 'voucher_types') this._voucherTypesCache[companyId] = { data, timestamp };
+      else if (colName === 'stock_groups') this._stockGroupsCache[companyId] = { data, timestamp };
+      else if (colName === 'stock_categories') this._stockCategoriesCache[companyId] = { data, timestamp };
+      else if (colName === 'employee_groups') this._employeeGroupsCache[companyId] = { data, timestamp };
+      else {
+        this._genericCollectionsCache[cacheKey] = { data, timestamp };
+      }
+    } catch (e) {
+      console.warn('Error updating cached collection:', e);
+    }
+  },
+
+  _replaceCachedSubCollection(colName: string, companyId: string, voucherId: string, newEntries: any[]) {
+    if (!companyId) return;
+    try {
+      const cacheKey = `${colName}_${companyId}`;
+      let data: any[] = [];
+      const cachedStr = localStorage.getItem(`col_cache_${cacheKey}`);
+      if (cachedStr) {
+        const parsed = JSON.parse(cachedStr);
+        if (parsed && Array.isArray(parsed.data)) {
+          data = parsed.data;
+        }
+      }
+      
+      data = data.filter((item: any) => item.voucher_id !== voucherId);
+      data.push(...newEntries);
+      
+      const timestamp = Date.now();
+      localStorage.setItem(`col_cache_${cacheKey}`, JSON.stringify({ data, timestamp }));
+      this._genericCollectionsCache[cacheKey] = { data, timestamp };
+    } catch (e) {
+      console.warn('Error replacing cached subcollection:', e);
+    }
+  },
+
   invalidateLedgersCache(companyId: string) {
     if (!companyId) return;
     this._ledgersCache[companyId] = { data: [], timestamp: 0 };
@@ -454,34 +523,9 @@ export const erpService: any = {
     }
 
     // 7. Inject into generic collection caches to keep general reports (like Daybook, Summary, Register, StockItemReport) fully up-to-date instantly!
-    const colVouchersKey = `vouchers_${companyId}`;
-    const vCache = this._genericCollectionsCache[colVouchersKey];
-    if (vCache && Array.isArray(vCache.data)) {
-      if (!vCache.data.some((v: any) => v.id === voucher.id)) {
-        vCache.data.push(voucher);
-        try {
-          localStorage.setItem(`col_cache_${colVouchersKey}`, JSON.stringify(vCache));
-        } catch (e) {}
-      }
-    }
-
-    const colEntriesKey = `voucher_entries_${companyId}`;
-    const eCache = this._genericCollectionsCache[colEntriesKey];
-    if (eCache && Array.isArray(eCache.data)) {
-      eCache.data.push(...entries);
-      try {
-        localStorage.setItem(`col_cache_${colEntriesKey}`, JSON.stringify(eCache));
-      } catch (e) {}
-    }
-
-    const colInvKey = `inventory_entries_${companyId}`;
-    const invCache = this._genericCollectionsCache[colInvKey];
-    if (invCache && Array.isArray(invCache.data)) {
-      invCache.data.push(...inventoryEntries);
-      try {
-        localStorage.setItem(`col_cache_${colInvKey}`, JSON.stringify(invCache));
-      } catch (e) {}
-    }
+    this._updateCachedCollection('vouchers', companyId, voucher, 'add');
+    entries.forEach(e => this._updateCachedCollection('voucher_entries', companyId, e, 'add'));
+    inventoryEntries.forEach(i => this._updateCachedCollection('inventory_entries', companyId, i, 'add'));
 
     // 8. Delete cache entries for item stats so they dynamically recalculate accurate stats based on updated inventory_entries
     if (inventoryEntries && inventoryEntries.length > 0) {
@@ -647,36 +691,9 @@ export const erpService: any = {
     }
 
     // 7. Inject / Update generic Collection Caches
-    const colVouchersKey = `vouchers_${companyId}`;
-    const vCache = this._genericCollectionsCache[colVouchersKey];
-    if (vCache && Array.isArray(vCache.data)) {
-      vCache.data = vCache.data.map((v: any) => v.id === id ? newVoucher : v);
-      try {
-        localStorage.setItem(`col_cache_${colVouchersKey}`, JSON.stringify(vCache));
-      } catch (e) {}
-    }
-
-    const colEntriesKey = `voucher_entries_${companyId}`;
-    const eCache = this._genericCollectionsCache[colEntriesKey];
-    if (eCache && Array.isArray(eCache.data)) {
-      const filtered = eCache.data.filter((e: any) => e.voucher_id !== id);
-      filtered.push(...newEntries);
-      eCache.data = filtered;
-      try {
-        localStorage.setItem(`col_cache_${colEntriesKey}`, JSON.stringify(eCache));
-      } catch (e) {}
-    }
-
-    const colInvKey = `inventory_entries_${companyId}`;
-    const invCache = this._genericCollectionsCache[colInvKey];
-    if (invCache && Array.isArray(invCache.data)) {
-      const filtered = invCache.data.filter((i: any) => i.voucher_id !== id);
-      filtered.push(...newInventory);
-      invCache.data = filtered;
-      try {
-        localStorage.setItem(`col_cache_${colInvKey}`, JSON.stringify(invCache));
-      } catch (e) {}
-    }
+    this._updateCachedCollection('vouchers', companyId, newVoucher, 'update');
+    this._replaceCachedSubCollection('voucher_entries', companyId, id, newEntries);
+    this._replaceCachedSubCollection('inventory_entries', companyId, id, newInventory || []);
 
     // 8. Delete cache entries for item stats so they dynamically recalculate
     const oldItemIds = oldVoucher.inventory?.map((i: any) => i.item_id).filter(Boolean) || [];
@@ -765,32 +782,9 @@ export const erpService: any = {
     }
 
     // 7. Remove from generic Collection Caches
-    const colVouchersKey = `vouchers_${companyId}`;
-    const vCache = this._genericCollectionsCache[colVouchersKey];
-    if (vCache && Array.isArray(vCache.data)) {
-      vCache.data = vCache.data.filter((v: any) => v.id !== id);
-      try {
-        localStorage.setItem(`col_cache_${colVouchersKey}`, JSON.stringify(vCache));
-      } catch (e) {}
-    }
-
-    const colEntriesKey = `voucher_entries_${companyId}`;
-    const eCache = this._genericCollectionsCache[colEntriesKey];
-    if (eCache && Array.isArray(eCache.data)) {
-      eCache.data = eCache.data.filter((e: any) => e.voucher_id !== id);
-      try {
-        localStorage.setItem(`col_cache_${colEntriesKey}`, JSON.stringify(eCache));
-      } catch (e) {}
-    }
-
-    const colInvKey = `inventory_entries_${companyId}`;
-    const invCache = this._genericCollectionsCache[colInvKey];
-    if (invCache && Array.isArray(invCache.data)) {
-      invCache.data = invCache.data.filter((i: any) => i.voucher_id !== id);
-      try {
-        localStorage.setItem(`col_cache_${colInvKey}`, JSON.stringify(invCache));
-      } catch (e) {}
-    }
+    this._updateCachedCollection('vouchers', companyId, { id }, 'delete');
+    this._replaceCachedSubCollection('voucher_entries', companyId, id, []);
+    this._replaceCachedSubCollection('inventory_entries', companyId, id, []);
 
     // 8. Delete cache entries for item stats so they dynamically recalculate
     const itemIds = voucher.inventory?.map((i: any) => i.item_id).filter(Boolean) || [];
@@ -871,30 +865,30 @@ export const erpService: any = {
       cache = (this as any)._genericCollectionsCache[cacheKey];
     }
 
-    if (!forceRefresh && cache && (now - cache.timestamp < (this as any)._collectionTTL)) {
+    if (!forceRefresh && cache && Array.isArray(cache.data)) {
       return cache.data;
     }
 
     // Try hydrating from localStorage if memory cache is stale/empty to avoid fetching from server
-    if (!forceRefresh && !cache) {
+    if (!forceRefresh) {
       try {
         const item = localStorage.getItem(`col_cache_${cacheKey}`);
         if (item) {
           const parsed = JSON.parse(item);
-          if (parsed && typeof parsed.timestamp === 'number' && (now - parsed.timestamp < (this as any)._collectionTTL)) {
+          if (parsed && Array.isArray(parsed.data)) {
             const data = parsed.data;
-            if (colName === 'ledgers') (this as any)._ledgersCache[companyId] = { data, timestamp: parsed.timestamp };
-            else if (colName === 'items') (this as any)._itemsCache[companyId] = { data, timestamp: parsed.timestamp };
-            else if (colName === 'godowns') (this as any)._godownsCache[companyId] = { data, timestamp: parsed.timestamp };
-            else if (colName === 'employees') (this as any)._employeesCache[companyId] = { data, timestamp: parsed.timestamp };
-            else if (colName === 'units') (this as any)._unitsCache[companyId] = { data, timestamp: parsed.timestamp };
-            else if (colName === 'ledger_groups') (this as any)._ledgerGroupsCache[companyId] = { data, timestamp: parsed.timestamp };
-            else if (colName === 'voucher_types') (this as any)._voucherTypesCache[companyId] = { data, timestamp: parsed.timestamp };
-            else if (colName === 'stock_groups') (this as any)._stockGroupsCache[companyId] = { data, timestamp: parsed.timestamp };
-            else if (colName === 'stock_categories') (this as any)._stockCategoriesCache[companyId] = { data, timestamp: parsed.timestamp };
-            else if (colName === 'employee_groups') (this as any)._employeeGroupsCache[companyId] = { data, timestamp: parsed.timestamp };
+            if (colName === 'ledgers') (this as any)._ledgersCache[companyId] = { data, timestamp: parsed.timestamp || now };
+            else if (colName === 'items') (this as any)._itemsCache[companyId] = { data, timestamp: parsed.timestamp || now };
+            else if (colName === 'godowns') (this as any)._godownsCache[companyId] = { data, timestamp: parsed.timestamp || now };
+            else if (colName === 'employees') (this as any)._employeesCache[companyId] = { data, timestamp: parsed.timestamp || now };
+            else if (colName === 'units') (this as any)._unitsCache[companyId] = { data, timestamp: parsed.timestamp || now };
+            else if (colName === 'ledger_groups') (this as any)._ledgerGroupsCache[companyId] = { data, timestamp: parsed.timestamp || now };
+            else if (colName === 'voucher_types') (this as any)._voucherTypesCache[companyId] = { data, timestamp: parsed.timestamp || now };
+            else if (colName === 'stock_groups') (this as any)._stockGroupsCache[companyId] = { data, timestamp: parsed.timestamp || now };
+            else if (colName === 'stock_categories') (this as any)._stockCategoriesCache[companyId] = { data, timestamp: parsed.timestamp || now };
+            else if (colName === 'employee_groups') (this as any)._employeeGroupsCache[companyId] = { data, timestamp: parsed.timestamp || now };
             else {
-              (this as any)._genericCollectionsCache[cacheKey] = { data, timestamp: parsed.timestamp };
+              (this as any)._genericCollectionsCache[cacheKey] = { data, timestamp: parsed.timestamp || now };
             }
             return data;
           }
@@ -1422,30 +1416,28 @@ export const erpService: any = {
   async getVouchersByType(companyId: string, type: string, from: string, to: string) {
     const cacheKey = `${companyId}_${type}_${from}_${to}`;
     const now = Date.now();
-    if (this._vouchersByTypeCache[cacheKey] && (now - this._vouchersByTypeCache[cacheKey].timestamp < this._collectionTTL)) {
+    if (this._vouchersByTypeCache[cacheKey]) {
       return this._vouchersByTypeCache[cacheKey].data;
     }
     try {
-      const [snap, serialMap] = await Promise.all([
-        getDocs(query(
-          collection(db, 'vouchers'),
-          where('companyId', '==', companyId),
-          where('v_type', '==', type),
-          where('v_date', '>=', from),
-          where('v_date', '<=', to),
-          orderBy('v_date', 'asc')
-        )),
+      const [vouchers, allEntries, serialMap] = await Promise.all([
+        this.getCollection('vouchers', companyId),
+        this.getCollection('voucher_entries', companyId),
         this.getVoucherSerials(companyId)
       ]);
-      const vouchers = snap.docs.map(d => {
-        const data = d.data() as any;
-        const dynamicSerial = serialMap[d.id];
-        return { 
-          ...data,
-          id: d.id, 
-          serial_no: dynamicSerial || data.serial_no || data.auto_serial_no || 0
+
+      const filteredVouchers = vouchers.filter((v: any) => 
+        v.v_type === type && v.v_date >= from && v.v_date <= to
+      );
+
+      const result = filteredVouchers.map((v: any) => {
+        const dynamicSerial = serialMap[v.id];
+        return {
+          ...v,
+          serial_no: dynamicSerial || v.serial_no || v.auto_serial_no || 0,
+          entries: allEntries.filter((e: any) => e.voucher_id === v.id)
         };
-      }).sort((a, b) => {
+      }).sort((a: any, b: any) => {
         const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
         if (dateComp !== 0) return dateComp;
         
@@ -1466,34 +1458,11 @@ export const erpService: any = {
 
         return a.id.localeCompare(b.id);
       });
-      
-      this.trackQuota(companyId, vouchers.length || 1, 0);
-
-      if (vouchers.length === 0) return [];
-
-      // Fetch entries for these vouchers
-      const voucherIds = vouchers.map(v => v.id);
-      const allEntries: any[] = [];
-      for (let i = 0; i < voucherIds.length; i += 30) {
-        const chunk = voucherIds.slice(i, i + 30);
-        const eSnap = await getDocs(query(
-          collection(db, 'voucher_entries'), 
-          where('voucher_id', 'in', chunk),
-          where('companyId', '==', companyId)
-        ));
-        this.trackQuota(companyId, eSnap.size || 1, 0);
-        allEntries.push(...eSnap.docs.map(d => ({ ...d.data(), id: d.id })));
-      }
-
-      const result = vouchers.map(v => ({
-        ...v,
-        entries: allEntries.filter(e => e.voucher_id === v.id)
-      }));
 
       this._vouchersByTypeCache[cacheKey] = { data: result, timestamp: now };
       return result;
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'vouchers');
+      console.error('Error in getVouchersByType:', error);
       return [];
     }
   },
@@ -1501,121 +1470,71 @@ export const erpService: any = {
   async getVouchersByGroup(companyId: string, groupId: string, from: string, to: string) {
     const cacheKey = `${companyId}_${groupId}_${from}_${to}`;
     const now = Date.now();
-    if (this._vouchersByGroupCache[cacheKey] && (now - this._vouchersByGroupCache[cacheKey].timestamp < this._collectionTTL)) {
+    if (this._vouchersByGroupCache[cacheKey]) {
       return this._vouchersByGroupCache[cacheKey].data;
     }
     try {
-      // Get all groups to build hierarchy
-      const allGroups = await this.getCollection('ledger_groups', companyId);
+      const [allGroups, ledgers, vouchers, allEntries, serialMap] = await Promise.all([
+        this.getCollection('ledger_groups', companyId),
+        this.getCollection('ledgers', companyId),
+        this.getCollection('vouchers', companyId),
+        this.getCollection('voucher_entries', companyId),
+        this.getVoucherSerials(companyId)
+      ]);
       
       const getChildGroupIds = (parentId: string): string[] => {
         let ids = [parentId];
-        const children = allGroups.filter(g => g.parent_id === parentId);
-        children.forEach(child => {
+        const children = allGroups.filter((g: any) => g.parent_id === parentId);
+        children.forEach((child: any) => {
           ids = [...ids, ...getChildGroupIds(child.id)];
         });
         return ids;
       };
 
       const groupIds = getChildGroupIds(groupId);
-      
-      // Get all ledgers in these groups
-      const ledgers = await this.getCollection('ledgers', companyId);
-      const groupLedgerIds = ledgers.filter(l => groupIds.includes(l.group_id)).map(l => l.id);
+      const groupLedgerIds = ledgers.filter((l: any) => groupIds.includes(l.group_id)).map((l: any) => l.id);
       
       if (groupLedgerIds.length === 0) return [];
 
-      // Fetch all vouchers in the date range for the company
-      const [vSnap, serialMap] = await Promise.all([
-        getDocs(query(
-          collection(db, 'vouchers'),
-          where('companyId', '==', companyId),
-          where('v_date', '>=', from),
-          where('v_date', '<=', to)
-        )),
-        this.getVoucherSerials(companyId)
-      ]);
-      const allVouchersInRange = vSnap.docs.map(d => {
-        const data = d.data() as any;
-        const dynamicSerial = serialMap[d.id];
-        return { 
-          ...data,
-          id: d.id, 
-          serial_no: dynamicSerial || data.serial_no || data.auto_serial_no || 0
+      const filteredVouchers = vouchers.filter((v: any) => v.v_date >= from && v.v_date <= to);
+
+      const result = filteredVouchers.map((v: any) => {
+        const dynamicSerial = serialMap[v.id];
+        const voucherEntries = allEntries.filter((e: any) => e.voucher_id === v.id);
+        const hasMatchingLedger = voucherEntries.some((e: any) => groupLedgerIds.includes(e.ledger_id));
+        if (!hasMatchingLedger) return null;
+
+        return {
+          ...v,
+          serial_no: dynamicSerial || v.serial_no || v.auto_serial_no || 0,
+          entries: voucherEntries
         };
+      }).filter(Boolean).sort((a: any, b: any) => {
+        const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
+        if (dateComp !== 0) return dateComp;
+        
+        const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
+        const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
+        if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+        const vNoComp = (a.v_no || '').localeCompare(b.v_no || '');
+        if (vNoComp !== 0) return vNoComp;
+
+        const serialA = a.serial_no || a.auto_serial_no || 0;
+        const serialB = b.serial_no || b.auto_serial_no || 0;
+        if (serialA !== serialB) return serialA - serialB;
+
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        if (timeA !== timeB) return timeA - timeB;
+
+        return a.id.localeCompare(b.id);
       });
 
-      this.trackQuota(companyId, allVouchersInRange.length || 1, 0);
-
-      if (allVouchersInRange.length === 0) return [];
-
-      // Find which vouchers have entries for our group ledgers
-      const voucherIds = allVouchersInRange.map(v => v.id);
-      const relevantVoucherIds = new Set<string>();
-
-      for (let i = 0; i < voucherIds.length; i += 30) {
-        const chunk = voucherIds.slice(i, i + 30);
-        const eSnap = await getDocs(query(
-          collection(db, 'voucher_entries'), 
-          where('voucher_id', 'in', chunk),
-          where('companyId', '==', companyId)
-        ));
-        this.trackQuota(companyId, eSnap.size || 1, 0);
-        
-        eSnap.docs.forEach(d => {
-          const entry = d.data();
-          if (groupLedgerIds.includes(entry.ledger_id)) {
-            relevantVoucherIds.add(entry.voucher_id);
-          }
-        });
-      }
-
-      const resultVouchers = allVouchersInRange
-        .filter(v => relevantVoucherIds.has(v.id))
-        .sort((a, b) => {
-          const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
-          if (dateComp !== 0) return dateComp;
-          
-          const serialA = a.serial_no || a.auto_serial_no || 0;
-          const serialB = b.serial_no || b.auto_serial_no || 0;
-          if (serialA !== serialB) return serialA - serialB;
-
-          const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
-          const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
-          if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
-
-          const vNoComp = (a.v_no || '').localeCompare(b.v_no || '');
-          if (vNoComp !== 0) return vNoComp;
-          
-          const timeA = a.createdAt?.seconds || 0;
-          const timeB = b.createdAt?.seconds || 0;
-          if (timeA !== timeB) return timeA - timeB;
-
-          return a.id.localeCompare(b.id);
-        });
-
-      if (resultVouchers.length === 0) return [];
-
-      // Fetch entries for the resulting vouchers to allow counterparty identification
-      const finalVoucherIds = resultVouchers.map(v => v.id);
-      const allEntries: any[] = [];
-      for (let i = 0; i < finalVoucherIds.length; i += 30) {
-        const chunk = finalVoucherIds.slice(i, i + 30);
-        const eSnap = await getDocs(query(
-          collection(db, 'voucher_entries'), 
-          where('voucher_id', 'in', chunk),
-          where('companyId', '==', companyId)
-        ));
-        this.trackQuota(companyId, eSnap.size || 1, 0);
-        allEntries.push(...eSnap.docs.map(d => ({ ...d.data(), id: d.id })));
-      }
-
-      return resultVouchers.map(v => ({
-        ...v,
-        entries: allEntries.filter(e => e.voucher_id === v.id)
-      }));
+      this._vouchersByGroupCache[cacheKey] = { data: result, timestamp: now };
+      return result;
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'vouchers');
+      console.error('Error in getVouchersByGroup:', error);
       return [];
     }
   },
@@ -1785,9 +1704,63 @@ export const erpService: any = {
   },
    async getVoucherById(id: string): Promise<any> {
      const now = Date.now();
-     if (this._voucherDetailCache[id] && (now - this._voucherDetailCache[id].timestamp < this._collectionTTL)) {
+     if (this._voucherDetailCache[id]) {
        return this._voucherDetailCache[id].data;
      }
+     
+     // Try loading from cached local collections first
+     const lastCompanyId = localStorage.getItem('last_company_id') || localStorage.getItem('current_company_id');
+     if (lastCompanyId) {
+       try {
+         const [vouchers, allEntries, allInventory, ledgers, items, godowns, serialMap] = await Promise.all([
+           this.getCollection('vouchers', lastCompanyId),
+           this.getCollection('voucher_entries', lastCompanyId),
+           this.getCollection('inventory_entries', lastCompanyId),
+           this.getCollection('ledgers', lastCompanyId),
+           this.getCollection('items', lastCompanyId),
+           this.getCollection('godowns', lastCompanyId),
+           this.getVoucherSerials(lastCompanyId)
+         ]);
+
+         const voucher = vouchers.find((v: any) => v.id === id);
+         if (voucher) {
+           const entries = allEntries
+             .filter((e: any) => e.voucher_id === id)
+             .map((e: any) => {
+               const ledger = ledgers.find((l: any) => l.id === e.ledger_id);
+               return {
+                 ...e,
+                 ledger_name: ledger?.name || 'Unknown Ledger'
+               };
+             })
+             .sort((a: any, b: any) => (a.entry_index || 0) - (b.entry_index || 0));
+
+           const inventory = allInventory
+             .filter((i: any) => i.voucher_id === id)
+             .map((i: any) => {
+               const item = items.find((itm: any) => itm.id === i.item_id);
+               const godown = godowns.find((g: any) => g.id === i.godown_id);
+               return {
+                 ...i,
+                 item_name: item?.name || 'Unknown Item',
+                 godown_name: godown?.name || 'N/A'
+               };
+             });
+
+           const result = {
+             ...voucher,
+             entries,
+             inventory,
+             serial_no: serialMap[id] || voucher.serial_no || voucher.auto_serial_no || 0
+           };
+           this._voucherDetailCache[id] = { data: result, timestamp: now };
+           return result;
+         }
+       } catch (cacheErr) {
+         console.warn('Error reading from local cache inside getVoucherById:', cacheErr);
+       }
+     }
+
      try {
        const vSnap = await getDoc(doc(db, 'vouchers', id));
        if (!vSnap.exists()) return null;
@@ -2464,7 +2437,6 @@ export const erpService: any = {
   },
 
   async createLedger(companyId: string, ledger: any) {
-    this.invalidateLedgersCache(companyId);
     try {
       const isDuplicate = await this.checkDuplicate('ledgers', companyId, 'name', ledger.name);
       if (isDuplicate) throw new Error(`Ledger "${ledger.name}" already exists.`);
@@ -2477,6 +2449,7 @@ export const erpService: any = {
         current_balance: ledger.opening_balance || 0
       });
       await setDoc(ref, data);
+      this._updateCachedCollection('ledgers', companyId, data, 'add');
       return data;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'ledgers');
@@ -2487,11 +2460,14 @@ export const erpService: any = {
     try {
       const ref = doc(db, 'ledgers', id);
       const snap = await getDoc(ref);
+      let companyId = '';
       if (snap.exists()) {
-        const companyId = snap.data().companyId;
-        if (companyId) this.invalidateLedgersCache(companyId);
+        companyId = snap.data().companyId;
       }
       await updateDoc(ref, ledger);
+      if (companyId) {
+        this._updateCachedCollection('ledgers', companyId, { id, ...ledger }, 'update');
+      }
       return { id, ...ledger };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `ledgers/${id}`);
@@ -2499,12 +2475,12 @@ export const erpService: any = {
   },
 
   async deleteLedger(id: string, companyId: string) {
-    this.invalidateLedgersCache(companyId);
     const hasTransactions = await this.checkLedgerTransactions(id, companyId);
     if (hasTransactions) {
       throw new Error('Cannot delete ledger with transactions. Please delete all vouchers associated with this ledger first.');
     }
     await deleteDoc(doc(db, 'ledgers', id));
+    this._updateCachedCollection('ledgers', companyId, { id }, 'delete');
     this.trackQuota(companyId, 0, 0, 1);
   },
 
@@ -2578,7 +2554,6 @@ export const erpService: any = {
   },
 
   async createItem(companyId: string, item: any) {
-    this.invalidateItemsCache(companyId);
     const isDuplicate = await this.checkDuplicate('items', companyId, 'name', item.name);
     if (isDuplicate) throw new Error(`Stock Item "${item.name}" already exists.`);
 
@@ -2593,6 +2568,7 @@ export const erpService: any = {
       avg_cost: Number(item.opening_rate) || 0
     });
     await setDoc(ref, data);
+    this._updateCachedCollection('items', companyId, data, 'add');
     return data;
   },
 
@@ -2605,9 +2581,7 @@ export const erpService: any = {
     }
     
     const oldData = oldSnap.data();
-    if (oldData.companyId) {
-      this.invalidateItemsCache(oldData.companyId);
-    }
+    const companyId = oldData.companyId;
     const updates: any = { ...item };
     
     // Ensure numeric values
@@ -2617,17 +2591,20 @@ export const erpService: any = {
     await updateDoc(itemRef, {
       ...updates,
       updated_at: serverTimestamp(),
-      companyId: oldData.companyId // Ensure it stays
+      companyId: companyId // Ensure it stays
     });
+    if (companyId) {
+      this._updateCachedCollection('items', companyId, { id, ...updates }, 'update');
+    }
   },
 
   async deleteItem(id: string, companyId: string) {
-    this.invalidateItemsCache(companyId);
     const hasTransactions = await this.checkItemTransactions(id, companyId);
     if (hasTransactions) {
       throw new Error('Cannot delete item with transactions. Please delete all vouchers associated with this item first.');
     }
     await deleteDoc(doc(db, 'items', id));
+    this._updateCachedCollection('items', companyId, { id }, 'delete');
     this.trackQuota(companyId, 0, 0, 1);
   },
 
@@ -3375,30 +3352,28 @@ export const erpService: any = {
   async getVouchersByDateRange(companyId: string, startDate: string, endDate: string): Promise<any[]> {
     const cacheKey = `${companyId}_${startDate}_${endDate}`;
     const now = Date.now();
-    if (this._vouchersByDateRangeCache[cacheKey] && (now - this._vouchersByDateRangeCache[cacheKey].timestamp < this._collectionTTL)) {
+    if (this._vouchersByDateRangeCache[cacheKey]) {
       return this._vouchersByDateRangeCache[cacheKey].data;
     }
     try {
-      const [vSnap, serialMap] = await Promise.all([
-        getDocs(query(
-          collection(db, 'vouchers'),
-          where('companyId', '==', companyId),
-          where('v_date', '>=', startDate),
-          where('v_date', '<=', endDate),
-          orderBy('v_date', 'asc')
-        )),
+      const [vouchers, allEntries, allInventory, serialMap] = await Promise.all([
+        this.getCollection('vouchers', companyId),
+        this.getCollection('voucher_entries', companyId),
+        this.getCollection('inventory_entries', companyId),
         this.getVoucherSerials(companyId)
       ]);
 
-      const vouchers = vSnap.docs.map(doc => {
-        const data = doc.data() as any;
-        const dynamicSerial = serialMap[doc.id];
-        return { 
-          ...data,
-          id: doc.id, 
-          serial_no: dynamicSerial || data.serial_no || data.auto_serial_no || 0
+      const filteredVouchers = vouchers.filter((v: any) => v.v_date >= startDate && v.v_date <= endDate);
+
+      const result = filteredVouchers.map((v: any) => {
+        const dynamicSerial = serialMap[v.id];
+        return {
+          ...v,
+          serial_no: dynamicSerial || v.serial_no || v.auto_serial_no || 0,
+          entries: allEntries.filter((e: any) => e.voucher_id === v.id),
+          inventory: allInventory.filter((i: any) => i.voucher_id === v.id)
         };
-      }).sort((a, b) => {
+      }).sort((a: any, b: any) => {
         const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
         if (dateComp !== 0) return dateComp;
         
@@ -3419,41 +3394,11 @@ export const erpService: any = {
 
         return a.id.localeCompare(b.id);
       });
-      
-      this.trackQuota(companyId, vouchers.length || 1, 0);
-
-      if (vouchers.length === 0) return [];
-
-      // Fetch entries and inventory for these vouchers
-      const voucherIds = vouchers.map(v => v.id);
-      const allAccEntries: any[] = [];
-      const allInvEntries: any[] = [];
-      
-      // Chunk accounting entries fetch
-      for (let i = 0; i < voucherIds.length; i += 30) {
-        const chunk = voucherIds.slice(i, i + 30);
-        
-        const [eSnap, iSnap] = await Promise.all([
-          getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId))),
-          getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId)))
-        ]);
-        
-        this.trackQuota(companyId, (eSnap.size + iSnap.size) || 1, 0);
-
-        allAccEntries.push(...eSnap.docs.map(d => ({ ...(d.data() as any), id: d.id })));
-        allInvEntries.push(...iSnap.docs.map(d => ({ ...(d.data() as any), id: d.id })));
-      }
-
-      const result = vouchers.map(v => ({
-        ...v,
-        entries: allAccEntries.filter((e: any) => e.voucher_id === v.id),
-        inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id)
-      }));
 
       this._vouchersByDateRangeCache[cacheKey] = { data: result, timestamp: now };
       return result;
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'vouchers');
+      console.error('Error in getVouchersByDateRange:', error);
       return [];
     }
   },
