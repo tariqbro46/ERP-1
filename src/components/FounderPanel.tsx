@@ -109,6 +109,7 @@ export default function FounderPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompany, setSelectedCompany] = useState<CompanyStats | null>(null);
   const [isEditingSubscription, setIsEditingSubscription] = useState(false);
+  const [editDraft, setEditDraft] = useState<Partial<CompanyStats> | null>(null);
   const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent' | 'plans' | 'orders' | 'menu' | 'features' | 'errorLogs' | 'inquiries'>('companies');
   const [inquiries, setInquiries] = useState<any[]>([]);
   const [inquiriesLoading, setInquiriesLoading] = useState(false);
@@ -6116,6 +6117,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                   onClick={() => {
                     setSelectedCompany(null);
                     setIsEditingSubscription(false);
+                    setEditDraft(null);
                   }}
                   className="p-2 hover:bg-foreground/5 rounded-lg transition-colors"
                 >
@@ -6127,15 +6129,16 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                   <div className="space-y-3">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Subscription Status</p>
-                    {isEditingSubscription ? (
+                    {isEditingSubscription && editDraft ? (
                       <div className="grid grid-cols-3 gap-2">
                         {['active', 'inactive', 'trial'].map(status => (
                           <button
                             key={status}
-                            onClick={() => updateSubscription(selectedCompany.id, { subscriptionStatus: status })}
+                            type="button"
+                            onClick={() => setEditDraft(prev => prev ? { ...prev, subscriptionStatus: status as 'active' | 'trial' | 'inactive' } : null)}
                             className={cn(
                               "py-2 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest border transition-all",
-                              selectedCompany.subscriptionStatus === status 
+                              editDraft.subscriptionStatus === status 
                                 ? status === 'active' ? "bg-emerald-500 border-emerald-600 text-white shadow-lg" :
                                   status === 'trial' ? "bg-amber-500 border-amber-600 text-white shadow-lg" :
                                   "bg-rose-500 border-rose-600 text-white shadow-lg"
@@ -6165,16 +6168,17 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                   </div>
                   <div className="space-y-3">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Plan Type</p>
-                    {isEditingSubscription ? (
+                    {isEditingSubscription && editDraft ? (
                       <div className="space-y-4">
                         <div className="grid grid-cols-3 gap-2">
                           {['free', 'monthly', 'yearly'].map(plan => (
                             <button
                               key={plan}
-                              onClick={() => updateSubscription(selectedCompany.id, { planType: plan })}
+                              type="button"
+                              onClick={() => setEditDraft(prev => prev ? { ...prev, planType: plan as 'monthly' | 'free' | 'yearly' } : null)}
                               className={cn(
                                 "py-2 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest border transition-all",
-                                selectedCompany.planType === plan 
+                                editDraft.planType === plan 
                                   ? "bg-primary border-primary text-white shadow-lg"
                                   : "bg-background border-border text-muted-foreground hover:border-foreground"
                               )}
@@ -6186,8 +6190,8 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                         <div className="space-y-2">
                           <label className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">Assigned Subscription Plan</label>
                           <select
-                            value={selectedCompany.planId || ''}
-                            onChange={(e) => updateSubscription(selectedCompany.id, { planId: e.target.value })}
+                            value={editDraft.planId || ''}
+                            onChange={(e) => setEditDraft(prev => prev ? { ...prev, planId: e.target.value } : null)}
                             className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary"
                           >
                             <option value="">No Plan Assigned</option>
@@ -6212,11 +6216,11 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                   </div>
                   <div className="space-y-3">
                     <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Expiry Date</p>
-                    {isEditingSubscription ? (
+                    {isEditingSubscription && editDraft ? (
                       <input 
                         type="date"
-                        value={selectedCompany.expiryDate ? safeFormat(selectedCompany.expiryDate, 'yyyy-MM-dd') : ''}
-                        onChange={(e) => updateSubscription(selectedCompany.id, { expiryDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                        value={editDraft.expiryDate ? safeFormat(editDraft.expiryDate, 'yyyy-MM-dd') : ''}
+                        onChange={(e) => setEditDraft(prev => prev ? { ...prev, expiryDate: e.target.value ? new Date(e.target.value).toISOString() : null } : null)}
                         className="w-full bg-background border border-border rounded-lg p-2.5 text-sm outline-none focus:border-primary"
                       />
                     ) : (
@@ -6257,7 +6261,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       Extra Features & Custom Limits
                     </h3>
                     
-                    {isEditingSubscription ? (
+                    {isEditingSubscription && editDraft ? (
                       <div className="space-y-6">
                         <div className="space-y-6">
                           <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Grant Extra Features</label>
@@ -6267,19 +6271,20 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                                 <p className="text-[8px] uppercase font-black text-muted-foreground/40">{category.label}</p>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                   {category.features.map(feature => {
-                                    const isExtra = selectedCompany.extraFeatures?.includes(feature.id);
-                                    const plan = subscriptionPlans.find(p => p.id === selectedCompany.planId);
+                                    const isExtra = editDraft.extraFeatures?.includes(feature.id);
+                                    const plan = subscriptionPlans.find(p => p.id === editDraft.planId);
                                     const inPlan = plan?.features.includes(feature.id);
                                     
                                     return (
                                       <button
                                         key={feature.id}
+                                        type="button"
                                         onClick={() => {
-                                          const currentExtra = selectedCompany.extraFeatures || [];
+                                          const currentExtra = editDraft.extraFeatures || [];
                                           const newExtra = isExtra 
                                             ? currentExtra.filter(id => id !== feature.id)
                                             : [...currentExtra, feature.id];
-                                          updateSubscription(selectedCompany.id, { extraFeatures: newExtra });
+                                          setEditDraft(prev => prev ? { ...prev, extraFeatures: newExtra } : null);
                                         }}
                                         className={cn(
                                           "flex items-center gap-2 p-2 border rounded-lg text-[9px] font-bold uppercase tracking-tight transition-all text-left group/extra relative",
@@ -6318,12 +6323,12 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                                 <label className="text-[9px] uppercase font-bold text-muted-foreground">{limitKey}</label>
                                 <input
                                   type="number"
-                                  value={selectedCompany.customLimits?.[limitKey] ?? ''}
+                                  value={editDraft.customLimits?.[limitKey] ?? ''}
                                   placeholder="Plan Default"
                                   onChange={(e) => {
                                     const val = e.target.value === '' ? undefined : Number(e.target.value);
-                                    const newLimits = { ...(selectedCompany.customLimits || {}), [limitKey]: val };
-                                    updateSubscription(selectedCompany.id, { customLimits: newLimits });
+                                    const newLimits = { ...(editDraft.customLimits || {}), [limitKey]: val };
+                                    setEditDraft(prev => prev ? { ...prev, customLimits: newLimits } : null);
                                   }}
                                   className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary"
                                 />
@@ -6339,11 +6344,11 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               <label className="text-[9px] uppercase font-bold text-muted-foreground">Firestore Quota Limit (Ops)</label>
                               <input
                                 type="number"
-                                value={selectedCompany.quotaLimit ?? 10000}
+                                value={editDraft.quotaLimit ?? 10000}
                                 placeholder="10000"
                                 onChange={(e) => {
                                   const val = e.target.value === '' ? 10000 : Number(e.target.value);
-                                  updateSubscription(selectedCompany.id, { quotaLimit: val });
+                                  setEditDraft(prev => prev ? { ...prev, quotaLimit: val } : null);
                                 }}
                                 className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary"
                               />
@@ -6353,17 +6358,17 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               <div className="flex gap-2">
                                 <input
                                   type="number"
-                                  value={selectedCompany.quotaUsed ?? 0}
+                                  value={editDraft.quotaUsed ?? 0}
                                   placeholder="0"
                                   onChange={(e) => {
                                     const val = e.target.value === '' ? 0 : Number(e.target.value);
-                                    updateSubscription(selectedCompany.id, { quotaUsed: val });
+                                    setEditDraft(prev => prev ? { ...prev, quotaUsed: val } : null);
                                   }}
                                   className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary flex-1"
                                 />
                                 <button
                                   type="button"
-                                  onClick={() => updateSubscription(selectedCompany.id, { quotaUsed: 0 })}
+                                  onClick={() => setEditDraft(prev => prev ? { ...prev, quotaUsed: 0 } : null)}
                                   className="px-3 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors"
                                 >
                                   Reset
@@ -6373,8 +6378,8 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                             <div className="space-y-1 sm:col-span-2">
                               <label className="text-[9px] uppercase font-bold text-muted-foreground">Sidebar Quota Display Rule</label>
                               <select
-                                value={selectedCompany.quotaDisplayRule || 'exceed_50'}
-                                onChange={(e) => updateSubscription(selectedCompany.id, { quotaDisplayRule: e.target.value })}
+                                value={editDraft.quotaDisplayRule || 'exceed_50'}
+                                onChange={(e) => setEditDraft(prev => prev ? { ...prev, quotaDisplayRule: e.target.value as 'always' | 'exceed_50' } : null)}
                                 className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary font-medium"
                               >
                                 <option value="always">Always Show Quota Indicator in Sidebar</option>
@@ -6384,9 +6389,9 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                             <div className="space-y-1 sm:col-span-2">
                               <label className="text-[9px] uppercase font-bold text-muted-foreground">Maintenance Break Custom Message</label>
                               <textarea
-                                value={selectedCompany.quotaExceededMsg || ''}
+                                value={editDraft.quotaExceededMsg || ''}
                                 placeholder="Enter custom message or custom support guidelines here. If left empty, default templates will be used."
-                                onChange={(e) => updateSubscription(selectedCompany.id, { quotaExceededMsg: e.target.value })}
+                                onChange={(e) => setEditDraft(prev => prev ? { ...prev, quotaExceededMsg: e.target.value } : null)}
                                 className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary h-20 resize-y font-normal"
                               />
                             </div>
@@ -6457,13 +6462,34 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                     onClick={() => {
                       setSelectedCompany(null);
                       setIsEditingSubscription(false);
+                      setEditDraft(null);
                     }}
                     className="flex-1 py-3 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-muted transition-all"
                   >
                     Close
                   </button>
                   <button 
-                    onClick={() => setIsEditingSubscription(!isEditingSubscription)}
+                    onClick={() => {
+                      if (isEditingSubscription) {
+                        if (editDraft) {
+                          updateSubscription(selectedCompany.id, editDraft);
+                        }
+                      } else {
+                        setEditDraft({
+                          subscriptionStatus: selectedCompany.subscriptionStatus,
+                          planType: selectedCompany.planType,
+                          planId: selectedCompany.planId || '',
+                          expiryDate: selectedCompany.expiryDate || null,
+                          extraFeatures: selectedCompany.extraFeatures || [],
+                          customLimits: selectedCompany.customLimits || {},
+                          quotaLimit: selectedCompany.quotaLimit ?? 10000,
+                          quotaUsed: selectedCompany.quotaUsed ?? 0,
+                          quotaDisplayRule: selectedCompany.quotaDisplayRule || 'exceed_50',
+                          quotaExceededMsg: selectedCompany.quotaExceededMsg || '',
+                        });
+                        setIsEditingSubscription(true);
+                      }
+                    }}
                     className={cn(
                       "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg",
                       isEditingSubscription 
