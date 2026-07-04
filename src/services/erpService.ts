@@ -1420,17 +1420,44 @@ export const erpService: any = {
       return this._vouchersByTypeCache[cacheKey].data;
     }
     try {
-      const [vouchers, allEntries, serialMap] = await Promise.all([
-        this.getCollection('vouchers', companyId),
-        this.getCollection('voucher_entries', companyId),
-        this.getVoucherSerials(companyId)
-      ]);
+      let vouchers: any[] = [];
+      let allEntries: any[] = [];
+      let serialMap: any = {};
 
-      const filteredVouchers = vouchers.filter((v: any) => 
-        v.v_type === type && v.v_date >= from && v.v_date <= to
-      );
+      try {
+        const [vSnap, eSnap, sMap] = await Promise.all([
+          getDocs(query(
+            collection(db, 'vouchers'),
+            where('companyId', '==', companyId),
+            where('v_type', '==', type),
+            where('v_date', '>=', from),
+            where('v_date', '<=', to)
+          )),
+          getDocs(query(
+            collection(db, 'voucher_entries'),
+            where('companyId', '==', companyId),
+            where('date', '>=', from),
+            where('date', '<=', to)
+          )),
+          this.getVoucherSerials(companyId)
+        ]);
+        vouchers = vSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
+        allEntries = eSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
+        serialMap = sMap;
+        this.trackQuota(companyId, vSnap.size + eSnap.size, 0);
+      } catch (rangeErr) {
+        console.warn('Targeted range query in getVouchersByType failed, falling back:', rangeErr);
+        const [vCollection, eCollection, sMap] = await Promise.all([
+          this.getCollection('vouchers', companyId),
+          this.getCollection('voucher_entries', companyId),
+          this.getVoucherSerials(companyId)
+        ]);
+        vouchers = vCollection.filter((v: any) => v.v_type === type && v.v_date >= from && v.v_date <= to);
+        allEntries = eCollection;
+        serialMap = sMap;
+      }
 
-      const result = filteredVouchers.map((v: any) => {
+      const result = vouchers.map((v: any) => {
         const dynamicSerial = serialMap[v.id];
         return {
           ...v,
@@ -1474,11 +1501,9 @@ export const erpService: any = {
       return this._vouchersByGroupCache[cacheKey].data;
     }
     try {
-      const [allGroups, ledgers, vouchers, allEntries, serialMap] = await Promise.all([
+      const [allGroups, ledgers, serialMap] = await Promise.all([
         this.getCollection('ledger_groups', companyId),
         this.getCollection('ledgers', companyId),
-        this.getCollection('vouchers', companyId),
-        this.getCollection('voucher_entries', companyId),
         this.getVoucherSerials(companyId)
       ]);
       
@@ -1496,9 +1521,38 @@ export const erpService: any = {
       
       if (groupLedgerIds.length === 0) return [];
 
-      const filteredVouchers = vouchers.filter((v: any) => v.v_date >= from && v.v_date <= to);
+      let vouchers: any[] = [];
+      let allEntries: any[] = [];
 
-      const result = filteredVouchers.map((v: any) => {
+      try {
+        const [vSnap, eSnap] = await Promise.all([
+          getDocs(query(
+            collection(db, 'vouchers'),
+            where('companyId', '==', companyId),
+            where('v_date', '>=', from),
+            where('v_date', '<=', to)
+          )),
+          getDocs(query(
+            collection(db, 'voucher_entries'),
+            where('companyId', '==', companyId),
+            where('date', '>=', from),
+            where('date', '<=', to)
+          ))
+        ]);
+        vouchers = vSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
+        allEntries = eSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
+        this.trackQuota(companyId, vSnap.size + eSnap.size, 0);
+      } catch (rangeErr) {
+        console.warn('Targeted range query in getVouchersByGroup failed, falling back:', rangeErr);
+        const [vCollection, eCollection] = await Promise.all([
+          this.getCollection('vouchers', companyId),
+          this.getCollection('voucher_entries', companyId)
+        ]);
+        vouchers = vCollection.filter((v: any) => v.v_date >= from && v.v_date <= to);
+        allEntries = eCollection;
+      }
+
+      const result = vouchers.map((v: any) => {
         const dynamicSerial = serialMap[v.id];
         const voucherEntries = allEntries.filter((e: any) => e.voucher_id === v.id);
         const hasMatchingLedger = voucherEntries.some((e: any) => groupLedgerIds.includes(e.ledger_id));
@@ -3356,16 +3410,53 @@ export const erpService: any = {
       return this._vouchersByDateRangeCache[cacheKey].data;
     }
     try {
-      const [vouchers, allEntries, allInventory, serialMap] = await Promise.all([
-        this.getCollection('vouchers', companyId),
-        this.getCollection('voucher_entries', companyId),
-        this.getCollection('inventory_entries', companyId),
-        this.getVoucherSerials(companyId)
-      ]);
+      let vouchers: any[] = [];
+      let allEntries: any[] = [];
+      let allInventory: any[] = [];
+      let serialMap: any = {};
 
-      const filteredVouchers = vouchers.filter((v: any) => v.v_date >= startDate && v.v_date <= endDate);
+      try {
+        const [vSnap, eSnap, iSnap, sMap] = await Promise.all([
+          getDocs(query(
+            collection(db, 'vouchers'),
+            where('companyId', '==', companyId),
+            where('v_date', '>=', startDate),
+            where('v_date', '<=', endDate)
+          )),
+          getDocs(query(
+            collection(db, 'voucher_entries'),
+            where('companyId', '==', companyId),
+            where('date', '>=', startDate),
+            where('date', '<=', endDate)
+          )),
+          getDocs(query(
+            collection(db, 'inventory_entries'),
+            where('companyId', '==', companyId),
+            where('date', '>=', startDate),
+            where('date', '<=', endDate)
+          )),
+          this.getVoucherSerials(companyId)
+        ]);
+        vouchers = vSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
+        allEntries = eSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
+        allInventory = iSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
+        serialMap = sMap;
+        this.trackQuota(companyId, vSnap.size + eSnap.size + iSnap.size, 0);
+      } catch (rangeErr) {
+        console.warn('Targeted range query in getVouchersByDateRange failed, falling back:', rangeErr);
+        const [vCollection, eCollection, iCollection, sMap] = await Promise.all([
+          this.getCollection('vouchers', companyId),
+          this.getCollection('voucher_entries', companyId),
+          this.getCollection('inventory_entries', companyId),
+          this.getVoucherSerials(companyId)
+        ]);
+        vouchers = vCollection.filter((v: any) => v.v_date >= startDate && v.v_date <= endDate);
+        allEntries = eCollection;
+        allInventory = iCollection;
+        serialMap = sMap;
+      }
 
-      const result = filteredVouchers.map((v: any) => {
+      const result = vouchers.map((v: any) => {
         const dynamicSerial = serialMap[v.id];
         return {
           ...v,
@@ -3617,21 +3708,24 @@ export const erpService: any = {
         ledger = this._ledgersCache[companyId].data.find((l: any) => l.id === ledgerId);
       }
 
-      const [entries] = await Promise.all([
-        getDocs(query(collection(db, 'voucher_entries'), where('ledger_id', '==', ledgerId), where('companyId', '==', companyId))),
-        ledger ? Promise.resolve(ledger) : this.getLedgerById(ledgerId).then(l => { ledger = l; })
-      ]);
-      
-      this.trackQuota(companyId, (entries.size || 1) + (ledger ? 0 : 1), 0);
+      if (ledger) {
+        const bal = ledger.current_balance !== undefined ? ledger.current_balance : (ledger.opening_balance || 0);
+        this._ledgerBalanceCache[cacheKey] = { data: bal, timestamp: now };
+        return bal;
+      }
 
-      const movement = entries.docs.reduce((sum, doc) => {
-        const data = doc.data();
-        return sum + (data.debit || 0) - (data.credit || 0);
-      }, 0);
-      
-      const bal = ledger ? ((ledger.opening_balance || 0) + movement) : movement;
-      this._ledgerBalanceCache[cacheKey] = { data: bal, timestamp: now };
-      return bal;
+      // Fetch the single ledger document instead of querying voucher_entries
+      const lSnap = await getDoc(doc(db, 'ledgers', ledgerId));
+      this.trackQuota(companyId, 1, 0);
+
+      if (lSnap.exists()) {
+        const lData = lSnap.data();
+        const bal = lData.current_balance !== undefined ? lData.current_balance : (lData.opening_balance || 0);
+        this._ledgerBalanceCache[cacheKey] = { data: bal, timestamp: now };
+        return bal;
+      }
+
+      return 0;
     } catch (err) {
       console.error('Error getting ledger balance:', err);
       return 0;
@@ -4941,24 +5035,153 @@ export const erpService: any = {
     }
   },
 
-  trackQuota: async function(
+  _quotaBuffer: {} as Record<string, { reads: number, writes: number, deletes: number }>,
+  _quotaTimer: null as any,
+
+  trackQuota: function(
     companyId: string | undefined,
     reads: number,
     writes: number,
     deletes: number = 0
   ) {
     if (!companyId || companyId === "placeholder" || companyId === "test") return;
-    try {
-      const companyRef = doc(db, "companies", companyId);
-      await updateDoc(companyRef, {
-        quotaReads: increment(reads),
-        quotaWrites: increment(writes),
-        quotaDeletes: increment(deletes),
-        quotaUsed: increment(reads + writes * 5 + deletes * 2), // standard weighted calculation
-      });
-    } catch (e) {
-      console.warn("Quota tracking error:", e);
+    
+    // Initialize buffer if not exists
+    if (!this._quotaBuffer[companyId]) {
+      this._quotaBuffer[companyId] = { reads: 0, writes: 0, deletes: 0 };
     }
+    
+    // Accumulate in memory
+    this._quotaBuffer[companyId].reads += reads;
+    this._quotaBuffer[companyId].writes += writes;
+    this._quotaBuffer[companyId].deletes += deletes;
+
+    // Save backup to localStorage to prevent data loss on tab close/reload
+    try {
+      const storedKey = `unsaved_quota_${companyId}`;
+      const existing = localStorage.getItem(storedKey);
+      let localData = { reads: 0, writes: 0, deletes: 0 };
+      if (existing) {
+        try {
+          localData = JSON.parse(existing);
+        } catch (e) {}
+      }
+      localData.reads += reads;
+      localData.writes += writes;
+      localData.deletes += deletes;
+      localStorage.setItem(storedKey, JSON.stringify(localData));
+    } catch (e) {
+      console.warn('Error saving unsaved quota backup:', e);
+    }
+
+    // Schedule flush in 10 seconds if not already scheduled
+    if (!this._quotaTimer) {
+      this._quotaTimer = setTimeout(() => {
+        this.flushQuotaBuffer();
+      }, 10000);
+    }
+  },
+
+  async flushQuotaBuffer() {
+    this._quotaTimer = null;
+    const companies = Object.keys(this._quotaBuffer);
+    if (companies.length === 0) return;
+
+    for (const companyId of companies) {
+      const buffer = this._quotaBuffer[companyId];
+      if (buffer.reads === 0 && buffer.writes === 0 && buffer.deletes === 0) continue;
+
+      const readsToSave = buffer.reads;
+      const writesToSave = buffer.writes;
+      const deletesToSave = buffer.deletes;
+      
+      // Reset in-memory buffer before making async call to avoid race conditions
+      buffer.reads = 0;
+      buffer.writes = 0;
+      buffer.deletes = 0;
+
+      try {
+        const companyRef = doc(db, "companies", companyId);
+        await updateDoc(companyRef, {
+          quotaReads: increment(readsToSave),
+          quotaWrites: increment(writesToSave),
+          quotaDeletes: increment(deletesToSave),
+          quotaUsed: increment(readsToSave + writesToSave * 5 + deletesToSave * 2),
+        });
+
+        // Success! Clean up localStorage backup
+        const storedKey = `unsaved_quota_${companyId}`;
+        const existing = localStorage.getItem(storedKey);
+        if (existing) {
+          try {
+            const localData = JSON.parse(existing);
+            localData.reads = Math.max(0, localData.reads - readsToSave);
+            localData.writes = Math.max(0, localData.writes - writesToSave);
+            localData.deletes = Math.max(0, localData.deletes - deletesToSave);
+            if (localData.reads === 0 && localData.writes === 0 && localData.deletes === 0) {
+              localStorage.removeItem(storedKey);
+            } else {
+              localStorage.setItem(storedKey, JSON.stringify(localData));
+            }
+          } catch (e) {
+            localStorage.removeItem(storedKey);
+          }
+        }
+      } catch (e) {
+        console.warn(`[QUOTA] Failed to flush quota buffer for ${companyId}:`, e);
+        // Put back in buffer on failure to retry next time
+        if (!this._quotaBuffer[companyId]) {
+          this._quotaBuffer[companyId] = { reads: 0, writes: 0, deletes: 0 };
+        }
+        this._quotaBuffer[companyId].reads += readsToSave;
+        this._quotaBuffer[companyId].writes += writesToSave;
+        this._quotaBuffer[companyId].deletes += deletesToSave;
+      }
+    }
+  },
+
+  initQuotaTracking() {
+    if (typeof window === 'undefined') return;
+    
+    // Flush on page unload or visibility hide
+    const handleFlush = () => {
+      this.flushQuotaBuffer();
+    };
+    window.addEventListener('beforeunload', handleFlush);
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        handleFlush();
+      }
+    });
+
+    // Recover unsaved quota from localStorage on startup
+    setTimeout(async () => {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('unsaved_quota_')) {
+            const companyId = key.replace('unsaved_quota_', '');
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              try {
+                const data = JSON.parse(raw);
+                if (data && (data.reads > 0 || data.writes > 0 || data.deletes > 0)) {
+                  if (!this._quotaBuffer[companyId]) {
+                    this._quotaBuffer[companyId] = { reads: 0, writes: 0, deletes: 0 };
+                  }
+                  this._quotaBuffer[companyId].reads += data.reads;
+                  this._quotaBuffer[companyId].writes += data.writes;
+                  this._quotaBuffer[companyId].deletes += data.deletes;
+                }
+              } catch (e) {}
+            }
+          }
+        }
+        this.flushQuotaBuffer();
+      } catch (err) {
+        console.warn('Error in initQuotaTracking recovery:', err);
+      }
+    }, 1000);
   },
 
   // --- DATA EXPORT ---
@@ -4969,3 +5192,10 @@ export const erpService: any = {
     XLSX.writeFile(wb, `${fileName}.xlsx`);
   }
 };
+
+// Initialize quota tracking automatically on service load
+try {
+  erpService.initQuotaTracking();
+} catch (e) {
+  console.warn('Failed to auto-initialize erpService quota tracking:', e);
+}
