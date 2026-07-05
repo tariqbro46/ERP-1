@@ -607,9 +607,12 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
   // Quota Exceeded Block
   const isQuotaExceeded = company && company.quotaLimit && company.quotaUsed !== undefined && company.quotaUsed >= company.quotaLimit;
-  if (isQuotaExceeded && !isSuperAdmin) {
-    return <QuotaExceededPage company={company} />;
-  }
+
+  const [bannerLang, setBannerLang] = React.useState<'en' | 'bn'>(language === 'bn' ? 'bn' : 'en');
+
+  React.useEffect(() => {
+    setBannerLang(language === 'bn' ? 'bn' : 'en');
+  }, [language]);
 
   const isInventoryEnabled = features.find(f => f.id === 'inv')?.enabled ?? true;
   const [expandedGroups, setExpandedGroups] = React.useState<Set<string>>(new Set());
@@ -1673,6 +1676,69 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         {/* Conditional Top Menu rendering */}
         {menuBarStyle === 'ribbon' && renderRibbonMenu()}
         {menuBarStyle === 'macos' && renderMacOSMenu()}
+
+        {/* Database Quota Exceeded Sticky Banner */}
+        {isQuotaExceeded && (
+          <div id="quota-warning-banner" className="bg-rose-600 dark:bg-rose-950/95 border-b border-rose-500/30 px-4 lg:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-3 text-white dark:text-rose-200 text-xs font-semibold animate-fadeIn z-[400] relative">
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <LucideIcons.ShieldAlert className="w-5 h-5 text-white dark:text-rose-400 animate-pulse shrink-0" />
+              <div className="flex-1">
+                {bannerLang === 'bn' ? (
+                  <span>
+                    এই ডেটাবেসটি বর্তমানে কোটা সীমা অতিক্রম করেছে। এই সীমাবদ্ধতাগুলো দূর করতে, এই ডেটাবেসটিকে উন্নত কোটা বিলিং-এ স্থানান্তর করুন।{' '}
+                    <button 
+                      onClick={() => setIsQuotaDashboardOpen(true)}
+                      className="underline text-rose-100 dark:text-rose-300 hover:text-rose-200 dark:hover:text-rose-100 font-bold ml-1 transition-colors cursor-pointer"
+                    >
+                      আরও জানুন
+                    </button>
+                  </span>
+                ) : (
+                  <span>
+                    This database is currently over quota. To overcome these limitations, migrate this database to enhanced quota billing.{' '}
+                    <button 
+                      onClick={() => setIsQuotaDashboardOpen(true)}
+                      className="underline text-rose-100 dark:text-rose-300 hover:text-rose-200 dark:hover:text-rose-100 font-bold ml-1 transition-colors cursor-pointer"
+                    >
+                      Learn more
+                    </button>
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 shrink-0">
+              {/* Language Switch Toggle Options */}
+              <div className="flex items-center bg-rose-700/55 dark:bg-rose-900/40 rounded-md p-0.5 border border-rose-500/25">
+                <button 
+                  onClick={() => setBannerLang('en')}
+                  className={cn(
+                    "px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider transition-all cursor-pointer",
+                    bannerLang === 'en' ? "bg-rose-800 dark:bg-rose-600 text-white shadow-sm" : "text-rose-200 dark:text-rose-300 hover:text-white dark:hover:text-rose-100"
+                  )}
+                >
+                  English
+                </button>
+                <button 
+                  onClick={() => setBannerLang('bn')}
+                  className={cn(
+                    "px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer",
+                    bannerLang === 'bn' ? "bg-rose-800 dark:bg-rose-600 text-white shadow-sm" : "text-rose-200 dark:text-rose-300 hover:text-white dark:hover:text-rose-100"
+                  )}
+                >
+                  বাংলা
+                </button>
+              </div>
+
+              <button
+                onClick={() => setIsQuotaDashboardOpen(true)}
+                className="text-[10px] uppercase font-bold tracking-wider px-3 py-1.5 rounded bg-white/20 dark:bg-rose-500/20 hover:bg-white/30 dark:hover:bg-rose-500/35 text-white dark:text-rose-100 border border-white/30 dark:border-rose-500/30 transition-all cursor-pointer"
+              >
+                {bannerLang === 'bn' ? 'বিস্তারিত দেখুন' : 'View Details'}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div ref={scrollRef} 
         data-scrolling-tables={showScrollingBar}

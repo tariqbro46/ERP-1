@@ -217,6 +217,132 @@ export function deduplicateMenuConfig(config: MenuConfig | null): MenuConfig | n
 }
 
 export const erpService: any = {
+  // Demo Mode Client-side Database Helpers
+  isDemoMode() {
+    return localStorage.getItem('erp_is_demo_mode') === 'true';
+  },
+
+  _getDemoData(colName: string): any[] {
+    const dbStr = localStorage.getItem('erp_demo_db');
+    let dataObj: any = {};
+    if (dbStr) {
+      try {
+        dataObj = JSON.parse(dbStr);
+      } catch (e) {
+        dataObj = {};
+      }
+    }
+    return dataObj[colName] || [];
+  },
+
+  _saveDemoData(colName: string, data: any[]) {
+    const dbStr = localStorage.getItem('erp_demo_db');
+    let dataObj: any = {};
+    if (dbStr) {
+      try {
+        dataObj = JSON.parse(dbStr);
+      } catch (e) {}
+    }
+    dataObj[colName] = data;
+    localStorage.setItem('erp_demo_db', JSON.stringify(dataObj));
+  },
+
+  _demoCreate(colName: string, docData: any) {
+    const list = this._getDemoData(colName);
+    const newDoc = {
+      ...docData,
+      id: 'demo_' + colName + '_' + Date.now() + Math.random().toString(36).substring(2, 7),
+      createdAt: new Date().toISOString()
+    };
+    list.push(newDoc);
+    this._saveDemoData(colName, list);
+    return newDoc;
+  },
+
+  _demoUpdate(colName: string, id: string, docData: any) {
+    const list = this._getDemoData(colName);
+    const index = list.findIndex((x: any) => x.id === id);
+    if (index !== -1) {
+      list[index] = {
+        ...list[index],
+        ...docData,
+        id
+      };
+      this._saveDemoData(colName, list);
+    }
+    return list[index];
+  },
+
+  _demoDelete(colName: string, id: string) {
+    const list = this._getDemoData(colName);
+    const filtered = list.filter((x: any) => x.id !== id);
+    this._saveDemoData(colName, filtered);
+  },
+
+  initDemoDbIfNeeded() {
+    if (!localStorage.getItem('erp_demo_db_initialized') || !localStorage.getItem('erp_demo_db')) {
+      const demoDb: any = {
+        ledger_groups: [
+          { id: 'g_bank', name: 'Bank Accounts', nature: 'Asset' },
+          { id: 'g_cash', name: 'Cash-in-Hand', nature: 'Asset' },
+          { id: 'g_assets', name: 'Current Assets', nature: 'Asset' },
+          { id: 'g_liabilities', name: 'Current Liabilities', nature: 'Liability' },
+          { id: 'g_direct_exp', name: 'Direct Expenses', nature: 'Expense' },
+          { id: 'g_direct_inc', name: 'Direct Incomes', nature: 'Income' },
+          { id: 'g_fixed_assets', name: 'Fixed Assets', nature: 'Asset' },
+          { id: 'g_indirect_exp', name: 'Indirect Expenses', nature: 'Expense' },
+          { id: 'g_indirect_inc', name: 'Indirect Incomes', nature: 'Income' },
+          { id: 'g_purchase', name: 'Purchase Accounts', nature: 'Expense' },
+          { id: 'g_sales', name: 'Sales Accounts', nature: 'Income' },
+          { id: 'g_creditors', name: 'Sundry Creditors', nature: 'Liability' },
+          { id: 'g_debtors', name: 'Sundry Debtors', nature: 'Asset' },
+          { id: 'g_capital', name: 'Capital Account', nature: 'Liability' }
+        ],
+        voucher_types: [
+          { id: 'vt_sales', name: 'Sales', base_type: 'Sales' },
+          { id: 'vt_purchase', name: 'Purchase', base_type: 'Purchase' },
+          { id: 'vt_payment', name: 'Payment', base_type: 'Payment' },
+          { id: 'vt_receipt', name: 'Receipt', base_type: 'Receipt' },
+          { id: 'vt_contra', name: 'Contra', base_type: 'Contra' },
+          { id: 'vt_journal', name: 'Journal', base_type: 'Journal' },
+          { id: 'vt_credit_note', name: 'Credit Note', base_type: 'Credit Note' },
+          { id: 'vt_debit_note', name: 'Debit Note', base_type: 'Debit Note' }
+        ],
+        units: [
+          { id: 'u_pcs', name: 'Pcs', formal_name: 'Pieces' },
+          { id: 'u_kg', name: 'Kg', formal_name: 'Kilograms' }
+        ],
+        godowns: [
+          { id: 'godown_main', name: 'Main Warehouse', companyId: 'demo_company_id' },
+          { id: 'godown_retail', name: 'Retail Store', companyId: 'demo_company_id' }
+        ],
+        ledgers: [
+          { id: 'l_cash', name: 'Cash', parent_group_id: 'g_cash', opening_balance: 150000, current_balance: 150000, companyId: 'demo_company_id' },
+          { id: 'l_bank', name: 'Prime Bank A/C', parent_group_id: 'g_bank', opening_balance: 500000, current_balance: 500000, companyId: 'demo_company_id' },
+          { id: 'l_sales', name: 'Sales Ledger', parent_group_id: 'g_sales', opening_balance: 0, current_balance: 0, companyId: 'demo_company_id' },
+          { id: 'l_purchase', name: 'Purchase Ledger', parent_group_id: 'g_purchase', opening_balance: 0, current_balance: 0, companyId: 'demo_company_id' },
+          { id: 'l_rent', name: 'Office Rent', parent_group_id: 'g_indirect_exp', opening_balance: 0, current_balance: 0, companyId: 'demo_company_id' },
+          { id: 'l_salaries', name: 'Employee Salaries', parent_group_id: 'g_indirect_exp', opening_balance: 0, current_balance: 0, companyId: 'demo_company_id' },
+          { id: 'l_customer_a', name: 'Acme Corporates', parent_group_id: 'g_debtors', opening_balance: 50000, current_balance: 50000, companyId: 'demo_company_id' },
+          { id: 'l_vendor_a', name: 'Apex Distributing', parent_group_id: 'g_creditors', opening_balance: -30000, current_balance: -30000, companyId: 'demo_company_id' }
+        ],
+        items: [
+          { id: 'item_laptop', name: 'Core i7 Laptop', unit_id: 'u_pcs', current_stock: 25, rate: 45000, companyId: 'demo_company_id' },
+          { id: 'item_monitor', name: '24" LED Monitor', unit_id: 'u_pcs', current_stock: 50, rate: 12000, companyId: 'demo_company_id' },
+          { id: 'item_keyboard', name: 'Mechanical Keyboard', unit_id: 'u_pcs', current_stock: 120, rate: 25000, companyId: 'demo_company_id' }
+        ],
+        vouchers: [],
+        voucher_entries: [],
+        inventory_entries: [],
+        tax_rates: [
+          { id: 't_vat_15', name: 'VAT 15%', rate: 15, companyId: 'demo_company_id' }
+        ]
+      };
+      localStorage.setItem('erp_demo_db', JSON.stringify(demoDb));
+      localStorage.setItem('erp_demo_db_initialized', 'true');
+    }
+  },
+
   // Caching mechanism for voucher serials and common collections to significantly reduce reads
   _serialsCache: {} as Record<string, { data: Record<string, number>, timestamp: number }>,
   _ledgersCache: {} as Record<string, { data: Ledger[], timestamp: number }>,
@@ -840,6 +966,12 @@ export const erpService: any = {
   },
 
   getCollection: async function<T = any>(colName: string, companyId: string, limitCount: number = 5000, forceRefresh = false): Promise<T[]> {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      if (typeof (this as any).initDemoDbIfNeeded === 'function') {
+        (this as any).initDemoDbIfNeeded();
+      }
+      return (this as any)._getDemoData(colName);
+    }
     if (!companyId) return [];
     const cacheKey = `${colName}_${companyId}`;
     
@@ -1181,6 +1313,101 @@ export const erpService: any = {
     }
   },
   async createVoucher(companyId: string, userId: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const demoVouchers = this._getDemoData('vouchers');
+      const demoEntries = this._getDemoData('voucher_entries');
+      const demoInventory = this._getDemoData('inventory_entries');
+      const demoLedgers = this._getDemoData('ledgers');
+      const demoItems = this._getDemoData('items');
+
+      const vType = (voucher.v_type || '').toString().trim();
+      
+      // Calculate next serial
+      const typeVouchers = demoVouchers.filter((v: any) => (v.v_type || '').toLowerCase() === vType.toLowerCase());
+      const nextSerial = typeVouchers.length + 1;
+      const vId = 'demo_v_' + Date.now() + Math.random().toString(36).substring(2, 7);
+
+      const vData = {
+        ...voucher,
+        id: vId,
+        companyId,
+        serial_no: nextSerial,
+        v_no: voucher.v_no || `${vType}-${nextSerial}`,
+        reference_no: voucher.v_no || `${vType}-${nextSerial}`,
+        v_date: voucher.v_date || new Date().toISOString().split('T')[0],
+        createdBy: userId,
+        createdAt: new Date().toISOString()
+      };
+      demoVouchers.push(vData);
+
+      // Save accounting entries
+      for (const entry of entries) {
+        const eId = 'demo_e_' + Date.now() + Math.random().toString(36).substring(2, 7);
+        demoEntries.push({
+          ...entry,
+          id: eId,
+          voucher_id: vId,
+          companyId,
+          date: vData.v_date,
+          created_at: new Date().toISOString()
+        });
+
+        // Update Ledger Balance
+        if (entry.ledger_id) {
+          const ledgerIndex = demoLedgers.findIndex((l: any) => l.id === entry.ledger_id);
+          if (ledgerIndex !== -1) {
+            const balanceChange = (Number(entry.debit) || 0) - (Number(entry.credit) || 0);
+            demoLedgers[ledgerIndex] = {
+              ...demoLedgers[ledgerIndex],
+              current_balance: (Number(demoLedgers[ledgerIndex].current_balance) || 0) + balanceChange
+            };
+          }
+        }
+      }
+
+      // Save inventory entries
+      if (inventoryEntries && inventoryEntries.length > 0) {
+        for (const inv of inventoryEntries) {
+          const invId = 'demo_inv_' + Date.now() + Math.random().toString(36).substring(2, 7);
+          const vTypeLower = vType.toLowerCase();
+          const isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes(vTypeLower);
+          const totalEntryQty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
+          const qtyChange = isOutward ? -totalEntryQty : totalEntryQty;
+
+          demoInventory.push({
+            ...inv,
+            id: invId,
+            voucher_id: vId,
+            v_type: vType,
+            companyId,
+            date: vData.v_date,
+            created_at: new Date().toISOString(),
+            movement_type: isOutward ? 'Outward' : 'Inward',
+            m_type: isOutward ? 'Outward' : 'Inward',
+            entry_type: inv.entry_type || (isOutward ? 'Outward' : 'Inward')
+          });
+
+          if (inv.item_id) {
+            const itemIndex = demoItems.findIndex((i: any) => i.id === inv.item_id);
+            if (itemIndex !== -1) {
+              demoItems[itemIndex] = {
+                ...demoItems[itemIndex],
+                current_stock: (Number(demoItems[itemIndex].current_stock) || 0) + qtyChange
+              };
+            }
+          }
+        }
+      }
+
+      this._saveDemoData('vouchers', demoVouchers);
+      this._saveDemoData('voucher_entries', demoEntries);
+      this._saveDemoData('inventory_entries', demoInventory);
+      this._saveDemoData('ledgers', demoLedgers);
+      this._saveDemoData('items', demoItems);
+
+      return { id: vId, ...vData };
+    }
+
     // Track Firestore operations used
     this.trackQuota(companyId, 5, 5);
     try {
@@ -1864,6 +2091,65 @@ export const erpService: any = {
    },
 
   async deleteVoucher(id: string) {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const demoVouchers = this._getDemoData('vouchers');
+      const demoEntries = this._getDemoData('voucher_entries');
+      const demoInventory = this._getDemoData('inventory_entries');
+      const demoLedgers = this._getDemoData('ledgers');
+      const demoItems = this._getDemoData('items');
+
+      const vIndex = demoVouchers.findIndex((v: any) => v.id === id);
+      if (vIndex === -1) return;
+
+      const voucher = demoVouchers[vIndex];
+      const matchingEntries = demoEntries.filter((e: any) => e.voucher_id === id);
+      const matchingInventory = demoInventory.filter((i: any) => i.voucher_id === id);
+
+      // Reverse ledger balances
+      for (const entry of matchingEntries) {
+        if (entry.ledger_id) {
+          const lIndex = demoLedgers.findIndex((l: any) => l.id === entry.ledger_id);
+          if (lIndex !== -1) {
+            const balanceChange = (Number(entry.debit) || 0) - (Number(entry.credit) || 0);
+            demoLedgers[lIndex] = {
+              ...demoLedgers[lIndex],
+              current_balance: (Number(demoLedgers[lIndex].current_balance) || 0) - balanceChange
+            };
+          }
+        }
+      }
+
+      // Reverse inventory items
+      for (const inv of matchingInventory) {
+        if (inv.item_id) {
+          const iIndex = demoItems.findIndex((i: any) => i.id === inv.item_id);
+          if (iIndex !== -1) {
+            const isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((voucher.v_type || '').toLowerCase());
+            const totalQty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
+            const qtyChange = isOutward ? -totalQty : totalQty;
+
+            demoItems[iIndex] = {
+              ...demoItems[iIndex],
+              current_stock: (Number(demoItems[iIndex].current_stock) || 0) - qtyChange
+            };
+          }
+        }
+      }
+
+      // Remove from arrays
+      const filteredVouchers = demoVouchers.filter((v: any) => v.id !== id);
+      const filteredEntries = demoEntries.filter((e: any) => e.voucher_id !== id);
+      const filteredInventory = demoInventory.filter((i: any) => i.voucher_id !== id);
+
+      this._saveDemoData('vouchers', filteredVouchers);
+      this._saveDemoData('voucher_entries', filteredEntries);
+      this._saveDemoData('inventory_entries', filteredInventory);
+      this._saveDemoData('ledgers', demoLedgers);
+      this._saveDemoData('items', demoItems);
+
+      return;
+    }
+
     const voucher = await this.getVoucherById(id);
     if (!voucher) throw new Error('Voucher not found');
     const companyId = voucher.companyId;
@@ -1932,6 +2218,101 @@ export const erpService: any = {
   },
 
   async updateVoucher(id: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const companyId = voucher.companyId || 'demo_company_id';
+      const userId = 'demo_user_uid';
+      await this.deleteVoucher(id);
+      
+      const demoVouchers = this._getDemoData('vouchers');
+      const demoEntries = this._getDemoData('voucher_entries');
+      const demoInventory = this._getDemoData('inventory_entries');
+      const demoLedgers = this._getDemoData('ledgers');
+      const demoItems = this._getDemoData('items');
+
+      const vType = (voucher.v_type || '').toString().trim();
+      const typeVouchers = demoVouchers.filter((v: any) => (v.v_type || '').toLowerCase() === vType.toLowerCase());
+      const nextSerial = typeVouchers.length + 1;
+
+      const vData = {
+        ...voucher,
+        id: id,
+        companyId,
+        serial_no: nextSerial,
+        v_no: voucher.v_no || `${vType}-${nextSerial}`,
+        reference_no: voucher.v_no || `${vType}-${nextSerial}`,
+        v_date: voucher.v_date || new Date().toISOString().split('T')[0],
+        createdBy: userId,
+        createdAt: new Date().toISOString()
+      };
+      demoVouchers.push(vData);
+
+      // Save entries
+      for (const entry of entries) {
+        const eId = 'demo_e_' + Date.now() + Math.random().toString(36).substring(2, 7);
+        demoEntries.push({
+          ...entry,
+          id: eId,
+          voucher_id: id,
+          companyId,
+          date: vData.v_date,
+          created_at: new Date().toISOString()
+        });
+
+        if (entry.ledger_id) {
+          const lIndex = demoLedgers.findIndex((l: any) => l.id === entry.ledger_id);
+          if (lIndex !== -1) {
+            const balanceChange = (Number(entry.debit) || 0) - (Number(entry.credit) || 0);
+            demoLedgers[lIndex] = {
+              ...demoLedgers[lIndex],
+              current_balance: (Number(demoLedgers[lIndex].current_balance) || 0) + balanceChange
+            };
+          }
+        }
+      }
+
+      // Save inventory
+      if (inventoryEntries && inventoryEntries.length > 0) {
+        for (const inv of inventoryEntries) {
+          const invId = 'demo_inv_' + Date.now() + Math.random().toString(36).substring(2, 7);
+          const vTypeLower = vType.toLowerCase();
+          const isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes(vTypeLower);
+          const totalEntryQty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
+          const qtyChange = isOutward ? -totalEntryQty : totalEntryQty;
+
+          demoInventory.push({
+            ...inv,
+            id: invId,
+            voucher_id: id,
+            v_type: vType,
+            companyId,
+            date: vData.v_date,
+            created_at: new Date().toISOString(),
+            movement_type: isOutward ? 'Outward' : 'Inward',
+            m_type: isOutward ? 'Outward' : 'Inward',
+            entry_type: inv.entry_type || (isOutward ? 'Outward' : 'Inward')
+          });
+
+          if (inv.item_id) {
+            const itemIndex = demoItems.findIndex((i: any) => i.id === inv.item_id);
+            if (itemIndex !== -1) {
+              demoItems[itemIndex] = {
+                ...demoItems[itemIndex],
+                current_stock: (Number(demoItems[itemIndex].current_stock) || 0) + qtyChange
+              };
+            }
+          }
+        }
+      }
+
+      this._saveDemoData('vouchers', demoVouchers);
+      this._saveDemoData('voucher_entries', demoEntries);
+      this._saveDemoData('inventory_entries', demoInventory);
+      this._saveDemoData('ledgers', demoLedgers);
+      this._saveDemoData('items', demoItems);
+
+      return { id, ...vData };
+    }
+
     try {
       const oldVoucher = await this.getVoucherById(id);
       if (!oldVoucher) throw new Error('Voucher not found');
@@ -2491,6 +2872,23 @@ export const erpService: any = {
   },
 
   async createLedger(companyId: string, ledger: any) {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const ledgers = this._getDemoData('ledgers');
+      const isDuplicate = ledgers.some((l: any) => l.name.toLowerCase() === ledger.name.toLowerCase() && l.companyId === companyId);
+      if (isDuplicate) throw new Error(`Ledger "${ledger.name}" already exists.`);
+
+      const newLedger = {
+        ...ledger,
+        id: 'demo_ledger_' + Date.now() + Math.random().toString(36).substring(2, 7),
+        companyId,
+        opening_balance: Number(ledger.opening_balance) || 0,
+        current_balance: Number(ledger.opening_balance) || 0,
+        createdAt: new Date().toISOString()
+      };
+      ledgers.push(newLedger);
+      this._saveDemoData('ledgers', ledgers);
+      return newLedger;
+    }
     try {
       const isDuplicate = await this.checkDuplicate('ledgers', companyId, 'name', ledger.name);
       if (isDuplicate) throw new Error(`Ledger "${ledger.name}" already exists.`);
@@ -2511,6 +2909,22 @@ export const erpService: any = {
   },
 
   async updateLedger(id: string, ledger: any) {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const ledgers = this._getDemoData('ledgers');
+      const index = ledgers.findIndex((l: any) => l.id === id);
+      if (index !== -1) {
+        const old = ledgers[index];
+        ledgers[index] = {
+          ...old,
+          ...ledger,
+          id,
+          opening_balance: ledger.opening_balance !== undefined ? Number(ledger.opening_balance) : old.opening_balance,
+          current_balance: ledger.current_balance !== undefined ? Number(ledger.current_balance) : old.current_balance
+        };
+        this._saveDemoData('ledgers', ledgers);
+      }
+      return { id, ...ledger };
+    }
     try {
       const ref = doc(db, 'ledgers', id);
       const snap = await getDoc(ref);
@@ -2529,6 +2943,16 @@ export const erpService: any = {
   },
 
   async deleteLedger(id: string, companyId: string) {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const hasTransactions = await this.checkLedgerTransactions(id, companyId);
+      if (hasTransactions) {
+        throw new Error('Cannot delete ledger with transactions. Please delete all vouchers associated with this ledger first.');
+      }
+      const ledgers = this._getDemoData('ledgers');
+      const filtered = ledgers.filter((l: any) => l.id !== id);
+      this._saveDemoData('ledgers', filtered);
+      return;
+    }
     const hasTransactions = await this.checkLedgerTransactions(id, companyId);
     if (hasTransactions) {
       throw new Error('Cannot delete ledger with transactions. Please delete all vouchers associated with this ledger first.');
@@ -2608,6 +3032,26 @@ export const erpService: any = {
   },
 
   async createItem(companyId: string, item: any) {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const items = this._getDemoData('items');
+      const isDuplicate = items.some((i: any) => i.name.toLowerCase() === item.name.toLowerCase() && i.companyId === companyId);
+      if (isDuplicate) throw new Error(`Stock Item "${item.name}" already exists.`);
+
+      const newItem = {
+        ...item,
+        id: 'demo_item_' + Date.now() + Math.random().toString(36).substring(2, 7),
+        companyId,
+        opening_qty: Number(item.opening_qty) || 0,
+        opening_rate: Number(item.opening_rate) || 0,
+        current_stock: Number(item.opening_qty) || 0,
+        avg_cost: Number(item.opening_rate) || 0,
+        rate: Number(item.rate) || 0,
+        createdAt: new Date().toISOString()
+      };
+      items.push(newItem);
+      this._saveDemoData('items', items);
+      return newItem;
+    }
     const isDuplicate = await this.checkDuplicate('items', companyId, 'name', item.name);
     if (isDuplicate) throw new Error(`Stock Item "${item.name}" already exists.`);
 
@@ -2627,6 +3071,22 @@ export const erpService: any = {
   },
 
   async updateItem(id: string, item: any) {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const items = this._getDemoData('items');
+      const index = items.findIndex((i: any) => i.id === id);
+      if (index !== -1) {
+        items[index] = {
+          ...items[index],
+          ...item,
+          id,
+          opening_qty: item.opening_qty !== undefined ? Number(item.opening_qty) : items[index].opening_qty,
+          opening_rate: item.opening_rate !== undefined ? Number(item.opening_rate) : items[index].opening_rate,
+          current_stock: item.current_stock !== undefined ? Number(item.current_stock) : items[index].current_stock
+        };
+        this._saveDemoData('items', items);
+      }
+      return;
+    }
     const itemRef = doc(db, 'items', id);
     const oldSnap = await getDoc(itemRef);
     if (!oldSnap.exists()) {
@@ -2653,6 +3113,16 @@ export const erpService: any = {
   },
 
   async deleteItem(id: string, companyId: string) {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const hasTransactions = await this.checkItemTransactions(id, companyId);
+      if (hasTransactions) {
+        throw new Error('Cannot delete item with transactions. Please delete all vouchers associated with this item first.');
+      }
+      const items = this._getDemoData('items');
+      const filtered = items.filter((i: any) => i.id !== id);
+      this._saveDemoData('items', filtered);
+      return;
+    }
     const hasTransactions = await this.checkItemTransactions(id, companyId);
     if (hasTransactions) {
       throw new Error('Cannot delete item with transactions. Please delete all vouchers associated with this item first.');
@@ -2674,6 +3144,12 @@ export const erpService: any = {
   },
 
   async createGodown(companyId: string, godown: any) {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const godowns = this._getDemoData('godowns');
+      const isDuplicate = godowns.some((g: any) => g.name.toLowerCase() === godown.name.toLowerCase() && g.companyId === companyId);
+      if (isDuplicate) throw new Error(`Godown "${godown.name}" already exists.`);
+      return this._demoCreate('godowns', godown);
+    }
     this._godownsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
     const isDuplicate = await this.checkDuplicate('godowns', companyId, 'name', godown.name);
     if (isDuplicate) throw new Error(`Godown "${godown.name}" already exists.`);
@@ -2685,6 +3161,9 @@ export const erpService: any = {
   },
 
   async updateGodown(id: string, godown: any) {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      return this._demoUpdate('godowns', id, godown);
+    }
     const ref = doc(db, 'godowns', id);
     const snap = await getDoc(ref);
     if (snap.exists()) {
@@ -2695,6 +3174,9 @@ export const erpService: any = {
   },
 
   async deleteGodown(id: string) {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      return this._demoDelete('godowns', id);
+    }
     const ref = doc(db, 'godowns', id);
     const snap = await getDoc(ref);
     if (snap.exists()) {
@@ -3697,6 +4179,11 @@ export const erpService: any = {
   },
 
   async getLedgerBalance(ledgerId: string, companyId: string): Promise<number> {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const ledgers = this._getDemoData('ledgers');
+      const ledger = ledgers.find((l: any) => l.id === ledgerId);
+      return ledger ? (Number(ledger.current_balance) !== undefined ? Number(ledger.current_balance) : Number(ledger.opening_balance) || 0) : 0;
+    }
     const cacheKey = `${companyId}_${ledgerId}`;
     const now = Date.now();
     if (this._ledgerBalanceCache[cacheKey] && (now - this._ledgerBalanceCache[cacheKey].timestamp < this._collectionTTL)) {

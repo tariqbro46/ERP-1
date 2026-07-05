@@ -1,5 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../firebase';
 import { Navbar } from '../../components/landing/Navbar';
 import { Footer } from '../../components/landing/Footer';
 import { 
@@ -9,15 +11,20 @@ import {
   Users, 
   ArrowRight,
   Globe,
-  Database
+  Database,
+  Sparkles,
+  X
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useSiteContent } from '../../hooks/useSiteContent';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { erpService } from '../../services/erpService';
 
 export const Home = () => {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const { adaptiveLoaderEnabled = true, skeletonEnabled = true, skeletonDashboardOnly = true } = useSettings();
 
   const DEFAULT_CONTENT = {
@@ -90,6 +97,59 @@ export const Home = () => {
   };
 
   const [activeTab, setActiveTab] = React.useState<'finance' | 'inventory' | 'production' | 'payroll'>('finance');
+
+  const [showDemoModal, setShowDemoModal] = React.useState(false);
+  const [demoForm, setDemoForm] = React.useState({
+    name: '',
+    companyName: '',
+    address: '',
+    phone: '',
+    email: ''
+  });
+  const [demoSubmitLoading, setDemoSubmitLoading] = React.useState(false);
+  const [demoError, setDemoError] = React.useState('');
+
+  const handleDemoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!demoForm.name || !demoForm.companyName || !demoForm.address || !demoForm.phone || !demoForm.email) {
+      setDemoError(language === 'bn' ? 'দয়া করে সবগুলি ফিল্ড পূরণ করুন।' : 'Please fill out all fields.');
+      return;
+    }
+    setDemoSubmitLoading(true);
+    setDemoError('');
+
+    try {
+      await addDoc(collection(db, 'inquiries'), {
+        name: demoForm.name,
+        email: demoForm.email,
+        subject: "Experience Hub Activation",
+        message: `Company Name: ${demoForm.companyName}\nAddress: ${demoForm.address}\nPhone Number: ${demoForm.phone}\nMode: Demo Mode Enabled`,
+        createdAt: serverTimestamp()
+      });
+
+      localStorage.removeItem('erp_demo_db');
+      localStorage.removeItem('erp_demo_db_initialized');
+      localStorage.setItem('erp_is_demo_mode', 'true');
+      localStorage.setItem('erp_demo_visitor', JSON.stringify({
+        name: demoForm.name,
+        companyName: demoForm.companyName,
+        address: demoForm.address,
+        phone: demoForm.phone,
+        email: demoForm.email,
+        activatedAt: new Date().toISOString()
+      }));
+
+      // Initialize the seeded demo database immediately
+      erpService.initDemoDbIfNeeded();
+
+      window.location.href = '/dashboard';
+    } catch (err: any) {
+      console.error("Failed to activate Experience Hub:", err);
+      setDemoError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setDemoSubmitLoading(false);
+    }
+  };
 
   const isAdaptiveLoaderEnabled = content.adaptiveLoaderEnabled !== false && adaptiveLoaderEnabled !== false;
   const isSkeletonEnabled = content.skeletonLoaderEnabled !== false && skeletonEnabled !== false && !skeletonDashboardOnly;
@@ -281,13 +341,13 @@ export const Home = () => {
                     {content.heroSubtitle}
                   </p>
 
-                  <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+                   <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
                     <Link
-                      to="/register"
+                      to={user ? "/dashboard" : "/register"}
                       className="w-full sm:w-auto px-8 py-4 rounded-full text-base font-bold transition-all shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2 group hover:opacity-90 text-white"
                       style={{ backgroundColor: content.heroCtaPrimaryBg || '#3b82f6' }}
                     >
-                      {content.heroCtaPrimary}
+                      {user ? t('nav.dashboard') : content.heroCtaPrimary}
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Link>
                     <Link
@@ -296,6 +356,15 @@ export const Home = () => {
                     >
                       {content.heroCtaSecondary || "View Pricing Models"}
                     </Link>
+                    {!user && (
+                      <button
+                        onClick={() => setShowDemoModal(true)}
+                        className="w-full sm:w-auto px-8 py-4 rounded-full text-base font-bold transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 text-emerald-400 bg-emerald-950/20 border border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-950/40 shadow-[0_0_15px_rgba(16,185,129,0.1)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                      >
+                        <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
+                        {language === 'bn' ? 'এক্সপেরিয়েন্স হাব (ডেমো)' : 'Experience Hub (Demo)'}
+                      </button>
+                    )}
                   </div>
                 </motion.div>
 
@@ -736,17 +805,161 @@ export const Home = () => {
                 {content.ctaSubtitle}
               </p>
               <Link
-                to="/register"
+                to={user ? "/dashboard" : "/register"}
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-base font-bold transition-all font-sans tracking-wide shadow-xl hover:-translate-y-0.5"
                 style={{ backgroundColor: content.ctaButtonBg || '#ffffff', color: content.ctaButtonText || '#020617' }}
               >
-                {content.ctaButton}
+                {user ? t('nav.dashboard') : content.ctaButton}
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </div>
           </section>
         )}
       </main>
+
+      {showDemoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950/40">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-lg font-bold text-white uppercase tracking-wider font-mono">
+                  {language === 'bn' ? 'এক্সপেরিয়েন্স হাব অ্যাক্টিভেশন' : 'Activate Experience Hub'}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowDemoModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                id="close_demo_modal_btn"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleDemoSubmit} className="p-6 space-y-4">
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {language === 'bn' 
+                  ? 'এক্সপেরিয়েন্স হাবে স্বাগতম! এখানে এন্ট্রি করা কোনো ডাটা ডাটাবেজে স্টোর হবে না, তবে আপনি রিয়েল-টাইম রিপোর্ট এবং সমস্ত ফিচার সম্পূর্ণ ফ্রিতে ট্রাই করতে পারবেন।' 
+                  : 'Welcome to the Experience Hub! All entries here will stay non-persistent inside your browser cache, allowing you to test reports and operations without storing them in the cloud.'}
+              </p>
+
+              {demoError && (
+                <div className="p-3 text-xs bg-red-950/50 border border-red-500/30 text-red-400 rounded-lg">
+                  {demoError}
+                </div>
+              )}
+
+              <div className="space-y-3 text-left">
+                {/* Name */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">
+                    {language === 'bn' ? 'আপনার নাম' : 'Your Name'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={demoForm.name}
+                    onChange={(e) => setDemoForm({ ...demoForm, name: e.target.value })}
+                    placeholder={language === 'bn' ? 'উদাঃ আরিফুল ইসলাম' : 'e.g. John Doe'}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+
+                {/* Company Name */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">
+                    {language === 'bn' ? 'প্রতিষ্ঠানের নাম' : 'Company Name'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={demoForm.companyName}
+                    onChange={(e) => setDemoForm({ ...demoForm, companyName: e.target.value })}
+                    placeholder={language === 'bn' ? 'উদাঃ স্কাইলাইন ট্রেডার্স' : 'e.g. Skyline Traders'}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+
+                {/* Address */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">
+                    {language === 'bn' ? 'ঠিকানা' : 'Address'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={demoForm.address}
+                    onChange={(e) => setDemoForm({ ...demoForm, address: e.target.value })}
+                    placeholder={language === 'bn' ? 'উদাঃ উত্তরা, ঢাকা' : 'e.g. Uttara, Dhaka'}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">
+                    {language === 'bn' ? 'ফোন নম্বর' : 'Phone Number'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={demoForm.phone}
+                    onChange={(e) => setDemoForm({ ...demoForm, phone: e.target.value })}
+                    placeholder={language === 'bn' ? 'উদাঃ ০১৮XXXXXXXX' : 'e.g. +88018XXXXXXXX'}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">
+                    {language === 'bn' ? 'ইমেইল অ্যাড্রেস' : 'Email Address'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={demoForm.email}
+                    onChange={(e) => setDemoForm({ ...demoForm, email: e.target.value })}
+                    placeholder="e.g. name@company.com"
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowDemoModal(false)}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-850 transition-colors"
+                >
+                  {language === 'bn' ? 'বাতিল করুন' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={demoSubmitLoading}
+                  className="px-6 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all hover:scale-[1.02] flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.3)] disabled:opacity-50"
+                  id="submit_demo_visitor_btn"
+                >
+                  {demoSubmitLoading ? (
+                    <>
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      {language === 'bn' ? 'প্রবেশ করা হচ্ছে...' : 'Entering...'}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {language === 'bn' ? 'এক্সপেরিয়েন্স হাব শুরু করুন' : 'Launch Experience Hub'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

@@ -95,6 +95,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      try {
+        const visitor = JSON.parse(localStorage.getItem('erp_demo_visitor') || '{}');
+        setUser({
+          uid: 'demo_user_uid',
+          email: visitor.email || 'demo@visitor.com',
+          displayName: visitor.name || 'Demo Visitor',
+          role: 'Admin',
+          companyId: 'demo_company_id'
+        });
+        setCompany({
+          id: 'demo_company_id',
+          name: visitor.companyName || 'Demo Enterprise',
+          subscriptionStatus: 'trial',
+          planType: 'free',
+          expiryDate: '2030-12-31',
+          isAccessEnabled: true,
+          customLimits: {
+            vouchers: 1000,
+            items: 1000,
+            ledgers: 1000,
+            users: 5,
+            godowns: 5
+          }
+        });
+        setLoading(false);
+      } catch (e) {
+        console.error("Demo context setup error:", e);
+      }
+      return;
+    }
+
     let unsubProfile: (() => void) | null = null;
     let unsubCompany: (() => void) | null = null;
     let unsubPermissions: (() => void) | null = null;
@@ -253,6 +285,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = async () => {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      localStorage.removeItem('erp_is_demo_mode');
+      localStorage.removeItem('erp_demo_visitor');
+      localStorage.removeItem('erp_demo_db');
+      localStorage.removeItem('erp_demo_db_initialized');
+      setUser(null);
+      setCompany(null);
+      window.location.href = '/';
+      return;
+    }
     await signOut(auth);
   };
 

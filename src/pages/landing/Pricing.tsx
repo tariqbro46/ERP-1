@@ -377,7 +377,7 @@ export const Pricing = () => {
                     <td className="py-5 px-6 text-slate-300 font-semibold">Max Vouchers (Voucher cap)</td>
                     {sortedPlans.map(plan => (
                       <td key={plan.id} className="py-5 px-6 text-center text-slate-400 font-mono">
-                        {plan.limits.vouchers === -1 ? 'Unlimited (No Cap)' : `${plan.limits.vouchers.toLocaleString()} / mo`}
+                        {plan.limits.vouchers === -1 ? 'Unlimited (No Cap)' : plan.limits.vouchers.toLocaleString()}
                       </td>
                     ))}
                   </tr>

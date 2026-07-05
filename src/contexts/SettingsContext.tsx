@@ -467,6 +467,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (authLoading) return;
 
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      try {
+        const persisted = localStorage.getItem(`swr_usersettings_${user?.uid || 'demo_user_uid'}`);
+        if (persisted) {
+          setUserSettings(JSON.parse(persisted));
+        } else {
+          setUserSettings({});
+        }
+      } catch (e) {
+        setUserSettings({});
+      }
+      return;
+    }
+
     if (!user?.uid) {
       setUserSettings({});
       return;
@@ -488,6 +502,29 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     let unsubSystem: (() => void) | null = null;
 
     useEffect(() => {
+      if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+        const companyId = user?.companyId || 'demo_company_id';
+        let companySettings = { ...defaultSettings };
+        try {
+          const persisted = localStorage.getItem(`swr_settings_${companyId}`);
+          if (persisted) {
+            companySettings = { ...companySettings, ...JSON.parse(persisted) };
+          }
+        } catch (e) {}
+
+        setSettings(prev => ({
+          ...prev,
+          ...companySettings,
+          appFeatures: APP_FEATURES,
+          subscriptionPlans: [],
+          loading: false,
+          updateSettings: prev.updateSettings,
+          updateSystemSettings: prev.updateSystemSettings,
+          updateFeaturesSettings: prev.updateFeaturesSettings,
+        }));
+        return;
+      }
+
     // Fetch global system config - Live subscription to reflect maintenance changes immediately
     const fetchSystemConfig = () => {
       try {
@@ -782,6 +819,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const updateSettings = async (newSettings: Partial<SettingsContextType>) => {
     if (!user?.companyId) return;
     
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const { updateSettings: _, updateSystemSettings: __, ...dataToSave } = newSettings as any;
+      setSettings(prev => {
+        const next = { ...prev, ...dataToSave };
+        try {
+          localStorage.setItem(`swr_settings_${user.companyId}`, JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
+      return;
+    }
+
     try {
       // Remove functions before saving
       const { updateSettings: _, updateSystemSettings: __, ...dataToSave } = newSettings as any;
@@ -792,6 +841,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateSystemSettings = async (newSettings: any) => {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      setSettings(prev => ({
+        ...prev,
+        ...newSettings,
+        systemUiStyle: newSettings.uiStyle !== undefined ? newSettings.uiStyle : prev.systemUiStyle,
+        systemMenuBarStyle: newSettings.menuBarStyle !== undefined ? newSettings.menuBarStyle : prev.systemMenuBarStyle,
+        globalDashboardDesign: newSettings.dashboardDesign || prev.globalDashboardDesign
+      }));
+      return;
+    }
     try {
       await erpService.updateSystemConfig(newSettings);
       // Update local state to reflect changes immediately
@@ -809,6 +868,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateFeaturesSettings = async (newFeatures: FeatureCategory[]) => {
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      setSettings(prev => ({ ...prev, appFeatures: newFeatures }));
+      return;
+    }
     try {
       await erpService.updateFeaturesConfig(newFeatures);
     } catch (err) {
@@ -818,6 +881,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   const updateUserSettings = async (newSettings: any) => {
     if (!user?.uid) return;
+
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      setUserSettings(prev => {
+        const next = { ...prev, ...newSettings };
+        try {
+          localStorage.setItem(`swr_usersettings_${user.uid}`, JSON.stringify(next));
+        } catch (e) {}
+        return next;
+      });
+      return;
+    }
+
     try {
       await erpService.updateUserSettings(user.uid, newSettings);
     } catch (err) {

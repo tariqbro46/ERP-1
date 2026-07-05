@@ -63,7 +63,7 @@ const StatCard = ({ title, value, change, icon: Icon, trend, loading, color, uiS
 export function Dashboard() {
   const navigate = useNavigate();
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { 
     companyName, 
     slogan,
@@ -1361,6 +1361,40 @@ export function Dashboard() {
 
   return (
     <div className="flex flex-col min-h-full bg-background transition-colors font-mono tracking-tight">
+      {/* Experience Hub Demo Mode Notice Banner */}
+      {localStorage.getItem('erp_is_demo_mode') === 'true' && (
+        <div className="bg-emerald-950/25 border-b border-emerald-500/25 px-4 lg:px-6 py-2.5 flex items-center justify-between text-emerald-400 text-xs font-semibold gap-3 animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse shrink-0" />
+            <span>
+              {localStorage.getItem('erp_demo_visitor') ? (
+                <>
+                  {language === 'bn' ? (
+                    <><strong>এক্সপেরিয়েন্স হাব সক্রিয়:</strong> আপনার এন্ট্রি করা ডেটা ক্লাউডে যাবে না এবং ব্রাউজার ক্যাশে থাকবে।</>
+                  ) : (
+                    <><strong>Experience Hub Active:</strong> Running in client-side memory. Your entries won't touch the cloud database.</>
+                  )}
+                </>
+              ) : (
+                <>Experience Hub Active: Running in client-side memory.</>
+              )}
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              localStorage.removeItem('erp_is_demo_mode');
+              localStorage.removeItem('erp_demo_visitor');
+              localStorage.removeItem('erp_demo_db');
+              localStorage.removeItem('erp_demo_db_initialized');
+              window.location.href = '/';
+            }}
+            className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 transition-all cursor-pointer shrink-0"
+          >
+            {language === 'bn' ? 'আসল অ্যাপে ফিরুন' : 'Exit Hub'}
+          </button>
+        </div>
+      )}
+
       {/* Sticky Header Section */}
       <div className="sticky top-0 bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
