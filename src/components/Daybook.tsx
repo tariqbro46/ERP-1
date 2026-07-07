@@ -300,23 +300,7 @@ export function Daybook() {
           : "bg-background border-border"
       )}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div className="flex-1 w-full sm:max-w-2xl space-y-4">
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => navigate(-1)}
-                className={settings.reportsPageUiStyle === 'modern'
-                  ? "p-2.5 bg-slate-50 border border-slate-200/60 hover:bg-slate-100 rounded-xl transition-all text-slate-600 shadow-sm"
-                  : "p-2 hover:bg-gray-100 rounded-full transition-colors"
-                }
-              >
-                <ArrowLeft className={settings.reportsPageUiStyle === 'modern' ? "w-5 h-5" : "w-6 h-6"} />
-              </button>
-              <EditableHeader 
-                pageId="daybook"
-                defaultTitle="Daybook"
-                defaultSubtitle={settings.companyName}
-              />
-            </div>
+          <div className="flex-1 w-full sm:max-w-md">
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <DateInput

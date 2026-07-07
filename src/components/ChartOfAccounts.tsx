@@ -55,22 +55,17 @@ export function ChartOfAccounts() {
   return (
     <div className="flex flex-col h-full bg-background font-mono transition-colors text-[11px] overflow-hidden">
       {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border z-30 shadow-sm">
-        <div className="p-4 lg:p-6 space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
-            <EditableHeader 
-              pageId="chart_of_accounts"
-              defaultTitle={t('accounts.chartOfAccounts')}
-              defaultSubtitle={t('accounts.hierarchy')}
-            />
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-600" />
+      <div className="flex-none bg-background border-b border-border z-30 shadow-sm py-4">
+        <div className="px-4 lg:px-6">
+          <div className="flex items-center justify-start">
+            <div className="relative w-full max-w-2xl">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input 
                 type="text"
                 placeholder={t('common.searchPlaceholder')}
                 value={search || ''}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-card border border-border text-foreground pl-9 pr-4 py-2 text-[10px] outline-none focus:border-foreground transition-colors uppercase tracking-widest"
+                className="w-full bg-card border border-border text-foreground pl-10 pr-4 py-2.5 text-[11px] outline-none focus:border-foreground transition-colors uppercase tracking-widest rounded-lg"
                 autoFocus
               />
             </div>

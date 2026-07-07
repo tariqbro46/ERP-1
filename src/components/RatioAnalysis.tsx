@@ -209,20 +209,7 @@ export function RatioAnalysis() {
       {/* Fixed Header Section */}
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
-          <div className="flex-1 w-full sm:max-w-md space-y-4">
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => navigate(-1)}
-                className="p-2 hover:bg-foreground/5 rounded-full transition-colors"
-              >
-                <ArrowLeft className="w-6 h-6 text-foreground" />
-              </button>
-              <EditableHeader 
-                pageId="ratio_analysis"
-                defaultTitle="Ratio Analysis"
-                defaultSubtitle={settings.companyName}
-              />
-            </div>
+          <div className="flex-1 w-full sm:max-w-xs">
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <DateInput
