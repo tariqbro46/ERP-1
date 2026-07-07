@@ -608,6 +608,10 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   // Quota Exceeded Block
   const isQuotaExceeded = company && company.quotaLimit && company.quotaUsed !== undefined && company.quotaUsed >= company.quotaLimit;
 
+  if (isQuotaExceeded && !isSuperAdmin) {
+    return <QuotaExceededPage company={company} />;
+  }
+
   const [bannerLang, setBannerLang] = React.useState<'en' | 'bn'>(language === 'bn' ? 'bn' : 'en');
 
   React.useEffect(() => {
