@@ -3217,6 +3217,56 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       </div>
                     )}
 
+                    {/* Remote App Force Refresh Card */}
+                    {currentUser?.companyId && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <RefreshCw className="w-4 h-4 text-blue-500 animate-spin [animation-duration:12s]" />
+                          <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Remote App Force-Refresh</h4>
+                            <p className="text-[9px] uppercase tracking-wide text-muted-foreground font-medium mt-0.5">Instant live reloading for all online users of your active company.</p>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            If you recently updated setting parameters, feature flags, or custom assets, active users who keep the application open will not see the updates until they refresh their browser tab. 
+                            <br />
+                            <span className="font-semibold text-foreground">Clicking the button below instantly reloads the application on all active user devices in real-time.</span>
+                          </p>
+                          <div className="bg-amber-500/5 border border-dashed border-amber-500/20 rounded-lg p-3">
+                            <p className="text-[10px] text-amber-600 dark:text-amber-500 font-bold uppercase tracking-wider flex items-center gap-1">
+                              ⚠️ Live Session Reload / লাইভ সেশন রিলোড:
+                            </p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 leading-normal">
+                              All users currently editing vouchers, viewing sheets, or working in this company will experience a seamless, instant browser refresh.
+                              <br />
+                              এই কোম্পানির সকল সচল ব্যবহারকারীর ব্রাউজার সাথে সাথে রিলোড হবে।
+                            </p>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              try {
+                                if (!currentUser?.companyId) return;
+                                await erpService.updateCompany(currentUser.companyId, {
+                                  forceRefreshAt: Date.now()
+                                });
+                                showNotification('Force refresh command broadcasted to all active company sessions! / ফোর্স রিফ্রেশ কমান্ড সফলভাবে পাঠানো হয়েছে!', 'success');
+                              } catch (e) {
+                                showNotification('Failed to broadcast refresh command.', 'error');
+                              }
+                            }}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-[10px] font-bold uppercase tracking-widest rounded-lg shadow-md transition-all flex items-center gap-1.5"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span>Broadcast Live Refresh / রিলোড পাঠান</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Group 1.5: Maintenance Break System Settings */}
                     {showMaintenance && (
                       <div className={cn(
@@ -6451,6 +6501,34 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               </span>
                             </div>
                           </div>
+                        </div>
+
+                        <div className="space-y-2 border-t border-border pt-3 mt-3 bg-blue-500/5 p-3 rounded-lg border border-dashed border-blue-500/20">
+                          <p className="text-[10px] text-blue-500 uppercase font-black tracking-widest flex items-center gap-1.5">
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin [animation-duration:6s]" />
+                            <span>Live Force Refresh / ফোর্স রিফ্রেশ:</span>
+                          </p>
+                          <p className="text-[10px] text-muted-foreground leading-normal">
+                            Click below to force-refresh the application for all active users of this company in real-time.
+                            <br />
+                            নিচের বাটনে ক্লিক করলে এই কোম্পানির সকল ব্যবহারকারীর অ্যাপ সাথে সাথে রিলোড হবে।
+                          </p>
+                          <button
+                            onClick={async () => {
+                              try {
+                                await erpService.updateCompany(selectedCompany.id, {
+                                  forceRefreshAt: Date.now()
+                                });
+                                showNotification('Force refresh command sent successfully! / ফোর্স রিফ্রেশ কমান্ড সফলভাবে পাঠানো হয়েছে!', 'success');
+                              } catch (e) {
+                                showNotification('Failed to send refresh command.', 'error');
+                              }
+                            }}
+                            className="w-full mt-1.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-[10px] font-bold uppercase tracking-widest rounded-md shadow-md transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            <span>Force Refresh All Sessions / রিফ্রেশ করুন</span>
+                          </button>
                         </div>
                       </div>
                     )}

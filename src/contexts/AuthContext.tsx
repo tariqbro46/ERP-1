@@ -36,6 +36,7 @@ export interface CompanyData {
   quotaLastResetDateStr?: string;
   quotaDisplayRule?: 'always' | 'exceed_50';
   quotaExceededMsg?: string;
+  forceRefreshAt?: number;
   customLimits?: {
     vouchers?: number;
     items?: number;
@@ -68,6 +69,8 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const appLoadedAt = Date.now();
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -157,6 +160,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 unsubCompany = onSnapshot(companyRef, (compSnap) => {
                   if (compSnap.exists()) {
                     const compData = compSnap.data() as CompanyData;
+                    
+                    // Handle remote force refresh signal
+                    if (compData.forceRefreshAt && compData.forceRefreshAt > appLoadedAt) {
+                      console.log("[REFRESH] Force refresh signal received:", compData.forceRefreshAt);
+                      window.location.reload();
+                      return;
+                    }
+
                     const mostRecentResetTime = erpService.getMostRecent130PM(new Date()).getTime();
                     const lastReset = compData.quotaLastReset || 0;
                     if (lastReset < mostRecentResetTime) {

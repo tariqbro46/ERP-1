@@ -34,6 +34,7 @@ export interface Company {
   quotaUsed?: number;
   quotaDisplayRule?: 'always' | 'exceed_50';
   quotaExceededMsg?: string;
+  forceRefreshAt?: number;
   search_config?: {
     placeholder?: string;
     showShortcut?: boolean;
