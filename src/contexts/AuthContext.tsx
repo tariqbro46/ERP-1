@@ -163,9 +163,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                       erpService.resetCompanyQuota(userData.companyId, mostRecentResetTime);
                     } else {
                       setCompany(compData);
+                      const isExceeded = (localStorage.getItem('erp_is_demo_mode') !== 'true') && 
+                        compData.quotaLimit && 
+                        compData.quotaUsed !== undefined && 
+                        compData.quotaUsed >= compData.quotaLimit;
+                      localStorage.setItem('company_quota_exceeded', isExceeded ? 'true' : 'false');
                     }
                   } else {
                     setCompany(null);
+                    localStorage.setItem('company_quota_exceeded', 'false');
                   }
                   setLoading(false);
                 }, (err) => {

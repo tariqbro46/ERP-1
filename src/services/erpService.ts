@@ -3,29 +3,139 @@ import { ensureDate, formatToYMD, parseEntryDate, getMovementType } from '../lib
 import { errorService } from './errorService';
 import { 
   collection, 
-  addDoc, 
-  getDocs, 
-  getDoc, 
+  addDoc as firestoreAddDoc, 
+  getDocs as firestoreGetDocs, 
+  getDoc as firestoreGetDoc, 
+  getDocFromCache,
+  getDocsFromCache,
   doc, 
   query, 
   where, 
-  updateDoc, 
-  deleteDoc, 
+  updateDoc as firestoreUpdateDoc, 
+  deleteDoc as firestoreDeleteDoc, 
   orderBy, 
   limit, 
-  setDoc,
+  setDoc as firestoreSetDoc,
   serverTimestamp,
   increment,
-  writeBatch,
-  runTransaction,
+  writeBatch as firestoreWriteBatch,
+  runTransaction as firestoreRunTransaction,
   Timestamp,
   onSnapshot,
   arrayUnion,
   arrayRemove,
   DocumentReference,
   DocumentSnapshot,
-  getCountFromServer
+  getCountFromServer as firestoreGetCountFromServer
 } from 'firebase/firestore';
+
+// Custom wrappers to enforce cache-only reads and prevent any database traffic when over quota
+async function getDoc(docRef: any) {
+  if (localStorage.getItem('company_quota_exceeded') === 'true') {
+    try {
+      console.log("[QUOTA] Offline-mode reading getDoc from cache:", docRef.path);
+      return await getDocFromCache(docRef);
+    } catch (cacheErr) {
+      console.warn("[QUOTA] Cache read failed in over-quota mode:", cacheErr);
+      return {
+        exists: () => false,
+        data: () => undefined,
+        id: docRef.id,
+        ref: docRef
+      } as any;
+    }
+  }
+  return await firestoreGetDoc(docRef);
+}
+
+async function getDocs(queryRef: any) {
+  if (localStorage.getItem('company_quota_exceeded') === 'true') {
+    try {
+      console.log("[QUOTA] Offline-mode reading getDocs from cache");
+      return await getDocsFromCache(queryRef);
+    } catch (cacheErr) {
+      console.warn("[QUOTA] Cache query failed in over-quota mode:", cacheErr);
+      return {
+        docs: [],
+        empty: true,
+        size: 0,
+        forEach: (callback: any) => {}
+      } as any;
+    }
+  }
+  return await firestoreGetDocs(queryRef);
+}
+
+async function getCountFromServer(queryRef: any) {
+  if (localStorage.getItem('company_quota_exceeded') === 'true') {
+    console.log("[QUOTA] getCountFromServer bypass when over-quota");
+    return {
+      data: () => ({ count: 0 })
+    } as any;
+  }
+  return await firestoreGetCountFromServer(queryRef);
+}
+
+async function addDoc(colRef: any, data: any) {
+  if (localStorage.getItem('company_quota_exceeded') === 'true') {
+    const error = new Error("Database quota exceeded. Write operations are disabled until your quota resets.");
+    (error as any).code = 'permission-denied';
+    throw error;
+  }
+  return await firestoreAddDoc(colRef, data);
+}
+
+async function updateDoc(docRef: any, data: any) {
+  if (localStorage.getItem('company_quota_exceeded') === 'true') {
+    const error = new Error("Database quota exceeded. Write operations are disabled until your quota resets.");
+    (error as any).code = 'permission-denied';
+    throw error;
+  }
+  return await firestoreUpdateDoc(docRef, data);
+}
+
+async function deleteDoc(docRef: any) {
+  if (localStorage.getItem('company_quota_exceeded') === 'true') {
+    const error = new Error("Database quota exceeded. Write operations are disabled until your quota resets.");
+    (error as any).code = 'permission-denied';
+    throw error;
+  }
+  return await firestoreDeleteDoc(docRef);
+}
+
+async function setDoc(docRef: any, data: any, options?: any) {
+  if (localStorage.getItem('company_quota_exceeded') === 'true') {
+    const error = new Error("Database quota exceeded. Write operations are disabled until your quota resets.");
+    (error as any).code = 'permission-denied';
+    throw error;
+  }
+  return await firestoreSetDoc(docRef, data, options);
+}
+
+async function runTransaction<T>(dbRef: any, updateFunction: (transaction: any) => Promise<T>): Promise<T> {
+  if (localStorage.getItem('company_quota_exceeded') === 'true') {
+    const error = new Error("Database quota exceeded. Transactions are disabled until your quota resets.");
+    (error as any).code = 'permission-denied';
+    throw error;
+  }
+  return await firestoreRunTransaction(dbRef, updateFunction);
+}
+
+function writeBatch(dbRef: any) {
+  if (localStorage.getItem('company_quota_exceeded') === 'true') {
+    return {
+      set: () => {},
+      update: () => {},
+      delete: () => {},
+      commit: async () => {
+        const error = new Error("Database quota exceeded. Batch writes are disabled until your quota resets.");
+        (error as any).code = 'permission-denied';
+        throw error;
+      }
+    } as any;
+  }
+  return firestoreWriteBatch(dbRef);
+}
 import { initializeApp } from 'firebase/app';
 import { 
   Feature,
@@ -1976,7 +2086,7 @@ export const erpService: any = {
       const voucherIds = Array.from(new Set(entries.map((e: any) => e.voucher_id)));
       if (voucherIds.length === 0) return [];
 
-      const vSnaps = await Promise.all(voucherIds.map(id => getDoc(doc(db, 'vouchers', id))));
+      const vSnaps = await Promise.all(voucherIds.map((id: any) => getDoc(doc(db, 'vouchers', id as string))));
       return vSnaps.filter(s => s.exists()).map(s => ({ ...s.data(), id: s.id }));
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'voucher_entries');
