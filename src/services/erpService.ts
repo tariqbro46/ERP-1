@@ -50,6 +50,12 @@ function getPathFromRef(ref: any): string {
   return "";
 }
 
+function triggerQuotaEvent(path: string) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('erp_quota_exceeded_attempt', { detail: { path } }));
+  }
+}
+
 function isExemptFromQuotaBlock(path: string): boolean {
   if (!path) return false;
   const lower = path.toLowerCase();
@@ -68,6 +74,7 @@ function isExemptFromQuotaBlock(path: string): boolean {
 async function getDoc(docRef: any) {
   const path = getPathFromRef(docRef);
   if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+    triggerQuotaEvent(path);
     try {
       console.log("[QUOTA] Offline-mode reading getDoc from cache:", path);
       return await getDocFromCache(docRef);
@@ -87,6 +94,7 @@ async function getDoc(docRef: any) {
 async function getDocs(queryRef: any) {
   const path = getPathFromRef(queryRef);
   if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+    triggerQuotaEvent(path);
     try {
       console.log("[QUOTA] Offline-mode reading getDocs from cache:", path);
       return await getDocsFromCache(queryRef);
@@ -106,6 +114,7 @@ async function getDocs(queryRef: any) {
 async function getCountFromServer(queryRef: any) {
   const path = getPathFromRef(queryRef);
   if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+    triggerQuotaEvent(path);
     console.log("[QUOTA] getCountFromServer bypass when over-quota:", path);
     return {
       data: () => ({ count: 0 })
@@ -117,6 +126,7 @@ async function getCountFromServer(queryRef: any) {
 async function addDoc(colRef: any, data: any) {
   const path = getPathFromRef(colRef);
   if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+    triggerQuotaEvent(path);
     const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
     (error as any).code = 'permission-denied';
     throw error;
@@ -127,6 +137,7 @@ async function addDoc(colRef: any, data: any) {
 async function updateDoc(docRef: any, data: any) {
   const path = getPathFromRef(docRef);
   if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+    triggerQuotaEvent(path);
     const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
     (error as any).code = 'permission-denied';
     throw error;
@@ -137,6 +148,7 @@ async function updateDoc(docRef: any, data: any) {
 async function deleteDoc(docRef: any) {
   const path = getPathFromRef(docRef);
   if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+    triggerQuotaEvent(path);
     const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
     (error as any).code = 'permission-denied';
     throw error;
@@ -147,6 +159,7 @@ async function deleteDoc(docRef: any) {
 async function setDoc(docRef: any, data: any, options?: any) {
   const path = getPathFromRef(docRef);
   if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+    triggerQuotaEvent(path);
     const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
     (error as any).code = 'permission-denied';
     throw error;
@@ -164,6 +177,7 @@ async function runTransaction<T>(dbRef: any, updateFunction: (transaction: any) 
         set: (docRef: any, data: any, options?: any) => {
           const path = getPathFromRef(docRef);
           if (!isExemptFromQuotaBlock(path)) {
+            triggerQuotaEvent(path);
             const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
             (error as any).code = 'permission-denied';
             throw error;
@@ -174,6 +188,7 @@ async function runTransaction<T>(dbRef: any, updateFunction: (transaction: any) 
         update: (docRef: any, data: any) => {
           const path = getPathFromRef(docRef);
           if (!isExemptFromQuotaBlock(path)) {
+            triggerQuotaEvent(path);
             const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
             (error as any).code = 'permission-denied';
             throw error;
@@ -184,6 +199,7 @@ async function runTransaction<T>(dbRef: any, updateFunction: (transaction: any) 
         delete: (docRef: any) => {
           const path = getPathFromRef(docRef);
           if (!isExemptFromQuotaBlock(path)) {
+            triggerQuotaEvent(path);
             const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
             (error as any).code = 'permission-denied';
             throw error;
@@ -205,6 +221,7 @@ function writeBatch(dbRef: any) {
       set: (docRef: any, data: any, options?: any) => {
         const path = getPathFromRef(docRef);
         if (!isExemptFromQuotaBlock(path)) {
+          triggerQuotaEvent(path);
           console.warn("[QUOTA] writeBatch.set blocked for path:", path);
           return;
         }
@@ -213,6 +230,7 @@ function writeBatch(dbRef: any) {
       update: (docRef: any, data: any) => {
         const path = getPathFromRef(docRef);
         if (!isExemptFromQuotaBlock(path)) {
+          triggerQuotaEvent(path);
           console.warn("[QUOTA] writeBatch.update blocked for path:", path);
           return;
         }
@@ -221,6 +239,7 @@ function writeBatch(dbRef: any) {
       delete: (docRef: any) => {
         const path = getPathFromRef(docRef);
         if (!isExemptFromQuotaBlock(path)) {
+          triggerQuotaEvent(path);
           console.warn("[QUOTA] writeBatch.delete blocked for path:", path);
           return;
         }

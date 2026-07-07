@@ -101,7 +101,7 @@ import { StockCategorySummary } from './components/StockCategorySummary';
 import { InventoryBooks } from './components/InventoryBooks';
 import { AccountBooks } from './components/AccountBooks';
 import MaintenancePage from './components/MaintenancePage';
-import QuotaExceededPage from './components/QuotaExceededPage';
+import QuotaExceededModal from './components/QuotaExceededModal';
 import { ReportPlaceholder } from './components/ReportPlaceholder';
 import { GroupDashboard } from './components/GroupDashboard';
 import { VoucherDetail } from './components/VoucherDetail';
@@ -605,12 +605,8 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     return <SubscriptionRequired />;
   }
 
-  // Quota Exceeded Block
+  // Quota Exceeded Check
   const isQuotaExceeded = company && company.quotaLimit && company.quotaUsed !== undefined && company.quotaUsed >= company.quotaLimit;
-
-  if (isQuotaExceeded && !isSuperAdmin) {
-    return <QuotaExceededPage company={company} />;
-  }
 
   const [bannerLang, setBannerLang] = React.useState<'en' | 'bn'>(language === 'bn' ? 'bn' : 'en');
 
@@ -625,7 +621,20 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
   const [unreadNotificationCount, setUnreadNotificationCount] = React.useState(0);
   const [isQuotaDashboardOpen, setIsQuotaDashboardOpen] = React.useState(false);
+  const [isQuotaModalOpen, setIsQuotaModalOpen] = React.useState(false);
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
+
+  React.useEffect(() => {
+    const handleQuotaExceededAttempt = (e: Event) => {
+      if (!isSuperAdmin) {
+        setIsQuotaModalOpen(true);
+      }
+    };
+    window.addEventListener('erp_quota_exceeded_attempt', handleQuotaExceededAttempt);
+    return () => {
+      window.removeEventListener('erp_quota_exceeded_attempt', handleQuotaExceededAttempt);
+    };
+  }, [isSuperAdmin]);
 
   React.useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -1867,6 +1876,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       
       <GoToSearch />
       <QuotaDashboardModal isOpen={isQuotaDashboardOpen} onClose={() => setIsQuotaDashboardOpen(false)} company={company} />
+      <QuotaExceededModal isOpen={isQuotaModalOpen} onClose={() => setIsQuotaModalOpen(false)} company={company} />
       {isOffline && (
         <div id="offline-toast" className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] animate-in fade-in slide-in-from-bottom-5 duration-300">
           <div className="bg-slate-900 border border-slate-800 text-slate-100 pl-4 pr-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 select-none">
