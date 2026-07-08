@@ -118,23 +118,8 @@ export function Statistics() {
   ];
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      <div className="p-6 pb-4 shrink-0">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Statistics</h1>
-            <p className="text-gray-500">Summary of all masters and transactions</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-6 pt-0">
+    <div className="h-full flex flex-col overflow-hidden pt-4 bg-background">
+      <div className="flex-1 overflow-y-auto p-4 lg:p-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <div className="space-y-6">
             {sections.map((section, idx) => (

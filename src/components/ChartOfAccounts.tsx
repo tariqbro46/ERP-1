@@ -58,7 +58,7 @@ export function ChartOfAccounts() {
       <div className="flex-none bg-background border-b border-border z-30 shadow-sm py-4">
         <div className="px-4 lg:px-6">
           <div className="flex items-center justify-start">
-            <div className="relative w-full max-w-2xl">
+            <div className="relative w-full">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input 
                 type="text"

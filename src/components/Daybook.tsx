@@ -33,7 +33,7 @@ const DEFAULT_CONFIG: ReportConfig = {
 
 export function Daybook() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, company } = useAuth();
   const { t } = useLanguage();
   const settings = useSettings();
   const { showNotification } = useNotification();
@@ -46,13 +46,22 @@ export function Daybook() {
   const [config, setConfig] = useState<ReportConfig>(DEFAULT_CONFIG);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [startDate, setStartDate] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-CA');
+    return new Date().toLocaleDateString('en-CA');
   });
   const [endDate, setEndDate] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() + 1, 0).toLocaleDateString('en-CA');
+    return new Date().toLocaleDateString('en-CA');
   });
+  const [highlightDates, setHighlightDates] = useState(false);
+
+  useEffect(() => {
+    if (company && company.enableDaybookDateHighlight !== false) {
+      setHighlightDates(true);
+      const timer = setTimeout(() => {
+        setHighlightDates(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [company?.id, company?.enableDaybookDateHighlight]);
 
   const fetchVouchers = async () => {
     if (!user?.companyId) return;
@@ -308,6 +317,7 @@ export function Daybook() {
                   value={startDate}
                   onChange={setStartDate}
                   className="w-full"
+                  highlighted={highlightDates}
                 />
               </div>
               <div className="flex-1">
@@ -316,6 +326,7 @@ export function Daybook() {
                   value={endDate}
                   onChange={setEndDate}
                   className="w-full"
+                  highlighted={highlightDates}
                 />
               </div>
             </div>

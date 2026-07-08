@@ -137,8 +137,15 @@ export function RatioAnalysis() {
     exportToCSV('Ratio_Analysis', 'Ratio Analysis', exportData, ['Type', 'Particulars', 'Value'], settings);
   };
 
-  if (loading) {
-    return <SkeletonLoader type="cards" />;
+  if (loading && !data) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8 bg-background min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Calculating ratios...</p>
+        </div>
+      </div>
+    );
   }
 
   const renderGroups = () => (

@@ -35,6 +35,7 @@ export interface Company {
   quotaDisplayRule?: 'always' | 'exceed_50';
   quotaExceededMsg?: string;
   forceRefreshAt?: number;
+  enableDaybookDateHighlight?: boolean;
   search_config?: {
     placeholder?: string;
     showShortcut?: boolean;

@@ -1063,15 +1063,21 @@ export default function FounderPanel() {
   const updateSubscription = async (companyId: string, updates: any) => {
     try {
       const companyRef = doc(db, 'companies', companyId);
-      await updateDoc(companyRef, updates);
+      const mostRecentResetTime = erpService.getMostRecent130PM(new Date()).getTime();
+      const finalUpdates = {
+        ...updates,
+        quotaLastReset: mostRecentResetTime,
+        quotaLastResetDateStr: new Date(mostRecentResetTime).toISOString()
+      };
+      await updateDoc(companyRef, finalUpdates);
       
       const updatedCompanies = companies.map(c => 
-        c.id === companyId ? { ...c, ...updates } : c
+        c.id === companyId ? { ...c, ...finalUpdates } : c
       );
       setCompanies(updatedCompanies);
       
       if (selectedCompany?.id === companyId) {
-        setSelectedCompany({ ...selectedCompany, ...updates });
+        setSelectedCompany({ ...selectedCompany, ...finalUpdates });
       }
       
       setIsEditingSubscription(false);
@@ -6437,6 +6443,17 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               </select>
                             </div>
                             <div className="space-y-1 sm:col-span-2">
+                              <label className="text-[9px] uppercase font-bold text-muted-foreground">Daybook Date Highlight</label>
+                              <select
+                                value={editDraft.enableDaybookDateHighlight === false ? 'false' : 'true'}
+                                onChange={(e) => setEditDraft(prev => prev ? { ...prev, enableDaybookDateHighlight: e.target.value === 'true' } : null)}
+                                className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary font-medium"
+                              >
+                                <option value="true">Enabled (Glow/Highlight From/To fields for 2 seconds on load)</option>
+                                <option value="false">Disabled</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1 sm:col-span-2">
                               <label className="text-[9px] uppercase font-bold text-muted-foreground">Maintenance Break Custom Message</label>
                               <textarea
                                 value={editDraft.quotaExceededMsg || ''}
@@ -6498,6 +6515,12 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               <span>Display Rule:</span>
                               <span className="text-foreground capitalize font-semibold">
                                 {selectedCompany.quotaDisplayRule === 'always' ? 'Always Show' : 'Show Over 50% only'}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] font-mono bg-muted/20 px-2.5 py-1.5 rounded-lg border border-dashed border-border text-muted-foreground mt-1">
+                              <span>Daybook Date Highlight:</span>
+                              <span className={cn("font-semibold uppercase text-xs", selectedCompany.enableDaybookDateHighlight !== false ? "text-emerald-500 font-bold" : "text-rose-500 font-bold")}>
+                                {selectedCompany.enableDaybookDateHighlight !== false ? 'Enabled' : 'Disabled'}
                               </span>
                             </div>
                           </div>
@@ -6564,6 +6587,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                           quotaUsed: selectedCompany.quotaUsed ?? 0,
                           quotaDisplayRule: selectedCompany.quotaDisplayRule || 'exceed_50',
                           quotaExceededMsg: selectedCompany.quotaExceededMsg || '',
+                          enableDaybookDateHighlight: selectedCompany.enableDaybookDateHighlight !== false,
                         });
                         setIsEditingSubscription(true);
                       }

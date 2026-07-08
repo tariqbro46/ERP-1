@@ -37,6 +37,7 @@ export interface CompanyData {
   quotaDisplayRule?: 'always' | 'exceed_50';
   quotaExceededMsg?: string;
   forceRefreshAt?: number;
+  enableDaybookDateHighlight?: boolean;
   customLimits?: {
     vouchers?: number;
     items?: number;
@@ -171,7 +172,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const mostRecentResetTime = erpService.getMostRecent130PM(new Date()).getTime();
                     const lastReset = compData.quotaLastReset || 0;
                     if (lastReset < mostRecentResetTime) {
-                      erpService.resetCompanyQuota(userData.companyId, mostRecentResetTime);
+                      // Optimistically set company state immediately so the app has data and doesn't render white screen
+                      setCompany({
+                        ...compData,
+                        quotaUsed: 0,
+                        quotaReads: 0,
+                        quotaWrites: 0,
+                        quotaDeletes: 0,
+                        quotaLastReset: mostRecentResetTime,
+                        quotaLastResetDateStr: new Date(mostRecentResetTime).toISOString()
+                      });
+                      erpService.resetCompanyQuota(userData.companyId, mostRecentResetTime).catch(err => {
+                        console.error("[QUOTA] Background quota reset error:", err);
+                      });
                     } else {
                       setCompany(compData);
                       const isExceeded = (localStorage.getItem('erp_is_demo_mode') !== 'true') && 
