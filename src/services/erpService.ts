@@ -820,6 +820,19 @@ export const erpService: any = {
               filtered.push(fullVoucher);
               
               filtered.sort((a: any, b: any) => {
+                const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
+                if (dateComp !== 0) return dateComp;
+                
+                const vTypeComp = (a.v_type || '').localeCompare(b.v_type || '');
+                if (vTypeComp !== 0) return vTypeComp;
+
+                const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
+                const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
+                if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+                const vNoComp = (a.v_no || '').localeCompare(b.v_no || '', undefined, { numeric: true });
+                if (vNoComp !== 0) return vNoComp;
+
                 const serialA = a.serial_no || a.auto_serial_no || 0;
                 const serialB = b.serial_no || b.auto_serial_no || 0;
                 return serialA - serialB;
@@ -988,6 +1001,19 @@ export const erpService: any = {
               filtered.push(fullVoucher);
               
               filtered.sort((a: any, b: any) => {
+                const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
+                if (dateComp !== 0) return dateComp;
+                
+                const vTypeComp = (a.v_type || '').localeCompare(b.v_type || '');
+                if (vTypeComp !== 0) return vTypeComp;
+
+                const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
+                const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
+                if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+                const vNoComp = (a.v_no || '').localeCompare(b.v_no || '', undefined, { numeric: true });
+                if (vNoComp !== 0) return vNoComp;
+
                 const serialA = a.serial_no || a.auto_serial_no || 0;
                 const serialB = b.serial_no || b.auto_serial_no || 0;
                 return serialA - serialB;
