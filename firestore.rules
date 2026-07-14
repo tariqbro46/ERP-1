@@ -127,7 +127,12 @@ service cloud.firestore {
       allow get: if isAuthenticated() && (isSuperAdmin() || isCompanyMember(companyId));
       allow list: if isAuthenticated() && (isSuperAdmin() || resource.data.get('ownerId', '') == request.auth.uid || resource.data.get('createdBy', '') == request.auth.uid);
       allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && (isSuperAdmin() || resource.data.get('ownerId', '') == request.auth.uid);
+      allow update: if isAuthenticated() && (
+        isSuperAdmin() || 
+        resource.data.get('ownerId', '') == request.auth.uid ||
+        (isCompanyMember(companyId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quotaReads', 'quotaWrites', 'quotaDeletes', 'quotaUsed', 'quotaLastReset', 'quotaLastResetDateStr']))
+      );
+      allow delete: if isAuthenticated() && (isSuperAdmin() || resource.data.get('ownerId', '') == request.auth.uid);
     }
 
     match /users/{uid} {
