@@ -1899,42 +1899,15 @@ export const erpService: any = {
       return this._vouchersByTypeCache[cacheKey].data;
     }
     try {
-      let vouchers: any[] = [];
-      let allEntries: any[] = [];
-      let serialMap: any = {};
+      const [vCollection, eCollection, sMap] = await Promise.all([
+        this.getCollection('vouchers', companyId),
+        this.getCollection('voucher_entries', companyId),
+        this.getVoucherSerials(companyId)
+      ]);
 
-      try {
-        const [vSnap, eSnap, sMap] = await Promise.all([
-          getDocs(query(
-            collection(db, 'vouchers'),
-            where('companyId', '==', companyId),
-            where('v_type', '==', type),
-            where('v_date', '>=', from),
-            where('v_date', '<=', to)
-          )),
-          getDocs(query(
-            collection(db, 'voucher_entries'),
-            where('companyId', '==', companyId),
-            where('date', '>=', from),
-            where('date', '<=', to)
-          )),
-          this.getVoucherSerials(companyId)
-        ]);
-        vouchers = vSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
-        allEntries = eSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
-        serialMap = sMap;
-        this.trackQuota(companyId, vSnap.size + eSnap.size, 0);
-      } catch (rangeErr) {
-        console.warn('Targeted range query in getVouchersByType failed, falling back:', rangeErr);
-        const [vCollection, eCollection, sMap] = await Promise.all([
-          this.getCollection('vouchers', companyId),
-          this.getCollection('voucher_entries', companyId),
-          this.getVoucherSerials(companyId)
-        ]);
-        vouchers = vCollection.filter((v: any) => v.v_type === type && v.v_date >= from && v.v_date <= to);
-        allEntries = eCollection;
-        serialMap = sMap;
-      }
+      const vouchers = vCollection.filter((v: any) => v.v_type === type && v.v_date >= from && v.v_date <= to);
+      const allEntries = eCollection;
+      const serialMap = sMap;
 
       const result = vouchers.map((v: any) => {
         const dynamicSerial = serialMap[v.id];
@@ -1980,10 +1953,12 @@ export const erpService: any = {
       return this._vouchersByGroupCache[cacheKey].data;
     }
     try {
-      const [allGroups, ledgers, serialMap] = await Promise.all([
+      const [allGroups, ledgers, serialMap, vCollection, eCollection] = await Promise.all([
         this.getCollection('ledger_groups', companyId),
         this.getCollection('ledgers', companyId),
-        this.getVoucherSerials(companyId)
+        this.getVoucherSerials(companyId),
+        this.getCollection('vouchers', companyId),
+        this.getCollection('voucher_entries', companyId)
       ]);
       
       const getChildGroupIds = (parentId: string): string[] => {
@@ -2000,36 +1975,8 @@ export const erpService: any = {
       
       if (groupLedgerIds.length === 0) return [];
 
-      let vouchers: any[] = [];
-      let allEntries: any[] = [];
-
-      try {
-        const [vSnap, eSnap] = await Promise.all([
-          getDocs(query(
-            collection(db, 'vouchers'),
-            where('companyId', '==', companyId),
-            where('v_date', '>=', from),
-            where('v_date', '<=', to)
-          )),
-          getDocs(query(
-            collection(db, 'voucher_entries'),
-            where('companyId', '==', companyId),
-            where('date', '>=', from),
-            where('date', '<=', to)
-          ))
-        ]);
-        vouchers = vSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
-        allEntries = eSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
-        this.trackQuota(companyId, vSnap.size + eSnap.size, 0);
-      } catch (rangeErr) {
-        console.warn('Targeted range query in getVouchersByGroup failed, falling back:', rangeErr);
-        const [vCollection, eCollection] = await Promise.all([
-          this.getCollection('vouchers', companyId),
-          this.getCollection('voucher_entries', companyId)
-        ]);
-        vouchers = vCollection.filter((v: any) => v.v_date >= from && v.v_date <= to);
-        allEntries = eCollection;
-      }
+      const vouchers = vCollection.filter((v: any) => v.v_date >= from && v.v_date <= to);
+      const allEntries = eCollection;
 
       const result = vouchers.map((v: any) => {
         const dynamicSerial = serialMap[v.id];
@@ -3786,82 +3733,82 @@ export const erpService: any = {
   },
 
   async getVoucherEntriesByDate(companyId: string, asOnDate: string): Promise<any[]> {
-    const vouchersQuery = query(
-      collection(db, 'vouchers'),
-      where('companyId', '==', companyId)
-    );
-    const vouchersSnap = await getDocs(vouchersQuery);
-    const targetDate = parseEntryDate(asOnDate, null);
+    try {
+      const [allEntries, allVouchers] = await Promise.all([
+        this.getCollection('voucher_entries', companyId),
+        this.getCollection('vouchers', companyId)
+      ]);
+      const targetDate = parseEntryDate(asOnDate, null);
 
-    const filteredVouchers = vouchersSnap.docs.filter(d => {
-      const vDate = parseEntryDate(d.data().v_date, d.data().createdAt);
-      return vDate <= targetDate;
-    });
+      const filteredVouchers = allVouchers.filter((v: any) => {
+        const vDate = parseEntryDate(v.v_date, v.createdAt);
+        return vDate <= targetDate;
+      });
 
-    const voucherIds = filteredVouchers.map(d => d.id);
-    
-    if (voucherIds.length === 0) return [];
-    
-    const entriesQuery = query(
-      collection(db, 'voucher_entries'),
-      where('companyId', '==', companyId)
-    );
-    const entriesSnap = await getDocs(entriesQuery);
-    
-    return entriesSnap.docs
-      .map(d => ({ ...(d.data() as any), id: d.id }))
-      .filter(e => voucherIds.includes(e.voucher_id))
-      .map(e => ({
-        ...e,
-        v_date: vouchersSnap.docs.find(v => v.id === e.voucher_id)?.data()?.v_date
-      }));
+      const voucherIds = filteredVouchers.map((v: any) => v.id);
+      
+      const voucherMap = allVouchers.reduce((acc: any, v: any) => {
+        acc[v.id] = v;
+        return acc;
+      }, {});
+
+      return allEntries
+        .filter((e: any) => voucherIds.includes(e.voucher_id))
+        .map((e: any) => ({
+          ...e,
+          v_date: voucherMap[e.voucher_id]?.v_date
+        }));
+    } catch (error) {
+      console.error('Error in getVoucherEntriesByDate:', error);
+      return [];
+    }
   },
 
   async getVoucherEntriesByDateRange(companyId: string, startDate: string, endDate: string) {
-    const vouchersQuery = query(
-      collection(db, 'vouchers'),
-      where('companyId', '==', companyId),
-      where('v_date', '>=', startDate),
-      where('v_date', '<=', endDate)
-    );
-    const vouchersSnap = await getDocs(vouchersQuery);
-    const voucherIds = vouchersSnap.docs.map(d => d.id);
-    
-    if (voucherIds.length === 0) return [];
-    
-    const entriesQuery = query(
-      collection(db, 'voucher_entries'),
-      where('companyId', '==', companyId)
-    );
-    const entriesSnap = await getDocs(entriesQuery);
-    
-    return entriesSnap.docs
-      .map(d => ({ ...(d.data() as any), id: d.id }))
-      .filter(e => voucherIds.includes(e.voucher_id))
-      .map(e => ({
-        ...e,
-        v_date: vouchersSnap.docs.find(v => v.id === e.voucher_id)?.data()?.v_date
-      }));
+    try {
+      const [allEntries, allVouchers] = await Promise.all([
+        this.getCollection('voucher_entries', companyId),
+        this.getCollection('vouchers', companyId)
+      ]);
+      
+      const filteredVouchers = allVouchers.filter((v: any) => v.v_date >= startDate && v.v_date <= endDate);
+      const voucherIds = filteredVouchers.map((v: any) => v.id);
+      
+      const voucherMap = allVouchers.reduce((acc: any, v: any) => {
+        acc[v.id] = v;
+        return acc;
+      }, {});
+      
+      return allEntries
+        .filter((e: any) => voucherIds.includes(e.voucher_id))
+        .map((e: any) => ({
+          ...e,
+          v_date: voucherMap[e.voucher_id]?.v_date
+        }));
+    } catch (error) {
+      console.error('Error in getVoucherEntriesByDateRange:', error);
+      return [];
+    }
   },
 
   async getInventoryEntriesGrouped(companyId: string): Promise<any[]> {
-    const q = query(collection(db, 'inventory_entries'), where('companyId', '==', companyId));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
+    try {
+      return await this.getCollection('inventory_entries', companyId);
+    } catch (error) {
+      console.error('Error in getInventoryEntriesGrouped:', error);
+      return [];
+    }
   },
 
   async getInventoryEntriesByDate(companyId: string, startDate: string, endDate: string): Promise<any[]> {
-    // We widen the query to be string-format agnostic and filter in JS for absolute correctness
-    // while the database is being migrated to YYYY-MM-DD
-    const q = query(
-      collection(db, 'inventory_entries'),
-      where('companyId', '==', companyId)
-    );
     try {
-      const snap = await getDocs(q);
-      return snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
+      const allEntries = await this.getCollection('inventory_entries', companyId);
+      return allEntries.filter((e: any) => {
+        const date = e.date || '';
+        return date >= startDate && date <= endDate;
+      });
     } catch (error) {
-      handleFirestoreError(error, OperationType.GET, 'inventory_entries');
+      console.error('Error in getInventoryEntriesByDate:', error);
       return [];
     }
   },
@@ -4144,51 +4091,17 @@ export const erpService: any = {
       return this._vouchersByDateRangeCache[cacheKey].data;
     }
     try {
-      let vouchers: any[] = [];
-      let allEntries: any[] = [];
-      let allInventory: any[] = [];
-      let serialMap: any = {};
+      const [vCollection, eCollection, iCollection, sMap] = await Promise.all([
+        this.getCollection('vouchers', companyId),
+        this.getCollection('voucher_entries', companyId),
+        this.getCollection('inventory_entries', companyId),
+        this.getVoucherSerials(companyId)
+      ]);
 
-      try {
-        const [vSnap, eSnap, iSnap, sMap] = await Promise.all([
-          getDocs(query(
-            collection(db, 'vouchers'),
-            where('companyId', '==', companyId),
-            where('v_date', '>=', startDate),
-            where('v_date', '<=', endDate)
-          )),
-          getDocs(query(
-            collection(db, 'voucher_entries'),
-            where('companyId', '==', companyId),
-            where('date', '>=', startDate),
-            where('date', '<=', endDate)
-          )),
-          getDocs(query(
-            collection(db, 'inventory_entries'),
-            where('companyId', '==', companyId),
-            where('date', '>=', startDate),
-            where('date', '<=', endDate)
-          )),
-          this.getVoucherSerials(companyId)
-        ]);
-        vouchers = vSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
-        allEntries = eSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
-        allInventory = iSnap.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
-        serialMap = sMap;
-        this.trackQuota(companyId, vSnap.size + eSnap.size + iSnap.size, 0);
-      } catch (rangeErr) {
-        console.warn('Targeted range query in getVouchersByDateRange failed, falling back:', rangeErr);
-        const [vCollection, eCollection, iCollection, sMap] = await Promise.all([
-          this.getCollection('vouchers', companyId),
-          this.getCollection('voucher_entries', companyId),
-          this.getCollection('inventory_entries', companyId),
-          this.getVoucherSerials(companyId)
-        ]);
-        vouchers = vCollection.filter((v: any) => v.v_date >= startDate && v.v_date <= endDate);
-        allEntries = eCollection;
-        allInventory = iCollection;
-        serialMap = sMap;
-      }
+      const vouchers = vCollection.filter((v: any) => v.v_date >= startDate && v.v_date <= endDate);
+      const allEntries = eCollection;
+      const allInventory = iCollection;
+      const serialMap = sMap;
 
       const result = vouchers.map((v: any) => {
         const dynamicSerial = serialMap[v.id];
