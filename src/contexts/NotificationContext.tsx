@@ -145,6 +145,32 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               </button>
             </div>
             {renderAnimation(n)}
+            {/* Glowing 4-Side Border Frame Effect */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible">
+              <rect
+                x="1.5"
+                y="1.5"
+                width="calc(100% - 3px)"
+                height="calc(100% - 3px)"
+                rx="4"
+                fill="none"
+                stroke={
+                  n.type === 'success' ? "#10b981" : 
+                  n.type === 'error' ? "#f43f5e" : 
+                  "#3b82f6"
+                }
+                strokeWidth="2.5"
+                vectorEffect="non-scaling-stroke"
+                pathLength="100"
+                className="animate-progress-path"
+                style={{
+                  animationDuration: `${notificationDuration || 5000}ms`,
+                  filter: n.type === 'success' ? 'drop-shadow(0 0 8px rgba(16,185,129,0.95)) drop-shadow(0 0 3px rgba(16,185,129,0.7))' :
+                          n.type === 'error' ? 'drop-shadow(0 0 8px rgba(244,63,94,0.95)) drop-shadow(0 0 3px rgba(244,63,94,0.7))' :
+                          'drop-shadow(0 0 8px rgba(59,130,246,0.95)) drop-shadow(0 0 3px rgba(59,130,246,0.7))'
+                }}
+              />
+            </svg>
           </div>
         ))}
       </div>

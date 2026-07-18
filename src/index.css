@@ -213,6 +213,16 @@
     animation-fill-mode: forwards;
   }
 
+  @keyframes glowing-line-progress {
+    from { width: 100%; }
+    to { width: 0%; }
+  }
+  .animate-glowing-line {
+    animation-name: glowing-line-progress;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+
   /* Neon Glow */
   @keyframes neon-glow {
     0%, 100% { opacity: 0.4; transform: scale(1); }
