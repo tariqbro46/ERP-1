@@ -298,9 +298,23 @@ export function StockSummary() {
     exportToPDF('Stock_Summary', 'Stock Summary', exportData, ['Particulars', 'Category', 'Quantity', 'Unit', 'Rate', 'Value'], settings);
   };
 
-  if (loading) {
-    return <SkeletonLoader type="table" />;
-  }
+  const dummyStockGroups = ['Raw Materials', 'Finished Goods', 'Packaging Materials'];
+  const dummyGroupedItems: Record<string, any[]> = {
+    'Raw Materials': [
+      { id: 'dummy-1', name: 'Premium Plastic Pellets', opening: 0, inward: 0, outward: 0, displayStock: 0, avg_cost: 0, isLoading: true },
+      { id: 'dummy-2', name: 'Color Masterbatch (Blue)', opening: 0, inward: 0, outward: 0, displayStock: 0, avg_cost: 0, isLoading: true }
+    ],
+    'Finished Goods': [
+      { id: 'dummy-3', name: 'Standard Delivery Box 12x12', opening: 0, inward: 0, outward: 0, displayStock: 0, avg_cost: 0, isLoading: true },
+      { id: 'dummy-4', name: 'Eco-friendly Carry Bags', opening: 0, inward: 0, outward: 0, displayStock: 0, avg_cost: 0, isLoading: true }
+    ],
+    'Packaging Materials': [
+      { id: 'dummy-5', name: 'Heavy Duty Adhesive Tape', opening: 0, inward: 0, outward: 0, displayStock: 0, avg_cost: 0, isLoading: true }
+    ]
+  };
+
+  const groupsToRender = loading ? dummyStockGroups : filteredGroups;
+  const activeGroupedItems = loading ? dummyGroupedItems : groupedItems;
 
   const now = new Date();
   const asOnDate = formatReportDate(endDate, settings.dateFormat);
@@ -365,19 +379,24 @@ export function StockSummary() {
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 w-full sm:w-auto">
             <div className="text-left sm:text-right">
               <p className="text-[9px] text-gray-500 uppercase tracking-widest">{t('common.totalValue')}</p>
-              <p className="text-lg text-foreground font-bold">৳ {formatNumber(totalStockValue)}</p>
+              {loading ? (
+                <div className="h-6 w-24 bg-muted-foreground/20 animate-pulse rounded mt-1" />
+              ) : (
+                <p className="text-lg text-foreground font-bold">৳ {formatNumber(totalStockValue)}</p>
+              )}
             </div>
             <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
               <button 
                 onClick={() => printUtils.printElement('stock-summary-report', `Stock Summary`, settings)}
-                className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase rounded-sm shadow-sm"
+                disabled={loading}
+                className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase rounded-sm shadow-sm disabled:opacity-50"
               >
                 <Printer className="w-3.5 h-3.5" />
                 {t('common.print')}
               </button>
               <button 
                 onClick={handleDownload}
-                disabled={finalFilteredItems.length === 0}
+                disabled={loading || finalFilteredItems.length === 0}
                 className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase rounded-sm shadow-sm"
                 title={t('common.csv')}
               >
@@ -385,7 +404,7 @@ export function StockSummary() {
               </button>
               <button 
                 onClick={handleDownloadPDF}
-                disabled={finalFilteredItems.length === 0}
+                disabled={loading || finalFilteredItems.length === 0}
                 className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase rounded-sm shadow-sm"
                 title={t('common.pdf')}
               >
@@ -393,7 +412,8 @@ export function StockSummary() {
               </button>
               <button 
                 onClick={() => setIsQuickItemOpen(true)}
-                className="px-3 py-1.5 bg-amber-600/10 border border-amber-600/20 text-amber-600 hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 text-[10px] font-bold uppercase rounded-sm shadow-sm"
+                disabled={loading}
+                className="px-3 py-1.5 bg-amber-600/10 border border-amber-600/20 text-amber-600 hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 text-[10px] font-bold uppercase rounded-sm shadow-sm disabled:opacity-50"
                 title={t('stock.quickCreateItem')}
               >
                 <Package className="w-3.5 h-3.5" /> {t('item.new')}
@@ -451,7 +471,7 @@ export function StockSummary() {
           <div className="flex gap-4 justify-end">
             <button 
               onClick={handleRecalculateAll}
-              disabled={recalculating}
+              disabled={recalculating || loading}
               className="flex items-center gap-2 text-[10px] text-gray-500 uppercase tracking-widest hover:text-foreground disabled:opacity-50"
             >
               {recalculating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Activity className="w-3 h-3" />}
@@ -479,13 +499,13 @@ export function StockSummary() {
           
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
-            {filteredGroups.map(groupName => {
-              const groupItems = groupedItems[groupName];
+            {groupsToRender.map(groupName => {
+              const groupItems = activeGroupedItems[groupName] || [];
               const groupOpening = groupItems.reduce((sum, i) => sum + (i.opening || 0), 0);
               const groupInward = groupItems.reduce((sum, i) => sum + (i.inward || 0), 0);
               const groupOutward = groupItems.reduce((sum, i) => sum + (i.outward || 0), 0);
-              const groupQty = groupItems.reduce((sum, i) => sum + i.displayStock, 0);
-              const groupValue = groupItems.reduce((sum, i) => sum + (i.displayStock * (i.avg_cost || i.opening_rate || 0)), 0);
+              const groupQty = groupItems.reduce((sum, i) => sum + (i.displayStock || 0), 0);
+              const groupValue = groupItems.reduce((sum, i) => sum + ((i.displayStock || 0) * (i.avg_cost || i.opening_rate || 0)), 0);
               const isExpanded = expandedGroups.has(groupName) || search.length > 0;
 
               return (
@@ -502,33 +522,60 @@ export function StockSummary() {
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] text-gray-500 uppercase">{t('common.totalValue')}</p>
-                      <p className="text-xs font-bold text-foreground font-mono">৳ {formatNumber(groupValue)}</p>
+                      {loading ? (
+                        <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto mt-0.5" />
+                      ) : (
+                        <p className="text-xs font-bold text-foreground font-mono">৳ {formatNumber(groupValue)}</p>
+                      )}
                     </div>
                   </div>
                   {isExpanded && groupItems.map(item => (
                     <div 
                       key={item.id} 
-                      onClick={() => navigate(`/reports/stock-item?id=${item.id}&from=${startDate}&to=${endDate}`)}
+                      onClick={() => {
+                        if (loading) return;
+                        navigate(`/reports/stock-item?id=${item.id}&from=${startDate}&to=${endDate}`);
+                      }}
                       className="p-4 pl-8 border-t border-border/30 space-y-2 hover:bg-muted/60 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary/40"
                     >
                       <div className="flex justify-between items-start">
                         <span className="text-xs text-foreground/80 italic">
                           {highlightText(item.name, search)}
                         </span>
-                        <span className="text-xs font-bold text-foreground font-mono">{formatQuantity(item.displayStock, item.units?.name)}</span>
+                        {item.isLoading ? (
+                          <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded" />
+                        ) : (
+                          <span className="text-xs font-bold text-foreground font-mono">{formatQuantity(item.displayStock, item.units?.name)}</span>
+                        )}
                       </div>
                       <div className="grid grid-cols-2 gap-2 mt-1">
                         <div className="text-[9px] text-gray-500 uppercase">
-                          Op: <span className="text-foreground font-bold">{formatQuantity(item.opening)}</span>
+                          Op: {item.isLoading ? (
+                            <span className="inline-block h-3 w-8 bg-muted-foreground/20 animate-pulse rounded align-middle" />
+                          ) : (
+                            <span className="text-foreground font-bold">{formatQuantity(item.opening)}</span>
+                          )}
                         </div>
                         <div className="text-[9px] text-gray-500 uppercase text-right">
-                          In: <span className="text-foreground font-bold">{formatQuantity(item.inward)}</span>
+                          In: {item.isLoading ? (
+                            <span className="inline-block h-3 w-8 bg-muted-foreground/20 animate-pulse rounded align-middle" />
+                          ) : (
+                            <span className="text-foreground font-bold">{formatQuantity(item.inward)}</span>
+                          )}
                         </div>
                         <div className="text-[9px] text-gray-500 uppercase">
-                          Out: <span className="text-foreground font-bold">{formatQuantity(item.outward)}</span>
+                          Out: {item.isLoading ? (
+                            <span className="inline-block h-3 w-8 bg-muted-foreground/20 animate-pulse rounded align-middle" />
+                          ) : (
+                            <span className="text-foreground font-bold">{formatQuantity(item.outward)}</span>
+                          )}
                         </div>
                         <div className="text-[9px] text-gray-500 uppercase text-right font-bold text-foreground">
-                          Val: ৳ {formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))}
+                          Val: {item.isLoading ? (
+                            <span className="inline-block h-3 w-12 bg-muted-foreground/20 animate-pulse rounded align-middle" />
+                          ) : (
+                            <span>৳ {formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))}</span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -536,14 +583,18 @@ export function StockSummary() {
                 </div>
               );
             })}
-            {filteredGroups.length === 0 && (
+            {!loading && filteredGroups.length === 0 && (
               <div className="p-10 text-center text-gray-500 uppercase tracking-widest text-[10px]">{t('stock.noItems')}</div>
             )}
             {/* Grand Total Mobile */}
             <div className="p-4 bg-foreground/10 flex justify-between items-center font-bold">
               <span className="text-[10px] text-gray-500 uppercase tracking-widest">{t('common.grandTotal')}</span>
               <div className="text-right">
-                <p className="text-sm text-foreground font-mono">৳ {formatNumber(totalStockValue)}</p>
+                {loading ? (
+                  <div className="h-5 w-24 bg-muted-foreground/20 animate-pulse rounded" />
+                ) : (
+                  <p className="text-sm text-foreground font-mono">৳ {formatNumber(totalStockValue)}</p>
+                )}
               </div>
             </div>
           </div>
@@ -563,13 +614,13 @@ export function StockSummary() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50 bg-white">
-                {filteredGroups.map(groupName => {
-                  const groupItems = groupedItems[groupName];
-                  const groupOpening = groupItems.reduce((sum, i) => sum + i.opening, 0);
-                  const groupInward = groupItems.reduce((sum, i) => sum + i.inward, 0);
-                  const groupOutward = groupItems.reduce((sum, i) => sum + i.outward, 0);
-                  const groupQty = groupItems.reduce((sum, i) => sum + i.displayStock, 0);
-                  const groupValue = groupItems.reduce((sum, i) => sum + (i.displayStock * (i.avg_cost || i.opening_rate || 0)), 0);
+                {groupsToRender.map(groupName => {
+                  const groupItems = activeGroupedItems[groupName] || [];
+                  const groupOpening = groupItems.reduce((sum, i) => sum + (i.opening || 0), 0);
+                  const groupInward = groupItems.reduce((sum, i) => sum + (i.inward || 0), 0);
+                  const groupOutward = groupItems.reduce((sum, i) => sum + (i.outward || 0), 0);
+                  const groupQty = groupItems.reduce((sum, i) => sum + (i.displayStock || 0), 0);
+                  const groupValue = groupItems.reduce((sum, i) => sum + ((i.displayStock || 0) * (i.avg_cost || i.opening_rate || 0)), 0);
                   const isExpanded = expandedGroups.has(groupName) || search.length > 0;
 
                   return (
@@ -587,28 +638,51 @@ export function StockSummary() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
-                          {formatQuantity(groupOpening)}
+                          {loading ? (
+                            <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                          ) : (
+                            formatQuantity(groupOpening)
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
-                          {formatQuantity(groupInward)}
+                          {loading ? (
+                            <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                          ) : (
+                            formatQuantity(groupInward)
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
-                          {formatQuantity(groupOutward)}
+                          {loading ? (
+                            <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                          ) : (
+                            formatQuantity(groupOutward)
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right text-amber-700 font-mono font-bold border-l border-amber-500/10 bg-amber-500/5">
-                          {formatQuantity(groupQty)}
+                          {loading ? (
+                            <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                          ) : (
+                            formatQuantity(groupQty)
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-600 border-l border-border/10">
                           -
                         </td>
                         <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
-                          {formatNumber(groupValue)}
+                          {loading ? (
+                            <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                          ) : (
+                            formatNumber(groupValue)
+                          )}
                         </td>
                       </tr>
                       {isExpanded && groupItems.map(item => (
                         <tr 
                           key={item.id} 
-                          onClick={() => navigate(`/reports/stock-item?id=${item.id}&from=${startDate}&to=${endDate}`)}
+                          onClick={() => {
+                            if (loading) return;
+                            navigate(`/reports/stock-item?id=${item.id}&from=${startDate}&to=${endDate}`);
+                          }}
                           className={cn("bg-muted/5 hover:bg-muted/60 transition-colors group/item cursor-pointer border-l-4 border-transparent hover:border-primary/40", item.isLowStock && "bg-rose-500/5")}
                         >
                         <td className="px-10 py-2.5 text-foreground/60 italic flex items-center gap-2">
@@ -621,29 +695,53 @@ export function StockSummary() {
                           )}
                         </td>
                          <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
-                           {formatQuantity(item.opening, item.units?.name)}
+                           {item.isLoading ? (
+                             <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                           ) : (
+                             formatQuantity(item.opening, item.units?.name)
+                           )}
                          </td>
                          <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
-                           {formatQuantity(item.inward, item.units?.name)}
+                           {item.isLoading ? (
+                             <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                           ) : (
+                             formatQuantity(item.inward, item.units?.name)
+                           )}
                          </td>
                          <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
-                           {formatQuantity(item.outward, item.units?.name)}
+                           {item.isLoading ? (
+                             <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                           ) : (
+                             formatQuantity(item.outward, item.units?.name)
+                           )}
                          </td>
                          <td className="px-4 py-2.5 text-right text-amber-700 font-bold font-mono border-l border-amber-500/20 bg-amber-500/10">
-                           {formatQuantity(item.displayStock, item.units?.name)}
+                           {item.isLoading ? (
+                             <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                           ) : (
+                             formatQuantity(item.displayStock, item.units?.name)
+                           )}
                          </td>
                            <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5">
-                             {formatNumber(item.avg_cost || item.opening_rate || 0)}
+                             {item.isLoading ? (
+                               <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                             ) : (
+                               formatNumber(item.avg_cost || item.opening_rate || 0)
+                             )}
                            </td>
                            <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5">
-                             {formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))}
+                             {item.isLoading ? (
+                               <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                             ) : (
+                               formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))
+                             )}
                            </td>
                         </tr>
                       ))}
                     </React.Fragment>
                   );
                 })}
-                {filteredGroups.length === 0 && (
+                {!loading && filteredGroups.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-6 py-10 text-center text-gray-500 uppercase tracking-widest">{t('stock.noItems')}</td>
                   </tr>
@@ -653,22 +751,42 @@ export function StockSummary() {
                 <tr className="font-bold text-foreground bg-background">
                   <td className="px-4 py-3 uppercase text-[9px] text-gray-500 tracking-widest bg-background">{t('common.grandTotal')}</td>
                   <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
-                    {formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.opening, 0))}
+                    {loading ? (
+                      <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                    ) : (
+                      formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.opening, 0))
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
-                    {formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.inward, 0))}
+                    {loading ? (
+                      <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                    ) : (
+                      formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.inward, 0))
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
-                    {formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.outward, 0))}
+                    {loading ? (
+                      <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                    ) : (
+                      formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.outward, 0))
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right font-mono border-l border-amber-600 bg-amber-600 text-white">
-                    {formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.displayStock, 0))}
+                    {loading ? (
+                      <div className="h-4 w-16 bg-white/30 animate-pulse rounded ml-auto" />
+                    ) : (
+                      formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.displayStock, 0))
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
                     -
                   </td>
                   <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
-                    ৳ {formatNumber(totalStockValue)}
+                    {loading ? (
+                      <div className="h-4 w-24 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
+                    ) : (
+                      <span>৳ {formatNumber(totalStockValue)}</span>
+                    )}
                   </td>
                 </tr>
               </tfoot>

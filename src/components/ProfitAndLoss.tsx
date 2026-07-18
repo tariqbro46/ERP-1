@@ -269,9 +269,32 @@ export function ProfitAndLoss() {
     exportToCSV('Profit_And_Loss', 'Profit & Loss A/c', exportData, ['Particulars', 'Amount'], settings);
   };
 
-  if (loading) {
-    return <SkeletonLoader type="table" />;
-  }
+  const dummyTradingData = {
+    openingStock: 0,
+    closingStock: 0,
+    purchaseGroups: [
+      { name: 'Purchase Accounts', balance: 0, isLoading: true }
+    ],
+    salesGroups: [
+      { name: 'Sales Accounts', balance: 0, isLoading: true }
+    ],
+    directExpenseGroups: [
+      { name: 'Direct Expenses', balance: 0, isLoading: true }
+    ],
+    directIncomeGroups: []
+  };
+
+  const dummyPlData = {
+    indirectExpenseGroups: [
+      { name: 'Indirect Expenses', balance: 0, isLoading: true }
+    ],
+    indirectIncomeGroups: [
+      { name: 'Indirect Incomes', balance: 0, isLoading: true }
+    ]
+  };
+
+  const activeTradingData = loading ? dummyTradingData : tradingData;
+  const activePlData = loading ? dummyPlData : plData;
 
   const finalTotal = Math.max(debitTotal + (netProfit > 0 ? netProfit : 0), creditTotal + (netProfit < 0 ? Math.abs(netProfit) : 0));
 
@@ -302,14 +325,16 @@ export function ProfitAndLoss() {
           <div className="flex gap-2 w-full sm:w-auto">
             <button 
               onClick={handlePrint}
-              className="p-2 aspect-square hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors border border-border"
+              disabled={loading}
+              className="p-2 aspect-square hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors border border-border disabled:opacity-50"
               title="Print"
             >
               <Printer className="w-5 h-5" />
             </button>
             <button 
               onClick={handleDownloadPDF}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all font-medium text-sm shadow-sm active:scale-95"
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all font-medium text-sm shadow-sm active:scale-95 disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
               PDF
@@ -332,51 +357,91 @@ export function ProfitAndLoss() {
                 <div className="flex-1 divide-y divide-border/30">
                   {/* Opening Stock */}
                   <div 
-                    onClick={() => navigate(`/reports/stock?from=${startDate}&to=${endDate}`)}
-                    className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
+                    onClick={() => {
+                      if (loading) return;
+                      navigate(`/reports/stock?from=${startDate}&to=${endDate}`);
+                    }}
+                    className={cn(
+                      "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
+                      loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
+                    )}
                   >
                     <span className="text-sm font-medium text-foreground">{t('reports.openingStock')}</span>
-                    <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(tradingData.openingStock)}</span>
+                    {loading ? (
+                      <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
+                    ) : (
+                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(tradingData.openingStock)}</span>
+                    )}
                   </div>
 
                   {/* Purchase Accounts */}
-                  {tradingData.purchaseGroups.map((g: any) => (
+                  {activeTradingData.purchaseGroups.map((g: any) => (
                     <div 
                       key={g.name} 
-                      onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
-                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
+                      onClick={() => {
+                        if (loading) return;
+                        navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`);
+                      }}
+                      className={cn(
+                        "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
+                        loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
+                      )}
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
-                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
+                      {g.isLoading ? (
+                        <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
+                      ) : (
+                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
+                      )}
                     </div>
                   ))}
 
                   {/* Direct Expenses */}
-                  {tradingData.directExpenseGroups.map((g: any) => (
+                  {activeTradingData.directExpenseGroups.map((g: any) => (
                     <div 
                       key={g.name} 
-                      onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
-                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
+                      onClick={() => {
+                        if (loading) return;
+                        navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`);
+                      }}
+                      className={cn(
+                        "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
+                        loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
+                      )}
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
-                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
+                      {g.isLoading ? (
+                        <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
+                      ) : (
+                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
+                      )}
                     </div>
                   ))}
 
                   {/* Indirect Expenses */}
-                  {plData.indirectExpenseGroups.map((g: any) => (
+                  {activePlData.indirectExpenseGroups.map((g: any) => (
                     <div 
                       key={g.name} 
-                      onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
-                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
+                      onClick={() => {
+                        if (loading) return;
+                        navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`);
+                      }}
+                      className={cn(
+                        "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
+                        loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
+                      )}
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
-                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
+                      {g.isLoading ? (
+                        <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
+                      ) : (
+                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
+                      )}
                     </div>
                   ))}
 
                   {/* Nett Profit */}
-                  {netProfit > 0 && (
+                  {netProfit > 0 && !loading && (
                     <div className="px-4 py-3 flex justify-between items-center bg-emerald-500/5 group hover:bg-emerald-500/10 transition-colors cursor-pointer border-l-4 border-emerald-500">
                       <span className="text-sm font-bold italic text-emerald-600">Nett Profit</span>
                       <span className="text-sm font-bold text-emerald-600 tabular-nums underline decoration-emerald-500/30 underline-offset-4">{formatNumber(netProfit)}</span>
@@ -387,7 +452,11 @@ export function ProfitAndLoss() {
                 {/* Total Left */}
                 <div className="px-4 py-3 border-t border-border bg-muted/20 flex justify-between items-center mt-auto">
                   <span className="text-sm font-black uppercase tracking-tight text-foreground">Total</span>
-                  <span className="text-sm font-black text-foreground tabular-nums border-b-2 border-double border-foreground py-0.5">{formatNumber(finalTotal)}</span>
+                  {loading ? (
+                    <div className="h-5 w-24 bg-muted-foreground/20 animate-pulse rounded" />
+                  ) : (
+                    <span className="text-sm font-black text-foreground tabular-nums border-b-2 border-double border-foreground py-0.5">{formatNumber(finalTotal)}</span>
+                  )}
                 </div>
               </div>
 
@@ -400,40 +469,70 @@ export function ProfitAndLoss() {
 
                 <div className="flex-1 divide-y divide-border/30">
                   {/* Sales Accounts */}
-                  {tradingData.salesGroups.map((g: any) => (
+                  {activeTradingData.salesGroups.map((g: any) => (
                     <div 
                       key={g.name} 
-                      onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
-                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
+                      onClick={() => {
+                        if (loading) return;
+                        navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`);
+                      }}
+                      className={cn(
+                        "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
+                        loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
+                      )}
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
-                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(g.balance))}</span>
+                      {g.isLoading ? (
+                        <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
+                      ) : (
+                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(g.balance))}</span>
+                      )}
                     </div>
                   ))}
 
                   {/* Indirect Incomes */}
-                  {plData.indirectIncomeGroups.map((g: any) => (
+                  {activePlData.indirectIncomeGroups.map((g: any) => (
                     <div 
                       key={g.name} 
-                      onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
-                      className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
+                      onClick={() => {
+                        if (loading) return;
+                        navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`);
+                      }}
+                      className={cn(
+                        "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
+                        loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
+                      )}
                     >
                       <span className="text-sm font-medium text-foreground">{g.name}</span>
-                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(g.balance))}</span>
+                      {g.isLoading ? (
+                        <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
+                      ) : (
+                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(g.balance))}</span>
+                      )}
                     </div>
                   ))}
 
                   {/* Closing Stock */}
                   <div 
-                    onClick={() => navigate(`/reports/stock?from=${startDate}&to=${endDate}`)}
-                    className="px-4 py-3 flex justify-between items-center hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary"
+                    onClick={() => {
+                      if (loading) return;
+                      navigate(`/reports/stock?from=${startDate}&to=${endDate}`);
+                    }}
+                    className={cn(
+                      "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
+                      loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
+                    )}
                   >
                     <span className="text-sm font-medium text-foreground">Closing Stock</span>
-                    <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(tradingData.closingStock)}</span>
+                    {loading ? (
+                      <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
+                    ) : (
+                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(tradingData.closingStock)}</span>
+                    )}
                   </div>
 
                   {/* Nett Loss */}
-                  {netProfit < 0 && (
+                  {netProfit < 0 && !loading && (
                     <div className="px-4 py-3 flex justify-between items-center bg-rose-500/5 hover:bg-rose-500/10 transition-colors cursor-pointer border-l-4 border-rose-500">
                       <span className="text-sm font-bold italic text-rose-600">Nett Loss</span>
                       <span className="text-sm font-bold text-rose-600 tabular-nums underline decoration-rose-500/30 underline-offset-4">{formatNumber(Math.abs(netProfit))}</span>
@@ -444,7 +543,11 @@ export function ProfitAndLoss() {
                 {/* Total Right */}
                 <div className="px-4 py-3 border-t border-border bg-muted/20 flex justify-between items-center mt-auto">
                   <span className="text-sm font-black uppercase tracking-tight text-foreground">Total</span>
-                  <span className="text-sm font-black text-foreground tabular-nums border-b-2 border-double border-foreground py-0.5">{formatNumber(finalTotal)}</span>
+                  {loading ? (
+                    <div className="h-5 w-24 bg-muted-foreground/20 animate-pulse rounded" />
+                  ) : (
+                    <span className="text-sm font-black text-foreground tabular-nums border-b-2 border-double border-foreground py-0.5">{formatNumber(finalTotal)}</span>
+                  )}
                 </div>
               </div>
             </div>
