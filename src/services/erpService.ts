@@ -5923,6 +5923,56 @@ export const erpService: any = {
     }, 1000);
   },
 
+  clearAllCaches: function() {
+    // 1. Reset all in-memory caches to empty objects
+    this._serialsCache = {};
+    this._ledgersCache = {};
+    this._itemsCache = {};
+    this._godownsCache = {};
+    this._employeesCache = {};
+    this._unitsCache = {};
+    this._dashboardStatsCache = {};
+    this._ledgerGroupsCache = {};
+    this._voucherTypesCache = {};
+    this._stockGroupsCache = {};
+    this._stockCategoriesCache = {};
+    this._employeeGroupsCache = {};
+    this._usersCache = {};
+    this._singleLedgerCache = {};
+    this._singleItemCache = {};
+    this._genericCollectionsCache = {};
+    this._vouchersByDateRangeCache = {};
+    this._vouchersByTypeCache = {};
+    this._vouchersByGroupCache = {};
+    this._ledgerBalanceCache = {};
+    this._voucherDetailCache = {};
+    this._voucherWithEntriesCache = {};
+    this._ledgerMovementBeforeDateCache = {};
+    this._itemStatsCache = {};
+
+    // 2. Clear relevant localStorage caches without logging out
+    const preserveKeys = ['theme', 'app_language', 'erp_is_demo_mode', 'erp_demo_visitor', 'erp_demo_db', 'erp_demo_db_initialized'];
+    const keysToRemove: string[] = [];
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      
+      // Preserve Firebase auth/login, theme, app language, and demo mode keys
+      if (
+        key.startsWith('firebase:') || 
+        key.includes('auth') || 
+        preserveKeys.includes(key)
+      ) {
+        continue;
+      }
+      keysToRemove.push(key);
+    }
+    
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    console.log('App caches cleared successfully.');
+  },
+
   // --- DATA EXPORT ---
   exportToExcel: function(data: any[], fileName: string) {
     const ws = XLSX.utils.json_to_sheet(data);

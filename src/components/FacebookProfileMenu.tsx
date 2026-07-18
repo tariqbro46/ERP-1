@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth, UserRole } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { erpService } from '../services/erpService';
 import { AppNotification } from '../types';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -36,6 +37,27 @@ export default function FacebookProfileMenu({ isOpen, onClose, uiStyle, onNotifi
   // Notification States
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  const { showNotification } = useNotification();
+  const [isClearingCache, setIsClearingCache] = useState(false);
+
+  const handleClearCache = async () => {
+    try {
+      setIsClearingCache(true);
+      erpService.clearAllCaches();
+      showNotification('Local caches cleared successfully! Reloading to apply...', 'success');
+      
+      setTimeout(() => {
+        setIsClearingCache(false);
+        onClose();
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      console.error('Failed clearing local caches:', err);
+      showNotification('Failed to clear local cache. Please try reloading manually.', 'error');
+      setIsClearingCache(false);
+    }
+  };
 
   useEffect(() => {
     if (user?.photoURL) {
@@ -286,6 +308,33 @@ export default function FacebookProfileMenu({ isOpen, onClose, uiStyle, onNotifi
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+
+              {/* Clear App Cache Button */}
+              <button 
+                onClick={handleClearCache}
+                disabled={isClearingCache}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-muted disabled:opacity-60 transition-colors text-left group"
+                title="Clears local cache database and refreshes the application safely"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center">
+                    {isClearingCache ? (
+                      <Loader2 className="w-4.5 h-4.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4.5 h-4.5" />
+                    )}
+                  </div>
+                  <div>
+                    <span className="font-bold text-xs block text-foreground">Clear App Cache</span>
+                    <span className="text-[10px] text-muted-foreground">Fixes stale report sorting, N/As, and wrong dates</span>
+                  </div>
+                </div>
+                {isClearingCache ? (
+                  <span className="text-[10px] font-bold text-muted-foreground animate-pulse">Clearing...</span>
+                ) : (
+                  <span className="text-[9px] font-mono font-extrabold uppercase bg-muted px-2 py-0.5 rounded text-muted-foreground border border-border">Clear</span>
+                )}
               </button>
 
               {/* Founder/Admin tools quick-access shortcuts */}
