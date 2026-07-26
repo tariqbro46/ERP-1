@@ -85,7 +85,7 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
   if (showReset) {
     return (
       <div className="h-screen w-full flex bg-background overflow-hidden">
-        <div className="hidden lg:block lg:w-[40%] relative overflow-hidden">
+        <div className="hidden lg:block lg:w-[58%] relative overflow-hidden">
           <img 
             src="https://picsum.photos/seed/auth-bg/1200/1600" 
             alt="Auth Background" 
@@ -193,7 +193,7 @@ export const Login: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
 
   return (
     <div className="h-screen w-full flex bg-background overflow-hidden">
-      <div className="hidden lg:block lg:w-[40%] relative overflow-hidden">
+      <div className="hidden lg:block lg:w-[58%] relative overflow-hidden">
         <img 
           src={content.loginImage} 
           alt="Auth Background" 
@@ -456,7 +456,7 @@ export const Register: React.FC<{ onToggle: () => void }> = ({ onToggle }) => {
 
   return (
     <div className="h-screen w-full flex bg-background overflow-hidden">
-      <div className="hidden lg:block lg:w-[40%] relative overflow-hidden">
+      <div className="hidden lg:block lg:w-[58%] relative overflow-hidden">
         <img 
           src={content.registerImage} 
           alt="Auth Background" 
