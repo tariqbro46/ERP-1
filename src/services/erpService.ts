@@ -5370,24 +5370,38 @@ export const erpService: any = {
       }
     })();
 
-    // 4. Search Vouchers (Optimized with 5-minute session cache)
+    // 4. Search Vouchers (Optimized with 5-minute session cache and index-safe fallback)
     const voucherResults = await (async () => {
       try {
         const now = Date.now();
-        let vouchers = [];
+        let vouchers: any[] = [];
         
         // Use cache if same company and less than 5 minutes old
         if (this._searchVouchersCache.companyId === companyId && 
-            (now - this._searchVouchersCache.timestamp < 300000)) {
+            (now - this._searchVouchersCache.timestamp < 300000) &&
+            Array.isArray(this._searchVouchersCache.data) &&
+            this._searchVouchersCache.data.length > 0) {
           vouchers = this._searchVouchersCache.data;
         } else {
-          const vSnap = await getDocs(query(
-            collection(db, 'vouchers'),
-            where('companyId', '==', companyId),
-            orderBy('v_date', 'desc'),
-            limit(400)
-          ));
-          vouchers = vSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as any));
+          try {
+            const vSnap = await getDocs(query(
+              collection(db, 'vouchers'),
+              where('companyId', '==', companyId),
+              orderBy('v_date', 'desc'),
+              limit(2000)
+            ));
+            vouchers = vSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+          } catch (idxError) {
+            console.warn('Search vouchers indexed query failed, falling back to simple query:', idxError);
+            const vSnap = await getDocs(query(
+              collection(db, 'vouchers'),
+              where('companyId', '==', companyId),
+              limit(2500)
+            ));
+            vouchers = vSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+            vouchers.sort((a, b) => String(b.v_date || '').localeCompare(String(a.v_date || '')));
+          }
+
           this._searchVouchersCache = {
             companyId,
             data: vouchers,
@@ -5396,22 +5410,53 @@ export const erpService: any = {
         }
         
         return vouchers
-          .filter(v => 
-            (v.v_no || '').toLowerCase().includes(lowerSearch) ||
-            (v.reference_no || '').toLowerCase().includes(lowerSearch) ||
-            (v.narration || '').toLowerCase().includes(lowerSearch) ||
-            (v.v_type || '').toLowerCase().includes(lowerSearch) ||
-            (v.party_name || '').toLowerCase().includes(lowerSearch) ||
-            (v.entries || []).some((e: any) => (e.ledger_name || '').toLowerCase().includes(lowerSearch))
-          )
-          .map(v => ({
-            id: v.id,
-            title: `${v.v_type} - ${v.v_no}`,
-            subtitle: `Voucher • ${v.v_date} • ${v.narration?.substring(0, 50) || 'No narration'}`,
-            type: 'voucher' as const,
-            category: 'Transactions',
-            metadata: v
-          }));
+          .filter(v => {
+            const vNo = String(v.v_no || '').toLowerCase();
+            const refNo = String(v.reference_no || '').toLowerCase();
+            const memoNo = String(v.memo_no || v.memoNo || '').toLowerCase();
+            const invNo = String(v.invoice_no || v.invoiceNo || '').toLowerCase();
+            const serialNo = String(v.serial_no || v.auto_serial_no || '').toLowerCase();
+            const chalanNo = String(v.chalan_no || v.chalanNo || '').toLowerCase();
+            const billNo = String(v.bill_no || v.billNo || '').toLowerCase();
+            const narration = String(v.narration || '').toLowerCase();
+            const vType = String(v.v_type || '').toLowerCase();
+            const partyName = String(v.party_name || '').toLowerCase();
+            const docId = String(v.id || '').toLowerCase();
+
+            const matchEntries = (v.entries || []).some((e: any) => 
+              String(e.ledger_name || '').toLowerCase().includes(lowerSearch)
+            );
+            const matchItems = (v.inventory_entries || []).some((i: any) => 
+              String(i.item_name || i.item_id || '').toLowerCase().includes(lowerSearch)
+            );
+
+            return (
+              vNo.includes(lowerSearch) ||
+              refNo.includes(lowerSearch) ||
+              memoNo.includes(lowerSearch) ||
+              invNo.includes(lowerSearch) ||
+              serialNo.includes(lowerSearch) ||
+              chalanNo.includes(lowerSearch) ||
+              billNo.includes(lowerSearch) ||
+              narration.includes(lowerSearch) ||
+              vType.includes(lowerSearch) ||
+              partyName.includes(lowerSearch) ||
+              docId.includes(lowerSearch) ||
+              matchEntries ||
+              matchItems
+            );
+          })
+          .map(v => {
+            const displayNo = v.v_no || v.memo_no || v.memoNo || v.reference_no || v.serial_no || v.id;
+            return {
+              id: v.id,
+              title: `${v.v_type || 'Voucher'} - ${displayNo}`,
+              subtitle: `Voucher • ${v.v_date || 'N/A'} • ${v.party_name ? 'Party: ' + v.party_name + ' • ' : ''}${String(v.narration || '').substring(0, 50) || 'No narration'}`,
+              type: 'voucher' as const,
+              category: 'Transactions',
+              metadata: v
+            };
+          });
       } catch (e) {
         console.error('Search Vouchers error:', e);
         return [];

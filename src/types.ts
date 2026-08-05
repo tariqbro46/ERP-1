@@ -566,3 +566,44 @@ export interface SerialNumber {
   soldVoucherId?: string;
   createdAt: any;
 }
+
+export interface ReportSectionConfig {
+  id: string;
+  type: 'header' | 'title_period' | 'summary_cards' | 'data_table' | 'custom_text' | 'signatures' | 'footer' | 'divider';
+  title: string;
+  visible: boolean;
+  align?: 'left' | 'center' | 'right';
+  fontSize?: 'xs' | 'sm' | 'base' | 'lg' | 'xl';
+  fontFamily?: 'Courier' | 'Helvetica' | 'Times-Roman' | 'Arial' | 'Inter';
+  textColor?: string;
+  bgColor?: string;
+  paddingY?: number;
+  marginBottom?: number;
+  borderStyle?: 'none' | 'solid' | 'double' | 'dashed';
+  borderWidth?: number;
+  borderColor?: string;
+  customHtml?: string;
+  visibleColumns?: Record<string, boolean>;
+  columnTitles?: Record<string, string>;
+  tableHeaderBg?: string;
+  tableHeaderTextColor?: string;
+  tableBorderColor?: string;
+  zebraStriping?: boolean;
+}
+
+export interface ReportLayoutTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  paperSize: 'a4' | 'letter';
+  orientation: 'portrait' | 'landscape';
+  marginTop: number;
+  marginBottom: number;
+  marginLeft: number;
+  marginRight: number;
+  fontFamily: string;
+  baseFontSize: number;
+  primaryColor: string;
+  accentColor: string;
+  sections: ReportSectionConfig[];
+}

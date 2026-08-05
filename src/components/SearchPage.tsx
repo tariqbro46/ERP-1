@@ -429,7 +429,7 @@ export default function SearchPage() {
                   <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
                     <Info className="w-6 h-6 text-slate-400" />
                   </div>
-                  <p className="text-sm font-bold text-slate-800">No matching indexes found</p>
+                  <p className="text-sm font-bold text-slate-800">No matching records found</p>
                   <p className="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto">We couldn't search any ledger, voucher, stock item or employee matching "{lastSearchedQuery}". Check spelling and retry.</p>
                 </div>
               ) : (

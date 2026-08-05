@@ -1,6 +1,7 @@
 import React from 'react';
-import { X, Check } from 'lucide-react';
+import { X, Check, Layout } from 'lucide-react';
 import { ReportConfig } from '../types';
+import { ReportBuilderModal } from './ReportBuilderModal';
 
 interface ReportConfigModalProps {
   isOpen: boolean;
@@ -10,8 +11,21 @@ interface ReportConfigModalProps {
   title: string;
 }
 
+const Toggle = ({ label, value, onChange, disabled = false }: { label: string, value: boolean, onChange: (v: boolean) => void, disabled?: boolean }) => (
+  <div className={`flex items-center justify-between py-2 ${disabled ? 'opacity-50' : ''}`}>
+    <span className="text-sm text-foreground">{label}</span>
+    <button
+      onClick={() => !disabled && onChange(!value)}
+      className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${value ? 'bg-emerald-500' : 'bg-gray-300'}`}
+    >
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? 'translate-x-5' : 'translate-x-1'}`} />
+    </button>
+  </div>
+);
+
 export function ReportConfigModal({ isOpen, onClose, config, onSave, title }: ReportConfigModalProps) {
   const [localConfig, setLocalConfig] = React.useState<ReportConfig>(config);
+  const [isBuilderOpen, setIsBuilderOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -33,18 +47,6 @@ export function ReportConfigModal({ isOpen, onClose, config, onSave, title }: Re
   const handleChange = (key: keyof ReportConfig, value: any) => {
     setLocalConfig(prev => ({ ...prev, [key]: value }));
   };
-
-  const Toggle = ({ label, value, onChange, disabled = false }: { label: string, value: boolean, onChange: (v: boolean) => void, disabled?: boolean }) => (
-    <div className={`flex items-center justify-between py-2 ${disabled ? 'opacity-50' : ''}`}>
-      <span className="text-sm text-foreground">{label}</span>
-      <button
-        onClick={() => !disabled && onChange(!value)}
-        className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${value ? 'bg-emerald-500' : 'bg-gray-300'}`}
-      >
-        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${value ? 'translate-x-5' : 'translate-x-1'}`} />
-      </button>
-    </div>
-  );
 
   return (
     <div className="fixed top-14 left-0 lg:left-64 right-0 bottom-0 z-40 flex justify-center items-center p-4 md:p-6 bg-slate-950/30 backdrop-blur-[1px]">
@@ -161,6 +163,16 @@ export function ReportConfigModal({ isOpen, onClose, config, onSave, title }: Re
             value={localConfig.enableStripeView} 
             onChange={(v) => handleChange('enableStripeView', v)}
           />
+
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => setIsBuilderOpen(true)}
+              className="w-full bg-blue-600/10 hover:bg-blue-600 hover:text-white border border-blue-600/30 text-blue-600 font-bold py-2 rounded-lg transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+            >
+              <Layout className="h-4 w-4" /> Open Elementor Visual Report Designer
+            </button>
+          </div>
         </div>
 
         <div className="border-t border-border p-4 bg-muted/30">
@@ -172,6 +184,11 @@ export function ReportConfigModal({ isOpen, onClose, config, onSave, title }: Re
           </button>
         </div>
       </div>
+
+      <ReportBuilderModal
+        isOpen={isBuilderOpen}
+        onClose={() => setIsBuilderOpen(false)}
+      />
     </div>
   );
 }

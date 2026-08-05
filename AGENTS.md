@@ -11,6 +11,11 @@
 - The "Marketing Manager" role must be available in the Permissions tab for all companies.
 - When checking features, use both granular IDs and broad module IDs.
 
+## Report Print & PDF Layout Rules
+- Page numbers MUST ONLY appear at the very top right corner of the page (in the top header area).
+- DO NOT place duplicate "Page 1" or page numbers right above table headers or above column headers.
+- Maintain consistent formal company header formatting with single top-right page numbering across all report layouts.
+
 ## Numeric Formatting
 - Quantity values for items with units like "Pcs", "Pc", or "Nos" MUST NOT show any decimal places.
 - All other numeric values (Rate, Amount, Totals, or non-Pcs quantities) MUST NOT show more than 2 decimal places.

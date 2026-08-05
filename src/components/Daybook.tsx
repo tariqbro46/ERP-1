@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Printer, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft } from 'lucide-react';
+import { Search, Filter, Download, Printer, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn, formatNumber, formatQuantity, parseEntryDate } from '../lib/utils';
 import { erpService } from '../services/erpService';
@@ -9,7 +9,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { printReport, printUtils } from '../utils/printUtils';
-import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
+import { exportToCSV, exportToPDF, exportUtils, downloadHtmlAsPDF } from '../utils/exportUtils';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { EditableHeader } from './EditableHeader';
@@ -244,12 +244,264 @@ export function Daybook() {
     }
   };
 
+  const generateDaybookReportHtml = () => {
+    const companyName = company?.name || settings?.companyName || 'Modina Enterprise';
+    const companyAddress = (company as any)?.address || settings?.companyAddress || 'Noyagola More, Chapai Nawabgonj';
+    const companyEmail = settings?.printEmail || (company as any)?.email || 'modinaenterprise29@gmail.com';
+    const companyPhone = settings?.printPhone || (company as any)?.phone || '';
+
+    const formatDt = (dStr: string) => formatReportDate(dStr, settings.dateFormat || 'DD-MMM-YY');
+    const periodText = startDate === endDate
+      ? `For ${formatDt(startDate)}`
+      : `For ${formatDt(startDate)} to ${formatDt(endDate)}`;
+
+    let totalDebit = 0;
+    let totalCredit = 0;
+    let totalInwardsQty = 0;
+    let totalOutwardsQty = 0;
+
+    const rowsHtml = vouchers.map((v, idx) => {
+      const isDebit = ['Sales', 'Payment', 'Debit Note'].includes(v.v_type);
+      const isCredit = ['Purchase', 'Receipt', 'Credit Note'].includes(v.v_type);
+
+      let debitVal = 0;
+      let creditVal = 0;
+
+      if (isDebit) {
+        debitVal = v.total_amount || 0;
+      } else if (isCredit) {
+        creditVal = v.total_amount || 0;
+      } else {
+        debitVal = v.debit || v.total_amount || 0;
+      }
+
+      totalDebit += debitVal;
+      totalCredit += creditVal;
+
+      let subDetailsHtml = '';
+      let rowInwardsQty = 0;
+      let rowOutwardsQty = 0;
+
+      if (v.inventory && v.inventory.length > 0) {
+        const itemsList = v.inventory.map((inv: any) => {
+          const itemObj = items.find(i => i.id === inv.item_id);
+          const name = itemObj?.name || 'Item';
+          const qty = Number(inv.qty || 0);
+          if (v.v_type === 'Purchase') rowInwardsQty += qty;
+          if (v.v_type === 'Sales') rowOutwardsQty += qty;
+          return `${inv.batch || ''} ${name}`.trim();
+        }).join(', ');
+
+        if (itemsList) {
+          subDetailsHtml += `<div style="padding-left: 12px; font-size: 10px; color: #222; font-style: italic; margin-top: 2px;">${itemsList}</div>`;
+        }
+      } else if (v.item_names) {
+        subDetailsHtml += `<div style="padding-left: 12px; font-size: 10px; color: #222; font-style: italic; margin-top: 2px;">${v.item_names}</div>`;
+      }
+
+      if (config.showNarration && v.narration) {
+        subDetailsHtml += `<div style="padding-left: 12px; font-size: 10px; color: #444; font-style: italic;">(${v.narration})</div>`;
+      }
+
+      totalInwardsQty += rowInwardsQty;
+      totalOutwardsQty += rowOutwardsQty;
+
+      const isStripe = config.enableStripeView && idx % 2 === 1;
+
+      return `
+        <tr style="border-bottom: 1px solid #E5E7EB; ${isStripe ? 'background-color: #F9FAFB;' : ''}">
+          <td style="padding: 5px 6px; vertical-align: top; white-space: nowrap;">${formatDt(v.v_date)}</td>
+          <td style="padding: 5px 6px; vertical-align: top;">
+            <div style="font-weight: bold; color: #000;">${getLedgerName(v)}</div>
+            ${subDetailsHtml}
+          </td>
+          <td style="padding: 5px 6px; vertical-align: top; font-weight: 500;">${v.v_type}</td>
+          <td style="padding: 5px 6px; vertical-align: top;">${v.v_no || v.reference_no || ''}</td>
+          <td style="padding: 5px 6px; vertical-align: top; text-align: right; font-weight: bold;">
+            ${debitVal > 0 ? formatNumber(debitVal) : ''}
+            ${rowInwardsQty > 0 ? `<div style="font-size: 9px; color: #555; font-weight: normal;">${formatQuantity(rowInwardsQty, 'Pcs')}</div>` : ''}
+          </td>
+          <td style="padding: 5px 6px; vertical-align: top; text-align: right; font-weight: bold;">
+            ${creditVal > 0 ? formatNumber(creditVal) : ''}
+            ${rowOutwardsQty > 0 ? `<div style="font-size: 9px; color: #555; font-weight: normal;">${formatQuantity(rowOutwardsQty, 'Pcs')}</div>` : ''}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Day Book - ${companyName}</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 1.2cm 1cm;
+            }
+            body {
+              font-family: Arial, Helvetica, sans-serif;
+              color: #000;
+              margin: 0;
+              padding: 0;
+              font-size: 11px;
+              background: #fff;
+            }
+            .header-container {
+              text-align: center;
+              margin-bottom: 12px;
+            }
+            .company-title {
+              font-size: 18px;
+              font-weight: bold;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-bottom: 2px;
+            }
+            .company-sub {
+              font-size: 11px;
+              color: #222;
+              margin-bottom: 2px;
+            }
+            .divider {
+              border: 0;
+              border-top: 1px solid #000;
+              margin: 8px 0;
+            }
+            .report-title {
+              font-size: 15px;
+              font-weight: bold;
+              margin-bottom: 2px;
+            }
+            .period-title {
+              font-size: 11px;
+              font-style: italic;
+              margin-bottom: 8px;
+            }
+            .page-header-no {
+              text-align: right;
+              font-size: 10px;
+              font-weight: bold;
+              margin-bottom: 4px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 11px;
+            }
+            th {
+              border-top: 1px solid #000;
+              border-bottom: 1px solid #000;
+              padding: 5px 6px;
+              text-align: left;
+              font-weight: bold;
+              background-color: #fff;
+            }
+            th.num-col {
+              text-align: right;
+            }
+            .sub-th {
+              font-size: 9px;
+              font-weight: normal;
+              color: #333;
+            }
+            .total-row td {
+              border-top: 1px solid #000;
+              border-bottom: 3px double #000;
+              font-weight: bold;
+              padding: 6px;
+            }
+            @media print {
+              .no-print { display: none !important; }
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div style="position: relative;">
+            <div style="position: absolute; right: 0; top: 0; font-size: 10px; font-weight: bold;">Page 1</div>
+            <div class="header-container">
+              <div class="company-title">${companyName}</div>
+              <div class="company-sub">${companyAddress}</div>
+              ${companyEmail ? `<div class="company-sub">E-Mail : ${companyEmail}</div>` : ''}
+              ${companyPhone ? `<div class="company-sub">Phone : ${companyPhone}</div>` : ''}
+              <div class="divider"></div>
+              <div class="report-title">Day Book</div>
+              <div class="period-title">${periodText}</div>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 11%;">Date</th>
+                <th style="width: 39%;">Particulars</th>
+                <th style="width: 12%;">Vch Type</th>
+                <th style="width: 8%;">Vch No.</th>
+                <th style="width: 15%;" class="num-col">
+                  Debit Amount
+                  <div class="sub-th">Inwards Qty</div>
+                </th>
+                <th style="width: 15%;" class="num-col">
+                  Credit Amount
+                  <div class="sub-th">Outwards Qty</div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td colspan="4" style="text-align: right;">Total :</td>
+                <td style="text-align: right;">
+                  ${formatNumber(totalDebit)}
+                  ${totalInwardsQty > 0 ? `<div style="font-size: 9px; font-weight: normal;">${formatQuantity(totalInwardsQty, 'Pcs')}</div>` : ''}
+                </td>
+                <td style="text-align: right;">
+                  ${formatNumber(totalCredit)}
+                  ${totalOutwardsQty > 0 ? `<div style="font-size: 9px; font-weight: normal;">${formatQuantity(totalOutwardsQty, 'Pcs')}</div>` : ''}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+          <script>
+            window.onload = function() {
+              // Auto focus for seamless printing or PDF download
+            };
+          </script>
+        </body>
+      </html>
+    `;
+  };
+
+  const handleFullPageView = () => {
+    const html = generateDaybookReportHtml();
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+    }
+  };
+
   const handlePrint = () => {
-    printUtils.printElement('daybook-report', 'Daybook Report');
+    const html = generateDaybookReportHtml();
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      setTimeout(() => {
+        win.print();
+      }, 300);
+    }
   };
 
   const handleDownloadPDF = () => {
-    exportUtils.exportToPDF('daybook-report', 'Daybook_Report');
+    const html = generateDaybookReportHtml();
+    downloadHtmlAsPDF(html, `Daybook_Report_${startDate}_to_${endDate}`);
   };
 
   const handleDownloadExcel = () => {
@@ -340,8 +592,17 @@ export function Daybook() {
               <SettingsIcon className="w-3 h-3" /> {t('common.f12Configure')}
             </button>
             <button 
+              onClick={handleFullPageView}
+              disabled={vouchers.length === 0}
+              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap disabled:opacity-50"
+              title="Full Page Print Layout Preview"
+            >
+              <Eye className="w-3 h-3" /> FULL PAGE VIEW
+            </button>
+            <button 
               onClick={handlePrint}
-              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap"
+              disabled={vouchers.length === 0}
+              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap disabled:opacity-50"
             >
               <Printer className="w-3 h-3" /> PRINT
             </button>

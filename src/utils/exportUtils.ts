@@ -2,6 +2,118 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { convertNumberToWords } from './printUtils';
 
+export async function downloadHtmlAsPDF(htmlContent: string, fileName: string) {
+  const cleanFileName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+
+  // Show progress notification in bottom-right corner as requested
+  const toast = document.createElement('div');
+  toast.id = 'pdf-download-toast';
+  toast.style.position = 'fixed';
+  toast.style.bottom = '24px';
+  toast.style.right = '24px';
+  toast.style.backgroundColor = '#0f172a';
+  toast.style.color = '#ffffff';
+  toast.style.padding = '12px 20px';
+  toast.style.borderRadius = '8px';
+  toast.style.boxShadow = '0 10px 25px -5px rgba(0,0,0,0.4)';
+  toast.style.fontSize = '13px';
+  toast.style.fontWeight = '600';
+  toast.style.zIndex = '99999999';
+  toast.style.display = 'flex';
+  toast.style.alignItems = 'center';
+  toast.style.gap = '10px';
+  toast.innerHTML = `<span style="display:inline-block; width:14px; height:14px; border:2px solid #ffffff; border-top-color:transparent; border-radius:50%; animation:pdfSpin 0.8s linear infinite;"></span> Generating PDF... Please wait`;
+
+  if (!document.getElementById('pdf-toast-anim')) {
+    const style = document.createElement('style');
+    style.id = 'pdf-toast-anim';
+    style.textContent = `@keyframes pdfSpin { to { transform: rotate(360deg); } }`;
+    document.head.appendChild(style);
+  }
+  document.body.appendChild(toast);
+
+  try {
+    // Create an invisible iframe to render the exact HTML with computed styles
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.top = '0';
+    iframe.style.left = '0';
+    iframe.style.width = '794px'; // Standard A4 portrait width in pixels
+    iframe.style.height = '1123px';
+    iframe.style.border = 'none';
+    iframe.style.zIndex = '9999999'; // Highest z-index during capture
+    iframe.style.backgroundColor = '#ffffff';
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iframeDoc) throw new Error("Could not initialize iframe for PDF export");
+
+    // Write full HTML content into iframe
+    iframeDoc.open();
+    iframeDoc.write(htmlContent);
+    iframeDoc.close();
+
+    // Wait for styles and fonts to render
+    await new Promise((resolve) => setTimeout(resolve, 350));
+
+    // Dynamically import html2canvas
+    const html2canvasModule: any = await import('html2canvas');
+    const html2canvas = html2canvasModule.default || html2canvasModule;
+
+    // Capture the iframe body
+    const canvas = await html2canvas(iframeDoc.body, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+      windowWidth: 794
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    const pdf = new jsPDF('portrait', 'mm', 'a4');
+    const imgWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    // Add extra pages if report spans multiple A4 pages
+    while (heightLeft > 5) {
+      position -= pageHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save(cleanFileName);
+
+    if (document.body.contains(iframe)) {
+      document.body.removeChild(iframe);
+    }
+
+    toast.style.backgroundColor = '#16a34a';
+    toast.innerHTML = `✓ PDF downloaded successfully!`;
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+    }, 2000);
+  } catch (err) {
+    console.error('Error generating PDF:', err);
+    toast.style.backgroundColor = '#dc2626';
+    toast.innerHTML = `✕ PDF generation failed`;
+    setTimeout(() => {
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
+    }, 3000);
+  }
+}
+
 export function exportToCSV(filename: string, title: string, data: any[], headers: string[], settings: any = {}) {
   const csvRows = [];
   
@@ -663,5 +775,6 @@ export const exportUtils = {
   exportToCSV,
   exportToPDF,
   exportElementToPDF,
-  exportVoucherToPDF
+  exportVoucherToPDF,
+  downloadHtmlAsPDF
 };

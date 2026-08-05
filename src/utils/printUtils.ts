@@ -19,7 +19,7 @@ const getSignatureHtml = (settings: any) => {
   `;
 };
 
-const executePrint = (html: string) => {
+export const executePrint = (html: string) => {
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';

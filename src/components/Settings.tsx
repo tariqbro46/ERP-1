@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2, Package, Volume2 } from 'lucide-react';
+import { Search, Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2, Package, Volume2, Layout } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -14,6 +14,7 @@ import { MenuConfig } from '../types';
 import { useTheme, Theme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { soundService } from '../services/soundService';
+import { ReportBuilderModal } from './ReportBuilderModal';
 
 export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const { user, logout } = useAuth();
@@ -160,6 +161,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localShowMobileNav, setLocalShowMobileNav] = useState(showMobileNav ?? false);
   const [localMobileBottomNavItems, setLocalMobileBottomNavItems] = useState<string[]>(mobileBottomNavItems || []);
   const [localReportLayout, setLocalReportLayout] = useState(reportLayout || 'Layout 2');
+  const [isReportBuilderOpen, setIsReportBuilderOpen] = useState(false);
   const [localDashboardDesign, setLocalDashboardDesign] = useState(dashboardDesign || 'Design 1');
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
   const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground || 'default');
@@ -876,11 +878,26 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         <option value="Layout 2">Layout 2 (Tally Style - Default)</option>
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">{t('common.reportLayoutDesc')}</p>
+
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsReportBuilderOpen(true)}
+                          className="px-4 py-2.5 bg-blue-600/10 hover:bg-blue-600 hover:text-white border border-blue-600/30 text-blue-600 font-bold text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-2"
+                        >
+                          <Layout className="w-4 h-4" /> Launch Elementor Visual Report Designer
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             )}
+
+            <ReportBuilderModal
+              isOpen={isReportBuilderOpen}
+              onClose={() => setIsReportBuilderOpen(false)}
+            />
             {activeTab === 'ui' && (
               <div className="space-y-8">
                 <div className="space-y-4">

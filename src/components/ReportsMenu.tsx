@@ -22,9 +22,18 @@ import {
   Percent,
   Calculator,
   X,
-  SlidersHorizontal
+  SlidersHorizontal,
+  CheckCircle,
+  Printer
 } from 'lucide-react';
 import { EditableHeader } from './EditableHeader';
+import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useSettings } from '../contexts/SettingsContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { erpService } from '../services/erpService';
+import { MenuConfig } from '../types';
+
 const LucideIcons: any = { BookOpen, ClipboardList, Scale, TrendingUp, Package, Activity, DollarSign, AlertCircle, BarChart3, FileText, Users, User };
 
 const getReportDescription = (id: string, label: string): string => {
@@ -76,12 +85,6 @@ const getReportDescription = (id: string, label: string): string => {
 
   return `Analytical interactive statements profiling ${label.toLowerCase()} entries.`;
 };
-import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import { useSettings } from '../contexts/SettingsContext';
-import { motion, AnimatePresence } from 'framer-motion';
-import { erpService } from '../services/erpService';
-import { MenuConfig } from '../types';
 
 export const ReportsMenu: React.FC = () => {
   const { t } = useLanguage();
@@ -97,8 +100,11 @@ export const ReportsMenu: React.FC = () => {
   const [menuConfig, setMenuConfig] = React.useState<MenuConfig | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [showStatusModal, setShowStatusModal] = React.useState(false);
   const [activeCategoryTab, setActiveCategoryTab] = React.useState<'all' | 'accounting' | 'inventory' | 'payroll' | 'exception'>('all');
   const [selectedCategory, setSelectedCategory] = React.useState<any | null>(null);
+
+  const customizedReportIds = React.useMemo(() => new Set(['rep-ledger-statement', 'rep-daybook']), []);
 
   const defaultItems = React.useMemo(() => [
     { id: 'rep-trial-balance', label: 'Trial Balance', labelKey: 'reports.trialBalance', to: '/reports/trial-balance', icon: 'Scale' },
@@ -472,6 +478,16 @@ export const ReportsMenu: React.FC = () => {
                 </button>
               )}
             </div>
+
+            <button
+              onClick={() => setShowStatusModal(true)}
+              className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow transition-all whitespace-nowrap cursor-pointer"
+              title="View Print/PDF Layout Customization Draft Status"
+            >
+              <Printer className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Print/PDF Layout Status</span>
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full text-[10px] font-mono">2 Ready</span>
+            </button>
           </div>
 
           {enableUserSortViewPref && (
@@ -627,6 +643,11 @@ export const ReportsMenu: React.FC = () => {
                           </div>
                           
                           <div className="flex items-center gap-2">
+                            {customizedReportIds.has(item.id) && (
+                              <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3 text-emerald-600" /> Print/PDF Ready
+                              </span>
+                            )}
                             {item.hidden && isSuperAdmin && (
                               <span className="text-[8px] uppercase font-bold text-slate-400 tracking-widest bg-slate-100 py-0.5 px-2 rounded">Hidden</span>
                             )}
@@ -776,6 +797,13 @@ export const ReportsMenu: React.FC = () => {
                       {reportDesc}
                     </p>
                     
+                    {customizedReportIds.has(item.id) && (
+                      <div className="mt-2 flex items-center gap-1 text-[9px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md w-fit">
+                        <CheckCircle className="w-3 h-3 text-emerald-600" />
+                        <span>Print/PDF Layout Ready</span>
+                      </div>
+                    )}
+                    
                     {/* Footnote details (e.g., ID code or hidden state) */}
                     {item.hidden && isSuperAdmin && (
                       <div className="flex items-center gap-1.5 mt-2">
@@ -919,8 +947,129 @@ export const ReportsMenu: React.FC = () => {
   };
 
   return (
-    <div className="min-h-full">
+    <div className="min-h-full relative">
       {reportsPageUiStyle === 'grid' ? renderGrid() : (reportsPageUiStyle === 'modern' ? renderModern() : renderClassic())}
+
+      {/* Print/PDF Layout Customization Status Modal */}
+      <AnimatePresence>
+        {showStatusModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[85vh]"
+            >
+              <div className="p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                    <Printer className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm sm:text-base">Report Print/PDF Layout Status Draft</h3>
+                    <p className="text-[11px] text-slate-400">Track customized reports vs pending layouts</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowStatusModal(false)}
+                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-5 overflow-y-auto space-y-6">
+                {/* Completed / Ready Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-black uppercase text-emerald-700 tracking-wider flex items-center gap-1.5">
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
+                      Customized Layouts Ready (2)
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      100% Vector PDF & Print Supported
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <div 
+                      onClick={() => { setShowStatusModal(false); navigate('/reports/ledger'); }}
+                      className="p-3.5 bg-emerald-50/50 border border-emerald-200/80 rounded-xl hover:bg-emerald-100/50 transition-colors cursor-pointer flex items-center justify-between group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-xs font-bold text-emerald-800 bg-white border border-emerald-200 px-2 py-0.5 rounded">1</span>
+                        <div>
+                          <div className="font-bold text-xs text-slate-800 group-hover:text-emerald-700">Ledger Statement</div>
+                          <div className="text-[10px] text-slate-500">/#/reports/ledger • Double Borders, Header Logo, Page Numbers, Layout 1 & 2</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">
+                        ✅ Customized
+                      </span>
+                    </div>
+
+                    <div 
+                      onClick={() => { setShowStatusModal(false); navigate('/reports/daybook'); }}
+                      className="p-3.5 bg-emerald-50/50 border border-emerald-200/80 rounded-xl hover:bg-emerald-100/50 transition-colors cursor-pointer flex items-center justify-between group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-xs font-bold text-emerald-800 bg-white border border-emerald-200 px-2 py-0.5 rounded">2</span>
+                        <div>
+                          <div className="font-bold text-xs text-slate-800 group-hover:text-emerald-700">Daybook</div>
+                          <div className="text-[10px] text-slate-500">/#/reports/daybook • Modina Enterprise Header Format, Debit/Credit, Inwards/Outwards Qty</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md">
+                        ✅ Customized
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pending Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-black uppercase text-slate-500 tracking-wider">
+                      Pending Customization ({itemsToUse.length - 2})
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Provide photo/screenshot anytime to implement
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {itemsToUse.filter(item => !customizedReportIds.has(item.id)).map((item, idx) => (
+                      <div 
+                        key={item.id}
+                        onClick={() => { setShowStatusModal(false); navigate(item.to); }}
+                        className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="font-mono text-[10px] font-bold text-slate-400">{idx + 3}</span>
+                          <span className="text-xs font-medium text-slate-700 truncate">{item.labelKey && t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.label}</span>
+                        </div>
+                        <span className="text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase whitespace-nowrap">
+                          ⏳ Pending
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-50 border-t border-slate-200 text-right flex justify-between items-center">
+                <span className="text-xs text-slate-500">Attach any report photo/PDF screenshot in chat to customize its layout!</span>
+                <button
+                  onClick={() => setShowStatusModal(false)}
+                  className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition-colors"
+                >
+                  Close Draft
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
