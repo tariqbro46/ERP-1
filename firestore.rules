@@ -149,62 +149,52 @@ service cloud.firestore {
     }
 
     match /ledger_groups/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /ledgers/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /items/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /vouchers/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /voucher_entries/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /inventory_entries/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /units/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /godowns/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /godown_stock/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /employees/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
@@ -239,72 +229,62 @@ service cloud.firestore {
     }
 
     match /employee_groups/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /pay_heads/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyAdmin(getEffectiveCompanyId()));
     }
 
     match /salary_structures/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyAdmin(getEffectiveCompanyId()));
     }
 
     match /attendance/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
     
     match /orders/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && (isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data))) && (hasPermission('orders') || isCompanyAdminSimple(getCompanyId(resource.data)))));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data))) && (hasPermission('orders') || isCompanyAdminSimple(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || ((isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId())) && (hasPermission('orders') || isCompanyAdminSimple(getEffectiveCompanyId()))));
     }
 
     match /machines/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || (resource != null && (isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data))) && (hasPermission('machines') || isCompanyAdminSimple(getCompanyId(resource.data)))));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data))) && (hasPermission('machines') || isCompanyAdminSimple(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || ((isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId())) && (hasPermission('machines') || isCompanyAdminSimple(getEffectiveCompanyId()))));
     }
 
     match /serial_numbers/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /tax_rates/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /leads/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /interactions/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /purchase_orders/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
     match /batches/{id} {
-      allow list: if isSuperAdminBasic() || (isAuthenticated() && resource.data.get('companyId', '') == request.auth.uid);
-      allow get: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
+      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
       allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
     }
 
