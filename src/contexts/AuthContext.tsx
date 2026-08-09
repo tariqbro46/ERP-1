@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc, getDocs, collection, query, where, limit } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc, getDocs, collection, query, where, limit } from 'firebase/firestore';
 import { erpService } from '../services/erpService';
 
 export type UserRole = 'Founder' | 'Marketing Manager' | 'Admin' | 'Manager' | 'Staff';
@@ -80,9 +80,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [rolePermissions, setRolePermissions] = useState<Record<string, string[]> | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isFounder = user?.role === 'Founder' || firebaseUser?.email?.toLowerCase() === 'sapientman46@gmail.com';
+  const isFounder = firebaseUser?.email?.toLowerCase() === 'sapientman46@gmail.com' ||
+                    user?.email?.toLowerCase() === 'sapientman46@gmail.com' ||
+                    (user?.role === 'Founder' && user?.email?.toLowerCase() === 'sapientman46@gmail.com');
   const isMarketingManager = user?.role === 'Marketing Manager';
-  const isSuperAdmin = isFounder || isMarketingManager;
+  const isSuperAdmin = isFounder;
   const isAdmin = user?.role === 'Admin' || isSuperAdmin;
 
   const hasPermission = (featureId: string) => {
@@ -153,6 +155,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             if (docSnap.exists()) {
               const userData = docSnap.data() as Profile;
+              if (userData.role === 'Founder' && userData.email?.toLowerCase() !== 'sapientman46@gmail.com') {
+                userData.role = 'Admin';
+                updateDoc(userRef, { role: 'Admin' }).catch(err => console.error("Error sanitizing non-founder role:", err));
+              }
               setUser(userData);
 
               // Listen to company changes
@@ -248,7 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 // Special handling for Founder
-                const isFounderEmail = fUser.email?.toLowerCase() === 'sapientman46@gmail.com' || fUser.email?.toLowerCase() === 'arifulislamoffice35@gmail.com';
+                const isFounderEmail = fUser.email?.toLowerCase() === 'sapientman46@gmail.com';
                 if (isFounderEmail) {
                   role = 'Founder';
                   // Use a specific query or limit if searching for a company

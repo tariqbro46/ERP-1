@@ -4154,13 +4154,29 @@ export const erpService: any = {
   async getUsers(companyId: string): Promise<any[]> {
     const q = query(collection(db, 'users'), where('companyId', '==', companyId), limit(100));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ uid: doc.id, ...(doc.data() as any) }));
+    return snapshot.docs.map(docSnap => {
+      const data = docSnap.data() as any;
+      let role = data.role || 'Admin';
+      if (role === 'Founder' && data.email?.toLowerCase() !== 'sapientman46@gmail.com') {
+        role = 'Admin';
+        updateDoc(doc(db, 'users', docSnap.id), { role: 'Admin' }).catch(err => console.error("Error updating non-founder role:", err));
+      }
+      return { uid: docSnap.id, ...data, role };
+    });
   },
 
   async getAllUsers(): Promise<any[]> {
     try {
       const snapshot = await getDocs(query(collection(db, 'users'), limit(500)));
-      return snapshot.docs.map(doc => ({ uid: doc.id, ...(doc.data() as any) }));
+      return snapshot.docs.map(docSnap => {
+        const data = docSnap.data() as any;
+        let role = data.role || 'Admin';
+        if (role === 'Founder' && data.email?.toLowerCase() !== 'sapientman46@gmail.com') {
+          role = 'Admin';
+          updateDoc(doc(db, 'users', docSnap.id), { role: 'Admin' }).catch(err => console.error("Error updating non-founder role:", err));
+        }
+        return { uid: docSnap.id, ...data, role };
+      });
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'users');
       return [];

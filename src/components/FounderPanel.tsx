@@ -102,7 +102,8 @@ export default function FounderPanel() {
   const { user: currentUser } = useAuth();
   const { showNotification } = useNotification();
   const navigate = useNavigate();
-  const isSuperAdmin = currentUser?.role === 'Founder' || currentUser?.role === 'Marketing Manager' || currentUser?.email === 'sapientman46@gmail.com';
+  const isSuperAdmin = currentUser?.role === 'Founder' || 
+    currentUser?.email?.toLowerCase() === 'sapientman46@gmail.com';
   const [companies, setCompanies] = useState<CompanyStats[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

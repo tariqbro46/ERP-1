@@ -15,10 +15,7 @@ service cloud.firestore {
 
     function isFounder() {
       return isAuthenticated() && (
-        request.auth.uid == "yt5Vi0mPs2aag2ENJZu1mw0Nowz2" || 
-        request.auth.uid == "vyF2U9sucLc7vYLOUX6Jh9jrtC02" ||
         request.auth.token.email == "sapientman46@gmail.com" ||
-        request.auth.token.email == "arifulislamoffice35@gmail.com" ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'Founder')
       );
@@ -27,10 +24,7 @@ service cloud.firestore {
     // Optimization: SuperAdmin check without DB reads for hardcoded users
     function isSuperAdminBasic() {
       return isAuthenticated() && (
-        request.auth.uid == "yt5Vi0mPs2aag2ENJZu1mw0Nowz2" || 
-        request.auth.uid == "vyF2U9sucLc7vYLOUX6Jh9jrtC02" ||
-        request.auth.token.email == "sapientman46@gmail.com" ||
-        request.auth.token.email == "arifulislamoffice35@gmail.com"
+        request.auth.token.email == "sapientman46@gmail.com"
       );
     }
 

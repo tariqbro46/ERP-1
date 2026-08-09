@@ -1671,7 +1671,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                       {unreadNotificationCount}
                     </span>
                   )}
-                  {isSuperAdmin && <div className="absolute -top-1 -left-1 w-3 h-3 bg-primary rounded-full border-2 border-background" title="Founder/Marketing Manager" />}
+                  {isSuperAdmin && <div className="absolute -top-1 -left-1 w-3 h-3 bg-primary rounded-full border-2 border-background" title="Founder / SuperAdmin" />}
                   <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-background rounded-full" />
                 </button>
 
@@ -2181,7 +2181,7 @@ function ProtectedRoute() {
           <Route path="/settings/whatsapp" element={<Settings activeTab="whatsapp" />} />
           <Route path="/companies" element={<CompanyManagement />} />
           <Route path="/users" element={<UserManagement />} />
-          <Route path="/founder" element={<FounderPanel />} />
+          <Route path="/founder" element={isFounder ? <FounderPanel /> : <Navigate to="/" replace />} />
            <Route path="/notifications" element={<NotificationPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/instructions" element={<HelpPage />} />
