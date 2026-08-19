@@ -369,8 +369,9 @@ export const SiteContentEditor: React.FC<{ showNotification?: (msg: string, type
     const value = content[key];
     const isBoolean = typeof selectedPage.defaultContent[key] === 'boolean';
     const isColor = key.toLowerCase().includes('color');
-    const isImage = key.toLowerCase().includes('image') || key.toLowerCase().includes('logo') || key.toLowerCase().includes('avatar');
-    const isLongText = typeof value === 'string' && (value.length > 80 || key.toLowerCase().includes('subtitle') || key.toLowerCase().includes('quote') || key.toLowerCase().includes('desc') || key.toLowerCase().includes('address'));
+    const isClientLogos = key === 'clientLogosText';
+    const isImage = !isClientLogos && (key.toLowerCase().includes('image') || key.toLowerCase().includes('logo') || key.toLowerCase().includes('avatar'));
+    const isLongText = isClientLogos || (typeof value === 'string' && (value.length > 80 || key.toLowerCase().includes('subtitle') || key.toLowerCase().includes('quote') || key.toLowerCase().includes('desc') || key.toLowerCase().includes('address')));
 
     if (isBoolean) {
       return (
@@ -392,6 +393,76 @@ export const SiteContentEditor: React.FC<{ showNotification?: (msg: string, type
               value ? "left-5.5" : "left-0.5"
             )} />
           </button>
+        </div>
+      );
+    }
+
+    if (isClientLogos) {
+      const parsedLogos = (value || '')
+        .split(/[\n,;]+/)
+        .map((i: string) => i.trim())
+        .filter(Boolean);
+
+      return (
+        <div key={key} className="space-y-2 md:col-span-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
+              <label className="text-[11px] font-bold tracking-wide text-foreground/80">
+                {label} (Image URLs or Brand Names)
+              </label>
+            </div>
+            <span className="text-[10px] text-muted-foreground">
+              Comma or newline separated
+            </span>
+          </div>
+
+          <textarea
+            value={value || ''}
+            onChange={(e) => updateField(key, e.target.value)}
+            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-primary outline-none transition-all min-h-[70px] resize-y"
+            placeholder="Enter comma-separated logo image URLs or names (e.g., https://example.com/logo1.svg, https://example.com/logo2.png, Google, MIT)"
+          />
+
+          {parsedLogos.length > 0 && (
+            <div className="p-3 rounded-lg bg-muted/30 border border-border/70 space-y-1.5">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Client Logos Preview ({parsedLogos.length})
+              </div>
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                {parsedLogos.map((item: string, idx: number) => {
+                  const isUrl = 
+                    item.startsWith('http://') || 
+                    item.startsWith('https://') || 
+                    item.startsWith('data:image/') || 
+                    item.startsWith('/') ||
+                    /\.(png|jpg|jpeg|svg|webp|gif|ico|avif)($|\?)/i.test(item);
+
+                  if (isUrl) {
+                    return (
+                      <div key={idx} className="p-1.5 bg-white rounded border border-slate-200 flex items-center justify-center max-h-8 max-w-[100px] shadow-sm">
+                        <img 
+                          src={item} 
+                          alt={`Logo ${idx + 1}`} 
+                          className="max-h-6 max-w-full object-contain"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <span key={idx} className="px-2 py-1 bg-muted rounded text-[11px] font-bold text-foreground border border-border">
+                      {item}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       );
     }

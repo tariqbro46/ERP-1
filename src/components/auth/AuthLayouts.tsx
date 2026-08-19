@@ -161,6 +161,85 @@ export function SoftrDivider({ text }: { text?: string }) {
   );
 }
 
+export function ClientLogosRow({ clientLogosText }: { clientLogosText?: string }) {
+  if (!clientLogosText || !clientLogosText.trim()) {
+    return (
+      <div className="pt-5 border-t border-slate-100 flex items-center justify-between gap-4 px-2 opacity-60 grayscale hover:grayscale-0 transition-all flex-wrap">
+        <div className="text-[10px] font-extrabold text-slate-700 tracking-tighter uppercase">
+          <span>UNIVERSAL</span>
+        </div>
+        <div className="text-[11px] font-black text-slate-800 tracking-widest">
+          MIT
+        </div>
+        <div className="flex items-center gap-1 text-[11px] font-bold text-slate-800">
+          <span className="font-mono text-purple-600">III</span> make
+        </div>
+        <div className="text-[11px] font-bold text-slate-700 tracking-tight">
+          Google
+        </div>
+        <div className="text-[11px] font-bold text-slate-700">
+          EvenUp
+        </div>
+        <div className="text-[11px] font-bold text-slate-700 font-serif">
+          clay
+        </div>
+      </div>
+    );
+  }
+
+  // Parse items from clientLogosText: can be comma, newline, or semicolon separated
+  const items = clientLogosText
+    .split(/[\n,;]+/)
+    .map(i => i.trim())
+    .filter(Boolean);
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="pt-5 border-t border-slate-100 flex items-center justify-center sm:justify-between gap-4 px-2 flex-wrap transition-all">
+      {items.map((item, idx) => {
+        // Detect if item is a URL / image path
+        const isUrl = 
+          item.startsWith('http://') || 
+          item.startsWith('https://') || 
+          item.startsWith('data:image/') || 
+          item.startsWith('/') ||
+          item.startsWith('blob:') ||
+          /\.(png|jpg|jpeg|svg|webp|gif|ico|avif)($|\?)/i.test(item);
+
+        if (isUrl) {
+          return (
+            <div key={idx} className="flex items-center justify-center max-h-7 max-w-[120px] transition-all">
+              <img 
+                src={item} 
+                alt={`Client Logo ${idx + 1}`} 
+                className="max-h-6 max-w-full object-contain filter grayscale hover:grayscale-0 opacity-75 hover:opacity-100 transition-all"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.style.display = 'none';
+                  if (target.parentElement) {
+                    const fallbackName = item.split('/').pop()?.split('?')[0]?.split('.')[0] || 'Partner';
+                    target.parentElement.innerHTML = `<span class="text-[11px] font-bold text-slate-700 tracking-tight">${fallbackName}</span>`;
+                  }
+                }}
+              />
+            </div>
+          );
+        }
+
+        return (
+          <div key={idx} className="text-[11px] font-bold text-slate-700 tracking-tight opacity-75 hover:opacity-100 transition-opacity">
+            {item}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
  * 1. EXACT 1:1 SOFTR AUTH LAYOUT (Image 1 replica)
  */
@@ -323,34 +402,7 @@ export function SoftrAuthLayout({
           </div>
 
           {/* Client Logos Row */}
-          <div className="pt-5 border-t border-slate-100 flex items-center justify-between gap-4 px-2 opacity-60 grayscale hover:grayscale-0 transition-all">
-            {clientLogosText ? (
-              <div className="w-full text-center text-xs font-semibold text-slate-600 tracking-wider">
-                {clientLogosText}
-              </div>
-            ) : (
-              <>
-                <div className="text-[10px] font-extrabold text-slate-700 tracking-tighter uppercase">
-                  <span>UNIVERSAL</span>
-                </div>
-                <div className="text-[11px] font-black text-slate-800 tracking-widest">
-                  MIT
-                </div>
-                <div className="flex items-center gap-1 text-[11px] font-bold text-slate-800">
-                  <span className="font-mono text-purple-600">III</span> make
-                </div>
-                <div className="text-[11px] font-bold text-slate-700 tracking-tight">
-                  Google
-                </div>
-                <div className="text-[11px] font-bold text-slate-700">
-                  EvenUp
-                </div>
-                <div className="text-[11px] font-bold text-slate-700 font-serif">
-                  clay
-                </div>
-              </>
-            )}
-          </div>
+          <ClientLogosRow clientLogosText={clientLogosText} />
         </div>
 
         {/* Floating Chat Support Bubble (Bottom Right) */}
