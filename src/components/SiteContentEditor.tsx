@@ -17,7 +17,8 @@ import {
   Settings as SettingsIcon, 
   Lock,
   Layers,
-  HelpCircle
+  HelpCircle,
+  Info
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { AUTH_TEMPLATE_OPTIONS } from './auth/AuthLayouts';
@@ -357,6 +358,35 @@ export const SiteContentEditor: React.FC<{ showNotification?: (msg: string, type
     setContent((prev: any) => ({ ...prev, [key]: value }));
   };
 
+  const getImageSizeGuide = (fieldKey: string) => {
+    const k = fieldKey.toLowerCase();
+    if (k.includes('clientlogos')) {
+      return {
+        badge: 'Full-Width: 400×60px to 800×120px | Logos: 140×40px',
+        desc: 'Left-to-right full width banner: 400×60px to 800×120px (transparent SVG/PNG). For separate logos: enter comma-separated URLs (140×40px each).'
+      };
+    }
+    if (k.includes('brandlogo') || (k.includes('logo') && !k.includes('logos'))) {
+      return {
+        badge: '160×40px or 200×60px',
+        desc: 'SVG or transparent PNG recommended.'
+      };
+    }
+    if (k.includes('avatar')) {
+      return {
+        badge: '160×160px (1:1)',
+        desc: 'Square 1:1 ratio image, face centered.'
+      };
+    }
+    if (k.includes('image') || k.includes('backdrop') || k.includes('login') || k.includes('reset')) {
+      return {
+        badge: '1200×1600px (3:4) or 1920×1080px (16:9)',
+        desc: 'High resolution vertical or wide photograph for auth art banner.'
+      };
+    }
+    return null;
+  };
+
   const isAuthPage = selectedPage.id === 'login' || selectedPage.id === 'register';
 
   const renderInput = (key: string) => {
@@ -372,6 +402,7 @@ export const SiteContentEditor: React.FC<{ showNotification?: (msg: string, type
     const isClientLogos = key === 'clientLogosText';
     const isImage = !isClientLogos && (key.toLowerCase().includes('image') || key.toLowerCase().includes('logo') || key.toLowerCase().includes('avatar'));
     const isLongText = isClientLogos || (typeof value === 'string' && (value.length > 80 || key.toLowerCase().includes('subtitle') || key.toLowerCase().includes('quote') || key.toLowerCase().includes('desc') || key.toLowerCase().includes('address')));
+    const sizeGuide = isClientLogos || isImage ? getImageSizeGuide(key) : null;
 
     if (isBoolean) {
       return (
@@ -405,23 +436,32 @@ export const SiteContentEditor: React.FC<{ showNotification?: (msg: string, type
 
       return (
         <div key={key} className="space-y-2 md:col-span-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <div className="flex items-center gap-1.5">
               <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
               <label className="text-[11px] font-bold tracking-wide text-foreground/80">
                 {label} (Image URLs or Brand Names)
               </label>
             </div>
-            <span className="text-[10px] text-muted-foreground">
-              Comma or newline separated
-            </span>
+            {sizeGuide && (
+              <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                📏 Guide: {sizeGuide.badge}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-start gap-1.5 p-2 rounded-lg bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 text-[11px] text-blue-700 dark:text-blue-300">
+            <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+            <p className="leading-tight">
+              <strong>বাম থেকে ডানে সম্পূর্ণ প্রস্থ (Left-to-Right Full Width):</strong> একটি ব্যানারের লিঙ্ক দিলে তা কার্ডের পুরো প্রস্থ জুড়ে বড় ও পরিপাটি দেখাবে (প্রস্তাবিত: <strong>400×60px</strong> থেকে <strong>800×120px</strong>, ট্রান্সপারেন্ট SVG/PNG)। আলাদা আলাদা লোগোর জন্য কমা (`,`) দিয়ে একাধিক লিঙ্ক দিন।
+            </p>
           </div>
 
           <textarea
             value={value || ''}
             onChange={(e) => updateField(key, e.target.value)}
             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-primary outline-none transition-all min-h-[70px] resize-y"
-            placeholder="Enter comma-separated logo image URLs or names (e.g., https://example.com/logo1.svg, https://example.com/logo2.png, Google, MIT)"
+            placeholder="Enter comma-separated logo image URLs or names (e.g., https://example.com/logo-banner.svg, or https://example.com/logo1.svg, https://example.com/logo2.png)"
           />
 
           {parsedLogos.length > 0 && (
@@ -440,11 +480,11 @@ export const SiteContentEditor: React.FC<{ showNotification?: (msg: string, type
 
                   if (isUrl) {
                     return (
-                      <div key={idx} className="p-1.5 bg-white rounded border border-slate-200 flex items-center justify-center max-h-8 max-w-[100px] shadow-sm">
+                      <div key={idx} className="p-1.5 bg-white rounded border border-slate-200 flex items-center justify-center max-h-10 max-w-[140px] shadow-sm">
                         <img 
                           src={item} 
                           alt={`Logo ${idx + 1}`} 
-                          className="max-h-6 max-w-full object-contain"
+                          className="max-h-8 max-w-full object-contain"
                           referrerPolicy="no-referrer"
                           onError={(e) => {
                             (e.currentTarget as HTMLElement).style.display = 'none';
@@ -478,11 +518,15 @@ export const SiteContentEditor: React.FC<{ showNotification?: (msg: string, type
               {label}
             </label>
           </div>
-          {isImage && value && (
+          {sizeGuide ? (
+            <span className="text-[10px] font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+              📏 {sizeGuide.badge}
+            </span>
+          ) : isImage && value ? (
             <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[150px]">
               Active URL
             </span>
-          )}
+          ) : null}
         </div>
 
         {isColor ? (

@@ -197,25 +197,44 @@ export function ClientLogosRow({ clientLogosText }: { clientLogosText?: string }
     return null;
   }
 
+  const isUrlCheck = (str: string) =>
+    str.startsWith('http://') ||
+    str.startsWith('https://') ||
+    str.startsWith('data:image/') ||
+    str.startsWith('/') ||
+    str.startsWith('blob:') ||
+    /\.(png|jpg|jpeg|svg|webp|gif|ico|avif)($|\?)/i.test(str);
+
+  // If there is only 1 item and it is an image, render it spanning the full left-to-right area of the testimonial card
+  if (items.length === 1 && isUrlCheck(items[0])) {
+    return (
+      <div className="pt-5 border-t border-slate-100 w-full flex items-center justify-center">
+        <img 
+          src={items[0]} 
+          alt="Client Logos" 
+          className="w-full h-auto max-h-24 sm:max-h-28 object-contain filter grayscale hover:grayscale-0 opacity-80 hover:opacity-100 transition-all"
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            const target = e.currentTarget;
+            target.style.display = 'none';
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="pt-5 border-t border-slate-100 flex items-center justify-center sm:justify-between gap-4 px-2 flex-wrap transition-all">
+    <div className="pt-5 border-t border-slate-100 w-full flex items-center justify-center sm:justify-between gap-4 sm:gap-6 px-1 flex-wrap transition-all">
       {items.map((item, idx) => {
-        // Detect if item is a URL / image path
-        const isUrl = 
-          item.startsWith('http://') || 
-          item.startsWith('https://') || 
-          item.startsWith('data:image/') || 
-          item.startsWith('/') ||
-          item.startsWith('blob:') ||
-          /\.(png|jpg|jpeg|svg|webp|gif|ico|avif)($|\?)/i.test(item);
+        const isUrl = isUrlCheck(item);
 
         if (isUrl) {
           return (
-            <div key={idx} className="flex items-center justify-center max-h-7 max-w-[120px] transition-all">
+            <div key={idx} className="flex items-center justify-center max-h-10 sm:max-h-12 max-w-[150px] flex-1 min-w-[70px] transition-all">
               <img 
                 src={item} 
                 alt={`Client Logo ${idx + 1}`} 
-                className="max-h-6 max-w-full object-contain filter grayscale hover:grayscale-0 opacity-75 hover:opacity-100 transition-all"
+                className="max-h-8 sm:max-h-10 max-w-full object-contain filter grayscale hover:grayscale-0 opacity-75 hover:opacity-100 transition-all"
                 referrerPolicy="no-referrer"
                 onError={(e) => {
                   const target = e.currentTarget;
@@ -231,7 +250,7 @@ export function ClientLogosRow({ clientLogosText }: { clientLogosText?: string }
         }
 
         return (
-          <div key={idx} className="text-[11px] font-bold text-slate-700 tracking-tight opacity-75 hover:opacity-100 transition-opacity">
+          <div key={idx} className="text-[11px] sm:text-xs font-bold text-slate-700 tracking-tight opacity-75 hover:opacity-100 transition-opacity">
             {item}
           </div>
         );
