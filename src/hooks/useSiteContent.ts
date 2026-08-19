@@ -10,6 +10,17 @@ const listeners: Record<string, {
   subscribers: Set<(data: any) => void>
 }> = {};
 
+export function updateSiteContentMemoryCache(pageId: string, content: any) {
+  const data = { pageId, content, updatedAt: new Date().toISOString() };
+  contentCache[pageId] = data;
+  try {
+    localStorage.setItem(`swr_site_content_${pageId}`, JSON.stringify(data));
+  } catch (e) {}
+  if (listeners[pageId]) {
+    listeners[pageId].subscribers.forEach(cb => cb(data));
+  }
+}
+
 export function useSiteContent(pageId: string, defaultContent: any) {
   const { language } = useLanguage();
   

@@ -67,6 +67,10 @@ function isExemptFromQuotaBlock(path: string): boolean {
          lower.includes('/users') ||
          lower.startsWith('global') ||
          lower.includes('/global') ||
+         lower.startsWith('site_content') ||
+         lower.includes('/site_content') ||
+         lower.startsWith('subscription_plans') ||
+         lower.includes('/subscription_plans') ||
          lower.startsWith('notifications') ||
          lower.includes('/notifications');
 }
@@ -5073,7 +5077,7 @@ export const erpService: any = {
         pageId,
         content,
         updatedAt: serverTimestamp()
-      });
+      }, { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `site_content/${pageId}`);
     }

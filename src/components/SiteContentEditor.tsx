@@ -25,6 +25,7 @@ import { AUTH_TEMPLATE_OPTIONS } from './auth/AuthLayouts';
 import { AuthTemplate } from '../types';
 import { Login, Register } from './Auth';
 import { useNotification } from '../contexts/NotificationContext';
+import { updateSiteContentMemoryCache } from '../hooks/useSiteContent';
 
 interface PageContent {
   id: string;
@@ -313,8 +314,26 @@ export const SiteContentEditor: React.FC<{ showNotification?: (msg: string, type
   const fetchContent = async () => {
     setLoading(true);
     try {
+      // 1. Instantly check localStorage for ultra-fast responsive display
+      try {
+        const persisted = localStorage.getItem(`swr_site_content_${selectedPage.id}`);
+        if (persisted) {
+          const parsed = JSON.parse(persisted);
+          if (parsed && (parsed.content || parsed[`content_en`])) {
+            const initial = parsed.content || parsed[`content_en`];
+            setContent({ ...selectedPage.defaultContent, ...initial });
+          }
+        }
+      } catch (e) {}
+
+      // 2. Fetch authoritative version from Firestore
       const saved = await erpService.getSiteContent(selectedPage.id);
-      setContent({ ...selectedPage.defaultContent, ...saved });
+      if (saved) {
+        setContent({ ...selectedPage.defaultContent, ...saved });
+        updateSiteContentMemoryCache(selectedPage.id, saved);
+      } else {
+        setContent(selectedPage.defaultContent);
+      }
     } catch (error) {
       console.error('Error fetching site content:', error);
       showNotification('Failed to load content', 'error');
@@ -326,16 +345,34 @@ export const SiteContentEditor: React.FC<{ showNotification?: (msg: string, type
   const handleSave = async () => {
     setSaving(true);
     try {
+      // 1. Save authoritative page content to Firestore
       await erpService.updateSiteContent(selectedPage.id, content);
       
-      // If updating template on login or register, sync to global & corresponding page as well for consistent experience
+      // 2. Immediately update in-memory and local caches for zero-delay UI update
+      updateSiteContentMemoryCache(selectedPage.id, content);
+
+      // 3. If updating template on login or register, sync to global & corresponding page safely without wiping their contents
       if (content.template) {
         if (selectedPage.id === 'login') {
-          await erpService.updateSiteContent('register', { template: content.template });
-          await erpService.updateSiteContent('global', { authTemplate: content.template });
+          const existingReg = (await erpService.getSiteContent('register')) || {};
+          const updatedReg = { ...existingReg, template: content.template };
+          await erpService.updateSiteContent('register', updatedReg);
+          updateSiteContentMemoryCache('register', updatedReg);
+
+          const existingGlobal = (await erpService.getSiteContent('global')) || {};
+          const updatedGlobal = { ...existingGlobal, authTemplate: content.template };
+          await erpService.updateSiteContent('global', updatedGlobal);
+          updateSiteContentMemoryCache('global', updatedGlobal);
         } else if (selectedPage.id === 'register') {
-          await erpService.updateSiteContent('login', { template: content.template });
-          await erpService.updateSiteContent('global', { authTemplate: content.template });
+          const existingLogin = (await erpService.getSiteContent('login')) || {};
+          const updatedLogin = { ...existingLogin, template: content.template };
+          await erpService.updateSiteContent('login', updatedLogin);
+          updateSiteContentMemoryCache('login', updatedLogin);
+
+          const existingGlobal = (await erpService.getSiteContent('global')) || {};
+          const updatedGlobal = { ...existingGlobal, authTemplate: content.template };
+          await erpService.updateSiteContent('global', updatedGlobal);
+          updateSiteContentMemoryCache('global', updatedGlobal);
         }
       }
 
