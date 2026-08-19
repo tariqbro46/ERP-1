@@ -1624,7 +1624,7 @@ export default function FounderPanel() {
           </div>
         </div>
       ) : viewMode === 'siteContent' ? (
-        <SiteContentEditor />
+        <SiteContentEditor showNotification={showNotification} />
       ) : viewMode === 'users' ? (
         <div className="overflow-x-auto pb-4">
           <div className="min-w-[600px] lg:min-w-0 space-y-4">

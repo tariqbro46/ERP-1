@@ -1,5 +1,6 @@
 export type VoucherType = 'Sales' | 'Purchase' | 'Payment' | 'Receipt' | 'Contra' | 'Journal' | 'Credit Note' | 'Debit Note' | 'Physical Stock' | 'Stock Journal';
 export type UserRole = 'Founder' | 'Marketing Manager' | 'Admin' | 'Manager' | 'Staff';
+export type AuthTemplate = 'softr' | 'softr-split' | 'split' | 'glass' | 'enterprise';
 
 export interface Company {
   id: string;
