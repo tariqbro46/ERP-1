@@ -78,6 +78,8 @@ interface SettingsContextType {
   companyName: string;
   companyLogo?: string;
   systemLogo?: string;
+  logoBgColor?: string;
+  systemLogoBgColor?: string;
   systemFavicon?: string;
   companyAddress: string;
   slogan: string;
@@ -237,6 +239,8 @@ const defaultSettings: SettingsContextType = {
   companyName: 'TallyFlow ERP',
   companyLogo: '',
   systemLogo: '',
+  logoBgColor: 'transparent',
+  systemLogoBgColor: 'transparent',
   systemFavicon: '',
   companyAddress: 'Dhaka, Bangladesh',
   slogan: 'Enterprise ERP Solution',
@@ -561,6 +565,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               englishFont: data.englishFont || prev.englishFont,
               banglaFont: data.banglaFont || prev.banglaFont,
               systemLogo: data.systemLogo || prev.systemLogo,
+              systemLogoBgColor: data.systemLogoBgColor || data.logoBgColor || prev.systemLogoBgColor,
+              logoBgColor: data.logoBgColor || data.systemLogoBgColor || prev.logoBgColor,
               systemFavicon: data.systemFavicon || prev.systemFavicon,
               glassBackground: data.glassBackground || prev.glassBackground,
               notificationDuration: data.notificationDuration || prev.notificationDuration,

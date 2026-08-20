@@ -303,6 +303,8 @@ export default function FounderPanel() {
     statusErrorText, 
     systemLogo, 
     systemFavicon, 
+    logoBgColor,
+    systemLogoBgColor,
     notificationDuration, 
     notificationAnimationStyle,
     searchPlaceholder,
@@ -422,6 +424,7 @@ export default function FounderPanel() {
   const [localStatusError, setLocalStatusError] = useState(statusErrorText || 'Database Error');
   const [localSystemLogo, setLocalSystemLogo] = useState(systemLogo || '');
   const [localSystemFavicon, setLocalSystemFavicon] = useState(systemFavicon || '');
+  const [localLogoBgColor, setLocalLogoBgColor] = useState(logoBgColor || systemLogoBgColor || 'transparent');
   const [localNotificationDuration, setLocalNotificationDuration] = useState(notificationDuration || 5000);
   const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle || 'default');
   const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut ?? true);
@@ -525,6 +528,10 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalSystemFavicon(systemFavicon || '');
   }, [systemFavicon]);
+
+  useEffect(() => {
+    setLocalLogoBgColor(logoBgColor || systemLogoBgColor || 'transparent');
+  }, [logoBgColor, systemLogoBgColor]);
 
   useEffect(() => {
     setLocalAlterPageUiStyle(alterPageUiStyle || 'classic');
@@ -3016,6 +3023,8 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       developerContactAlignment: localDeveloperContactAlignment,
                       systemLogo: localSystemLogo,
                       systemFavicon: localSystemFavicon,
+                      logoBgColor: localLogoBgColor,
+                      systemLogoBgColor: localLogoBgColor,
                       uiStyle: localUIStyle,
                       menuBarStyle: localMenuBarStyle,
                       alterPageUiStyle: localAlterPageUiStyle,
@@ -4038,9 +4047,10 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                 };
 
                 const showLogos = checkFilter(['logo', 'asset', 'upload logo', 'set via url', 'system logo', 'building']);
+                const showLogoBg = checkFilter(['logo background', 'background color', 'transparent', 'white', 'logo bg', 'color', 'header logo', 'sidebar logo', 'branding color']);
                 const showFavicon = checkFilter(['favicon', 'app icon', 'mobile app icon', 'launcher', 'upload favicon', 'home screen', 'tab']);
 
-                if (!showLogos && !showFavicon) {
+                if (!showLogos && !showFavicon && !showLogoBg) {
                   return (
                     <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card border border-border border-dashed rounded-xl">
                       <Search className="w-8 h-8 text-muted-foreground opacity-30 mb-2 animate-bounce" />
@@ -4100,6 +4110,143 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                                 />
                               </div>
                               <p className="text-[9px] text-muted-foreground uppercase leading-relaxed font-black">This logo will be used as a default for all companies if they don't have their own logo.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Group 1.5: Logo Background Color & Header Canvas Styling */}
+                    {showLogoBg && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Palette className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Sidebar & Header Logo Background Color</h4>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            Configure the background color of the logo container rendered in the Sidebar Header (including Firebase Console Style and classic layouts). Choose Transparent, Pure White, or any custom brand color.
+                          </p>
+
+                          {/* Quick color preset chips */}
+                          <div className="space-y-2">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Quick Preset Swatches</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                              {[
+                                { id: 'transparent', label: 'Transparent', hex: 'transparent', isChecker: true, desc: 'Natural blend' },
+                                { id: '#ffffff', label: 'Pure White', hex: '#ffffff', border: true, desc: 'Clean white box' },
+                                { id: '#f8fafc', label: 'Off White', hex: '#f8fafc', border: true, desc: 'Soft slate light' },
+                                { id: '#0f172a', label: 'Dark Slate', hex: '#0f172a', desc: 'Midnight slate' },
+                                { id: '#1e293b', label: 'Navy Slate', hex: '#1e293b', desc: 'Deep corporate' },
+                                { id: '#1a73e8', label: 'Google Blue', hex: '#1a73e8', desc: 'Console azure' },
+                                { id: '#4f46e5', label: 'Indigo', hex: '#4f46e5', desc: 'Modern purple-blue' },
+                                { id: '#059669', label: 'Emerald', hex: '#059669', desc: 'Vibrant green' },
+                                { id: '#d97706', label: 'Amber Gold', hex: '#d97706', desc: 'Warm golden' },
+                                { id: '#e11d48', label: 'Rose Crimson', hex: '#e11d48', desc: 'Bold crimson' }
+                              ].map((preset) => {
+                                const isSelected = (localLogoBgColor || 'transparent').toLowerCase() === preset.hex.toLowerCase();
+                                return (
+                                  <button
+                                    key={preset.id}
+                                    type="button"
+                                    onClick={() => setLocalLogoBgColor(preset.hex)}
+                                    className={cn(
+                                      "p-2.5 rounded-xl border text-left flex flex-col gap-1.5 transition-all relative overflow-hidden group",
+                                      isSelected
+                                        ? "border-primary bg-primary/5 ring-2 ring-primary/40 shadow-xs"
+                                        : "border-border bg-background hover:bg-muted/60"
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div 
+                                        className={cn(
+                                          "w-5 h-5 rounded-md shrink-0 border border-black/10 flex items-center justify-center overflow-hidden shadow-xs",
+                                          preset.border && "border-slate-300 dark:border-slate-600"
+                                        )}
+                                        style={{ 
+                                          backgroundColor: preset.hex !== 'transparent' ? preset.hex : undefined,
+                                          backgroundImage: preset.isChecker ? 'repeating-conic-gradient(#cbd5e1 0% 25%, #ffffff 0% 50%) 50% / 8px 8px' : undefined
+                                        }}
+                                      />
+                                      <span className="text-[11px] font-bold text-foreground leading-tight truncate">{preset.label}</span>
+                                    </div>
+                                    <span className="text-[8.5px] text-muted-foreground uppercase font-mono tracking-tight">{preset.desc}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Custom Color Picker & Hex Input */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/20 border border-border rounded-xl items-center">
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Custom Color Picker / Hex Code</label>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="color"
+                                  value={localLogoBgColor.startsWith('#') ? localLogoBgColor : '#ffffff'}
+                                  onChange={(e) => setLocalLogoBgColor(e.target.value)}
+                                  className="w-10 h-9 p-0.5 rounded-lg border border-border bg-background cursor-pointer shrink-0"
+                                  title="Choose custom logo background color"
+                                />
+                                <input
+                                  type="text"
+                                  value={localLogoBgColor}
+                                  onChange={(e) => setLocalLogoBgColor(e.target.value)}
+                                  placeholder="e.g. transparent, #ffffff, #1a73e8"
+                                  className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none"
+                                />
+                                {localLogoBgColor !== 'transparent' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setLocalLogoBgColor('transparent')}
+                                    className="px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground bg-background border border-border rounded-lg hover:bg-muted transition-all shrink-0"
+                                  >
+                                    Reset
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Live Sidebar Header Sandbox */}
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block font-mono">Real-Time Header Preview</label>
+                              <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex items-center justify-between gap-3 shadow-inner">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  {/* Logo preview with chosen background */}
+                                  <div 
+                                    className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden shrink-0 border border-black/10 dark:border-white/10 shadow-xs transition-all"
+                                    style={{ backgroundColor: localLogoBgColor !== 'transparent' ? localLogoBgColor : undefined }}
+                                  >
+                                    {localSystemLogo ? (
+                                      <img src={localSystemLogo} alt="Preview" className="w-full h-full object-contain p-1" referrerPolicy="no-referrer" />
+                                    ) : (
+                                      <div className="grid grid-cols-2 gap-0.5 w-full h-full p-1.5">
+                                        <div className="rounded-[2px] bg-amber-400" />
+                                        <div className="rounded-[2px] bg-red-400" />
+                                        <div className="rounded-[2px] bg-sky-400" />
+                                        <div className="rounded-[2px] bg-emerald-400" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  {/* Title & Slogan next to logo */}
+                                  <div className="min-w-0">
+                                    <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate leading-tight">
+                                      TallyFlow ERP Enterprise
+                                    </h4>
+                                    <p className="text-[9px] text-slate-500 dark:text-slate-400 uppercase font-medium truncate mt-0.5">
+                                      Active Company Switcher & Cloud
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-[8px] font-bold uppercase tracking-wider text-slate-400 px-1.5 py-0.5 rounded bg-slate-200/50 dark:bg-slate-800 shrink-0">
+                                  Live
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>

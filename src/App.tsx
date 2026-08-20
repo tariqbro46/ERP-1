@@ -383,6 +383,8 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     companyName, 
     companyLogo,
     systemLogo,
+    logoBgColor,
+    systemLogoBgColor,
     slogan, 
     features = [], 
     menuBarStyle = 'classic', 
@@ -1087,55 +1089,101 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   };
 
   const renderFirebaseConsoleSidebar = () => {
+    const isDarkTheme = theme === 'dark';
+    const activeLogoBg = logoBgColor || systemLogoBgColor || 'transparent';
+
     return (
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300 ease-in-out font-sans select-none",
-          "bg-slate-900 border-r border-slate-800 text-slate-300 shadow-2xl",
+          isDarkTheme
+            ? "bg-slate-900 border-r border-slate-800 text-slate-300 shadow-2xl"
+            : "bg-[#f8f9fa] border-r border-slate-200 text-slate-700 shadow-xl",
           "lg:relative lg:translate-x-0",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full",
           isSidebarCollapsed ? "w-16" : "w-64"
         )}
       >
-        {/* Header: Logo & Branding */}
-        <div className="p-3.5 border-b border-slate-800 flex items-center justify-between shrink-0 bg-slate-950/40">
-          <div className="flex items-center gap-3 overflow-hidden min-w-0">
-            {/* TallyFlow ERP 4-color Logo Box */}
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-0.5 shadow-md shadow-orange-500/20 shrink-0 flex items-center justify-center overflow-hidden">
+        {/* Header: Logo & Active Switched Company Branding with Dropdown Switcher */}
+        <div className={cn(
+          "p-3 border-b flex items-center justify-between shrink-0 transition-colors relative",
+          isDarkTheme ? "border-slate-800 bg-slate-950/50" : "border-slate-200 bg-white"
+        )}>
+          <div className="flex items-center gap-2.5 overflow-hidden min-w-0 flex-1">
+            {/* Logo Container with Configured Background Color */}
+            <div
+              onClick={() => isSidebarCollapsed && setIsOrgDropdownOpen(!isOrgDropdownOpen)}
+              className={cn(
+                "w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden shrink-0 transition-all cursor-pointer group/logo",
+                isDarkTheme ? "border border-white/10 shadow-sm" : "border border-slate-200 shadow-xs",
+                activeLogoBg === 'transparent' && (isDarkTheme ? "bg-slate-800" : "bg-slate-100")
+              )}
+              style={{
+                backgroundColor: activeLogoBg !== 'transparent' ? activeLogoBg : undefined
+              }}
+              title={isSidebarCollapsed ? (company?.name || companyName || 'Switch Company') : undefined}
+            >
               {companyLogo || systemLogo ? (
                 <img
                   src={companyLogo || systemLogo}
                   alt="Logo"
-                  className="w-full h-full object-contain rounded-[6px]"
+                  className="w-full h-full object-contain p-1 rounded-lg"
                   referrerPolicy="no-referrer"
                 />
               ) : (
-                <div className="w-full h-full bg-slate-950 rounded-[6px] flex items-center justify-center">
-                  <div className="grid grid-cols-2 gap-0.5 p-1">
-                    <div className="w-2 h-2 rounded-[2px] bg-amber-400" />
-                    <div className="w-2 h-2 rounded-[2px] bg-red-400" />
-                    <div className="w-2 h-2 rounded-[2px] bg-sky-400" />
-                    <div className="w-2 h-2 rounded-[2px] bg-emerald-400" />
+                <div className="w-full h-full flex items-center justify-center p-1.5">
+                  <div className="grid grid-cols-2 gap-0.5 w-full h-full">
+                    <div className="rounded-[2px] bg-amber-400" />
+                    <div className="rounded-[2px] bg-red-400" />
+                    <div className="rounded-[2px] bg-sky-400" />
+                    <div className="rounded-[2px] bg-emerald-400" />
                   </div>
                 </div>
               )}
             </div>
 
+            {/* Active Switched Company Name & Slogan with Switcher Trigger */}
             {!isSidebarCollapsed && (
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <h1 className="text-xs font-bold text-white tracking-tight truncate">
-                    TallyFlow ERP
-                  </h1>
-                  {activePlan && (
-                    <span className="text-[7.5px] font-extrabold uppercase px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
-                      {activePlan.name}
-                    </span>
+                <button
+                  type="button"
+                  onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
+                  className={cn(
+                    "w-full text-left flex items-center justify-between rounded-lg p-1 -m-1 transition-all group/sw cursor-pointer",
+                    isDarkTheme ? "hover:bg-slate-800/80" : "hover:bg-slate-100/90"
                   )}
-                </div>
-                <p className="text-[8.5px] text-slate-400 font-medium truncate uppercase tracking-widest">
-                  Universal Business Cloud
-                </p>
+                  title="Click to Switch Organization / Branch"
+                >
+                  <div className="min-w-0 flex-1 pr-1">
+                    <div className="flex items-center gap-1.5">
+                      <h1 className={cn(
+                        "text-xs font-bold tracking-tight truncate leading-tight transition-colors",
+                        isDarkTheme ? "text-white group-hover/sw:text-indigo-300" : "text-slate-900 group-hover/sw:text-blue-700"
+                      )}>
+                        {company?.name || companyName || 'TallyFlow ERP'}
+                      </h1>
+                      {activePlan && (
+                        <span className={cn(
+                          "text-[7px] font-extrabold uppercase px-1 py-0.2 rounded shrink-0",
+                          isDarkTheme ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-amber-100 text-amber-800 border border-amber-300"
+                        )}>
+                          {activePlan.name}
+                        </span>
+                      )}
+                    </div>
+                    <p className={cn(
+                      "text-[8.5px] font-medium truncate uppercase tracking-wider leading-tight mt-0.5",
+                      isDarkTheme ? "text-slate-400" : "text-slate-500"
+                    )}>
+                      {(company as any)?.slogan || (company as any)?.address || slogan || 'Enterprise ERP'}
+                    </p>
+                  </div>
+                  <ChevronsUpDown className={cn(
+                    "w-3.5 h-3.5 shrink-0 transition-transform duration-200",
+                    isDarkTheme ? "text-slate-400 group-hover/sw:text-slate-200" : "text-slate-400 group-hover/sw:text-slate-700",
+                    isOrgDropdownOpen && "rotate-180"
+                  )} />
+                </button>
               </div>
             )}
           </div>
@@ -1144,125 +1192,106 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
           <button
             type="button"
             onClick={() => setIsSidebarOpen(false)}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 lg:hidden shrink-0"
+            className={cn(
+              "p-1 rounded-lg lg:hidden shrink-0 transition-colors",
+              isDarkTheme ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+            )}
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Organization / Branch Switcher Dropdown */}
-        <div className="relative border-b border-slate-800 shrink-0 bg-slate-900/60">
-          {!isSidebarCollapsed ? (
-            <div className="p-2.5">
-              <button
-                type="button"
-                onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
-                className="w-full bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 rounded-xl p-2 flex items-center justify-between text-left transition-all group shadow-sm cursor-pointer"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-6 h-6 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center shrink-0 text-indigo-400">
-                    <Building2 className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-semibold text-slate-100 truncate group-hover:text-white transition-colors leading-tight">
-                      {company?.name || companyName || 'TallyFlow Enterprise'}
-                    </p>
-                    <p className="text-[8.5px] text-slate-400 truncate uppercase tracking-wider leading-tight">
-                      Organization / Branch
-                    </p>
-                  </div>
-                </div>
-                <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 shrink-0 ml-1" />
-              </button>
-            </div>
-          ) : (
-            <div className="p-2 flex justify-center">
-              <button
-                type="button"
-                onClick={() => setIsOrgDropdownOpen(!isOrgDropdownOpen)}
-                title={company?.name || companyName || 'Select Organization'}
-                className="w-10 h-10 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 flex items-center justify-center text-slate-200 hover:text-white transition-all shadow-sm group cursor-pointer"
-              >
-                <Building2 className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
-              </button>
-            </div>
-          )}
-
-          {/* Dropdown Menu */}
-          {isOrgDropdownOpen && (
-            <div
-              ref={orgDropdownRef}
-              className={cn(
-                "absolute z-50 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md animate-in fade-in duration-150",
-                isSidebarCollapsed ? "left-full ml-2 top-0 w-72" : "top-full left-2.5 right-2.5 mt-1"
-              )}
-            >
-              <div className="p-2.5 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Building2 className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="text-[10px] font-bold text-slate-200 uppercase tracking-wider">
-                    Select Organization / Branch
-                  </span>
-                </div>
-                {isSwitchingOrg && <Loader2 className="w-3 h-3 text-indigo-400 animate-spin" />}
+        {/* Organization / Branch Switcher Popover Menu */}
+        {isOrgDropdownOpen && (
+          <div
+            ref={orgDropdownRef}
+            className={cn(
+              "absolute z-50 rounded-xl shadow-2xl overflow-hidden backdrop-blur-md animate-in fade-in duration-150 border",
+              isDarkTheme ? "bg-slate-900 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-800",
+              isSidebarCollapsed ? "left-full ml-2 top-2 w-72" : "top-14 left-2.5 right-2.5"
+            )}
+          >
+            <div className={cn(
+              "p-2.5 border-b flex items-center justify-between",
+              isDarkTheme ? "border-slate-800 bg-slate-950/70" : "border-slate-100 bg-slate-50"
+            )}>
+              <div className="flex items-center gap-2">
+                <Building2 className={cn("w-3.5 h-3.5", isDarkTheme ? "text-indigo-400" : "text-blue-600")} />
+                <span className={cn("text-[10px] font-bold uppercase tracking-wider", isDarkTheme ? "text-slate-200" : "text-slate-700")}>
+                  Select Organization / Branch
+                </span>
               </div>
+              {isSwitchingOrg && <Loader2 className={cn("w-3 h-3 animate-spin", isDarkTheme ? "text-indigo-400" : "text-blue-600")} />}
+            </div>
 
-              <div className="max-h-56 overflow-y-auto p-1.5 space-y-1 custom-scrollbar">
-                {userCompanies.length > 0 ? (
-                  userCompanies.map((c) => {
-                    const isCurrent = c.id === company?.id || c.id === user?.companyId;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        disabled={isSwitchingOrg}
-                        onClick={() => handleSwitchCompany(c.id)}
-                        className={cn(
-                          "w-full p-2 rounded-lg flex items-center justify-between text-left transition-all group cursor-pointer",
-                          isCurrent
+            <div className="max-h-56 overflow-y-auto p-1.5 space-y-1 custom-scrollbar">
+              {userCompanies.length > 0 ? (
+                userCompanies.map((c) => {
+                  const isCurrent = c.id === company?.id || c.id === user?.companyId;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      disabled={isSwitchingOrg}
+                      onClick={() => handleSwitchCompany(c.id)}
+                      className={cn(
+                        "w-full p-2 rounded-lg flex items-center justify-between text-left transition-all group cursor-pointer",
+                        isCurrent
+                          ? isDarkTheme
                             ? "bg-slate-800 text-white font-semibold ring-1 ring-white/10"
-                            : "hover:bg-slate-800/60 text-slate-300 hover:text-white"
-                        )}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className={cn(
-                            "w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0",
-                            isCurrent ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400 group-hover:bg-slate-700"
-                          )}>
-                            {c.name ? c.name.charAt(0).toUpperCase() : 'C'}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold truncate leading-tight">{c.name}</p>
-                            <p className="text-[9px] text-slate-400 truncate leading-tight">{c.address || c.email || 'Active'}</p>
-                          </div>
+                            : "bg-[#e8f0fe] text-[#1967d2] font-semibold ring-1 ring-blue-500/20"
+                          : isDarkTheme
+                            ? "hover:bg-slate-800/60 text-slate-300 hover:text-white"
+                            : "hover:bg-slate-100 text-slate-700 hover:text-slate-900"
+                      )}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={cn(
+                          "w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0",
+                          isCurrent
+                            ? isDarkTheme ? "bg-indigo-600 text-white" : "bg-blue-600 text-white"
+                            : isDarkTheme ? "bg-slate-800 text-slate-400 group-hover:bg-slate-700" : "bg-slate-200 text-slate-600 group-hover:bg-slate-300"
+                        )}>
+                          {c.name ? c.name.charAt(0).toUpperCase() : 'C'}
                         </div>
-                        {isCurrent && <Check className="w-3.5 h-3.5 text-indigo-400 shrink-0" />}
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="p-3 text-center text-xs text-slate-400">
-                    {company?.name || companyName} (Active)
-                  </div>
-                )}
-              </div>
-
-              <div className="p-1.5 border-t border-slate-800 bg-slate-950/40">
-                <Link
-                  to="/companies"
-                  onClick={() => {
-                    setIsOrgDropdownOpen(false);
-                    if (window.innerWidth < 1024) setIsSidebarOpen(false);
-                  }}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-300 hover:text-indigo-200 text-xs font-medium border border-indigo-500/20 transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Manage Organizations & Branches</span>
-                </Link>
-              </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold truncate leading-tight">{c.name}</p>
+                          <p className={cn("text-[9px] truncate leading-tight", isDarkTheme ? "text-slate-400" : "text-slate-500")}>
+                            {c.address || c.email || 'Active'}
+                          </p>
+                        </div>
+                      </div>
+                      {isCurrent && <Check className={cn("w-3.5 h-3.5 shrink-0", isDarkTheme ? "text-indigo-400" : "text-blue-600")} />}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className={cn("p-3 text-center text-xs", isDarkTheme ? "text-slate-400" : "text-slate-500")}>
+                  {company?.name || companyName} (Active)
+                </div>
+              )}
             </div>
-          )}
-        </div>
+
+            <div className={cn("p-1.5 border-t", isDarkTheme ? "border-slate-800 bg-slate-950/40" : "border-slate-100 bg-slate-50/80")}>
+              <Link
+                to="/companies"
+                onClick={() => {
+                  setIsOrgDropdownOpen(false);
+                  if (window.innerWidth < 1024) setIsSidebarOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium border transition-colors",
+                  isDarkTheme
+                    ? "bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-300 hover:text-indigo-200 border-indigo-500/20"
+                    : "bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 border-blue-200"
+                )}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Manage Organizations & Branches</span>
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Navigation Categories (Accordion / Collapsible) */}
         <nav className="flex-1 py-2 px-2 overflow-y-auto no-scrollbar overflow-x-hidden space-y-1">
@@ -1275,21 +1304,27 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                   className={cn(
                     "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all group",
                     location.pathname === DASHBOARD_ITEM.to
-                      ? "bg-slate-800 text-white font-semibold shadow-xs ring-1 ring-white/10"
-                      : "text-slate-300 hover:text-white hover:bg-slate-800/60"
+                      ? isDarkTheme
+                        ? "bg-slate-800 text-white font-semibold shadow-xs ring-1 ring-white/10"
+                        : "bg-[#e8f0fe] text-[#1967d2] font-semibold shadow-xs ring-1 ring-blue-500/20"
+                      : isDarkTheme
+                        ? "text-slate-300 hover:text-white hover:bg-slate-800/60"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                   )}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <LayoutDashboard className={cn(
                       "w-4 h-4 shrink-0 transition-colors",
-                      location.pathname === DASHBOARD_ITEM.to ? "text-indigo-400" : "text-slate-400 group-hover:text-slate-200"
+                      location.pathname === DASHBOARD_ITEM.to
+                        ? isDarkTheme ? "text-indigo-400" : "text-[#1967d2]"
+                        : isDarkTheme ? "text-slate-400 group-hover:text-slate-200" : "text-slate-500 group-hover:text-slate-700"
                     )} />
                     <span className="truncate">
                       {DASHBOARD_ITEM.labelKey && t(DASHBOARD_ITEM.labelKey) !== DASHBOARD_ITEM.labelKey ? t(DASHBOARD_ITEM.labelKey) : DASHBOARD_ITEM.label}
                     </span>
                   </div>
                   {location.pathname === DASHBOARD_ITEM.to && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                    <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", isDarkTheme ? "bg-indigo-400" : "bg-[#1967d2]")} />
                   )}
                 </Link>
 
@@ -1298,19 +1333,25 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                   className={cn(
                     "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all group",
                     location.pathname === '/search'
-                      ? "bg-slate-800 text-white font-semibold shadow-xs ring-1 ring-white/10"
-                      : "text-slate-300 hover:text-white hover:bg-slate-800/60"
+                      ? isDarkTheme
+                        ? "bg-slate-800 text-white font-semibold shadow-xs ring-1 ring-white/10"
+                        : "bg-[#e8f0fe] text-[#1967d2] font-semibold shadow-xs ring-1 ring-blue-500/20"
+                      : isDarkTheme
+                        ? "text-slate-300 hover:text-white hover:bg-slate-800/60"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                   )}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <Search className={cn(
                       "w-4 h-4 shrink-0 transition-colors",
-                      location.pathname === '/search' ? "text-indigo-400" : "text-slate-400 group-hover:text-slate-200"
+                      location.pathname === '/search'
+                        ? isDarkTheme ? "text-indigo-400" : "text-[#1967d2]"
+                        : isDarkTheme ? "text-slate-400 group-hover:text-slate-200" : "text-slate-500 group-hover:text-slate-700"
                     )} />
                     <span className="truncate">{t('common.search') || "Search"}</span>
                   </div>
                   {location.pathname === '/search' && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                    <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", isDarkTheme ? "bg-indigo-400" : "bg-[#1967d2]")} />
                   )}
                 </Link>
               </>
@@ -1321,13 +1362,21 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                   className={cn(
                     "w-10 h-10 mx-auto rounded-xl flex items-center justify-center transition-all group relative my-1",
                     location.pathname === DASHBOARD_ITEM.to
-                      ? "bg-slate-800 text-white shadow-xs ring-1 ring-white/10"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                      ? isDarkTheme ? "bg-slate-800 text-white shadow-xs ring-1 ring-white/10" : "bg-[#e8f0fe] text-[#1967d2] shadow-xs ring-1 ring-blue-500/20"
+                      : isDarkTheme ? "text-slate-400 hover:text-white hover:bg-slate-800/60" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/60"
                   )}
                   title="Dashboard"
                 >
-                  <LayoutDashboard className={cn("w-4 h-4", location.pathname === DASHBOARD_ITEM.to ? "text-indigo-400" : "text-slate-400 group-hover:text-slate-200")} />
-                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-950 border border-slate-700 text-slate-100 text-[11px] font-medium rounded-md whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                  <LayoutDashboard className={cn(
+                    "w-4 h-4",
+                    location.pathname === DASHBOARD_ITEM.to
+                      ? isDarkTheme ? "text-indigo-400" : "text-[#1967d2]"
+                      : isDarkTheme ? "text-slate-400 group-hover:text-slate-200" : "text-slate-500 group-hover:text-slate-700"
+                  )} />
+                  <div className={cn(
+                    "absolute left-full ml-3 px-2.5 py-1 text-[11px] font-medium rounded-md whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 border",
+                    isDarkTheme ? "bg-slate-950 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-800"
+                  )}>
                     Dashboard
                   </div>
                 </Link>
@@ -1337,13 +1386,21 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                   className={cn(
                     "w-10 h-10 mx-auto rounded-xl flex items-center justify-center transition-all group relative my-1",
                     location.pathname === '/search'
-                      ? "bg-slate-800 text-white shadow-xs ring-1 ring-white/10"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                      ? isDarkTheme ? "bg-slate-800 text-white shadow-xs ring-1 ring-white/10" : "bg-[#e8f0fe] text-[#1967d2] shadow-xs ring-1 ring-blue-500/20"
+                      : isDarkTheme ? "text-slate-400 hover:text-white hover:bg-slate-800/60" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/60"
                   )}
                   title="Search"
                 >
-                  <Search className={cn("w-4 h-4", location.pathname === '/search' ? "text-indigo-400" : "text-slate-400 group-hover:text-slate-200")} />
-                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-950 border border-slate-700 text-slate-100 text-[11px] font-medium rounded-md whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                  <Search className={cn(
+                    "w-4 h-4",
+                    location.pathname === '/search'
+                      ? isDarkTheme ? "text-indigo-400" : "text-[#1967d2]"
+                      : isDarkTheme ? "text-slate-400 group-hover:text-slate-200" : "text-slate-500 group-hover:text-slate-700"
+                  )} />
+                  <div className={cn(
+                    "absolute left-full ml-3 px-2.5 py-1 text-[11px] font-medium rounded-md whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 border",
+                    isDarkTheme ? "bg-slate-950 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-800"
+                  )}>
                     Search
                   </div>
                 </Link>
@@ -1369,7 +1426,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
             if (isSidebarCollapsed) {
               return (
                 <div key={group.id} className="py-1">
-                  <div className="w-8 mx-auto border-t border-slate-800/80 my-1.5" />
+                  <div className={cn("w-8 mx-auto border-t my-1.5", isDarkTheme ? "border-slate-800/80" : "border-slate-200")} />
                   {visibleItems.map((item: any) => {
                     const isSubscribed = !item.feature || isFeatureEnabled(item.feature);
                     const isActive = location.pathname === item.to;
@@ -1383,15 +1440,25 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                         className={cn(
                           "w-10 h-10 mx-auto rounded-xl flex items-center justify-center transition-all group relative my-0.5",
                           isActive
-                            ? "bg-slate-800 text-white shadow-xs ring-1 ring-white/10"
-                            : "text-slate-400 hover:text-white hover:bg-slate-800/60",
+                            ? isDarkTheme ? "bg-slate-800 text-white shadow-xs ring-1 ring-white/10" : "bg-[#e8f0fe] text-[#1967d2] shadow-xs ring-1 ring-blue-500/20"
+                            : isDarkTheme ? "text-slate-400 hover:text-white hover:bg-slate-800/60" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/60",
                           !isSubscribed && "opacity-40 grayscale"
                         )}
                         title={`${groupTitle} › ${itemLabel}`}
                       >
-                        <ItemIcon className={cn("w-4 h-4", isActive ? "text-indigo-400" : "text-slate-400 group-hover:text-slate-200")} />
-                        <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-950 border border-slate-700 text-slate-100 text-[11px] font-medium rounded-md whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
-                          <div className="text-[9px] uppercase tracking-wider text-indigo-400 font-bold">{groupTitle}</div>
+                        <ItemIcon className={cn(
+                          "w-4 h-4",
+                          isActive
+                            ? isDarkTheme ? "text-indigo-400" : "text-[#1967d2]"
+                            : isDarkTheme ? "text-slate-400 group-hover:text-slate-200" : "text-slate-500 group-hover:text-slate-700"
+                        )} />
+                        <div className={cn(
+                          "absolute left-full ml-3 px-2.5 py-1 text-[11px] font-medium rounded-md whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 border",
+                          isDarkTheme ? "bg-slate-950 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-800"
+                        )}>
+                          <div className={cn("text-[9px] uppercase tracking-wider font-bold", isDarkTheme ? "text-indigo-400" : "text-blue-600")}>
+                            {groupTitle}
+                          </div>
                           <div>{itemLabel}</div>
                         </div>
                       </Link>
@@ -1406,12 +1473,17 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                 <button
                   type="button"
                   onClick={() => toggleGroup(group.group)}
-                  className="w-full px-3 py-1.5 flex items-center justify-between text-slate-400 hover:text-slate-200 text-[10px] font-bold uppercase tracking-wider transition-colors select-none group cursor-pointer"
+                  className={cn(
+                    "w-full px-3 py-1.5 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider transition-colors select-none group cursor-pointer",
+                    isDarkTheme ? "text-slate-400 hover:text-slate-200" : "text-slate-500 hover:text-slate-800"
+                  )}
                 >
                   <span className="truncate">{groupTitle}</span>
                   <ChevronDown className={cn(
                     "w-3.5 h-3.5 transition-transform duration-200",
-                    isGroupOpen ? "rotate-0 text-slate-300" : "-rotate-90 text-slate-500 group-hover:text-slate-400"
+                    isGroupOpen
+                      ? "rotate-0 " + (isDarkTheme ? "text-slate-300" : "text-slate-700")
+                      : "-rotate-90 " + (isDarkTheme ? "text-slate-500 group-hover:text-slate-400" : "text-slate-400 group-hover:text-slate-600")
                   )} />
                 </button>
 
@@ -1432,19 +1504,25 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                           className={cn(
                             "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all group",
                             isActive
-                              ? "bg-slate-800 text-white font-semibold shadow-xs ring-1 ring-white/10"
-                              : "text-slate-300 hover:text-white hover:bg-slate-800/60"
+                              ? isDarkTheme
+                                ? "bg-slate-800 text-white font-semibold shadow-xs ring-1 ring-white/10"
+                                : "bg-[#e8f0fe] text-[#1967d2] font-semibold shadow-xs ring-1 ring-blue-500/20"
+                              : isDarkTheme
+                                ? "text-slate-300 hover:text-white hover:bg-slate-800/60"
+                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                           )}
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <ItemIcon className={cn(
                               "w-4 h-4 shrink-0 transition-colors",
-                              isActive ? "text-indigo-400" : "text-slate-400 group-hover:text-slate-200"
+                              isActive
+                                ? isDarkTheme ? "text-indigo-400" : "text-[#1967d2]"
+                                : isDarkTheme ? "text-slate-400 group-hover:text-slate-200" : "text-slate-500 group-hover:text-slate-700"
                             )} />
                             <span className="truncate">{itemLabel}</span>
                           </div>
                           {isActive && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                            <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", isDarkTheme ? "bg-indigo-400" : "bg-[#1967d2]")} />
                           )}
                         </Link>
                       </div>
@@ -1458,7 +1536,8 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
         {/* Bottom Section: Quota & Collapse/Expand Toggle */}
         <div className={cn(
-          "border-t border-slate-800 bg-slate-950/60 shrink-0 transition-all",
+          "border-t shrink-0 transition-all",
+          isDarkTheme ? "border-slate-800 bg-slate-950/60" : "border-slate-200 bg-slate-100/90",
           isSidebarCollapsed ? "p-2" : "p-2.5 space-y-1.5"
         )}>
           {/* Quota widget if applicable */}
@@ -1473,19 +1552,24 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
             return (
               <div 
                 onClick={() => setIsQuotaDashboardOpen(true)}
-                className="p-1.5 bg-slate-900/90 hover:bg-slate-800/90 rounded-lg border border-slate-800 cursor-pointer transition-all group"
+                className={cn(
+                  "p-1.5 rounded-lg border cursor-pointer transition-all group",
+                  isDarkTheme
+                    ? "bg-slate-900/90 hover:bg-slate-800/90 border-slate-800"
+                    : "bg-white hover:bg-slate-50 border-slate-200"
+                )}
                 title="View Database Usage"
               >
-                <div className="flex items-center justify-between text-[9px] text-slate-300 font-bold uppercase tracking-wider mb-1">
+                <div className={cn("flex items-center justify-between text-[9px] font-bold uppercase tracking-wider mb-1", isDarkTheme ? "text-slate-300" : "text-slate-700")}>
                   <span className="flex items-center gap-1">
-                    <Database className="w-3 h-3 text-indigo-400" />
+                    <Database className={cn("w-3 h-3", isDarkTheme ? "text-indigo-400" : "text-blue-600")} />
                     Usage (Today):
                   </span>
                   <span className={cn(
-                    pct >= 90 ? "text-rose-400" : pct >= 75 ? "text-amber-400" : "text-emerald-400"
+                    pct >= 90 ? "text-rose-500" : pct >= 75 ? "text-amber-500" : "text-emerald-500"
                   )}>{pct}%</span>
                 </div>
-                <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                <div className={cn("w-full h-1 rounded-full overflow-hidden", isDarkTheme ? "bg-slate-800" : "bg-slate-200")}>
                   <div 
                     className={cn(
                       "h-full rounded-full transition-all duration-500",
@@ -1504,14 +1588,17 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(true)}
-                className="flex items-center gap-2 px-2 py-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 text-[11px] font-medium transition-colors cursor-pointer"
+                className={cn(
+                  "flex items-center gap-2 px-2 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer",
+                  isDarkTheme ? "text-slate-400 hover:text-slate-100 hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/80"
+                )}
                 title="Collapse sidebar"
               >
                 <PanelLeftClose className="w-4 h-4" />
                 <span>Collapse</span>
               </button>
 
-              <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-mono">
+              <div className={cn("flex items-center gap-1.5 text-[9px] font-mono", isDarkTheme ? "text-slate-400" : "text-slate-500")}>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span>{appVersion}</span>
               </div>
@@ -1521,11 +1608,17 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(false)}
-                className="w-10 h-10 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center transition-colors cursor-pointer group relative"
+                className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer group relative",
+                  isDarkTheme ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/80"
+                )}
                 title="Expand sidebar"
               >
-                <PanelLeftOpen className="w-5 h-5 text-slate-400 group-hover:text-white group-hover:scale-110 transition-transform" />
-                <div className="absolute left-full ml-3 px-2.5 py-1 bg-slate-950 border border-slate-700 text-slate-100 text-[11px] font-medium rounded-md whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                <PanelLeftOpen className={cn("w-5 h-5 transition-transform group-hover:scale-110", isDarkTheme ? "text-slate-400 group-hover:text-white" : "text-slate-500 group-hover:text-slate-900")} />
+                <div className={cn(
+                  "absolute left-full ml-3 px-2.5 py-1 text-[11px] font-medium rounded-md whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 border",
+                  isDarkTheme ? "bg-slate-950 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-800"
+                )}>
                   Expand sidebar
                 </div>
               </button>
