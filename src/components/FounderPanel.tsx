@@ -3629,6 +3629,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
                             >
                               <option value="classic">Classic Sidebar (Default)</option>
+                              <option value="firebase_console">Firebase Console Style</option>
                               <option value="ribbon">Microsoft Office Ribbon</option>
                               <option value="macos">macOS Top Menu Bar</option>
                               <option value="windows11">Windows 11 Taskbar Style</option>

@@ -987,6 +987,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground disabled:opacity-80"
                       >
                         <option value="classic">{t('settings.classicSidebar')}</option>
+                        <option value="firebase_console">{t('settings.firebaseConsoleStyle')}</option>
                         <option value="ribbon">{t('settings.ribbonStyle')}</option>
                         <option value="macos">{t('settings.macosStyle')}</option>
                         <option value="windows11">{t('settings.windows11Style')}</option>

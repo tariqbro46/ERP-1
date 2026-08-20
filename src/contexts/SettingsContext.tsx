@@ -20,7 +20,7 @@ interface FeatureSettings {
   enabled: boolean;
 }
 
-export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11' | 'colorful';
+export type MenuBarStyle = 'classic' | 'ribbon' | 'macos' | 'windows11' | 'colorful' | 'firebase_console';
 export type ReportLayout = 'Layout 1' | 'Layout 2';
 export type DashboardDesign = 'Design 1' | 'Design 2' | 'Design 3' | 'Design 4' | 'Design 5' | 'Design 6';
 export type UIStyle = 'UI/UX 1' | 'UI/UX 2' | 'UI/UX 3' | 'UI/UX 4';
