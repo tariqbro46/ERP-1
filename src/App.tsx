@@ -873,7 +873,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         "w-64"
       )}>
         <div className={cn(
-          "p-6 border-b flex items-center justify-between",
+          "h-14 flex-none px-4 border-b flex items-center justify-between shrink-0",
           customBgOpt ? "border-border/10" : isColorful ? "border-[#1e1b4b]/40" : "border-border"
         )}>
           <div className="flex items-center gap-3 overflow-hidden">
@@ -882,23 +882,23 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                 <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
               ) : (
                 <div className={cn("w-full h-full flex items-center justify-center", customBgOpt ? "bg-white/10" : isColorful ? "bg-indigo-600" : "bg-foreground")}>
-                  <span className={cn("font-bold text-lg", customBgOpt ? "text-inherit" : isColorful ? "text-white" : "text-background")}>{companyName.charAt(0)}</span>
+                  <span className={cn("font-bold text-base", customBgOpt ? "text-inherit" : isColorful ? "text-white" : "text-background")}>{companyName.charAt(0)}</span>
                 </div>
               )}
             </div>
-            <div className="transition-opacity duration-300 relative group/logo">
+            <div className="transition-opacity duration-300 relative group/logo min-w-0">
               <h1 className={cn(
-                "text-xs font-black tracking-tight truncate max-w-[120px]", 
+                "text-xs sm:text-[13px] font-bold tracking-tight truncate max-w-[130px] leading-tight", 
                 customBgOpt ? (customBgOpt.isDark ? "text-slate-100" : "text-stone-900") : isColorful ? "text-slate-100" : "text-foreground"
               )}>{companyName}</h1>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mt-0.5">
                 <p className={cn(
-                  "text-[9px] uppercase tracking-widest truncate max-w-[120px]", 
+                  "text-[10px] uppercase tracking-wider truncate max-w-[110px] leading-tight", 
                   customBgOpt ? (customBgOpt.isDark ? "text-slate-400" : "text-stone-500") : isColorful ? "text-slate-400" : "text-gray-500"
                 )}>{slogan}</p>
                 {activePlan && (
                   <span className={cn(
-                    "text-[7px] font-bold uppercase tracking-tighter px-1 rounded",
+                    "text-[7.5px] font-bold uppercase tracking-tighter px-1 py-0.2 rounded shrink-0",
                     customBgOpt ? "text-indigo-400 bg-white/10" : isColorful ? "text-indigo-400 bg-indigo-500/10 border border-indigo-500/20" : "text-primary bg-primary/5"
                   )}>
                     {activePlan.name}
@@ -1106,7 +1106,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       >
         {/* Header: Logo & Active Switched Company Branding with Dropdown Switcher */}
         <div className={cn(
-          "p-3 border-b flex items-center justify-between shrink-0 transition-colors relative",
+          "h-14 flex-none border-b flex items-center justify-between px-3 shrink-0 transition-colors relative",
           isDarkTheme ? "border-slate-800 bg-slate-950/50" : "border-slate-200 bg-white"
         )}>
           <div className="flex items-center gap-2.5 overflow-hidden min-w-0 flex-1">
@@ -1157,14 +1157,14 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                   <div className="min-w-0 flex-1 pr-1">
                     <div className="flex items-center gap-1.5">
                       <h1 className={cn(
-                        "text-xs font-bold tracking-tight truncate leading-tight transition-colors",
+                        "text-xs sm:text-[13px] font-bold tracking-tight truncate leading-tight transition-colors",
                         isDarkTheme ? "text-white group-hover/sw:text-indigo-300" : "text-slate-900 group-hover/sw:text-blue-700"
                       )}>
                         {company?.name || companyName || 'TallyFlow ERP'}
                       </h1>
                       {activePlan && (
                         <span className={cn(
-                          "text-[7px] font-extrabold uppercase px-1 py-0.2 rounded shrink-0",
+                          "text-[7.5px] font-extrabold uppercase px-1 py-0.2 rounded shrink-0",
                           isDarkTheme ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" : "bg-amber-100 text-amber-800 border border-amber-300"
                         )}>
                           {activePlan.name}
@@ -1172,7 +1172,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                       )}
                     </div>
                     <p className={cn(
-                      "text-[8.5px] font-medium truncate uppercase tracking-wider leading-tight mt-0.5",
+                      "text-[10px] sm:text-[10.5px] font-medium truncate uppercase tracking-wider leading-tight mt-0.5",
                       isDarkTheme ? "text-slate-400" : "text-slate-500"
                     )}>
                       {(company as any)?.slogan || (company as any)?.address || slogan || 'Enterprise ERP'}
