@@ -73,27 +73,27 @@ export const Home = () => {
 
   const { content: rawContent } = useSiteContent('home', DEFAULT_CONTENT);
 
-  // Normalize content to use consistent dark theme backgrounds and colors, matching Features, Pricing, About, and Contact pages
+  // Normalize content to use consistent light theme backgrounds and colors, matching Login and Softr design
   const content = {
     ...rawContent,
-    heroBgColor: "#020617",
-    heroTitleColor: "#ffffff",
-    heroSubtitleColor: "#94a3b8",
-    heroCtaPrimaryBg: "#3b82f6",
+    heroBgColor: "#ffffff",
+    heroTitleColor: "#0f172a",
+    heroSubtitleColor: "#475569",
+    heroCtaPrimaryBg: "#1e293b",
     heroCtaPrimaryText: "#ffffff",
-    heroCtaSecondaryText: "#ffffff",
-    statsSectionBg: "#090d16",
-    statsTitleColor: "#ffffff",
+    heroCtaSecondaryText: "#334155",
+    statsSectionBg: "#fafafa",
+    statsTitleColor: "#0f172a",
     statsSubtitleColor: "#64748b",
-    featuresSectionBg: "#020617",
-    featureCardBg: "#0b1329",
-    featureCardTitleColor: "#ffffff",
-    featureCardDescColor: "#94a3b8",
-    ctaTitleColor: "#ffffff",
-    ctaSubtitleColor: "rgba(255,255,255,0.8)",
-    ctaSectionBg: "#020617",
-    ctaButtonBg: "#ffffff",
-    ctaButtonText: "#020617",
+    featuresSectionBg: "#ffffff",
+    featureCardBg: "#f8fafc",
+    featureCardTitleColor: "#0f172a",
+    featureCardDescColor: "#64748b",
+    ctaTitleColor: "#0f172a",
+    ctaSubtitleColor: "#475569",
+    ctaSectionBg: "#fafafa",
+    ctaButtonBg: "#1e293b",
+    ctaButtonText: "#ffffff",
   };
 
   const [activeTab, setActiveTab] = React.useState<'finance' | 'inventory' | 'production' | 'payroll'>('finance');
@@ -199,56 +199,56 @@ export const Home = () => {
   if (loading && (isAdaptiveLoaderEnabled || isSkeletonEnabled)) {
     if (isSkeletonEnabled) {
       return (
-        <div className="min-h-screen bg-slate-950 text-white flex flex-col relative overflow-hidden">
+        <div className="min-h-screen bg-white text-slate-900 flex flex-col relative overflow-hidden">
           {/* Skeleton Navbar Header */}
-          <div className="h-20 border-b border-slate-900/50 bg-slate-950/80 backdrop-blur-md px-6 flex items-center justify-between">
+          <div className="h-16 border-b border-slate-100 bg-white/80 backdrop-blur-md px-6 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-slate-850 rounded-xl animate-pulse" />
-              <div className="w-24 h-5 bg-slate-850 rounded-lg animate-pulse" />
+              <div className="w-8 h-8 bg-slate-100 rounded-lg animate-pulse" />
+              <div className="w-24 h-5 bg-slate-100 rounded-lg animate-pulse" />
             </div>
             <div className="hidden md:flex items-center gap-6">
-              <div className="w-16 h-4 bg-slate-900 rounded animate-pulse" />
-              <div className="w-16 h-4 bg-slate-900 rounded animate-pulse" />
-              <div className="w-16 h-4 bg-slate-900 rounded animate-pulse" />
-              <div className="w-16 h-4 bg-slate-900 rounded animate-pulse" />
+              <div className="w-16 h-4 bg-slate-100 rounded animate-pulse" />
+              <div className="w-16 h-4 bg-slate-100 rounded animate-pulse" />
+              <div className="w-16 h-4 bg-slate-100 rounded animate-pulse" />
+              <div className="w-16 h-4 bg-slate-100 rounded animate-pulse" />
             </div>
-            <div className="w-24 h-10 bg-blue-600/20 rounded-xl animate-pulse" />
+            <div className="w-24 h-9 bg-slate-100 rounded-lg animate-pulse" />
           </div>
 
           {/* Skeleton Hero Section */}
-          <div className="flex-1 max-w-7xl mx-auto px-6 pt-32 pb-24 text-center w-full space-y-8">
+          <div className="flex-1 max-w-7xl mx-auto px-6 pt-24 pb-20 text-center w-full space-y-8">
             <div className="flex justify-center">
-              <div className="w-56 h-8 bg-slate-900 border border-slate-800 rounded-full animate-pulse" />
+              <div className="w-52 h-7 bg-slate-100 rounded-full animate-pulse" />
             </div>
             
             <div className="space-y-4 max-w-4xl mx-auto animate-pulse">
-              <div className="h-16 md:h-20 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 rounded-2xl" />
-              <div className="h-16 md:h-20 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 rounded-2xl w-3/4 mx-auto" />
+              <div className="h-14 md:h-16 bg-slate-100 rounded-2xl" />
+              <div className="h-14 md:h-16 bg-slate-100 rounded-2xl w-3/4 mx-auto" />
             </div>
 
-            <div className="space-y-2.5 max-w-2xl mx-auto pt-4 animate-pulse">
-              <div className="h-4 bg-slate-900 rounded w-full" />
-              <div className="h-4 bg-slate-900 rounded w-5/6 mx-auto" />
+            <div className="space-y-2 max-w-2xl mx-auto pt-2 animate-pulse">
+              <div className="h-4 bg-slate-100 rounded w-full" />
+              <div className="h-4 bg-slate-100 rounded w-5/6 mx-auto" />
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-center gap-4 pt-6 animate-pulse">
-              <div className="w-36 h-12 bg-blue-500/10 border border-blue-500/20 rounded-xl" />
-              <div className="w-36 h-12 bg-slate-900 border border-slate-800 rounded-xl" />
+            <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4 animate-pulse">
+              <div className="w-36 h-11 bg-slate-200 rounded-lg" />
+              <div className="w-36 h-11 bg-slate-100 rounded-lg" />
             </div>
 
             {/* Simulated app interface mockup skeleton */}
-            <div className="mt-16 border border-slate-800 bg-slate-900/10 rounded-2xl aspect-[16/9] w-full animate-pulse flex flex-col p-4 space-y-4">
-              <div className="flex justify-between items-center border-slate-900 pb-3">
+            <div className="mt-12 border border-slate-100 bg-slate-50/50 rounded-2xl aspect-[16/9] w-full animate-pulse flex flex-col p-5 space-y-4 shadow-sm">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                 <div className="flex gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-slate-850" />
-                  <span className="w-3 h-3 rounded-full bg-slate-850" />
-                  <span className="w-3 h-3 rounded-full bg-slate-850" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
                 </div>
-                <div className="w-32 h-4 bg-slate-850 rounded" />
+                <div className="w-32 h-4 bg-slate-200 rounded" />
               </div>
               <div className="flex-1 grid grid-cols-4 gap-4">
-                <div className="col-span-1 bg-slate-900/40 rounded-xl" />
-                <div className="col-span-3 bg-slate-900/40 rounded-xl" />
+                <div className="col-span-1 bg-slate-100 rounded-xl" />
+                <div className="col-span-3 bg-slate-100 rounded-xl" />
               </div>
             </div>
           </div>
@@ -256,16 +256,16 @@ export const Home = () => {
           {/* Bottom Right Progressive Step Indicator */}
           {isAdaptiveLoaderEnabled && (
             <div 
-              className="absolute bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-800/80 bg-slate-950/90 text-slate-300 font-mono text-[11px] uppercase tracking-widest shadow-2xl animate-in fade-in duration-300"
+              className="absolute bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-mono text-[11px] uppercase tracking-wider shadow-lg animate-in fade-in duration-300"
             >
               <div className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-450 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
               </div>
               
               <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] text-slate-500 font-black tracking-tighter">PROGRESS STATUS</span>
-                <span className="text-white font-bold">{loadingPhrases[currentPhraseIdx]}</span>
+                <span className="text-[9px] text-slate-400 font-bold tracking-tight">PROGRESS STATUS</span>
+                <span className="text-slate-900 font-semibold">{loadingPhrases[currentPhraseIdx]}</span>
               </div>
             </div>
           )}
@@ -273,25 +273,23 @@ export const Home = () => {
       );
     } else {
       return (
-        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center relative overflow-hidden text-white">
-          <div className="absolute inset-0 bg-gradient-to-tr from-blue-950/20 via-transparent to-slate-950 opacity-40 animate-pulse" />
-          
+        <div className="min-h-screen bg-white flex flex-col items-center justify-center relative overflow-hidden text-slate-900">
           <div className="flex flex-col items-center gap-4 relative z-10">
-            <div className="w-12 h-12 rounded-full border-slate-800 border-t-blue-500 animate-spin" />
-            <span className="text-xs font-mono tracking-widest text-slate-400 uppercase">Loading Hero Portfolio...</span>
+            <div className="w-10 h-10 rounded-full border-2 border-slate-200 border-t-slate-900 animate-spin" />
+            <span className="text-xs font-mono tracking-wider text-slate-500 uppercase">Loading Workspace...</span>
           </div>
 
           {isAdaptiveLoaderEnabled && (
             <div 
-              className="absolute bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-800/80 bg-slate-950/90 text-slate-300 font-mono text-[11px] uppercase tracking-widest shadow-2xl"
+              className="absolute bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-mono text-[11px] uppercase tracking-wider shadow-lg"
             >
               <div className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-[9px] text-slate-500 font-black tracking-tighter">PROGRESS STATUS</span>
-                <span className="text-white font-bold">{loadingPhrases[currentPhraseIdx]}</span>
+                <span className="text-[9px] text-slate-400 font-bold tracking-tight">PROGRESS STATUS</span>
+                <span className="text-slate-900 font-semibold">{loadingPhrases[currentPhraseIdx]}</span>
               </div>
             </div>
           )}
@@ -301,112 +299,138 @@ export const Home = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col selection:bg-blue-500/30 bg-slate-950 text-white transition-colors duration-300 animate-fadeIn">
+    <div className="min-h-screen flex flex-col bg-white text-slate-900 selection:bg-slate-200 selection:text-slate-900 transition-colors duration-300 animate-fadeIn">
       <Navbar />
       
       <main className="flex-1">
         {/* Hero Section */}
         {content.showHero && (
-          <section className="relative pt-32 pb-24 overflow-hidden" style={{ backgroundColor: content.heroBgColor || '#020617' }}>
-            {/* Dark Cyber Mesh Background Grids */}
-            <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[600px] -z-10 pointer-events-none">
-              <div className="absolute top-12 left-1/4 w-[500px] h-[500px] bg-gradient-to-tr from-blue-600/10 to-indigo-600/0 rounded-full blur-[140px] opacity-80" />
-              <div className="absolute top-24 right-1/4 w-[400px] h-[400px] bg-gradient-to-tl from-emerald-500/5 to-indigo-600/0 rounded-full blur-[120px] opacity-60" />
-            </div>
+          <section className="relative pt-28 sm:pt-36 pb-20 overflow-hidden bg-white">
+            
+            {/* Subtle grid pattern background matching Login page */}
+            <div 
+              className="absolute inset-0 opacity-[0.55] pointer-events-none"
+              style={{
+                backgroundImage: `linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)`,
+                backgroundSize: '88px 88px'
+              }}
+            />
+
+            {/* Large Decorative Geometric Outlines matching Login page */}
+            <div className="absolute top-10 left-8 w-[360px] h-[360px] rounded-full border border-pink-300/50 pointer-events-none" />
+            <div className="absolute top-24 right-12 w-[320px] h-[260px] rounded-[36px] border border-indigo-200/60 pointer-events-none" />
+            <div className="absolute bottom-20 left-16 w-[360px] h-[240px] rounded-[32px] border border-blue-200/60 pointer-events-none" />
+            <div className="absolute -bottom-8 right-20 w-[380px] h-[380px] rounded-[48px] border border-amber-200/50 pointer-events-none" />
+            
+            {/* Ambient soft glow */}
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-gradient-to-tr from-pink-100/35 via-indigo-50/25 to-blue-100/25 rounded-full blur-[140px] pointer-events-none" />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
               <div className="text-center">
                 <motion.div
-                  initial={{ opacity: 0, y: 30 }}
+                  initial={{ opacity: 0, y: 24 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.7 }}
+                  transition={{ duration: 0.6 }}
                 >
                   {/* Inline trending announcement badge */}
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 hover:bg-slate-850 transition-all shadow-sm text-xs font-semibold text-slate-350 mb-8 select-none scale-95 sm:scale-100">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200/90 hover:border-slate-300 hover:bg-slate-50 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.04)] text-xs font-semibold text-slate-700 mb-8 select-none">
                     <span className="flex h-2 w-2 relative">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600"></span>
                     </span>
-                    <span className="text-slate-400">✨ {language === 'bn' ? 'ইআরপি এন্টারপ্রাইজ ইন্টেলিজেন্স' : 'ERP Enterprise Intelligence'}</span>
-                    <span className="w-[1px] h-3 bg-slate-800" />
-                    <span className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer flex items-center gap-0.5">Explore Features <ArrowRight className="w-3 h-3" /></span>
+                    <span className="text-slate-600">✨ {language === 'bn' ? 'ইআরপি এন্টারপ্রাইজ ইন্টেলিজেন্স' : 'ERP Enterprise Intelligence'}</span>
+                    <span className="w-[1px] h-3 bg-slate-200" />
+                    <span className="text-blue-600 hover:text-blue-700 transition-colors cursor-pointer flex items-center gap-1 font-medium">
+                      Explore Features <ArrowRight className="w-3 h-3" />
+                    </span>
                   </div>
 
-                  <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight mb-8 animate-fadeIn" style={{ color: content.heroTitleColor || '#ffffff' }}>
+                  <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-slate-900 mb-6 animate-fadeIn">
                     {content.heroTitle}
                   </h1>
 
-                  <p className="text-lg sm:text-xl max-w-3xl mx-auto mb-12 font-medium leading-relaxed" style={{ color: content.heroSubtitleColor || '#94a3b8' }}>
+                  <p className="text-base sm:text-lg lg:text-xl max-w-2xl mx-auto mb-10 text-slate-600 font-normal leading-relaxed">
                     {content.heroSubtitle}
                   </p>
 
-                   <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+                  <div className="flex flex-col sm:flex-row justify-center items-center gap-3.5">
+                    {/* Primary Button: Solid Dark Navy Blue */}
                     <Link
                       to={user ? "/dashboard" : "/register"}
-                      className="w-full sm:w-auto px-8 py-4 rounded-full text-base font-bold transition-all shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2 group hover:opacity-90 text-white"
-                      style={{ backgroundColor: content.heroCtaPrimaryBg || '#3b82f6' }}
+                      id="hero-primary-cta"
+                      className="w-full sm:w-auto px-7 py-3 rounded-lg text-[13px] font-semibold bg-[#1e293b] hover:bg-[#0f172a] text-white transition-all shadow-[0_1px_2px_rgba(0,0,0,0.08)] active:scale-[0.99] flex items-center justify-center gap-2 group cursor-pointer"
                     >
                       {user ? t('nav.dashboard') : content.heroCtaPrimary}
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Link>
+
+                    {/* Secondary Button: Outline/Light Grey border style */}
                     <Link
                       to="/pricing"
-                      className="w-full sm:w-auto px-8 py-4 rounded-full text-base font-bold border border-slate-800 text-white transition-all hover:bg-slate-900"
+                      id="hero-secondary-cta"
+                      className="w-full sm:w-auto px-7 py-3 rounded-lg text-[13px] font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.04)] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {content.heroCtaSecondary || "View Pricing Models"}
                     </Link>
+
+                    {/* Experience Hub Demo Button */}
                     {!user && (
                       <button
                         onClick={() => setShowDemoModal(true)}
-                        className="w-full sm:w-auto px-8 py-4 rounded-full text-base font-bold transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 text-emerald-400 bg-emerald-950/20 border border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-950/40 shadow-[0_0_15px_rgba(16,185,129,0.1)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                        id="hero-demo-cta"
+                        className="w-full sm:w-auto px-6 py-3 rounded-lg text-[13px] font-semibold border border-emerald-200 bg-emerald-50/90 hover:bg-emerald-100/80 text-emerald-800 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.04)] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
+                        <Sparkles className="w-4 h-4 text-emerald-600" />
                         {language === 'bn' ? 'এক্সপেরিয়েন্স হাব (ডেমো)' : 'Experience Hub (Demo)'}
                       </button>
                     )}
                   </div>
                 </motion.div>
 
-                {/* Trending Interactive Dashboard Mockup Preview */}
+                {/* Light-Themed Dashboard Preview Card matching Floating Card on Login Page */}
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.96, y: 40 }}
+                  initial={{ opacity: 0, scale: 0.98, y: 30 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  transition={{ duration: 0.9, delay: 0.2 }}
-                  className="mt-20 relative max-w-5xl mx-auto z-20"
+                  transition={{ duration: 0.8, delay: 0.15 }}
+                  className="mt-14 relative max-w-5xl mx-auto z-20"
                 >
-                  <div className="absolute -inset-1 rounded-[32px] bg-blue-500/10 opacity-40 blur-lg" />
-                  
-                  {/* Outer Frame */}
-                  <div className="relative rounded-3xl overflow-hidden border border-slate-800 bg-slate-900/95 shadow-2xl text-white">
+                  <div className="relative rounded-2xl bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden text-slate-900 text-left">
                     
                     {/* Simulated OS Browser Tab and Action Bar */}
-                    <div className="bg-slate-950 border-b border-slate-850 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <div className="flex items-center gap-6">
-                        {/* macOS lights */}
-                        <div className="flex gap-2">
-                          <span className="w-3.5 h-3.5 rounded-full bg-rose-500/80 block border border-rose-600/40" />
-                          <span className="w-3.5 h-3.5 rounded-full bg-amber-500/80 block border border-amber-600/40" />
-                          <span className="w-3.5 h-3.5 rounded-full bg-emerald-500/80 block border border-emerald-600/40" />
+                    <div className="bg-[#fafafa] border-b border-slate-100 px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        {/* Softr style macOS lights */}
+                        <div className="flex gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-rose-400 block" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 block" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 block" />
                         </div>
-                        <span className="text-xs font-mono text-slate-400 tracking-wider font-extrabold">TallyFlow ERP</span>
+                        <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
+                          <div className="flex items-center gap-0.5">
+                            <div className="w-2 h-2 rounded-[1px] bg-[#f97316]" />
+                            <div className="w-2 h-2 rounded-[1px] bg-[#e11d48]" />
+                            <div className="w-2 h-2 rounded-[1px] bg-[#3b82f6]" />
+                            <div className="w-2 h-2 rounded-[1px] bg-[#eab308]" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800 tracking-tight">TallyFlow ERP</span>
+                        </div>
                       </div>
                       
                       {/* Interactive App Tabs */}
-                      <div className="flex bg-slate-950 p-1 rounded-full border border-slate-800/80">
+                      <div className="flex bg-slate-100/90 p-1 rounded-lg border border-slate-200/60">
                         {(['finance', 'inventory', 'production', 'payroll'] as const).map((tab) => (
                           <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold tracking-tight transition-all cursor-pointer ${
                               activeTab === tab 
-                                ? 'bg-blue-600 text-white shadow-sm' 
-                                : 'text-slate-400 hover:text-white'
+                                ? 'bg-white text-slate-900 shadow-xs' 
+                                : 'text-slate-500 hover:text-slate-900'
                             }`}
                           >
                             {language === 'bn' 
                               ? (tab === 'finance' ? 'অর্থায়ন' : tab === 'inventory' ? 'ইনভেন্টরি' : tab === 'production' ? 'উৎপাদন' : 'পেরোল')
-                              : tab
+                              : (tab.charAt(0).toUpperCase() + tab.slice(1))
                             }
                           </button>
                         ))}
@@ -414,52 +438,52 @@ export const Home = () => {
                     </div>
 
                     {/* App Visual Canvas */}
-                    <div className="p-8 bg-slate-950/40 min-h-[440px] text-left transition-all">
+                    <div className="p-6 sm:p-8 bg-white min-h-[420px] text-left transition-all">
                       {activeTab === 'finance' && (
                         <div className="space-y-6 animate-fadeIn">
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                              <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold">Financial Analytics Summary</h4>
-                              <p className="text-2xl font-black text-blue-400">৳2,482,900 Total Asset Flow</p>
+                              <h4 className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Financial Analytics Summary</h4>
+                              <p className="text-2xl font-bold text-slate-900 mt-0.5">৳2,482,900 Total Asset Flow</p>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">+18.4% Revenue Target</span>
-                              <span className="text-xs px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-450 border border-blue-500/20 font-bold">Live Status</span>
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-semibold">+18.4% Revenue Target</span>
+                              <span className="text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60 font-semibold">Live Real-time</span>
                             </div>
                           </div>
 
-                          {/* Minimal Live Visual chart representation */}
+                          {/* Live Visual chart representation */}
                           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="md:col-span-3 bg-slate-950 border border-slate-850 p-6 rounded-2xl flex flex-col justify-between min-h-[220px]">
+                            <div className="md:col-span-3 bg-slate-50/70 border border-slate-100 p-6 rounded-xl flex flex-col justify-between min-h-[220px]">
                               <div className="flex justify-between items-center mb-4">
-                                <span className="text-xs font-bold text-slate-450">Quarterly Income Flow Trend</span>
-                                <span className="text-[10px] font-mono text-slate-500">Auto-calculated</span>
+                                <span className="text-xs font-semibold text-slate-700">Quarterly Income Flow Trend</span>
+                                <span className="text-[11px] font-mono text-slate-500">Auto-calculated</span>
                               </div>
                               <div className="h-28 flex items-end gap-2 pt-2">
                                 {[54, 76, 45, 90, 68, 100, 85, 95, 110, 80, 95, 120].map((val, i) => (
                                   <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
                                     <div 
-                                      className="w-full bg-blue-500/70 rounded-t-md hover:bg-blue-500 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-300"
+                                      className="w-full bg-blue-600 hover:bg-blue-700 rounded-t transition-all duration-300"
                                       style={{ height: `${val}%` }} 
                                     />
-                                    <span className="text-[9px] font-mono text-slate-500 group-hover:text-slate-350">Q{i+1}</span>
+                                    <span className="text-[10px] font-mono text-slate-400 group-hover:text-slate-700">Q{i+1}</span>
                                   </div>
                                 ))}
                               </div>
                             </div>
 
                             <div className="space-y-4">
-                              <div className="bg-slate-950 border border-slate-850 p-5 rounded-2xl">
-                                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black">Net Profit Margin</p>
-                                <p className="text-xl font-bold tracking-tight text-white mt-1">24.5%</p>
-                                <div className="w-full bg-slate-900 h-1.5 rounded-full mt-3 overflow-hidden">
-                                  <div className="bg-blue-500 h-full rounded-full" style={{ width: '24.5%' }} />
+                              <div className="bg-slate-50/70 border border-slate-100 p-5 rounded-xl">
+                                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Net Profit Margin</p>
+                                <p className="text-xl font-bold tracking-tight text-slate-900 mt-1">24.5%</p>
+                                <div className="w-full bg-slate-200 h-1.5 rounded-full mt-3 overflow-hidden">
+                                  <div className="bg-blue-600 h-full rounded-full" style={{ width: '24.5%' }} />
                                 </div>
                               </div>
-                              <div className="bg-slate-950 border border-slate-850 p-5 rounded-2xl">
-                                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black">Total Invoices Disbursed</p>
-                                <p className="text-xl font-bold tracking-tight text-white mt-1">3,485 Pcs</p>
-                                <p className="text-[10px] text-emerald-450 mt-2 font-bold select-none">• No Error Found</p>
+                              <div className="bg-slate-50/70 border border-slate-100 p-5 rounded-xl">
+                                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Total Invoices Disbursed</p>
+                                <p className="text-xl font-bold tracking-tight text-slate-900 mt-1">3,485 Pcs</p>
+                                <p className="text-[11px] text-emerald-600 mt-2 font-semibold select-none">• Verified & Balanced</p>
                               </div>
                             </div>
                           </div>
@@ -470,55 +494,55 @@ export const Home = () => {
                         <div className="space-y-6 animate-fadeIn">
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                              <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold">Multi-Godown Stock Levels</h4>
-                              <p className="text-2xl font-black text-amber-500">৳14,560,000 Active Inventory Value</p>
+                              <h4 className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Multi-Godown Stock Levels</h4>
+                              <p className="text-2xl font-bold text-slate-900 mt-0.5">৳14,560,000 Active Inventory Value</p>
                             </div>
-                            <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-550 border border-amber-500/20 font-bold">Low-Stock Warnings Configured</span>
+                            <span className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-semibold">Low-Stock Warnings Configured</span>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
                             <div className="space-y-4">
-                              <div className="bg-slate-950 border border-slate-850 p-6 rounded-2xl">
+                              <div className="bg-slate-50/70 border border-slate-100 p-5 rounded-xl">
                                 <div className="flex justify-between items-center mb-2">
-                                  <span className="text-sm font-bold text-slate-200">Dhaka Warehouse Alpha</span>
-                                  <span className="text-xs font-bold text-slate-450">82% Volume Capacity</span>
+                                  <span className="text-xs font-bold text-slate-800">Dhaka Warehouse Alpha</span>
+                                  <span className="text-xs font-semibold text-slate-600">82% Volume Capacity</span>
                                 </div>
-                                <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden">
+                                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                                   <div className="bg-amber-500 h-full rounded-full" style={{ width: '82%' }} />
                                 </div>
-                                <div className="flex justify-between items-center text-[10px] text-slate-450 mt-2">
+                                <div className="flex justify-between items-center text-[11px] text-slate-500 mt-2">
                                   <span>24,800 Items Loaded</span>
                                   <span>Limit: 30,000</span>
                                 </div>
                               </div>
 
-                              <div className="bg-slate-950 border border-slate-850 p-6 rounded-2xl">
+                              <div className="bg-slate-50/70 border border-slate-100 p-5 rounded-xl">
                                 <div className="flex justify-between items-center mb-2">
-                                  <span className="text-sm font-bold text-slate-200">Chittagong Port Terminal</span>
-                                  <span className="text-xs font-bold text-rose-500">Low Stock - 38% Volume</span>
+                                  <span className="text-xs font-bold text-slate-800">Chittagong Port Terminal</span>
+                                  <span className="text-xs font-semibold text-rose-600">Low Stock - 38% Volume</span>
                                 </div>
-                                <div className="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden">
+                                <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                                   <div className="bg-rose-500 h-full rounded-full" style={{ width: '38%' }} />
                                 </div>
-                                <div className="flex justify-between items-center text-[10px] text-slate-450 mt-2">
+                                <div className="flex justify-between items-center text-[11px] text-slate-500 mt-2">
                                   <span>11,400 Items Loaded</span>
                                   <span>Limit: 30,000</span>
                                 </div>
                               </div>
                             </div>
 
-                            <div className="bg-slate-950 border border-slate-850 p-6 rounded-2xl flex flex-col justify-between">
-                              <span className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-4">Stock Ledger Quick Ticker</span>
-                              <div className="divide-y divide-slate-900">
+                            <div className="bg-slate-50/70 border border-slate-100 p-5 rounded-xl flex flex-col justify-between">
+                              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-3">Stock Ledger Quick Ticker</span>
+                              <div className="divide-y divide-slate-200/80">
                                 {[
-                                  { name: 'Ultra-Tough Cement', qty: '4,500 Bags', godown: 'Dhaka Alpha', color: 'text-emerald-450' },
-                                  { name: 'Deformed Steel Rods', qty: '180 Tons', godown: 'Dhaka Alpha', color: 'text-emerald-450' },
-                                  { name: 'Fibre Glass Insulation', qty: '12 Rolls', godown: 'Chittagong-Port', color: 'text-rose-500' },
+                                  { name: 'Ultra-Tough Cement', qty: '4,500 Bags', godown: 'Dhaka Alpha', color: 'text-emerald-700' },
+                                  { name: 'Deformed Steel Rods', qty: '180 Tons', godown: 'Dhaka Alpha', color: 'text-emerald-700' },
+                                  { name: 'Fibre Glass Insulation', qty: '12 Rolls', godown: 'Chittagong-Port', color: 'text-rose-600' },
                                 ].map((item, i) => (
                                   <div key={i} className="py-2.5 flex items-center justify-between text-xs">
                                     <div>
-                                      <p className="font-bold text-slate-200">{item.name}</p>
-                                      <p className="text-[10px] text-slate-500">{item.godown}</p>
+                                      <p className="font-semibold text-slate-800">{item.name}</p>
+                                      <p className="text-[11px] text-slate-500">{item.godown}</p>
                                     </div>
                                     <span className={`font-mono font-bold ${item.color}`}>{item.qty}</span>
                                   </div>
@@ -533,31 +557,31 @@ export const Home = () => {
                         <div className="space-y-6 animate-fadeIn">
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                              <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold">Line Production Monitoring</h4>
-                              <p className="text-2xl font-black text-purple-400">Automatic Machine Dispatch Logs</p>
+                              <h4 className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Line Production Monitoring</h4>
+                              <p className="text-2xl font-bold text-slate-900 mt-0.5">Automatic Machine Dispatch Logs</p>
                             </div>
-                            <span className="text-xs px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-450 border border-purple-500/20 font-bold">4 Active Lines Online</span>
+                            <span className="text-xs px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-semibold">4 Active Lines Online</span>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                             {[
-                              { lineName: 'Alpha Extruder X1', speed: '48m/min', load: '94% Power Load', progress: 94, statusClass: 'text-purple-450 bg-purple-500/10 border-purple-500/20' },
-                              { lineName: 'Litho Printer L2', speed: '120 Sheets/min', load: '78% Power Load', progress: 78, statusClass: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
-                              { lineName: 'Fila Wrapper F3', speed: 'Idle', load: 'Ready to Process Order', progress: 0, statusClass: 'text-slate-500 bg-slate-900 border-none' },
+                              { lineName: 'Alpha Extruder X1', speed: '48m/min', load: '94% Power Load', progress: 94, statusClass: 'text-purple-700 bg-purple-50 border-purple-200' },
+                              { lineName: 'Litho Printer L2', speed: '120 Sheets/min', load: '78% Power Load', progress: 78, statusClass: 'text-blue-700 bg-blue-50 border-blue-200' },
+                              { lineName: 'Fila Wrapper F3', speed: 'Idle', load: 'Ready to Process Order', progress: 0, statusClass: 'text-slate-600 bg-slate-100 border-slate-200' },
                             ].map((machine, i) => (
-                              <div key={i} className="bg-slate-950 border border-slate-850 p-5 rounded-2xl flex flex-col justify-between min-h-[160px]">
+                              <div key={i} className="bg-slate-50/70 border border-slate-100 p-5 rounded-xl flex flex-col justify-between min-h-[150px]">
                                 <div>
                                   <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-bold text-slate-200">{machine.lineName}</span>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono border ${machine.statusClass}`}>ONLINE</span>
+                                    <span className="text-xs font-bold text-slate-800">{machine.lineName}</span>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold border ${machine.statusClass}`}>ONLINE</span>
                                   </div>
-                                  <p className="text-sm font-bold text-slate-400">{machine.speed}</p>
+                                  <p className="text-xs font-semibold text-slate-500">{machine.speed}</p>
                                 </div>
-                                <div className="space-y-1">
-                                  <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                                    <div className="bg-purple-500 h-full rounded-full" style={{ width: `${machine.progress}%` }} />
+                                <div className="space-y-1.5">
+                                  <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                                    <div className="bg-purple-600 h-full rounded-full" style={{ width: `${machine.progress}%` }} />
                                   </div>
-                                  <p className="text-[9px] text-slate-500 font-medium">{machine.load}</p>
+                                  <p className="text-[10px] text-slate-500 font-medium">{machine.load}</p>
                                 </div>
                               </div>
                             ))}
@@ -569,43 +593,43 @@ export const Home = () => {
                         <div className="space-y-6 animate-fadeIn">
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                              <h4 className="text-xs uppercase tracking-widest text-slate-500 font-bold">Automated Workforce Disbursements</h4>
-                              <p className="text-2xl font-black text-sky-400">৳324,500 Outstanding Salaries Disbursed</p>
+                              <h4 className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Automated Workforce Disbursements</h4>
+                              <p className="text-2xl font-bold text-slate-900 mt-0.5">৳324,500 Outstanding Salaries Disbursed</p>
                             </div>
-                            <span className="text-xs px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-450 border border-blue-500/20 font-bold">Attendance Secure Track</span>
+                            <span className="text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-semibold">Attendance Secure Track</span>
                           </div>
 
-                          <div className="bg-slate-950 border border-slate-850 rounded-2xl overflow-hidden pt-2">
+                          <div className="bg-white border border-slate-100 rounded-xl overflow-hidden pt-1 shadow-xs">
                             <table className="w-full text-xs text-left relative">
-                              <thead className="sticky top-0 bg-slate-950 z-10 border-b border-slate-850 text-slate-400 font-bold uppercase tracking-wider">
+                              <thead className="sticky top-0 bg-slate-50 z-10 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
                                 <tr>
-                                  <th className="py-3.5 px-4">Employee Full Name</th>
-                                  <th className="py-3.5 px-4 text-center">Designation Room</th>
-                                  <th className="py-3.5 px-4 text-center">Attendance Checklist</th>
-                                  <th className="py-3.5 px-4 text-right">Current Disbursed Status</th>
+                                  <th className="py-3 px-4">Employee Full Name</th>
+                                  <th className="py-3 px-4 text-center">Designation</th>
+                                  <th className="py-3 px-4 text-center">Attendance Status</th>
+                                  <th className="py-3 px-4 text-right">Disbursed Status</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-slate-900 font-medium select-none">
+                              <tbody className="divide-y divide-slate-100 font-medium select-none">
                                 {[
                                   { name: 'Ahmad Rafique', role: 'Production Analyst', attendance: 'Present (On Time)', colorId: 'bg-emerald-500', status: '৳45,000 Transferred' },
                                   { name: 'Nusrat Jahan', role: 'Financial Manager', attendance: 'Present (On Time)', colorId: 'bg-emerald-500', status: '৳72,050 Transferred' },
                                   { name: 'Kamrul Hassan', role: 'Inventory Operator', attendance: 'Excused Leave (Paid)', colorId: 'bg-amber-500', status: '৳34,000 Transferred' },
                                 ].map((emp, i) => (
-                                  <tr key={i} className="hover:bg-slate-900/40 transition-colors">
-                                    <td className="py-3.5 px-4 flex items-center gap-2.5">
-                                      <div className="w-7 h-7 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold font-mono text-[10px]">
+                                  <tr key={i} className="hover:bg-slate-50/80 transition-colors">
+                                    <td className="py-3 px-4 flex items-center gap-2.5">
+                                      <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold font-mono text-[10px] border border-slate-200">
                                         {emp.name.split(' ').map(n=>n[0]).join('')}
                                       </div>
-                                      <span className="text-slate-200">{emp.name}</span>
+                                      <span className="text-slate-800 font-semibold">{emp.name}</span>
                                     </td>
-                                    <td className="py-3.5 px-4 text-center text-slate-450">{emp.role}</td>
-                                    <td className="py-3.5 px-4 text-center">
-                                      <span className="inline-flex items-center gap-1.5 text-[10px] text-slate-400">
+                                    <td className="py-3 px-4 text-center text-slate-500">{emp.role}</td>
+                                    <td className="py-3 px-4 text-center">
+                                      <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-600">
                                         <span className={`w-1.5 h-1.5 rounded-full ${emp.colorId}`} />
                                         {emp.attendance}
                                       </span>
                                     </td>
-                                    <td className="py-3.5 px-4 text-right text-emerald-400 font-mono font-bold">{emp.status}</td>
+                                    <td className="py-3 px-4 text-right text-emerald-700 font-mono font-bold">{emp.status}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -624,8 +648,7 @@ export const Home = () => {
         {/* Stats Section */}
         {content.showStats && (
           <section 
-            className="py-16 border-y border-slate-900/60 relative"
-            style={{ backgroundColor: content.statsSectionBg || '#090d16' }}
+            className="py-16 border-y border-slate-100 relative bg-[#fafafa]"
           >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
@@ -637,14 +660,12 @@ export const Home = () => {
                 ].map((stat, i) => (
                   <div key={i} className="group relative">
                     <p 
-                      className="text-4xl sm:text-5xl font-black tracking-tight mb-2 group-hover:text-blue-450 transition-colors duration-300 font-mono"
-                      style={{ color: content.statsTitleColor || '#ffffff' }}
+                      className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-2 text-slate-900 font-sans"
                     >
                       {stat.value}
                     </p>
                     <p 
-                      className="text-[10px] sm:text-xs tracking-[0.2em] uppercase font-black"
-                      style={{ color: content.statsSubtitleColor || '#64748b' }}
+                      className="text-xs tracking-wider uppercase font-semibold text-slate-500"
                     >
                       {stat.label}
                     </p>
@@ -658,18 +679,15 @@ export const Home = () => {
         {/* Trending Bento Grid Features Section */}
         {content.showFeatures && (
           <section 
-            className="py-32 relative overflow-hidden" 
-            style={{ backgroundColor: content.featuresSectionBg || '#020617' }}
+            className="py-24 sm:py-32 relative overflow-hidden bg-white border-b border-slate-100" 
           >
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[160px] pointer-events-none" />
-            
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-              <div className="text-center mb-24 max-w-2xl mx-auto">
-                <span className="text-xs font-black uppercase tracking-[0.3em] bg-blue-500/10 text-blue-400 px-3 py-1.5 rounded-full border border-blue-500/20 mb-6 inline-block">MODULAR ECOSYSTEM</span>
-                <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-6" style={{ color: content.featuresTitleColor || '#ffffff' }}>
+              <div className="text-center mb-16 sm:mb-20 max-w-2xl mx-auto">
+                <span className="text-xs font-semibold uppercase tracking-wider bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-100 mb-4 inline-block">MODULAR ECOSYSTEM</span>
+                <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-slate-900 mb-4">
                   {content.featuresTitle}
                 </h2>
-                <p className="text-lg leading-relaxed font-medium" style={{ color: content.featuresSubtitleColor || '#94a3b8' }}>
+                <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed">
                   {content.featuresSubtitle}
                 </p>
               </div>
@@ -679,18 +697,17 @@ export const Home = () => {
                 
                 {/* Bento Cell 1: Wide financial card */}
                 <motion.div
-                  whileHover={{ y: -4 }}
-                  className="md:col-span-4 p-8 rounded-3xl border border-slate-800 flex flex-col justify-between hover:border-blue-550/40 hover:shadow-lg transition-all group"
-                  style={{ backgroundColor: content.featureCardBg || '#0b1329' }}
+                  whileHover={{ y: -3 }}
+                  className="md:col-span-4 p-7 sm:p-8 rounded-2xl bg-slate-50/70 border border-slate-100 hover:border-slate-200 hover:shadow-md flex flex-col justify-between transition-all group"
                 >
                   <div>
-                    <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center border border-emerald-500/20 mb-6 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 bg-white text-emerald-600 rounded-xl flex items-center justify-center border border-slate-200/70 shadow-xs mb-6 group-hover:scale-105 transition-transform">
                       <BarChart3 className="w-6 h-6" />
                     </div>
-                    <h3 className="text-2xl font-bold mb-3" style={{ color: content.featureCardTitleColor || '#ffffff' }}>{t('home.feature1Title')}</h3>
-                    <p className="text-sm leading-relaxed select-none" style={{ color: content.featureCardDescColor || '#94a3b8' }}>{t('home.feature1Desc')}</p>
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2.5">{t('home.feature1Title')}</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed select-none">{t('home.feature1Desc')}</p>
                   </div>
-                  <div className="mt-8 pt-4 border-t border-slate-850/60 flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                  <div className="mt-8 pt-4 border-t border-slate-200/60 flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                     <span>Live Tracking Activated</span>
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   </div>
@@ -698,86 +715,81 @@ export const Home = () => {
 
                 {/* Bento Cell 2: Secure card */}
                 <motion.div
-                  whileHover={{ y: -4 }}
-                  className="md:col-span-2 p-8 rounded-3xl border border-slate-800 flex flex-col justify-between hover:border-blue-550/40 hover:shadow-lg transition-all group"
-                  style={{ backgroundColor: content.featureCardBg || '#0b1329' }}
+                  whileHover={{ y: -3 }}
+                  className="md:col-span-2 p-7 sm:p-8 rounded-2xl bg-slate-50/70 border border-slate-100 hover:border-slate-200 hover:shadow-md flex flex-col justify-between transition-all group"
                 >
                   <div>
-                    <div className="w-12 h-12 bg-blue-500/10 text-blue-400 rounded-2xl flex items-center justify-center border border-blue-500/20 mb-6 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 bg-white text-blue-600 rounded-xl flex items-center justify-center border border-slate-200/70 shadow-xs mb-6 group-hover:scale-105 transition-transform">
                       <Shield className="w-6 h-6" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3" style={{ color: content.featureCardTitleColor || '#ffffff' }}>{t('home.feature4Title')}</h3>
-                    <p className="text-xs leading-relaxed" style={{ color: content.featureCardDescColor || '#94a3b8' }}>{t('home.feature4Desc')}</p>
+                    <h3 className="text-xl font-bold text-slate-900 mb-2.5">{t('home.feature4Title')}</h3>
+                    <p className="text-xs text-slate-600 leading-relaxed">{t('home.feature4Desc')}</p>
                   </div>
-                  <div className="mt-8 pt-4 border-t border-slate-850_60 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+                  <div className="mt-8 pt-4 border-t border-slate-200/60 text-[11px] font-mono text-slate-500 uppercase tracking-wider">
                     AES-256 ENCRYPTION
                   </div>
                 </motion.div>
 
                 {/* Bento Cell 3: Small Card */}
                 <motion.div
-                  whileHover={{ y: -4 }}
-                  className="md:col-span-2 p-8 rounded-3xl border border-slate-800 flex flex-col justify-between hover:border-blue-550/40 hover:shadow-lg transition-all group"
-                  style={{ backgroundColor: content.featureCardBg || '#0b1329' }}
+                  whileHover={{ y: -3 }}
+                  className="md:col-span-2 p-7 sm:p-8 rounded-2xl bg-slate-50/70 border border-slate-100 hover:border-slate-200 hover:shadow-md flex flex-col justify-between transition-all group"
                 >
                   <div>
-                    <div className="w-12 h-12 bg-purple-500/10 text-purple-400 rounded-2xl flex items-center justify-center border border-purple-500/20 mb-6 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 bg-white text-purple-600 rounded-xl flex items-center justify-center border border-slate-200/70 shadow-xs mb-6 group-hover:scale-105 transition-transform">
                       <Zap className="w-6 h-6" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3" style={{ color: content.featureCardTitleColor || '#ffffff' }}>{t('home.feature5Title')}</h3>
-                    <p className="text-xs leading-relaxed" style={{ color: content.featureCardDescColor || '#94a3b8' }}>{t('home.feature5Desc')}</p>
+                    <h3 className="text-xl font-bold text-slate-900 mb-2.5">{t('home.feature5Title')}</h3>
+                    <p className="text-xs text-slate-600 leading-relaxed">{t('home.feature5Desc')}</p>
                   </div>
-                  <div className="mt-8 pt-4 border-t border-slate-850/60 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+                  <div className="mt-8 pt-4 border-t border-slate-200/60 text-[11px] font-mono text-slate-500 uppercase tracking-wider">
                     0ms Latency Pipeline
                   </div>
                 </motion.div>
 
                 {/* Bento Cell 4: Large Wide Warehouse card */}
                 <motion.div
-                  whileHover={{ y: -4 }}
-                  className="md:col-span-4 p-8 rounded-3xl border border-slate-800 flex flex-col justify-between hover:border-blue-550/40 hover:shadow-lg transition-all group"
-                  style={{ backgroundColor: content.featureCardBg || '#0b1329' }}
+                  whileHover={{ y: -3 }}
+                  className="md:col-span-4 p-7 sm:p-8 rounded-2xl bg-slate-50/70 border border-slate-100 hover:border-slate-200 hover:shadow-md flex flex-col justify-between transition-all group"
                 >
                   <div>
-                    <div className="w-12 h-12 bg-amber-500/10 text-amber-400 rounded-2xl flex items-center justify-center border border-amber-500/20 mb-6 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 bg-white text-amber-600 rounded-xl flex items-center justify-center border border-slate-200/70 shadow-xs mb-6 group-hover:scale-105 transition-transform">
                       <Database className="w-6 h-6" />
                     </div>
-                    <h3 className="text-2xl font-bold mb-3" style={{ color: content.featureCardTitleColor || '#ffffff' }}>{t('home.feature2Title')}</h3>
-                    <p className="text-sm leading-relaxed select-none" style={{ color: content.featureCardDescColor || '#94a3b8' }}>{t('home.feature2Desc')}</p>
+                    <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-2.5">{t('home.feature2Title')}</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed select-none">{t('home.feature2Desc')}</p>
                   </div>
-                  <div className="mt-8 pt-4 border-t border-slate-850/60 flex items-center justify-between text-xs font-bold text-slate-500">
-                    <span className="uppercase tracking-widest">STOCK METRICS CONNECTED</span>
-                    <span className="font-mono text-[10px]">DB_ACTIVE // SECURE_CON_99%</span>
+                  <div className="mt-8 pt-4 border-t border-slate-200/60 flex items-center justify-between text-xs font-semibold text-slate-500">
+                    <span className="uppercase tracking-wider">STOCK METRICS CONNECTED</span>
+                    <span className="font-mono text-[11px]">DB_ACTIVE // 99.9% UPTIME</span>
                   </div>
                 </motion.div>
 
                 {/* Bento Cell 5: Small Card Users */}
                 <motion.div
-                  whileHover={{ y: -4 }}
-                  className="md:col-span-3 p-8 rounded-3xl border border-slate-800 flex flex-col justify-between hover:border-blue-550/40 hover:shadow-lg transition-all group"
-                  style={{ backgroundColor: content.featureCardBg || '#0b1329' }}
+                  whileHover={{ y: -3 }}
+                  className="md:col-span-3 p-7 sm:p-8 rounded-2xl bg-slate-50/70 border border-slate-100 hover:border-slate-200 hover:shadow-md flex flex-col justify-between transition-all group"
                 >
                   <div>
-                    <div className="w-12 h-12 bg-sky-500/10 text-sky-400 rounded-2xl flex items-center justify-center border border-sky-500/20 mb-6 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 bg-white text-sky-600 rounded-xl flex items-center justify-center border border-slate-200/70 shadow-xs mb-6 group-hover:scale-105 transition-transform">
                       <Users className="w-6 h-6" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3" style={{ color: content.featureCardTitleColor || '#ffffff' }}>{t('home.feature3Title')}</h3>
-                    <p className="text-xs leading-relaxed" style={{ color: content.featureCardDescColor || '#94a3b8' }}>{t('home.feature3Desc')}</p>
+                    <h3 className="text-xl font-bold text-slate-900 mb-2.5">{t('home.feature3Title')}</h3>
+                    <p className="text-xs text-slate-600 leading-relaxed">{t('home.feature3Desc')}</p>
                   </div>
                 </motion.div>
 
                 {/* Bento Cell 6: Small Card Globe */}
                 <motion.div
-                  whileHover={{ y: -4 }}
-                  className="md:col-span-3 p-8 rounded-3xl border border-slate-800 flex flex-col justify-between hover:border-blue-550/40 hover:shadow-lg transition-all group"
-                  style={{ backgroundColor: content.featureCardBg || '#0b1329' }}
+                  whileHover={{ y: -3 }}
+                  className="md:col-span-3 p-7 sm:p-8 rounded-2xl bg-slate-50/70 border border-slate-100 hover:border-slate-200 hover:shadow-md flex flex-col justify-between transition-all group"
                 >
                   <div>
-                    <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center border border-emerald-500/20 mb-6 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 bg-white text-emerald-600 rounded-xl flex items-center justify-center border border-slate-200/70 shadow-xs mb-6 group-hover:scale-105 transition-transform">
                       <Globe className="w-6 h-6" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3" style={{ color: content.featureCardTitleColor || '#ffffff' }}>{t('home.feature6Title')}</h3>
-                    <p className="text-xs leading-relaxed" style={{ color: content.featureCardDescColor || '#94a3b8' }}>{t('home.feature6Desc')}</p>
+                    <h3 className="text-xl font-bold text-slate-900 mb-2.5">{t('home.feature6Title')}</h3>
+                    <p className="text-xs text-slate-600 leading-relaxed">{t('home.feature6Desc')}</p>
                   </div>
                 </motion.div>
 
@@ -789,28 +801,30 @@ export const Home = () => {
         {/* CTA Section */}
         {content.showCta && (
           <section 
-            className="relative py-32 overflow-hidden text-center border-t border-slate-900"
-            style={{ backgroundColor: content.ctaSectionBg || '#020617' }}
+            className="relative py-24 sm:py-32 overflow-hidden text-center bg-[#fafafa] border-t border-slate-100"
           >
-            <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_100%,#000_70%,transparent_100%)] pointer-events-none" />
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[400px] -z-10 pointer-events-none">
-              <div className="absolute bottom-[-100px] left-1/3 w-[400px] h-[400px] bg-gradient-to-tr from-blue-500/10 to-indigo-600/0 rounded-full blur-[120px] opacity-80" />
-            </div>
+            {/* Subtle grid pattern */}
+            <div 
+              className="absolute inset-0 opacity-[0.4] pointer-events-none"
+              style={{
+                backgroundImage: `linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)`,
+                backgroundSize: '88px 88px'
+              }}
+            />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-              <h2 className="text-4xl sm:text-6xl font-black mb-8 tracking-tight" style={{ color: content.ctaTitleColor || '#ffffff' }}>
+              <h2 className="text-3xl sm:text-5xl font-bold mb-4 tracking-tight text-slate-900">
                 {content.ctaTitle}
               </h2>
-              <p className="max-w-xl mx-auto mb-12 text-lg leading-relaxed font-semibold animate-pulse" style={{ color: content.ctaSubtitleColor || 'rgba(255,255,255,0.8)' }}>
+              <p className="max-w-xl mx-auto mb-10 text-base sm:text-lg text-slate-600 font-normal leading-relaxed">
                 {content.ctaSubtitle}
               </p>
               <Link
                 to={user ? "/dashboard" : "/register"}
-                className="inline-flex items-center gap-2 px-8 py-4 rounded-full text-base font-bold transition-all font-sans tracking-wide shadow-xl hover:-translate-y-0.5"
-                style={{ backgroundColor: content.ctaButtonBg || '#ffffff', color: content.ctaButtonText || '#020617' }}
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg text-sm font-semibold bg-[#1e293b] hover:bg-[#0f172a] text-white shadow-sm hover:shadow-md transition-all active:scale-[0.99]"
               >
                 {user ? t('nav.dashboard') : content.ctaButton}
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </section>
@@ -818,19 +832,19 @@ export const Home = () => {
       </main>
 
       {showDemoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950/40">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/60">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-lg font-bold text-white uppercase tracking-wider font-mono">
+                <Sparkles className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
                   {language === 'bn' ? 'এক্সপেরিয়েন্স হাব অ্যাক্টিভেশন' : 'Activate Experience Hub'}
                 </h3>
               </div>
               <button 
                 onClick={() => setShowDemoModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
                 id="close_demo_modal_btn"
               >
                 <X className="w-5 h-5" />
@@ -839,14 +853,14 @@ export const Home = () => {
 
             {/* Form */}
             <form onSubmit={handleDemoSubmit} className="p-6 space-y-4">
-              <p className="text-xs text-slate-400 leading-relaxed">
+              <p className="text-xs text-slate-500 leading-relaxed">
                 {language === 'bn' 
                   ? 'এক্সপেরিয়েন্স হাবে স্বাগতম! এখানে এন্ট্রি করা কোনো ডাটা ডাটাবেজে স্টোর হবে না, তবে আপনি রিয়েল-টাইম রিপোর্ট এবং সমস্ত ফিচার সম্পূর্ণ ফ্রিতে ট্রাই করতে পারবেন।' 
                   : 'Welcome to the Experience Hub! All entries here will stay non-persistent inside your browser cache, allowing you to test reports and operations without storing them in the cloud.'}
               </p>
 
               {demoError && (
-                <div className="p-3 text-xs bg-red-950/50 border border-red-500/30 text-red-400 rounded-lg">
+                <div className="p-3 text-xs bg-rose-50 border border-rose-200 text-rose-700 rounded-lg">
                   {demoError}
                 </div>
               )}
@@ -854,8 +868,8 @@ export const Home = () => {
               <div className="space-y-3 text-left">
                 {/* Name */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">
-                    {language === 'bn' ? 'আপনার নাম' : 'Your Name'} <span className="text-red-500">*</span>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    {language === 'bn' ? 'আপনার নাম' : 'Your Name'} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -863,14 +877,14 @@ export const Home = () => {
                     value={demoForm.name}
                     onChange={(e) => setDemoForm({ ...demoForm, name: e.target.value })}
                     placeholder={language === 'bn' ? 'উদাঃ আরিফুল ইসলাম' : 'e.g. John Doe'}
-                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-colors"
                   />
                 </div>
 
                 {/* Company Name */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">
-                    {language === 'bn' ? 'প্রতিষ্ঠানের নাম' : 'Company Name'} <span className="text-red-500">*</span>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    {language === 'bn' ? 'প্রতিষ্ঠানের নাম' : 'Company Name'} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -878,14 +892,14 @@ export const Home = () => {
                     value={demoForm.companyName}
                     onChange={(e) => setDemoForm({ ...demoForm, companyName: e.target.value })}
                     placeholder={language === 'bn' ? 'উদাঃ স্কাইলাইন ট্রেডার্স' : 'e.g. Skyline Traders'}
-                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-colors"
                   />
                 </div>
 
                 {/* Address */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">
-                    {language === 'bn' ? 'ঠিকানা' : 'Address'} <span className="text-red-500">*</span>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    {language === 'bn' ? 'ঠিকানা' : 'Address'} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -893,14 +907,14 @@ export const Home = () => {
                     value={demoForm.address}
                     onChange={(e) => setDemoForm({ ...demoForm, address: e.target.value })}
                     placeholder={language === 'bn' ? 'উদাঃ উত্তরা, ঢাকা' : 'e.g. Uttara, Dhaka'}
-                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-colors"
                   />
                 </div>
 
                 {/* Phone */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">
-                    {language === 'bn' ? 'ফোন নম্বর' : 'Phone Number'} <span className="text-red-500">*</span>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    {language === 'bn' ? 'ফোন নম্বর' : 'Phone Number'} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="tel"
@@ -908,14 +922,14 @@ export const Home = () => {
                     value={demoForm.phone}
                     onChange={(e) => setDemoForm({ ...demoForm, phone: e.target.value })}
                     placeholder={language === 'bn' ? 'উদাঃ ০১৮XXXXXXXX' : 'e.g. +88018XXXXXXXX'}
-                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-colors"
                   />
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1 uppercase tracking-wider">
-                    {language === 'bn' ? 'ইমেইল অ্যাড্রেস' : 'Email Address'} <span className="text-red-500">*</span>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    {language === 'bn' ? 'ইমেইল অ্যাড্রেস' : 'Email Address'} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="email"
@@ -923,24 +937,24 @@ export const Home = () => {
                     value={demoForm.email}
                     onChange={(e) => setDemoForm({ ...demoForm, email: e.target.value })}
                     placeholder="e.g. name@company.com"
-                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-colors"
                   />
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowDemoModal(false)}
-                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-850 transition-colors"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                 >
                   {language === 'bn' ? 'বাতিল করুন' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   disabled={demoSubmitLoading}
-                  className="px-6 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all hover:scale-[1.02] flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.3)] disabled:opacity-50"
+                  className="px-5 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
                   id="submit_demo_visitor_btn"
                 >
                   {demoSubmitLoading ? (
