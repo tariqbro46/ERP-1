@@ -2596,12 +2596,15 @@ function AppContent() {
   return (
     <Router>
       <Routes>
-        {/* Public Landing Pages */}
+        {/* Public Landing & Documentation Pages */}
         <Route path="/" element={<Home />} />
         <Route path="/features" element={<Features />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/pricing" element={<Pricing />} />
+        <Route path="/docs" element={<HelpPage />} />
+        <Route path="/help" element={<HelpPage />} />
+        <Route path="/instructions" element={<HelpPage />} />
         
         {/* Auth Pages */}
         <Route path="/login" element={

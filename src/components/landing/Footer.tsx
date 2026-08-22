@@ -5,7 +5,7 @@ import { useSiteContent } from '../../hooks/useSiteContent';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 export const Footer = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { content: globalSettings } = useSiteContent('global', { 
     siteName: 'TallyFlow ERP',
     siteNameColor: '#0f172a',
@@ -37,6 +37,7 @@ export const Footer = () => {
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-4">{t('footer.product')}</h4>
             <ul className="space-y-2">
               <li><Link to="/features" className="text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition-colors">{t('nav.features')}</Link></li>
+              <li><Link to="/docs" className="text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition-colors">{language === 'bn' ? 'ডকুমেন্টেশন ও গাইড' : 'Help Documentation'}</Link></li>
               <li><Link to="/about" className="text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition-colors">{t('nav.about')}</Link></li>
               <li><Link to="/contact" className="text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition-colors">{t('nav.contact')}</Link></li>
             </ul>

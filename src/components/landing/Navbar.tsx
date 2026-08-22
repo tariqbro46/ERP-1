@@ -22,6 +22,7 @@ export const Navbar = () => {
     { name: t('nav.home'), href: '/' },
     { name: t('nav.features'), href: '/features' },
     { name: t('nav.pricing'), href: '/pricing' },
+    { name: language === 'bn' ? 'ডকুমেন্টেশন' : 'Docs', href: '/docs' },
     { name: t('nav.about'), href: '/about' },
     { name: t('nav.contact'), href: '/contact' },
   ];
