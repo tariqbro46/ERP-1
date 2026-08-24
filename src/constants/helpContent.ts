@@ -732,5 +732,93 @@ export const HELP_DOCS: DocCategory[] = [
         bnContent: "হ্যাঁ! প্রতিষ্ঠাতা বা অ্যাডমিনরা টপ হেডারে থাকা 'Manage Screenshots' বাটনে ক্লিক করে যেকোনো বিষয়ের জন্য নিজস্ব স্ক্রিনশট আপলোড করতে পারবেন। আপলোড করার সাথে সাথে তা সবার জন্য দৃশ্যমান হবে।"
       }
     ]
+  },
+  {
+    id: "desktop-app",
+    iconName: "layers",
+    badge: "Desktop .EXE",
+    title: "Desktop Application & Offline Database",
+    bnTitle: "ডেস্কটপ সফটওয়্যার ও অফলাইন ডাটাবেজ গাইড",
+    description: "Guide on how to convert, install, and run this ERP as an offline Desktop Software (.exe) on Windows with local database storage.",
+    bnDescription: "উইন্ডোজ কম্পিউটারে সফটওয়্যার (.exe) হিসেবে ইন্সটল, ইন্টারনেট ছাড়া অফলাইনে চালানো এবং লোকাল ডাটাবেজ ব্যাকআপ ব্যবস্থাপনার নিয়মাবলী।",
+    sections: [
+      {
+        id: "desktop-overview",
+        title: "Desktop Application Software (.exe) Overview",
+        bnTitle: "ডেস্কটপ সফটওয়্যার (.exe) পরিচিতি ও সুবিধা",
+        content: "You can run this ERP both as a Web Application in browsers and as a native Desktop Application Software on Windows/Mac. In desktop mode, data is securely stored right on the user's computer hard disk (Offline SQLite / Dexie), requiring zero internet connection.",
+        bnContent: "আপনার এই সম্পূর্ণ ERP সিস্টেমটি একই সাথে ব্রাউজারে অনলাইন ওয়েব অ্যাপ হিসেবে এবং উইন্ডোজ পিসিতে ইনস্টল করা অফলাইন ডেস্কটপ সফটওয়্যার (.exe) হিসেবে চলতে পারে। ডেস্কটপ মোডে কোনো ইন্টারনেট সংযোগ লাগে না এবং সকল ডাটা সরাসরি কম্পিউটারের নিজস্ব হার্ডড্রাইভে নিরাপদে সংরক্ষিত থাকে।",
+        whereToFind: "Electron Configuration / Settings > Data Management",
+        bnWhereToFind: "ইলেকট্রন কনফিগারেশন / সেটিংস > ডাটা ব্যাকআপ",
+        points: [
+          "1. 100% Offline Billing: Make sales, vouchers, invoices, and payroll entries without internet.",
+          "2. Zero Database Cost: Eliminates cloud bandwidth, monthly Firestore bills, or read quota limits.",
+          "3. Native Printer Speed: Lightning-fast receipt and invoice printing with POS & Thermal printers.",
+          "4. Single Click Backup: Export your entire company database into a single file (.json / .db) to flash drive."
+        ],
+        bnPoints: [
+          "১. ১০০% অফলাইন বিলিং: কোনো ইন্টারনেট সংযোগ ছাড়াই সেলস বিল, ভাউচার এন্ট্রি, ইনভেন্টরি ও বেতন তৈরি করুন।",
+          "২. জিরো ক্লাউড খরচ: কোনো ক্লাউড ডাটাবেজ রিড কোটা বা মাসিক বিলের ঝামেলা নেই।",
+          "৩. সুপার ফাস্ট প্রিন্টিং: থার্মাল ও লেজার প্রিন্টারে সাথে সাথে ইনভয়েস প্রিন্ট করার সুবিধা।",
+          "৪. ১-ক্লিকে পেনড্রাইভ ব্যাকআপ: সম্পূর্ণ ডাটাবেজ একটি ফাইলে এক্সপোর্ট করে পেনড্রাইভে সংরক্ষণ করুন।"
+        ],
+        tip: "Updating features in the desktop app will NEVER delete or corrupt your stored local database records.",
+        bnTip: "সফটওয়্যার আপডেট করলেও কম্পিউটারে আগে থেকে তৈরি করা কোনো ভাউচার বা লেজারের ডাটা নষ্ট হবে না।"
+      },
+      {
+        id: "desktop-packaging-steps",
+        title: "How to Build & Package into Windows Setup (.exe)",
+        bnTitle: "কীভাবে Windows Setup (.exe) তৈরি করবেন (Build Guide)",
+        content: "Follow this simple 3-step packaging command to generate your standalone installer 'TallyFlow-Setup.exe' using Electron-Builder.",
+        bnContent: "নিচের ৩টি সহজ কমান্ড দিয়ে আপনি আপনার প্রজেক্টকে সরাসরি উইন্ডোজ ইনস্টলার ফাইলে (.exe) রূপান্তর করতে পারেন:",
+        whereToFind: "Terminal / Command Prompt in your project folder",
+        bnWhereToFind: "প্রজেক্টের টার্মিনাল বা কমান্ড প্রম্পট",
+        points: [
+          "Step 1: Install electron & electron-builder (npm install -D electron electron-builder).",
+          "Step 2: Run 'npm run build' to generate the production React web bundle.",
+          "Step 3: Run 'npx electron-builder --win' to produce the final 'dist/TallyFlow-Setup.exe' file.",
+          "Step 4: Distribute and install 'TallyFlow-Setup.exe' on any Windows computer!"
+        ],
+        bnPoints: [
+          "ধাপ ১: টার্মিনালে কমান্ড দিন: npm install -D electron electron-builder",
+          "ধাপ ২: ওয়েব বান্ডিল তৈরি করতে কমান্ড দিন: npm run build",
+          "ধাপ ৩: ইনস্টলার বানাতে কমান্ড দিন: npx electron-builder --win",
+          "ধাপ ৪: 'dist' ফোল্ডারে 'TallyFlow-Setup.exe' তৈরি হয়ে যাবে; এটি যেকোনো পিসিতে ইনস্টল করতে পারবেন।"
+        ],
+        example: {
+          scenario: "Installing on a retail shop computer with no internet",
+          bnScenario: "ইন্টারনেটবিহীন দোকানে বা অফিসে নতুন সফটওয়্যার ইন্সটল",
+          steps: [
+            "1. Copy 'TallyFlow-Setup.exe' to a USB Pendrive.",
+            "2. Plug into the shop's computer and double-click to install.",
+            "3. The desktop icon will appear on desktop. Launch and start creating companies and billing offline!"
+          ],
+          bnSteps: [
+            "১. পেনড্রাইভে 'TallyFlow-Setup.exe' ফাইলটি কপি করুন।",
+            "২. দোকানে থাকা কম্পিউটারে ডাবল-ক্লিক করে ইনস্টল করুন।",
+            "৩. ডেস্কটপে আইকন আসবে; ক্লিক করলেই অফলাইনে ক্যাশ বিলিং ও হিসাব রাখা শুরু হবে।"
+          ]
+        }
+      },
+      {
+        id: "desktop-backup-restore",
+        title: "1-Click Offline Data Backup & Migration",
+        bnTitle: "১-ক্লিকে অফলাইন ডাটা ব্যাকআপ ও রিস্টোর করার নিয়ম",
+        content: "To safeguard against computer hardware failure or Windows reinstall, use the built-in 1-Click Backup tool to save your database to USB drive or external storage.",
+        bnContent: "কম্পিউটার নষ্ট হওয়া বা উইন্ডোজ পরিবর্তনের ঝুঁকি এড়াতে 'Settings > Data Backup' অপশন থেকে নিয়মিত ১-ক্লিকে পেনড্রাইভে ব্যাকআপ রাখুন।",
+        whereToFind: "Settings > Data Management > Backup & Restore",
+        bnWhereToFind: "সেটিংস > ডাটা ম্যানেজমেন্ট > ব্যাকআপ ও রিস্টোর",
+        points: [
+          "1. Click 'Export Local Backup' to instantly download your complete company ledger, vouchers, items, and settings.",
+          "2. Store the downloaded backup file (.json) in a safe USB drive or Google Drive.",
+          "3. On any new computer or after reinstall, click 'Import Backup' to restore all vouchers and financial reports in seconds!"
+        ],
+        bnPoints: [
+          "১. 'Export Local Backup' বাটনে ক্লিক করলেই মুহূর্তেই সমস্ত লেজার, ভাউচার ও সেটিংস ব্যাকআপ ফাইল হিসেবে সেভ হবে।",
+          "২. ফাইলটি পেনড্রাইভ বা ক্লাউডে নিরাপদ রাখুন।",
+          "৩. যেকোনো নতুন কম্পিউটারে ইনস্টল করে 'Import Backup' এ ক্লিক করলেই সাথে সাথে পূর্বের সকল হিসাব হুবহু ফিরে আসবে।"
+        ]
+      }
+    ]
   }
 ];
