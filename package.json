@@ -10,9 +10,28 @@
     "build": "vite build",
     "preview": "vite preview",
     "electron": "electron electron/main.cjs",
-    "electron:build": "vite build && electron-builder --win",
+    "electron:build": "vite build && electron-builder --win -c.npmRebuild=false",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
+  },
+  "build": {
+    "appId": "com.tallyflow.erp",
+    "productName": "TallyFlow ERP",
+    "directories": {
+      "output": "dist_setup"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "npmRebuild": false,
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
