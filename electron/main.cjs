@@ -30,11 +30,29 @@ function createWindow() {
   const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
   if (isDev && process.env.ELECTRON_START_URL) {
     mainWindow.loadURL(process.env.ELECTRON_START_URL);
-  } else if (fs.existsSync(path.join(__dirname, '../dist/index.html'))) {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   } else {
-    mainWindow.loadURL('http://localhost:3000');
+    const candidatePaths = [
+      path.join(app.getAppPath(), 'dist/index.html'),
+      path.join(__dirname, '../dist/index.html'),
+      path.join(__dirname, 'dist/index.html'),
+      path.join(process.resourcesPath || '', 'app.asar/dist/index.html'),
+    ];
+
+    const targetHtmlPath = candidatePaths.find(p => fs.existsSync(p));
+    if (targetHtmlPath) {
+      mainWindow.loadFile(targetHtmlPath);
+    } else {
+      mainWindow.loadURL('http://localhost:3000');
+    }
   }
+
+  // Allow F12 or Ctrl+Shift+I to open Developer Tools
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12' || (input.control && input.shift && input.key.toLowerCase() === 'i')) {
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
