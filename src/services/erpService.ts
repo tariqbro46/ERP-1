@@ -92,7 +92,36 @@ async function getDoc(docRef: any) {
       } as any;
     }
   }
-  return await firestoreGetDoc(docRef);
+
+  // If client is currently offline, read directly from cache
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    try {
+      return await getDocFromCache(docRef);
+    } catch (cacheErr) {
+      return {
+        exists: () => false,
+        data: () => undefined,
+        id: docRef.id,
+        ref: docRef
+      } as any;
+    }
+  }
+
+  try {
+    return await firestoreGetDoc(docRef);
+  } catch (err: any) {
+    // Graceful fallback to persistent cache on network disconnection/offline
+    try {
+      return await getDocFromCache(docRef);
+    } catch (cacheErr) {
+      return {
+        exists: () => false,
+        data: () => undefined,
+        id: docRef.id,
+        ref: docRef
+      } as any;
+    }
+  }
 }
 
 async function getDocs(queryRef: any) {
@@ -112,7 +141,36 @@ async function getDocs(queryRef: any) {
       } as any;
     }
   }
-  return await firestoreGetDocs(queryRef);
+
+  // If client is currently offline, read directly from cache
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    try {
+      return await getDocsFromCache(queryRef);
+    } catch (cacheErr) {
+      return {
+        docs: [],
+        empty: true,
+        size: 0,
+        forEach: (callback: any) => {}
+      } as any;
+    }
+  }
+
+  try {
+    return await firestoreGetDocs(queryRef);
+  } catch (err: any) {
+    // Graceful fallback to persistent cache on network disconnection/offline
+    try {
+      return await getDocsFromCache(queryRef);
+    } catch (cacheErr) {
+      return {
+        docs: [],
+        empty: true,
+        size: 0,
+        forEach: (callback: any) => {}
+      } as any;
+    }
+  }
 }
 
 async function getCountFromServer(queryRef: any) {
@@ -124,7 +182,34 @@ async function getCountFromServer(queryRef: any) {
       data: () => ({ count: 0 })
     } as any;
   }
-  return await firestoreGetCountFromServer(queryRef);
+
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    try {
+      const snap = await getDocsFromCache(queryRef);
+      return {
+        data: () => ({ count: snap.size || 0 })
+      } as any;
+    } catch (e) {
+      return {
+        data: () => ({ count: 0 })
+      } as any;
+    }
+  }
+
+  try {
+    return await firestoreGetCountFromServer(queryRef);
+  } catch (err) {
+    try {
+      const snap = await getDocsFromCache(queryRef);
+      return {
+        data: () => ({ count: snap.size || 0 })
+      } as any;
+    } catch (e) {
+      return {
+        data: () => ({ count: 0 })
+      } as any;
+    }
+  }
 }
 
 async function addDoc(colRef: any, data: any) {
@@ -1330,6 +1415,28 @@ export const erpService: any = {
     return fetchPromise;
   },
 
+  async preloadCompanyData(companyId: string) {
+    if (!companyId || localStorage.getItem('erp_is_demo_mode') === 'true') return;
+    try {
+      const collections = [
+        'ledgers',
+        'items',
+        'godowns',
+        'units',
+        'ledger_groups',
+        'voucher_types',
+        'stock_groups',
+        'stock_categories',
+        'employees',
+        'employee_groups'
+      ];
+      // Fetch in parallel to warm up in-memory & localStorage caches for offline usage
+      await Promise.allSettled(collections.map(col => this.getCollection(col, companyId)));
+    } catch (e) {
+      console.warn("Background preload error:", e);
+    }
+  },
+
   async deleteDocCustom(colName: string, id: string) {
     await deleteDoc(doc(db, colName, id));
   },
@@ -1671,73 +1778,35 @@ export const erpService: any = {
       const typeKey = vType.toLowerCase().replace(/\s+/g, '_');
       const counterRef = doc(db, 'counters', `${companyId}_voucher_${typeKey}`);
 
-      const res = await runTransaction(db, async (transaction) => {
-        // Log transaction start attempt
-        console.log(`Starting transaction for ${vType} in company ${companyId}`);
-        
-        // 1. All mandatory reads first
-        const reads: Promise<DocumentSnapshot>[] = [transaction.get(counterRef)];
-        
-        // Track references needed for Physical Stock reads
-        const itemRefsMap: Record<string, DocumentReference> = {};
-        const godownStockRefsMap: Record<string, DocumentReference> = {};
-
-        if (vType.toLowerCase() === 'physical stock' && inventoryEntries && inventoryEntries.length > 0) {
-          for (const inv of inventoryEntries) {
-            if (inv.item_id) {
-              if (!itemRefsMap[inv.item_id]) {
-                const iRef = doc(db, 'items', inv.item_id);
-                itemRefsMap[inv.item_id] = iRef;
-                reads.push(transaction.get(iRef));
-              }
-              if (inv.godown_id) {
-                const gsKey = `${inv.godown_id}_${inv.item_id}`;
-                if (!godownStockRefsMap[gsKey]) {
-                  const gsRef = doc(db, 'godown_stock', gsKey);
-                  godownStockRefsMap[gsKey] = gsRef;
-                  reads.push(transaction.get(gsRef));
-                }
-              }
-            }
-          }
-        }
-
-        const allSnaps = await Promise.all(reads);
-        const counterSnap = allSnaps[0];
-        
-        // Cache item and godown snapshots by path
-        const snapsCache: Record<string, DocumentSnapshot> = {};
-        allSnaps.slice(1).forEach(snap => {
-          snapsCache[snap.ref.path] = snap;
-        });
-
+      const executeOfflineBatch = async () => {
+        const counterSnap = await getDoc(counterRef);
         let nextSerial = 1;
         if (counterSnap && counterSnap.exists()) {
           nextSerial = (counterSnap.data().lastSerial || 0) + 1;
         }
 
-        // 2. Start writes after all reads are done
         const vRef = doc(collection(db, 'vouchers'));
-        const reference_no = voucher.v_no || ''; 
-        
+        const reference_no = voucher.v_no || '';
+        const vDateYMD = formatToYMD(voucher.v_date);
+
         const vData = cleanData({
           ...voucher,
           id: vRef.id,
           companyId,
           reference_no: reference_no,
           serial_no: nextSerial,
-          v_no: reference_no, 
-          v_date: formatToYMD(voucher.v_date), // Ensure YYYY-MM-DD
+          v_no: reference_no,
+          v_date: vDateYMD,
           createdBy: userId,
           createdAt: serverTimestamp()
         });
-        transaction.set(vRef, vData);
 
-        // 3. Create Accounting Entries
-        const vDateYMD = formatToYMD(voucher.v_date);
+        const batch = writeBatch(db);
+        batch.set(vRef, vData);
+
         for (const entry of entries) {
           const eRef = doc(collection(db, 'voucher_entries'));
-          transaction.set(eRef, cleanData({
+          batch.set(eRef, cleanData({
             ...entry,
             voucher_id: vRef.id,
             companyId,
@@ -1745,26 +1814,22 @@ export const erpService: any = {
             created_at: serverTimestamp()
           }));
 
-          // Update Ledger Balance
           if (entry.ledger_id) {
             const lRef = doc(db, 'ledgers', entry.ledger_id);
             const balanceChange = (entry.debit || 0) - (entry.credit || 0);
-            transaction.update(lRef, { current_balance: increment(balanceChange) });
+            batch.update(lRef, { current_balance: increment(balanceChange) });
           }
         }
 
-        // 4. Create Inventory Entries
         if (inventoryEntries && inventoryEntries.length > 0) {
           for (const inv of inventoryEntries) {
             const invRef = doc(collection(db, 'inventory_entries'));
-            
-            // Special handling for movement type
             const vTypeLower = vType.toLowerCase();
             let isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes(vTypeLower) || 
                            ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((inv.entry_type || '').toLowerCase()) ||
                            ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((inv.m_type || '').toLowerCase()) ||
                            ['outward', 'out'].includes((inv.type || '').toLowerCase());
-            
+
             const totalEntryQty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
             let qtyChange = isOutward ? -totalEntryQty : totalEntryQty;
             let finalInvData = {
@@ -1774,54 +1839,25 @@ export const erpService: any = {
               companyId,
               date: vDateYMD,
               created_at: serverTimestamp(),
-              // Ensure consistent movement fields for reporting
               movement_type: isOutward ? 'Outward' : 'Inward',
               m_type: isOutward ? 'Outward' : 'Inward',
               entry_type: inv.entry_type || (isOutward ? 'Outward' : 'Inward')
             };
 
-            if (vTypeLower === 'physical stock' && inv.item_id) {
-              const iRef = itemRefsMap[inv.item_id];
-              const itemSnap = snapsCache[iRef.path];
-              const globalStock = (itemSnap && itemSnap.exists() ? itemSnap.data().current_stock : 0) || 0;
-
-              let currentGodownStock = 0;
-              if (inv.godown_id) {
-                const gsKey = `${inv.godown_id}_${inv.item_id}`;
-                const gsRef = godownStockRefsMap[gsKey];
-                const gsSnap = snapsCache[gsRef.path];
-                currentGodownStock = (gsSnap && gsSnap.exists() ? gsSnap.data().current_stock : 0) || 0;
-              }
-
-              const targetQty = Number(inv.qty) || 0;
-              const adjustment = targetQty - (inv.godown_id ? currentGodownStock : globalStock);
-              
-              qtyChange = adjustment;
-              
-              finalInvData = {
-                ...finalInvData,
-                qty: targetQty,
-                adjustment_qty: adjustment,
-                movement_type: adjustment >= 0 ? 'Inward' : 'Outward',
-                is_physical_snapshot: true
-              };
-            }
-
-            transaction.set(invRef, cleanData(finalInvData));
+            batch.set(invRef, cleanData(finalInvData));
 
             if (inv.item_id) {
               const iRef = doc(db, 'items', inv.item_id);
               if (vType.toLowerCase() === 'physical stock' && !inv.godown_id) {
-                 // If no godown specified, physical stock sets the global absolute
-                 transaction.update(iRef, { current_stock: Number(inv.qty) || 0 });
+                batch.update(iRef, { current_stock: Number(inv.qty) || 0 });
               } else {
-                 transaction.update(iRef, { current_stock: increment(qtyChange) });
+                batch.update(iRef, { current_stock: increment(qtyChange) });
               }
 
               if (inv.godown_id) {
                 const gsRef = doc(db, 'godown_stock', `${inv.godown_id}_${inv.item_id}`);
                 if (vType.toLowerCase() === 'physical stock') {
-                  transaction.set(gsRef, {
+                  batch.set(gsRef, {
                     godown_id: inv.godown_id,
                     item_id: inv.item_id,
                     companyId,
@@ -1829,7 +1865,7 @@ export const erpService: any = {
                     updatedAt: serverTimestamp()
                   }, { merge: true });
                 } else {
-                  transaction.set(gsRef, {
+                  batch.set(gsRef, {
                     godown_id: inv.godown_id,
                     item_id: inv.item_id,
                     companyId,
@@ -1842,16 +1878,209 @@ export const erpService: any = {
           }
         }
 
-        // 5. Commit counter increment
-        await transaction.set(counterRef, {
+        batch.set(counterRef, {
           lastSerial: nextSerial,
           vType,
           companyId,
           updatedAt: serverTimestamp()
         }, { merge: true });
 
+        await batch.commit();
         return { success: true, id: vRef.id, serial_no: nextSerial, v_date: vDateYMD, itemIds: Array.from(new Set(inventoryEntries?.map(i => i.item_id).filter(Boolean) || [])) };
-      });
+      };
+
+      let res: any = null;
+
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        res = await executeOfflineBatch();
+      } else {
+        try {
+          res = await runTransaction(db, async (transaction) => {
+            // Log transaction start attempt
+            console.log(`Starting transaction for ${vType} in company ${companyId}`);
+            
+            // 1. All mandatory reads first
+            const reads: Promise<DocumentSnapshot>[] = [transaction.get(counterRef)];
+            
+            // Track references needed for Physical Stock reads
+            const itemRefsMap: Record<string, DocumentReference> = {};
+            const godownStockRefsMap: Record<string, DocumentReference> = {};
+
+            if (vType.toLowerCase() === 'physical stock' && inventoryEntries && inventoryEntries.length > 0) {
+              for (const inv of inventoryEntries) {
+                if (inv.item_id) {
+                  if (!itemRefsMap[inv.item_id]) {
+                    const iRef = doc(db, 'items', inv.item_id);
+                    itemRefsMap[inv.item_id] = iRef;
+                    reads.push(transaction.get(iRef));
+                  }
+                  if (inv.godown_id) {
+                    const gsKey = `${inv.godown_id}_${inv.item_id}`;
+                    if (!godownStockRefsMap[gsKey]) {
+                      const gsRef = doc(db, 'godown_stock', gsKey);
+                      godownStockRefsMap[gsKey] = gsRef;
+                      reads.push(transaction.get(gsRef));
+                    }
+                  }
+                }
+              }
+            }
+
+            const allSnaps = await Promise.all(reads);
+            const counterSnap = allSnaps[0];
+            
+            // Cache item and godown snapshots by path
+            const snapsCache: Record<string, DocumentSnapshot> = {};
+            allSnaps.slice(1).forEach(snap => {
+              snapsCache[snap.ref.path] = snap;
+            });
+
+            let nextSerial = 1;
+            if (counterSnap && counterSnap.exists()) {
+              nextSerial = (counterSnap.data().lastSerial || 0) + 1;
+            }
+
+            // 2. Start writes after all reads are done
+            const vRef = doc(collection(db, 'vouchers'));
+            const reference_no = voucher.v_no || ''; 
+            
+            const vData = cleanData({
+              ...voucher,
+              id: vRef.id,
+              companyId,
+              reference_no: reference_no,
+              serial_no: nextSerial,
+              v_no: reference_no, 
+              v_date: formatToYMD(voucher.v_date), // Ensure YYYY-MM-DD
+              createdBy: userId,
+              createdAt: serverTimestamp()
+            });
+            transaction.set(vRef, vData);
+
+            // 3. Create Accounting Entries
+            const vDateYMD = formatToYMD(voucher.v_date);
+            for (const entry of entries) {
+              const eRef = doc(collection(db, 'voucher_entries'));
+              transaction.set(eRef, cleanData({
+                ...entry,
+                voucher_id: vRef.id,
+                companyId,
+                date: vDateYMD,
+                created_at: serverTimestamp()
+              }));
+
+              // Update Ledger Balance
+              if (entry.ledger_id) {
+                const lRef = doc(db, 'ledgers', entry.ledger_id);
+                const balanceChange = (entry.debit || 0) - (entry.credit || 0);
+                transaction.update(lRef, { current_balance: increment(balanceChange) });
+              }
+            }
+
+            // 4. Create Inventory Entries
+            if (inventoryEntries && inventoryEntries.length > 0) {
+              for (const inv of inventoryEntries) {
+                const invRef = doc(collection(db, 'inventory_entries'));
+                
+                // Special handling for movement type
+                const vTypeLower = vType.toLowerCase();
+                let isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes(vTypeLower) || 
+                               ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((inv.entry_type || '').toLowerCase()) ||
+                               ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'outward', 'out', 'consumption', 'debit note'].includes((inv.m_type || '').toLowerCase()) ||
+                               ['outward', 'out'].includes((inv.type || '').toLowerCase());
+                
+                const totalEntryQty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
+                let qtyChange = isOutward ? -totalEntryQty : totalEntryQty;
+                let finalInvData = {
+                  ...inv,
+                  voucher_id: vRef.id,
+                  v_type: vType,
+                  companyId,
+                  date: vDateYMD,
+                  created_at: serverTimestamp(),
+                  // Ensure consistent movement fields for reporting
+                  movement_type: isOutward ? 'Outward' : 'Inward',
+                  m_type: isOutward ? 'Outward' : 'Inward',
+                  entry_type: inv.entry_type || (isOutward ? 'Outward' : 'Inward')
+                };
+
+                if (vTypeLower === 'physical stock' && inv.item_id) {
+                  const iRef = itemRefsMap[inv.item_id];
+                  const itemSnap = snapsCache[iRef.path];
+                  const globalStock = (itemSnap && itemSnap.exists() ? itemSnap.data().current_stock : 0) || 0;
+
+                  let currentGodownStock = 0;
+                  if (inv.godown_id) {
+                    const gsKey = `${inv.godown_id}_${inv.item_id}`;
+                    const gsRef = godownStockRefsMap[gsKey];
+                    const gsSnap = snapsCache[gsRef.path];
+                    currentGodownStock = (gsSnap && gsSnap.exists() ? gsSnap.data().current_stock : 0) || 0;
+                  }
+
+                  const targetQty = Number(inv.qty) || 0;
+                  const adjustment = targetQty - (inv.godown_id ? currentGodownStock : globalStock);
+                  
+                  qtyChange = adjustment;
+                  
+                  finalInvData = {
+                    ...finalInvData,
+                    qty: targetQty,
+                    adjustment_qty: adjustment,
+                    movement_type: adjustment >= 0 ? 'Inward' : 'Outward',
+                    is_physical_snapshot: true
+                  };
+                }
+
+                transaction.set(invRef, cleanData(finalInvData));
+
+                if (inv.item_id) {
+                  const iRef = doc(db, 'items', inv.item_id);
+                  if (vType.toLowerCase() === 'physical stock' && !inv.godown_id) {
+                     // If no godown specified, physical stock sets the global absolute
+                     transaction.update(iRef, { current_stock: Number(inv.qty) || 0 });
+                  } else {
+                     transaction.update(iRef, { current_stock: increment(qtyChange) });
+                  }
+
+                  if (inv.godown_id) {
+                    const gsRef = doc(db, 'godown_stock', `${inv.godown_id}_${inv.item_id}`);
+                    if (vType.toLowerCase() === 'physical stock') {
+                      transaction.set(gsRef, {
+                        godown_id: inv.godown_id,
+                        item_id: inv.item_id,
+                        companyId,
+                        current_stock: Number(inv.qty) || 0,
+                        updatedAt: serverTimestamp()
+                      }, { merge: true });
+                    } else {
+                      transaction.set(gsRef, {
+                        godown_id: inv.godown_id,
+                        item_id: inv.item_id,
+                        companyId,
+                        current_stock: increment(qtyChange),
+                        updatedAt: serverTimestamp()
+                      }, { merge: true });
+                    }
+                  }
+                }
+              }
+            }
+
+            // 5. Commit counter increment
+            await transaction.set(counterRef, {
+              lastSerial: nextSerial,
+              vType,
+              companyId,
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+
+            return { success: true, id: vRef.id, serial_no: nextSerial, v_date: vDateYMD, itemIds: Array.from(new Set(inventoryEntries?.map(i => i.item_id).filter(Boolean) || [])) };
+          });
+        } catch (txErr: any) {
+          console.warn("Transaction failed or offline, falling back to writeBatch:", txErr?.message || txErr);
+          res = await executeOfflineBatch();
+        }
+      }
 
       if (res && res.success) {
         // Construct full voucher
@@ -2892,7 +3121,12 @@ export const erpService: any = {
   async updateLedgerGroup(id: string, group: any) {
     try {
       const ref = doc(db, 'ledger_groups', id);
+      const snap = await getDoc(ref);
+      const companyId = snap.exists() ? snap.data().companyId : group.companyId;
       await updateDoc(ref, group);
+      if (companyId) {
+        this._updateCachedCollection('ledger_groups', companyId, { id, ...group }, 'update');
+      }
       return { id, ...group };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `ledger_groups/${id}`);
@@ -2902,7 +3136,12 @@ export const erpService: any = {
   async updateVoucherType(id: string, type: any) {
     try {
       const ref = doc(db, 'voucher_types', id);
+      const snap = await getDoc(ref);
+      const companyId = snap.exists() ? snap.data().companyId : type.companyId;
       await updateDoc(ref, type);
+      if (companyId) {
+        this._updateCachedCollection('voucher_types', companyId, { id, ...type }, 'update');
+      }
       return { id, ...type };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `voucher_types/${id}`);
@@ -2912,7 +3151,12 @@ export const erpService: any = {
   async updateStockCategory(id: string, category: any) {
     try {
       const ref = doc(db, 'stock_categories', id);
+      const snap = await getDoc(ref);
+      const companyId = snap.exists() ? snap.data().companyId : category.companyId;
       await updateDoc(ref, category);
+      if (companyId) {
+        this._updateCachedCollection('stock_categories', companyId, { id, ...category }, 'update');
+      }
       return { id, ...category };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `stock_categories/${id}`);
@@ -2922,7 +3166,12 @@ export const erpService: any = {
   async updateEmployeeGroup(id: string, group: any) {
     try {
       const ref = doc(db, 'employee_groups', id);
+      const snap = await getDoc(ref);
+      const companyId = snap.exists() ? snap.data().companyId : group.companyId;
       await updateDoc(ref, group);
+      if (companyId) {
+        this._updateCachedCollection('employee_groups', companyId, { id, ...group }, 'update');
+      }
       return { id, ...group };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `employee_groups/${id}`);
@@ -2933,11 +3182,11 @@ export const erpService: any = {
     try {
       const ref = doc(db, 'units', id);
       const snap = await getDoc(ref);
-      if (snap.exists()) {
-        const companyId = snap.data().companyId;
-        if (companyId) this._unitsCache[companyId] = { data: [], timestamp: 0 };
-      }
+      const companyId = snap.exists() ? snap.data().companyId : unit.companyId;
       await updateDoc(ref, unit);
+      if (companyId) {
+        this._updateCachedCollection('units', companyId, { id, ...unit }, 'update');
+      }
       return { id, ...unit };
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `units/${id}`);
@@ -2948,18 +3197,48 @@ export const erpService: any = {
     try {
       const ref = doc(db, 'units', id);
       const snap = await getDoc(ref);
-      if (snap.exists()) {
-        const companyId = snap.data().companyId;
-        if (companyId) this._unitsCache[companyId] = { data: [], timestamp: 0 };
-      }
+      const companyId = snap.exists() ? snap.data().companyId : '';
       await deleteDoc(ref);
+      if (companyId) {
+        this._updateCachedCollection('units', companyId, { id }, 'delete');
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `units/${id}`);
     }
   },
 
   async checkDuplicate(colName: string, companyId: string, field: string, value: string) {
+    if (!value || !companyId) return false;
     try {
+      const valLower = value.toString().trim().toLowerCase();
+      // 1. Check in local collection cache first
+      let cachedList: any[] | null = null;
+      if (colName === 'ledgers' && this._ledgersCache[companyId]) cachedList = this._ledgersCache[companyId].data;
+      else if (colName === 'items' && this._itemsCache[companyId]) cachedList = this._itemsCache[companyId].data;
+      else if (colName === 'godowns' && this._godownsCache[companyId]) cachedList = this._godownsCache[companyId].data;
+      else if (colName === 'units' && this._unitsCache[companyId]) cachedList = this._unitsCache[companyId].data;
+      else if (colName === 'ledger_groups' && this._ledgerGroupsCache[companyId]) cachedList = this._ledgerGroupsCache[companyId].data;
+      else if (colName === 'voucher_types' && this._voucherTypesCache[companyId]) cachedList = this._voucherTypesCache[companyId].data;
+      else if (colName === 'stock_groups' && this._stockGroupsCache[companyId]) cachedList = this._stockGroupsCache[companyId].data;
+      else if (colName === 'stock_categories' && this._stockCategoriesCache[companyId]) cachedList = this._stockCategoriesCache[companyId].data;
+      else if (colName === 'employees' && this._employeesCache[companyId]) cachedList = this._employeesCache[companyId].data;
+
+      if (!cachedList) {
+        try {
+          const str = localStorage.getItem(`col_cache_${colName}_${companyId}`);
+          if (str) {
+            const parsed = JSON.parse(str);
+            if (parsed && Array.isArray(parsed.data)) {
+              cachedList = parsed.data;
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (cachedList && Array.isArray(cachedList) && cachedList.length > 0) {
+        return cachedList.some(item => (item[field] || '').toString().trim().toLowerCase() === valLower);
+      }
+
       const q = query(
         collection(db, colName),
         where('companyId', '==', companyId),
@@ -2981,6 +3260,7 @@ export const erpService: any = {
       const ref = doc(collection(db, 'ledger_groups'));
       const data = cleanData({ ...group, id: ref.id, companyId });
       await setDoc(ref, data);
+      this._updateCachedCollection('ledger_groups', companyId, data, 'add');
       return data;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'ledger_groups');
@@ -2995,6 +3275,7 @@ export const erpService: any = {
       const ref = doc(collection(db, 'voucher_types'));
       const data = cleanData({ ...type, id: ref.id, companyId });
       await setDoc(ref, data);
+      this._updateCachedCollection('voucher_types', companyId, data, 'add');
       return data;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'voucher_types');
@@ -3009,6 +3290,7 @@ export const erpService: any = {
       const ref = doc(collection(db, 'stock_categories'));
       const data = cleanData({ ...category, id: ref.id, companyId });
       await setDoc(ref, data);
+      this._updateCachedCollection('stock_categories', companyId, data, 'add');
       return data;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'stock_categories');
@@ -3023,6 +3305,7 @@ export const erpService: any = {
       const ref = doc(collection(db, 'employee_groups'));
       const data = cleanData({ ...group, id: ref.id, companyId });
       await setDoc(ref, data);
+      this._updateCachedCollection('employee_groups', companyId, data, 'add');
       return data;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'employee_groups');
@@ -3030,7 +3313,6 @@ export const erpService: any = {
   },
 
   async createUnit(companyId: string, unit: any) {
-    this._unitsCache[companyId] = { data: [], timestamp: 0 }; // Invalidate cache
     try {
       const isDuplicate = await this.checkDuplicate('units', companyId, 'name', unit.name);
       if (isDuplicate) throw new Error(`Unit "${unit.name}" already exists.`);
@@ -3038,6 +3320,7 @@ export const erpService: any = {
       const ref = doc(collection(db, 'units'));
       const data = cleanData({ ...unit, id: ref.id, companyId });
       await setDoc(ref, data);
+      this._updateCachedCollection('units', companyId, data, 'add');
       return data;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'units');

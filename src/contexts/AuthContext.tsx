@@ -75,10 +75,39 @@ const appLoadedAt = Date.now();
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [user, setUser] = useState<Profile | null>(null);
-  const [company, setCompany] = useState<CompanyData | null>(null);
-  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]> | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<Profile | null>(() => {
+    try {
+      const cached = localStorage.getItem('cached_auth_profile');
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [company, setCompany] = useState<CompanyData | null>(() => {
+    try {
+      const cached = localStorage.getItem('cached_auth_company');
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]> | null>(() => {
+    try {
+      const cached = localStorage.getItem('cached_role_permissions');
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    // If we have cached profile & company, start immediately without blocking UI
+    try {
+      const hasCached = !!(localStorage.getItem('cached_auth_profile') && localStorage.getItem('cached_auth_company'));
+      return !hasCached;
+    } catch (e) {
+      return true;
+    }
+  });
 
   const isFounder = firebaseUser?.email?.toLowerCase() === 'sapientman46@gmail.com' ||
                     user?.email?.toLowerCase() === 'sapientman46@gmail.com' ||
@@ -133,6 +162,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    // Fallback safety timer: If offline or slow connection, ensure loading is dismissed if we have cached data
+    const fallbackTimer = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
+
     let unsubProfile: (() => void) | null = null;
     let unsubCompany: (() => void) | null = null;
     let unsubPermissions: (() => void) | null = null;
@@ -160,9 +194,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 updateDoc(userRef, { role: 'Admin' }).catch(err => console.error("Error sanitizing non-founder role:", err));
               }
               setUser(userData);
+              try {
+                localStorage.setItem('cached_auth_profile', JSON.stringify(userData));
+              } catch (e) {}
 
               // Listen to company changes
               if (userData.companyId) {
+                // Background preload essential collections (ledgers, items, godowns, etc.)
+                erpService.preloadCompanyData(userData.companyId).catch(() => {});
+
                 const companyRef = doc(db, 'companies', userData.companyId);
                 unsubCompany = onSnapshot(companyRef, (compSnap) => {
                   if (compSnap.exists()) {
@@ -178,8 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const mostRecentResetTime = erpService.getMostRecent130PM(new Date()).getTime();
                     const lastReset = compData.quotaLastReset || 0;
                     if (lastReset < mostRecentResetTime) {
-                      // Optimistically set company state immediately so the app has data and doesn't render white screen
-                      setCompany({
+                      const updatedComp = {
                         ...compData,
                         quotaUsed: 0,
                         quotaReads: 0,
@@ -187,12 +226,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         quotaDeletes: 0,
                         quotaLastReset: mostRecentResetTime,
                         quotaLastResetDateStr: new Date(mostRecentResetTime).toISOString()
-                      });
+                      };
+                      setCompany(updatedComp);
+                      try {
+                        localStorage.setItem('cached_auth_company', JSON.stringify(updatedComp));
+                      } catch (e) {}
                       erpService.resetCompanyQuota(userData.companyId, mostRecentResetTime).catch(err => {
                         console.error("[QUOTA] Background quota reset error:", err);
                       });
                     } else {
                       setCompany(compData);
+                      try {
+                        localStorage.setItem('cached_auth_company', JSON.stringify(compData));
+                      } catch (e) {}
                       const isExceeded = (localStorage.getItem('erp_is_demo_mode') !== 'true') && 
                         compData.quotaLimit && 
                         compData.quotaUsed !== undefined && 
@@ -213,14 +259,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const permsRef = doc(db, 'settings', userData.companyId, 'config', 'role_permissions');
                 unsubPermissions = onSnapshot(permsRef, (permsSnap) => {
                   if (permsSnap.exists()) {
-                    setRolePermissions(permsSnap.data() as Record<string, string[]>);
+                    const perms = permsSnap.data() as Record<string, string[]>;
+                    setRolePermissions(perms);
+                    try {
+                      localStorage.setItem('cached_role_permissions', JSON.stringify(perms));
+                    } catch (e) {}
                   } else {
                     setRolePermissions(null);
                   }
                 }, (error) => {
                   console.error("Permissions snapshot error:", error);
-                  // We don't necessarily want to block the whole app if permissions fail to load,
-                  // but we should log it.
                 });
               } else {
                 console.warn("User profile exists but companyId is missing");
@@ -313,6 +361,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
+      clearTimeout(fallbackTimer);
       unsubscribe();
       if (unsubProfile) unsubProfile();
       if (unsubCompany) unsubCompany();
@@ -321,6 +370,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = async () => {
+    localStorage.removeItem('cached_auth_profile');
+    localStorage.removeItem('cached_auth_company');
+    localStorage.removeItem('cached_role_permissions');
     if (localStorage.getItem('erp_is_demo_mode') === 'true') {
       localStorage.removeItem('erp_is_demo_mode');
       localStorage.removeItem('erp_demo_visitor');
