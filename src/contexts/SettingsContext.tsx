@@ -25,6 +25,8 @@ export type ReportLayout = 'Layout 1' | 'Layout 2';
 export type DashboardDesign = 'Design 1' | 'Design 2' | 'Design 3' | 'Design 4' | 'Design 5' | 'Design 6';
 export type UIStyle = 'UI/UX 1' | 'UI/UX 2' | 'UI/UX 3' | 'UI/UX 4';
 export type NotificationAnimationStyle = 'default' | 'neon' | 'snake' | 'liquid' | 'glitch' | 'shimmer';
+export type NotificationStyle = 'default' | 'google' | 'facebook' | 'figma' | 'erpnext' | 'apple_ios' | 'linear_dark' | 'stripe' | 'windows11' | 'neon_cyber';
+export type NotificationPosition = 'bottom-right' | 'top-right' | 'top-center' | 'bottom-center' | 'top-left' | 'bottom-left';
 export type GlassBackground = 'default' | 'sunset' | 'ocean' | 'aurora' | 'minimal';
 
 export interface SidebarBgOption {
@@ -150,6 +152,8 @@ interface SettingsContextType {
   glassBackground: GlassBackground;
   notificationDuration: number;
   notificationAnimationStyle: NotificationAnimationStyle;
+  notificationStyle: NotificationStyle;
+  notificationPosition: NotificationPosition;
   appVersion: string;
   englishFont: string;
   banglaFont: string;
@@ -320,6 +324,8 @@ const defaultSettings: SettingsContextType = {
   glassBackground: 'default',
   notificationDuration: 5000,
   notificationAnimationStyle: 'default',
+  notificationStyle: 'default',
+  notificationPosition: 'bottom-right',
   appVersion: 'v1.0.1',
   englishFont: 'Inter',
   banglaFont: 'Hind Siliguri',
@@ -571,6 +577,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               glassBackground: data.glassBackground || prev.glassBackground,
               notificationDuration: data.notificationDuration || prev.notificationDuration,
               notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle,
+              notificationStyle: data.notificationStyle || prev.notificationStyle || 'default',
+              notificationPosition: data.notificationPosition || prev.notificationPosition || 'bottom-right',
               searchPlaceholder: data.searchPlaceholder || prev.searchPlaceholder,
               searchHelpText: data.searchHelpText || prev.searchHelpText,
               showSearchShortcut: data.showSearchShortcut !== undefined ? data.showSearchShortcut : prev.showSearchShortcut,
@@ -920,6 +928,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       menuBarStyle: settings.systemMenuBarStyle || userSettings.menuBarStyle || settings.menuBarStyle || 'classic',
       sidebarBgColor: userSettings.sidebarBgColor || settings.sidebarBgColor || 'default',
       sidebarTextColor: userSettings.sidebarTextColor || settings.sidebarTextColor || 'default',
+      notificationStyle: userSettings.notificationStyle || settings.notificationStyle || 'default',
+      notificationPosition: userSettings.notificationPosition || settings.notificationPosition || 'bottom-right',
+      notificationDuration: userSettings.notificationDuration !== undefined ? userSettings.notificationDuration : (settings.notificationDuration ?? 5000),
+      notificationAnimationStyle: userSettings.notificationAnimationStyle || settings.notificationAnimationStyle || 'default',
       soundEnabled: userSettings.soundEnabled !== undefined ? userSettings.soundEnabled : (settings.soundEnabled ?? true),
       soundVolume: userSettings.soundVolume !== undefined ? userSettings.soundVolume : (settings.soundVolume ?? 0.5),
       soundScheme: userSettings.soundScheme || settings.soundScheme || 'system',

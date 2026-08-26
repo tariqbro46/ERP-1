@@ -307,6 +307,8 @@ export default function FounderPanel() {
     systemLogoBgColor,
     notificationDuration, 
     notificationAnimationStyle,
+    notificationStyle,
+    notificationPosition,
     searchPlaceholder,
     searchHelpText,
     showSearchShortcut,
@@ -427,6 +429,8 @@ export default function FounderPanel() {
   const [localLogoBgColor, setLocalLogoBgColor] = useState(logoBgColor || systemLogoBgColor || 'transparent');
   const [localNotificationDuration, setLocalNotificationDuration] = useState(notificationDuration || 5000);
   const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle || 'default');
+  const [localNotificationStyle, setLocalNotificationStyle] = useState(notificationStyle || 'default');
+  const [localNotificationPosition, setLocalNotificationPosition] = useState(notificationPosition || 'bottom-right');
   const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut ?? true);
   const [localShowTopbarSearch, setLocalShowTopbarSearch] = useState(showTopbarSearch ?? true);
   const [localShowTopbarNotifications, setLocalShowTopbarNotifications] = useState(showTopbarNotifications ?? true);
@@ -456,7 +460,7 @@ export default function FounderPanel() {
   const [localMaintenanceEndTime, setLocalMaintenanceEndTime] = useState(maintenanceEndTime || '');
   const [localMaintenanceReason, setLocalMaintenanceReason] = useState(maintenanceReason || '');
   const [localMaintenanceUpdates, setLocalMaintenanceUpdates] = useState(maintenanceUpdates || '');
-  const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'branding' | 'search' | 'loader' | 'skeleton' | 'warnings' | 'sounds'>('general');
+  const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'notifications' | 'branding' | 'search' | 'loader' | 'skeleton' | 'warnings' | 'sounds'>('general');
   const [settingsFilterQuery, setSettingsFilterQuery] = useState('');
 
   useEffect(() => {
@@ -570,6 +574,14 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalNotificationAnimationStyle(notificationAnimationStyle);
   }, [notificationAnimationStyle]);
+
+  useEffect(() => {
+    setLocalNotificationStyle(notificationStyle || 'default');
+  }, [notificationStyle]);
+
+  useEffect(() => {
+    setLocalNotificationPosition(notificationPosition || 'bottom-right');
+  }, [notificationPosition]);
 
   useEffect(() => {
     setLocalShowGoToShortcut(showGoToShortcut);
@@ -3038,6 +3050,8 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       glassBackground: localGlassBackground,
                       notificationDuration: localNotificationDuration,
                       notificationAnimationStyle: localNotificationAnimationStyle,
+                      notificationStyle: localNotificationStyle,
+                      notificationPosition: localNotificationPosition,
                       showGoToShortcut: localShowGoToShortcut,
                       showTopbarSearch: localShowTopbarSearch,
                       showTopbarNotifications: localShowTopbarNotifications,
@@ -3123,6 +3137,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
               {[
                 { id: 'general', label: 'General & Status', desc: 'Alerts, version, shortcuts', icon: Activity },
                 { id: 'theme', label: 'Theme & Layout', desc: 'UI styles, navigations', icon: Palette },
+                { id: 'notifications', label: 'Popup Notifications', desc: 'Designs, positions, durations', icon: Bell },
                 { id: 'branding', label: 'Logo & Branding', desc: 'Default logo, mobile icon', icon: FileImage },
                 { id: 'search', label: 'Search Engine', desc: 'Placeholders, key binds', icon: Search },
                 { id: 'loader', label: 'Loading Screen', desc: 'Icon styles, blur, custom texts', icon: RefreshCw },
@@ -5408,6 +5423,359 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                             </div>
                           ))}
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Dedicated Subtab: Popup Notifications */}
+              {systemSubTab === 'notifications' && (() => {
+                const notifStyles = [
+                  {
+                    id: 'google',
+                    name: 'Google Material 3',
+                    subtitle: 'Floating Dark Pill • Multi-color Dot',
+                    badge: 'Android / Gmail',
+                    badgeColor: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+                    previewBg: 'bg-[#202124] text-[#e8eaed] border-[#3c4043]'
+                  },
+                  {
+                    id: 'facebook',
+                    name: 'Facebook / Meta Style',
+                    subtitle: 'Meta Blue Avatar • Reaction Dot',
+                    badge: 'Social Feed',
+                    badgeColor: 'bg-blue-600/10 text-blue-600 border-blue-600/20',
+                    previewBg: 'bg-white dark:bg-[#242526] text-slate-800 dark:text-slate-100 border-slate-200 dark:border-[#393a3b]'
+                  },
+                  {
+                    id: 'figma',
+                    name: 'Figma Canvas Style',
+                    subtitle: 'Floating Dark Panel • 4-Color Dots',
+                    badge: 'Design Suite',
+                    badgeColor: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+                    previewBg: 'bg-[#2c2c2c] text-white border-[#444444]'
+                  },
+                  {
+                    id: 'erpnext',
+                    name: 'ERPNext / Frappe Desk',
+                    subtitle: 'Enterprise Banner • Colored Left Border',
+                    badge: 'Enterprise Desk',
+                    badgeColor: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+                    previewBg: 'bg-white dark:bg-[#1a1d24] text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-800 border-l-4 border-l-[#28a745]'
+                  },
+                  {
+                    id: 'apple_ios',
+                    name: 'Apple iOS Dynamic Island',
+                    subtitle: 'Frosted Glass Capsule • SF Symbols Glow',
+                    badge: 'macOS / iOS',
+                    badgeColor: 'bg-stone-500/10 text-stone-600 dark:text-stone-300 border-stone-500/20',
+                    previewBg: 'bg-black/85 text-white border-white/20'
+                  },
+                  {
+                    id: 'linear_dark',
+                    name: 'Linear / Vercel Style',
+                    subtitle: 'Ultra-dark Minimalist • Radar Ping Dot',
+                    badge: 'Developer',
+                    badgeColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+                    previewBg: 'bg-[#0e1015] text-slate-100 border-white/15'
+                  },
+                  {
+                    id: 'stripe',
+                    name: 'Stripe / Shopify Fintech',
+                    subtitle: 'Indigo Accent • Animated Progress Timer',
+                    badge: 'Fintech',
+                    badgeColor: 'bg-[#635bff]/10 text-[#635bff] border-[#635bff]/20',
+                    previewBg: 'bg-white dark:bg-[#1a1f36] text-slate-800 dark:text-slate-100 border-slate-200 dark:border-[#2e384d]'
+                  },
+                  {
+                    id: 'windows11',
+                    name: 'Windows 11 Fluent Acrylic',
+                    subtitle: 'Mica Glass Toast • App Header Row',
+                    badge: 'Fluent UI',
+                    badgeColor: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
+                    previewBg: 'bg-slate-50 dark:bg-[#202020] text-slate-900 dark:text-slate-100 border-slate-200 dark:border-white/10'
+                  },
+                  {
+                    id: 'neon_cyber',
+                    name: 'Cyberpunk Neon HUD',
+                    subtitle: 'Holographic Scanlines • Corner Brackets',
+                    badge: 'Sci-Fi HUD',
+                    badgeColor: 'bg-cyan-400/10 text-cyan-400 border-cyan-400/20',
+                    previewBg: 'bg-[#050b14] text-cyan-300 border-cyan-400'
+                  },
+                  {
+                    id: 'default',
+                    name: 'Classic Tally ERP',
+                    subtitle: 'High Contrast Frame • Animated Borders',
+                    badge: 'Classic ERP',
+                    badgeColor: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+                    previewBg: 'bg-card text-foreground border-border'
+                  }
+                ];
+
+                return (
+                  <div className="space-y-6">
+                    {/* Header & Quick Action Testing */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border">
+                      <div>
+                        <h3 className="text-sm font-black uppercase tracking-wider text-foreground flex items-center gap-2">
+                          <Bell className="w-4 h-4 text-primary" />
+                          Global Popup Notification Styling & Behavior
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground uppercase">
+                          Set the default popup snackbar design theme, screen placement, and duration for all users across the ERP system.
+                        </p>
+                      </div>
+
+                      {/* Interactive Test Triggers */}
+                      <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                        <span className="text-[9px] uppercase font-bold text-muted-foreground mr-1">Test Live:</span>
+                        <button
+                          type="button"
+                          onClick={() => showNotification('Voucher Saved Successfully (#VCH-9824)', 'success')}
+                          className="px-2.5 py-1 text-[9px] font-bold uppercase rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all"
+                        >
+                          ✓ Success
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => showNotification('Inventory Shortage: Stock cannot be negative', 'error')}
+                          className="px-2.5 py-1 text-[9px] font-bold uppercase rounded-lg bg-rose-500/10 text-rose-600 border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-all"
+                        >
+                          ✕ Error
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => showNotification('Database Sync: 24 records refreshed', 'info')}
+                          className="px-2.5 py-1 text-[9px] font-bold uppercase rounded-lg bg-blue-500/10 text-blue-600 border border-blue-500/20 hover:bg-blue-500 hover:text-white transition-all"
+                        >
+                          ℹ Info
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => showNotification('Credit Limit Exceeded for Ledger Acct', 'warning')}
+                          className="px-2.5 py-1 text-[9px] font-bold uppercase rounded-lg bg-amber-500/10 text-amber-600 border border-amber-500/20 hover:bg-amber-500 hover:text-white transition-all"
+                        >
+                          ⚠ Warning
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Section 1: Notification Design Themes (10 Themes) */}
+                    <div className={cn(
+                      "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                      uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                    )}>
+                      <div className="flex items-center justify-between border-b border-border pb-3">
+                        <div className="flex items-center gap-2">
+                          <Palette className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                            1. Select Global Popup Theme ({notifStyles.length} Available)
+                          </h4>
+                        </div>
+                        <span className="text-[9px] uppercase font-mono font-bold bg-primary/10 text-primary px-2.5 py-0.5 rounded-full border border-primary/20">
+                          Active: {notifStyles.find(s => s.id === localNotificationStyle)?.name || 'Default'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {notifStyles.map((style) => (
+                          <button
+                            key={style.id}
+                            type="button"
+                            onClick={() => {
+                              setLocalNotificationStyle(style.id as any);
+                              showNotification(`Applied ${style.name} Theme!`, 'success');
+                            }}
+                            className={cn(
+                              "flex flex-col text-left p-3.5 rounded-xl border transition-all relative overflow-hidden group shadow-xs",
+                              localNotificationStyle === style.id
+                                ? "border-primary bg-primary/5 ring-2 ring-primary/40 shadow-sm"
+                                : "border-border bg-background hover:border-gray-400 hover:shadow"
+                            )}
+                          >
+                            <div className="flex items-center justify-between w-full mb-1">
+                              <span className={cn(
+                                "text-xs font-black tracking-tight",
+                                localNotificationStyle === style.id ? "text-primary" : "text-foreground"
+                              )}>
+                                {style.name}
+                              </span>
+                              <span className={cn("text-[8px] font-mono font-bold px-2 py-0.5 rounded-full border shrink-0", style.badgeColor)}>
+                                {style.badge}
+                              </span>
+                            </div>
+
+                            <p className="text-[9px] text-muted-foreground mb-3 leading-tight">
+                              {style.subtitle}
+                            </p>
+
+                            {/* Mini Preview Box */}
+                            <div className={cn(
+                              "w-full rounded-lg border p-2 text-[10px] flex items-center justify-between gap-2 shadow-inner",
+                              style.previewBg
+                            )}>
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                                <span className="font-semibold truncate">Voucher Saved</span>
+                              </div>
+                              <span className="text-[8px] opacity-60 shrink-0 font-mono">OK</span>
+                            </div>
+
+                            {localNotificationStyle === style.id && (
+                              <div className="absolute top-0 right-0 w-3 h-3 bg-primary [clip-path:polygon(100%_0,0_0,100%_100%)]" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Section 2: Screen Position & Display Duration */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Position Matrix */}
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Settings className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                            2. Default Screen Anchor Position
+                          </h4>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">Select the fixed screen viewport anchor where popup notifications materialize.</p>
+                        <div className="grid grid-cols-3 gap-2 pt-1">
+                          {[
+                            { id: 'top-left', label: 'Top Left' },
+                            { id: 'top-center', label: 'Top Center' },
+                            { id: 'top-right', label: 'Top Right' },
+                            { id: 'bottom-left', label: 'Bottom Left' },
+                            { id: 'bottom-center', label: 'Bottom Center' },
+                            { id: 'bottom-right', label: 'Bottom Right' }
+                          ].map((pos) => (
+                            <button
+                              key={pos.id}
+                              type="button"
+                              onClick={() => {
+                                setLocalNotificationPosition(pos.id as any);
+                                showNotification(`Position set to ${pos.label}`, 'info');
+                              }}
+                              className={cn(
+                                "py-2.5 px-2 text-[10px] font-bold uppercase rounded-lg border text-center transition-all",
+                                localNotificationPosition === pos.id
+                                  ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                                  : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                              )}
+                            >
+                              {pos.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Display Duration */}
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <Clock className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                            3. Auto-Dismiss Duration
+                          </h4>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">How many seconds popups remain on screen before smooth dismissal.</p>
+                        <div className="grid grid-cols-5 gap-2 pt-1">
+                          {[
+                            { ms: 2000, label: '2s' },
+                            { ms: 3000, label: '3s' },
+                            { ms: 5000, label: '5s' },
+                            { ms: 8000, label: '8s' },
+                            { ms: 10000, label: '10s' }
+                          ].map((dur) => (
+                            <button
+                              key={dur.ms}
+                              type="button"
+                              onClick={() => {
+                                setLocalNotificationDuration(dur.ms);
+                                showNotification(`Duration set to ${dur.label}`, 'info');
+                              }}
+                              className={cn(
+                                "py-2.5 text-[10px] font-bold uppercase rounded-lg border text-center transition-all",
+                                localNotificationDuration === dur.ms
+                                  ? "border-primary bg-primary/10 text-primary ring-1 ring-primary"
+                                  : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                              )}
+                            >
+                              {dur.label}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="pt-2">
+                          <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">Custom Duration (ms)</label>
+                          <input
+                            type="number"
+                            step="500"
+                            min="1000"
+                            max="30000"
+                            value={localNotificationDuration}
+                            onChange={(e) => setLocalNotificationDuration(Number(e.target.value))}
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-primary outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Classic Border Frame Animation Effects */}
+                    <div className={cn(
+                      "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                      uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                    )}>
+                      <div className="flex items-center justify-between border-b border-border pb-3">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                            4. Animated Border Frame Effects
+                          </h4>
+                        </div>
+                        <span className="text-[9px] text-muted-foreground">Active for border-highlighted styles</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        {[
+                          { id: 'default', label: 'Default Path', desc: 'Classic border trace' },
+                          { id: 'neon', label: 'Neon Glow', desc: 'Pulsating neon border' },
+                          { id: 'snake', label: 'Snake Chase', desc: 'Moving segment' },
+                          { id: 'liquid', label: 'Liquid Flow', desc: 'Rotating gradient' },
+                          { id: 'glitch', label: 'Cyber Glitch', desc: 'Digital distortion' },
+                          { id: 'shimmer', label: 'Shimmer Sweep', desc: 'Elegant light sweep' }
+                        ].map((style) => (
+                          <button
+                            key={style.id}
+                            type="button"
+                            onClick={() => {
+                              setLocalNotificationAnimationStyle(style.id as any);
+                              showNotification(`Border animation: ${style.label}`, 'info');
+                            }}
+                            className={cn(
+                              "flex flex-col items-start p-3 rounded-xl border transition-all text-left gap-1",
+                              localNotificationAnimationStyle === style.id
+                                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                : "border-border bg-background hover:bg-muted"
+                            )}
+                          >
+                            <span className={cn(
+                              "text-[10px] font-black uppercase tracking-wider",
+                              localNotificationAnimationStyle === style.id ? "text-primary" : "text-foreground"
+                            )}>
+                              {style.label}
+                            </span>
+                            <span className="text-[8px] text-muted-foreground leading-tight">
+                              {style.desc}
+                            </span>
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>

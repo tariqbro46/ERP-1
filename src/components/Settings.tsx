@@ -72,7 +72,10 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     dashboardDesign,
     uiStyle,
     glassBackground,
+    notificationDuration,
     notificationAnimationStyle,
+    notificationStyle,
+    notificationPosition,
     appVersion,
     menuBarStyle,
     layoutWidth,
@@ -166,6 +169,9 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
   const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground || 'default');
   const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle || 'default');
+  const [localNotificationStyle, setLocalNotificationStyle] = useState(notificationStyle || 'default');
+  const [localNotificationPosition, setLocalNotificationPosition] = useState(notificationPosition || 'bottom-right');
+  const [localNotificationDuration, setLocalNotificationDuration] = useState(notificationDuration || 5000);
   const [localSidebarDefaultExpanded, setLocalSidebarDefaultExpanded] = useState(sidebarDefaultExpanded ?? true);
   const [localShowScrollingBar, setLocalShowScrollingBar] = useState(showScrollingBar ?? false);
   const [localShowGoToShortcut, setLocalShowGoToShortcut] = useState(showGoToShortcut ?? true);
@@ -287,6 +293,9 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalUIStyle(uiStyle || 'UI/UX 1');
     setLocalGlassBackground(glassBackground || 'default');
     setLocalNotificationAnimationStyle(notificationAnimationStyle || 'default');
+    setLocalNotificationStyle(notificationStyle || 'default');
+    setLocalNotificationPosition(notificationPosition || 'bottom-right');
+    setLocalNotificationDuration(notificationDuration || 5000);
     setLocalSidebarDefaultExpanded(sidebarDefaultExpanded ?? true);
     setLocalShowScrollingBar(showScrollingBar ?? false);
     setLocalShowGoToShortcut(showGoToShortcut ?? true);
@@ -318,6 +327,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     signatureAlignment, showDeveloperContact, financialYearStart, 
     baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
     showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, dashboardDesign, uiStyle, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates, sidebarBgColor, sidebarTextColor,
+    notificationStyle, notificationPosition, notificationDuration, notificationAnimationStyle,
     soundEnabled, soundVolume, soundScheme, soundSuccess, soundError, soundWarning, soundDelete, soundClick, soundNavigation
   ]);
 
@@ -373,7 +383,10 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       layoutWidth: localLayoutWidth,
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
       showScrollingBar: localShowScrollingBar,
-      notificationAnimationStyle: localNotificationAnimationStyle
+      notificationAnimationStyle: localNotificationAnimationStyle,
+      notificationStyle: localNotificationStyle,
+      notificationPosition: localNotificationPosition,
+      notificationDuration: localNotificationDuration
     });
 
     updateSettings({
@@ -384,7 +397,11 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       layoutWidth: localLayoutWidth,
       dashboardDesign: localDashboardDesign,
       uiStyle: localUIStyle,
-      menuBarStyle: localMenuBarStyle
+      menuBarStyle: localMenuBarStyle,
+      notificationStyle: localNotificationStyle,
+      notificationPosition: localNotificationPosition,
+      notificationDuration: localNotificationDuration,
+      notificationAnimationStyle: localNotificationAnimationStyle
     });
 
     showNotification('UI Customization saved successfully!');
@@ -1386,38 +1403,295 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-bold text-foreground uppercase px-1">Notification Border Animation</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {/* Popup Notification Customization Section */}
+                    <div className="space-y-6 pt-4 border-t border-border">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <h3 className="text-xs font-bold text-foreground uppercase tracking-widest flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            Popup Notification Design & Themes
+                          </h3>
+                          <p className="text-[11px] text-gray-500">
+                            Choose premium visual notification popup styles inspired by top global applications.
+                          </p>
+                        </div>
+
+                        {/* Interactive Live Testing Buttons */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] uppercase font-bold text-gray-400">Live Test:</span>
+                          <button
+                            type="button"
+                            onClick={() => showNotification('Voucher SAL/2025/008 saved successfully!', 'success')}
+                            className="px-2.5 py-1 text-[10px] font-bold uppercase rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white transition-all shadow-sm flex items-center gap-1"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Success
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => showNotification('Debit & Credit balances do not match!', 'error')}
+                            className="px-2.5 py-1 text-[10px] font-bold uppercase rounded bg-rose-500/10 text-rose-500 border border-rose-500/30 hover:bg-rose-500 hover:text-white transition-all shadow-sm flex items-center gap-1"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                            Error
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => showNotification('Cloud database synchronized. 24 vouchers updated.', 'info')}
+                            className="px-2.5 py-1 text-[10px] font-bold uppercase rounded bg-sky-500/10 text-sky-500 border border-sky-500/30 hover:bg-sky-500 hover:text-white transition-all shadow-sm flex items-center gap-1"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                            Info
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 10 Theme Cards */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                         {[
-                          { id: 'default', label: 'Default Path', desc: 'Classic border trace' },
-                          { id: 'neon', label: 'Neon Glow', desc: 'Pulsating neon border' },
-                          { id: 'snake', label: 'Snake Chase', desc: 'Moving segment' },
-                          { id: 'liquid', label: 'Liquid Flow', desc: 'Rotating gradient' },
-                          { id: 'glitch', label: 'Cyber Glitch', desc: 'Digital distortion' },
-                          { id: 'shimmer', label: 'Shimmer Sweep', desc: 'Elegant light sweep' }
+                          {
+                            id: 'google',
+                            name: 'Google Material 3',
+                            subtitle: 'Floating Dark Pill • Multi-color Dot',
+                            badge: 'Android / Gmail',
+                            badgeColor: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+                            previewBg: 'bg-[#202124] text-[#e8eaed] border-[#3c4043]'
+                          },
+                          {
+                            id: 'facebook',
+                            name: 'Facebook / Meta Style',
+                            subtitle: 'Meta Blue Avatar • Reaction Dot',
+                            badge: 'Social Feed',
+                            badgeColor: 'bg-blue-600/10 text-blue-600 border-blue-600/20',
+                            previewBg: 'bg-white dark:bg-[#242526] text-slate-800 dark:text-slate-100 border-slate-200 dark:border-[#393a3b]'
+                          },
+                          {
+                            id: 'figma',
+                            name: 'Figma Canvas Style',
+                            subtitle: 'Floating Dark Panel • 4-Color Dots',
+                            badge: 'Design Suite',
+                            badgeColor: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+                            previewBg: 'bg-[#2c2c2c] text-white border-[#444444]'
+                          },
+                          {
+                            id: 'erpnext',
+                            name: 'ERPNext / Frappe Desk',
+                            subtitle: 'Enterprise Banner • Colored Left Border',
+                            badge: 'Enterprise Desk',
+                            badgeColor: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+                            previewBg: 'bg-white dark:bg-[#1a1d24] text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-800 border-l-4 border-l-[#28a745]'
+                          },
+                          {
+                            id: 'apple_ios',
+                            name: 'Apple iOS Dynamic Island',
+                            subtitle: 'Frosted Glass Capsule • SF Symbols Glow',
+                            badge: 'macOS / iOS',
+                            badgeColor: 'bg-stone-500/10 text-stone-600 dark:text-stone-300 border-stone-500/20',
+                            previewBg: 'bg-black/85 text-white border-white/20'
+                          },
+                          {
+                            id: 'linear_dark',
+                            name: 'Linear / Vercel Style',
+                            subtitle: 'Ultra-dark Minimalist • Radar Ping Dot',
+                            badge: 'Developer',
+                            badgeColor: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+                            previewBg: 'bg-[#0e1015] text-slate-100 border-white/15'
+                          },
+                          {
+                            id: 'stripe',
+                            name: 'Stripe / Shopify Fintech',
+                            subtitle: 'Indigo Accent • Animated Progress Timer',
+                            badge: 'Fintech',
+                            badgeColor: 'bg-[#635bff]/10 text-[#635bff] border-[#635bff]/20',
+                            previewBg: 'bg-white dark:bg-[#1a1f36] text-slate-800 dark:text-slate-100 border-slate-200 dark:border-[#2e384d]'
+                          },
+                          {
+                            id: 'windows11',
+                            name: 'Windows 11 Fluent Acrylic',
+                            subtitle: 'Mica Glass Toast • App Header Row',
+                            badge: 'Fluent UI',
+                            badgeColor: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20',
+                            previewBg: 'bg-slate-50 dark:bg-[#202020] text-slate-900 dark:text-slate-100 border-slate-200 dark:border-white/10'
+                          },
+                          {
+                            id: 'neon_cyber',
+                            name: 'Cyberpunk Neon HUD',
+                            subtitle: 'Holographic Scanlines • Corner Brackets',
+                            badge: 'Sci-Fi HUD',
+                            badgeColor: 'bg-cyan-400/10 text-cyan-400 border-cyan-400/20',
+                            previewBg: 'bg-[#050b14] text-cyan-300 border-cyan-400'
+                          },
+                          {
+                            id: 'default',
+                            name: 'Classic Tally ERP',
+                            subtitle: 'High Contrast Frame • Animated Borders',
+                            badge: 'Classic ERP',
+                            badgeColor: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
+                            previewBg: 'bg-card text-foreground border-border'
+                          }
                         ].map((style) => (
                           <button
                             key={style.id}
-                            onClick={() => setLocalNotificationAnimationStyle(style.id as any)}
+                            type="button"
+                            onClick={() => {
+                              setLocalNotificationStyle(style.id as any);
+                              showNotification(`Applied ${style.name} Theme!`, 'success');
+                            }}
                             className={cn(
-                              "flex flex-col items-start p-3 border transition-all text-left gap-1",
-                              localNotificationAnimationStyle === style.id
-                                ? "border-emerald-500 bg-emerald-500/5"
-                                : "border-border bg-background hover:border-gray-400"
+                              "flex flex-col text-left p-3.5 rounded-xl border transition-all relative overflow-hidden group shadow-sm",
+                              localNotificationStyle === style.id
+                                ? "border-emerald-500 bg-emerald-500/[0.06] shadow-md ring-1 ring-emerald-500"
+                                : "border-border bg-background hover:border-gray-400 hover:shadow"
                             )}
                           >
-                            <span className={cn(
-                              "text-[10px] font-bold uppercase tracking-wider",
-                              localNotificationAnimationStyle === style.id ? "text-emerald-500" : "text-foreground"
+                            <div className="flex items-center justify-between w-full mb-1.5">
+                              <span className={cn(
+                                "text-xs font-bold tracking-tight",
+                                localNotificationStyle === style.id ? "text-emerald-500" : "text-foreground"
+                              )}>
+                                {style.name}
+                              </span>
+                              <span className={cn("text-[9px] font-mono px-2 py-0.5 rounded-full border", style.badgeColor)}>
+                                {style.badge}
+                              </span>
+                            </div>
+
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3">
+                              {style.subtitle}
+                            </p>
+
+                            {/* Mini Preview Mockup Box */}
+                            <div className={cn(
+                              "w-full rounded-lg border p-2 text-[10px] flex items-center justify-between gap-2 shadow-inner",
+                              style.previewBg
                             )}>
-                              {style.label}
-                            </span>
-                            <span className="text-[9px] text-gray-500 leading-tight">
-                              {style.desc}
-                            </span>
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                                <span className="font-medium truncate">Saved Successfully</span>
+                              </div>
+                              <span className="text-[8px] opacity-60 shrink-0 font-mono">OK</span>
+                            </div>
+
+                            {localNotificationStyle === style.id && (
+                              <div className="absolute top-0 right-0 w-3 h-3 bg-emerald-500 [clip-path:polygon(100%_0,0_0,100%_100%)]" />
+                            )}
                           </button>
                         ))}
+                      </div>
+
+                      {/* Position & Duration Settings */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                        <div className="space-y-2 p-4 rounded-xl border border-border bg-foreground/[0.02]">
+                          <label className="text-xs font-bold text-foreground uppercase tracking-wider block">
+                            Screen Position
+                          </label>
+                          <p className="text-[10px] text-gray-500 mb-2">Select where notification popups appear on the screen.</p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: 'top-left', label: 'Top Left' },
+                              { id: 'top-center', label: 'Top Center' },
+                              { id: 'top-right', label: 'Top Right' },
+                              { id: 'bottom-left', label: 'Bottom Left' },
+                              { id: 'bottom-center', label: 'Bottom Center' },
+                              { id: 'bottom-right', label: 'Bottom Right' }
+                            ].map((pos) => (
+                              <button
+                                key={pos.id}
+                                type="button"
+                                onClick={() => {
+                                  setLocalNotificationPosition(pos.id as any);
+                                  showNotification(`Position set to ${pos.label}`, 'info');
+                                }}
+                                className={cn(
+                                  "py-2 px-2 text-[10px] font-bold rounded-lg border text-center transition-all",
+                                  localNotificationPosition === pos.id
+                                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-500"
+                                    : "border-border bg-background text-gray-600 dark:text-gray-300 hover:border-gray-400"
+                                )}
+                              >
+                                {pos.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 p-4 rounded-xl border border-border bg-foreground/[0.02]">
+                          <label className="text-xs font-bold text-foreground uppercase tracking-wider block">
+                            Display Duration (Seconds)
+                          </label>
+                          <p className="text-[10px] text-gray-500 mb-2">How long notification popups stay visible before fading away.</p>
+                          <div className="grid grid-cols-5 gap-2">
+                            {[
+                              { ms: 2000, label: '2s' },
+                              { ms: 3000, label: '3s' },
+                              { ms: 5000, label: '5s' },
+                              { ms: 8000, label: '8s' },
+                              { ms: 10000, label: '10s' }
+                            ].map((dur) => (
+                              <button
+                                key={dur.ms}
+                                type="button"
+                                onClick={() => {
+                                  setLocalNotificationDuration(dur.ms);
+                                  showNotification(`Duration set to ${dur.label}`, 'info');
+                                }}
+                                className={cn(
+                                  "py-2 text-[10px] font-bold rounded-lg border text-center transition-all",
+                                  localNotificationDuration === dur.ms
+                                    ? "border-emerald-500 bg-emerald-500/10 text-emerald-500"
+                                    : "border-border bg-background text-gray-600 dark:text-gray-300 hover:border-gray-400"
+                                )}
+                              >
+                                {dur.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Notification Border Animation (for Classic ERP style & frame effects) */}
+                      <div className="space-y-3 pt-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold text-foreground uppercase px-1">
+                            Classic Border Frame Animation
+                          </h4>
+                          <span className="text-[10px] text-gray-500">Accent border motion effects</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {[
+                            { id: 'default', label: 'Default Path', desc: 'Classic border trace' },
+                            { id: 'neon', label: 'Neon Glow', desc: 'Pulsating neon border' },
+                            { id: 'snake', label: 'Snake Chase', desc: 'Moving segment' },
+                            { id: 'liquid', label: 'Liquid Flow', desc: 'Rotating gradient' },
+                            { id: 'glitch', label: 'Cyber Glitch', desc: 'Digital distortion' },
+                            { id: 'shimmer', label: 'Shimmer Sweep', desc: 'Elegant light sweep' }
+                          ].map((style) => (
+                            <button
+                              key={style.id}
+                              type="button"
+                              onClick={() => {
+                                setLocalNotificationAnimationStyle(style.id as any);
+                                showNotification(`Border animation: ${style.label}`, 'info');
+                              }}
+                              className={cn(
+                                "flex flex-col items-start p-3 rounded-lg border transition-all text-left gap-1",
+                                localNotificationAnimationStyle === style.id
+                                  ? "border-emerald-500 bg-emerald-500/10"
+                                  : "border-border bg-background hover:border-gray-400"
+                              )}
+                            >
+                              <span className={cn(
+                                "text-[10px] font-bold uppercase tracking-wider",
+                                localNotificationAnimationStyle === style.id ? "text-emerald-500" : "text-foreground"
+                              )}>
+                                {style.label}
+                              </span>
+                              <span className="text-[9px] text-gray-500 leading-tight">
+                                {style.desc}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
