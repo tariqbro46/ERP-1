@@ -73,7 +73,11 @@ import {
   Save,
   Wrench,
   Sparkles,
-  Volume2
+  Volume2,
+  Boxes,
+  Monitor,
+  Play,
+  Eye
 } from 'lucide-react';
 import { soundService } from '../services/soundService';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -367,8 +371,24 @@ export default function FounderPanel() {
     soundWarning,
     soundDelete,
     soundClick,
-    soundNavigation
+    soundNavigation,
+    heroDesignStyle,
+    heroThreeUiTheme,
+    heroThreeUiGlowColor,
+    heroThreeUiPerspective,
+    heroThreeUiShowParticles,
+    heroThreeUiShowFloatingBadges,
+    heroThreeUiShowExperienceHubDemo,
+    heroThreeUiShowSimulateVoucher
   } = useSettings();
+  const [localHeroDesignStyle, setLocalHeroDesignStyle] = useState<'default' | 'threeui'>(heroDesignStyle || 'default');
+  const [localHeroThreeUiTheme, setLocalHeroThreeUiTheme] = useState<'cyber-dark' | 'glass-light' | 'aurora-navy' | 'emerald-obsidian'>(heroThreeUiTheme || 'aurora-navy');
+  const [localHeroThreeUiGlowColor, setLocalHeroThreeUiGlowColor] = useState<'cyan' | 'emerald' | 'indigo' | 'amber'>(heroThreeUiGlowColor || 'cyan');
+  const [localHeroThreeUiPerspective, setLocalHeroThreeUiPerspective] = useState<'subtle' | 'cinematic' | 'extreme'>(heroThreeUiPerspective || 'cinematic');
+  const [localHeroThreeUiShowParticles, setLocalHeroThreeUiShowParticles] = useState<boolean>(heroThreeUiShowParticles ?? true);
+  const [localHeroThreeUiShowFloatingBadges, setLocalHeroThreeUiShowFloatingBadges] = useState<boolean>(heroThreeUiShowFloatingBadges ?? true);
+  const [localHeroThreeUiShowExperienceHubDemo, setLocalHeroThreeUiShowExperienceHubDemo] = useState<boolean>(heroThreeUiShowExperienceHubDemo ?? true);
+  const [localHeroThreeUiShowSimulateVoucher, setLocalHeroThreeUiShowSimulateVoucher] = useState<boolean>(heroThreeUiShowSimulateVoucher ?? true);
   const [localSoundEnabled, setLocalSoundEnabled] = useState(soundEnabled ?? true);
   const [localSoundVolume, setLocalSoundVolume] = useState(soundVolume ?? 0.5);
   const [localSoundScheme, setLocalSoundScheme] = useState(soundScheme || 'system');
@@ -460,7 +480,7 @@ export default function FounderPanel() {
   const [localMaintenanceEndTime, setLocalMaintenanceEndTime] = useState(maintenanceEndTime || '');
   const [localMaintenanceReason, setLocalMaintenanceReason] = useState(maintenanceReason || '');
   const [localMaintenanceUpdates, setLocalMaintenanceUpdates] = useState(maintenanceUpdates || '');
-  const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'notifications' | 'branding' | 'search' | 'loader' | 'skeleton' | 'warnings' | 'sounds'>('general');
+  const [systemSubTab, setSystemSubTab] = useState<'general' | 'theme' | 'hero' | 'notifications' | 'branding' | 'search' | 'loader' | 'skeleton' | 'warnings' | 'sounds'>('general');
   const [settingsFilterQuery, setSettingsFilterQuery] = useState('');
 
   useEffect(() => {
@@ -3111,7 +3131,15 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       soundWarning: localSoundWarning,
                       soundDelete: localSoundDelete,
                       soundClick: localSoundClick,
-                      soundNavigation: localSoundNavigation
+                      soundNavigation: localSoundNavigation,
+                      heroDesignStyle: localHeroDesignStyle,
+                      heroThreeUiTheme: localHeroThreeUiTheme,
+                      heroThreeUiGlowColor: localHeroThreeUiGlowColor,
+                      heroThreeUiPerspective: localHeroThreeUiPerspective,
+                      heroThreeUiShowParticles: localHeroThreeUiShowParticles,
+                      heroThreeUiShowFloatingBadges: localHeroThreeUiShowFloatingBadges,
+                      heroThreeUiShowExperienceHubDemo: localHeroThreeUiShowExperienceHubDemo,
+                      heroThreeUiShowSimulateVoucher: localHeroThreeUiShowSimulateVoucher
                     });
                     showNotification('System configuration updated successfully', 'success');
                   } catch (err) {
@@ -3136,6 +3164,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
             <div className="w-full lg:w-64 shrink-0 flex flex-row lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 no-scrollbar">
               {[
                 { id: 'general', label: 'General & Status', desc: 'Alerts, version, shortcuts', icon: Activity },
+                { id: 'hero', label: 'Hero Landing Page', desc: 'ThreeUI 3D Holographic, tilt & glow', icon: Boxes },
                 { id: 'theme', label: 'Theme & Layout', desc: 'UI styles, navigations', icon: Palette },
                 { id: 'notifications', label: 'Popup Notifications', desc: 'Designs, positions, durations', icon: Bell },
                 { id: 'branding', label: 'Logo & Branding', desc: 'Default logo, mobile icon', icon: FileImage },
@@ -3557,6 +3586,387 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                             </select>
                           </div>
                         </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {systemSubTab === 'hero' && (() => {
+                const checkFilter = (labels: string[]) => {
+                  if (!settingsFilterQuery) return true;
+                  const q = settingsFilterQuery.toLowerCase();
+                  return labels.some(l => l && l.toLowerCase().includes(q));
+                };
+
+                const showDesignPicker = checkFilter(['hero', 'threeui', 'isometric', '3d', 'holographic', 'dashboard', 'classic', 'landing', 'homepage']);
+                const showThemeProps = checkFilter(['theme', 'aurora', 'cyber', 'obsidian', 'glass', 'palette', 'glow', 'color', 'cyan', 'emerald', 'indigo', 'amber']);
+                const showPhysicsProps = checkFilter(['perspective', 'tilt', 'angle', 'particles', 'constellation', 'floating', 'badges', 'telemetry', 'sensory']);
+
+                if (!showDesignPicker && !showThemeProps && !showPhysicsProps) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-card border border-border border-dashed rounded-xl">
+                      <Search className="w-8 h-8 text-muted-foreground opacity-30 mb-2 animate-bounce" />
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">No matching options</h4>
+                      <p className="text-[10px] text-muted-foreground mt-1 max-w-xs leading-relaxed uppercase">
+                        We couldn't find any hero configuration options matching your keyword.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-6">
+                    {/* Header with Quick Actions */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-cyan-500/10 border border-blue-500/20 rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
+                          <Boxes className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-extrabold text-foreground tracking-tight flex items-center gap-2">
+                            Landing Page Hero Engine
+                            <span className="text-[9px] uppercase px-2 py-0.5 rounded-full font-mono font-bold bg-blue-500/20 text-blue-500 border border-blue-500/30">
+                              ThreeUI Integrated
+                            </span>
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Switch between the classic clean hero and the modern ThreeUI 3D interactive executive dashboard.
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href="/#/"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3.5 py-2 bg-background border border-border hover:border-primary/50 text-foreground text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-primary" />
+                        <span>Preview Landing Page</span>
+                        <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                      </a>
+                    </div>
+
+                    {/* Group 1: Master Hero Style Selector */}
+                    {showDesignPicker && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <LayoutDashboard className="w-4 h-4 text-primary" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Hero Design Architecture</h4>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Option 1: Classic Default */}
+                          <div 
+                            onClick={() => setLocalHeroDesignStyle('default')}
+                            className={cn(
+                              "p-4 rounded-xl border-2 cursor-pointer transition-all relative overflow-hidden flex flex-col justify-between group",
+                              localHeroDesignStyle === 'default'
+                                ? "border-primary bg-primary/5 shadow-sm"
+                                : "border-border hover:border-muted-foreground/40 bg-background"
+                            )}
+                          >
+                            {localHeroDesignStyle === 'default' && (
+                              <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+                                <Check className="w-3 h-3" />
+                              </div>
+                            )}
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">📄</span>
+                                <h5 className="text-xs font-bold text-foreground">Classic Clean Light SaaS</h5>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Standard bright aesthetic with soft background geometric vectors, flat dashboard card preview, and static department tabs.
+                              </p>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+                              <span>Style: Minimalist White</span>
+                              <span className={localHeroDesignStyle === 'default' ? "text-primary font-bold" : ""}>
+                                {localHeroDesignStyle === 'default' ? "ACTIVE DEFAULT" : "Click to select"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Option 2: ThreeUI 3D Holographic Dashboard */}
+                          <div 
+                            onClick={() => setLocalHeroDesignStyle('threeui')}
+                            className={cn(
+                              "p-4 rounded-xl border-2 cursor-pointer transition-all relative overflow-hidden flex flex-col justify-between group",
+                              localHeroDesignStyle === 'threeui'
+                                ? "border-cyan-500 bg-gradient-to-br from-cyan-500/10 via-slate-900/10 to-indigo-500/10 shadow-md shadow-cyan-500/10"
+                                : "border-border hover:border-muted-foreground/40 bg-background"
+                            )}
+                          >
+                            <div className="absolute -top-6 -right-6 w-20 h-20 bg-cyan-500/10 rounded-full blur-xl pointer-events-none" />
+                            {localHeroDesignStyle === 'threeui' && (
+                              <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-cyan-500 text-black font-black flex items-center justify-center shadow-xs">
+                                <Check className="w-3 h-3 stroke-[3]" />
+                              </div>
+                            )}
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">✨</span>
+                                <h5 className="text-xs font-extrabold text-foreground flex items-center gap-1.5">
+                                  ThreeUI 3D Holographic Hero
+                                  <span className="text-[8px] uppercase px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-mono font-bold">
+                                    NEW
+                                  </span>
+                                </h5>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Ultra-modern 3D isometric perspective tilting with mouse tracking, particle constellation canvas, live telemetry counters, glowing auras, and interactive executive command dashboard.
+                              </p>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+                              <span>Style: ThreeUI Interactive 3D</span>
+                              <span className={localHeroDesignStyle === 'threeui' ? "text-cyan-500 font-bold" : ""}>
+                                {localHeroDesignStyle === 'threeui' ? "ACTIVE 3D HERO" : "Click to activate"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Group 2: ThreeUI Visual Customizer (Theme, Glow & Perspective) */}
+                    {(showThemeProps || showPhysicsProps) && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-5 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md",
+                        localHeroDesignStyle !== 'threeui' && "opacity-80"
+                      )}>
+                        <div className="flex items-center justify-between border-b border-border pb-3">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-cyan-500" />
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">ThreeUI 3D Dashboard Engine Customizer</h4>
+                          </div>
+                          {localHeroDesignStyle !== 'threeui' && (
+                            <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-600 border border-amber-500/20 font-bold">
+                              Configuration applies when ThreeUI style is active
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Theme Preset Variants */}
+                        {showThemeProps && (
+                          <div className="space-y-3">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">
+                              ThreeUI Color & Lighting Theme
+                            </label>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              {[
+                                {
+                                  id: 'aurora-navy',
+                                  label: 'Aurora Navy',
+                                  desc: 'Deep cosmic slate & indigo with soft cyan stars',
+                                  bgBadge: 'bg-[#020617] border-cyan-500/40 text-cyan-400'
+                                },
+                                {
+                                  id: 'cyber-dark',
+                                  label: 'Cyber Dark',
+                                  desc: 'OLED midnight black with vibrant contrast telemetry',
+                                  bgBadge: 'bg-black border-slate-700 text-white'
+                                },
+                                {
+                                  id: 'emerald-obsidian',
+                                  label: 'Emerald Matrix',
+                                  desc: 'Cyberpunk emerald laser glow over obsidian slate',
+                                  bgBadge: 'bg-[#021f14] border-emerald-500/40 text-emerald-400'
+                                },
+                                {
+                                  id: 'glass-light',
+                                  label: 'Glass Light',
+                                  desc: 'Frosted crystal light canvas with frosted glass finish',
+                                  bgBadge: 'bg-slate-100 border-slate-300 text-slate-900'
+                                }
+                              ].map((t) => (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => setLocalHeroThreeUiTheme(t.id as any)}
+                                  className={cn(
+                                    "p-3 rounded-xl border text-left transition-all relative flex flex-col justify-between min-h-[90px] outline-none",
+                                    localHeroThreeUiTheme === t.id
+                                      ? "border-cyan-500 bg-cyan-500/10 ring-1 ring-cyan-500 shadow-xs"
+                                      : "border-border bg-background hover:bg-muted/50"
+                                  )}
+                                >
+                                  <div>
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-xs font-bold text-foreground">{t.label}</p>
+                                      <div className={cn("w-3 h-3 rounded-full border", t.bgBadge)} />
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground mt-1 leading-tight">{t.desc}</p>
+                                  </div>
+                                  {localHeroThreeUiTheme === t.id && (
+                                    <span className="text-[8px] font-mono text-cyan-500 uppercase font-black mt-2">Active Theme</span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Glow Light Aura Color & 3D Tilt Perspective */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                          {/* Glow Aura Selector */}
+                          <div className="space-y-2 p-4 bg-muted/20 border border-border rounded-xl">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">
+                              Dynamic Glow Aura Reflection
+                            </label>
+                            <div className="grid grid-cols-4 gap-2">
+                              {[
+                                { id: 'cyan', label: 'Electric Cyan', color: 'bg-cyan-500', glow: 'shadow-cyan-500/50' },
+                                { id: 'emerald', label: 'Laser Emerald', color: 'bg-emerald-500', glow: 'shadow-emerald-500/50' },
+                                { id: 'indigo', label: 'Deep Indigo', color: 'bg-indigo-500', glow: 'shadow-indigo-500/50' },
+                                { id: 'amber', label: 'Solar Amber', color: 'bg-amber-500', glow: 'shadow-amber-500/50' }
+                              ].map((g) => (
+                                <button
+                                  key={g.id}
+                                  type="button"
+                                  onClick={() => setLocalHeroThreeUiGlowColor(g.id as any)}
+                                  className={cn(
+                                    "py-2 px-1 rounded-lg border text-center transition-all flex flex-col items-center gap-1.5 outline-none",
+                                    localHeroThreeUiGlowColor === g.id
+                                      ? "border-primary bg-primary/10 shadow-xs ring-1 ring-primary"
+                                      : "border-border bg-background hover:bg-muted"
+                                  )}
+                                >
+                                  <div className={cn("w-4 h-4 rounded-full shadow-sm", g.color)} />
+                                  <span className="text-[9px] font-bold text-foreground truncate w-full text-center">{g.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                            <p className="text-[9px] text-muted-foreground uppercase font-mono">
+                              Aura backlighting radiates behind the isometric 3D dashboard.
+                            </p>
+                          </div>
+
+                          {/* 3D Perspective Sensitivity */}
+                          <div className="space-y-2 p-4 bg-muted/20 border border-border rounded-xl">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">
+                              3D Isometric Tilt Sensitivity
+                            </label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {[
+                                { id: 'subtle', label: 'Subtle', angle: 'Max ±7° tilt', desc: 'Gentle smooth tilt' },
+                                { id: 'cinematic', label: 'Cinematic', angle: 'Max ±12° tilt', desc: 'Recommended depth' },
+                                { id: 'extreme', label: 'Extreme', angle: 'Max ±18° tilt', desc: 'Dramatic depth' }
+                              ].map((p) => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => setLocalHeroThreeUiPerspective(p.id as any)}
+                                  className={cn(
+                                    "p-2 rounded-lg border text-center transition-all flex flex-col items-center justify-center gap-1 outline-none",
+                                    localHeroThreeUiPerspective === p.id
+                                      ? "border-cyan-500 bg-cyan-500/10 shadow-xs ring-1 ring-cyan-500"
+                                      : "border-border bg-background hover:bg-muted"
+                                  )}
+                                >
+                                  <span className="text-[10px] font-bold text-foreground">{p.label}</span>
+                                  <span className="text-[8px] font-mono text-cyan-500 font-bold">{p.angle}</span>
+                                </button>
+                              ))}
+                            </div>
+                            <p className="text-[9px] text-muted-foreground uppercase font-mono">
+                              Controls how responsive the 3D card rotates as users move the mouse across the hero.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Toggles: Particles Canvas, Floating Badges, Experience Hub, and Simulate Voucher */}
+                        {showPhysicsProps && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                            {/* Particles Switch */}
+                            <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
+                              <div className="space-y-0.5">
+                                <p className="text-xs font-bold text-foreground">Procedural Particle Constellations</p>
+                                <p className="text-[10px] text-muted-foreground">Interactive connected node canvas with subtle drifting physics.</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLocalHeroThreeUiShowParticles(!localHeroThreeUiShowParticles)}
+                                className={cn(
+                                  "w-10 h-5.5 rounded-full transition-colors relative shrink-0 cursor-pointer",
+                                  localHeroThreeUiShowParticles ? "bg-cyan-500" : "bg-neutral-600"
+                                )}
+                              >
+                                <div className={cn(
+                                  "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                                  localHeroThreeUiShowParticles ? "right-0.5" : "left-0.5"
+                                )} />
+                              </button>
+                            </div>
+
+                            {/* Floating Telemetry Badges Switch */}
+                            <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
+                              <div className="space-y-0.5">
+                                <p className="text-xs font-bold text-foreground">3D Floating Telemetry Badges</p>
+                                <p className="text-[10px] text-muted-foreground">Floating live revenue flow and bank ledger reconciled floating widgets.</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLocalHeroThreeUiShowFloatingBadges(!localHeroThreeUiShowFloatingBadges)}
+                                className={cn(
+                                  "w-10 h-5.5 rounded-full transition-colors relative shrink-0 cursor-pointer",
+                                  localHeroThreeUiShowFloatingBadges ? "bg-cyan-500" : "bg-neutral-600"
+                                )}
+                              >
+                                <div className={cn(
+                                  "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                                  localHeroThreeUiShowFloatingBadges ? "right-0.5" : "left-0.5"
+                                )} />
+                              </button>
+                            </div>
+
+                            {/* Experience HUB Demo Button / Link Switch */}
+                            <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
+                              <div className="space-y-0.5">
+                                <p className="text-xs font-bold text-foreground">Experience HUB (Demo) Button</p>
+                                <p className="text-[10px] text-muted-foreground">Show or hide the interactive Experience HUB demo modal trigger button.</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLocalHeroThreeUiShowExperienceHubDemo(!localHeroThreeUiShowExperienceHubDemo)}
+                                className={cn(
+                                  "w-10 h-5.5 rounded-full transition-colors relative shrink-0 cursor-pointer",
+                                  localHeroThreeUiShowExperienceHubDemo ? "bg-cyan-500" : "bg-neutral-600"
+                                )}
+                              >
+                                <div className={cn(
+                                  "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                                  localHeroThreeUiShowExperienceHubDemo ? "right-0.5" : "left-0.5"
+                                )} />
+                              </button>
+                            </div>
+
+                            {/* Simulate Voucher Event Button Switch */}
+                            <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
+                              <div className="space-y-0.5">
+                                <p className="text-xs font-bold text-foreground">Simulate Voucher Event Button</p>
+                                <p className="text-[10px] text-muted-foreground">Show or hide the live transaction voucher simulation pulse button.</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLocalHeroThreeUiShowSimulateVoucher(!localHeroThreeUiShowSimulateVoucher)}
+                                className={cn(
+                                  "w-10 h-5.5 rounded-full transition-colors relative shrink-0 cursor-pointer",
+                                  localHeroThreeUiShowSimulateVoucher ? "bg-cyan-500" : "bg-neutral-600"
+                                )}
+                              >
+                                <div className={cn(
+                                  "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                                  localHeroThreeUiShowSimulateVoucher ? "right-0.5" : "left-0.5"
+                                )} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

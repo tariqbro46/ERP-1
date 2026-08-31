@@ -218,6 +218,14 @@ interface SettingsContextType {
   maintenanceEndTime?: string;
   maintenanceReason?: string;
   maintenanceUpdates?: string;
+  heroDesignStyle?: 'default' | 'threeui';
+  heroThreeUiTheme?: 'cyber-dark' | 'glass-light' | 'aurora-navy' | 'emerald-obsidian';
+  heroThreeUiGlowColor?: 'cyan' | 'emerald' | 'indigo' | 'amber';
+  heroThreeUiPerspective?: 'subtle' | 'cinematic' | 'extreme';
+  heroThreeUiShowParticles?: boolean;
+  heroThreeUiShowFloatingBadges?: boolean;
+  heroThreeUiShowExperienceHubDemo?: boolean;
+  heroThreeUiShowSimulateVoucher?: boolean;
   features: FeatureSettings[];
   appFeatures: FeatureCategory[];
   subscriptionPlans: SubscriptionPlan[];
@@ -395,6 +403,14 @@ const defaultSettings: SettingsContextType = {
   maintenanceEndTime: '',
   maintenanceReason: '',
   maintenanceUpdates: '',
+  heroDesignStyle: 'default',
+  heroThreeUiTheme: 'aurora-navy',
+  heroThreeUiGlowColor: 'cyan',
+  heroThreeUiPerspective: 'cinematic',
+  heroThreeUiShowParticles: true,
+  heroThreeUiShowFloatingBadges: true,
+  heroThreeUiShowExperienceHubDemo: true,
+  heroThreeUiShowSimulateVoucher: true,
   features: [],
   appFeatures: [],
   subscriptionPlans: [],
@@ -636,6 +652,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               sidebarBgColor: data.sidebarBgColor || prev.sidebarBgColor || 'default',
               sidebarTextColor: data.sidebarTextColor || prev.sidebarTextColor || 'default',
               globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign,
+              heroDesignStyle: data.heroDesignStyle || prev.heroDesignStyle || 'default',
+              heroThreeUiTheme: data.heroThreeUiTheme || prev.heroThreeUiTheme || 'aurora-navy',
+              heroThreeUiGlowColor: data.heroThreeUiGlowColor || prev.heroThreeUiGlowColor || 'cyan',
+              heroThreeUiPerspective: data.heroThreeUiPerspective || prev.heroThreeUiPerspective || 'cinematic',
+              heroThreeUiShowParticles: data.heroThreeUiShowParticles !== undefined ? !!data.heroThreeUiShowParticles : (prev.heroThreeUiShowParticles !== undefined ? prev.heroThreeUiShowParticles : true),
+              heroThreeUiShowFloatingBadges: data.heroThreeUiShowFloatingBadges !== undefined ? !!data.heroThreeUiShowFloatingBadges : (prev.heroThreeUiShowFloatingBadges !== undefined ? prev.heroThreeUiShowFloatingBadges : true),
+              heroThreeUiShowExperienceHubDemo: data.heroThreeUiShowExperienceHubDemo !== undefined ? !!data.heroThreeUiShowExperienceHubDemo : (prev.heroThreeUiShowExperienceHubDemo !== undefined ? prev.heroThreeUiShowExperienceHubDemo : true),
+              heroThreeUiShowSimulateVoucher: data.heroThreeUiShowSimulateVoucher !== undefined ? !!data.heroThreeUiShowSimulateVoucher : (prev.heroThreeUiShowSimulateVoucher !== undefined ? prev.heroThreeUiShowSimulateVoucher : true),
               maintenanceEnabled: data.maintenanceEnabled !== undefined ? !!data.maintenanceEnabled : false,
               maintenanceEndTime: data.maintenanceEndTime || '',
               maintenanceReason: data.maintenanceReason || '',

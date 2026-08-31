@@ -21,23 +21,48 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { erpService } from '../../services/erpService';
+import { ThreeUiHeroDashboard } from '../../components/landing/ThreeUiHeroDashboard';
 
 export const Home = () => {
   const { t, language } = useLanguage();
   const { user } = useAuth();
-  const { adaptiveLoaderEnabled = true, skeletonEnabled = true, skeletonDashboardOnly = true } = useSettings();
+  const { 
+    adaptiveLoaderEnabled = true, 
+    skeletonEnabled = true, 
+    skeletonDashboardOnly = true,
+    heroDesignStyle = 'default',
+    heroThreeUiTheme = 'aurora-navy',
+    heroThreeUiGlowColor = 'cyan',
+    heroThreeUiPerspective = 'cinematic',
+    heroThreeUiShowParticles = true,
+    heroThreeUiShowFloatingBadges = true,
+    heroThreeUiShowExperienceHubDemo = true,
+    heroThreeUiShowSimulateVoucher = true
+  } = useSettings();
 
   const DEFAULT_CONTENT = {
     heroTitle: language === 'bn' ? 'বুদ্ধিমত্তার সাথে আপনার ব্যবসা পরিচালনা করুন' : 'Manage Your Business With Pure Intelligence',
     heroTitleColor: "#ffffff",
     heroSubtitle: t('home.heroSubtitle'),
     heroSubtitleColor: "#94a3b8",
+    heroBadgeText: "THREEUI 3D SPATIAL ENGINE",
+    heroBadgeTag: language === 'bn' ? 'রিয়েল-টাইম ইআরপি ড্যাশবোর্ড' : 'Live Interactive Dashboard',
     heroCtaPrimary: t('home.startTrial'),
     heroCtaPrimaryBg: "#3b82f6",
     heroCtaPrimaryText: "#ffffff",
     heroCtaSecondary: "View Pricing Models",
     heroCtaSecondaryBg: "transparent",
     heroCtaSecondaryText: "#ffffff",
+    heroExperienceHubButtonText: language === 'bn' ? 'এক্সপেরিয়েন্স হাব (ডেমো)' : 'Experience Hub (Demo)',
+    heroSimulateVoucherButtonText: language === 'bn' ? 'সিমুলেট ভাউচার ইভেন্ট' : 'Simulate Voucher Event',
+    heroDashboardCompanyName: "TallyFlow ERP",
+    heroDashboardCompanyLocation: "DHAKA, BANGLADESH",
+    heroDashboardTitle: "DASHBOARD",
+    heroDashboardGreeting: language === 'bn' ? 'শুভ অপরাহ্ন, তারিকুল ইসলাম' : 'Good Afternoon, Tariqul Islam',
+    heroDashboardBadgeText: "TALLYFLOW ENTERPRISE HUB",
+    heroDashboardSlogan: "TALLYFLOW ERP | SMART SOLUTION",
+    heroDashboardNotice: "SECURE CLOUD ENTERPRISE ENVIRONMENT • ACTIVE SESSION",
+    heroDashboardAvatarInitials: "TI",
     heroImage: "https://picsum.photos/seed/erp-hero-dashboard/1600/900",
     heroBgColor: "#020617",
     showHero: true,
@@ -305,6 +330,19 @@ export const Home = () => {
       <main className="flex-1">
         {/* Hero Section */}
         {content.showHero && (
+          heroDesignStyle === 'threeui' ? (
+            <ThreeUiHeroDashboard
+              content={content}
+              onOpenDemoModal={() => setShowDemoModal(true)}
+              themeVariant={heroThreeUiTheme}
+              glowColor={heroThreeUiGlowColor}
+              perspectiveLevel={heroThreeUiPerspective}
+              showParticles={heroThreeUiShowParticles}
+              showFloatingBadges={heroThreeUiShowFloatingBadges}
+              showExperienceHubDemo={heroThreeUiShowExperienceHubDemo}
+              showSimulateVoucher={heroThreeUiShowSimulateVoucher}
+            />
+          ) : (
           <section className="relative pt-28 sm:pt-36 pb-20 overflow-hidden bg-white">
             
             {/* Subtle grid pattern background matching Login page */}
@@ -365,13 +403,15 @@ export const Home = () => {
                     </Link>
 
                     {/* Secondary Button: Outline/Light Grey border style */}
-                    <Link
-                      to="/pricing"
-                      id="hero-secondary-cta"
-                      className="w-full sm:w-auto px-7 py-3 rounded-lg text-[13px] font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.04)] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      {content.heroCtaSecondary || "View Pricing Models"}
-                    </Link>
+                    {content.heroCtaSecondary && (
+                      <Link
+                        to="/pricing"
+                        id="hero-secondary-cta"
+                        className="w-full sm:w-auto px-7 py-3 rounded-lg text-[13px] font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.04)] active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        {content.heroCtaSecondary}
+                      </Link>
+                    )}
 
                     {/* Experience Hub Demo Button */}
                     {!user && (
@@ -643,6 +683,7 @@ export const Home = () => {
               </div>
             </div>
           </section>
+          )
         )}
 
         {/* Stats Section */}

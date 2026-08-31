@@ -139,26 +139,26 @@ export const About = () => {
               {[
                 {
                   icon: Zap,
-                  title: content.value1Title || "Operational Clarity",
-                  desc: content.value1Desc || "We build intuitive interfaces allowing rapid understanding over double entry finances in milliseconds.",
+                  title: content.value1Title !== undefined ? content.value1Title : "Operational Clarity",
+                  desc: content.value1Desc !== undefined ? content.value1Desc : "We build intuitive interfaces allowing rapid understanding over double entry finances in milliseconds.",
                   iconColor: 'bg-blue-50 text-blue-600 border-blue-100'
                 },
                 {
                   icon: Users,
-                  title: content.value2Title || "Enterprise Growth",
-                  desc: content.value2Desc || "Supporting scaling ventures across multi-godown networks without performance compromises.",
+                  title: content.value2Title !== undefined ? content.value2Title : "Enterprise Growth",
+                  desc: content.value2Desc !== undefined ? content.value2Desc : "Supporting scaling ventures across multi-godown networks without performance compromises.",
                   iconColor: 'bg-purple-50 text-purple-600 border-purple-100'
                 },
                 {
                   icon: Globe,
-                  title: content.value3Title || "Global Alignment",
-                  desc: content.value3Desc || "Engineered for international statutory regulations with support for multi-currency transactions.",
+                  title: content.value3Title !== undefined ? content.value3Title : "Global Alignment",
+                  desc: content.value3Desc !== undefined ? content.value3Desc : "Engineered for international statutory regulations with support for multi-currency transactions.",
                   iconColor: 'bg-emerald-50 text-emerald-600 border-emerald-100'
                 },
                 {
                   icon: Award,
-                  title: content.value4Title || "Uncompromised Trust",
-                  desc: content.value4Desc || "Rigid compliance rules with role-based permissions preventing leakages and tracking actions.",
+                  title: content.value4Title !== undefined ? content.value4Title : "Uncompromised Trust",
+                  desc: content.value4Desc !== undefined ? content.value4Desc : "Rigid compliance rules with role-based permissions preventing leakages and tracking actions.",
                   iconColor: 'bg-amber-50 text-amber-600 border-amber-100'
                 }
               ].map((value, i) => (
@@ -169,10 +169,12 @@ export const About = () => {
                   <div className={cn("w-12 h-12 rounded-xl border flex items-center justify-center mb-5", value.iconColor)}>
                     <value.icon className="w-5 h-5" />
                   </div>
-                  <h3 className="text-base font-bold mb-2 text-slate-900">{value.title}</h3>
-                  <p className="text-slate-600 text-xs leading-relaxed font-normal">
-                    {value.desc}
-                  </p>
+                  {value.title && <h3 className="text-base font-bold mb-2 text-slate-900">{value.title}</h3>}
+                  {value.desc && (
+                    <p className="text-slate-600 text-xs leading-relaxed font-normal">
+                      {value.desc}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -185,24 +187,28 @@ export const About = () => {
                 <span className="text-[11px] font-bold uppercase tracking-[0.25em] bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full border border-blue-100 mb-4 inline-block shadow-2xs">
                   LEADERSHIP
                 </span>
-                <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-2 text-slate-900">
-                  {content.leadershipTitle}
-                </h2>
+                {content.leadershipTitle && (
+                  <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-2 text-slate-900">
+                    {content.leadershipTitle}
+                  </h2>
+                )}
                 <p className="text-slate-600 text-sm font-medium">Empowering enterprise scalability through digital precision.</p>
               </div>
  
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
                 {[
-                  { name: content.leader1Name || "John Doe", role: content.leader1Role || "Chief Executive Officer", img: content.leader1Img || "https://api.dicebear.com/7.x/micah/svg?seed=John&backgroundType=gradientLinear&backgroundRotation=140" },
-                  { name: content.leader2Name || "Jane Smith", role: content.leader2Role || "Chief Technology Officer", img: content.leader2Img || "https://api.dicebear.com/7.x/micah/svg?seed=Jane&backgroundType=gradientLinear&backgroundRotation=140" },
-                  { name: content.leader3Name || "Mike Johnson", role: content.leader3Role || "VP Product", img: content.leader3Img || "https://api.dicebear.com/7.x/micah/svg?seed=Mike&backgroundType=gradientLinear&backgroundRotation=140" }
+                  { name: content.leader1Name !== undefined ? content.leader1Name : "John Doe", role: content.leader1Role !== undefined ? content.leader1Role : "Chief Executive Officer", img: content.leader1Img !== undefined ? content.leader1Img : "https://api.dicebear.com/7.x/micah/svg?seed=John&backgroundType=gradientLinear&backgroundRotation=140" },
+                  { name: content.leader2Name !== undefined ? content.leader2Name : "Jane Smith", role: content.leader2Role !== undefined ? content.leader2Role : "Chief Technology Officer", img: content.leader2Img !== undefined ? content.leader2Img : "https://api.dicebear.com/7.x/micah/svg?seed=Jane&backgroundType=gradientLinear&backgroundRotation=140" },
+                  { name: content.leader3Name !== undefined ? content.leader3Name : "Mike Johnson", role: content.leader3Role !== undefined ? content.leader3Role : "VP Product", img: content.leader3Img !== undefined ? content.leader3Img : "https://api.dicebear.com/7.x/micah/svg?seed=Mike&backgroundType=gradientLinear&backgroundRotation=140" }
                 ].map((member, i) => (
                   <div key={i} className="p-7 bg-white border border-slate-200/90 hover:border-slate-300 rounded-2xl text-center transition-all hover:shadow-md shadow-xs">
-                    <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4 border-2 border-slate-100 bg-slate-50 shadow-xs">
-                      <img src={member.img} alt={member.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                    <h3 className="text-base font-bold text-slate-900 mb-0.5">{member.name}</h3>
-                    <p className="text-xs text-blue-700 font-semibold tracking-wide">{member.role}</p>
+                    {member.img && (
+                      <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4 border-2 border-slate-100 bg-slate-50 shadow-xs">
+                        <img src={member.img} alt={member.name || 'Leader'} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      </div>
+                    )}
+                    {member.name && <h3 className="text-base font-bold text-slate-900 mb-0.5">{member.name}</h3>}
+                    {member.role && <p className="text-xs text-blue-700 font-semibold tracking-wide">{member.role}</p>}
                     <div className="mt-4 flex justify-center">
                       <span className="text-[9px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-mono font-medium">TALLYFLOW EXECUTIVE</span>
                     </div>
