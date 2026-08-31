@@ -379,7 +379,8 @@ export default function FounderPanel() {
     heroThreeUiShowParticles,
     heroThreeUiShowFloatingBadges,
     heroThreeUiShowExperienceHubDemo,
-    heroThreeUiShowSimulateVoucher
+    heroThreeUiShowSimulateVoucher,
+    heroThreeUiEnableTiltDefault
   } = useSettings();
   const [localHeroDesignStyle, setLocalHeroDesignStyle] = useState<'default' | 'threeui'>(heroDesignStyle || 'default');
   const [localHeroThreeUiTheme, setLocalHeroThreeUiTheme] = useState<'cyber-dark' | 'glass-light' | 'aurora-navy' | 'emerald-obsidian'>(heroThreeUiTheme || 'aurora-navy');
@@ -389,6 +390,7 @@ export default function FounderPanel() {
   const [localHeroThreeUiShowFloatingBadges, setLocalHeroThreeUiShowFloatingBadges] = useState<boolean>(heroThreeUiShowFloatingBadges ?? true);
   const [localHeroThreeUiShowExperienceHubDemo, setLocalHeroThreeUiShowExperienceHubDemo] = useState<boolean>(heroThreeUiShowExperienceHubDemo ?? true);
   const [localHeroThreeUiShowSimulateVoucher, setLocalHeroThreeUiShowSimulateVoucher] = useState<boolean>(heroThreeUiShowSimulateVoucher ?? true);
+  const [localHeroThreeUiEnableTiltDefault, setLocalHeroThreeUiEnableTiltDefault] = useState<boolean>(heroThreeUiEnableTiltDefault ?? false);
   const [localSoundEnabled, setLocalSoundEnabled] = useState(soundEnabled ?? true);
   const [localSoundVolume, setLocalSoundVolume] = useState(soundVolume ?? 0.5);
   const [localSoundScheme, setLocalSoundScheme] = useState(soundScheme || 'system');
@@ -3139,7 +3141,8 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       heroThreeUiShowParticles: localHeroThreeUiShowParticles,
                       heroThreeUiShowFloatingBadges: localHeroThreeUiShowFloatingBadges,
                       heroThreeUiShowExperienceHubDemo: localHeroThreeUiShowExperienceHubDemo,
-                      heroThreeUiShowSimulateVoucher: localHeroThreeUiShowSimulateVoucher
+                      heroThreeUiShowSimulateVoucher: localHeroThreeUiShowSimulateVoucher,
+                      heroThreeUiEnableTiltDefault: localHeroThreeUiEnableTiltDefault
                     });
                     showNotification('System configuration updated successfully', 'success');
                   } catch (err) {
@@ -3962,6 +3965,35 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                                 <div className={cn(
                                   "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
                                   localHeroThreeUiShowSimulateVoucher ? "right-0.5" : "left-0.5"
+                                )} />
+                              </button>
+                            </div>
+
+                            {/* 3D Tilt Orbit Effect Default Switch */}
+                            <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border rounded-xl">
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-xs font-bold text-foreground">3D Tilt Orbit Effect (Default State)</p>
+                                  <span className={cn(
+                                    "text-[9px] font-mono font-bold px-1.5 py-0.5 rounded",
+                                    localHeroThreeUiEnableTiltDefault ? "bg-cyan-500/20 text-cyan-500" : "bg-muted text-muted-foreground"
+                                  )}>
+                                    {localHeroThreeUiEnableTiltDefault ? "DEFAULT ON" : "DEFAULT OFF"}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground">ল্যান্ডিং পেজ লোড হওয়ার সময় 3D টিল্ট মোশন ডিফল্টভাবে অফ বা অন রাখার অপশন।</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setLocalHeroThreeUiEnableTiltDefault(!localHeroThreeUiEnableTiltDefault)}
+                                className={cn(
+                                  "w-10 h-5.5 rounded-full transition-colors relative shrink-0 cursor-pointer",
+                                  localHeroThreeUiEnableTiltDefault ? "bg-cyan-500" : "bg-neutral-600"
+                                )}
+                              >
+                                <div className={cn(
+                                  "absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-all",
+                                  localHeroThreeUiEnableTiltDefault ? "right-0.5" : "left-0.5"
                                 )} />
                               </button>
                             </div>

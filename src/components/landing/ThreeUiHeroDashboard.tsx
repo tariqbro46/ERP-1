@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { cn } from '../../lib/utils';
 
 interface ThreeUiHeroDashboardProps {
@@ -54,6 +55,7 @@ interface ThreeUiHeroDashboardProps {
   showFloatingBadges?: boolean;
   showExperienceHubDemo?: boolean;
   showSimulateVoucher?: boolean;
+  enableTiltDefault?: boolean;
 }
 
 export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
@@ -65,19 +67,100 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
   showParticles = true,
   showFloatingBadges = true,
   showExperienceHubDemo = true,
-  showSimulateVoucher = true
+  showSimulateVoucher = true,
+  enableTiltDefault
 }) => {
   const { language, t } = useLanguage();
-  const { user } = useAuth();
+  const { user, company } = useAuth();
+  const { 
+    companyName: settingsCompanyName, 
+    companyAddress: settingsCompanyAddress, 
+    slogan: settingsSlogan, 
+    companyLogo: settingsCompanyLogo, 
+    systemLogo: settingsSystemLogo 
+  } = useSettings();
+
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [is3DOrbitActive, setIs3DOrbitActive] = useState(true);
+  const [is3DOrbitActive, setIs3DOrbitActive] = useState(
+    enableTiltDefault !== undefined ? enableTiltDefault : (content.enable3dTilt !== undefined ? !!content.enable3dTilt : false)
+  );
+
+  useEffect(() => {
+    if (enableTiltDefault !== undefined) {
+      setIs3DOrbitActive(enableTiltDefault);
+    }
+  }, [enableTiltDefault]);
+
   const [activeCardHover, setActiveCardHover] = useState<string | null>(null);
   const [livePulse, setLivePulse] = useState(false);
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDate, setCurrentDate] = useState<string>('');
   const [activeNav, setActiveNav] = useState('dashboard');
+
+  // Dynamic company name, slogan/address, and logo
+  const activeCompanyName = user 
+    ? (company?.name || settingsCompanyName || user.displayName || 'TallyFlow ERP')
+    : (content.heroDashboardCompanyName !== undefined ? content.heroDashboardCompanyName : 'TallyFlow ERP');
+
+  const userSlogan = (company as any)?.slogan || settingsSlogan;
+  const userAddress = (company as any)?.address || settingsCompanyAddress;
+  const activeCompanySub = user
+    ? (userSlogan || userAddress || 'DHAKA, BANGLADESH')
+    : (content.heroDashboardCompanyLocation !== undefined ? content.heroDashboardCompanyLocation : 'DHAKA, BANGLADESH');
+
+  const activeCompanyLogo = user
+    ? ((company as any)?.logo_url || settingsCompanyLogo || settingsSystemLogo)
+    : settingsSystemLogo;
+
+  const companyInitials = (activeCompanyName || 'TF').substring(0, 2).toUpperCase();
+
+  // Avatar initials and image
+  const activeAvatarInitials = user
+    ? (user.displayName || user.email || 'UN').substring(0, 2).toUpperCase()
+    : ((content.heroDashboardAvatarInitials && content.heroDashboardAvatarInitials !== 'TI') ? content.heroDashboardAvatarInitials : 'UN');
+  const activeUserAvatarUrl = user?.photoURL;
+
+  // Time-of-day greeting
+  const getGreetingPrefix = () => {
+    const hour = new Date().getHours();
+    if (language === 'bn') {
+      if (hour < 12) return 'শুভ সকাল';
+      if (hour < 17) return 'শুভ অপরাহ্ন';
+      return 'শুভ সন্ধ্যা';
+    }
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
+  const greetingPrefix = getGreetingPrefix();
+  let activeGreetingTitle = '';
+  if (user) {
+    const userName = user.displayName || user.email?.split('@')[0] || 'User_Name';
+    activeGreetingTitle = `${greetingPrefix}, ${userName}`;
+  } else {
+    if (
+      content.heroDashboardGreeting &&
+      !content.heroDashboardGreeting.includes('Tariqul Islam') &&
+      !content.heroDashboardGreeting.includes('তারিকুল ইসলাম')
+    ) {
+      activeGreetingTitle = content.heroDashboardGreeting;
+    } else {
+      activeGreetingTitle = `${greetingPrefix}, User_Name`;
+    }
+  }
+
+  // Slogan under greeting
+  let activeDashboardSlogan = '';
+  if (user) {
+    const compName = (company?.name || settingsCompanyName || 'TallyFlow ERP').toUpperCase();
+    const slog = (company as any)?.slogan || settingsSlogan;
+    activeDashboardSlogan = slog ? `${compName} | ${slog.toUpperCase()}` : compName;
+  } else {
+    activeDashboardSlogan = content.heroDashboardSlogan !== undefined ? content.heroDashboardSlogan : 'TALLYFLOW ERP | SMART SOLUTION';
+  }
 
   // Motion values for smooth 3D tilt tracking mouse
   const mouseX = useMotionValue(0);
@@ -502,21 +585,25 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
               
               {/* Top Left: Company Selector & Identity */}
               <div className="flex items-center gap-3 min-w-[200px]">
-                {content.heroDashboardAvatarInitials && (
-                  <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white text-xs font-black shadow-xs shrink-0">
-                    {content.heroDashboardAvatarInitials}
+                {activeCompanyLogo ? (
+                  <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white border border-slate-200 shadow-xs shrink-0 p-0.5">
+                    <img src={activeCompanyLogo} alt={activeCompanyName || 'Company Logo'} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                   </div>
-                )}
+                ) : companyInitials ? (
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white text-xs font-black shadow-xs shrink-0">
+                    {companyInitials}
+                  </div>
+                ) : null}
                 <div className="flex flex-col text-left">
-                  {content.heroDashboardCompanyName && (
+                  {activeCompanyName && (
                     <div className="flex items-center gap-1.5 font-black text-slate-900 text-xs sm:text-sm leading-none cursor-pointer hover:text-emerald-700 transition-colors">
-                      <span>{content.heroDashboardCompanyName}</span>
+                      <span>{activeCompanyName}</span>
                       <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
                     </div>
                   )}
-                  {content.heroDashboardCompanyLocation && (
+                  {activeCompanySub && (
                     <span className="text-[9px] font-mono text-slate-400 uppercase tracking-tight mt-0.5">
-                      {content.heroDashboardCompanyLocation}
+                      {activeCompanySub}
                     </span>
                   )}
                 </div>
@@ -548,14 +635,21 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
                   <span>3D Tilt: {is3DOrbitActive ? 'ON' : 'PAUSED'}</span>
                 </button>
 
-                {content.heroDashboardAvatarInitials && (
+                {activeUserAvatarUrl ? (
                   <div className="relative">
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-rose-600 to-amber-600 text-white font-bold flex items-center justify-center text-xs shadow-xs ring-2 ring-white cursor-pointer hover:ring-rose-200 transition-all">
-                      {content.heroDashboardAvatarInitials}
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border-2 border-white shadow-xs cursor-pointer hover:ring-2 hover:ring-rose-200 transition-all bg-slate-100">
+                      <img src={activeUserAvatarUrl} alt={user?.displayName || 'User'} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white absolute bottom-0 right-0" />
                   </div>
-                )}
+                ) : activeAvatarInitials ? (
+                  <div className="relative">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-rose-600 to-amber-600 text-white font-bold flex items-center justify-center text-xs shadow-xs ring-2 ring-white cursor-pointer hover:ring-rose-200 transition-all">
+                      {activeAvatarInitials}
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white absolute bottom-0 right-0" />
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -730,12 +824,8 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
                   </div>
                 </div>
 
-                {/* Sidebar Footer Usage & Collapse */}
+                {/* Sidebar Footer Collapse */}
                 <div className="mt-4 pt-3 border-t border-slate-200/80 space-y-2">
-                  <div className="px-2.5 py-1.5 bg-white rounded-md border border-slate-200/80 text-[9px] font-mono flex items-center justify-between text-slate-600">
-                    <span className="font-bold">USAGE (TODAY):</span>
-                    <span className="text-emerald-600 font-bold">0%</span>
-                  </div>
                   <div className="flex items-center justify-between px-2 text-[10px] text-slate-400">
                     <span className="flex items-center gap-1 hover:text-slate-600 cursor-pointer">
                       <PanelLeftClose className="w-3 h-3" /> Collapse
@@ -762,16 +852,16 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
                   )}
 
                   {/* Main User Greeting */}
-                  {content.heroDashboardGreeting && (
+                  {activeGreetingTitle && (
                     <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">
-                      {content.heroDashboardGreeting}
+                      {activeGreetingTitle}
                     </h1>
                   )}
 
                   {/* Slogan */}
-                  {content.heroDashboardSlogan && (
+                  {activeDashboardSlogan && (
                     <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 font-mono">
-                      {content.heroDashboardSlogan}
+                      {activeDashboardSlogan}
                     </p>
                   )}
 
@@ -800,7 +890,6 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
                           card.glowBorder,
                           activeCardHover === card.id && "ring-1 ring-primary/20 shadow-md"
                         )}
-                        onClick={onOpenDemoModal}
                       >
                         <div>
                           {/* Card Header with Icon and Category Badge */}

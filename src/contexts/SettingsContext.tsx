@@ -226,6 +226,7 @@ interface SettingsContextType {
   heroThreeUiShowFloatingBadges?: boolean;
   heroThreeUiShowExperienceHubDemo?: boolean;
   heroThreeUiShowSimulateVoucher?: boolean;
+  heroThreeUiEnableTiltDefault?: boolean;
   features: FeatureSettings[];
   appFeatures: FeatureCategory[];
   subscriptionPlans: SubscriptionPlan[];
@@ -411,6 +412,7 @@ const defaultSettings: SettingsContextType = {
   heroThreeUiShowFloatingBadges: true,
   heroThreeUiShowExperienceHubDemo: true,
   heroThreeUiShowSimulateVoucher: true,
+  heroThreeUiEnableTiltDefault: false,
   features: [],
   appFeatures: [],
   subscriptionPlans: [],
@@ -660,6 +662,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               heroThreeUiShowFloatingBadges: data.heroThreeUiShowFloatingBadges !== undefined ? !!data.heroThreeUiShowFloatingBadges : (prev.heroThreeUiShowFloatingBadges !== undefined ? prev.heroThreeUiShowFloatingBadges : true),
               heroThreeUiShowExperienceHubDemo: data.heroThreeUiShowExperienceHubDemo !== undefined ? !!data.heroThreeUiShowExperienceHubDemo : (prev.heroThreeUiShowExperienceHubDemo !== undefined ? prev.heroThreeUiShowExperienceHubDemo : true),
               heroThreeUiShowSimulateVoucher: data.heroThreeUiShowSimulateVoucher !== undefined ? !!data.heroThreeUiShowSimulateVoucher : (prev.heroThreeUiShowSimulateVoucher !== undefined ? prev.heroThreeUiShowSimulateVoucher : true),
+              heroThreeUiEnableTiltDefault: data.heroThreeUiEnableTiltDefault !== undefined ? !!data.heroThreeUiEnableTiltDefault : (prev.heroThreeUiEnableTiltDefault !== undefined ? prev.heroThreeUiEnableTiltDefault : false),
               maintenanceEnabled: data.maintenanceEnabled !== undefined ? !!data.maintenanceEnabled : false,
               maintenanceEndTime: data.maintenanceEndTime || '',
               maintenanceReason: data.maintenanceReason || '',

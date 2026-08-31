@@ -37,7 +37,8 @@ export const Home = () => {
     heroThreeUiShowParticles = true,
     heroThreeUiShowFloatingBadges = true,
     heroThreeUiShowExperienceHubDemo = true,
-    heroThreeUiShowSimulateVoucher = true
+    heroThreeUiShowSimulateVoucher = true,
+    heroThreeUiEnableTiltDefault = false
   } = useSettings();
 
   const DEFAULT_CONTENT = {
@@ -58,11 +59,12 @@ export const Home = () => {
     heroDashboardCompanyName: "TallyFlow ERP",
     heroDashboardCompanyLocation: "DHAKA, BANGLADESH",
     heroDashboardTitle: "DASHBOARD",
-    heroDashboardGreeting: language === 'bn' ? 'শুভ অপরাহ্ন, তারিকুল ইসলাম' : 'Good Afternoon, Tariqul Islam',
+    heroDashboardGreeting: language === 'bn' ? 'শুভ অপরাহ্ন, User_Name' : 'Good Afternoon, User_Name',
     heroDashboardBadgeText: "TALLYFLOW ENTERPRISE HUB",
     heroDashboardSlogan: "TALLYFLOW ERP | SMART SOLUTION",
     heroDashboardNotice: "SECURE CLOUD ENTERPRISE ENVIRONMENT • ACTIVE SESSION",
-    heroDashboardAvatarInitials: "TI",
+    heroDashboardAvatarInitials: "UN",
+    enable3dTilt: false,
     heroImage: "https://picsum.photos/seed/erp-hero-dashboard/1600/900",
     heroBgColor: "#020617",
     showHero: true,
@@ -341,6 +343,7 @@ export const Home = () => {
               showFloatingBadges={heroThreeUiShowFloatingBadges}
               showExperienceHubDemo={heroThreeUiShowExperienceHubDemo}
               showSimulateVoucher={heroThreeUiShowSimulateVoucher}
+              enableTiltDefault={heroThreeUiEnableTiltDefault ?? rawContent.enable3dTilt ?? false}
             />
           ) : (
           <section className="relative pt-28 sm:pt-36 pb-20 overflow-hidden bg-white">
