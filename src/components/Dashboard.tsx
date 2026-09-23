@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, Clock, Hammer, CheckCircle2, ListTodo, TrendingUp, RefreshCw, ChevronRight, Calculator, Bookmark, Pin, Layers, FileText, BookOpen, Sparkles, Cpu, Coins, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, AlertCircle, Clock, Hammer, CheckCircle2, ListTodo, TrendingUp, RefreshCw, ChevronRight, Calculator, Bookmark, Pin, Layers, FileText, BookOpen, Sparkles, Cpu, Coins, Trash2, BellRing } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -79,7 +79,9 @@ export function Dashboard() {
     showPinnedBookmarks = true,
     customControlCenterTheme = 'emerald',
     customWelcomeMessage = 'Executive Command Center',
-    splashSubDesign = 'grid'
+    splashSubDesign = 'grid',
+    showDashboardLowStockAlert = true,
+    showDashboardDueAlert = true
   } = useSettings();
   
   const dashboardDesign = globalDashboardDesign || localDesign;
@@ -150,6 +152,8 @@ export function Dashboard() {
   };
 
   const [refreshKey, setRefreshKey] = useState(0);
+  const [lowStockCount, setLowStockCount] = useState(0);
+  const [dueSummary, setDueSummary] = useState<{ totalDue: number; customerCount: number }>({ totalDue: 0, customerCount: 0 });
   const isInitialMount = React.useRef(true);
 
   useEffect(() => {
@@ -176,6 +180,36 @@ export function Dashboard() {
         ]);
         setOrders([]);
         setLoading(false);
+
+        // Also fetch lowStockCount and dueSummary for alert banners in Minimalist Splash
+        erpService.getItems(user.companyId).then(items => {
+          if (items && Array.isArray(items)) {
+            const count = items.filter((item: any) => {
+              const thresh = Number(item.low_stock_threshold ?? item.reorder_level ?? 0);
+              const stock = Number(item.current_stock || 0);
+              return thresh > 0 ? stock <= thresh : stock <= 0;
+            }).length;
+            setLowStockCount(count);
+          }
+        }).catch(() => {});
+
+        erpService.getLedgers(user.companyId).then(ledgers => {
+          if (ledgers && Array.isArray(ledgers)) {
+            let dueSum = 0;
+            let dueCusts = 0;
+            ledgers.forEach((l: any) => {
+              const bal = Number(l.current_balance ?? l.opening_balance ?? 0);
+              const gName = (l.group_name || l.ledger_groups?.name || '').toLowerCase();
+              const isDebtor = gName.includes('debtor') || gName.includes('customer') || gName.includes('client') || (l.nature === 'Asset' && bal > 0);
+              if (isDebtor && bal > 0) {
+                dueSum += bal;
+                dueCusts++;
+              }
+            });
+            setDueSummary({ totalDue: dueSum, customerCount: dueCusts });
+          }
+        }).catch(() => {});
+
         return;
       }
 
@@ -219,6 +253,42 @@ export function Dashboard() {
         setStats(s);
         setRecentVouchers(processed);
         setOrders(o || []);
+
+        // Check low stock count using cached items
+        try {
+          const items = await erpService.getItems(user.companyId);
+          if (items && Array.isArray(items)) {
+            const count = items.filter((item: any) => {
+              const thresh = Number(item.low_stock_threshold ?? item.reorder_level ?? 0);
+              const stock = Number(item.current_stock || 0);
+              return thresh > 0 ? stock <= thresh : stock <= 0;
+            }).length;
+            setLowStockCount(count);
+          }
+        } catch {
+          // Silent fallback
+        }
+
+        // Calculate due payments from cached ledgers
+        try {
+          const ledgers = await erpService.getLedgers(user.companyId);
+          if (ledgers && Array.isArray(ledgers)) {
+            let dueSum = 0;
+            let dueCusts = 0;
+            ledgers.forEach((l: any) => {
+              const bal = Number(l.current_balance ?? l.opening_balance ?? 0);
+              const gName = (l.group_name || l.ledger_groups?.name || '').toLowerCase();
+              const isDebtor = gName.includes('debtor') || gName.includes('customer') || gName.includes('client') || (l.nature === 'Asset' && bal > 0);
+              if (isDebtor && bal > 0) {
+                dueSum += bal;
+                dueCusts += 1;
+              }
+            });
+            setDueSummary({ totalDue: dueSum, customerCount: dueCusts });
+          }
+        } catch {
+          // Silent fallback
+        }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
       } finally {
@@ -367,6 +437,58 @@ export function Dashboard() {
 
         {/* Scrollable Data Area */}
         <div className="flex-1 p-4 lg:p-6 space-y-6 overflow-y-auto">
+          {/* Low Stock Warning Alert Banner */}
+          {showDashboardLowStockAlert !== false && lowStockCount > 0 && (
+            <div className="p-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all">
+              <div className="flex items-start gap-3.5">
+                <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-600 shrink-0">
+                  <AlertTriangle className="w-5 h-5 animate-pulse" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-black uppercase tracking-tight text-rose-600">
+                    Low Stock Warning: {lowStockCount} Item{lowStockCount > 1 ? 's' : ''} Below Reorder Level
+                  </p>
+                  <p className="text-[11px] text-rose-700/80 dark:text-rose-300/80 leading-relaxed">
+                    Inventory items have reached or fallen below safety thresholds. Review and replenish immediately to prevent order fulfillment disruption.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/inventory?filter=lowStock')}
+                className="px-4 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-rose-700 transition-colors flex items-center gap-1.5 shrink-0 shadow-xs"
+              >
+                <span>Review Stock & Reorder</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Due Payment Alert Banner */}
+          {showDashboardDueAlert !== false && dueSummary.customerCount > 0 && (
+            <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all">
+              <div className="flex items-start gap-3.5">
+                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-600 shrink-0">
+                  <AlertCircle className="w-5 h-5 animate-pulse" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-black uppercase tracking-tight text-amber-600">
+                    Due Payment Reminder: {dueSummary.customerCount} Customer{dueSummary.customerCount > 1 ? 's' : ''} with Overdue Receivables ({dueSummary.totalDue.toLocaleString()} BDT)
+                  </p>
+                  <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
+                    Customer payment dues are pending. Send automated payment reminders via WhatsApp, Phone SMS, and Email with formal demand notices.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/reports/due-payments')}
+                className="px-4 py-2 bg-amber-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-amber-700 transition-colors flex items-center gap-1.5 shrink-0 shadow-xs"
+              >
+                <span>Send Due Reminders</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Active Alert Desk */}
           <div className={cn("p-4.5 rounded-2xl border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all", isDark ? "bg-cyan-950/10 border-cyan-500/20" : "bg-white border-border shadow-sm")}>
             <div className="flex items-start gap-3.5">
@@ -380,6 +502,14 @@ export function Dashboard() {
                 </p>
               </div>
             </div>
+            <button
+              onClick={() => navigate('/reports/audit-trail')}
+              className="px-3.5 py-2 border border-border bg-card hover:bg-muted/50 rounded-xl text-xs font-bold text-foreground transition-all flex items-center gap-1.5 shrink-0 shadow-xs"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-500" />
+              <span>{language === 'bn' ? 'অডিট ট্রেইল লগ' : 'Audit Trail Logs'}</span>
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+            </button>
           </div>
 
           {/* Quick Workflows Grid & Control Console */}
@@ -707,7 +837,29 @@ export function Dashboard() {
         icon: Clock,
         url: '/reports/daybook',
         color: 'from-violet-500 to-fuchsia-500',
-        badge: 'Audit Trail'
+        badge: 'Daybook'
+      },
+      {
+        id: 'due-payments',
+        title: 'Due Payment Alerts',
+        desc: 'Follow up receivables with WhatsApp, SMS, & Demand Notices',
+        descNeon: 'DISPATCH RECEIVABLE REMINDERS',
+        descEditorial: 'Customer overdue balances & legal demand notices',
+        icon: BellRing,
+        url: '/reports/due-payments',
+        color: 'from-amber-500 to-rose-500',
+        badge: 'Reminders'
+      },
+      {
+        id: 'audit-trail',
+        title: 'Audit Trail & Logs',
+        desc: 'Track voucher changes, deletions & certified activity logs',
+        descNeon: 'MONITOR AUDIT INTEGRITY STREAM',
+        descEditorial: 'Chronological activity stream & auditor logs',
+        icon: ShieldCheck,
+        url: '/reports/audit-trail',
+        color: 'from-emerald-500 to-teal-500',
+        badge: 'Compliance'
       },
       {
         id: 'settings',
@@ -756,8 +908,42 @@ export function Dashboard() {
 
             <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent w-full" />
 
+            {/* Critical Telemetry Alerts in Neon Minimalist Splash */}
+            {( (showDashboardLowStockAlert !== false && lowStockCount > 0) || (showDashboardDueAlert !== false && dueSummary.customerCount > 0) ) && (
+              <div className="space-y-2">
+                {showDashboardLowStockAlert !== false && lowStockCount > 0 && (
+                  <button
+                    onClick={() => navigate('/inventory?filter=lowStock')}
+                    className="w-full flex items-center justify-between p-3.5 bg-rose-950/40 border border-rose-500/40 hover:border-rose-400 rounded-xl text-left text-rose-300 font-mono text-xs transition-all shadow-[0_0_15px_rgba(244,63,94,0.15)] group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <AlertTriangle className="w-4 h-4 text-rose-400 animate-pulse shrink-0" />
+                      <span><strong>[STOCK DEFICIT ALERT]:</strong> {lowStockCount} inventory items at or below reorder threshold</span>
+                    </div>
+                    <span className="text-[10px] text-rose-400 uppercase font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                      REQUISITION STREAM &rarr;
+                    </span>
+                  </button>
+                )}
+                {showDashboardDueAlert !== false && dueSummary.customerCount > 0 && (
+                  <button
+                    onClick={() => navigate('/reports/due-payments')}
+                    className="w-full flex items-center justify-between p-3.5 bg-amber-950/40 border border-amber-500/40 hover:border-amber-400 rounded-xl text-left text-amber-300 font-mono text-xs transition-all shadow-[0_0_15px_rgba(245,158,11,0.15)] group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <BellRing className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
+                      <span><strong>[RECEIVABLES OVERDUE]:</strong> {dueSummary.customerCount} customers have overdue balance (৳{dueSummary.totalDue.toLocaleString()})</span>
+                    </div>
+                    <span className="text-[10px] text-amber-400 uppercase font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                      DISPATCH NOTICES &rarr;
+                    </span>
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Bento cybergrid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {shortcuts.map(sc => {
                 const Icon = sc.icon;
                 return (
@@ -838,6 +1024,34 @@ export function Dashboard() {
 
               {/* Right Column List Menu */}
               <div className="lg:col-span-7 space-y-3">
+                {showDashboardLowStockAlert !== false && lowStockCount > 0 && (
+                  <button
+                    onClick={() => navigate('/inventory?filter=lowStock')}
+                    className="w-full text-left p-3.5 bg-rose-50 border border-rose-200 hover:border-rose-400 rounded-xl flex items-center justify-between group transition-all text-rose-900 text-xs font-serif shadow-xs"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span><strong>Stock Notice:</strong> {lowStockCount} item{lowStockCount > 1 ? 's' : ''} have reached minimum reorder quantity.</span>
+                    </div>
+                    <span className="text-[11px] font-sans font-bold underline group-hover:translate-x-0.5 transition-transform">
+                      Review &rarr;
+                    </span>
+                  </button>
+                )}
+                {showDashboardDueAlert !== false && dueSummary.customerCount > 0 && (
+                  <button
+                    onClick={() => navigate('/reports/due-payments')}
+                    className="w-full text-left p-3.5 bg-amber-50 border border-amber-200 hover:border-amber-400 rounded-xl flex items-center justify-between group transition-all text-amber-900 text-xs font-serif shadow-xs"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <BellRing className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span><strong>Receivables Alert:</strong> {dueSummary.customerCount} customers with overdue balances.</span>
+                    </div>
+                    <span className="text-[11px] font-sans font-bold underline group-hover:translate-x-0.5 transition-transform">
+                      Reminders &rarr;
+                    </span>
+                  </button>
+                )}
                 {shortcuts.map(sc => {
                   const Icon = sc.icon;
                   return (
@@ -911,8 +1125,42 @@ export function Dashboard() {
 
           <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent w-full" />
 
-          {/* Main shortcuts grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Alert banners in Minimalist Splash Grid */}
+          {( (showDashboardLowStockAlert !== false && lowStockCount > 0) || (showDashboardDueAlert !== false && dueSummary.customerCount > 0) ) && (
+            <div className="space-y-2.5">
+              {showDashboardLowStockAlert !== false && lowStockCount > 0 && (
+                <button
+                  onClick={() => navigate('/inventory?filter=lowStock')}
+                  className="w-full flex items-center justify-between p-3.5 bg-rose-50 border border-rose-200/90 hover:border-rose-400 rounded-xl text-left text-rose-800 text-xs font-medium transition-all shadow-xs group cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 animate-bounce shrink-0" />
+                    <span><strong>Low Stock Warning:</strong> {lowStockCount} Item{lowStockCount > 1 ? 's' : ''} currently below reorder level.</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-rose-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    Review Stock & Reorder <ChevronRight className="w-3.5 h-3.5" />
+                  </span>
+                </button>
+              )}
+              {showDashboardDueAlert !== false && dueSummary.customerCount > 0 && (
+                <button
+                  onClick={() => navigate('/reports/due-payments')}
+                  className="w-full flex items-center justify-between p-3.5 bg-amber-50/80 border border-amber-200/90 hover:border-amber-400 rounded-xl text-left text-amber-900 text-xs font-medium transition-all shadow-xs group cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <BellRing className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span><strong>Due Receivables Alert:</strong> {dueSummary.customerCount} customers have overdue balance (৳{dueSummary.totalDue.toLocaleString()}).</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-amber-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    Send Reminders <ChevronRight className="w-3.5 h-3.5" />
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Main shortcuts grid - 8 items in 4 columns on large screens */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {shortcuts.map(sc => {
               const Icon = sc.icon;
               return (

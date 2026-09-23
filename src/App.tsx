@@ -58,6 +58,8 @@ import { StockItemReport } from './components/StockItemReport';
 import { BalanceSheet } from './components/BalanceSheet';
 import { ProfitAndLoss } from './components/ProfitAndLoss';
 import { LedgerStatement } from './components/LedgerStatement';
+import { DuePaymentAlerts } from './components/DuePaymentAlerts';
+import { AuditTrail } from './components/AuditTrail';
 import { ChartOfAccounts } from './components/ChartOfAccounts';
 import { Settings } from './components/Settings';
 import { GoToSearch } from './components/GoToSearch';
@@ -119,6 +121,8 @@ import InventoryAdvanced from './pages/InventoryAdvanced';
 import DataCenter from './pages/DataCenter';
 import AIInsights from './pages/AIInsights';
 import SystemGuideFloatingButton from './components/SystemGuideFloatingButton';
+import { WhatsNewModal } from './components/WhatsNewModal';
+import { ReleaseNotes } from './components/ReleaseNotes';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
@@ -2477,6 +2481,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       <GoToSearch />
       <QuotaDashboardModal isOpen={isQuotaDashboardOpen} onClose={() => setIsQuotaDashboardOpen(false)} company={company} />
       <QuotaExceededModal isOpen={isQuotaModalOpen} onClose={() => setIsQuotaModalOpen(false)} company={company} />
+      <WhatsNewModal />
       {isOffline && (
         <div id="offline-toast" className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] animate-in fade-in slide-in-from-bottom-5 duration-300">
           <div className="bg-slate-900 border border-slate-800 text-slate-100 pl-4 pr-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 select-none">
@@ -2605,6 +2610,8 @@ function AppContent() {
         <Route path="/docs" element={<HelpPage />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/instructions" element={<HelpPage />} />
+        <Route path="/release-notes" element={<ReleaseNotes />} />
+        <Route path="/whats-new" element={<ReleaseNotes />} />
         
         {/* Auth Pages */}
         <Route path="/login" element={
@@ -2712,6 +2719,7 @@ function ProtectedRoute() {
           <Route path="/vouchers/view/:id" element={<FeatureGuard permission="acc_reports_view"><VoucherDetail /></FeatureGuard>} />
           <Route path="/accounts/ledgers/new" element={<FeatureGuard permission="acc_masters_create"><LedgerCreation /></FeatureGuard>} />
           <Route path="/accounts/ledgers/edit/:id" element={<FeatureGuard permission="acc_masters_alter"><LedgerCreation /></FeatureGuard>} />
+          <Route path="/inventory" element={<FeatureGuard feature="inv" permission="inv_masters_view"><ItemMaster /></FeatureGuard>} />
           <Route path="/inventory/items" element={<FeatureGuard feature="inv" permission="inv_masters_view"><ItemMaster /></FeatureGuard>} />
           <Route path="/inventory/items/new" element={<FeatureGuard feature="inv" permission="inv_masters_create"><ItemCreation /></FeatureGuard>} />
           <Route path="/inventory/items/edit/:id" element={<FeatureGuard feature="inv" permission="inv_masters_alter"><ItemCreation /></FeatureGuard>} />
@@ -2731,6 +2739,10 @@ function ProtectedRoute() {
           <Route path="/production/orders/edit/:id" element={<FeatureGuard feature="ord" permission="ord_alter"><OrderEntry /></FeatureGuard>} />
           <Route path="/production/reports" element={<FeatureGuard feature="ord" permission="ord_reports"><OrderReports /></FeatureGuard>} />
           <Route path="/reports/ledger" element={<FeatureGuard permission="acc_reports_view"><LedgerStatement /></FeatureGuard>} />
+          <Route path="/reports/due-payments" element={<FeatureGuard permission="acc_reports_view"><DuePaymentAlerts /></FeatureGuard>} />
+          <Route path="/due-payments" element={<Navigate to="/reports/due-payments" replace />} />
+          <Route path="/reports/audit-trail" element={<FeatureGuard permission="acc_reports_view"><AuditTrail /></FeatureGuard>} />
+          <Route path="/audit-trail" element={<Navigate to="/reports/audit-trail" replace />} />
           <Route path="/reports/cash-bank" element={<FeatureGuard permission="acc_reports_view"><CashBankBooks /></FeatureGuard>} />
           <Route path="/reports/trial-balance" element={<FeatureGuard permission="acc_reports_view"><TrialBalance /></FeatureGuard>} />
           <Route path="/reports/stock-item" element={<FeatureGuard feature="inv" permission="inv_reports_view"><StockItemReport /></FeatureGuard>} />
@@ -2788,6 +2800,8 @@ function ProtectedRoute() {
            <Route path="/notifications" element={<NotificationPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/instructions" element={<HelpPage />} />
+          <Route path="/release-notes" element={<ReleaseNotes />} />
+          <Route path="/whats-new" element={<ReleaseNotes />} />
           <Route path="/profile" element={<UserProfile />} />
           <Route path="*" element={
             <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">

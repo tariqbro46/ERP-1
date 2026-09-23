@@ -2,18 +2,26 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, X, Search, Keyboard, FileText, 
-  Lightbulb, ExternalLink, ChevronDown, ChevronUp, HelpCircle 
+  Lightbulb, ExternalLink, ChevronDown, ChevronUp, HelpCircle,
+  AlertTriangle, BellRing, Sparkles, Sliders, Eye, EyeOff, Check
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
 export default function SystemGuideFloatingButton() {
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const { 
+    showDashboardLowStockAlert = true, 
+    showDashboardDueAlert = true, 
+    updateSettings 
+  } = useSettings();
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'quick' | 'hotkeys'>('quick');
+  const [activeTab, setActiveTab] = useState<'quick' | 'alerts' | 'hotkeys'>('quick');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     'dash': false,
     'vouch': false,
@@ -184,27 +192,45 @@ export default function SystemGuideFloatingButton() {
                   type="button"
                   onClick={() => setActiveTab('quick')}
                   className={cn(
-                    "flex-1 text-center py-1.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5",
+                    "flex-1 text-center py-1.5 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1",
                     activeTab === 'quick' 
                       ? "bg-background text-foreground shadow-sm" 
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  <span>{isBn ? 'কুইক গাইড' : 'Quick Guide'}</span>
+                  <span>{isBn ? 'গাইড' : 'Guide'}</span>
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('alerts')}
+                  className={cn(
+                    "flex-1 text-center py-1.5 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1",
+                    activeTab === 'alerts' 
+                      ? "bg-background text-foreground shadow-sm" 
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Sliders className="w-3.5 h-3.5 text-amber-500" />
+                  <span>{isBn ? 'অ্যালার্টস' : 'Alerts'}</span>
+                  {(showDashboardLowStockAlert || showDashboardDueAlert) && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  )}
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setActiveTab('hotkeys')}
                   className={cn(
-                    "flex-1 text-center py-1.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1.5",
+                    "flex-1 text-center py-1.5 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1",
                     activeTab === 'hotkeys' 
                       ? "bg-background text-foreground shadow-sm" 
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <Keyboard className="w-3.5 h-3.5" />
-                  <span>{isBn ? 'ইনস্ট্যান্ট কি-বোর্ড' : 'Hotkeys'}</span>
+                  <span>{isBn ? 'শর্টকাট' : 'Hotkeys'}</span>
                 </button>
               </div>
             </div>
@@ -291,6 +317,137 @@ export default function SystemGuideFloatingButton() {
                       {isBn ? 'কোনো ফলাফল পাওয়া যায়নি' : 'No guidelines match'}
                     </div>
                   )}
+                </div>
+              ) : activeTab === 'alerts' ? (
+                /* Alerts Control Tab */
+                <div className="space-y-3">
+                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/80">
+                    <span className="text-[11px] font-bold text-foreground block">
+                      {isBn ? 'ড্যাশবোর্ড অ্যালার্টস দৃশ্যমানতা (Desktop)' : 'Dashboard Alert Controls (Desktop)'}
+                    </span>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
+                      {isBn 
+                        ? 'ড্যাশবোর্ডের উপরে প্রদর্শিত সতর্কবার্তা ব্যানার আপনার সুবিধার্থে অন বা অফ করুন।' 
+                        : 'Toggle warning alert banners on your dashboard view according to preference.'}
+                    </p>
+                  </div>
+
+                  {/* Low Stock Warning Toggle */}
+                  <div className="p-3 rounded-xl border border-border bg-card hover:border-rose-500/40 transition-all space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-rose-500/15 text-rose-600">
+                          <AlertTriangle className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground">
+                            {isBn ? 'Low Stock Warning (লো-স্টক সতর্কতা)' : 'Low Stock Warning'}
+                          </h4>
+                          <span className={cn(
+                            "text-[9px] font-bold font-mono px-1.5 py-0.2 rounded",
+                            showDashboardLowStockAlert 
+                              ? "bg-emerald-500/15 text-emerald-600" 
+                              : "bg-muted text-muted-foreground"
+                          )}>
+                            {showDashboardLowStockAlert 
+                              ? (isBn ? 'প্রদর্শিত (Show)' : 'Show') 
+                              : (isBn ? 'লুকায়িত (Hide)' : 'Hide')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => updateSettings({ showDashboardLowStockAlert: !showDashboardLowStockAlert })}
+                        className={cn(
+                          "w-11 h-6 rounded-full transition-colors relative cursor-pointer focus:outline-hidden",
+                          showDashboardLowStockAlert ? "bg-rose-600" : "bg-muted-foreground/30"
+                        )}
+                        title={showDashboardLowStockAlert ? "Hide Low Stock Alert" : "Show Low Stock Alert"}
+                      >
+                        <div className={cn(
+                          "w-4 h-4 rounded-full bg-white transition-transform absolute top-1 shadow-sm",
+                          showDashboardLowStockAlert ? "left-6" : "left-1"
+                        )} />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      {isBn 
+                        ? 'রিঅর্ডার সীমার নিচে নেমে যাওয়া পণ্যের লাল সতর্কবার্তা ব্যানার।' 
+                        : 'Red warning alert when items fall below safety threshold.'}
+                    </p>
+                  </div>
+
+                  {/* Due Receivables Alert Toggle */}
+                  <div className="p-3 rounded-xl border border-border bg-card hover:border-amber-500/40 transition-all space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-600">
+                          <BellRing className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground">
+                            {isBn ? 'Due Receivables Alert (বকেয়া দেনাদার সতর্কতা)' : 'Due Receivables Alert'}
+                          </h4>
+                          <span className={cn(
+                            "text-[9px] font-bold font-mono px-1.5 py-0.2 rounded",
+                            showDashboardDueAlert 
+                              ? "bg-emerald-500/15 text-emerald-600" 
+                              : "bg-muted text-muted-foreground"
+                          )}>
+                            {showDashboardDueAlert 
+                              ? (isBn ? 'প্রদর্শিত (Show)' : 'Show') 
+                              : (isBn ? 'লুকায়িত (Hide)' : 'Hide')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => updateSettings({ showDashboardDueAlert: !showDashboardDueAlert })}
+                        className={cn(
+                          "w-11 h-6 rounded-full transition-colors relative cursor-pointer focus:outline-hidden",
+                          showDashboardDueAlert ? "bg-amber-600" : "bg-muted-foreground/30"
+                        )}
+                        title={showDashboardDueAlert ? "Hide Due Receivables Alert" : "Show Due Receivables Alert"}
+                      >
+                        <div className={cn(
+                          "w-4 h-4 rounded-full bg-white transition-transform absolute top-1 shadow-sm",
+                          showDashboardDueAlert ? "left-6" : "left-1"
+                        )} />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      {isBn 
+                        ? 'মেয়াদোত্তীর্ণ কাস্টমার ব্যালেন্স ও বকেয়া দেনার কমলা সতর্কবার্তা ব্যানার।' 
+                        : 'Amber warning alert when debtor customers have overdue balances.'}
+                    </p>
+                  </div>
+
+                  {/* Release Notes Link */}
+                  <div className="p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/5 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-indigo-500 shrink-0" />
+                      <div>
+                        <h5 className="text-[11px] font-bold text-foreground">
+                          {isBn ? 'নতুন আপডেট রিলিজ নোটস' : "What's New in Updates"}
+                        </h5>
+                        <p className="text-[9px] text-muted-foreground">
+                          {isBn ? 'নতুন ফিচার ও পরিবর্তনের তালিকা' : 'Inspect feature & bug fix log'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        navigate('/release-notes');
+                      }}
+                      className="px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-colors shrink-0"
+                    >
+                      {isBn ? 'দেখুন' : 'View'}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 /* Hotkeys tab */

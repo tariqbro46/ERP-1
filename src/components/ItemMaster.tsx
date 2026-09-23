@@ -2,21 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Package, Search, Edit2, Plus, Loader2, Filter, Activity } from 'lucide-react';
+import { Package, Search, Edit2, Plus, Loader2, Filter, Activity, AlertTriangle, X } from 'lucide-react';
 import { SkeletonLoader } from './SkeletonLoader';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { cn, formatNumber } from '../lib/utils';
 
 export function ItemMaster() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { t } = useLanguage();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [lowStockOnly, setLowStockOnly] = useState(() => searchParams.get('filter') === 'lowStock');
   const [viewMode, setViewMode] = useState<'master' | 'pricelist'>('master');
   const [recalculating, setRecalculating] = useState(false);
+
+  useEffect(() => {
+    setLowStockOnly(searchParams.get('filter') === 'lowStock');
+  }, [searchParams]);
 
   const handleRecalculateAll = async () => {
     if (!user?.companyId) return;
@@ -68,12 +74,21 @@ export function ItemMaster() {
 
   const categories = ['All', ...Array.from(new Set(items.map(i => i.category)))];
 
+  const isItemLowStock = (item: any) => {
+    const thresh = Number(item.low_stock_threshold ?? item.reorder_level ?? 0);
+    const stock = Number(item.current_stock || 0);
+    return thresh > 0 ? stock <= thresh : stock <= 0;
+  };
+
+  const lowStockCount = items.filter(isItemLowStock).length;
+
   const filteredItems = items
     .filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
                            item.part_no?.toLowerCase().includes(search.toLowerCase());
       const matchesCategory = categoryFilter === 'All' || item.category === categoryFilter;
-      return matchesSearch && matchesCategory;
+      const matchesLowStock = !lowStockOnly || isItemLowStock(item);
+      return matchesSearch && matchesCategory && matchesLowStock;
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -94,7 +109,7 @@ export function ItemMaster() {
                 className="w-full bg-gray-50 border border-border text-foreground pl-10 pr-4 py-2 text-[10px] outline-none focus:border-foreground transition-all uppercase tracking-widest rounded-lg animate-fadeIn"
               />
             </div>
-            <div className="relative w-48 flex-shrink-0">
+            <div className="relative w-40 flex-shrink-0">
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <select 
                 value={categoryFilter}
@@ -106,6 +121,38 @@ export function ItemMaster() {
                 ))}
               </select>
             </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const nextState = !lowStockOnly;
+                setLowStockOnly(nextState);
+                if (nextState) {
+                  setSearchParams({ filter: 'lowStock' });
+                } else {
+                  searchParams.delete('filter');
+                  setSearchParams(searchParams);
+                }
+              }}
+              className={cn(
+                "px-3 py-2 border text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 shrink-0",
+                lowStockOnly 
+                  ? "bg-rose-500 text-white border-rose-600 shadow-sm" 
+                  : "bg-gray-50 border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+              title="Filter low stock and reorder level items"
+            >
+              <AlertTriangle className={cn("w-3.5 h-3.5", lowStockOnly ? "text-white" : "text-rose-500")} />
+              <span>{lowStockOnly ? 'Low Stock Filter' : 'Low Stock'}</span>
+              {lowStockCount > 0 && (
+                <span className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[9px] font-bold font-mono",
+                  lowStockOnly ? "bg-white text-rose-600" : "bg-rose-500/20 text-rose-600"
+                )}>
+                  {lowStockCount}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Right part: View modes, Recalculate, Create Item */}
@@ -152,6 +199,29 @@ export function ItemMaster() {
       {/* Scrollable Content Section */}
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <div className="px-4 lg:px-6 pb-4 lg:pb-6">
+          {lowStockOnly && (
+            <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-between gap-3 text-xs text-rose-700 dark:text-rose-300 animate-fadeIn">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                <span>
+                  <strong>Low Stock Warning Filter:</strong> Showing {filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''} at or below minimum reorder threshold.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setLowStockOnly(false);
+                  searchParams.delete('filter');
+                  setSearchParams(searchParams);
+                }}
+                className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 hover:bg-rose-500/30 text-rose-800 dark:text-rose-200 px-2.5 py-1 rounded-md transition-colors"
+              >
+                <span>Show All Items</span>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           <div className="bg-card border border-border">
           {loading ? (
             <SkeletonLoader type="table" />
@@ -188,12 +258,19 @@ export function ItemMaster() {
                       </div>
                       <div className="text-right">
                         <p className="text-[9px] text-gray-500 uppercase tracking-widest">{t('item.currentStock')}</p>
-                        <p className={cn(
-                          "text-sm font-bold font-mono",
-                          item.current_stock > 0 ? "text-emerald-500" : "text-rose-500"
-                        )}>
-                          {formatNumber(item.current_stock)} <span className="text-[10px] uppercase">{item.units?.name}</span>
-                        </p>
+                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                          {isItemLowStock(item) && (
+                            <span className="text-[8px] font-bold uppercase tracking-wider px-1 py-0.2 rounded bg-rose-500/15 text-rose-600 border border-rose-500/20">
+                              Low
+                            </span>
+                          )}
+                          <p className={cn(
+                            "text-sm font-bold font-mono",
+                            item.current_stock > 0 ? (isItemLowStock(item) ? "text-amber-600 dark:text-amber-400" : "text-emerald-500") : "text-rose-500"
+                          )}>
+                            {formatNumber(item.current_stock)} <span className="text-[10px] uppercase">{item.units?.name}</span>
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -248,12 +325,19 @@ export function ItemMaster() {
                           ৳ {formatNumber(item.opening_rate)}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <p className={cn(
-                            "text-[11px] font-bold font-mono",
-                            item.current_stock > 0 ? "text-emerald-500" : "text-rose-500"
-                          )}>
-                            {formatNumber(item.current_stock)}
-                          </p>
+                          <div className="flex items-center justify-end gap-1.5">
+                            {isItemLowStock(item) && (
+                              <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-500/15 text-rose-600 border border-rose-500/20">
+                                Low
+                              </span>
+                            )}
+                            <p className={cn(
+                              "text-[11px] font-bold font-mono",
+                              item.current_stock > 0 ? (isItemLowStock(item) ? "text-amber-600 dark:text-amber-400" : "text-emerald-500") : "text-rose-500"
+                            )}>
+                              {formatNumber(item.current_stock)}
+                            </p>
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-right text-[11px] text-gray-400 font-mono">
                           ৳ {formatNumber(item.avg_cost)}

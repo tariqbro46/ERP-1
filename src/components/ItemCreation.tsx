@@ -144,6 +144,9 @@ export function ItemCreation() {
       // Clean data for saving
       const { units: _u, id: _id, created_at: _ca, current_stock: _cs, avg_cost: _ac, ...cleanData } = formData as any;
       
+      cleanData.low_stock_threshold = Number(formData.low_stock_threshold ?? formData.reorder_level ?? 0);
+      cleanData.reorder_level = Number(formData.low_stock_threshold ?? formData.reorder_level ?? 0);
+
       // Ensure unit_name is included
       const selectedUnit = units.find(u => u.id === formData.unit_id);
       if (selectedUnit) {

@@ -55,6 +55,18 @@ export const HELP_CONTENT: Record<string, HelpSection> = {
   "/payroll": {
     en: "Payroll Maintenance Guide:\n1. Employee Setup: Add/Update employees with basic salary and joining dates.\n2. Attendance Entry: Mark daily attendance (Present/Absent/Leave) in the Attendance tab. This affects 'On Attendance' pay heads.\n3. Pay Heads & Structures: Define custom earnings (e.g., HRA) and setup each employee's salary package.\n4. Advance & Loans: Record any employee advances or loans. EMI will be auto-deducted from salary.\n5. Salary Generation: Use 'Bulk View' to generate all pending sheets for the month. All calculations are automated based on attendance and structure.\n6. Distribution: Print or send payslips via WhatsApp/Email.",
     bn: "পেরোল ম্যানেজমেন্ট নির্দেশিকা:\n১. কর্মচারী সেটআপ: বেসিক স্যালারি এবং যোগদানের তারিখ সহ কর্মচারী যোগ করুন বা আপডেট করুন।\n২. উপস্থিতি এন্ট্রি: অ্যাটেনডেন্স ট্যাবে প্রতিদিনের উপস্থিতি (উপস্থিত/অনুপস্থিত/ছুটি) মার্ক করুন। এটি 'উপস্থিতি ভিত্তিক' পে-হেডগুলোকে প্রভাবিত করে।\n৩. পে-হেড এবং কাঠামো: কাস্টম আয় (যেমন: বাড়ি ভাড়া) সংজ্ঞায়িত করুন এবং প্রতিটি কর্মচারীর স্যালারি প্যাকেজ সেটআপ করুন।\n৪. অগ্রিম ও ঋণ: কর্মচারীর অগ্রিম বা ঋণ রেকর্ড করুন। ইএমআই (EMI) বেতন থেকে স্বয়ংক্রিয়ভাবে কাটা হবে।\n৫. বেতন জেনারেশন: মাসের সমস্ত পেন্ডিং শিট তৈরি করতে 'Bulk View' ব্যবহার করুন। উপস্থিতি এবং কাঠামোর উপর ভিত্তি করে সমস্ত গণনা স্বয়ংক্রিয়।\n৬. বিতরণ: পে-স্লিপ প্রিন্ট করুন অথবা হোয়াটসঅ্যাপ/ইমেলের মাধ্যমে পাঠান।"
+  },
+  "/reports/due-payments": {
+    en: "Customer Overdue & Due Payment Recovery Hub:\n1. Overdue Aging Analysis: Automatically categorizes unpaid customer balances into 0-15 Days, 16-30 Days, 31-60 Days, and 60+ Days (Critical).\n2. Automated Reminders: Dispatch polite, formal, or urgent payment reminders directly via WhatsApp, SMS, or Email in 1 click.\n3. Legal Demand Notices: Generate formal printed payment demand letters with bank routing and overdue breakdown on company letterhead.\n4. Call Log Records: Track every phone follow-up with customer response remarks and scheduled promise-to-pay dates.",
+    bn: "বকেয়া আদায় ও দেনাদার ব্যবস্থাপনা হাব:\n১. বকেয়ার বয়স ভিত্তিক বিশ্লেষণ (Aging): অনাদায়ী পাওনা স্বয়ংক্রিয়ভাবে ০-১৫ দিন, ১৬-৩০ দিন, ৩১-৬০ দিন এবং ৬০+ দিন (ঝুঁকিপূর্ণ) ক্যাটাগরিতে বিভক্ত করে।\n২. অটোমেটেড রিমাইন্ডার: ১ ক্লিকেই হোয়াটসঅ্যাপ, এসএমএস বা ইমেলের মাধ্যমে নমনীয়, তাগাদা বা জরুরি রিমাইন্ডার মেসেজ পাঠান।\n৩. লিগ্যাল ডিমান্ড নোটিশ: কোম্পানির নিজস্ব লেটারহেডে ব্যাংক অ্যাকাউন্ট ও বকেয়া চালান উল্লেখসহ আনুষ্ঠানিক আইনি তাগাদাপত্র তৈরি ও প্রিন্ট করুন।\n৪. কল লগ রেকর্ড: কাস্টমারের সাথে ফোনে কথা বলার পর তাদের বক্তব্য ও পরবর্তী পেমেন্টের সম্ভাব্য তারিখ ডায়রিতে লিখে রাখুন।"
+  },
+  "/reports/audit-trail": {
+    en: "Statutory Audit Trail & Historical Transaction Log:\n1. Immutable Event Logging: Captures every Create, Update, Delete, and Cancel action with timestamp, IP, and authorized User ID.\n2. Deep Diff Inspection: Compare before and after values for altered vouchers down to the individual ledger row and amount.\n3. Auditor Review Notes: Qualified internal and statutory auditors can append review remarks without altering financial books.\n4. Regulatory Compliance: Meets MCA, GST, and ISO accounting audit trail compliance standards.",
+    bn: "বিধিবদ্ধ অডিট ট্রেইল ও কার্যক্রমের ইতিহাস সংরক্ষণ:\n১. অপরিবর্তনীয় ইভেন্ট লগ: প্রতিটি ভাউচার তৈরি, পরিবর্তন বা মুছে ফেলার সাথে সাথে তারিখ, সময়, ইউজার আইডি ও আইপি রেকর্ড করে।\n২. পরিবর্তন তুলনামূলক নিরীক্ষা: কোনো ভাউচার সংশোধন করা হলে আগের তথ্য এবং বর্তমান তথ্যের নিখুঁত পার্থক্য খতিয়ে দেখুন।\n৩. অডিটর রিভিউ নোট: অভ্যন্তরীণ বা সরকারি নিরীক্ষক হিসাবের মূল খতিয়ান পরিবর্তন না করেই নিজস্ব মতামত ও মন্তব্য সংরক্ষণ করতে পারবেন।\n৪. প্রাতিষ্ঠানিক কমপ্লায়েন্স: আয়কর, ভ্যাট এবং ISO স্ট্যান্ডার্ডের ডিজিটাল অডিট ট্রেইল নীতিমালা শতভাগ পূরণ করে।"
+  },
+  "/inventory": {
+    en: "Inventory Overview & Stock Health Monitor:\n1. Real-Time Stock Status: Live monitoring of current quantity, reserved quantity, and stock valuation.\n2. Low Stock Alerts: Instant visual alerts for items falling below minimum safety threshold with 1-click Requisition Print.\n3. Negative Stock Prevention: Real-time warnings during sales voucher entry to eliminate negative balances.\n4. Multi-Warehouse Tracking: Track balances per godown with automated stock valuation (FIFO/Moving Average).",
+    bn: "ইনভেন্টরি সার্বিক অবস্থা ও স্টক মনিটরিং:\n১. রিয়েল-টাইম স্টক স্ট্যাটাস: প্রতিটি আইটেমের বর্তমান স্টক, সংরক্ষিত স্টক এবং মোট মজুত মূল্য পর্যবেক্ষণ করুন।\n২. লো-স্টক সতর্কতা: স্টক রিঅর্ডার লেভেলের নিচে নামার সাথে সাথে সতর্কবার্তা এবং ১ ক্লিকে সাপ্লায়ার রিকুইজিশন তৈরি ও প্রিন্ট করুন।\n৩. ঘাটতি স্টক প্রতিরোধ: সেলস ভাউচার এন্ট্রির সময় সরাসরি সতর্কতা যাতে গোডাউনে নেগেটিভ স্টক না হয়।\n৪. মাল্টি-গোডাউন ব্যবস্থাপনা: একাধিক গুদামের আলাদা স্টক পর্যবেক্ষণ এবং স্বয়ংক্রিয় স্টক ভ্যালুয়েশন।"
   }
 };
 
@@ -430,6 +442,53 @@ export const HELP_DOCS: DocCategory[] = [
           "নিরাপদ স্থানান্তর: সোর্স গোডাউন থেকে স্বয়ংক্রিয়ভাবে স্টক বিয়োগ করে ডেস্টিনেশন গোডাউনে যোগ করবে।",
           "ঘাটতি স্টক প্রতিরোধ: সোর্স গুদামে পর্যাপ্ত ব্যালেন্স না থাকলে সিস্টেম ভুল ট্রান্সফার আটকে দেবে।"
         ]
+      },
+      {
+        id: "inv-low-stock",
+        title: "4.3 Low Stock Warnings & Reorder Requisitions",
+        bnTitle: "৪.৩ লো-স্টক সতর্কতা ও স্বয়ংক্রিয় রি-অর্ডার রিকুইজিশন",
+        path: "/inventory",
+        hotkey: "Alt+K",
+        planBadge: "All Plans",
+        whereToFind: "Dashboard Alert Banner (in Standard & Minimalist Splash) | Sidebar > Inventory > Click 'Low Stock Alerts' tab | Sales Voucher Entry (F8)",
+        bnWhereToFind: "ড্যাশবোর্ড অ্যালার্ট ব্যানার (স্ট্যান্ডার্ড ও মিনিমালিস্ট স্প্ল্যাশ উভয় লেআউটেই) | সাইডবার > Inventory > 'Low Stock Alerts' ট্যাব | সেলস ভাউচার এন্ট্রি (F8)",
+        content: "Automated inventory depletion alert engine and procurement requisition generator.\n\n### Why Use This Feature (কেন ব্যবহার করবেন):\n1. Prevent Stockouts: Never turn away paying customers due to unmonitored stock depletion.\n2. Optimize Working Capital: Balance inventory so you never overstock slow-moving goods nor run out of fast-selling SKUs.\n3. Instant Procurement Workflows: Convert endangered items into formal supplier purchase requisitions in one click.\n4. Frontline Cashier Alerts: When issuing a Sales Invoice (F8), the billing screen automatically warns the operator if current stock breaches the safety threshold.\n\n### How to Use Step-by-Step (কীভাবে ব্যবহার করবেন):\n1. Configure Threshold: In Inventory > Stock Items (or Alt+I), specify the 'Low Stock Threshold / Reorder Level' for each item (e.g., 10 Pcs).\n2. View Dashboard Warnings: On the home Dashboard (both Standard and Minimalist Splash layouts), a high-visibility alert banner alerts you whenever items breach safety margins.\n3. Inspect Inventory Alerts: Navigate to Sidebar > Inventory and click the 'Low Stock Alerts' tab to see current stock, threshold deficit, and supplier details.\n4. Print Requisition: Click 'Print Reorder Sheet' to generate a formal supplier requisition order with recommended procurement quantities.",
+        bnContent: "স্বয়ংক্রিয় স্টক ঘাটতি শনাক্তকরণ এবং সাপ্লায়ার রিকুইজিশন তৈরির পূর্ণাঙ্গ ব্যবস্থা।\n\n### কেন ব্যবহার করবেন (Why Use This Feature):\n১. বিক্রি বন্ধ হওয়া প্রতিরোধ: হঠাৎ স্টক শেষ হয়ে কাস্টমার ফিরে যাওয়া বা অর্ডার বাতিল হওয়া সম্পূর্ণ দূর করে।\n২. কার্যকরি মূলধন নিয়ন্ত্রণ: অলস পণ্য অতিরিক্ত না কিনে শুধুমাত্র প্রয়োজনীয় পণ্য সঠিক সময়ে রি-অর্ডার করার সুযোগ দেয়।\n৩. তাৎক্ষণিক রিকুইজিশন: সংকটপূর্ণ পণ্যগুলোর জন্য ১ ক্লিকেই সাপ্লায়ারের জন্য ফরমাল পারচেজ রিকুইজিশন শিট তৈরি করা যায়।\n৪. বিক্রয় পয়েন্টে তাৎক্ষণিক সতর্কতা: সেলস ভাউচার (F8) তৈরির সময় ক্যাশিয়ার তাৎক্ষণিক ওয়ার্নিং দেখতে পান যদি স্টক নির্ধারিত সীমার নিচে নেমে যায়।\n\n### কীভাবে ব্যবহার করবেন (Step-by-Step Usage Guide):\n১. থ্রেশহোল্ড সেটআপ: Inventory > Stock Items এ গিয়ে প্রতিটি পণ্যের 'Low Stock Threshold / Reorder Level' ফিল্ডে ন্যূনতম মজুত সংখ্যা দিন (যেমন: ১০ পিস)।\n২. ড্যাশবোর্ড অ্যালার্ট মনিটরিং: হোম ড্যাশবোর্ডে (স্ট্যান্ডার্ড ও মিনিমালিস্ট স্প্ল্যাশ উভয় ডিজাইনেই) লাল রঙের সতর্কবার্তা প্রদর্শিত হবে যদি কোনো আইটেমের স্টক কমে যায়।\n৩. স্টক অডিট তালিকা: সাইডবার থেকে Inventory পেজে গিয়ে 'Low Stock Alerts' ট্যাবে ক্লিক করুন। এখানে ঝুঁকিপূর্ণ সকল আইটেমের তালিকা ও ঘাটতির পরিমাণ দেখতে পাবেন।\n৪. রিকুইজিশন প্রিন্ট: 'Print Requisition' বাটনে ক্লিক করে সাপ্লায়ারের কাছে পাঠানোর উপযোগী অফিসিয়াল পারচেজ রিকুইজিশন প্রিন্ট বা পিডিএফ করুন।",
+        points: [
+          "Dual-Layout Dashboard Integration: Alerts appear dynamically in both Standard Grid and Minimalist Splash layouts.",
+          "Live Point-of-Sale Guard: Real-time visual badge inside Sales Voucher (F8) line items.",
+          "Automated Deficit Calculation: Automatically calculates reorder quantity = Reorder Threshold - Current Stock.",
+          "One-Click Supplier Requisition: Direct print-ready procurement purchase orders with formal header."
+        ],
+        bnPoints: [
+          "উভয় ড্যাশবোর্ডেই কার্যকর: স্ট্যান্ডার্ড গ্রিড এবং মিনিমালিস্ট স্প্ল্যাশ উভয় লেআউটেই সতর্কবার্তা ফুটে ওঠে।",
+          "সেলস ভাউচারে সরাসরি ওয়ার্নিং: সেলস চালানে আইটেম সিলেক্ট করলেই লাইভ স্টক ও থ্রেশহোল্ড অ্যালার্ট দেখায়।",
+          "স্বয়ংক্রিয় ঘাটতি পরিমাপ: প্রয়োজনীয় ঘাটতির পরিমাণ স্বয়ংক্রিয়ভাবে গণনা করে।",
+          "১ ক্লিকে রিকুইজিশন প্রিন্ট: সাপ্লায়ারের ঠিকানাসহ প্রাতিষ্ঠানিক ফরম্যাটে রি-অর্ডার তালিকা প্রিন্ট করার সুবিধা।"
+        ],
+        fields: [
+          { name: "Low Stock Threshold", bnName: "লো-স্টক থ্রেশহোল্ড", type: "Number (Required)", description: "The safety stock boundary. If current stock <= threshold, alert fires.", bnDescription: "ন্যূনতম সংরক্ষিত সংখ্যা। স্টক এর সমান বা নিচে নামলে অ্যালার্ট চালু হবে।" },
+          { name: "Reorder Quantity", bnName: "রিঅর্ডার পরিমাণ", type: "Number", description: "Standard batch volume to order when replenishing stock.", bnDescription: "একবারে নতুন করে যে পরিমাণ পণ্য সাপ্লায়ার থেকে ক্রয় করতে চান।" },
+          { name: "Primary Supplier", bnName: "প্রধান সরবরাহকারী", type: "Ledger", description: "Preferred vendor to automatically attach to procurement sheets.", bnDescription: "যে সাপ্লায়ারের নিকট থেকে সাধারণত পণ্যটি কেনা হয়।" }
+        ],
+        example: {
+          scenario: "Electronics wholesaler with fast-selling LED monitors.",
+          bnScenario: "একটি ইলেকট্রনিক্স প্রতিষ্ঠান যাদের এলইডি মনিটরের দ্রুত বিক্রি হয়।",
+          steps: [
+            "Set Reorder Level to 15 Pcs for 24-inch LED Monitor.",
+            "Sales invoice issued for 8 units, reducing stock from 20 to 12 Pcs.",
+            "Dashboard and Inventory overview immediately highlight 'Low Stock Warning: 1 Item Below Reorder Level'.",
+            "Store manager clicks 'Print Requisition' and sends purchase order to supplier without delay."
+          ],
+          bnSteps: [
+            "২৪ ইঞ্চি এলইডি মনিটরের রিঅর্ডার লেভেল ১৫ পিস নির্ধারণ করলেন।",
+            "৮টি মনিটর বিক্রির চালান কাটায় গোডাউনের স্টক ২০ থেকে কমে ১২ পিসে নেমে এলো।",
+            "ড্যাশবোর্ড ও ইনভেন্টরি পেজে সাথে সাথে 'Low Stock Warning: 1 Item Below Reorder Level' নোটিফিকেশন চলে আসলো।",
+            "স্টোর ম্যানেজার ১ ক্লিকে 'Print Requisition' চেপে সাপ্লায়ারকে নতুন পারচেজ অর্ডার পাঠিয়ে দিলেন।"
+          ]
+        },
+        tip: "Set thresholds slightly higher than your average vendor delivery lead time so stock arrives before your warehouse runs completely dry.",
+        bnTip: "সাপ্লায়ারের মাল সরবরাহ করতে যত দিন লাগে, সেই সময়ের গড় বিক্রির উপর ভিত্তি করে থ্রেশহোল্ড একটু বাড়িয়ে সেট করুন যাতে স্টক কখনোই শূন্য না হয়।"
       }
     ]
   },
@@ -603,6 +662,100 @@ export const HELP_DOCS: DocCategory[] = [
         bnWhereToFind: "সাইডবার > Reports > Daybook (বা Ledger Statement)",
         content: "Chronological audit trail of all transactions recorded on any specific day. Drill down into individual party ledgers to reconcile customer or vendor balances.",
         bnContent: "প্রতিদিনের সকল লেনদেনের সময়ানুক্রমিক তালিকা এবং যেকোনো নির্দিষ্ট কাস্টমার বা সাপ্লায়ারের বিস্তারিত খতিয়ান।"
+      },
+      {
+        id: "rep-due-alerts",
+        title: "8.5 Due Payment Alerts, Overdue Aging & Legal Demand Notices",
+        bnTitle: "৮.৫ বকেয়া রিমাইন্ডার, দেনাদার এজিং ও লিগ্যাল ডিমান্ড নোটিশ",
+        path: "/reports/due-payments",
+        hotkey: "Alt+D",
+        planBadge: "All Plans",
+        whereToFind: "Dashboard 'Due Payment Alerts' shortcut & alert badge (All layouts) | Sidebar > Reports > Due Payment Alerts | URL /reports/due-payments",
+        bnWhereToFind: "ড্যাশবোর্ড 'Due Payment Alerts' শর্টকাট ও ব্যানার (সকল লেআউটেই) | সাইডবার > Reports > Due Payment Alerts | সরাসরি লিংক /reports/due-payments",
+        content: "Comprehensive receivables recovery engine and automated debt collection management.\n\n### Why Use This Feature (কেন ব্যবহার করবেন):\n1. Protect Business Liquidity: Eliminate cash shortages by speeding up debtor collections and lowering Days Sales Outstanding (DSO).\n2. Prevent Bad Debts: Track overdue invoices across aging brackets (0-15d, 16-30d, 31-60d, 60+d) before receivables become uncollectible.\n3. 1-Click Multi-Channel Reminders: Instantly dispatch pre-formatted payment notices via WhatsApp, SMS, or Email directly to customer contacts.\n4. Formal Legal Demand Notices: Generate lawyer-grade printed payment demand letters on company letterhead with bank routing and overdue invoices breakdown.\n5. Documented Call History: Log every phone follow-up with customer promises-to-pay and scheduled callback dates for internal team accountability.\n\n### How to Use Step-by-Step (কীভাবে ব্যবহার করবেন):\n1. Open Due Payment Alerts: Click the 'Due Payment Alerts' card on the Dashboard (works in both Standard and Minimalist Splash layouts) or navigate to Sidebar > Reports > Due Payment Alerts.\n2. Filter by Aging Bracket: Click filter chips (0-15 Days, 16-30 Days, 31-60 Days, 60+ Days Critical) to prioritize delinquent debtors.\n3. Send Instant Reminder: Click the WhatsApp, SMS, or Email button next to any debtor. The system generates a personalized message with exact balance, due date, and your company bank account details.\n4. Print Legal Demand Notice: Click the 'Legal Notice' button to generate a formal, lawyer-standard demand letter with official company header, invoice schedule, and signature block.\n5. Log Call Notes: Click 'Log Call' to enter summaries of phone commitments, check numbers promised, and repayment deadlines.\n6. Export Aging Sheet: Click 'Export CSV' to export the complete debtor list for management and recovery review.",
+        bnContent: "বকেয়া আদায় গতিশীলকরণ এবং স্বয়ংক্রিয় দেনাদার অনুসরণের পূর্ণাঙ্গ সমাধান।\n\n### কেন ব্যবহার করবেন (Why Use This Feature):\n১. তারল্য সংকট প্রতিরোধ: কাস্টমারদের কাছ থেকে সময়মতো বকেয়া টাকা তুলে আনার মাধ্যমে নগদ টাকার প্রবাহ স্বাভাবিক রাখে।\n২. মন্দ ঋণ (Bad Debt) দূরীকরণ: বকেয়ার বয়স অনুযায়ী (০-১৫ দিন, ১৬-৩০ দিন, ৩১-৬০ দিন, ৬০+ দিন) সময়মতো তাগাদা দিয়ে বকেয়া টাকা আটকে যাওয়া প্রতিরোধ করে।\n৩. ১ ক্লিকে মাল্টি-চ্যানেল রিমাইন্ডার: হোয়াটসঅ্যাপ, এসএমএস বা ইমেলের মাধ্যমে মুহূর্তেই কাস্টমারের মোবাইলে পাওনার পরিমাণ ও ব্যাংক একাউন্ট নম্বরসহ মেসেজ পাঠানোর সুবিধা।\n৪. প্রাতিষ্ঠানিক লিগ্যাল ডিমান্ড নোটিশ: কোম্পানির নিজস্ব প্যাডে ব্যাংক হিসাব নম্বর ও চালানের বিবরণসহ আইনজীবীর নোটিশের মতো আনুষ্ঠানিক ডিমান্ড লেটার প্রিন্ট করার ব্যবস্থা।\n৫. ফলো-আপ কল ডায়রি: দেনাদারের সাথে ফোনে কথা বলে তারা কী প্রতিশ্রুতি দিল এবং কবে টাকা পরিশোধ করবে তা সিস্টেমে নোট আকারে সংরক্ষণ করা যায়।\n\n### কীভাবে ব্যবহার করবেন (Step-by-Step Usage Guide):\n১. মডিউলে প্রবেশ: হোম ড্যাশবোর্ডের 'Due Payment Alerts' কার্ড বা ব্যানার থেকে (স্ট্যান্ডার্ড ও মিনিমালিস্ট স্প্ল্যাশ উভয় লেআউটেই রয়েছে) অথবা সাইডবার > Reports > Due Payment Alerts এ যান।\n২. বকেয়া ফিল্টারিং: ০-১৫ দিন, ১৬-৩০ দিন, ৩১-৬০ দিন বা ৬০+ দিন (ঝুঁকিপূর্ণ) ফিল্টারে ক্লিক করে সবচেয়ে পুরনো দেনাদারদের আলাদা করুন।\n৩. রিমাইন্ডার প্রেরণ: সংশ্লিষ্ট কাস্টমারের পাশে থাকা WhatsApp, SMS বা Email বাটনে ক্লিক করুন। স্বয়ংক্রিয়ভাবে মোট বকেয়া ও ব্যাংক হিসাব সহ মেসেজ প্রস্তুত হয়ে যাবে।\n৪. লিগ্যাল ডিমান্ড নোটিশ প্রিন্ট: 'Legal Notice' বাটনে ক্লিক করে প্রাতিষ্ঠানিক লেটারহেডে আনুষ্ঠানিক তাগাদাপত্র প্রস্তুত করুন এবং প্রিন্ট বা পিডিএফ সেভ করুন।\n৫. কল লগ সংরক্ষণ: 'Log Call' বাটনে ক্লিক করে কাস্টমারের আশ্বাস, চেক দেওয়ার তারিখ ইত্যাদি নোট লিখে রাখুন।\n৬. এক্সেল এক্সপোর্ট: 'Export CSV' ক্লিক করে মিটিং বা অডিটের জন্য সকল দেনাদারের তালিকা ডাউনলোড করুন।",
+        points: [
+          "Dynamic Aging Buckets: Categorized into 0-15d, 16-30d, 31-60d, and 60+d critical exposure tiers.",
+          "Automated Message Placeholders: Supports {{customerName}}, {{dueAmount}}, {{currency}}, and {{companyName}}.",
+          "Court-Ready Legal Notices: Includes invoice schedules, interest notice warnings, and official company seals.",
+          "Direct Dashboard Badges: Prominently featured across all dashboard design layouts."
+        ],
+        bnPoints: [
+          "স্বয়ংক্রিয় এজিং ক্যাটাগরি: ০-১৫ দিন, ১৬-৩০ দিন, ৩১-৬০ দিন ও ৬০+ দিন অনুযায়ী স্বয়ংক্রিয় গ্রুপিং।",
+          "ডাইনামিক টেমপ্লেট ট্যাগ: কাস্টমারের নাম, বকেয়া টাকার পরিমাণ ও কোম্পানির নাম স্বয়ংক্রিয়ভাবে বসে যায়।",
+          "আনুষ্ঠানিক আইনি নোটিশ: চালানের তালিকা, ব্যাংকের বিস্তারিত ও স্বাক্ষরের ঘর সহ স্ট্যান্ডার্ড নোটিশ ফরম্যাট।",
+          "ড্যাশবোর্ডে সার্বক্ষণিক অ্যালার্ট: মিনিমালিস্ট স্প্ল্যাশ সহ সকল ড্যাশবোর্ডেই নোটিফিকেশন প্রদর্শন।"
+        ],
+        fields: [
+          { name: "Debtor Name & Phone", bnName: "কাস্টমারের নাম ও মোবাইল", type: "Ledger", description: "Customer account and primary mobile number for messaging.", bnDescription: "গ্রাহকের নাম এবং মেসেজ পাঠানোর জন্য মোবাইল নম্বর।" },
+          { name: "Overdue Amount", bnName: "বকেয়ার পরিমাণ", type: "Currency", description: "Net outstanding closing balance derived from sales and receipts.", bnDescription: "বিক্রয় ও আদায়ের পর গ্রাহকের কাছে মোট বকেয়ার স্থিতি।" },
+          { name: "Aging Bucket", bnName: "বকেয়ার বয়স", type: "Category", description: "Age tier (0-15d, 16-30d, 31-60d, 60+d) based on last invoice date.", bnDescription: "সর্বশেষ চালানের তারিখ থেকে কত দিন পার হয়েছে তার হিসাব।" }
+        ],
+        example: {
+          scenario: "Distributor recovering ৳85,000 from an overdue retail merchant (45 days unpaid).",
+          bnScenario: "একটি পরিবেশক প্রতিষ্ঠান যার এক খুচরা বিক্রেতার কাছে ৪৫ দিন যাবত ৮৫,০০০ টাকা বকেয়া পড়ে আছে।",
+          steps: [
+            "Open Due Payment Alerts and select the '31-60 Days' filter.",
+            "Click the WhatsApp icon next to the merchant's name; a professional reminder with bank coordinates is sent in 2 seconds.",
+            "Click 'Log Call' and note: 'Merchant promised bank transfer by Thursday 3 PM'.",
+            "On Friday, if unpaid, click 'Legal Notice' and send a formal written demand notice on company letterhead."
+          ],
+          bnSteps: [
+            "Due Payment Alerts পেজে গিয়ে '31-60 Days' ফিল্টার সিলেক্ট করলেন।",
+            "কাস্টমারের নামের পাশে WhatsApp বাটনে চাপ দিলেন; ২ সেকেন্ডেই পাওনার বিস্তারিত ও ব্যাংক একাউন্ট সহ মেসেজ চলে গেল।",
+            "'Log Call' এ গিয়ে লিখলেন: 'কাস্টমার বৃহস্পতিবার বিকাল ৩টার মধ্যে ব্যাংকে জমা দেওয়ার প্রতিশ্রুতি দিয়েছেন'।",
+            "শুক্রবার টাকা জমা না হলে 'Legal Notice' এ ক্লিক করে প্রাতিষ্ঠানিক লেটারহেডে চূড়ান্ত ডিমান্ড লেটার ইস্যু করলেন।"
+          ]
+        },
+        tip: "Send polite automated reminders within 1-15 days, and reserve formal demand notices only for accounts exceeding 45 days.",
+        bnTip: "০-১৫ দিনের মধ্যে থাকা গ্রাহকদের নমনীয় ভাষায় সাধারণ রিমাইন্ডার পাঠান এবং ৪৫ দিনের বেশি বকেয়া হলে তবেই আনুষ্ঠানিক লিগ্যাল নোটিশ ইস্যু করুন।"
+      },
+      {
+        id: "rep-audit-trail",
+        title: "8.6 Audit Trail & Historical Activity Logs",
+        bnTitle: "৮.৬ অডিট ট্রেইল ও কার্যক্রম হিস্ট্রি ট্র্যাকিং",
+        path: "/reports/audit-trail",
+        hotkey: "Alt+A",
+        planBadge: "All Plans",
+        whereToFind: "Dashboard 'Audit Trail & Logs' shortcut (All layouts) | Sidebar > Reports > Audit Trail (or Exception Reports) | URL /reports/audit-trail",
+        bnWhereToFind: "ড্যাশবোর্ড 'Audit Trail & Logs' শর্টকাট (সকল লেআউটেই) | সাইডবার > Reports > Audit Trail | সরাসরি লিংক /reports/audit-trail",
+        content: "Statutory transaction audit logging, data forensics, and auditor review console.\n\n### Why Use This Feature (কেন ব্যবহার করবেন):\n1. Strict Statutory Compliance: Meets MCA, Income Tax, VAT, and ISO corporate accounting standards requiring continuous, tamper-evident audit logs.\n2. Internal Fraud & Error Prevention: Instantly know which staff member created, updated, or deleted a voucher, with exact timestamp and device IP.\n3. Before/After Field Comparison: Deep inspection reveals exactly what ledger amount, quantity, or narration was modified during voucher alterations.\n4. Independent Auditor Workspace: Qualified statutory or internal auditors can inspect logs and append certified review remarks without corrupting ledger balances.\n5. Complete System Transparency: Tracks non-voucher events as well, including ledger alterations, inventory edits, data exports, and logins.\n\n### How to Use Step-by-Step (কীভাবে ব্যবহার করবেন):\n1. Access Audit Trail: Click 'Audit Trail & Logs' on the Dashboard or go to Sidebar > Reports > Audit Trail.\n2. Filter Historical Events: Use quick filter buttons (Create, Update, Delete, Export) and date range presets (Today, 7 Days, 30 Days, Custom).\n3. Inspect Log Details: Click on any log row to open the Log Inspector modal. View author name, user ID, module, description, and exact timestamp.\n4. Compare Changes: For 'UPDATE' logs, view the before/after delta comparing previous values against new values.\n5. Append Auditor Remarks: Statutory auditors can type official verification notes and mark logs as 'Audited / Verified'.\n6. Export Compliance Report: Click 'Print Audit Report' or 'Export CSV' to create physical or digital proof for external tax and audit authorities.",
+        bnContent: "আর্থিক লেনদেনের ডিজিটাল অডিট ট্রেইল, ফরেনসিক ট্র্যাকিং এবং নিরীক্ষকদের রিভিউ কনসোল।\n\n### কেন ব্যবহার করবেন (Why Use This Feature):\n১. সরকারি ও আইনি বাধ্যবাধকতা: আয়কর, ভ্যাট আইন এবং ISO স্ট্যান্ডার্ডের আওতায় যেকোনো লেনদেনের অপরিবর্তনীয় পরিবর্তন ট্রেইল থাকা বাধ্যতামূলক।\n২. অভ্যন্তরীণ জালিয়াতি ও ভুল প্রতিরোধ: কোন কর্মী কখন কোন ভাউচার তৈরি, সংশোধন বা মুছে ফেলেছেন তা সুনির্দিষ্ট সময় ও আইপিসহ রেকর্ড থাকে।\n৩. পরিবর্তনের তুলনামূলক যাচাই (Before/After): কোনো ভাউচার এডিট করা হলে আগে কী পরিমাণ বা লেজার ছিল এবং পরে কী করা হয়েছে তার নিখুঁত পার্থক্য দেখা যায়।\n৪. স্বাধীন অডিটর প্যানেল: হিসাবের মূল বই পরিবর্তন না করেই অভ্যন্তরীণ বা সরকারি নিরীক্ষক অডিট ট্রেইলে নিজস্ব প্রত্যয়ন ও মন্তব্য যোগ করতে পারেন।\n৫. সার্বিক সিস্টেমের স্বচ্ছতা: ভাউচারের পাশাপাশি লেজার মাস্টার পরিবর্তন, স্টক এডিট এবং এক্সেল এক্সপোর্ট কার্যক্রমও নজরদারিতে থাকে।\n\n### কীভাবে ব্যবহার করবেন (Step-by-Step Usage Guide):\n১. অডিট ট্রেইলে প্রবেশ: ড্যাশবোর্ডের 'Audit Trail & Logs' শর্টকাট থেকে অথবা সাইডবার > Reports > Audit Trail এ ক্লিক করুন।\n২. ইভেন্ট ফিল্টারিং: অ্যাকশন ফিল্টার (Create, Update, Delete, Export) এবং তারিখের ফিল্টার (আজ, ৭ দিন, ৩০ দিন ইত্যাদি) দিয়ে নির্দিষ্ট ইভেন্ট খুঁজুন।\n৩. বিস্তারিত লগ পরিদর্শণ: যেকোনো লগ লাইনে ক্লিক করলে বিস্তারিত ইনস্পেক্টর ওপেন হবে যেখানে ইউজার নেম, তারিখ, আইপি ও বিবরণ দেখা যাবে।\n৪. পরিবর্তন পর্যালোচনা: 'Update' লগে ক্লিক করে আগের ডাটা এবং নতুন ডাটার হুবহু তুলনামূলক পার্থক্য পরীক্ষা করুন।\n৫. অডিটর মন্তব্য যোগ: নিরীক্ষক সরাসরি 'Add Auditor Note' এ গিয়ে ভাউচারটি যাচাই হয়েছে কিনা তা লিখে সিলমোহর দিতে পারেন।\n৬. অডিট রিপোর্ট তৈরি: অডিট কমিটি বা আয়কর কর্মকর্তার নিকট জমা দেওয়ার জন্য 'Print Audit Report' বা 'Export CSV' ক্লিক করে প্রাতিষ্ঠানিক রিপোর্ট প্রিন্ট করুন।",
+        points: [
+          "Tamper-Evident Event Stream: Automated background recording for all vouchers, ledgers, items, and exports.",
+          "Before vs. After Delta Comparison: Visual diff highlighting modified ledger rows and voucher totals.",
+          "Certified Auditor Remarks: Non-destructive compliance notation system for external auditors.",
+          "Comprehensive Search & Filters: Real-time filtering by User, Action Type, Module, or Date Range."
+        ],
+        bnPoints: [
+          "অপরিবর্তনীয় ডিজিটাল রেকর্ড: ভাউচার তৈরি, এডিট বা ডিলিটের সাথে সাথে ব্যাকগ্রাউন্ডে স্বয়ংক্রিয় লগ তৈরি হয়।",
+          "পূর্বের ও পরের ডাটার পার্থক্য: কোনো এন্ট্রিতে টাকার অংক বদলানো হলে আগের ও বর্তমান মানের ভিজ্যুয়াল তুলনা।",
+          "নিরীক্ষকের অফিসিয়াল মন্তব্য: মূল খতিয়ানের ক্ষতি না করে অডিটরদের মন্তব্য ও ভেরিফিকেশন স্ট্যাম্প যুক্ত করার সুযোগ।",
+          "শক্তিশালী ফিল্টার: ইউজার, অ্যাকশনের ধরন, মডিউল বা তারিখ দিয়ে মুহূর্তেই যেকোনো কার্যকলাপ খুঁজে বের করার সুবিধা।"
+        ],
+        fields: [
+          { name: "Timestamp & Log ID", bnName: "সময় ও লগ আইডি", type: "Text (Immutable)", description: "Precise date, time, and unique cryptographic log identifier.", bnDescription: "সিস্টেমের সময় এবং স্বতন্ত্র অডিট রেফারেন্স আইডি।" },
+          { name: "Action & Module", bnName: "অ্যাকশন ও মডিউল", type: "Category", description: "Action taken (CREATE, UPDATE, DELETE, EXPORT) and target module.", bnDescription: "কী ধরণের কাজ করা হয়েছে এবং কোন মডিউলে কাজ হয়েছে।" },
+          { name: "User Details", bnName: "ইউজার পরিচিতি", type: "Profile", description: "Name, email, and user role of the operator performing the action.", bnDescription: "যে অপারেটর কাজটি সম্পন্ন করেছেন তার নাম ও ভূমিকা।" }
+        ],
+        example: {
+          scenario: "An accountant mistakenly edits a sales voucher amount from ৳50,000 to ৳45,000.",
+          bnScenario: "হিসাবরক্ষক অসাবধানতাবশত একটি সেলস চালানের টাকার অংক ৫০,০০০ টাকার স্থলে ৪৫,০০০ টাকা এডিট করলেন।",
+          steps: [
+            "Managing Director notices a disparity in sales register.",
+            "Opens Audit Trail and filters by 'Action: Update' and 'Module: Vouchers'.",
+            "Instantly sees the exact timestamp, accountant's username, and previous amount (৳50,000) vs new amount (৳45,000).",
+            "Auditor leaves a remark and instructs rectification without confrontation."
+          ],
+          bnSteps: [
+            "ব্যবস্থাপনা পরিচালক সেলস রেজিস্টারে টাকার গরমিল লক্ষ্য করলেন।",
+            "Audit Trail ওপেন করে 'Action: Update' এবং 'Module: Vouchers' ফিল্টার করলেন।",
+            "মুহূর্তেই দেখতে পেলেন কোন তারিখে, কোন হিসাবরক্ষক ৫০,০০০ টাকার স্থলে ৪৫,০০০ টাকা সংশোধন করেছেন।",
+            "অডিটর সেখানে মন্তব্য লিখে দিলেন এবং ভুলটি সাথে সাথে সংশোধন করা সম্ভব হলো।"
+          ]
+        },
+        tip: "Regularly export weekly audit trail summaries to encrypted offline storage to maintain multi-year statutory compliance.",
+        bnTip: "প্রতি সপ্তাহের শেষে অডিট ট্রেইলটি এক্সপোর্ট করে ব্যাকআপ রাখুন যাতে যেকোনো বার্ষিক সরকারি বা প্রাতিষ্ঠানিক অডিটে দ্রুত প্রমাণপত্র পেশ করা যায়।"
       }
     ]
   },

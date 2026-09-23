@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Save, Printer, Loader2, RefreshCw, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon, AlertCircle, Settings2, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Save, Printer, Loader2, RefreshCw, PlusCircle, Trash, Share2, MessageSquare, Mail, X, Download, Scan, Calendar as CalendarIcon, AlertCircle, AlertTriangle, Settings2, TrendingUp } from 'lucide-react';
 import { cn, formatNumber, formatQuantity } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
@@ -1716,9 +1716,42 @@ export function VoucherEntry() {
                             fieldSize={fieldSize}
                           />
                           {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
-                            <p className={cn("text-gray-400 uppercase leading-none mt-1", tableSubTextClass)}>
-                              {t('item.currentStock')}: <span className="font-bold text-foreground">{formatQuantity(itemStocks[`${entry.item_id}-${entry.godown_id}`], entry.unit)} {entry.unit}</span>
-                            </p>
+                            <div className="mt-1 space-y-0.5">
+                              <p className={cn("text-gray-400 uppercase leading-none", tableSubTextClass)}>
+                                {t('item.currentStock')}: <span className="font-bold text-foreground">{formatQuantity(itemStocks[`${entry.item_id}-${entry.godown_id}`], entry.unit)} {entry.unit}</span>
+                              </p>
+                              {(() => {
+                                const stock = Number(itemStocks[`${entry.item_id}-${entry.godown_id}`] || 0);
+                                const selectedItem = items.find(i => i.id === entry.item_id);
+                                const threshold = Number(selectedItem?.low_stock_threshold ?? selectedItem?.reorder_level ?? 0);
+                                const isOut = stock <= 0;
+                                const isLow = threshold > 0 && stock <= threshold;
+                                const isExceeding = (vType === 'Sales' || vType === 'Delivery Note' || vType === 'Material Out') && entry.qty > stock;
+
+                                if (isExceeding) {
+                                  return (
+                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-500/10 px-1.5 py-0.5 rounded">
+                                      <AlertTriangle className="w-2.5 h-2.5 shrink-0" /> Exceeds stock ({formatQuantity(stock, entry.unit)} avail)
+                                    </span>
+                                  );
+                                }
+                                if (isOut) {
+                                  return (
+                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-500/10 px-1.5 py-0.5 rounded">
+                                      <AlertTriangle className="w-2.5 h-2.5 shrink-0" /> Out of Stock (0 remaining)
+                                    </span>
+                                  );
+                                }
+                                if (isLow) {
+                                  return (
+                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                                      <AlertTriangle className="w-2.5 h-2.5 shrink-0" /> Low Stock Warning (Min: {formatQuantity(threshold, entry.unit)})
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
                           )}
                         </div>
                       </td>
@@ -1952,9 +1985,42 @@ export function VoucherEntry() {
                         fieldSize={fieldSize}
                       />
                       {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
-                        <p className="text-[8px] text-gray-500 uppercase">
-                          {t('item.currentStock')}: <span className="font-bold text-foreground">{formatQuantity(itemStocks[`${entry.item_id}-${entry.godown_id}`], entry.unit)} {entry.unit}</span>
-                        </p>
+                        <div className="mt-1 space-y-0.5">
+                          <p className="text-[8px] text-gray-500 uppercase">
+                            {t('item.currentStock')}: <span className="font-bold text-foreground">{formatQuantity(itemStocks[`${entry.item_id}-${entry.godown_id}`], entry.unit)} {entry.unit}</span>
+                          </p>
+                          {(() => {
+                            const stock = Number(itemStocks[`${entry.item_id}-${entry.godown_id}`] || 0);
+                            const selectedItem = items.find(i => i.id === entry.item_id);
+                            const threshold = Number(selectedItem?.low_stock_threshold ?? selectedItem?.reorder_level ?? 0);
+                            const isOut = stock <= 0;
+                            const isLow = threshold > 0 && stock <= threshold;
+                            const isExceeding = (vType === 'Sales' || vType === 'Delivery Note' || vType === 'Material Out') && entry.qty > stock;
+
+                            if (isExceeding) {
+                              return (
+                                <span className="inline-flex items-center gap-1 text-[8px] font-bold text-rose-600 bg-rose-500/10 px-1 py-0.5 rounded">
+                                  <AlertTriangle className="w-2.5 h-2.5 shrink-0" /> Exceeds stock ({formatQuantity(stock, entry.unit)} avail)
+                                </span>
+                              );
+                            }
+                            if (isOut) {
+                              return (
+                                <span className="inline-flex items-center gap-1 text-[8px] font-bold text-rose-600 bg-rose-500/10 px-1 py-0.5 rounded">
+                                  <AlertTriangle className="w-2.5 h-2.5 shrink-0" /> Out of Stock (0 remaining)
+                                </span>
+                              );
+                            }
+                            if (isLow) {
+                              return (
+                                <span className="inline-flex items-center gap-1 text-[8px] font-bold text-amber-600 bg-amber-500/10 px-1 py-0.5 rounded">
+                                  <AlertTriangle className="w-2.5 h-2.5 shrink-0" /> Low Stock (Min: {formatQuantity(threshold, entry.unit)})
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
                       )}
                     </div>
 

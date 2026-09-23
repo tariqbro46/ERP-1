@@ -181,6 +181,8 @@ interface SettingsContextType {
   adaptiveLoaderEnabled?: boolean;
   showQuickCalculator?: boolean;
   showPinnedBookmarks?: boolean;
+  showDashboardLowStockAlert?: boolean;
+  showDashboardDueAlert?: boolean;
   customControlCenterTheme?: 'emerald' | 'indigo' | 'slate' | 'cyber';
   customWelcomeMessage?: string;
   splashSubDesign?: 'grid' | 'neon' | 'editorial';
@@ -348,6 +350,8 @@ const defaultSettings: SettingsContextType = {
   adaptiveLoaderEnabled: true,
   showQuickCalculator: true,
   showPinnedBookmarks: true,
+  showDashboardLowStockAlert: true,
+  showDashboardDueAlert: true,
   customControlCenterTheme: 'emerald',
   customWelcomeMessage: 'Executive Command Center',
   splashSubDesign: 'grid',
@@ -608,6 +612,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               adaptiveLoaderEnabled: data.adaptiveLoaderEnabled !== undefined ? data.adaptiveLoaderEnabled : prev.adaptiveLoaderEnabled,
               showQuickCalculator: data.showQuickCalculator !== undefined ? data.showQuickCalculator : prev.showQuickCalculator,
               showPinnedBookmarks: data.showPinnedBookmarks !== undefined ? data.showPinnedBookmarks : prev.showPinnedBookmarks,
+              showDashboardLowStockAlert: data.showDashboardLowStockAlert !== undefined ? data.showDashboardLowStockAlert : prev.showDashboardLowStockAlert,
+              showDashboardDueAlert: data.showDashboardDueAlert !== undefined ? data.showDashboardDueAlert : prev.showDashboardDueAlert,
               customControlCenterTheme: data.customControlCenterTheme || prev.customControlCenterTheme || 'emerald',
               customWelcomeMessage: data.customWelcomeMessage || prev.customWelcomeMessage || 'Executive Command Center',
               splashSubDesign: data.splashSubDesign || prev.splashSubDesign || 'grid',

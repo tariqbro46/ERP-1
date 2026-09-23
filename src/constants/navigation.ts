@@ -135,6 +135,8 @@ export const NAV_ITEMS: NavGroup[] = [
       { id: 'rep-financial-insights', to: '/reports/financial-insights', icon: TrendingUp, iconName: 'TrendingUp', label: 'Financial Insights', labelKey: 'nav.financialInsights', feature: 'insights', permission: 'ana_insights', hidden: true },
       { id: 'rep-cash-flow', to: '/reports/cash-flow', icon: Activity, iconName: 'Activity', label: 'Cash Flow', labelKey: 'nav.cashFlow', feature: 'adv_reports', permission: 'ana_cashflow', hidden: true },
       { id: 'rep-funds-flow', to: '/reports/funds-flow', icon: Activity, iconName: 'Activity', label: 'Funds Flow', labelKey: 'nav.fundsFlow', feature: 'adv_reports', permission: 'ana_cashflow', hidden: true },
+      { id: 'rep-due-payments', to: '/reports/due-payments', icon: AlertCircle, iconName: 'AlertCircle', label: 'Due Payment Alerts', labelKey: 'nav.duePaymentAlerts', permission: 'acc_reports_view', hidden: false },
+      { id: 'rep-audit-trail', to: '/reports/audit-trail', icon: Shield, iconName: 'Shield', label: 'Audit Trail & Activity Logs', labelKey: 'nav.auditTrail', permission: 'acc_reports_view', hidden: false },
       { id: 'rep-ageing-analysis', to: '/reports/ageing-analysis', icon: Activity, iconName: 'Activity', label: 'Ageing Analysis', labelKey: 'nav.ageingAnalysis', feature: 'inv', permission: 'ana_ageing', hidden: true },
     ]
   },
@@ -265,6 +267,8 @@ export const PAGE_TITLES: Record<string, string> = {
   '/reports/ratios': 'nav.ratioAnalysis',
   '/reports/financial-insights': 'nav.financialInsights',
   '/reports/stock': 'nav.stockSummary',
+  '/reports/due-payments': 'nav.duePaymentAlerts',
+  '/reports/audit-trail': 'nav.auditTrail',
   '/reports/ledger': 'nav.ledgerStatement',
   '/reports/account-books': 'nav.accountBooks',
   '/reports/inventory-books': 'nav.inventoryBooks',

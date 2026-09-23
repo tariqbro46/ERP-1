@@ -674,6 +674,7 @@ export const erpService: any = {
   _stockCategoriesCache: {} as Record<string, { data: any[], timestamp: number }>,
   _employeeGroupsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _usersCache: {} as Record<string, { data: any[], timestamp: number }>,
+  _activityLogsCache: {} as Record<string, { data: any[], timestamp: number }>,
 
   _singleLedgerCache: {} as Record<string, { data: Ledger, timestamp: number }>,
   _singleItemCache: {} as Record<string, { data: Item, timestamp: number }>,
@@ -1441,19 +1442,58 @@ export const erpService: any = {
     await deleteDoc(doc(db, colName, id));
   },
 
-  async logActivity(companyId: string, userId: string, action: string, details: string, entity_type?: string, entity_id?: string) {
+  async logActivity(
+    companyId: string, 
+    userId: string, 
+    action: string, 
+    details: string, 
+    entity_type?: string, 
+    entity_id?: string,
+    metadata?: Record<string, any>
+  ) {
     try {
-      await addDoc(collection(db, 'activity_log'), {
-        companyId,
-        userId,
-        action,
-        details,
-        entity_type,
-        entity_id,
-        createdAt: serverTimestamp()
-      });
+      const nowIso = new Date().toISOString();
+      const logEntry = {
+        companyId: companyId || 'default_company',
+        userId: userId || 'system',
+        action: action || 'Activity',
+        details: details || '',
+        entity_type: entity_type || 'system',
+        entity_id: entity_id || '',
+        ...(metadata || {}),
+        createdAt: serverTimestamp(),
+        timestamp: nowIso
+      };
+
+      if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+        const demoLogs = this._getDemoData('activity_log');
+        demoLogs.unshift({
+          ...logEntry,
+          id: 'log_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+          createdAt: nowIso
+        });
+        if (demoLogs.length > 200) demoLogs.length = 200;
+        this._saveDemoData('activity_log', demoLogs);
+        return;
+      }
+
+      const ref = await addDoc(collection(db, 'activity_log'), logEntry);
+      
+      const cId = companyId || 'default_company';
+      if (this._activityLogsCache[cId]) {
+        this._activityLogsCache[cId].data.unshift({
+          ...logEntry,
+          id: ref.id,
+          createdAt: nowIso
+        });
+        if (this._activityLogsCache[cId].data.length > 100) {
+          this._activityLogsCache[cId].data.length = 100;
+        }
+      }
+
+      this.trackQuota(companyId, 0, 1, 0);
     } catch (err) {
-      console.error('Error logging activity:', err);
+      console.warn('Error logging activity:', err);
     }
   },
 
@@ -1767,6 +1807,21 @@ export const erpService: any = {
       this._saveDemoData('inventory_entries', demoInventory);
       this._saveDemoData('ledgers', demoLedgers);
       this._saveDemoData('items', demoItems);
+
+      this.logActivity(
+        companyId,
+        userId,
+        'Voucher Created',
+        `Created ${vData.v_type || 'Voucher'} #${vData.v_no || vData.serial_no || vId} (Amount: ${vData.total_amount || 0})`,
+        'voucher',
+        vId,
+        {
+          v_type: vData.v_type,
+          voucher_no: vData.v_no || vData.serial_no,
+          amount: vData.total_amount,
+          party_name: vData.party_name || ''
+        }
+      ).catch(console.warn);
 
       return { id: vId, ...vData };
     }
@@ -2103,6 +2158,21 @@ export const erpService: any = {
             this.recalculateItemStats(itemId as string, companyId).catch(console.error);
           }
         }
+
+        this.logActivity(
+          companyId,
+          userId,
+          'Voucher Created',
+          `Created ${createdVoucher.v_type || 'Voucher'} #${createdVoucher.reference_no || createdVoucher.serial_no || res.id} (Amount: ${createdVoucher.total_amount || 0})`,
+          'voucher',
+          res.id,
+          {
+            v_type: createdVoucher.v_type,
+            voucher_no: createdVoucher.reference_no || createdVoucher.serial_no,
+            amount: createdVoucher.total_amount,
+            party_name: createdVoucher.party_name || ''
+          }
+        ).catch(console.warn);
       }
       return true;
     } catch (err: any) {
@@ -2579,6 +2649,20 @@ export const erpService: any = {
       this._saveDemoData('ledgers', demoLedgers);
       this._saveDemoData('items', demoItems);
 
+      this.logActivity(
+        voucher.companyId || 'demo_company_id',
+        voucher.createdBy || 'demo_user',
+        'Voucher Deleted',
+        `Deleted ${voucher.v_type || 'Voucher'} #${voucher.v_no || voucher.serial_no || id}`,
+        'voucher',
+        id,
+        {
+          v_type: voucher.v_type,
+          voucher_no: voucher.v_no || voucher.serial_no,
+          amount: voucher.total_amount
+        }
+      ).catch(console.warn);
+
       return;
     }
 
@@ -2647,12 +2731,30 @@ export const erpService: any = {
     for (const itemId of itemIdsToRecalc) {
       this.recalculateItemStats(itemId, companyId).catch(console.error);
     }
+
+    this.logActivity(
+      companyId,
+      voucher?.userId || voucher?.createdBy || '',
+      'Voucher Deleted',
+      `Deleted ${voucher?.v_type || 'Voucher'} #${voucher?.v_no || voucher?.voucher_no || voucher?.serial_no || id}`,
+      'voucher',
+      id,
+      {
+        v_type: voucher?.v_type,
+        voucher_no: voucher?.v_no || voucher?.voucher_no || voucher?.serial_no || id,
+        amount: voucher?.total_amount
+      }
+    ).catch(console.warn);
   },
 
   async updateVoucher(id: string, voucher: any, entries: any[], inventoryEntries?: any[]) {
     if (localStorage.getItem('erp_is_demo_mode') === 'true') {
       const companyId = voucher.companyId || 'demo_company_id';
       const userId = 'demo_user_uid';
+      const demoVouchersBefore = this._getDemoData('vouchers');
+      const oldDemoVoucher = demoVouchersBefore.find((v: any) => v.id === id);
+      const oldDemoAmount = Number(oldDemoVoucher?.total_amount ?? 0);
+
       await this.deleteVoucher(id);
       
       const demoVouchers = this._getDemoData('vouchers');
@@ -2741,6 +2843,29 @@ export const erpService: any = {
       this._saveDemoData('inventory_entries', demoInventory);
       this._saveDemoData('ledgers', demoLedgers);
       this._saveDemoData('items', demoItems);
+
+      const newDemoAmount = Number(vData.total_amount || 0);
+      const diffDemoAmount = newDemoAmount - oldDemoAmount;
+
+      this.logActivity(
+        companyId,
+        userId,
+        'Voucher Updated',
+        `Modified ${vData.v_type || 'Voucher'} #${vData.v_no || vData.serial_no || id} (Before: ${oldDemoAmount}, After: ${newDemoAmount})`,
+        'voucher',
+        id,
+        {
+          v_type: vData.v_type,
+          voucher_no: vData.v_no || vData.serial_no,
+          amount: newDemoAmount,
+          before_amount: oldDemoAmount,
+          after_amount: newDemoAmount,
+          old_amount: oldDemoAmount,
+          new_amount: newDemoAmount,
+          difference_amount: diffDemoAmount,
+          party_name: vData.party_name || ''
+        }
+      ).catch(console.warn);
 
       return { id, ...vData };
     }
@@ -2954,6 +3079,33 @@ export const erpService: any = {
           this.recalculateItemStats(itemId as string, companyId).catch(console.error);
         }
       }
+
+      const vNo = voucher.reference_no || voucher.v_no || voucher.serial_no || id;
+      const oldAmount = Number(oldVoucher?.total_amount ?? 0);
+      const newAmount = Number(voucher.total_amount ?? updatedVoucher.total_amount ?? 0);
+      const diffAmount = newAmount - oldAmount;
+
+      this.logActivity(
+        companyId,
+        voucher.userId || oldVoucher?.userId || '',
+        'Voucher Updated',
+        `Modified ${vType || 'Voucher'} #${vNo} (Before: ${oldAmount}, After: ${newAmount})`,
+        'voucher',
+        id,
+        {
+          v_type: vType,
+          voucher_no: vNo,
+          amount: newAmount,
+          before_amount: oldAmount,
+          after_amount: newAmount,
+          old_amount: oldAmount,
+          new_amount: newAmount,
+          difference_amount: diffAmount,
+          party_name: voucher.party_name || oldVoucher?.party_name || '',
+          old_date: oldVoucher?.v_date,
+          new_date: voucher.v_date || oldVoucher?.v_date
+        }
+      ).catch(console.warn);
       return true;
     } catch (err: any) {
       if (err.message && err.message.startsWith('{')) throw err;
@@ -4480,18 +4632,67 @@ export const erpService: any = {
     }
   },
 
-  async getActivityLogs(companyId?: string, limitCount = 50): Promise<any[]> {
+  async getActivityLogs(companyId?: string, limitCount = 100, forceRefresh = false): Promise<any[]> {
+    const cId = companyId || 'default_company';
+    const now = Date.now();
+    if (!forceRefresh && this._activityLogsCache[cId] && (now - this._activityLogsCache[cId].timestamp < 300000)) {
+      return this._activityLogsCache[cId].data;
+    }
+
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const demoLogs = this._getDemoData('activity_log');
+      const filtered = companyId ? demoLogs.filter((l: any) => l.companyId === companyId) : demoLogs;
+      return filtered.slice(0, limitCount);
+    }
+
     try {
       let q;
       if (companyId) {
-        q = query(collection(db, 'activity_log'), where('companyId', '==', companyId), orderBy('createdAt', 'desc'), limit(limitCount));
+        try {
+          q = query(collection(db, 'activity_log'), where('companyId', '==', companyId), orderBy('createdAt', 'desc'), limit(limitCount));
+          const snapshot = await getDocs(q);
+          this.trackQuota(companyId, snapshot.size, 0, 0);
+          const logs = snapshot.docs.map(d => {
+            const data = d.data() as any;
+            return {
+              ...data,
+              id: d.id,
+              createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : (data.createdAt || data.timestamp || new Date().toISOString())
+            };
+          });
+          this._activityLogsCache[cId] = { data: logs, timestamp: now };
+          return logs;
+        } catch (indexErr) {
+          console.warn("Falling back to unindexed query for activity_log:", indexErr);
+          q = query(collection(db, 'activity_log'), where('companyId', '==', companyId), limit(limitCount));
+          const snapshot = await getDocs(q);
+          this.trackQuota(companyId, snapshot.size, 0, 0);
+          const logs = snapshot.docs.map(d => {
+            const data = d.data() as any;
+            return {
+              ...data,
+              id: d.id,
+              createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : (data.createdAt || data.timestamp || new Date().toISOString())
+            };
+          }).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          this._activityLogsCache[cId] = { data: logs, timestamp: now };
+          return logs;
+        }
       } else {
         q = query(collection(db, 'activity_log'), orderBy('createdAt', 'desc'), limit(limitCount));
+        const snapshot = await getDocs(q);
+        const logs = snapshot.docs.map(d => {
+          const data = d.data() as any;
+          return {
+            ...data,
+            id: d.id,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : (data.createdAt || data.timestamp || new Date().toISOString())
+          };
+        });
+        return logs;
       }
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id }));
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'activity_log');
+      console.warn("Error fetching activity logs:", error);
       return [];
     }
   },
@@ -4714,6 +4915,45 @@ export const erpService: any = {
       return data;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'companies');
+    }
+  },
+
+  async getCompany(companyId: string): Promise<any | null> {
+    if (!companyId) return null;
+
+    if (localStorage.getItem('erp_is_demo_mode') === 'true' || companyId === 'demo_company_id') {
+      const cached = localStorage.getItem('cached_auth_company');
+      if (cached) {
+        try { return JSON.parse(cached); } catch { /* ignore */ }
+      }
+      return {
+        id: companyId,
+        name: 'Demo Enterprise Ltd.',
+        base_currency: 'BDT',
+        subscriptionStatus: 'active'
+      };
+    }
+
+    try {
+      const companyDoc = await getDoc(doc(db, 'companies', companyId));
+      if (companyDoc.exists()) {
+        return { ...(companyDoc.data() as any), id: companyDoc.id };
+      }
+      const cached = localStorage.getItem('cached_auth_company');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed && (parsed.id === companyId || !parsed.id)) return parsed;
+        } catch { /* ignore */ }
+      }
+      return null;
+    } catch (error) {
+      console.warn(`[getCompany] Failed to fetch company ${companyId}:`, error);
+      const cached = localStorage.getItem('cached_auth_company');
+      if (cached) {
+        try { return JSON.parse(cached); } catch { /* ignore */ }
+      }
+      return null;
     }
   },
 

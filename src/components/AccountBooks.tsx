@@ -9,7 +9,9 @@ import {
   ChevronRight,
   SlidersHorizontal,
   DollarSign,
-  Activity
+  Activity,
+  AlertCircle,
+  ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -98,6 +100,24 @@ export function AccountBooks() {
       path: '/reports/funds-flow',
       group: 'flow',
       color: 'rose'
+    },
+    {
+      id: 'due-payments',
+      title: 'Due Payment Alerts (বকেয়া রিমাইন্ডার)',
+      description: 'Customer receivables & payment reminders via SMS, WhatsApp, and Email with formal demand notices.',
+      icon: AlertCircle,
+      path: '/reports/due-payments',
+      group: 'registers',
+      color: 'rose'
+    },
+    {
+      id: 'audit-trail',
+      title: 'Audit Trail & Activity Logs (অডিট ট্রেইল)',
+      description: 'Immutable chronological tracking of voucher mutations, user alterations, and ISO/Tally compliance logs.',
+      icon: ShieldCheck,
+      path: '/reports/audit-trail',
+      group: 'registers',
+      color: 'indigo'
     }
   ];
 

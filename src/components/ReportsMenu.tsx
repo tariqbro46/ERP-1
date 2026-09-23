@@ -63,6 +63,8 @@ const getReportDescription = (id: string, label: string): string => {
     'rep-ageing-analysis': 'Aged inventory balance analysis tracking holding periods and speed.',
     'rep-negative-stock': 'Risk alert registry tracking items with negative balance audit warnings.',
     'rep-negative-ledger': 'Overdraft analysis highlighting credit ledgers with negative cash balances.',
+    'rep-due-payments': 'Track overdue receivables and dispatch customer payment reminders via WhatsApp, SMS, and Email.',
+    'rep-audit-trail': 'Immutable chronological activity tracking, voucher alterations, deletion records, and compliance oversight.',
     'rep-statement-of-account': 'Ledger account statements index and sub-group statement reports.',
     'rep-stock-summary': 'Corporate physical stock summary detailing quantities, rates, and values.',
     'rep-account-books': 'Statements of account, ledger books, and registers list index.'
@@ -111,6 +113,7 @@ export const ReportsMenu: React.FC = () => {
     { id: 'rep-daybook', label: 'Daybook', labelKey: 'daybook.title', to: '/reports/daybook', icon: 'ClipboardList' },
     { id: 'rep-cash-flow', label: 'Cash Flow', labelKey: 'reports.cashFlow', to: '/reports/cash-flow', icon: 'DollarSign' },
     { id: 'rep-funds-flow', label: 'Funds Flow', labelKey: 'reports.fundsFlow', to: '/reports/funds-flow', icon: 'Activity' },
+    { id: 'rep-due-payments', label: 'Due Payment Alerts', labelKey: 'nav.duePaymentAlerts', to: '/reports/due-payments', icon: 'AlertCircle' },
     { id: 'rep-group-summary', label: 'Group Summary', labelKey: 'reports.groupSummary', to: '/reports/group-summary', icon: 'ClipboardList' },
     { id: 'rep-group-voucher', label: 'Group Vouchers', labelKey: 'reports.groupVoucher', to: '/reports/group-voucher', icon: 'BookOpen' },
     { id: 'rep-ledger-statement', label: 'Ledger Statement', labelKey: 'reports.ledgerStatement', to: '/reports/ledger', icon: 'FileText' },
@@ -172,6 +175,7 @@ export const ReportsMenu: React.FC = () => {
         'rep-funds-flow',
         'rep-group-summary',
         'rep-group-voucher',
+        'rep-due-payments',
         'rep-ledger-statement',
         'rep-cash-bank',
         'rep-sales-register',
@@ -223,7 +227,8 @@ export const ReportsMenu: React.FC = () => {
       gradient: 'from-amber-500 to-orange-500',
       itemIds: [
         'rep-negative-stock',
-        'rep-negative-ledger'
+        'rep-negative-ledger',
+        'rep-audit-trail'
       ]
     }
   ], []);
