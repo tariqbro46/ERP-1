@@ -59,11 +59,14 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      document.body.classList.add('has-active-modal');
     } else {
       document.body.style.overflow = '';
+      document.body.classList.remove('has-active-modal');
     }
     return () => {
       document.body.style.overflow = '';
+      document.body.classList.remove('has-active-modal');
     };
   }, [isOpen]);
 
@@ -109,23 +112,32 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
 
   return (
     <AnimatePresence>
-      <div id="quota-dashboard-overlay" className="fixed top-14 left-0 lg:left-64 right-0 bottom-0 z-40 flex justify-center items-center p-4 md:p-6 bg-slate-950/30">
-        {/* Backdrop overlay */}
+      {isOpen && (
         <motion.div 
+          id="quota-dashboard-overlay" 
+          data-modal="true"
+          role="dialog"
+          aria-modal="true"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs"
-        />
-
-        {/* Modal Card */}
-        <motion.div 
-          initial={{ scale: 0.95, opacity: 0, y: 15 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.95, opacity: 0, y: 15 }}
-          className="relative w-full max-w-2xl max-h-[calc(100vh-8rem)] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden font-sans select-none z-10 flex flex-col"
+          transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed inset-0 z-[99999] flex justify-center items-center p-4 md:p-6"
         >
+          {/* Silky Frosted Glassmorphism Backdrop */}
+          <div 
+            onClick={onClose}
+            className="absolute inset-0 bg-slate-950/45 dark:bg-black/60 backdrop-blur-xl"
+          />
+
+          {/* Floating Glassmorphism Modal Card */}
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0, y: 16 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.97, opacity: 0, y: 10 }}
+            transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+            className="relative w-full max-w-2xl max-h-[calc(100vh-8rem)] bg-slate-900/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.1)] overflow-hidden font-sans select-none z-10 flex flex-col"
+          >
           {/* Header Bar */}
           <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/50 shrink-0">
             <div className="flex items-center gap-2">
@@ -321,7 +333,8 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
             </button>
           </div>
         </motion.div>
-      </div>
-    </AnimatePresence>
-  );
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
 }

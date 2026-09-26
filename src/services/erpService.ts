@@ -1,6 +1,7 @@
 import { db, auth } from '../firebase';
 import { ensureDate, formatToYMD, parseEntryDate, getMovementType } from '../lib/utils';
 import { errorService } from './errorService';
+import { LATEST_VERSION } from '../data/releaseNotes';
 import { 
   collection, 
   addDoc as firestoreAddDoc, 
@@ -2863,7 +2864,17 @@ export const erpService: any = {
           old_amount: oldDemoAmount,
           new_amount: newDemoAmount,
           difference_amount: diffDemoAmount,
-          party_name: vData.party_name || ''
+          party_name: vData.party_name || '',
+          old_party_name: oldDemoVoucher?.party_name || '',
+          new_party_name: vData.party_name || oldDemoVoucher?.party_name || '',
+          old_date: oldDemoVoucher?.v_date || '',
+          new_date: vData.v_date || oldDemoVoucher?.v_date || '',
+          old_v_type: oldDemoVoucher?.v_type || vData.v_type,
+          new_v_type: vData.v_type,
+          old_narration: oldDemoVoucher?.narration || '',
+          new_narration: vData.narration || '',
+          old_voucher_no: oldDemoVoucher?.v_no || oldDemoVoucher?.serial_no || id,
+          new_voucher_no: vData.v_no || vData.serial_no || id
         }
       ).catch(console.warn);
 
@@ -3102,8 +3113,16 @@ export const erpService: any = {
           new_amount: newAmount,
           difference_amount: diffAmount,
           party_name: voucher.party_name || oldVoucher?.party_name || '',
-          old_date: oldVoucher?.v_date,
-          new_date: voucher.v_date || oldVoucher?.v_date
+          old_party_name: oldVoucher?.party_name || '',
+          new_party_name: voucher.party_name || oldVoucher?.party_name || '',
+          old_date: oldVoucher?.v_date || '',
+          new_date: voucher.v_date || oldVoucher?.v_date || '',
+          old_v_type: oldVoucher?.v_type || vType,
+          new_v_type: vType,
+          old_narration: oldVoucher?.narration || '',
+          new_narration: voucher.narration || '',
+          old_voucher_no: oldVoucher?.reference_no || oldVoucher?.v_no || oldVoucher?.serial_no || vNo,
+          new_voucher_no: vNo
         }
       ).catch(console.warn);
       return true;
@@ -5109,7 +5128,9 @@ export const erpService: any = {
   async updateSettings(companyId: string, settings: any) {
     try {
       const ref = doc(db, 'settings', companyId);
-      await setDoc(ref, cleanData({ ...settings, companyId }), { merge: true });
+      const settingsToSave = { ...settings };
+      delete settingsToSave.appVersion; // App version is a system config, not company config
+      await setDoc(ref, cleanData({ ...settingsToSave, companyId }), { merge: true });
 
       // If companyName, companyAddress, phone, email, or website is updated, also update the main company document
       if (settings.companyName || settings.companyAddress || settings.printPhone || settings.printEmail || settings.printWebsite) {
@@ -5164,7 +5185,7 @@ export const erpService: any = {
         statusOnlineText: 'Status: Online',
         statusOfflineText: 'Status: Offline',
         statusErrorText: 'Database Error',
-        appVersion: 'v1.0.1'
+        appVersion: LATEST_VERSION || 'v1.8.5'
       };
     } catch (error) {
       console.error('Error getting system config:', error);
@@ -5172,7 +5193,7 @@ export const erpService: any = {
         statusOnlineText: 'Status: Online',
         statusOfflineText: 'Status: Offline',
         statusErrorText: 'Database Error',
-        appVersion: 'v1.0.1'
+        appVersion: LATEST_VERSION || 'v1.8.5'
       };
     }
   },

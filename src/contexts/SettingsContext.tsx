@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { erpService } from '../services/erpService';
-import { doc, onSnapshot, collection, getDocFromServer, getDocs } from 'firebase/firestore';
+import { doc, onSnapshot, collection, getDocFromServer, getDocs, updateDoc, deleteField } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { SubscriptionPlan } from '../types';
 import { FeatureCategory, APP_FEATURES } from '../constants/features';
 import { soundService } from '../services/soundService';
+import { LATEST_VERSION } from '../data/releaseNotes';
 
 interface NotificationSettings {
   voucherSaved: string;
@@ -337,7 +338,7 @@ const defaultSettings: SettingsContextType = {
   notificationAnimationStyle: 'default',
   notificationStyle: 'default',
   notificationPosition: 'bottom-right',
-  appVersion: 'v1.0.1',
+  appVersion: LATEST_VERSION,
   englishFont: 'Inter',
   banglaFont: 'Hind Siliguri',
   statusOnlineText: 'Status: Online',
@@ -434,8 +435,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [settings, setSettings] = useState<SettingsContextType>(() => {
     try {
+      const explicitAppVersion = localStorage.getItem('tallyflow_active_version') || localStorage.getItem('swr_app_version');
       const systemPersisted = localStorage.getItem('swr_system_config');
       const cachedSystem = systemPersisted ? JSON.parse(systemPersisted) : {};
+
+      const resolvedAppVersion = explicitAppVersion || cachedSystem.appVersion || defaultSettings.appVersion;
 
       const keys = Object.keys(localStorage);
       const companyKey = keys.find(k => k.startsWith('swr_settings_'));
@@ -443,10 +447,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         const cachedCompany = localStorage.getItem(companyKey);
         if (cachedCompany) {
           const cachedData = JSON.parse(cachedCompany);
+          // appVersion is a system-wide setting, never let company cache override it
+          delete cachedData.appVersion;
           return {
             ...defaultSettings,
             ...cachedSystem,
             ...cachedData,
+            appVersion: resolvedAppVersion,
             loading: false,
             // Keep actual handlers as they are initialized/replaced on render
             updateSettings: defaultSettings.updateSettings,
@@ -462,6 +469,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         return {
           ...defaultSettings,
           ...cachedSystem,
+          appVersion: resolvedAppVersion,
           loading: false
         };
       }
@@ -577,6 +585,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             const data = snap.data();
             try {
               localStorage.setItem('swr_system_config', JSON.stringify(data));
+              if (data.appVersion) {
+                localStorage.setItem('swr_app_version', data.appVersion);
+                localStorage.setItem('tallyflow_active_version', data.appVersion);
+              }
             } catch (e) {}
             setSettings(prev => ({
               ...prev,
@@ -748,9 +760,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const persisted = localStorage.getItem(`swr_settings_${user.companyId}`);
       if (persisted) {
         const cachedData = JSON.parse(persisted);
+        delete cachedData.appVersion; // Ensure stale company cache does not override appVersion
         setSettings(prev => ({
           ...prev,
           ...cachedData,
+          appVersion: prev.appVersion,
           loading: false,
           updateSettings: prev.updateSettings,
           updateSystemSettings: prev.updateSystemSettings,
@@ -764,12 +778,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onSnapshot(ref, (snap) => {
       if (snap.exists()) {
         const snapData = snap.data();
+        // If company document contained legacy appVersion, clean it up
+        if (snapData.appVersion !== undefined) {
+          delete snapData.appVersion;
+          try {
+            updateDoc(ref, { appVersion: deleteField() }).catch(() => {});
+          } catch (e) {}
+        }
         try {
           localStorage.setItem(`swr_settings_${user.companyId}`, JSON.stringify(snapData));
         } catch (e) {}
         setSettings(prev => ({ 
           ...prev, 
           ...snapData, 
+          appVersion: prev.appVersion, // strictly keep the system appVersion
           loading: false,
           updateSettings: prev.updateSettings,
           updateSystemSettings: prev.updateSystemSettings,
@@ -866,8 +888,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const updateSettings = async (newSettings: Partial<SettingsContextType>) => {
     if (!user?.companyId) return;
     
+    // Always strip system-level properties like appVersion so company settings never pollute them
+    const { updateSettings: _, updateSystemSettings: __, appVersion: ___, ...dataToSave } = newSettings as any;
+
     if (localStorage.getItem('erp_is_demo_mode') === 'true') {
-      const { updateSettings: _, updateSystemSettings: __, ...dataToSave } = newSettings as any;
       setSettings(prev => {
         const next = { ...prev, ...dataToSave };
         try {
@@ -879,8 +903,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // Remove functions before saving
-      const { updateSettings: _, updateSystemSettings: __, ...dataToSave } = newSettings as any;
       await erpService.updateSettings(user.companyId, dataToSave);
     } catch (err) {
       console.error('Error updating settings:', err);
@@ -888,6 +910,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateSystemSettings = async (newSettings: any) => {
+    if (newSettings.appVersion) {
+      try {
+        localStorage.setItem('tallyflow_active_version', newSettings.appVersion);
+        localStorage.setItem('swr_app_version', newSettings.appVersion);
+      } catch (e) {}
+    }
+
     if (localStorage.getItem('erp_is_demo_mode') === 'true') {
       setSettings(prev => ({
         ...prev,
@@ -911,6 +940,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       }));
     } catch (err) {
       console.error('Error updating system settings:', err);
+      throw err;
     }
   };
 

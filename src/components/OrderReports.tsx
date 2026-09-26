@@ -18,6 +18,7 @@ import { format } from 'date-fns';
 import { cn } from '../lib/utils';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { EmptyState } from './EmptyState';
 
 export default function OrderReports() {
   const { user } = useAuth();
@@ -258,11 +259,12 @@ export default function OrderReports() {
                 </tr>
               ))}
               {sortedReport.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="p-12 text-center text-[10px] uppercase tracking-widest text-muted-foreground italic">
-                    No data available for the selected period.
-                  </td>
-                </tr>
+                <EmptyState
+                  variant="reports"
+                  colSpan={6}
+                  title="No data available for the selected period"
+                  description="Try adjusting your date range or search terms to view print order analytics."
+                />
               )}
             </tbody>
           </table>

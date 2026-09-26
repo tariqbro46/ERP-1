@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { erpService } from '../services/erpService';
@@ -30,7 +31,13 @@ import {
   ArrowRight,
   TrendingUp,
   TrendingDown,
-  Layers
+  Layers,
+  MinusCircle,
+  Columns2,
+  Rows3,
+  Table as TableIcon,
+  ArrowDown,
+  Code
 } from 'lucide-react';
 import { cn, formatCurrency, formatNumber } from '../lib/utils';
 
@@ -46,7 +53,11 @@ interface AuditLogEntry {
   entity_type?: string;
   entity_id?: string;
   voucher_no?: string | number;
+  old_voucher_no?: string | number;
+  new_voucher_no?: string | number;
   v_type?: string;
+  old_v_type?: string;
+  new_v_type?: string;
   amount?: number;
   before_amount?: number;
   after_amount?: number;
@@ -56,27 +67,71 @@ interface AuditLogEntry {
   old_date?: string;
   new_date?: string;
   party_name?: string;
+  old_party_name?: string;
+  new_party_name?: string;
+  old_narration?: string;
+  new_narration?: string;
+  status?: string;
+  old_status?: string;
+  new_status?: string;
   createdAt: string;
   timestamp?: string;
   metadata?: Record<string, any>;
 }
 
+export type DiffChangeType = 'added' | 'removed' | 'updated' | 'unchanged';
+
+export interface FieldDiffItem {
+  id: string;
+  label: string;
+  labelBn: string;
+  beforeValue: any;
+  afterValue: any;
+  status: DiffChangeType;
+  isCurrency?: boolean;
+  isDate?: boolean;
+}
+
 interface HistoryComparison {
   isUpdate: boolean;
+  isCreate: boolean;
+  isDelete: boolean;
   hasHistory: boolean;
   beforeAmount?: number;
   afterAmount?: number;
   difference?: number;
   oldDate?: string;
   newDate?: string;
+  fields: FieldDiffItem[];
+  counts: {
+    added: number;
+    removed: number;
+    updated: number;
+    unchanged: number;
+    total: number;
+  };
 }
 
 const getLogHistoryComparison = (log: AuditLogEntry | null, allLogs: AuditLogEntry[]): HistoryComparison => {
   if (!log) {
-    return { isUpdate: false, hasHistory: false };
+    return {
+      isUpdate: false,
+      isCreate: false,
+      isDelete: false,
+      hasHistory: false,
+      fields: [],
+      counts: { added: 0, removed: 0, updated: 0, unchanged: 0, total: 0 }
+    };
   }
 
-  // 1. Check direct fields
+  const actLower = (log.action || '').toLowerCase();
+  const detLower = (log.details || '').toLowerCase();
+
+  const isCreate = actLower.includes('creat') || actLower.includes('insert') || actLower.includes('new');
+  const isDelete = actLower.includes('delet') || actLower.includes('remov') || actLower.includes('void');
+  const isUpdate = actLower.includes('updat') || actLower.includes('modif') || actLower.includes('edit') || detLower.includes('modif');
+
+  // Amount extraction
   let beforeAmount: number | undefined = 
     log.before_amount ?? log.old_amount ?? log.metadata?.before_amount ?? log.metadata?.old_amount;
   let afterAmount: number | undefined = 
@@ -85,7 +140,7 @@ const getLogHistoryComparison = (log: AuditLogEntry | null, allLogs: AuditLogEnt
   const oldDate = log.old_date || log.metadata?.old_date;
   const newDate = log.new_date || log.metadata?.new_date;
 
-  // 2. Check if details has "Before: X, After: Y"
+  // Extract from details if "Before: X, After: Y"
   if (beforeAmount === undefined && log.details) {
     const beforeMatch = log.details.match(/before:\s*৳?\s*([0-9,.]+)/i);
     const afterMatch = log.details.match(/after:\s*৳?\s*([0-9,.]+)/i);
@@ -95,36 +150,38 @@ const getLogHistoryComparison = (log: AuditLogEntry | null, allLogs: AuditLogEnt
     }
   }
 
-  // 3. Determine if this action represents an update/modification
-  const actLower = (log.action || '').toLowerCase();
-  const isUpdate = actLower.includes('updat') || 
-                   actLower.includes('modif') || 
-                   actLower.includes('edit') ||
-                   (log.details || '').toLowerCase().includes('modif');
+  // Identify entity voucher_no
+  const logVNo = log.voucher_no || 
+                 log.metadata?.voucher_no || 
+                 log.details?.match(/#([a-zA-Z0-9_-]+)/)?.[1] || 
+                 log.entity_id;
 
-  // 4. If update and beforeAmount is still unknown, search in other logs for same entity
-  if (isUpdate && (beforeAmount === undefined || isNaN(beforeAmount))) {
+  // Search candidate prior log if update or delete
+  let candidatePriorLog: AuditLogEntry | undefined;
+  if ((isUpdate || isDelete) && allLogs && allLogs.length > 0) {
     const logTime = new Date(log.createdAt || log.timestamp || 0).getTime();
     
     const candidatePriorLogs = allLogs.filter(other => {
       if (other.id === log.id) return false;
       const otherTime = new Date(other.createdAt || other.timestamp || 0).getTime();
-      
-      const matchEntity = (log.entity_id && other.entity_id && log.entity_id === other.entity_id) ||
-                          (log.voucher_no && other.voucher_no && String(log.voucher_no) === String(other.voucher_no));
-      
-      if (!matchEntity) return false;
       if (logTime && otherTime && otherTime > logTime) return false;
 
-      return other.amount !== undefined || other.after_amount !== undefined;
+      const otherVNo = other.voucher_no || 
+                       other.metadata?.voucher_no || 
+                       other.details?.match(/#([a-zA-Z0-9_-]+)/)?.[1] || 
+                       other.entity_id;
+
+      const matchId = (log.entity_id && other.entity_id && log.entity_id === other.entity_id);
+      const matchVNo = (logVNo && otherVNo && String(logVNo) === String(otherVNo));
+
+      return matchId || matchVNo;
     });
 
     if (candidatePriorLogs.length > 0) {
       candidatePriorLogs.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-      const prior = candidatePriorLogs[0];
-      beforeAmount = prior.after_amount ?? prior.amount;
-      if (afterAmount === undefined) {
-        afterAmount = log.amount;
+      candidatePriorLog = candidatePriorLogs[0];
+      if (beforeAmount === undefined) {
+        beforeAmount = candidatePriorLog.after_amount ?? candidatePriorLog.amount;
       }
     }
   }
@@ -140,17 +197,178 @@ const getLogHistoryComparison = (log: AuditLogEntry | null, allLogs: AuditLogEnt
     }
   }
 
-  const hasHistory = beforeAmount !== undefined && afterAmount !== undefined;
-  const difference = hasHistory ? (afterAmount! - beforeAmount!) : undefined;
+  if (isCreate) {
+    beforeAmount = undefined;
+    if (afterAmount === undefined && log.amount !== undefined) {
+      afterAmount = log.amount;
+    }
+  } else if (isDelete) {
+    if (beforeAmount === undefined && log.amount !== undefined) {
+      beforeAmount = log.amount;
+    }
+    afterAmount = undefined;
+  }
+
+  // Build field diff items
+  const fields: FieldDiffItem[] = [];
+
+  const addField = (
+    id: string,
+    label: string,
+    labelBn: string,
+    beforeVal: any,
+    afterVal: any,
+    options: { isCurrency?: boolean; isDate?: boolean; defaultStatus?: DiffChangeType } = {}
+  ) => {
+    let status: DiffChangeType = options.defaultStatus || 'unchanged';
+
+    const hasBefore = beforeVal !== undefined && beforeVal !== null && beforeVal !== '' && beforeVal !== '—';
+    const hasAfter = afterVal !== undefined && afterVal !== null && afterVal !== '' && afterVal !== '—';
+
+    if (!options.defaultStatus) {
+      if (isCreate) {
+        status = hasAfter ? 'added' : 'unchanged';
+      } else if (isDelete) {
+        status = hasBefore ? 'removed' : 'unchanged';
+      } else if (isUpdate) {
+        if (!hasBefore && hasAfter) {
+          status = 'added';
+        } else if (hasBefore && !hasAfter) {
+          status = 'removed';
+        } else if (hasBefore && hasAfter) {
+          if (options.isCurrency || typeof beforeVal === 'number' || typeof afterVal === 'number') {
+            status = Number(beforeVal) !== Number(afterVal) ? 'updated' : 'unchanged';
+          } else {
+            status = String(beforeVal).trim() !== String(afterVal).trim() ? 'updated' : 'unchanged';
+          }
+        } else {
+          status = 'unchanged';
+        }
+      } else {
+        if (hasBefore && hasAfter && String(beforeVal) !== String(afterVal)) {
+          status = 'updated';
+        } else if (!hasBefore && hasAfter) {
+          status = 'added';
+        } else if (hasBefore && !hasAfter) {
+          status = 'removed';
+        } else {
+          status = 'unchanged';
+        }
+      }
+    }
+
+    fields.push({
+      id,
+      label,
+      labelBn,
+      beforeValue: beforeVal,
+      afterValue: afterVal,
+      status,
+      isCurrency: options.isCurrency,
+      isDate: options.isDate
+    });
+  };
+
+  // 1. Transaction Amount
+  addField(
+    'amount',
+    'Transaction Amount',
+    'লেনদেনের মোট পরিমাণ',
+    beforeAmount,
+    afterAmount,
+    { isCurrency: true }
+  );
+
+  // 2. Voucher / Document No
+  const beforeVNo = log.old_voucher_no ?? log.metadata?.old_voucher_no ?? candidatePriorLog?.voucher_no ?? (isUpdate ? logVNo : undefined);
+  const afterVNo = isDelete ? undefined : (log.new_voucher_no ?? log.voucher_no ?? log.metadata?.voucher_no ?? logVNo);
+  addField(
+    'voucher_no',
+    'Voucher / Document No',
+    'ভাউচার / ডকুমেন্ট নং',
+    isCreate ? undefined : beforeVNo,
+    afterVNo
+  );
+
+  // 3. Voucher / Entity Type
+  const beforeVType = log.old_v_type ?? log.metadata?.old_v_type ?? candidatePriorLog?.v_type ?? (isUpdate ? (log.v_type || log.entity_type) : undefined);
+  const afterVType = isDelete ? undefined : (log.new_v_type ?? log.v_type ?? log.metadata?.v_type ?? log.entity_type);
+  addField(
+    'v_type',
+    'Entry / Voucher Type',
+    'এন্ট্রি / ভাউচারের ধরন',
+    isCreate ? undefined : beforeVType,
+    afterVType
+  );
+
+  // 4. Party / Ledger Name
+  const beforeParty = log.old_party_name ?? log.metadata?.old_party_name ?? candidatePriorLog?.party_name ?? candidatePriorLog?.metadata?.party_name;
+  const afterParty = isDelete ? undefined : (log.new_party_name ?? log.party_name ?? log.metadata?.party_name);
+  addField(
+    'party_name',
+    'Party / Account Ledger',
+    'পার্টি / লেজার হিসাব',
+    isCreate ? undefined : beforeParty,
+    afterParty
+  );
+
+  // 5. Transaction Date
+  const beforeDateVal = oldDate ?? log.metadata?.old_date ?? candidatePriorLog?.old_date ?? candidatePriorLog?.createdAt?.substring(0, 10);
+  const afterDateVal = isDelete ? undefined : (newDate ?? log.metadata?.new_date ?? log.createdAt?.substring(0, 10));
+  addField(
+    'date',
+    'Transaction / Post Date',
+    'লেনদেন / রেকর্ডের তারিখ',
+    isCreate ? undefined : beforeDateVal,
+    afterDateVal,
+    { isDate: true }
+  );
+
+  // 6. Narration / Note
+  const beforeNarration = log.old_narration ?? log.metadata?.old_narration ?? candidatePriorLog?.details;
+  const afterNarration = isDelete ? undefined : (log.new_narration ?? log.details ?? log.metadata?.narration);
+  addField(
+    'narration',
+    'Audit Narrative / Note',
+    'বিবরণ ও বিবরণী নোট',
+    isCreate ? undefined : beforeNarration,
+    afterNarration
+  );
+
+  // 7. Status / Lifecycle
+  const beforeStatus = log.old_status ?? log.metadata?.old_status ?? (candidatePriorLog ? 'Recorded' : undefined);
+  const afterStatus = isDelete ? 'Voided / Deleted' : (log.new_status ?? log.metadata?.status ?? (isUpdate ? 'Updated / Active' : 'Posted / Active'));
+  addField(
+    'status',
+    'Record Status',
+    'রেকর্ডের স্ট্যাটাস',
+    isCreate ? undefined : beforeStatus,
+    afterStatus
+  );
+
+  const counts = {
+    added: fields.filter(f => f.status === 'added').length,
+    removed: fields.filter(f => f.status === 'removed').length,
+    updated: fields.filter(f => f.status === 'updated').length,
+    unchanged: fields.filter(f => f.status === 'unchanged').length,
+    total: fields.length
+  };
+
+  const hasHistory = isUpdate || isDelete || counts.updated > 0 || (beforeAmount !== undefined && afterAmount !== undefined);
+  const difference = (beforeAmount !== undefined && afterAmount !== undefined) ? (afterAmount - beforeAmount) : undefined;
 
   return {
     isUpdate,
+    isCreate,
+    isDelete,
     hasHistory,
     beforeAmount,
     afterAmount,
     difference,
     oldDate,
-    newDate
+    newDate,
+    fields,
+    counts
   };
 };
 
@@ -172,6 +390,29 @@ export const AuditTrail: React.FC = () => {
   // Inspection Modal
   const [selectedLog, setSelectedLog] = useState<AuditLogEntry | null>(null);
   const [copiedId, setCopiedId] = useState(false);
+  const [inspectorLayout, setInspectorLayout] = useState<'side-by-side' | 'stacked' | 'diff-table'>('side-by-side');
+  const [inspectorFilter, setInspectorFilter] = useState<'all' | 'changed-only'>('all');
+  const [showRawPayload, setShowRawPayload] = useState(false);
+
+  // When Audit Record Inspector popup is open, hide all top bars and lock body scroll
+  useEffect(() => {
+    if (selectedLog) {
+      document.body.classList.add('audit-inspector-open');
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') setSelectedLog(null);
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.classList.remove('audit-inspector-open');
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.classList.remove('audit-inspector-open');
+      document.body.style.overflow = '';
+    }
+  }, [selectedLog]);
 
   // Manual Audit Note Modal
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
@@ -445,7 +686,10 @@ export const AuditTrail: React.FC = () => {
       {/* ========================================================================= */}
       {/* 1. FIXED PERMANENT HEADER (Strict User Rule: Header never scrolls) */}
       {/* ========================================================================= */}
-      <header className="shrink-0 z-20 border-b border-border bg-card shadow-xs print:hidden">
+      <header className={cn(
+        "shrink-0 z-20 border-b border-border bg-card shadow-xs print:hidden transition-all duration-150",
+        selectedLog && "hidden"
+      )}>
         {/* Top bar: Title & Actions */}
         <div className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -823,250 +1067,634 @@ export const AuditTrail: React.FC = () => {
       {/* ========================================================================= */}
       {/* 3. AUDIT INSPECTION MODAL (Detailed Audit Record) */}
       {/* ========================================================================= */}
-      {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/40">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                  <ShieldCheck className="w-5 h-5" />
+      {selectedLog && createPortal((() => {
+        const history = getLogHistoryComparison(selectedLog, logs);
+        const displayedFields = history.fields.filter(f => 
+          inspectorFilter === 'changed-only' ? f.status !== 'unchanged' : true
+        );
+
+        const renderDiffBadge = (status: DiffChangeType) => {
+          switch (status) {
+            case 'updated':
+              return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                  <Edit3 className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                  <span>{isBn ? '~ পরিবর্তিত' : '~ Updated'}</span>
+                </span>
+              );
+            case 'added':
+              return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                  <PlusCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  <span>{isBn ? '+ যুক্ত' : '+ Added'}</span>
+                </span>
+              );
+            case 'removed':
+              return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-500/30">
+                  <MinusCircle className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+                  <span>{isBn ? '- অপসারিত' : '- Removed'}</span>
+                </span>
+              );
+            case 'unchanged':
+            default:
+              return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-muted text-muted-foreground border border-border">
+                  <span>{isBn ? '= অপরিবর্তিত' : '= Unchanged'}</span>
+                </span>
+              );
+          }
+        };
+
+        const renderFieldValue = (val: any, isCurrency?: boolean, isDate?: boolean, fallback = '—') => {
+          if (val === undefined || val === null || val === '') {
+            return <span className="text-muted-foreground italic font-normal text-xs">{fallback}</span>;
+          }
+          if (isCurrency && typeof val === 'number') {
+            return <span className="font-mono font-bold">{formatCurrency(val)}</span>;
+          }
+          if (isDate && val) {
+            return <span className="font-mono">{String(val)}</span>;
+          }
+          if (typeof val === 'number') {
+            return <span className="font-mono font-bold">{formatNumber(val)}</span>;
+          }
+          return <span>{String(val)}</span>;
+        };
+
+        return (
+          <div 
+            id="audit-record-inspector-modal"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedLog(null);
+            }}
+            className="fixed inset-0 z-[999999] w-screen h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/40 backdrop-blur-sm animate-in fade-in"
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-4xl lg:max-w-5xl overflow-hidden flex flex-col max-h-[92vh]"
+            >
+              {/* Modal Header */}
+              <div className="px-5 py-3.5 border-b border-border flex flex-wrap items-center justify-between gap-3 bg-muted/40">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-black text-foreground">
+                        {isBn ? 'অডিট রেকর্ড পরিদর্শন ও তুলনা' : 'Audit Record Inspector'}
+                      </h3>
+                      <div className="scale-90 origin-left">
+                        {getActionBadge(selectedLog.action)}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-[10px] font-mono text-muted-foreground">ID: {selectedLog.id}</p>
+                      <button
+                        onClick={() => handleCopyId(selectedLog.id)}
+                        className="text-[10px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 font-mono"
+                        title={isBn ? 'লগ ID কপি করুন' : 'Copy Log ID'}
+                      >
+                        {copiedId ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                        <span>{copiedId ? (isBn ? 'কপি হয়েছে' : 'Copied') : ''}</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-black">{isBn ? 'অডিট রেকর্ড পরিদর্শন' : 'Audit Record Inspector'}</h3>
-                  <p className="text-[10px] font-mono text-muted-foreground">ID: {selectedLog.id}</p>
+
+                {/* View Layout Switcher & Close Button */}
+                <div className="flex items-center gap-2">
+                  {/* Layout Mode Segmented Control */}
+                  <div className="inline-flex items-center p-1 rounded-xl bg-muted border border-border text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setInspectorLayout('side-by-side')}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all",
+                        inspectorLayout === 'side-by-side'
+                          ? "bg-card text-foreground shadow-xs border border-border"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      title={isBn ? 'পাশাপাশি তুলনা (Side-by-Side)' : 'Side-by-Side Grid'}
+                    >
+                      <Columns2 className="w-3.5 h-3.5 text-primary" />
+                      <span>{isBn ? 'পাশাপাশি' : 'Side-by-Side'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInspectorLayout('stacked')}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all",
+                        inspectorLayout === 'stacked'
+                          ? "bg-card text-foreground shadow-xs border border-border"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      title={isBn ? 'উপরে-নিচে তুলনা (Stacked)' : 'Stacked Grid'}
+                    >
+                      <Rows3 className="w-3.5 h-3.5 text-primary" />
+                      <span>{isBn ? 'স্ট্যাকড' : 'Stacked'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setInspectorLayout('diff-table')}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all",
+                        inspectorLayout === 'diff-table'
+                          ? "bg-card text-foreground shadow-xs border border-border"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      title={isBn ? 'তুলনামূলক টেবিল (Diff Table)' : 'Diff Table'}
+                    >
+                      <TableIcon className="w-3.5 h-3.5 text-primary" />
+                      <span>{isBn ? 'টেবিল' : 'Diff Table'}</span>
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => setSelectedLog(null)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors border border-transparent hover:border-border ml-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedLog(null)}
-                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
 
-            <div className="p-6 overflow-y-auto space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3 p-3.5 bg-muted/30 rounded-xl border border-border">
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground">{isBn ? 'অ্যাকশন' : 'Action'}</span>
-                  <div className="mt-0.5">{getActionBadge(selectedLog.action)}</div>
+              {/* Modal Body */}
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
+                {/* 1. Executive Summary Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 bg-muted/30 rounded-xl border border-border">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">{isBn ? 'অ্যাকশন' : 'Action'}</span>
+                    <div className="mt-0.5">{getActionBadge(selectedLog.action)}</div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">{isBn ? 'মডিউল' : 'Entity Type'}</span>
+                    <p className="font-bold mt-0.5 capitalize">{selectedLog.entity_type || 'System'}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">{isBn ? 'ব্যবহারকারী' : 'User'}</span>
+                    <p className="font-bold mt-0.5">{selectedLog.userName || selectedLog.userId || 'System'}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground">{isBn ? 'তারিখ ও সময়' : 'Recorded At'}</span>
+                    <p className="font-bold mt-0.5">{new Date(selectedLog.createdAt).toLocaleString()}</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground">{isBn ? 'মডিউল' : 'Entity Type'}</span>
-                  <p className="font-bold mt-0.5 capitalize">{selectedLog.entity_type || 'System'}</p>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground">{isBn ? 'ব্যবহারকারী' : 'User'}</span>
-                  <p className="font-bold mt-0.5">{selectedLog.userName || selectedLog.userId || 'System'}</p>
-                </div>
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground">{isBn ? 'তারিখ ও সময়' : 'Recorded At'}</span>
-                  <p className="font-bold mt-0.5">{new Date(selectedLog.createdAt).toLocaleString()}</p>
-                </div>
-              </div>
 
-              <div>
-                <span className="text-[10px] uppercase font-bold text-muted-foreground">{isBn ? 'পূর্ণ বিবরণ (Audit Description)' : 'Full Audit Narrative'}</span>
-                <div className="mt-1 p-3.5 rounded-xl bg-background border border-border leading-relaxed font-medium">
-                  {selectedLog.details}
+                {/* Narrative Statement */}
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground">{isBn ? 'পূর্ণ বিবরণ (Audit Narrative)' : 'Full Audit Narrative'}</span>
+                  <div className="mt-1 p-3 rounded-xl bg-background border border-border leading-relaxed font-medium text-foreground">
+                    {selectedLog.details}
+                  </div>
                 </div>
-              </div>
 
-              {/* Audit History: Before & After Card */}
-              {(() => {
-                const history = getLogHistoryComparison(selectedLog, logs);
-                
-                if (history.hasHistory) {
-                  return (
-                    <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
-                      <div className="px-3.5 py-2.5 bg-muted/40 border-b border-border flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <History className="w-4 h-4 text-primary" />
-                          <span className="font-black text-xs text-foreground">
-                            {isBn ? 'পরিবর্তন ইতিহাস (Before & After History)' : 'Audit History (Before & After)'}
-                          </span>
-                        </div>
-                        {history.difference !== undefined && (
-                          <span className={cn(
-                            "px-2 py-0.5 rounded-full text-[10px] font-black font-mono border",
-                            history.difference > 0 
-                              ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" 
-                              : history.difference < 0 
-                                ? "bg-rose-500/10 text-rose-600 border-rose-500/20" 
-                                : "bg-muted text-muted-foreground border-border"
-                          )}>
-                            {history.difference > 0 ? `+${formatCurrency(history.difference)}` : formatCurrency(history.difference)}
-                          </span>
+                {/* 2. Visual Diff Summary Toolbar */}
+                <div className="rounded-xl border border-border bg-card p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
+                  {/* Status Indicator Chips */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] font-bold text-muted-foreground mr-1">
+                      {isBn ? 'পার্থক্য পরিসংখ্যান:' : 'Diff Summary:'}
+                    </span>
+                    {/* Yellow for Updated */}
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-black font-mono border flex items-center gap-1",
+                      history.counts.updated > 0
+                        ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                        : "bg-muted text-muted-foreground border-border opacity-60"
+                    )}>
+                      <Edit3 className="w-3 h-3 text-amber-500" />
+                      <span>{history.counts.updated} {isBn ? 'পরিবর্তিত' : 'Updated'}</span>
+                    </span>
+
+                    {/* Green for Added */}
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-black font-mono border flex items-center gap-1",
+                      history.counts.added > 0
+                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                        : "bg-muted text-muted-foreground border-border opacity-60"
+                    )}>
+                      <PlusCircle className="w-3 h-3 text-emerald-500" />
+                      <span>{history.counts.added} {isBn ? 'যুক্ত' : 'Added'}</span>
+                    </span>
+
+                    {/* Red for Removed */}
+                    <span className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-black font-mono border flex items-center gap-1",
+                      history.counts.removed > 0
+                        ? "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30"
+                        : "bg-muted text-muted-foreground border-border opacity-60"
+                    )}>
+                      <MinusCircle className="w-3 h-3 text-rose-500" />
+                      <span>{history.counts.removed} {isBn ? 'অপসারিত' : 'Removed'}</span>
+                    </span>
+
+                    {/* Gray for Unchanged */}
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border bg-muted text-muted-foreground border-border">
+                      <span>{history.counts.unchanged} {isBn ? 'অপরিবর্তিত' : 'Unchanged'}</span>
+                    </span>
+                  </div>
+
+                  {/* Filter & Net Financial Change */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Financial Difference Pill */}
+                    {history.difference !== undefined && (
+                      <div className="flex items-center gap-1 text-[11px] font-black font-mono">
+                        {history.difference > 0 && <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />}
+                        {history.difference < 0 && <TrendingDown className="w-3.5 h-3.5 text-rose-600" />}
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-full border",
+                          history.difference > 0 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                          history.difference < 0 ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
+                          "bg-muted text-muted-foreground border-border"
+                        )}>
+                          {history.difference > 0 ? `+${formatCurrency(history.difference)} Net` : `${formatCurrency(history.difference)} Net`}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Filter Toggle: All vs Changed Only */}
+                    <div className="inline-flex items-center p-0.5 rounded-lg bg-muted border border-border">
+                      <button
+                        type="button"
+                        onClick={() => setInspectorFilter('all')}
+                        className={cn(
+                          "px-2 py-0.5 rounded text-[10px] font-bold transition-colors",
+                          inspectorFilter === 'all'
+                            ? "bg-card text-foreground shadow-2xs font-black"
+                            : "text-muted-foreground hover:text-foreground"
                         )}
-                      </div>
-
-                      <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
-                        {/* BEFORE */}
-                        <div className="p-3.5 rounded-xl bg-rose-500/5 border border-rose-500/20 flex flex-col justify-between">
-                          <div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black uppercase tracking-wider text-rose-600 flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-                                {isBn ? 'পূর্বে ছিল (BEFORE)' : 'BEFORE (Old State)'}
-                              </span>
-                              <span className="text-[9px] text-muted-foreground uppercase font-bold px-1.5 py-0.5 bg-rose-500/10 rounded">
-                                {isBn ? 'পূর্ববর্তী রেকর্ড' : 'Previous'}
-                              </span>
-                            </div>
-                            <div className="text-base font-black font-mono text-rose-700 dark:text-rose-400 mt-2">
-                              {formatCurrency(history.beforeAmount ?? 0)}
-                            </div>
-                          </div>
-                          {history.oldDate && (
-                            <div className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1 font-mono pt-1.5 border-t border-rose-500/10">
-                              <Clock className="w-3 h-3 text-rose-400" />
-                              <span>{history.oldDate}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* AFTER */}
-                        <div className="p-3.5 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col justify-between">
-                          <div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                {isBn ? 'পরিবর্তিত / বর্তমানে (AFTER)' : 'AFTER (Updated State)'}
-                              </span>
-                              <span className="text-[9px] text-emerald-600 font-bold uppercase px-1.5 py-0.5 bg-emerald-500/10 rounded">
-                                {isBn ? 'বর্তমান সক্রিয়' : 'Current Active'}
-                              </span>
-                            </div>
-                            <div className="text-base font-black font-mono text-emerald-700 dark:text-emerald-400 mt-2">
-                              {formatCurrency(history.afterAmount ?? 0)}
-                            </div>
-                          </div>
-                          {history.newDate && (
-                            <div className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1 font-mono pt-1.5 border-t border-emerald-500/10">
-                              <Clock className="w-3 h-3 text-emerald-400" />
-                              <span>{history.newDate}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Difference summary note */}
-                      <div className="px-3.5 py-2.5 bg-muted/30 border-t border-border flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground font-medium">
-                          {isBn ? 'মোট পরিবর্তনের পার্থক্য (Net Change):' : 'Net Value Change:'}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          {history.difference !== undefined && history.difference > 0 && <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />}
-                          {history.difference !== undefined && history.difference < 0 && <TrendingDown className="w-3.5 h-3.5 text-rose-600" />}
-                          <span className={cn(
-                            "font-black font-mono",
-                            (history.difference ?? 0) > 0 ? "text-emerald-600" : (history.difference ?? 0) < 0 ? "text-rose-600" : "text-muted-foreground"
-                          )}>
-                            {(history.difference ?? 0) > 0 
-                              ? `+${formatCurrency(history.difference!)} (${isBn ? 'বৃদ্ধি পেয়েছে' : 'Increased'})` 
-                              : (history.difference ?? 0) < 0 
-                                ? `${formatCurrency(history.difference!)} (${isBn ? 'হ্রাস পেয়েছে' : 'Decreased'})` 
-                                : (isBn ? 'অপরিবর্তিত (No change)' : 'Unchanged')}
-                          </span>
-                        </div>
-                      </div>
+                      >
+                        {isBn ? `সব ফিল্ড (${history.counts.total})` : `All Fields (${history.counts.total})`}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInspectorFilter('changed-only')}
+                        className={cn(
+                          "px-2 py-0.5 rounded text-[10px] font-bold transition-colors flex items-center gap-1",
+                          inspectorFilter === 'changed-only'
+                            ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 font-black"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <span>{isBn ? 'শুধু পরিবর্তন' : 'Changed Only'}</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      </button>
                     </div>
-                  );
-                }
+                  </div>
+                </div>
 
-                if (history.isUpdate) {
-                  return (
-                    <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
-                      <div className="px-3.5 py-2.5 bg-muted/40 border-b border-border flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <History className="w-4 h-4 text-amber-500" />
-                          <span className="font-black text-xs text-foreground">
-                            {isBn ? 'হালনাগাদ রেকর্ড (Updated Audit Record)' : 'Updated Audit Record'}
-                          </span>
-                        </div>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                          {isBn ? 'সংশোধিত এন্ট্রি' : 'Modified Entry'}
-                        </span>
-                      </div>
-                      <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
-                        <div className="p-3 rounded-xl bg-muted/40 border border-border flex flex-col justify-between">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                            {isBn ? 'পূর্বে ছিল (BEFORE)' : 'BEFORE (Old State)'}
-                          </span>
-                          <p className="text-xs text-muted-foreground italic mt-2">
-                            {isBn ? 'পূর্ববর্তী প্রাথমিক রেকর্ড সংশোধিত হয়েছে' : 'Initial recorded document state modified'}
-                          </p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col justify-between">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600">
-                              {isBn ? 'পরিবর্তিত / বর্তমানে (AFTER)' : 'AFTER (Updated Amount)'}
-                            </span>
-                            <span className="text-[9px] text-emerald-600 font-bold uppercase">
-                              {isBn ? 'বর্তমান' : 'Current'}
+                {/* 3. COMPARISON GRID LAYOUTS */}
+                {displayedFields.length === 0 ? (
+                  <div className="p-8 text-center bg-muted/20 border border-dashed border-border rounded-xl">
+                    <p className="text-muted-foreground font-medium">
+                      {isBn ? 'ফিল্টারের সাথে মিলে এমন কোনো পরিবর্তিত ফিল্ড পাওয়া যায়নি।' : 'No changed fields match the current filter.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setInspectorFilter('all')}
+                      className="mt-2 text-xs font-bold text-primary hover:underline"
+                    >
+                      {isBn ? 'সব ফিল্ড দেখুন' : 'Show All Fields'}
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Mode A: Side-by-Side Comparison Grid */}
+                    {inspectorLayout === 'side-by-side' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                        {/* LEFT COLUMN: BEFORE (Old State) */}
+                        <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.02] dark:bg-rose-950/[0.05] overflow-hidden flex flex-col shadow-xs">
+                          <div className="px-4 py-2.5 bg-rose-500/10 border-b border-rose-500/20 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                              <span className="font-black text-xs uppercase tracking-wider text-rose-700 dark:text-rose-400">
+                                {isBn ? 'পূর্বে ছিল (BEFORE - Old State)' : 'BEFORE (Old State)'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400 px-2 py-0.5 rounded bg-rose-500/15">
+                              {isBn ? 'সংশোধনের পূর্ববর্তী মান' : 'Previous Revision'}
                             </span>
                           </div>
-                          <div className="text-base font-black font-mono text-emerald-700 dark:text-emerald-400 mt-2">
-                            {formatCurrency(history.afterAmount ?? selectedLog.amount ?? 0)}
+
+                          <div className="p-3.5 space-y-2.5 flex-1">
+                            {displayedFields.map(field => {
+                              const isUpd = field.status === 'updated';
+                              const isRem = field.status === 'removed';
+                              const isAdd = field.status === 'added';
+                              return (
+                                <div
+                                  key={`before-${field.id}`}
+                                  className={cn(
+                                    "p-2.5 rounded-xl border transition-colors flex flex-col justify-between min-h-[62px]",
+                                    isUpd ? "bg-amber-500/10 border-amber-500/30" :
+                                    isRem ? "bg-rose-500/10 border-rose-500/30" :
+                                    isAdd ? "bg-muted/20 border-dashed border-border opacity-70" :
+                                    "bg-muted/30 border-border"
+                                  )}
+                                >
+                                  <div className="flex items-center justify-between text-[11px] mb-1">
+                                    <span className="font-bold text-muted-foreground">{isBn ? field.labelBn : field.label}</span>
+                                    {renderDiffBadge(field.status)}
+                                  </div>
+                                  <div className={cn(
+                                    "text-xs",
+                                    isUpd ? "line-through text-muted-foreground font-mono" :
+                                    isRem ? "text-rose-600 dark:text-rose-400 font-bold" :
+                                    isAdd ? "text-muted-foreground italic text-[11px]" :
+                                    "font-medium text-foreground"
+                                  )}>
+                                    {isAdd ? (isBn ? '— (পূর্বে বিদ্যমান ছিল না)' : '— (Not present in prior state)') : renderFieldValue(field.beforeValue, field.isCurrency, field.isDate)}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* RIGHT COLUMN: AFTER (Updated State) */}
+                        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.02] dark:bg-emerald-950/[0.05] overflow-hidden flex flex-col shadow-xs">
+                          <div className="px-4 py-2.5 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                              <span className="font-black text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                                {isBn ? 'পরিবর্তিত / বর্তমানে (AFTER - Updated State)' : 'AFTER (Updated State)'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/15">
+                              {isBn ? 'বর্তমান সক্রিয় মান' : 'Active Record'}
+                            </span>
+                          </div>
+
+                          <div className="p-3.5 space-y-2.5 flex-1">
+                            {displayedFields.map(field => {
+                              const isUpd = field.status === 'updated';
+                              const isRem = field.status === 'removed';
+                              const isAdd = field.status === 'added';
+                              return (
+                                <div
+                                  key={`after-${field.id}`}
+                                  className={cn(
+                                    "p-2.5 rounded-xl border transition-colors flex flex-col justify-between min-h-[62px]",
+                                    isUpd ? "bg-amber-500/15 border-amber-500/40 shadow-xs ring-1 ring-amber-500/20" :
+                                    isAdd ? "bg-emerald-500/15 border-emerald-500/40 shadow-xs ring-1 ring-emerald-500/20" :
+                                    isRem ? "bg-muted/20 border-dashed border-border opacity-70" :
+                                    "bg-muted/30 border-border"
+                                  )}
+                                >
+                                  <div className="flex items-center justify-between text-[11px] mb-1">
+                                    <span className="font-bold text-muted-foreground">{isBn ? field.labelBn : field.label}</span>
+                                    {renderDiffBadge(field.status)}
+                                  </div>
+                                  <div className={cn(
+                                    "text-xs",
+                                    isUpd ? "font-bold text-amber-800 dark:text-amber-300" :
+                                    isAdd ? "font-bold text-emerald-800 dark:text-emerald-300" :
+                                    isRem ? "text-muted-foreground italic text-[11px]" :
+                                    "font-medium text-foreground"
+                                  )}>
+                                    {isRem ? (isBn ? '— (অপসারিত)' : '— (Removed in this revision)') : renderFieldValue(field.afterValue, field.isCurrency, field.isDate)}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                }
+                    )}
 
-                if (selectedLog.amount !== undefined) {
-                  return (
-                    <div className="flex justify-between items-center p-3.5 rounded-xl bg-primary/5 border border-primary/20">
-                      <div>
-                        <span className="font-bold text-foreground block text-xs">
-                          {isBn ? 'লেনদেনের পরিমাণ' : 'Transaction Amount'}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">
-                          {isBn ? 'প্রাথমিক এন্ট্রি পরিমাণ' : 'Initial Recorded Amount'}
-                        </span>
+                    {/* Mode B: Stacked Grid Comparison */}
+                    {inspectorLayout === 'stacked' && (
+                      <div className="space-y-3">
+                        {/* BEFORE CARD */}
+                        <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.02] dark:bg-rose-950/[0.05] overflow-hidden shadow-xs">
+                          <div className="px-4 py-2.5 bg-rose-500/10 border-b border-rose-500/20 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                              <span className="font-black text-xs uppercase tracking-wider text-rose-700 dark:text-rose-400">
+                                {isBn ? '১. পূর্বে ছিল (BEFORE - Old State)' : '1. BEFORE (Old State)'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold text-rose-700 dark:text-rose-400 px-2 py-0.5 rounded bg-rose-500/15">
+                              {isBn ? 'সংশোধনের আগের মান' : 'Prior Revision'}
+                            </span>
+                          </div>
+                          <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                            {displayedFields.map(field => (
+                              <div
+                                key={`stacked-before-${field.id}`}
+                                className={cn(
+                                  "p-2.5 rounded-lg border",
+                                  field.status === 'updated' ? "bg-amber-500/10 border-amber-500/30" :
+                                  field.status === 'removed' ? "bg-rose-500/10 border-rose-500/30" :
+                                  field.status === 'added' ? "bg-muted/20 border-dashed border-border opacity-70" :
+                                  "bg-muted/30 border-border"
+                                )}
+                              >
+                                <div className="flex items-center justify-between text-[11px] mb-1">
+                                  <span className="font-bold text-muted-foreground">{isBn ? field.labelBn : field.label}</span>
+                                  {renderDiffBadge(field.status)}
+                                </div>
+                                <div className={cn(
+                                  "text-xs",
+                                  field.status === 'updated' ? "line-through text-muted-foreground font-mono" :
+                                  field.status === 'removed' ? "text-rose-600 font-bold" :
+                                  field.status === 'added' ? "text-muted-foreground italic text-[11px]" :
+                                  "font-medium text-foreground"
+                                )}>
+                                  {field.status === 'added' ? '—' : renderFieldValue(field.beforeValue, field.isCurrency, field.isDate)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Middle Direction Divider */}
+                        <div className="flex items-center justify-center py-1">
+                          <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-muted border border-border text-[11px] font-bold text-muted-foreground shadow-2xs">
+                            <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                            <span>{isBn ? 'সংশোধিত হয়ে পরিবর্তিত হয়েছে' : 'Transformed / Modified'}</span>
+                            {history.difference !== undefined && (
+                              <span className={cn(
+                                "font-mono font-black ml-1",
+                                history.difference > 0 ? "text-emerald-600" : history.difference < 0 ? "text-rose-600" : "text-muted-foreground"
+                              )}>
+                                ({history.difference > 0 ? `+${formatCurrency(history.difference)}` : formatCurrency(history.difference)})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* AFTER CARD */}
+                        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.02] dark:bg-emerald-950/[0.05] overflow-hidden shadow-xs">
+                          <div className="px-4 py-2.5 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                              <span className="font-black text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                                {isBn ? '২. পরিবর্তিত / বর্তমানে (AFTER - Updated State)' : '2. AFTER (Updated State)'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/15">
+                              {isBn ? 'বর্তমান সক্রিয় মান' : 'Active Record'}
+                            </span>
+                          </div>
+                          <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                            {displayedFields.map(field => (
+                              <div
+                                key={`stacked-after-${field.id}`}
+                                className={cn(
+                                  "p-2.5 rounded-lg border",
+                                  field.status === 'updated' ? "bg-amber-500/15 border-amber-500/40 shadow-xs ring-1 ring-amber-500/20" :
+                                  field.status === 'added' ? "bg-emerald-500/15 border-emerald-500/40 shadow-xs ring-1 ring-emerald-500/20" :
+                                  field.status === 'removed' ? "bg-muted/20 border-dashed border-border opacity-70" :
+                                  "bg-muted/30 border-border"
+                                )}
+                              >
+                                <div className="flex items-center justify-between text-[11px] mb-1">
+                                  <span className="font-bold text-muted-foreground">{isBn ? field.labelBn : field.label}</span>
+                                  {renderDiffBadge(field.status)}
+                                </div>
+                                <div className={cn(
+                                  "text-xs",
+                                  field.status === 'updated' ? "font-bold text-amber-800 dark:text-amber-300" :
+                                  field.status === 'added' ? "font-bold text-emerald-800 dark:text-emerald-300" :
+                                  field.status === 'removed' ? "text-muted-foreground italic text-[11px]" :
+                                  "font-medium text-foreground"
+                                )}>
+                                  {field.status === 'removed' ? '—' : renderFieldValue(field.afterValue, field.isCurrency, field.isDate)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <span className="font-black text-sm text-primary font-mono">{formatCurrency(selectedLog.amount)}</span>
+                    )}
+
+                    {/* Mode C: Structured Diff Table */}
+                    {inspectorLayout === 'diff-table' && (
+                      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-muted/60 border-b border-border text-[11px] font-black uppercase text-muted-foreground">
+                              <th className="py-2.5 px-3.5">{isBn ? 'ফিল্ডের নাম' : 'Field Attribute'}</th>
+                              <th className="py-2.5 px-3.5 bg-rose-500/5 text-rose-700 dark:text-rose-400">
+                                {isBn ? 'পূর্বে ছিল (BEFORE)' : 'BEFORE (Old)'}
+                              </th>
+                              <th className="py-2.5 px-3.5 text-center">{isBn ? 'পরিবর্তন (Diff)' : 'Diff Status'}</th>
+                              <th className="py-2.5 px-3.5 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400">
+                                {isBn ? 'বর্তমানে / পরে (AFTER)' : 'AFTER (New)'}
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {displayedFields.map(field => {
+                              const isUpd = field.status === 'updated';
+                              const isRem = field.status === 'removed';
+                              const isAdd = field.status === 'added';
+                              return (
+                                <tr
+                                  key={`table-${field.id}`}
+                                  className={cn(
+                                    "transition-colors",
+                                    isUpd ? "bg-amber-500/[0.04]" :
+                                    isAdd ? "bg-emerald-500/[0.04]" :
+                                    isRem ? "bg-rose-500/[0.04]" :
+                                    "hover:bg-muted/30"
+                                  )}
+                                >
+                                  <td className="py-2.5 px-3.5 font-bold text-foreground">
+                                    <span>{isBn ? field.labelBn : field.label}</span>
+                                    <span className="block text-[10px] font-mono text-muted-foreground font-normal">{field.id}</span>
+                                  </td>
+                                  <td className={cn(
+                                    "py-2.5 px-3.5 bg-rose-500/[0.02]",
+                                    isUpd ? "line-through text-muted-foreground font-mono" :
+                                    isRem ? "text-rose-600 font-bold" :
+                                    isAdd ? "text-muted-foreground italic text-[11px]" :
+                                    "text-foreground font-medium"
+                                  )}>
+                                    {isAdd ? '—' : renderFieldValue(field.beforeValue, field.isCurrency, field.isDate)}
+                                  </td>
+                                  <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
+                                    {renderDiffBadge(field.status)}
+                                  </td>
+                                  <td className={cn(
+                                    "py-2.5 px-3.5 bg-emerald-500/[0.02]",
+                                    isUpd ? "font-bold text-amber-800 dark:text-amber-300" :
+                                    isAdd ? "font-bold text-emerald-800 dark:text-emerald-300" :
+                                    isRem ? "text-muted-foreground italic text-[11px]" :
+                                    "text-foreground font-medium"
+                                  )}>
+                                    {isRem ? '—' : renderFieldValue(field.afterValue, field.isCurrency, field.isDate)}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* 4. Collapsible Raw Audit Metadata Payload */}
+                <details className="group rounded-xl border border-border bg-muted/20 overflow-hidden text-xs">
+                  <summary className="px-4 py-2.5 flex items-center justify-between cursor-pointer font-bold text-muted-foreground hover:text-foreground transition-colors select-none">
+                    <div className="flex items-center gap-2">
+                      <Code className="w-4 h-4 text-primary" />
+                      <span>{isBn ? 'র\' অডিট মেটাডাটা ও পে-লোড (Raw JSON Payload)' : 'Raw Audit Payload (JSON Metadata)'}</span>
                     </div>
-                  );
-                }
+                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-muted border border-border">
+                      {isBn ? 'ক্লিক করে দেখুন' : 'Expand / Collapse'}
+                    </span>
+                  </summary>
+                  <div className="p-3.5 bg-card border-t border-border">
+                    <pre className="p-3 rounded-lg bg-muted/60 font-mono text-[11px] leading-relaxed overflow-x-auto text-foreground border border-border">
+                      {JSON.stringify({
+                        id: selectedLog.id,
+                        action: selectedLog.action,
+                        entity_type: selectedLog.entity_type,
+                        entity_id: selectedLog.entity_id,
+                        voucher_no: selectedLog.voucher_no,
+                        amount: selectedLog.amount,
+                        before_amount: selectedLog.before_amount,
+                        after_amount: selectedLog.after_amount,
+                        party_name: selectedLog.party_name,
+                        createdAt: selectedLog.createdAt,
+                        details: selectedLog.details,
+                        metadata: selectedLog.metadata
+                      }, null, 2)}
+                    </pre>
+                  </div>
+                </details>
+              </div>
 
-                return null;
-              })()}
+              {/* Modal Footer */}
+              <div className="px-5 py-3 border-t border-border bg-muted/20 flex flex-wrap items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCopyId(selectedLog.id)}
+                  className="px-3 py-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-[11px] font-bold shadow-2xs transition-colors"
+                >
+                  {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedId ? (isBn ? 'আইডি কপি হয়েছে' : 'Copied!') : (isBn ? 'লগ ID কপি' : 'Copy Log ID')}</span>
+                </button>
 
-              {selectedLog.voucher_no && (
-                <div className="flex justify-between items-center p-2.5 rounded-xl bg-muted/30 border border-border">
-                  <span className="text-muted-foreground">{isBn ? 'ভাউচার নম্বর' : 'Voucher Number'}</span>
-                  <span className="font-mono font-bold">{selectedLog.voucher_no}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedLog(null)}
+                    className="px-4 py-1.5 bg-primary text-primary-foreground rounded-lg font-bold text-xs shadow-xs hover:bg-primary/90 transition-all"
+                  >
+                    {isBn ? 'বন্ধ করুন' : 'Close Inspector'}
+                  </button>
                 </div>
-              )}
-
-              {selectedLog.party_name && (
-                <div className="flex justify-between items-center p-2.5 rounded-xl bg-muted/30 border border-border">
-                  <span className="text-muted-foreground">{isBn ? 'পার্টি / কাস্টমার' : 'Party / Ledger'}</span>
-                  <span className="font-bold">{selectedLog.party_name}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="px-6 py-3 border-t border-border bg-muted/20 flex justify-between items-center">
-              <button
-                onClick={() => handleCopyId(selectedLog.id)}
-                className="px-3 py-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground flex items-center gap-1 text-[11px] font-bold"
-              >
-                {copiedId ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedId ? (isBn ? 'কপি হয়েছে' : 'Copied') : (isBn ? 'লগ ID কপি' : 'Copy Log ID')}</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedLog(null)}
-                className="px-4 py-1.5 bg-primary text-primary-foreground rounded-lg font-bold text-xs shadow-xs"
-              >
-                {isBn ? 'বন্ধ করুন' : 'Close'}
-              </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })(), document.body)}
 
       {/* ========================================================================= */}
       {/* 4. MANUAL AUDIT REMARK MODAL */}

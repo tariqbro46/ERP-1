@@ -23,6 +23,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { formatCurrency, cn } from '../lib/utils';
 import { format } from 'date-fns';
+import { EmptyState } from './EmptyState';
 
 import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
@@ -290,7 +291,12 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
                     </tr>
                   );
                 }) : (
-                  <tr><td colSpan={isAttendance ? 33 : 8} className="p-12 text-center text-gray-400 uppercase tracking-widest text-[10px]">No Records Found</td></tr>
+                  <EmptyState
+                    variant="payroll"
+                    colSpan={isAttendance ? 33 : 8}
+                    title="No Payroll Records Found"
+                    description="No attendance records or salary sheets generated for the selected month."
+                  />
                 )}
               </tbody>
               {!isAttendance && monthSheets.length > 0 && (

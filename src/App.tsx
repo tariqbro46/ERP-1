@@ -5,6 +5,7 @@ import { soundService } from './services/soundService';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS } from './contexts/SettingsContext';
 import { useTheme, Theme } from './contexts/ThemeContext';
+import { LATEST_VERSION } from './data/releaseNotes';
 import * as LucideIcons from 'lucide-react';
 import { 
   LayoutDashboard, 
@@ -123,6 +124,7 @@ import AIInsights from './pages/AIInsights';
 import SystemGuideFloatingButton from './components/SystemGuideFloatingButton';
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { ReleaseNotes } from './components/ReleaseNotes';
+import { GithubVersionReleaseModal } from './components/GithubVersionReleaseModal';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
@@ -401,7 +403,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     glassBackground = 'default',
     englishFont = 'Inter',
     banglaFont = 'Hind Siliguri',
-    appVersion = 'v1.0.1',
+    appVersion = LATEST_VERSION || 'v1.8.5',
     statusOnlineText = 'Status: Online',
     showGoToShortcut = true,
     showTopbarSearch = true,
@@ -634,7 +636,18 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   const [unreadNotificationCount, setUnreadNotificationCount] = React.useState(0);
   const [isQuotaDashboardOpen, setIsQuotaDashboardOpen] = React.useState(false);
   const [isQuotaModalOpen, setIsQuotaModalOpen] = React.useState(false);
+  const [isGithubReleaseModalOpen, setIsGithubReleaseModalOpen] = React.useState(false);
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
+
+  React.useEffect(() => {
+    const handleOpenGithubRelease = () => {
+      setIsGithubReleaseModalOpen(true);
+    };
+    window.addEventListener('open_github_version_release', handleOpenGithubRelease);
+    return () => {
+      window.removeEventListener('open_github_version_release', handleOpenGithubRelease);
+    };
+  }, []);
 
   React.useEffect(() => {
     const handleQuotaExceededAttempt = (e: Event) => {
@@ -1602,10 +1615,18 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                 <span>Collapse</span>
               </button>
 
-              <div className={cn("flex items-center gap-1.5 text-[9px] font-mono", isDarkTheme ? "text-slate-400" : "text-slate-500")}>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span>{appVersion}</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsGithubReleaseModalOpen(true)}
+                className={cn(
+                  "flex items-center gap-1.5 text-[9px] font-mono px-1.5 py-0.5 rounded cursor-pointer transition-all hover:scale-105 group border border-transparent hover:border-border/60",
+                  isDarkTheme ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/80"
+                )}
+                title={language === 'bn' ? 'গিটহাবে পুশ ও সংস্করণ পরিবর্তন করুন' : 'Push Changes to GitHub & Update App Version'}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse group-hover:bg-indigo-400" />
+                <span className="font-bold">{appVersion}</span>
+              </button>
             </div>
           ) : (
             <div className="flex justify-center">
@@ -2482,6 +2503,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       <QuotaDashboardModal isOpen={isQuotaDashboardOpen} onClose={() => setIsQuotaDashboardOpen(false)} company={company} />
       <QuotaExceededModal isOpen={isQuotaModalOpen} onClose={() => setIsQuotaModalOpen(false)} company={company} />
       <WhatsNewModal />
+      <GithubVersionReleaseModal isOpen={isGithubReleaseModalOpen} onClose={() => setIsGithubReleaseModalOpen(false)} />
       {isOffline && (
         <div id="offline-toast" className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] animate-in fade-in slide-in-from-bottom-5 duration-300">
           <div className="bg-slate-900 border border-slate-800 text-slate-100 pl-4 pr-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 select-none">

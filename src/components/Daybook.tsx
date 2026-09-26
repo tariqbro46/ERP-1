@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Printer, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft, Eye } from 'lucide-react';
+import { Search, Filter, Download, Printer, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft, Eye, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn, formatNumber, formatQuantity, parseEntryDate } from '../lib/utils';
 import { erpService } from '../services/erpService';
@@ -15,6 +15,7 @@ import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { EditableHeader } from './EditableHeader';
 import { ReportConfigModal } from './ReportConfigModal';
 import { ReportConfig } from '../types';
+import { VoucherContextMenu } from './TableContextMenu';
 
 const DEFAULT_CONFIG: ReportConfig = {
   showNarration: false,
@@ -52,6 +53,18 @@ export function Daybook() {
     return new Date().toLocaleDateString('en-CA');
   });
   const [highlightDates, setHighlightDates] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number } | null;
+    voucher: any;
+    particulars?: string;
+    amount?: number;
+    date?: string;
+  }>({
+    isOpen: false,
+    position: null,
+    voucher: null
+  });
 
   useEffect(() => {
     if (company && company.enableDaybookDateHighlight !== false) {
@@ -652,10 +665,42 @@ export function Daybook() {
                   config.enableStripeView && idx % 2 !== 0 && "bg-muted/30"
                 )}
                 onClick={() => navigate(`/vouchers/view/${v.id}`)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextMenu({
+                    isOpen: true,
+                    position: { x: e.clientX, y: e.clientY },
+                    voucher: v,
+                    particulars: getLedgerName(v),
+                    amount: v.total_amount,
+                    date: v.v_date
+                  });
+                }}
               >
                 <div className="flex justify-between items-start">
                   <span className="text-[10px] text-gray-500 uppercase">{v.v_date}</span>
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase bg-emerald-500/10 px-2 py-0.5 rounded">{v.v_type}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-emerald-500 uppercase bg-emerald-500/10 px-2 py-0.5 rounded">{v.v_type}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setContextMenu({
+                          isOpen: true,
+                          position: { x: rect.left - 180, y: rect.bottom + 4 },
+                          voucher: v,
+                          particulars: getLedgerName(v),
+                          amount: v.total_amount,
+                          date: v.v_date
+                        });
+                      }}
+                      className="p-1 text-gray-400 hover:text-foreground rounded"
+                      title="Actions"
+                    >
+                      <MoreVertical className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="flex flex-col">
@@ -720,6 +765,17 @@ export function Daybook() {
                         config.enableStripeView && idx % 2 !== 0 && "bg-muted/30"
                       )}
                       onClick={() => navigate(`/vouchers/view/${v.id}`)}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setContextMenu({
+                          isOpen: true,
+                          position: { x: e.clientX, y: e.clientY },
+                          voucher: v,
+                          particulars: getLedgerName(v),
+                          amount: v.total_amount,
+                          date: v.v_date
+                        });
+                      }}
                     >
                       <td className="px-4 lg:px-6 py-4 whitespace-nowrap">{formatReportDate(v.v_date, settings.dateFormat)}</td>
                       <td className="px-4 lg:px-6 py-4">
@@ -750,7 +806,7 @@ export function Daybook() {
                       </td>
                       <td className="px-4 lg:px-6 py-4 text-right text-foreground font-bold">৳ {formatNumber(v.total_amount)}</td>
                       <td className="px-4 lg:px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end items-center gap-1.5">
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(v); }}
                             className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded transition-colors"
@@ -764,6 +820,24 @@ export function Daybook() {
                             title="Share via Email"
                           >
                             <Mail className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setContextMenu({
+                                isOpen: true,
+                                position: { x: rect.left - 180, y: rect.bottom + 4 },
+                                voucher: v,
+                                particulars: getLedgerName(v),
+                                amount: v.total_amount,
+                                date: v.v_date
+                              });
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-foreground hover:bg-muted rounded transition-colors"
+                            title="More Actions (Right-click)"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
@@ -818,6 +892,17 @@ export function Daybook() {
           </div>
         </div>
       </div>
+      <VoucherContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        onClose={() => setContextMenu(prev => ({ ...prev, isOpen: false, position: null }))}
+        voucher={contextMenu.voucher}
+        particulars={contextMenu.particulars}
+        amount={contextMenu.amount}
+        date={contextMenu.date}
+        onRefresh={fetchVouchers}
+        onDeleted={fetchVouchers}
+      />
     </div>
   </div>
 );

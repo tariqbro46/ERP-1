@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Sparkles, 
   X, 
@@ -9,7 +10,8 @@ import {
   PlusCircle, 
   Calendar, 
   History,
-  ExternalLink
+  ExternalLink,
+  ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +19,8 @@ import {
   LATEST_VERSION, 
   getLatestRelease, 
   markReleaseAsSeen, 
-  hasUnseenRelease 
+  hasUnseenRelease,
+  RELEASE_NOTES 
 } from '../data/releaseNotes';
 import { useLanguage } from '../contexts/LanguageContext';
 import { cn } from '../lib/utils';
@@ -36,20 +39,37 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'new' | 'improvements' | 'fixes'>('all');
   const [dontShowAgain, setDontShowAgain] = useState(true);
+  const [selectedVersion, setSelectedVersion] = useState<string>(LATEST_VERSION);
 
-  const latestRelease = getLatestRelease();
-
-  // Auto-check on mount
+  // Auto-check on mount & sync open state
   useEffect(() => {
     if (controlledIsOpen !== undefined) {
       setIsOpen(controlledIsOpen);
+      if (controlledIsOpen) {
+        setSelectedVersion(LATEST_VERSION);
+      }
     } else if (forceOpen || hasUnseenRelease()) {
       setIsOpen(true);
+      setSelectedVersion(LATEST_VERSION);
     }
   }, [controlledIsOpen, forceOpen]);
 
+  const activeRelease = useMemo(() => {
+    return RELEASE_NOTES.find(r => r.version === selectedVersion) || getLatestRelease();
+  }, [selectedVersion]);
+
+  const activeReleaseIndex = useMemo(() => {
+    return RELEASE_NOTES.findIndex(r => r.version === selectedVersion);
+  }, [selectedVersion]);
+
+  const previousRelease = useMemo(() => {
+    return activeReleaseIndex >= 0 && activeReleaseIndex < RELEASE_NOTES.length - 1
+      ? RELEASE_NOTES[activeReleaseIndex + 1]
+      : null;
+  }, [activeReleaseIndex]);
+
   const handleDismiss = () => {
-    if (dontShowAgain) {
+    if (dontShowAgain && selectedVersion === LATEST_VERSION) {
       markReleaseAsSeen(LATEST_VERSION);
     }
     setIsOpen(false);
@@ -63,48 +83,95 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
 
   if (!isOpen) return null;
 
-  const totalNew = latestRelease.newFeatures.length;
-  const totalImp = latestRelease.improvements.length;
-  const totalFix = latestRelease.bugFixes.length;
+  const totalNew = activeRelease.newFeatures.length;
+  const totalImp = activeRelease.improvements.length;
+  const totalFix = activeRelease.bugFixes.length;
 
-  return (
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-sm">
+      <div 
+        id="whats-new-modal-overlay"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) handleDismiss();
+        }}
+        className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-in fade-in"
+      >
         <motion.div
-          initial={{ opacity: 0, scale: 0.92, y: 20 }}
+          initial={{ opacity: 0, scale: 0.94, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
-          className="relative w-full max-w-2xl bg-card border border-border shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[90vh] text-card-foreground"
+          exit={{ opacity: 0, scale: 0.96, y: 10 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-2xl bg-card border border-border shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[92vh] text-card-foreground"
         >
-          {/* Top Banner with gradient & badge */}
-          <div className="relative p-6 pb-5 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 text-white overflow-hidden select-none">
+          {/* Top Banner with gradient & badges */}
+          <div className="relative p-5 sm:p-6 pb-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-emerald-700 text-white overflow-hidden select-none">
             {/* Background sparkle accents */}
-            <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute left-1/3 -top-10 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
+            <div className="absolute -right-8 -bottom-8 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute left-1/3 -top-10 w-36 h-36 bg-white/10 rounded-full blur-xl pointer-events-none" />
 
-            <div className="relative z-10 flex items-start justify-between gap-4">
-              <div className="space-y-1.5">
+            <div className="relative z-10 flex items-start justify-between gap-3">
+              <div className="space-y-1.5 flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-white/20 backdrop-blur-md text-white border border-white/30 shadow-sm">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/20 backdrop-blur-md text-white border border-white/30 shadow-xs">
                     <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-                    {isBn ? 'নতুন আপডেট রিলিজ' : 'New Update Released'}
+                    {isBn ? "নতুন কি? সংস্করণ পরিবর্তন বিবরণী" : "What's New? Version Updates"}
                   </span>
-                  <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-white text-indigo-900 shadow-xs">
-                    {latestRelease.version}
+                  
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-black bg-white text-indigo-950 shadow-xs">
+                    {activeRelease.version}
                   </span>
-                  <span className="flex items-center gap-1 text-[11px] text-white/80 font-medium">
+
+                  {activeRelease.version === LATEST_VERSION && (
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-400 text-emerald-950 uppercase tracking-wide">
+                      {isBn ? 'বর্তমান সংস্করণ' : 'Current App Version'}
+                    </span>
+                  )}
+
+                  <span className="flex items-center gap-1 text-[11px] text-white/85 font-medium">
                     <Calendar className="w-3 h-3 text-white/70" />
-                    {isBn ? latestRelease.bnReleaseDate : latestRelease.releaseDate}
+                    {isBn ? activeRelease.bnReleaseDate : activeRelease.releaseDate}
                   </span>
                 </div>
 
-                <h2 className="text-lg sm:text-xl font-black tracking-tight text-white pt-1">
-                  {isBn ? latestRelease.bnTitle : latestRelease.title}
+                <h2 className="text-base sm:text-lg font-black tracking-tight text-white pt-1 leading-snug">
+                  {isBn ? activeRelease.bnTitle : activeRelease.title}
                 </h2>
-                <p className="text-xs text-white/90 leading-relaxed max-w-xl">
-                  {isBn ? latestRelease.bnSummary : latestRelease.summary}
+                <p className="text-xs text-white/90 leading-relaxed max-w-xl line-clamp-2">
+                  {isBn ? activeRelease.bnSummary : activeRelease.summary}
                 </p>
+
+                {/* Direct Version Comparison Callout */}
+                <div className="mt-2.5 p-2 rounded-xl bg-black/25 border border-white/20 backdrop-blur-xs flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                      <span className="text-[10px] uppercase tracking-wider text-white/70 font-semibold">{isBn ? 'টার্গেট ভার্সন:' : 'Version:'}</span>
+                      <span className="font-mono bg-amber-400/20 px-1.5 py-0.5 rounded border border-amber-400/30 text-white font-black">{activeRelease.version}</span>
+                    </div>
+                    {previousRelease && (
+                      <>
+                        <ArrowRight className="w-3 h-3 text-white/60 shrink-0" />
+                        <div className="flex items-center gap-1 text-white/90">
+                          <span className="text-[10px] uppercase tracking-wider text-white/70 font-semibold">{isBn ? 'তুলনা (পূর্বের):' : 'vs Previous:'}</span>
+                          <span className="font-mono bg-white/10 px-1.5 py-0.5 rounded border border-white/20">{previousRelease.version}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-white/90 font-medium">
+                    <span className="inline-flex items-center gap-1 text-emerald-300 font-bold">
+                      <PlusCircle className="w-3 h-3" /> {totalNew} {isBn ? 'নতুন ফিচার' : 'New'}
+                    </span>
+                    <span>•</span>
+                    <span className="inline-flex items-center gap-1 text-amber-300 font-bold">
+                      <Zap className="w-3 h-3" /> {totalImp} {isBn ? 'উন্নতি' : 'Imp'}
+                    </span>
+                    <span>•</span>
+                    <span className="inline-flex items-center gap-1 text-blue-300 font-bold">
+                      <Wrench className="w-3 h-3" /> {totalFix} {isBn ? 'ফিক্স' : 'Fixes'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <button
@@ -117,8 +184,51 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
               </button>
             </div>
 
+            {/* Version Switcher Bar (History Timeline) */}
+            <div className="mt-3 pt-2.5 border-t border-white/15 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/75 flex items-center gap-1 mr-1">
+                  <History className="w-3 h-3 text-amber-300" />
+                  {isBn ? 'রিসেন্ট ভার্সন হিস্ট্রি:' : 'Recent Releases:'}
+                </span>
+                {RELEASE_NOTES.slice(0, 4).map((rel) => {
+                  const isSel = rel.version === selectedVersion;
+                  return (
+                    <button
+                      key={rel.version}
+                      type="button"
+                      onClick={() => {
+                        setSelectedVersion(rel.version);
+                        setActiveTab('all');
+                      }}
+                      className={cn(
+                        "px-2 py-0.5 rounded-md text-[10px] font-mono font-bold transition-all shrink-0 flex items-center gap-1",
+                        isSel
+                          ? "bg-white text-indigo-950 shadow-xs ring-2 ring-white/60 font-black"
+                          : "bg-white/15 text-white hover:bg-white/25 border border-white/20"
+                      )}
+                    >
+                      <span>{rel.version}</span>
+                      {rel.version === LATEST_VERSION && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleViewAllHistory}
+                className="text-[10px] font-bold text-white/85 hover:text-white underline underline-offset-2 shrink-0 flex items-center gap-0.5 ml-2"
+              >
+                <span>{isBn ? 'সব রিলিজ দেখুন' : 'Full Release Notes'}</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+
             {/* Filter Tabs */}
-            <div className="flex items-center gap-1.5 mt-5 overflow-x-auto no-scrollbar pt-1">
+            <div className="flex items-center gap-1.5 mt-3 overflow-x-auto no-scrollbar pt-1">
               <button
                 type="button"
                 onClick={() => setActiveTab('all')}
@@ -189,9 +299,9 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
           </div>
 
           {/* Scrollable Content Items */}
-          <div className="p-6 overflow-y-auto max-h-[46vh] space-y-4 no-scrollbar">
+          <div className="p-5 sm:p-6 overflow-y-auto max-h-[46vh] space-y-4 no-scrollbar">
             {/* New Features Section */}
-            {(activeTab === 'all' || activeTab === 'new') && latestRelease.newFeatures.length > 0 && (
+            {(activeTab === 'all' || activeTab === 'new') && activeRelease.newFeatures.length > 0 && (
               <div className="space-y-2.5">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
@@ -203,7 +313,7 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
                 </div>
 
                 <div className="grid gap-2.5">
-                  {latestRelease.newFeatures.map((item) => (
+                  {activeRelease.newFeatures.map((item) => (
                     <div
                       key={item.id}
                       className="p-3.5 bg-muted/40 border border-border/80 rounded-xl hover:border-emerald-500/40 transition-colors space-y-1.5 group"
@@ -233,7 +343,7 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
             )}
 
             {/* Improvements Section */}
-            {(activeTab === 'all' || activeTab === 'improvements') && latestRelease.improvements.length > 0 && (
+            {(activeTab === 'all' || activeTab === 'improvements') && activeRelease.improvements.length > 0 && (
               <div className="space-y-2.5 pt-2">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
@@ -245,7 +355,7 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
                 </div>
 
                 <div className="grid gap-2.5">
-                  {latestRelease.improvements.map((item) => (
+                  {activeRelease.improvements.map((item) => (
                     <div
                       key={item.id}
                       className="p-3.5 bg-muted/40 border border-border/80 rounded-xl hover:border-amber-500/40 transition-colors space-y-1.5 group"
@@ -270,7 +380,7 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
             )}
 
             {/* Bug Fixes Section */}
-            {(activeTab === 'all' || activeTab === 'fixes') && latestRelease.bugFixes.length > 0 && (
+            {(activeTab === 'all' || activeTab === 'fixes') && activeRelease.bugFixes.length > 0 && (
               <div className="space-y-2.5 pt-2">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-md bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
@@ -282,7 +392,7 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
                 </div>
 
                 <div className="grid gap-2.5">
-                  {latestRelease.bugFixes.map((item) => (
+                  {activeRelease.bugFixes.map((item) => (
                     <div
                       key={item.id}
                       className="p-3.5 bg-muted/40 border border-border/80 rounded-xl hover:border-blue-500/40 transition-colors space-y-1.5 group"
@@ -320,7 +430,7 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
                 className="w-4 h-4 rounded border-border text-blue-600 focus:ring-blue-500 focus:ring-offset-0 bg-background cursor-pointer"
               />
               <span className="text-xs text-muted-foreground">
-                {isBn ? 'এই সংস্করণের জন্য আর দেখাবেন না' : "Don't show again for this version"}
+                {isBn ? 'এই সংস্করণের জন্য আর স্বয়ংক্রিয় দেখাবেন না' : "Don't show automatically for this version"}
               </span>
             </label>
 
@@ -328,10 +438,10 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
               <button
                 type="button"
                 onClick={handleViewAllHistory}
-                className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors"
+                className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl transition-colors border border-border/60"
               >
-                <History className="w-3.5 h-3.5" />
-                <span>{isBn ? 'রিলিজ হিস্ট্রি' : 'All Releases'}</span>
+                <History className="w-3.5 h-3.5 text-blue-600" />
+                <span>{isBn ? 'সম্পূর্ণ রিলিজ নোটস' : 'All Releases Page'}</span>
               </button>
 
               <button
@@ -339,13 +449,14 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
                 onClick={handleDismiss}
                 className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
               >
-                <span>{isBn ? 'ঠিক আছে, বুঝেছি' : 'Got it, Explore'}</span>
+                <span>{isBn ? 'ঠিক আছে, বুঝেছি' : 'Got it, Close'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

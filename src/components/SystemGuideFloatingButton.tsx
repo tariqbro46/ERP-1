@@ -9,6 +9,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { WhatsNewModal } from './WhatsNewModal';
 
 export default function SystemGuideFloatingButton() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function SystemGuideFloatingButton() {
   } = useSettings();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'quick' | 'alerts' | 'hotkeys'>('quick');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -158,7 +160,7 @@ export default function SystemGuideFloatingButton() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-16 right-0 w-[350px] sm:w-[380px] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col z-50 text-foreground"
+            className="absolute bottom-16 right-0 w-[360px] sm:w-[415px] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col z-50 text-foreground"
           >
             {/* Header */}
             <div className="p-4 bg-gradient-to-r from-blue-600/10 via-emerald-600/10 to-indigo-600/5 border-b border-border flex items-center justify-between">
@@ -474,18 +476,50 @@ export default function SystemGuideFloatingButton() {
               )}
             </div>
 
-            {/* Bottom Actions redirects to system instructions page */}
-            <div className="p-3 bg-muted/65 border-t border-border flex items-center justify-between">
-              <span className="text-[10px] text-muted-foreground font-semibold">
-                TallyFlow Zero ERP Guide
-              </span>
+            {/* Bottom Actions: Release Notes, What's New? (on the left of Full Guide), and Full Guide */}
+            <div className="p-2.5 sm:p-3 bg-muted/70 border-t border-border flex items-center justify-between gap-1.5 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                {/* 1. Release Notes Button (Links to /release-notes page) */}
+                <button
+                  type="button"
+                  id="guide-release-notes-btn"
+                  onClick={() => {
+                    setIsOpen(false);
+                    navigate('/release-notes');
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-card hover:bg-muted text-foreground border border-border hover:border-border/80 text-[11px] font-bold rounded-lg transition-all shadow-2xs hover:scale-[1.02] active:scale-[0.98]"
+                  title={isBn ? 'রিলিজ নোটস ও পূর্ণাঙ্গ সংস্করণ বিবরণী' : 'Release Notes & Version History'}
+                >
+                  <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>{isBn ? 'রিলিজ নোটস' : 'Release Notes'}</span>
+                </button>
+
+                {/* 2. What's New? Button (Placed immediately to the left of Full Guide) */}
+                <button
+                  type="button"
+                  id="guide-whats-new-btn"
+                  onClick={() => {
+                    setIsOpen(false);
+                    setIsWhatsNewOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-amber-500/15 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/35 hover:border-amber-500/50 text-[11px] font-bold rounded-lg transition-all shadow-2xs hover:scale-[1.02] active:scale-[0.98]"
+                  title={isBn ? 'বর্তমান সংস্করণে কি কি নতুন পরিবর্তন এসেছে জানুন' : "See What's New in this current version vs previous"}
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 animate-pulse" />
+                  <span>{isBn ? 'নতুন কি?' : "What's New?"}</span>
+                </button>
+              </div>
+
+              {/* 3. Full Guide Button */}
               <button
                 type="button"
+                id="guide-full-guide-btn"
                 onClick={() => {
                   setIsOpen(false);
                   navigate('/instructions');
                 }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-[11px] font-bold rounded-lg transition-colors shadow-sm"
+                className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-[11px] font-bold rounded-lg transition-all shadow-sm shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+                title={isBn ? 'সম্পূর্ণ সিস্টেম ব্যবহার নির্দেশিকা' : 'Complete System Guide'}
               >
                 <span>{isBn ? 'সম্পূর্ণ গাইড' : 'Full Guide'}</span>
                 <ExternalLink className="w-3 h-3" />
@@ -514,6 +548,13 @@ export default function SystemGuideFloatingButton() {
           <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
         </span>
       </button>
+
+      {/* What's New Modal opened from Assistant */}
+      <WhatsNewModal 
+        isOpen={isWhatsNewOpen} 
+        onClose={() => setIsWhatsNewOpen(false)} 
+        forceOpen={true} 
+      />
     </div>
   );
 }

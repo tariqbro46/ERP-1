@@ -71,13 +71,15 @@ import {
   Palette,
   FileImage,
   Save,
+  Loader2,
   Wrench,
   Sparkles,
   Volume2,
   Boxes,
   Monitor,
   Play,
-  Eye
+  Eye,
+  GitBranch
 } from 'lucide-react';
 import { soundService } from '../services/soundService';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -85,12 +87,14 @@ import { format } from 'date-fns';
 import { erpService, deduplicateMenuConfig } from '../services/erpService';
 import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { cn, ensureDate } from '../lib/utils';
 import { SiteContentEditor } from './SiteContentEditor';
 import { AVAILABLE_FEATURES, FeatureCategory } from '../constants/features';
 import { errorService } from '../services/errorService';
+import { LATEST_VERSION } from '../data/releaseNotes';
 
 interface CompanyStats extends Company {
   userCount: number;
@@ -104,6 +108,7 @@ interface CompanyStats extends Company {
 export default function FounderPanel() {
   const { updateFeaturesSettings, appFeatures } = useSettings();
   const { user: currentUser } = useAuth();
+  const { language } = useLanguage();
   const { showNotification } = useNotification();
   const navigate = useNavigate();
   const isSuperAdmin = currentUser?.role === 'Founder' || 
@@ -401,7 +406,8 @@ export default function FounderPanel() {
   const [localSoundClick, setLocalSoundClick] = useState(soundClick || '');
   const [localSoundNavigation, setLocalSoundNavigation] = useState(soundNavigation || '');
 
-  const [localAppVersion, setLocalAppVersion] = useState(appVersion || 'v1.0.1');
+  const [localAppVersion, setLocalAppVersion] = useState(appVersion || LATEST_VERSION || 'v1.8.5');
+  const [isSavingAppVersion, setIsSavingAppVersion] = useState(false);
   const [localDeveloperContactText, setLocalDeveloperContactText] = useState(developerContactText || 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000');
   const [localDeveloperContactAlignment, setLocalDeveloperContactAlignment] = useState(developerContactAlignment || 'center');
   const [localVoucherLayout, setLocalVoucherLayout] = useState(voucherLayout || 'Layout 1');
@@ -3262,19 +3268,93 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                         "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
                         uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
                       )}>
-                        <div className="flex items-center gap-2 border-b border-border pb-3">
-                          <Activity className="w-4 h-4 text-primary" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">App Version & Identity</h4>
+                        <div className="flex items-center justify-between border-b border-border pb-3 flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-primary" />
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">App Version & Identity</h4>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => window.dispatchEvent(new CustomEvent('open_github_version_release'))}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                          >
+                            <GitBranch className="w-3.5 h-3.5" />
+                            <span>{language === 'bn' ? 'গিটহাবে পুশ ও সংস্করণ রিলিজ' : 'Push to GitHub & Release Version'}</span>
+                          </button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">App Version</label>
-                            <input
-                              type="text"
-                              value={localAppVersion || ''}
-                              onChange={(e) => setLocalAppVersion(e.target.value)}
-                              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none"
-                            />
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">App Version</label>
+                              <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded">Active: {appVersion}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={localAppVersion || ''}
+                                onChange={(e) => setLocalAppVersion(e.target.value)}
+                                onKeyDown={async (e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    const cleanTarget = (localAppVersion || '').trim();
+                                    if (!cleanTarget) return;
+                                    setIsSavingAppVersion(true);
+                                    try {
+                                      await updateSystemSettings({ appVersion: cleanTarget });
+                                      try {
+                                        localStorage.setItem('tallyflow_active_version', cleanTarget);
+                                        localStorage.setItem('swr_app_version', cleanTarget);
+                                      } catch (err) {}
+                                      showNotification(language === 'bn' ? `অ্যাপ সংস্করণ ${cleanTarget}-এ সেভ হয়েছে` : `App version saved to ${cleanTarget}`);
+                                    } catch (err) {
+                                      showNotification('Failed to update app version', 'error');
+                                    } finally {
+                                      setIsSavingAppVersion(false);
+                                    }
+                                  }
+                                }}
+                                className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                              <button
+                                type="button"
+                                disabled={isSavingAppVersion || !localAppVersion?.trim() || localAppVersion.trim() === appVersion}
+                                onClick={async () => {
+                                  const cleanTarget = (localAppVersion || '').trim();
+                                  if (!cleanTarget) return;
+                                  setIsSavingAppVersion(true);
+                                  try {
+                                    await updateSystemSettings({ appVersion: cleanTarget });
+                                    try {
+                                      localStorage.setItem('tallyflow_active_version', cleanTarget);
+                                      localStorage.setItem('swr_app_version', cleanTarget);
+                                    } catch (err) {}
+                                    showNotification(language === 'bn' ? `অ্যাপ সংস্করণ ${cleanTarget}-এ সেভ হয়েছে` : `App version saved to ${cleanTarget}`);
+                                  } catch (err) {
+                                    showNotification('Failed to update app version', 'error');
+                                  } finally {
+                                    setIsSavingAppVersion(false);
+                                  }
+                                }}
+                                className="px-3 py-2 bg-primary hover:bg-primary/90 text-primary-foreground border border-transparent text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Save App Version Immediately"
+                              >
+                                {isSavingAppVersion ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Save className="w-3.5 h-3.5" />
+                                )}
+                                <span>{isSavingAppVersion ? 'Saving...' : (language === 'bn' ? 'সেভ' : 'Save')}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => window.dispatchEvent(new CustomEvent('open_github_version_release'))}
+                                className="px-3 py-2 bg-muted hover:bg-muted/80 text-foreground border border-border text-xs font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                                title="Open Version Release Manager"
+                              >
+                                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                <span>Bump</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>

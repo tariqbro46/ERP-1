@@ -14,6 +14,7 @@ import { cn, formatNumber, ensureDate } from '../lib/utils';
 import { SkeletonLoader } from './SkeletonLoader';
 import { format, differenceInDays } from 'date-fns';
 import { EditableHeader } from './EditableHeader';
+import { EmptyState } from './EmptyState';
 
 const mockChartData = [
   { name: 'Jan', value: 4000 },
@@ -1578,9 +1579,16 @@ export function Dashboard() {
                   </tr>
                 ))}
                 {recentVouchers.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-10 text-center text-gray-400 uppercase font-bold tracking-widest">{t('dash.noRecentTransactions')}</td>
-                  </tr>
+                  <EmptyState
+                    variant="vouchers"
+                    size="sm"
+                    colSpan={5}
+                    title={t('dash.noRecentTransactions')}
+                    action={{
+                      label: t('nav.voucherEntry') || 'New Voucher',
+                      onClick: () => navigate('/vouchers')
+                    }}
+                  />
                 )}
               </tbody>
             </table>
@@ -1989,7 +1997,15 @@ export function Dashboard() {
             </div>
           ))}
           {recentVouchers.length === 0 && !loading && (
-            <div className="p-10 text-center text-gray-600 uppercase tracking-widest text-[10px]">{t('dash.noRecentTransactions')}</div>
+            <EmptyState
+              variant="vouchers"
+              size="sm"
+              title={t('dash.noRecentTransactions')}
+              action={{
+                label: t('nav.voucherEntry') || 'New Voucher',
+                onClick: () => navigate('/vouchers')
+              }}
+            />
           )}
         </div>
 
@@ -2026,9 +2042,16 @@ export function Dashboard() {
                 </tr>
               ))}
               {recentVouchers.length === 0 && !loading && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-gray-600 uppercase tracking-widest">{t('dash.noRecentTransactions')}</td>
-                </tr>
+                <EmptyState
+                  variant="vouchers"
+                  size="sm"
+                  colSpan={4}
+                  title={t('dash.noRecentTransactions')}
+                  action={{
+                    label: t('nav.voucherEntry') || 'New Voucher',
+                    onClick: () => navigate('/vouchers')
+                  }}
+                />
               )}
               {loading && (
                 <tr>

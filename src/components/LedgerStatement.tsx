@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Printer, Download, ArrowLeft, Calculator, FileText, Settings as SettingsIcon, Loader2, Layout } from 'lucide-react';
+import { Search, Printer, Download, ArrowLeft, Calculator, FileText, Settings as SettingsIcon, Loader2, Layout, MoreVertical } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { cn, formatCurrency, formatNumber, formatQuantity } from '../lib/utils';
 import { erpService } from '../services/erpService';
@@ -16,6 +16,7 @@ import { ReportConfigModal } from './ReportConfigModal';
 import { ReportBuilderModal } from './ReportBuilderModal';
 import { QuickAdjustmentModal } from './QuickAdjustmentModal';
 import { ReportConfig } from '../types';
+import { VoucherContextMenu } from './TableContextMenu';
 
 const DEFAULT_CONFIG: ReportConfig = {
   showNarration: false,
@@ -51,6 +52,18 @@ export function LedgerStatement() {
   });
   const [endDate, setEndDate] = useState(() => {
     return searchParams.get('to') || sessionStorage.getItem('last_selected_ledger_to') || new Date().toLocaleDateString('en-CA');
+  });
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number } | null;
+    voucher: any;
+    particulars?: string;
+    amount?: number;
+    date?: string;
+  }>({
+    isOpen: false,
+    position: null,
+    voucher: null
   });
 
   useEffect(() => {
@@ -576,13 +589,43 @@ export function LedgerStatement() {
                                   settings.reportLayout === 'Layout 2' && mainRowIsStripe && "bg-[#F3F4F6]"
                                 )}
                                 onClick={() => navigate(`/vouchers/view/${e.id}`)}
+                                onContextMenu={(eEvent) => {
+                                  eEvent.preventDefault();
+                                  setContextMenu({
+                                    isOpen: true,
+                                    position: { x: eEvent.clientX, y: eEvent.clientY },
+                                    voucher: e.vouchers || { id: e.id, v_type: e.vouchers?.v_type, total_amount: (e.debit || e.credit || 0) },
+                                    particulars: e.particulars,
+                                    amount: e.debit || e.credit || 0,
+                                    date: e.vouchers?.v_date
+                                  });
+                                }}
                               >
                                 <td className="px-6 py-4 whitespace-nowrap text-black">{formatReportDate(e.vouchers?.v_date, settings.dateFormat)}</td>
                                 <td className="px-6 py-4">
-                                  <div className="flex flex-col">
+                                  <div className="flex items-center justify-between gap-2">
                                     <span className="text-black font-bold">
                                       {settings.reportLayout === 'Layout 2' ? 'Dr ' : ''}{e.particulars}
                                     </span>
+                                    <button
+                                      type="button"
+                                      onClick={(ev) => {
+                                        ev.stopPropagation();
+                                        const rect = ev.currentTarget.getBoundingClientRect();
+                                        setContextMenu({
+                                          isOpen: true,
+                                          position: { x: rect.left, y: rect.bottom + 4 },
+                                          voucher: e.vouchers || { id: e.id, v_type: e.vouchers?.v_type, total_amount: (e.debit || e.credit || 0) },
+                                          particulars: e.particulars,
+                                          amount: e.debit || e.credit || 0,
+                                          date: e.vouchers?.v_date
+                                        });
+                                      }}
+                                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted/80 rounded transition-all text-gray-400 hover:text-foreground shrink-0"
+                                      title="Actions (Right-click)"
+                                    >
+                                      <MoreVertical className="w-3.5 h-3.5" />
+                                    </button>
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 uppercase text-[10px] text-black">{e.vouchers?.v_type}</td>
@@ -750,6 +793,18 @@ export function LedgerStatement() {
           ledgerName: currentLedger?.name || 'M/S Johura Enterprise',
           period: `${startDate} to ${endDate}`
         }}
+      />
+
+      <VoucherContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        onClose={() => setContextMenu(prev => ({ ...prev, isOpen: false, position: null }))}
+        voucher={contextMenu.voucher}
+        particulars={contextMenu.particulars}
+        amount={contextMenu.amount}
+        date={contextMenu.date}
+        onRefresh={fetchEntries}
+        onDeleted={fetchEntries}
       />
     </div>
   </div>

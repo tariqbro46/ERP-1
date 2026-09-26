@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Printer, Download, ArrowLeft, Loader2 } from 'lucide-react';
+import { Search, Printer, Download, ArrowLeft, Loader2, MoreVertical } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -12,6 +12,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { ReportPrintHeader, ReportPrintFooter } from './ReportPrintHeader';
 import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
+import { VoucherContextMenu } from './TableContextMenu';
 
 interface RegisterReportProps {
   type: 'Contra' | 'Payment' | 'Receipt' | 'Sales' | 'Purchase' | 'Journal' | 'Stock Transfer' | 'Physical Stock';
@@ -31,24 +32,37 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA'),
     to: new Date().toLocaleDateString('en-CA')
   });
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number } | null;
+    voucher: any;
+    particulars?: string;
+    amount?: number;
+    date?: string;
+  }>({
+    isOpen: false,
+    position: null,
+    voucher: null
+  });
+
+  const fetchData = async () => {
+    if (!user?.companyId) return;
+    setLoading(true);
+    try {
+      const [vData, lData] = await Promise.all([
+        erpService.getVouchersByType(user.companyId, type, dateRange.from, dateRange.to),
+        erpService.getLedgers(user.companyId)
+      ]);
+      setVouchers(vData);
+      setLedgers(lData);
+    } catch (err) {
+      console.error(`Error fetching ${type} register:`, err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchData() {
-      if (!user?.companyId) return;
-      setLoading(true);
-      try {
-        const [vData, lData] = await Promise.all([
-          erpService.getVouchersByType(user.companyId, type, dateRange.from, dateRange.to),
-          erpService.getLedgers(user.companyId)
-        ]);
-        setVouchers(vData);
-        setLedgers(lData);
-      } catch (err) {
-        console.error(`Error fetching ${type} register:`, err);
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchData();
   }, [user?.companyId, type, dateRange]);
 
@@ -214,6 +228,17 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
                     key={v.id} 
                     className="hover:bg-gray-50 transition-colors cursor-pointer group"
                     onClick={() => navigate(`/vouchers/view/${v.id}`)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({
+                        isOpen: true,
+                        position: { x: e.clientX, y: e.clientY },
+                        voucher: v,
+                        particulars: getCounterpartyName(v),
+                        amount: v.total_amount,
+                        date: v.v_date
+                      });
+                    }}
                   >
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {formatReportDate(v.v_date, settings.dateFormat)}
@@ -232,7 +257,28 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
                       {v.v_type}
                     </td>
                     <td className="px-6 py-4 text-sm font-bold text-gray-900 text-right">
-                      {formatCurrency(v.total_amount)}
+                      <div className="flex items-center justify-end gap-2">
+                        <span>{formatCurrency(v.total_amount)}</span>
+                        <button
+                          type="button"
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            const rect = ev.currentTarget.getBoundingClientRect();
+                            setContextMenu({
+                              isOpen: true,
+                              position: { x: rect.left - 180, y: rect.bottom + 4 },
+                              voucher: v,
+                              particulars: getCounterpartyName(v),
+                              amount: v.total_amount,
+                              date: v.v_date
+                            });
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-700 transition-opacity"
+                          title="Actions (Right-click)"
+                        >
+                          <MoreVertical className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )) : (
@@ -258,6 +304,18 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
           </div>
         </div>
       </div>
+
+      <VoucherContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        onClose={() => setContextMenu(prev => ({ ...prev, isOpen: false, position: null }))}
+        voucher={contextMenu.voucher}
+        particulars={contextMenu.particulars}
+        amount={contextMenu.amount}
+        date={contextMenu.date}
+        onRefresh={fetchData}
+        onDeleted={fetchData}
+      />
     </div>
   );
 }
