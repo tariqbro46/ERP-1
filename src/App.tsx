@@ -620,7 +620,41 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   }
 
   // Quota Exceeded Check
-  const isQuotaExceeded = company && company.quotaLimit && company.quotaUsed !== undefined && company.quotaUsed >= company.quotaLimit;
+  const [quotaExceededFlag, setQuotaExceededFlag] = React.useState<boolean>(() => {
+    return localStorage.getItem('company_quota_exceeded') === 'true';
+  });
+
+  const isQuotaExceeded = Boolean(
+    !isSuperAdmin && (
+      (company && company.quotaLimit && company.quotaUsed !== undefined && company.quotaUsed >= company.quotaLimit) ||
+      quotaExceededFlag ||
+      localStorage.getItem('company_quota_exceeded') === 'true'
+    )
+  );
+
+  React.useEffect(() => {
+    if (company && company.quotaLimit && company.quotaUsed !== undefined) {
+      if (company.quotaUsed < company.quotaLimit) {
+        if (localStorage.getItem('company_quota_exceeded') === 'true') {
+          localStorage.removeItem('company_quota_exceeded');
+          setQuotaExceededFlag(false);
+        }
+      } else {
+        localStorage.setItem('company_quota_exceeded', 'true');
+        setQuotaExceededFlag(true);
+      }
+    }
+  }, [company?.quotaUsed, company?.quotaLimit]);
+
+  React.useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'company_quota_exceeded') {
+        setQuotaExceededFlag(e.newValue === 'true');
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const [bannerLang, setBannerLang] = React.useState<'en' | 'bn'>(language === 'bn' ? 'bn' : 'en');
 
@@ -651,6 +685,8 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
   React.useEffect(() => {
     const handleQuotaExceededAttempt = (e: Event) => {
+      setQuotaExceededFlag(true);
+      localStorage.setItem('company_quota_exceeded', 'true');
       if (!isSuperAdmin) {
         setIsQuotaModalOpen(true);
       }
@@ -2512,9 +2548,40 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
             </div>
             <div>
               <div className="text-[12px] font-bold text-slate-100 flex items-center gap-2">
-                You are currently offline
+                {language === 'bn' ? 'আপনি বর্তমানে অফলাইনে আছেন' : 'You are currently offline'}
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Database Quota Exceeded Floating Notification Toast */}
+      {isQuotaExceeded && (
+        <div id="quota-exceeded-toast" className={cn(
+          "fixed left-1/2 -translate-x-1/2 z-[9998] animate-in fade-in slide-in-from-bottom-5 duration-300 select-none",
+          isOffline ? "bottom-24" : "bottom-8"
+        )}>
+          <div className="bg-slate-900/95 border border-rose-500/50 text-slate-100 pl-4 pr-3.5 py-2.5 rounded-xl shadow-2xl flex items-center gap-3.5 backdrop-blur-md">
+            <div className="p-1.5 bg-rose-950/80 border border-rose-500/30 rounded-lg text-rose-400 shrink-0">
+              <LucideIcons.Database className="w-4 h-4 text-rose-400 animate-pulse" />
+            </div>
+            <div className="flex items-center gap-3">
+              <div>
+                <div className="text-[12px] font-bold text-slate-100 flex items-center gap-2">
+                  <span>{language === 'bn' ? 'কোটা সীমা শেষ হয়ে গেছে!' : 'Database Quota Exceeded!'}</span>
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping shrink-0" />
+                </div>
+                <div className="text-[10px] text-rose-300/80 font-medium">
+                  {language === 'bn' ? 'ভাওচার এন্ট্রি ও নতুন তথ্য সংরক্ষণ বন্ধ আছে' : 'Voucher entry and database writes are disabled'}
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsQuotaDashboardOpen(true)}
+                className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white transition-colors cursor-pointer shrink-0 shadow-sm"
+              >
+                {language === 'bn' ? 'বিস্তারিত' : 'Details'}
+              </button>
             </div>
           </div>
         </div>

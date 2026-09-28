@@ -10,6 +10,7 @@ import { formatCurrency, formatNumber, formatQuantity, cn } from '../lib/utils';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
+import { pdfExportService } from '../utils/pdfExportService';
 import { EditableHeader } from './EditableHeader';
 
 export function VoucherDetail() {
@@ -84,7 +85,7 @@ export function VoucherDetail() {
 
   const handleDownload = () => {
     if (voucher) {
-      exportUtils.exportVoucherToPDF({
+      pdfExportService.printVoucherToPDF({
         ...voucher,
         party_address: partyAddress || voucher.party_address || ''
       }, settings);
@@ -147,15 +148,17 @@ export function VoucherDetail() {
             </button>
             <button 
               onClick={handlePrint}
-              className="px-4 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-all flex items-center justify-center"
+              className="px-4 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-all flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider"
+              title="Print voucher (Browser print dialog)"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-4 h-4" /> {t('common.print')}
             </button>
             <button 
               onClick={handleDownload}
-              className="px-4 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-all flex items-center justify-center"
+              className="px-4 py-2 bg-primary/10 border border-primary/20 text-primary hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider"
+              title="Print to PDF (Save professional voucher offline)"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4" /> PRINT TO PDF
             </button>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { printBalanceSheet, printUtils } from '../utils/printUtils';
 import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
+import { pdfExportService } from '../utils/pdfExportService';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { EditableHeader } from './EditableHeader';
@@ -256,7 +257,14 @@ export function BalanceSheet() {
   };
 
   const handleDownloadPDF = () => {
-    exportUtils.exportToPDF('balance-sheet-report', 'Balance_Sheet_Report');
+    pdfExportService.printBalanceSheetToPDF({
+      liabilityGroups,
+      assetGroups,
+      totalLiabilities: totalLiabilitiesCombined,
+      totalAssets,
+      openingBalanceDiff,
+      asOnDate
+    }, settings);
   };
 
   const handleDownload = () => {
@@ -396,10 +404,10 @@ export function BalanceSheet() {
               onClick={handleDownloadPDF}
               disabled={loading}
               className="flex-1 sm:flex-none px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase disabled:opacity-50"
-              title={t('common.downloadPdf')}
+              title="Print to PDF (Save professional financial statement offline)"
               id="pdf-btn"
             >
-              <Download className="w-3 h-3" /> PDF
+              <Download className="w-3 h-3" /> PRINT TO PDF
             </button>
           </div>
         </div>

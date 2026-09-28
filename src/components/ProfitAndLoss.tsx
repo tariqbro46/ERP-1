@@ -7,6 +7,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { printProfitAndLoss, printUtils } from '../utils/printUtils';
 import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
+import { pdfExportService } from '../utils/pdfExportService';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { formatNumber, cn, ensureDate, parseEntryDate, getMovementType } from '../lib/utils';
@@ -255,7 +256,12 @@ export function ProfitAndLoss() {
   };
 
   const handleDownloadPDF = () => {
-    exportUtils.exportToPDF('pl-report', 'Profit_Loss_Report');
+    pdfExportService.printProfitAndLossToPDF({
+      tradingData: activeTradingData,
+      plData: activePlData,
+      startDate,
+      endDate
+    }, settings);
   };
 
   const handleDownload = () => {
@@ -335,9 +341,10 @@ export function ProfitAndLoss() {
               onClick={handleDownloadPDF}
               disabled={loading}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all font-medium text-sm shadow-sm active:scale-95 disabled:opacity-50"
+              title="Print to PDF (Save professional financial statement offline)"
             >
               <Download className="w-4 h-4" />
-              PDF
+              Print to PDF
             </button>
           </div>
         </div>

@@ -3,8 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TallyFlow ERP | TariQ BrO</title>
-    <link rel="manifest" href="./manifest.json" />
+    <title>TallyFlow ERP</title>
+    <meta name="description" content="A professional, keyboard-centric Universal ERP inspired by TallyPrime with double-entry bookkeeping, inventory management, and real-time financial reporting." />
+    <meta property="og:title" content="TallyFlow ERP" />
+    <meta property="og:description" content="A professional, keyboard-centric Universal ERP inspired by TallyPrime with double-entry bookkeeping, inventory management, and real-time financial reporting." />
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#3b82f6" />
     <link rel="apple-touch-icon" href="https://api.dicebear.com/7.x/pixel-art/svg?seed=erp-icon&size=192" />
   </head>
@@ -13,40 +16,53 @@
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js')
-            .then((registration) => {
-              console.log('Service Worker registered with scope:', registration.scope);
-              
-              // Check for updates
-              registration.onupdatefound = () => {
-                const installingWorker = registration.installing;
-                if (installingWorker) {
-                  installingWorker.onstatechange = () => {
-                    if (installingWorker.state === 'installed') {
-                      if (navigator.serviceWorker.controller) {
-                        // New content is available; please refresh.
-                        console.log('New content available, refreshing...');
+        const isDevOrPreview = window.location.hostname === 'localhost' || window.location.hostname.includes('run.app');
+        if (isDevOrPreview) {
+          // In development/preview container, unregister all workers and purge all caches
+          if ('caches' in window) {
+            caches.keys().then((names) => {
+              for (const name of names) {
+                caches.delete(name);
+              }
+            });
+          }
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            let hadRegistration = false;
+            for (const registration of registrations) {
+              registration.unregister();
+              hadRegistration = true;
+            }
+            if (hadRegistration && navigator.serviceWorker.controller) {
+              if (!sessionStorage.getItem('sw_purged_dev_v4')) {
+                sessionStorage.setItem('sw_purged_dev_v4', '1');
+                window.location.reload();
+              }
+            }
+          });
+        } else {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+              .then((registration) => {
+                registration.onupdatefound = () => {
+                  const installingWorker = registration.installing;
+                  if (installingWorker) {
+                    installingWorker.onstatechange = () => {
+                      if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
                         window.location.reload();
                       }
-                    }
-                  };
-                }
-              };
-            })
-            .catch((error) => {
-              console.error('Service Worker registration failed:', error);
-            });
-        });
+                    };
+                  }
+                };
+              })
+              .catch((error) => {
+                console.error('Service Worker registration failed:', error);
+              });
+          });
 
-        // Ensure the page reloads when the service worker changes
-        let refreshing = false;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (!refreshing) {
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
             window.location.reload();
-            refreshing = true;
-          }
-        });
+          });
+        }
       }
 
       // Global error handler to catch chunk load errors and force refresh

@@ -84,13 +84,35 @@ export function VoucherEntry() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
-  const { user } = useAuth();
-  const { t } = useLanguage();
+  const { user, company, isSuperAdmin } = useAuth();
+  const { t, language } = useLanguage();
   const { checkLimit } = useSubscription();
   const isEdit = !!id;
   const { showNotification } = useNotification();
   const settings = useSettings();
   const isLayout2 = settings.voucherLayout === 'Layout 2';
+
+  const isCompanyQuotaExceeded = Boolean(
+    !isSuperAdmin && (
+      erpService.isQuotaExceeded(user?.companyId) ||
+      (company && company.quotaLimit && company.quotaUsed !== undefined && company.quotaUsed >= company.quotaLimit) ||
+      localStorage.getItem('company_quota_exceeded') === 'true'
+    )
+  );
+
+  const [quotaLocked, setQuotaLocked] = useState(isCompanyQuotaExceeded);
+
+  useEffect(() => {
+    setQuotaLocked(isCompanyQuotaExceeded);
+  }, [isCompanyQuotaExceeded]);
+
+  useEffect(() => {
+    const handleQuotaEvent = () => {
+      if (!isSuperAdmin) setQuotaLocked(true);
+    };
+    window.addEventListener('erp_quota_exceeded_attempt', handleQuotaEvent);
+    return () => window.removeEventListener('erp_quota_exceeded_attempt', handleQuotaEvent);
+  }, [isSuperAdmin]);
   
   // Custom classes for Voucher Entry to scale down or up the entire page based on Founder select
   const fieldSize = settings.voucherFieldSize || 'medium';
@@ -879,6 +901,17 @@ export function VoucherEntry() {
                          (vType === 'Contra' && (isBankLedger(bankCashLedgerId) || accEntries.some(e => isBankLedger(e.ledger_id))));
 
   const handleSave = async () => {
+    if (quotaLocked || isCompanyQuotaExceeded) {
+      showNotification(
+        language === 'bn' 
+          ? 'কোটা লিমিট শেষ হয়ে গেছে! কোনো ভাওচার এন্ট্রি সম্পন্ন করা সম্ভব নয়।' 
+          : 'Database quota limit exceeded! Cannot create or save vouchers.',
+        'error'
+      );
+      window.dispatchEvent(new CustomEvent('erp_quota_exceeded_attempt', { detail: { path: 'vouchers' } }));
+      return;
+    }
+
     if (!isBalanced() || !user?.companyId) return;
     setLoading(true);
     try {
@@ -1067,6 +1100,19 @@ export function VoucherEntry() {
       }
     } catch (err: any) {
       console.error('Error saving voucher:', err);
+      const isQuota = erpService.isQuotaError(err) || quotaLocked || isCompanyQuotaExceeded || localStorage.getItem('company_quota_exceeded') === 'true';
+      if (isQuota) {
+        showNotification(
+          language === 'bn' 
+            ? 'কোটা সীমা শেষ হয়ে গেছে! ভাওচার এন্ট্রি সম্পন্ন করা সম্ভব হয়নি।' 
+            : 'Database quota exceeded! Voucher could not be saved.',
+          'error'
+        );
+        window.dispatchEvent(new CustomEvent('erp_quota_exceeded_attempt', { detail: { path: 'vouchers', error: err } }));
+      } else {
+        showNotification(language === 'bn' ? 'ভাওচার সেভ করা ব্যর্থ হয়েছে' : 'Failed to save voucher', 'error');
+      }
+
       // Log to technical logs
       errorService.logError({
         message: `Voucher Save Failed: ${err.message || 'Unknown Error'}`,
@@ -1085,7 +1131,6 @@ export function VoucherEntry() {
           }
         }
       });
-      showNotification('Failed to save voucher');
     } finally {
       setLoading(false);
     }
@@ -1172,6 +1217,27 @@ export function VoucherEntry() {
             ? "p-1.5 lg:p-2.5 space-y-1.5"
             : (voucherHeaderCompact ? "p-2 lg:p-3 space-y-3" : "p-2 lg:p-6 space-y-3 lg:space-y-6")
         )}>
+          {/* Quota Exceeded Inline Alert Banner */}
+          {quotaLocked && (
+            <div className="bg-rose-500/15 border border-rose-500/40 px-3 py-2 rounded-lg flex items-center justify-between gap-3 text-rose-600 dark:text-rose-300 text-xs font-semibold animate-pulse">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
+                <span>
+                  {language === 'bn' 
+                    ? 'কোটা লিমিট শেষ হয়ে গেছে! কোনো ভাওচার এন্ট্রি বা সংরক্ষণ করা সম্ভব নয়।' 
+                    : 'Database quota limit exceeded! Voucher creation and editing are disabled.'}
+                </span>
+              </div>
+              <button 
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('erp_quota_exceeded_attempt', { detail: { path: 'vouchers' } }))}
+                className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white transition-colors cursor-pointer shrink-0 shadow-sm"
+              >
+                {language === 'bn' ? 'বিস্তারিত' : 'Details'}
+              </button>
+            </div>
+          )}
+
           {/* Row 0: Voucher Type (Mobile only at top) */}
           <div className="lg:hidden grid grid-cols-1 gap-2">
             <div className="space-y-1 col-span-1">
@@ -2603,16 +2669,33 @@ export function VoucherEntry() {
                   <X className="w-3 h-3" /> {t('common.clear')}
                 </button>
                 <button
-                  onClick={handleSave}
-                  disabled={!isBalanced() || loading}
+                  onClick={() => {
+                    if (quotaLocked) {
+                      showNotification(
+                        language === 'bn' 
+                          ? 'কোটা লিমিট শেষ হয়ে গেছে! কোনো ভাওচার এন্ট্রি বা সংরক্ষণ করা সম্ভব নয়।' 
+                          : 'Database quota limit exceeded! Cannot create or save vouchers.',
+                        'error'
+                      );
+                      window.dispatchEvent(new CustomEvent('erp_quota_exceeded_attempt', { detail: { path: 'vouchers' } }));
+                      return;
+                    }
+                    handleSave();
+                  }}
+                  disabled={(!isBalanced() && !quotaLocked) || loading}
                   tabIndex={1004}
+                  title={quotaLocked ? (language === 'bn' ? 'কোটা সীমা শেষ হয়ে গেছে' : 'Database quota exceeded') : undefined}
                   className={cn(
                     "flex-1 lg:flex-none font-bold uppercase tracking-widest transition-all",
                     isLayout2 ? "px-6 lg:px-8 py-1 text-[9px]" : "px-8 lg:px-12 py-2 text-[10px]",
-                    isBalanced() ? "bg-foreground text-background hover:opacity-90 shadow-lg" : "bg-border text-gray-600 cursor-not-allowed"
+                    quotaLocked
+                      ? "bg-rose-600 hover:bg-rose-700 text-white shadow-lg cursor-pointer"
+                      : isBalanced() 
+                        ? "bg-foreground text-background hover:opacity-90 shadow-lg" 
+                        : "bg-border text-gray-600 cursor-not-allowed"
                   )}
                 >
-                  {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (isEdit ? t('common.update') : t('common.saveVoucher'))}
+                  {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : quotaLocked ? (language === 'bn' ? 'কোটা শেষ' : 'Quota Exceeded') : (isEdit ? t('common.update') : t('common.saveVoucher'))}
                 </button>
               </div>
           </div>

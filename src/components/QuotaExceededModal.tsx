@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { ShieldAlert, RefreshCw, X, Database, Clock, Mail, Phone, AlertCircle } from 'lucide-react';
+import { ShieldAlert, RefreshCw, X, Database, Clock, Mail, Phone, AlertCircle, RotateCcw, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
+import { erpService } from '../services/erpService';
 
 interface QuotaExceededModalProps {
   isOpen: boolean;
@@ -11,8 +12,9 @@ interface QuotaExceededModalProps {
 }
 
 export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaExceededModalProps) {
-  const { logout, user } = useAuth();
+  const { logout, user, isSuperAdmin, isAdmin } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
 
   const quotaLimit = company?.quotaLimit || 10000;
@@ -313,6 +315,31 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
 
             {/* Actions bar */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
+              {(isSuperAdmin || isAdmin) && company?.id && (
+                <button
+                  type="button"
+                  disabled={isResetting}
+                  onClick={async () => {
+                    if (window.confirm('Reset this company daily quota usage to 0 Ops now? / আপনি কি এখনই এই কোম্পানির কোটা ০-তে রিসেট করতে চান?')) {
+                      setIsResetting(true);
+                      try {
+                        await erpService.resetQuotaNow(company.id);
+                        onClose();
+                        window.location.reload();
+                      } catch (err) {
+                        alert('Failed to reset quota. Please check network connection.');
+                      } finally {
+                        setIsResetting(false);
+                      }
+                    }
+                  }}
+                  className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-xs font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer text-white shadow-md disabled:opacity-50"
+                >
+                  {isResetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                  <span>{isResetting ? 'Resetting...' : 'Reset Quota Now (কোটা রিসেট)'}</span>
+                </button>
+              )}
+
               <button
                 onClick={handleRefresh}
                 className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 active:scale-95 text-xs font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer text-white shadow-md"

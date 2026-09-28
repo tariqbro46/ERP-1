@@ -64,6 +64,10 @@ function isExemptFromQuotaBlock(path: string): boolean {
          lower.includes('/companies') ||
          lower.startsWith('system') || 
          lower.includes('/system') ||
+         lower.startsWith('counters') ||
+         lower.includes('/counters') ||
+         lower.startsWith('error_logs') ||
+         lower.includes('/error_logs') ||
          lower.startsWith('users') || 
          lower.includes('/users') ||
          lower.startsWith('global') ||
@@ -78,7 +82,7 @@ function isExemptFromQuotaBlock(path: string): boolean {
 
 async function getDoc(docRef: any) {
   const path = getPathFromRef(docRef);
-  if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+  if (!isFounderBypass() && localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
     triggerQuotaEvent(path);
     try {
       console.log("[QUOTA] Offline-mode reading getDoc from cache:", path);
@@ -127,7 +131,7 @@ async function getDoc(docRef: any) {
 
 async function getDocs(queryRef: any) {
   const path = getPathFromRef(queryRef);
-  if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+  if (!isFounderBypass() && localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
     triggerQuotaEvent(path);
     try {
       console.log("[QUOTA] Offline-mode reading getDocs from cache:", path);
@@ -176,7 +180,7 @@ async function getDocs(queryRef: any) {
 
 async function getCountFromServer(queryRef: any) {
   const path = getPathFromRef(queryRef);
-  if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+  if (!isFounderBypass() && localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
     triggerQuotaEvent(path);
     console.log("[QUOTA] getCountFromServer bypass when over-quota:", path);
     return {
@@ -213,9 +217,23 @@ async function getCountFromServer(queryRef: any) {
   }
 }
 
+function isFounderBypass(): boolean {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    const cachedProfile = localStorage.getItem('cached_auth_profile');
+    if (cachedProfile) {
+      const profile = JSON.parse(cachedProfile);
+      if (profile?.email?.toLowerCase() === 'sapientman46@gmail.com' || profile?.role === 'Founder') {
+        return true;
+      }
+    }
+  } catch (e) {}
+  return false;
+}
+
 async function addDoc(colRef: any, data: any) {
   const path = getPathFromRef(colRef);
-  if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+  if (!isFounderBypass() && localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
     triggerQuotaEvent(path);
     const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
     (error as any).code = 'permission-denied';
@@ -226,7 +244,7 @@ async function addDoc(colRef: any, data: any) {
 
 async function updateDoc(docRef: any, data: any) {
   const path = getPathFromRef(docRef);
-  if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+  if (!isFounderBypass() && localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
     triggerQuotaEvent(path);
     const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
     (error as any).code = 'permission-denied';
@@ -237,7 +255,7 @@ async function updateDoc(docRef: any, data: any) {
 
 async function deleteDoc(docRef: any) {
   const path = getPathFromRef(docRef);
-  if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+  if (!isFounderBypass() && localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
     triggerQuotaEvent(path);
     const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
     (error as any).code = 'permission-denied';
@@ -248,7 +266,7 @@ async function deleteDoc(docRef: any) {
 
 async function setDoc(docRef: any, data: any, options?: any) {
   const path = getPathFromRef(docRef);
-  if (localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
+  if (!isFounderBypass() && localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
     triggerQuotaEvent(path);
     const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
     (error as any).code = 'permission-denied';
@@ -258,7 +276,7 @@ async function setDoc(docRef: any, data: any, options?: any) {
 }
 
 async function runTransaction<T>(dbRef: any, updateFunction: (transaction: any) => Promise<T>): Promise<T> {
-  if (localStorage.getItem('company_quota_exceeded') === 'true') {
+  if (!isFounderBypass() && localStorage.getItem('company_quota_exceeded') === 'true') {
     return await firestoreRunTransaction(dbRef, async (transaction) => {
       const wrappedTransaction = {
         get: async (docRef: any) => {
@@ -306,14 +324,15 @@ async function runTransaction<T>(dbRef: any, updateFunction: (transaction: any) 
 
 function writeBatch(dbRef: any) {
   const batch = firestoreWriteBatch(dbRef);
-  if (localStorage.getItem('company_quota_exceeded') === 'true') {
+  if (!isFounderBypass() && localStorage.getItem('company_quota_exceeded') === 'true') {
     return {
       set: (docRef: any, data: any, options?: any) => {
         const path = getPathFromRef(docRef);
         if (!isExemptFromQuotaBlock(path)) {
           triggerQuotaEvent(path);
-          console.warn("[QUOTA] writeBatch.set blocked for path:", path);
-          return;
+          const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
+          (error as any).code = 'permission-denied';
+          throw error;
         }
         batch.set(docRef, data, options);
       },
@@ -321,8 +340,9 @@ function writeBatch(dbRef: any) {
         const path = getPathFromRef(docRef);
         if (!isExemptFromQuotaBlock(path)) {
           triggerQuotaEvent(path);
-          console.warn("[QUOTA] writeBatch.update blocked for path:", path);
-          return;
+          const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
+          (error as any).code = 'permission-denied';
+          throw error;
         }
         batch.update(docRef, data);
       },
@@ -330,8 +350,9 @@ function writeBatch(dbRef: any) {
         const path = getPathFromRef(docRef);
         if (!isExemptFromQuotaBlock(path)) {
           triggerQuotaEvent(path);
-          console.warn("[QUOTA] writeBatch.delete blocked for path:", path);
-          return;
+          const error = new Error(`Database quota exceeded. Write operations are disabled until your quota resets. (Path: ${path})`);
+          (error as any).code = 'permission-denied';
+          throw error;
         }
         batch.delete(docRef);
       },
@@ -412,6 +433,11 @@ interface FirestoreErrorInfo {
 }
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  if (errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('resource_exhausted') || errMsg.toLowerCase().includes('resource-exhausted')) {
+    triggerQuotaEvent(path || 'unknown');
+  }
+
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -1829,12 +1855,23 @@ export const erpService: any = {
 
     // Track Firestore operations used
     this.trackQuota(companyId, 5, 5);
+
+    if (this.isQuotaExceeded(companyId)) {
+      triggerQuotaEvent('vouchers');
+      throw new Error(`Database quota exceeded. Write operations are disabled until your quota resets.`);
+    }
+
     try {
       const vType = (voucher.v_type || '').toString().trim();
       const typeKey = vType.toLowerCase().replace(/\s+/g, '_');
       const counterRef = doc(db, 'counters', `${companyId}_voucher_${typeKey}`);
 
       const executeOfflineBatch = async () => {
+        if (this.isQuotaExceeded(companyId)) {
+          triggerQuotaEvent('vouchers');
+          throw new Error(`Database quota exceeded. Write operations are disabled until your quota resets.`);
+        }
+
         const counterSnap = await getDoc(counterRef);
         let nextSerial = 1;
         if (counterSnap && counterSnap.exists()) {
@@ -2133,9 +2170,17 @@ export const erpService: any = {
             return { success: true, id: vRef.id, serial_no: nextSerial, v_date: vDateYMD, itemIds: Array.from(new Set(inventoryEntries?.map(i => i.item_id).filter(Boolean) || [])) };
           });
         } catch (txErr: any) {
-          console.warn("Transaction failed or offline, falling back to writeBatch:", txErr?.message || txErr);
+          console.warn("Transaction failed or offline:", txErr?.message || txErr);
+          if (this.isQuotaError(txErr) || this.isQuotaExceeded(companyId) || localStorage.getItem('company_quota_exceeded') === 'true') {
+            triggerQuotaEvent('vouchers');
+            throw new Error(`Database quota exceeded. Write operations are disabled until your quota resets.`);
+          }
           res = await executeOfflineBatch();
         }
+      }
+
+      if (!res || !res.success) {
+        throw new Error('Voucher creation failed: Unable to commit changes.');
       }
 
       if (res && res.success) {
@@ -2670,7 +2715,12 @@ export const erpService: any = {
     const voucher = await this.getVoucherById(id);
     if (!voucher) throw new Error('Voucher not found');
     const companyId = voucher.companyId;
-    this._patchCachesOnDelete(companyId, id, voucher);
+
+    if (this.isQuotaExceeded(companyId)) {
+      triggerQuotaEvent('vouchers');
+      throw new Error(`Database quota exceeded. Write operations are disabled until your quota resets.`);
+    }
+
     const batch = writeBatch(db);
 
     // Check existence of ledgers and items
@@ -2726,6 +2776,7 @@ export const erpService: any = {
     batch.delete(doc(db, 'vouchers', id));
 
     await batch.commit();
+    this._patchCachesOnDelete(companyId, id, voucher);
     this.trackQuota(companyId, 0, 0, 1 + eSnap.size + iSnap.size);
 
     // Trigger recalculation for affected items
@@ -2887,6 +2938,12 @@ export const erpService: any = {
       
       const vType = (voucher.v_type || '').toString().trim();
       const companyId = oldVoucher.companyId;
+
+      if (this.isQuotaExceeded(companyId)) {
+        triggerQuotaEvent('vouchers');
+        throw new Error(`Database quota exceeded. Write operations are disabled until your quota resets.`);
+      }
+
       const updatedVoucher = {
         ...oldVoucher,
         ...voucher,
@@ -2894,7 +2951,6 @@ export const erpService: any = {
         id,
         companyId
       };
-      this._patchCachesOnUpdate(companyId, id, oldVoucher, updatedVoucher, entries, inventoryEntries || []);
       // Track Firestore operations used
       this.trackQuota(companyId, 5, 5);
 
@@ -3085,9 +3141,12 @@ export const erpService: any = {
         return { success: true, itemIds };
       });
 
-      if (res && res.success && res.itemIds.length > 0) {
-        for (const itemId of res.itemIds) {
-          this.recalculateItemStats(itemId as string, companyId).catch(console.error);
+      if (res && res.success) {
+        this._patchCachesOnUpdate(companyId, id, oldVoucher, updatedVoucher, entries, inventoryEntries || []);
+        if (res.itemIds.length > 0) {
+          for (const itemId of res.itemIds) {
+            this.recalculateItemStats(itemId as string, companyId).catch(console.error);
+          }
         }
       }
 
@@ -6225,6 +6284,77 @@ export const erpService: any = {
   },
 
   // --- QUOTA TRACKING ---
+  isQuotaError(err: any): boolean {
+    if (!err) return false;
+    const msg = (err.message || String(err)).toLowerCase();
+    const code = (err.code || '').toLowerCase();
+    return msg.includes('quota exceeded') ||
+           msg.includes('resource_exhausted') ||
+           msg.includes('resource-exhausted') ||
+           msg.includes('quota metric') ||
+           msg.includes('database quota exceeded') ||
+           code.includes('resource-exhausted');
+  },
+
+  isQuotaExceeded(companyId?: string): boolean {
+    if (typeof localStorage === 'undefined') return false;
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') return false;
+    try {
+      const cachedProfile = localStorage.getItem('cached_auth_profile');
+      if (cachedProfile) {
+        const profile = JSON.parse(cachedProfile);
+        if (profile?.email?.toLowerCase() === 'sapientman46@gmail.com' || profile?.role === 'Founder') {
+          return false;
+        }
+      }
+    } catch (e) {}
+
+    if (localStorage.getItem('company_quota_exceeded') === 'true') return true;
+    try {
+      const companyCached = localStorage.getItem('cached_auth_company');
+      if (companyCached) {
+        const comp = JSON.parse(companyCached);
+        if (comp && comp.quotaLimit && comp.quotaUsed !== undefined) {
+          if (comp.quotaUsed >= comp.quotaLimit) return true;
+        }
+      }
+    } catch (e) {}
+    return false;
+  },
+
+  async resetQuotaNow(companyId: string): Promise<void> {
+    if (!companyId) return;
+    try {
+      const companyRef = doc(db, 'companies', companyId);
+      const now = Date.now();
+      await updateDoc(companyRef, {
+        quotaUsed: 0,
+        quotaReads: 0,
+        quotaWrites: 0,
+        quotaDeletes: 0,
+        quotaLastReset: now,
+        quotaLastResetDateStr: new Date(now).toISOString()
+      });
+      localStorage.removeItem('company_quota_exceeded');
+      localStorage.removeItem(`unsaved_quota_${companyId}`);
+      try {
+        const cached = localStorage.getItem('cached_auth_company');
+        if (cached) {
+          const comp = JSON.parse(cached);
+          comp.quotaUsed = 0;
+          comp.quotaReads = 0;
+          comp.quotaWrites = 0;
+          comp.quotaDeletes = 0;
+          localStorage.setItem('cached_auth_company', JSON.stringify(comp));
+        }
+      } catch (e) {}
+      window.dispatchEvent(new CustomEvent('company_quota_reset_success'));
+    } catch (err) {
+      console.error('Failed to reset quota now:', err);
+      throw err;
+    }
+  },
+
   getMostRecent130PM(now: Date): Date {
     const tz = "Asia/Dhaka";
     try {

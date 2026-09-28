@@ -12,6 +12,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { ReportPrintHeader, ReportPrintFooter } from './ReportPrintHeader';
 import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
+import { pdfExportService } from '../utils/pdfExportService';
 import { VoucherContextMenu } from './TableContextMenu';
 
 interface RegisterReportProps {
@@ -131,7 +132,12 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
   };
 
   const handleDownload = () => {
-    exportUtils.exportToPDF('register-report', `${type}_Register_Report`);
+    pdfExportService.printToPDF({
+      elementId: 'register-report',
+      title: `${title} Report`,
+      fileName: `${type}_Register_Report`,
+      settings
+    });
   };
 
   return (
@@ -161,10 +167,11 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
             </button>
             <button 
               onClick={handleDownload}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
+              title="Print to PDF (Save professional report offline)"
             >
               <Download className="w-4 h-4" />
-              {t('common.downloadPdf')}
+              Print to PDF
             </button>
           </div>
         </div>
