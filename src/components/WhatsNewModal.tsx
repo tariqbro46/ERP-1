@@ -434,7 +434,7 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
               </span>
             </label>
 
-            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
               <button
                 type="button"
                 onClick={handleViewAllHistory}
@@ -442,6 +442,20 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
               >
                 <History className="w-3.5 h-3.5 text-blue-600" />
                 <span>{isBn ? 'সম্পূর্ণ রিলিজ নোটস' : 'All Releases Page'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  handleDismiss();
+                  navigate('/business-intelligence');
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                title={isBn ? 'নতুন ফিচার ঘুরে দেখুন' : 'Take a feature tour'}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                <span>{isBn ? 'নতুন ফিচার ট্যুর (Take a Tour)' : 'Take a Tour'}</span>
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
 
               <button

@@ -22,10 +22,77 @@ export interface ReleaseVersion {
   bugFixes: ReleaseNoteItem[];
 }
 
-export const LATEST_VERSION = "v1.8.5";
+export const LATEST_VERSION = "v1.9.0";
 export const LAST_SEEN_VERSION_KEY = "tallyflow_last_seen_release_version";
 
 export const RELEASE_NOTES: ReleaseVersion[] = [
+  {
+    version: "v1.9.0",
+    releaseDate: "September 29, 2026",
+    bnReleaseDate: "২৯ সেপ্টেম্বর, ২০২৬",
+    title: "Business Intelligence Hub, Feature Controls & On-Demand Analytics",
+    bnTitle: "বিজনেস ইন্টেলিজেন্স হাব, ফিচার নিয়ন্ত্রণ ও অন-ডিমান্ড ভিজ্যুয়াল অ্যানালিটিক্স",
+    summary: "Introducing a dedicated enterprise Business Intelligence & Telemetry Hub featuring complete Trading details, financial ratios, asset/liability analysis, 6-month trends, inventory dynamics, banking telemetry, and System Guide Assistant feature controls with on-demand toggles.",
+    bnSummary: "যুক্ত হলো সম্পূর্ণ নতুন ডেডিকেটেড বিজনেস ইন্টেলিজেন্স ও টেলিমেট্রি হাব — যাতে রয়েছে ট্রেডিং একাউন্ট ডিটেইলস, ৮টি ফাইন্যান্সিয়াল রেশিও, এসেট-লায়াবিলিটি সামারি, ৬ মাসের ট্রেন্ড গ্রাফ, ইনভেন্টরি ও ব্যাংকিং কার্যক্রম। সাথে সিস্টেম গাইড সহকারীতে ফিচার অন/অফ নিয়ন্ত্রণ এবং অন-ডিমান্ড ড্যাশবোর্ড উইজেট।",
+    isLatest: true,
+    newFeatures: [
+      {
+        id: "feat-bi-hub",
+        title: "Enterprise Business Intelligence & Telemetry Hub (/business-intelligence)",
+        bnTitle: "বিজনেস ইন্টেলিজেন্স ও টেলিমেট্রি হাব (/business-intelligence)",
+        description: "Full-scale corporate analytics dashboard providing Trading Account analysis (Direct Sales, Purchases, Expenses, Incomes, Gross Profit), 8 key financial ratios (Current, Quick, Debt-Equity, GP%, NP%, Working Capital, ROA), 6 monthly trends, Top Cost Centres, Top Groups, Inventory telemetry, and Banking inflows/outflows with zero extra Firestore quota.",
+        bnDescription: "ট্রেডিং ডিটেইলস, ৮টি জরুরি অর্থনৈতিক অনুপাত, সম্পদ ও দায়, ৬ মাসের গ্রস ও নেট প্রফিট ট্রেন্ড, পারচেজ ও সেলস ভলিউম, শীর্ষ কস্ট সেন্টার ও গ্রুপ, ইনভেন্টরি ও ব্যাংক ফ্লো অ্যানালাইসিস সম্বলিত ডেডিকেটেড অ্যানালিটিক্স কনসোল।",
+        module: "Analytics & BI",
+        badge: "NEW"
+      },
+      {
+        id: "feat-guide-feature-controls",
+        title: "System Guide Assistant Desktop Feature Controls",
+        bnTitle: "সিস্টেম গাইড সহকারীতে 'Features' কন্ট্রোল প্যানেল",
+        description: "System Guide Assistant now features a front-and-center 'Features' tab allowing users to selectively turn on or off dashboard visual widgets like Cash vs. Bank Balance, Top 5 Expenses, Low Stock Warning, and Due Receivables alerts.",
+        bnDescription: "সিস্টেম গাইড সহকারীর সর্বপ্রথমে 'Features' (ফিচারসমূহ) ট্যাব যুক্ত করা হয়েছে, যেখান থেকে ব্যবহারকারী প্রয়োজনমতো ক্যাশ বনাম ব্যাংক ব্যালেন্স, শীর্ষ ৫টি ব্যয় খাত, লো-স্টক ও বকেয়া দেনাদার অ্যালার্ট অন বা অফ করতে পারবেন।",
+        module: "Preferences",
+        badge: "NEW"
+      },
+      {
+        id: "feat-on-demand-dashboard-widgets",
+        title: "On-Demand Cash vs. Bank & Top 5 Expenses Visual Analytics",
+        bnTitle: "অন-ডিমান্ড ক্যাশ বনাম ব্যাংক এবং শীর্ষ ৫টি ব্যয়ের রিয়েল চার্ট",
+        description: "Visual Cash vs. Bank Donut and Top 5 Expenses Bar charts are kept clean and default OFF, appearing instantly when enabled by the user with 100% accurate voucher and ledger calculations.",
+        bnDescription: "ড্যাশবোর্ডকে পরিচ্ছন্ন ও দ্রুতগতি রাখতে ক্যাশ বনাম ব্যাংক এবং শীর্ষ ৫টি ব্যয় খাত ডিফল্টভাবে অফ থাকে। ব্যবহারকারী অন করলেই রিয়েল ভাউচার ও লেজারের নিখুঁত লাইভ চার্ট তাৎক্ষণিকভাবে প্রদর্শিত হয়।",
+        module: "Dashboard",
+        badge: "NEW"
+      }
+    ],
+    improvements: [
+      {
+        id: "imp-real-expense-tracking",
+        title: "Deep Transaction-Level Expense & Cash Inflow Aggregation",
+        bnTitle: "ট্রানজেকশন ভিত্তিক খরচের খাত ও তরল তহবিলের নিখুঁত হিসাব",
+        description: "Payment vouchers and expense heads are now dynamically extracted and aggregated in descending order with real currency values directly from cached memory without any extra Firestore reads.",
+        bnDescription: "পেমেন্ট ভাউচারের প্রকৃত খরচের খাত এবং ক্যাশ/ব্যাংক মুভমেন্ট রিয়েল ডেটার মাধ্যমে স্বয়ংক্রিয়ভাবে হিসাব করে টপ ৫ ব্যয় ও ডোনাট চার্ট তৈরি করা হয়।",
+        module: "Accounting Engine"
+      },
+      {
+        id: "imp-dashboard-cleanup",
+        title: "Streamlined Dashboard Layout & Removed Redundancies",
+        bnTitle: "ড্যাশবোর্ড লেআউট পরিমার্জন ও অপ্রয়োজনীয় বাটন অপসারণ",
+        description: "Cleaned up the executive dashboard layout and removed redundant General Configs button, focusing on core workflows and high-level KPIs.",
+        bnDescription: "ড্যাশবোর্ড থেকে অপ্রয়োজনীয় 'General Configs' বাটন অপসারণ করে ইন্টারফেসকে আরও আধুনিক ও পরিচ্ছন্ন করা হয়েছে।",
+        module: "UI/UX"
+      }
+    ],
+    bugFixes: [
+      {
+        id: "fix-zero-fallback-charts",
+        title: "Chart Zero Value & Nominal Fallback Handling",
+        bnTitle: "চার্ট খালি বা শূন্য ব্যালেন্সের ত্রুটি সমাধান",
+        description: "Resolved issues where charts would disappear or render empty when balances were nascent or unrecorded.",
+        bnDescription: "নতুন কোম্পানি বা শূন্য ব্যালেন্স থাকা সত্ত্বেও যাতে চার্ট কোনো ত্রুটি ছাড়া সুন্দরভাবে রেন্ডার হয় তা নিশ্চিত করা হয়েছে।",
+        module: "Data Visualization"
+      }
+    ]
+  },
   {
     version: "v1.8.5",
     releaseDate: "September 22, 2026",
@@ -34,7 +101,7 @@ export const RELEASE_NOTES: ReleaseVersion[] = [
     bnTitle: "বকেয়া দেনাদার আদায় হাব, বিধিবদ্ধ অডিট ট্রেইল ও রিলিজ সেন্টার",
     summary: "Major enterprise accounting and compliance release featuring automated debtor follow-ups with 1-click multi-channel dispatch, legal demand notices, full statutory transaction audit trail with before/after diffs, supplier reorder sheets, and multi-user update alerts.",
     bnSummary: "একটি বৃহৎ প্রাতিষ্ঠানিক রিলিজ — যার মাধ্যমে যুক্ত হয়েছে ১ ক্লিকে হোয়াটসঅ্যাপ/এসএমএস/ইমেল বকেয়া রিমাইন্ডার, আদালতের মতো লিগ্যাল ডিমান্ড নোটিশ, সরকারি অডিট ট্রেইল ও পরিবর্তন ডিটেইলস, লো-স্টক রিকুইজিশন এবং স্বয়ংক্রিয় রিলিজ নোটিফিকেশন সিস্টেম।",
-    isLatest: true,
+    isLatest: false,
     newFeatures: [
       {
         id: "feat-due-payments",

@@ -6333,7 +6333,9 @@ export const erpService: any = {
         quotaWrites: 0,
         quotaDeletes: 0,
         quotaLastReset: now,
-        quotaLastResetDateStr: new Date(now).toISOString()
+        quotaLastResetDateStr: new Date(now).toISOString(),
+        quotaResetRequested: false,
+        quotaResetRequestedAt: null
       });
       localStorage.removeItem('company_quota_exceeded');
       localStorage.removeItem(`unsaved_quota_${companyId}`);
@@ -6345,13 +6347,105 @@ export const erpService: any = {
           comp.quotaReads = 0;
           comp.quotaWrites = 0;
           comp.quotaDeletes = 0;
+          comp.quotaResetRequested = false;
           localStorage.setItem('cached_auth_company', JSON.stringify(comp));
         }
       } catch (e) {}
+
+      // Mark any pending reset requests for this company as completed
+      try {
+        const reqQuery = query(collection(db, 'quota_reset_requests'), where('companyId', '==', companyId), where('status', '==', 'pending'));
+        const reqSnap = await getDocs(reqQuery);
+        const updatePromises = reqSnap.docs.map(d => updateDoc(d.ref, {
+          status: 'completed',
+          completedAt: now
+        }));
+        await Promise.all(updatePromises);
+      } catch (err) {
+        console.warn('Could not mark quota_reset_requests as completed:', err);
+      }
+
       window.dispatchEvent(new CustomEvent('company_quota_reset_success'));
     } catch (err) {
       console.error('Failed to reset quota now:', err);
       throw err;
+    }
+  },
+
+  async requestQuotaReset(companyId: string, companyName: string, requestedBy: { name?: string; email?: string; userId?: string; quotaUsed?: number; quotaLimit?: number }): Promise<string> {
+    if (!companyId) return '';
+    try {
+      const now = Date.now();
+      // 1. Add record to quota_reset_requests
+      const reqRef = await addDoc(collection(db, 'quota_reset_requests'), {
+        companyId,
+        companyName: companyName || 'Company',
+        requestedByName: requestedBy.name || 'User',
+        requestedByEmail: requestedBy.email || '',
+        requestedByUserId: requestedBy.userId || '',
+        quotaUsed: requestedBy.quotaUsed || 0,
+        quotaLimit: requestedBy.quotaLimit || 10000,
+        status: 'pending',
+        createdAt: now,
+        createdAtStr: new Date(now).toISOString()
+      });
+
+      // 2. Mark company document
+      try {
+        const compRef = doc(db, 'companies', companyId);
+        await updateDoc(compRef, {
+          quotaResetRequested: true,
+          quotaResetRequestedAt: now,
+          quotaResetRequestedBy: requestedBy.email || requestedBy.name || 'User'
+        });
+      } catch (e) {}
+
+      // 3. Create system notification for founder
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          title: `Quota Reset Request: ${companyName}`,
+          message: `${requestedBy.email || 'A user'} from "${companyName}" has requested a quota reset.`,
+          type: 'warning',
+          targetType: 'all',
+          createdAt: new Date(),
+          isRead: false
+        });
+      } catch (e) {}
+
+      return reqRef.id;
+    } catch (err) {
+      console.error('Failed to submit quota reset request:', err);
+      throw err;
+    }
+  },
+
+  async getQuotaResetRequests(): Promise<any[]> {
+    try {
+      const q = query(collection(db, 'quota_reset_requests'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+      // Fallback without ordering in case index is pending
+      try {
+        const snap = await getDocs(collection(db, 'quota_reset_requests'));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+      } catch (e) {
+        console.error('Error fetching quota reset requests:', e);
+        return [];
+      }
+    }
+  },
+
+  async approveQuotaResetRequest(requestId: string, companyId: string): Promise<void> {
+    await this.resetQuotaNow(companyId);
+    if (requestId) {
+      try {
+        const reqRef = doc(db, 'quota_reset_requests', requestId);
+        await updateDoc(reqRef, {
+          status: 'completed',
+          completedAt: Date.now()
+        });
+      } catch (e) {}
     }
   },
 
@@ -6493,11 +6587,31 @@ export const erpService: any = {
 
       try {
         const companyRef = doc(db, "companies", companyId);
+        const compSnap = await getDoc(companyRef);
+        const currentData = compSnap.data() as any;
+        const limitVal = currentData?.quotaLimit || 10000;
+        const currentUsed = currentData?.quotaUsed || 0;
+
+        // If company has already reached 100%, do not increment beyond the limit
+        if (currentUsed >= limitVal) {
+          // Cap at limitVal if it drifted above
+          if (currentUsed > limitVal) {
+            await updateDoc(companyRef, { quotaUsed: limitVal });
+          }
+          // Clean up buffer
+          const storedKey = `unsaved_quota_${companyId}`;
+          localStorage.removeItem(storedKey);
+          continue;
+        }
+
+        const addedOps = readsToSave + writesToSave * 5 + deletesToSave * 2;
+        const newUsed = Math.min(limitVal, currentUsed + addedOps);
+
         await updateDoc(companyRef, {
           quotaReads: increment(readsToSave),
           quotaWrites: increment(writesToSave),
           quotaDeletes: increment(deletesToSave),
-          quotaUsed: increment(readsToSave + writesToSave * 5 + deletesToSave * 2),
+          quotaUsed: newUsed,
         });
 
         // Success! Clean up localStorage backup

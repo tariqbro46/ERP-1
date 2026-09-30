@@ -16,13 +16,17 @@ interface DateInputProps {
   compact?: boolean;
   fieldSize?: 'small' | 'semi-compact' | 'medium' | 'large';
   highlighted?: boolean;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  id?: string;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
-export function DateInput({ value, onChange, className, placeholder, label, disabled, tabIndex, compact, fieldSize, highlighted }: DateInputProps) {
+export function DateInput({ value, onChange, className, placeholder, label, disabled, tabIndex, compact, fieldSize, highlighted, onKeyDown, id, inputRef: externalInputRef }: DateInputProps) {
   const { dateFormat } = useSettings();
   const [inputValue, setInputValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const internalInputRef = useRef<HTMLInputElement>(null);
+  const activeInputRef = externalInputRef || internalInputRef;
 
   // Sync internal text with incoming standard value
   useEffect(() => {
@@ -45,10 +49,14 @@ export function DateInput({ value, onChange, className, placeholder, label, disa
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (onKeyDown) {
+      onKeyDown(e);
+      if (e.defaultPrevented) return;
+    }
     if (e.key === 'Enter') {
       handleBlur();
-      inputRef.current?.blur();
+      activeInputRef.current?.blur();
     }
   };
 
@@ -57,7 +65,8 @@ export function DateInput({ value, onChange, className, placeholder, label, disa
       {label && <label className={cn("text-gray-500 uppercase font-bold tracking-widest", compact ? "text-[9px]" : "text-[10px]")}>{label}</label>}
       <div className="relative group">
         <input
-          ref={inputRef}
+          ref={activeInputRef}
+          id={id}
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
@@ -84,6 +93,7 @@ export function DateInput({ value, onChange, className, placeholder, label, disa
         {/* Native date picker trigger via hidden input */}
         <input 
           type="date"
+          tabIndex={-1}
           className={cn(
             "absolute top-1/2 -translate-y-1/2 w-4 h-4 opacity-0 cursor-pointer z-10",
             compact ? "right-1.5" : "right-3"

@@ -17,13 +17,15 @@ export default function SystemGuideFloatingButton() {
   const { 
     showDashboardLowStockAlert = true, 
     showDashboardDueAlert = true, 
+    showDashboardCashBank = false,
+    showDashboardTopExpenses = false,
     updateSettings 
   } = useSettings();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'quick' | 'alerts' | 'hotkeys'>('quick');
+  const [activeTab, setActiveTab] = useState<'features' | 'quick' | 'hotkeys'>('features');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     'dash': false,
     'vouch': false,
@@ -192,6 +194,23 @@ export default function SystemGuideFloatingButton() {
               <div className="flex bg-muted/65 p-1 rounded-xl w-full border border-border/50">
                 <button
                   type="button"
+                  onClick={() => setActiveTab('features')}
+                  className={cn(
+                    "flex-1 text-center py-1.5 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1",
+                    activeTab === 'features' 
+                      ? "bg-background text-foreground shadow-sm" 
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Sliders className="w-3.5 h-3.5 text-blue-500" />
+                  <span>{isBn ? 'ফিচারসমূহ' : 'Features'}</span>
+                  {(showDashboardCashBank || showDashboardTopExpenses || showDashboardLowStockAlert || showDashboardDueAlert) && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setActiveTab('quick')}
                   className={cn(
                     "flex-1 text-center py-1.5 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1",
@@ -202,23 +221,6 @@ export default function SystemGuideFloatingButton() {
                 >
                   <FileText className="w-3.5 h-3.5" />
                   <span>{isBn ? 'গাইড' : 'Guide'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('alerts')}
-                  className={cn(
-                    "flex-1 text-center py-1.5 text-[10px] sm:text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1",
-                    activeTab === 'alerts' 
-                      ? "bg-background text-foreground shadow-sm" 
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Sliders className="w-3.5 h-3.5 text-amber-500" />
-                  <span>{isBn ? 'অ্যালার্টস' : 'Alerts'}</span>
-                  {(showDashboardLowStockAlert || showDashboardDueAlert) && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  )}
                 </button>
 
                 <button
@@ -320,17 +322,109 @@ export default function SystemGuideFloatingButton() {
                     </div>
                   )}
                 </div>
-              ) : activeTab === 'alerts' ? (
-                /* Alerts Control Tab */
+              ) : activeTab === 'features' ? (
+                /* Features Control Tab */
                 <div className="space-y-3">
                   <div className="p-2.5 rounded-xl bg-muted/40 border border-border/80">
                     <span className="text-[11px] font-bold text-foreground block">
-                      {isBn ? 'ড্যাশবোর্ড অ্যালার্টস দৃশ্যমানতা (Desktop)' : 'Dashboard Alert Controls (Desktop)'}
+                      {isBn ? 'ড্যাশবোর্ড ফিচারসমূহ নিয়ন্ত্রণ' : 'Dashboard Features Control'}
                     </span>
                     <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
                       {isBn 
-                        ? 'ড্যাশবোর্ডের উপরে প্রদর্শিত সতর্কবার্তা ব্যানার আপনার সুবিধার্থে অন বা অফ করুন।' 
-                        : 'Toggle warning alert banners on your dashboard view according to preference.'}
+                        ? 'ড্যাশবোর্ডে কোন কোন ফিচার ও চার্ট দেখতে চান তা সুবিধামতো অন বা অফ করুন।' 
+                        : 'Customise which widgets, charts, and alert banners appear on your dashboard.'}
+                    </p>
+                  </div>
+
+                  {/* Cash vs. Bank Balance Chart Toggle */}
+                  <div className="p-3 rounded-xl border border-border bg-card hover:border-emerald-500/40 transition-all space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-600">
+                          <Sliders className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground">
+                            {isBn ? 'Cash vs. Bank Balance (ক্যাশ বনাম ব্যাংক)' : 'Cash vs. Bank Balance'}
+                          </h4>
+                          <span className={cn(
+                            "text-[9px] font-bold font-mono px-1.5 py-0.2 rounded",
+                            showDashboardCashBank 
+                              ? "bg-emerald-500/15 text-emerald-600" 
+                              : "bg-muted text-muted-foreground"
+                          )}>
+                            {showDashboardCashBank 
+                              ? (isBn ? 'প্রদর্শিত (Show)' : 'Show') 
+                              : (isBn ? 'লুকায়িত (Hide)' : 'Hide')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => updateSettings({ showDashboardCashBank: !showDashboardCashBank })}
+                        className={cn(
+                          "w-11 h-6 rounded-full transition-colors relative cursor-pointer focus:outline-hidden",
+                          showDashboardCashBank ? "bg-emerald-600" : "bg-muted-foreground/30"
+                        )}
+                        title={showDashboardCashBank ? "Hide Cash vs Bank Chart" : "Show Cash vs Bank Chart"}
+                      >
+                        <div className={cn(
+                          "w-4 h-4 rounded-full bg-white transition-transform absolute top-1 shadow-sm",
+                          showDashboardCashBank ? "left-6" : "left-1"
+                        )} />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      {isBn 
+                        ? 'হাতে নগদ ও ব্যাংক অ্যাকাউন্টের তরল তহবিলের লাইভ পাই/ডোনাট চার্ট।' 
+                        : 'Real-time liquidity composition donut chart of cash and bank.'}
+                    </p>
+                  </div>
+
+                  {/* Top 5 Expenses Chart Toggle */}
+                  <div className="p-3 rounded-xl border border-border bg-card hover:border-rose-500/40 transition-all space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-rose-500/15 text-rose-600">
+                          <Sliders className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground">
+                            {isBn ? 'Top 5 Expenses (শীর্ষ ৫টি ব্যয় খাত)' : 'Top 5 Expenses'}
+                          </h4>
+                          <span className={cn(
+                            "text-[9px] font-bold font-mono px-1.5 py-0.2 rounded",
+                            showDashboardTopExpenses 
+                              ? "bg-emerald-500/15 text-emerald-600" 
+                              : "bg-muted text-muted-foreground"
+                          )}>
+                            {showDashboardTopExpenses 
+                              ? (isBn ? 'প্রদর্শিত (Show)' : 'Show') 
+                              : (isBn ? 'লুকায়িত (Hide)' : 'Hide')}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => updateSettings({ showDashboardTopExpenses: !showDashboardTopExpenses })}
+                        className={cn(
+                          "w-11 h-6 rounded-full transition-colors relative cursor-pointer focus:outline-hidden",
+                          showDashboardTopExpenses ? "bg-rose-600" : "bg-muted-foreground/30"
+                        )}
+                        title={showDashboardTopExpenses ? "Hide Top 5 Expenses Chart" : "Show Top 5 Expenses Chart"}
+                      >
+                        <div className={cn(
+                          "w-4 h-4 rounded-full bg-white transition-transform absolute top-1 shadow-sm",
+                          showDashboardTopExpenses ? "left-6" : "left-1"
+                        )} />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      {isBn 
+                        ? 'চলতি মাসের সর্বোচ্চ খরচের ৫টি খাতের অনুভূমিক বার চার্ট।' 
+                        : 'Ranked overhead expense horizontal bar chart for the current month.'}
                     </p>
                   </div>
 

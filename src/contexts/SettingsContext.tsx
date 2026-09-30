@@ -184,6 +184,8 @@ interface SettingsContextType {
   showPinnedBookmarks?: boolean;
   showDashboardLowStockAlert?: boolean;
   showDashboardDueAlert?: boolean;
+  showDashboardCashBank?: boolean;
+  showDashboardTopExpenses?: boolean;
   customControlCenterTheme?: 'emerald' | 'indigo' | 'slate' | 'cyber';
   customWelcomeMessage?: string;
   splashSubDesign?: 'grid' | 'neon' | 'editorial';
@@ -353,6 +355,8 @@ const defaultSettings: SettingsContextType = {
   showPinnedBookmarks: true,
   showDashboardLowStockAlert: true,
   showDashboardDueAlert: true,
+  showDashboardCashBank: false,
+  showDashboardTopExpenses: false,
   customControlCenterTheme: 'emerald',
   customWelcomeMessage: 'Executive Command Center',
   splashSubDesign: 'grid',
@@ -626,6 +630,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               showPinnedBookmarks: data.showPinnedBookmarks !== undefined ? data.showPinnedBookmarks : prev.showPinnedBookmarks,
               showDashboardLowStockAlert: data.showDashboardLowStockAlert !== undefined ? data.showDashboardLowStockAlert : prev.showDashboardLowStockAlert,
               showDashboardDueAlert: data.showDashboardDueAlert !== undefined ? data.showDashboardDueAlert : prev.showDashboardDueAlert,
+              showDashboardCashBank: data.showDashboardCashBank !== undefined ? data.showDashboardCashBank : (prev.showDashboardCashBank !== undefined ? prev.showDashboardCashBank : false),
+              showDashboardTopExpenses: data.showDashboardTopExpenses !== undefined ? data.showDashboardTopExpenses : (prev.showDashboardTopExpenses !== undefined ? prev.showDashboardTopExpenses : false),
               customControlCenterTheme: data.customControlCenterTheme || prev.customControlCenterTheme || 'emerald',
               customWelcomeMessage: data.customWelcomeMessage || prev.customWelcomeMessage || 'Executive Command Center',
               splashSubDesign: data.splashSubDesign || prev.splashSubDesign || 'grid',

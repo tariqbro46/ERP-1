@@ -67,6 +67,7 @@ import { GoToSearch } from './components/GoToSearch';
 import { TrialBalance } from './components/TrialBalance';
 import { RatioAnalysis } from './components/RatioAnalysis';
 import { FinancialInsights } from './components/FinancialInsights';
+import { BusinessIntelligence } from './components/BusinessIntelligence';
 import { GodownMaster } from './components/GodownMaster';
 import { EmployeeMaster } from './components/EmployeeMaster';
 import { PayrollManagement } from './components/PayrollManagement';
@@ -2822,6 +2823,8 @@ function ProtectedRoute() {
           <Route path="/reports/pl" element={<FeatureGuard permission="acc_reports_financial"><ProfitAndLoss /></FeatureGuard>} />
           <Route path="/reports/ratios" element={<FeatureGuard feature="adv_reports" permission="ana_ratio"><RatioAnalysis /></FeatureGuard>} />
           <Route path="/reports/financial-insights" element={<FeatureGuard feature="insights" permission="ana_insights"><FinancialInsights /></FeatureGuard>} />
+          <Route path="/business-intelligence" element={<FeatureGuard permission="ana_dashboard"><BusinessIntelligence /></FeatureGuard>} />
+          <Route path="/reports/business-intelligence" element={<FeatureGuard permission="ana_dashboard"><BusinessIntelligence /></FeatureGuard>} />
           <Route path="/production/orders" element={<FeatureGuard feature="ord" permission="ord_view"><OrderManagement /></FeatureGuard>} />
           <Route path="/production/machines" element={<FeatureGuard feature="mac" permission="mac_manage"><MachineManagement /></FeatureGuard>} />
           <Route path="/production/orders/new" element={<FeatureGuard feature="ord" permission="ord_create"><OrderEntry /></FeatureGuard>} />

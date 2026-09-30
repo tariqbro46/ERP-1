@@ -3,6 +3,7 @@ import { Database, Clock, Eye, Edit2, Trash2, ShieldCheck, X, HelpCircle, Chevro
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { erpService } from '../services/erpService';
+import { QuotaResetRequestModal } from './QuotaResetRequestModal';
 
 interface QuotaDashboardModalProps {
   isOpen: boolean;
@@ -11,9 +12,10 @@ interface QuotaDashboardModalProps {
 }
 
 export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaDashboardModalProps) {
-  const { isSuperAdmin, isAdmin } = useAuth();
+  const { isFounder, isSuperAdmin, isAdmin, user } = useAuth();
   const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [isResetting, setIsResetting] = useState(false);
+  const [showRequestModal, setShowRequestModal] = useState(false);
 
   // Get Dhaka formatted reset time text
   const bstResetLabel = "01:30 PM BST";
@@ -101,12 +103,14 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
   if (!isOpen) return null;
 
   const quotaLimit = company?.quotaLimit || 10000;
-  const quotaUsed = company?.quotaUsed || 0;
+  const rawQuotaUsed = company?.quotaUsed || 0;
+  // Strict 100% cap
+  const quotaUsed = Math.min(quotaLimit, rawQuotaUsed);
   const qReads = company?.quotaReads || 0;
   const qWrites = company?.quotaWrites || 0;
   const qDeletes = company?.quotaDeletes || 0;
 
-  const pctUsed = Math.min(100, Math.round((quotaUsed / quotaLimit) * 100));
+  const pctUsed = Math.min(100, Math.max(0, Math.round((quotaUsed / quotaLimit) * 100)));
 
   // Segment allocations for the split chart
   const totalOps = qReads + qWrites + qDeletes || 1;
@@ -115,7 +119,8 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
   const dPct = Math.max(0, 100 - rPct - wPct);
 
   return (
-    <AnimatePresence>
+    <>
+      <AnimatePresence>
       {isOpen && (
         <motion.div 
           id="quota-dashboard-overlay" 
@@ -330,30 +335,59 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
           {/* Footer controls */}
           <div className="p-3 border-t border-slate-800 bg-slate-950/30 flex items-center justify-between gap-2">
             <div>
-              {(isSuperAdmin || isAdmin) && company?.id && (
-                <button
-                  type="button"
-                  disabled={isResetting}
-                  onClick={async () => {
-                    if (window.confirm('Reset this company daily quota usage to 0 Ops now? / আপনি কি এখনই এই কোম্পানির কোটা ০-তে রিসেট করতে চান?')) {
+              {company?.id && (
+                isFounder ? (
+                  <button
+                    type="button"
+                    disabled={isResetting}
+                    onClick={async () => {
+                      if (window.confirm('Reset this company daily quota usage to 0 Ops now? / আপনি কি এখনই এই কোম্পানির কোটা ০-তে রিসেট করতে চান?')) {
+                        setIsResetting(true);
+                        try {
+                          await erpService.resetQuotaNow(company.id);
+                          onClose();
+                          window.location.reload();
+                        } catch (err) {
+                          alert('Failed to reset quota. Please check network connection.');
+                        } finally {
+                          setIsResetting(false);
+                        }
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                    title="Founder: Reset quota usage now"
+                  >
+                    {isResetting ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                    <span>{isResetting ? 'Resetting...' : 'Reset Quota Now (কোটা রিসেট)'}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isResetting}
+                    onClick={async () => {
                       setIsResetting(true);
                       try {
-                        await erpService.resetQuotaNow(company.id);
-                        onClose();
-                        window.location.reload();
+                        await erpService.requestQuotaReset(company.id, company.name, {
+                          name: user?.displayName || (user as any)?.name,
+                          email: user?.email,
+                          userId: user?.uid,
+                          quotaUsed,
+                          quotaLimit
+                        });
+                        setShowRequestModal(true);
                       } catch (err) {
-                        alert('Failed to reset quota. Please check network connection.');
+                        setShowRequestModal(true);
                       } finally {
                         setIsResetting(false);
                       }
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-                  title="Reset quota usage now"
-                >
-                  {isResetting ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
-                  <span>{isResetting ? 'Resetting...' : 'Reset Quota Now (কোটা রিসেট)'}</span>
-                </button>
+                    }}
+                    className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[10px] font-bold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                    title="Request quota reset from Founder"
+                  >
+                    {isResetting ? <Loader2 className="w-3 h-3 animate-spin" /> : <RotateCcw className="w-3 h-3" />}
+                    <span>{isResetting ? 'Submitting...' : 'Reset Quota Now (কোটা রিসেট)'}</span>
+                  </button>
+                )
               )}
             </div>
 
@@ -368,5 +402,13 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
       </motion.div>
     )}
   </AnimatePresence>
+
+  {/* Quota Reset Request Contact Modal for Users */}
+  <QuotaResetRequestModal
+    isOpen={showRequestModal}
+    onClose={() => setShowRequestModal(false)}
+    companyName={company?.name || 'Your Company'}
+  />
+</>
 );
 }

@@ -290,6 +290,11 @@ export function VoucherEntry() {
   }, [focusedItemId, user?.companyId]);
   const [loading, setLoading] = useState(false);
   const refNoInputRef = useRef<HTMLInputElement>(null);
+  const bankTxTypeRef = useRef<HTMLSelectElement>(null);
+  const bankInstNoRef = useRef<HTMLInputElement>(null);
+  const bankInstDateRef = useRef<HTMLInputElement>(null);
+  const bankNameRef = useRef<HTMLInputElement>(null);
+  const narrationRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-focus logic
   const focusRefNo = () => {
@@ -2319,7 +2324,20 @@ export function VoucherEntry() {
                           const next = [...accEntries];
                           next[idx].amount = Number(e.target.value);
                           setAccEntries(next);
-                        }} 
+                        }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (idx < accEntries.length - 1) {
+                              const nextInput = document.querySelector(`[tabindex="${100 + (idx + 1) * 10}"]`) as HTMLElement;
+                              nextInput?.focus();
+                            } else if (showBankDetails) {
+                              bankTxTypeRef.current?.focus();
+                            } else {
+                              narrationRef.current?.focus();
+                            }
+                          }
+                        }}
                       />
                     </td>
                     <td className={cn("w-10", tablePaddingClass)}><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
@@ -2413,6 +2431,19 @@ export function VoucherEntry() {
                           next[idx].debit = Number(e.target.value);
                           setAccEntries(next);
                         }} 
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (idx < accEntries.length - 1) {
+                              const nextInput = document.querySelector(`[tabindex="${100 + (idx + 1) * 10}"]`) as HTMLElement;
+                              nextInput?.focus();
+                            } else if (showBankDetails) {
+                              bankTxTypeRef.current?.focus();
+                            } else {
+                              narrationRef.current?.focus();
+                            }
+                          }
+                        }}
                       />
                     </td>
                     <td className={cn("w-48", tablePaddingClass)}>
@@ -2432,6 +2463,19 @@ export function VoucherEntry() {
                           next[idx].credit = Number(e.target.value);
                           setAccEntries(next);
                         }} 
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (idx < accEntries.length - 1) {
+                              const nextInput = document.querySelector(`[tabindex="${100 + (idx + 1) * 10}"]`) as HTMLElement;
+                              nextInput?.focus();
+                            } else if (showBankDetails) {
+                              bankTxTypeRef.current?.focus();
+                            } else {
+                              narrationRef.current?.focus();
+                            }
+                          }
+                        }}
                       />
                     </td>
                     <td className={cn("w-10", tablePaddingClass)}><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
@@ -2492,8 +2536,16 @@ export function VoucherEntry() {
               <div className="space-y-1">
                 <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.transactionType')}</label>
                 <select
+                  ref={bankTxTypeRef}
+                  tabIndex={990}
                   value={bankDetails.transaction_type}
                   onChange={(e) => setBankDetails({ ...bankDetails, transaction_type: e.target.value as any })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      bankInstNoRef.current?.focus();
+                    }
+                  }}
                   className={cn("w-full bg-background border border-border text-xs outline-none focus:border-foreground font-medium", isLayout2 ? "p-1 text-[11px]" : "p-1.5 lg:p-2")}
                 >
                   <option value="Cheque">Cheque</option>
@@ -2504,18 +2556,34 @@ export function VoucherEntry() {
               <div className="space-y-1">
                 <label className={textLabelClass}>{t('common.instNo')}</label>
                 <input
+                  ref={bankInstNoRef}
+                  tabIndex={991}
                   type="text"
                   value={bankDetails.instrument_no}
                   onChange={(e) => setBankDetails({ ...bankDetails, instrument_no: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      bankInstDateRef.current?.focus();
+                    }
+                  }}
                   placeholder={t('common.instNo')}
                   className={inputPaddingClass}
                 />
               </div>
               <div className="space-y-1">
                 <DateInput
+                  inputRef={bankInstDateRef}
+                  tabIndex={992}
                   label={t('common.instDate')}
                   value={bankDetails.instrument_date}
                   onChange={(val) => setBankDetails({ ...bankDetails, instrument_date: val })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      bankNameRef.current?.focus();
+                    }
+                  }}
                   className="w-full"
                   compact={isFieldCompact}
                   fieldSize={fieldSize}
@@ -2524,9 +2592,17 @@ export function VoucherEntry() {
               <div className="space-y-1">
                 <label className={textLabelClass}>{t('common.bankName')}</label>
                 <input
+                  ref={bankNameRef}
+                  tabIndex={993}
                   type="text"
                   value={bankDetails.bank_name}
                   onChange={(e) => setBankDetails({ ...bankDetails, bank_name: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      narrationRef.current?.focus();
+                    }
+                  }}
                   placeholder={t('common.bankName')}
                   className={inputPaddingClass}
                 />
@@ -2545,6 +2621,7 @@ export function VoucherEntry() {
             <div className="space-y-1 lg:col-span-3">
               <label className="text-[8px] text-gray-500 uppercase font-bold tracking-widest">{t('common.narration')}</label>
               <textarea
+                ref={narrationRef}
                 value={narration || ''}
                 onChange={e => setNarration(e.target.value)}
                 tabIndex={1000}

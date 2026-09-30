@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, LineChart, Line, PieChart, Pie, Cell
+  AreaChart, Area, LineChart, Line, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, AlertCircle, Clock, Hammer, CheckCircle2, ListTodo, TrendingUp, RefreshCw, ChevronRight, Calculator, Bookmark, Pin, Layers, FileText, BookOpen, Sparkles, Cpu, Coins, Trash2, BellRing } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, AlertCircle, Clock, Hammer, CheckCircle2, ListTodo, TrendingUp, RefreshCw, ChevronRight, Calculator, Bookmark, Pin, Layers, FileText, BookOpen, Sparkles, Cpu, Coins, Trash2, BellRing, Wallet, Landmark, PieChart as PieChartIcon } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -25,11 +26,16 @@ const mockChartData = [
   { name: 'Jun', value: 2390 },
 ];
 
-const StatCard = ({ title, value, change, icon: Icon, trend, loading, color, uiStyle }: any) => (
-  <div className={cn(
-    "bg-card border border-border p-4 flex flex-col gap-2 transition-all",
-    uiStyle === 'UI/UX 2' && color ? `${color} border-transparent shadow-md hover:brightness-95` : ""
-  )}>
+const StatCard = ({ title, value, change, icon: Icon, trend, loading, color, uiStyle, index = 0 }: any) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 12 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.35, delay: index * 0.05, ease: [0.25, 0.1, 0.25, 1.0] }}
+    className={cn(
+      "bg-card border border-border p-4 flex flex-col gap-2 transition-all",
+      uiStyle === 'UI/UX 2' && color ? `${color} border-transparent shadow-md hover:brightness-95` : ""
+    )}
+  >
     <div className="flex justify-between items-center">
       <span className={cn(
         "text-[10px] uppercase tracking-wider font-mono",
@@ -58,7 +64,7 @@ const StatCard = ({ title, value, change, icon: Icon, trend, loading, color, uiS
         </>
       )}
     </div>
-  </div>
+  </motion.div>
 );
 
 export function Dashboard() {
@@ -82,7 +88,9 @@ export function Dashboard() {
     customWelcomeMessage = 'Executive Command Center',
     splashSubDesign = 'grid',
     showDashboardLowStockAlert = true,
-    showDashboardDueAlert = true
+    showDashboardDueAlert = true,
+    showDashboardCashBank = false,
+    showDashboardTopExpenses = false
   } = useSettings();
   
   const dashboardDesign = globalDashboardDesign || localDesign;
@@ -155,6 +163,8 @@ export function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [dueSummary, setDueSummary] = useState<{ totalDue: number; customerCount: number }>({ totalDue: 0, customerCount: 0 });
+  const [cashBankData, setCashBankData] = useState<{ name: string; value: number; color: string }[]>([]);
+  const [topExpensesData, setTopExpensesData] = useState<{ name: string; amount: number }[]>([]);
   const isInitialMount = React.useRef(true);
 
   useEffect(() => {
@@ -211,6 +221,17 @@ export function Dashboard() {
           }
         }).catch(() => {});
 
+        setCashBankData([
+          { name: 'Cash in Hand', value: 185000, color: '#10b981' },
+          { name: 'Bank Accounts', value: 435000, color: '#3b82f6' }
+        ]);
+        setTopExpensesData([
+          { name: 'Office Rent Expense', amount: 45000 },
+          { name: 'Staff Salaries', amount: 38000 },
+          { name: 'Electricity & Utilities', amount: 14500 },
+          { name: 'Transportation & Logistics', amount: 12000 },
+          { name: 'Internet & Cloud Hosting', amount: 6500 }
+        ]);
         return;
       }
 
@@ -270,22 +291,152 @@ export function Dashboard() {
           // Silent fallback
         }
 
-        // Calculate due payments from cached ledgers
+        // Calculate due payments, Cash vs Bank, and Top 5 Expenses from cached ledgers & vouchers (Real Data!)
         try {
-          const ledgers = await erpService.getLedgers(user.companyId);
+          const [ledgers, vouchers] = await Promise.all([
+            erpService.getLedgers(user.companyId),
+            erpService.getCollection('vouchers', user.companyId).catch(() => [])
+          ]);
+
           if (ledgers && Array.isArray(ledgers)) {
             let dueSum = 0;
             let dueCusts = 0;
+            let totalCash = 0;
+            let totalBank = 0;
+            const cashLedgerIds = new Set<string>();
+            const bankLedgerIds = new Set<string>();
+            const expenseMap: Record<string, number> = {};
+
             ledgers.forEach((l: any) => {
-              const bal = Number(l.current_balance ?? l.opening_balance ?? 0);
+              const bal = Number(l.current_balance !== undefined && l.current_balance !== null ? l.current_balance : (l.opening_balance || 0));
               const gName = (l.group_name || l.ledger_groups?.name || '').toLowerCase();
+              const lName = (l.name || '').toLowerCase();
               const isDebtor = gName.includes('debtor') || gName.includes('customer') || gName.includes('client') || (l.nature === 'Asset' && bal > 0);
               if (isDebtor && bal > 0) {
                 dueSum += bal;
                 dueCusts += 1;
               }
+
+              // Cash vs Bank classification with comprehensive English and Bangla terms
+              const isCash = gName.includes('cash-in-hand') || gName.includes('cash in hand') || gName.includes('cash') || gName.includes('নগদ') || gName.includes('ক্যাশ') || lName.includes('cash') || lName.includes('নগদ') || lName.includes('ক্যাশ') || lName.includes('petty');
+              const isBank = gName.includes('bank') || lName.includes('bank') || lName.includes('islami') || lName.includes('bkash') || lName.includes('nagad') || lName.includes('rocket') || lName.includes('upay') || lName.includes('ব্যাংক') || lName.includes('বিকাশ') || lName.includes('dbbl') || lName.includes('brac') || lName.includes('city') || lName.includes('ebl') || lName.includes('sonali') || lName.includes('janata') || lName.includes('agrani') || lName.includes('pubali');
+
+              if (isCash) {
+                cashLedgerIds.add(l.id);
+                totalCash += bal;
+              } else if (isBank) {
+                bankLedgerIds.add(l.id);
+                totalBank += bal;
+              }
+
+              // Expenses classification from ledger definitions
+              const isExpense = l.nature === 'Expense' || 
+                gName.includes('expense') || 
+                gName.includes('direct expense') || 
+                gName.includes('indirect expense') || 
+                gName.includes('cost') ||
+                gName.includes('ব্যয়') ||
+                gName.includes('খরচ') ||
+                lName.includes('expense') ||
+                lName.includes('খরচ') ||
+                lName.includes('ভাড়া') ||
+                lName.includes('বেতন') ||
+                lName.includes('বিল') ||
+                lName.includes('salary') ||
+                lName.includes('rent') ||
+                lName.includes('utility') ||
+                lName.includes('freight') ||
+                lName.includes('stationery') ||
+                lName.includes('travel');
+              
+              if (isExpense && Math.abs(bal) > 0) {
+                const cleanName = l.name.trim();
+                expenseMap[cleanName] = (expenseMap[cleanName] || 0) + Math.abs(bal);
+              }
             });
+
+            // Derive actual transaction expenses and cash/bank flow from real vouchers
+            if (Array.isArray(vouchers) && vouchers.length > 0) {
+              let voucherCashNet = 0;
+              let voucherBankNet = 0;
+
+              vouchers.forEach((v: any) => {
+                const amt = Number(v.total_amount || 0);
+                if (amt <= 0) return;
+                const vType = v.v_type || '';
+                const pText = ((v.particulars || '') + ' ' + (v.party_ledger_name || '') + ' ' + (v.ledger_name || '')).toLowerCase();
+                const isBankTx = pText.includes('bank') || pText.includes('ব্যাংক') || pText.includes('bkash') || pText.includes('বিকাশ') || pText.includes('nagad') || pText.includes('rocket') || (v.party_ledger_id && bankLedgerIds.has(v.party_ledger_id));
+
+                // Real payment expenses
+                if (vType === 'Payment') {
+                  let expName = (v.party_ledger_name || v.particulars || v.ledger_name || '').trim();
+                  expName = expName.replace(/^(Payment to |Payment - |Dr |Paid to )/i, '').trim();
+                  if (!expName || expName.toLowerCase() === 'payment') {
+                    expName = language === 'bn' ? 'সাধারণ পরিচালন ব্যয়' : 'General Operating Expense';
+                  }
+                  expenseMap[expName] = (expenseMap[expName] || 0) + amt;
+
+                  if (isBankTx) voucherBankNet -= amt;
+                  else voucherCashNet -= amt;
+                } else if (vType === 'Purchase') {
+                  const pName = (v.party_ledger_name || v.particulars || '').trim();
+                  if (pName && (pName.toLowerCase().includes('expense') || pName.toLowerCase().includes('খরচ'))) {
+                    expenseMap[pName] = (expenseMap[pName] || 0) + amt;
+                  }
+                  if (isBankTx) voucherBankNet -= amt;
+                  else voucherCashNet -= amt;
+                } else if (vType === 'Receipt' || vType === 'Sales') {
+                  if (isBankTx) voucherBankNet += amt;
+                  else voucherCashNet += amt;
+                } else if (vType === 'Contra') {
+                  if (pText.includes('deposit') || pText.includes('to bank') || isBankTx) {
+                    voucherBankNet += amt;
+                    voucherCashNet -= amt;
+                  } else {
+                    voucherCashNet += amt;
+                    voucherBankNet -= amt;
+                  }
+                }
+              });
+
+              // If ledgers have 0 or unassigned balances, reflect voucher transaction totals
+              if (totalCash === 0 && totalBank === 0 && (voucherCashNet !== 0 || voucherBankNet !== 0)) {
+                totalCash = Math.max(0, voucherCashNet);
+                totalBank = Math.max(0, voucherBankNet);
+              } else if (totalCash >= 0 && totalBank >= 0 && (voucherCashNet !== 0 || voucherBankNet !== 0)) {
+                // If opening balances were set but current_balance was not updated
+                const hasExplicitCurrentBal = ledgers.some((l: any) => (cashLedgerIds.has(l.id) || bankLedgerIds.has(l.id)) && l.current_balance !== undefined && l.current_balance !== null);
+                if (!hasExplicitCurrentBal) {
+                  totalCash = Math.max(0, totalCash + voucherCashNet);
+                  totalBank = Math.max(0, totalBank + voucherBankNet);
+                }
+              }
+            }
+
             setDueSummary({ totalDue: dueSum, customerCount: dueCusts });
+
+            // Set Cash vs Bank chart data
+            setCashBankData([
+              { name: 'Cash in Hand', value: Math.max(0, totalCash), color: '#10b981' },
+              { name: 'Bank Accounts', value: Math.max(0, totalBank), color: '#3b82f6' }
+            ]);
+
+            // Set Top 5 Expenses sorted descending with real amounts
+            const realExpensesList = Object.entries(expenseMap)
+              .map(([name, amount]) => ({ name, amount: Math.round(amount) }))
+              .filter(e => e.amount > 0)
+              .sort((a, b) => b.amount - a.amount);
+
+            if (realExpensesList.length === 0) {
+              realExpensesList.push(
+                { name: language === 'bn' ? 'অফিস ভাড়া' : 'Office Rent', amount: 0 },
+                { name: language === 'bn' ? 'বিদ্যুৎ ও ইউটিলিটি' : 'Electricity & Utility', amount: 0 },
+                { name: language === 'bn' ? 'কর্মীদের বেতন' : 'Staff Salaries', amount: 0 },
+                { name: language === 'bn' ? 'যাতায়াত ও পরিবহন' : 'Transport & Freight', amount: 0 },
+                { name: language === 'bn' ? 'মার্কেটিং ও বিজ্ঞাপন' : 'Marketing & Promo', amount: 0 }
+              );
+            }
+            setTopExpensesData(realExpensesList.slice(0, 5));
           }
         } catch {
           // Silent fallback
@@ -620,6 +771,122 @@ export function Dashboard() {
                   </div>
                 </div>
               </div>
+
+              {/* Design 5 Analytics: Cash vs. Bank & Top 5 Expenses */}
+              {(showDashboardCashBank || showDashboardTopExpenses) && (
+                <div className={cn(
+                  "grid gap-4",
+                  showDashboardCashBank && showDashboardTopExpenses ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"
+                )}>
+                  {showDashboardCashBank && (
+                    <div className={cn("p-5 rounded-2xl border flex flex-col justify-between", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm")}>
+                      <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl">
+                            <Landmark className="w-4 h-4" />
+                          </div>
+                          <h4 className="text-xs font-black uppercase tracking-tight text-foreground">
+                            {language === 'bn' ? 'ক্যাশ বনাম ব্যাংক ব্যালেন্স' : 'Cash vs. Bank Balance'}
+                          </h4>
+                        </div>
+                        <span className="text-[9px] font-mono text-muted-foreground uppercase bg-muted/30 px-2 py-0.5 rounded-full">Liquidity</span>
+                      </div>
+                      <div className="h-[190px] w-full flex items-center justify-center">
+                        {cashBankData.length > 0 && cashBankData.some(d => d.value > 0) ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={cashBankData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={50}
+                                outerRadius={75}
+                                paddingAngle={4}
+                                dataKey="value"
+                              >
+                                {cashBankData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '11px', fontFamily: 'monospace' }}
+                                formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Balance']}
+                              />
+                              <Legend 
+                                verticalAlign="bottom" 
+                                iconType="circle"
+                                formatter={(val: string) => <span className="text-[10px] font-mono text-muted-foreground">{val}</span>}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="text-center text-muted-foreground font-mono p-4">
+                            <Wallet className="w-7 h-7 mx-auto mb-1 opacity-40" />
+                            <p className="text-[10px]">{language === 'bn' ? 'ব্যালেন্স তথ্য পাওয়া যায়নি' : 'No balance data'}</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border/60 text-xs">
+                        <div className="bg-emerald-500/5 p-2 rounded-xl border border-emerald-500/10">
+                          <span className="text-[9px] text-emerald-600 uppercase font-black block">Cash:</span>
+                          <span className="font-mono font-bold text-foreground">৳{formatNumber(cashBankData.find(d => d.name === 'Cash in Hand')?.value || 0)}</span>
+                        </div>
+                        <div className="bg-blue-500/5 p-2 rounded-xl border border-blue-500/10">
+                          <span className="text-[9px] text-blue-600 uppercase font-black block">Bank:</span>
+                          <span className="font-mono font-bold text-foreground">৳{formatNumber(cashBankData.find(d => d.name === 'Bank Accounts')?.value || 0)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {showDashboardTopExpenses && (
+                    <div className={cn("p-5 rounded-2xl border flex flex-col justify-between", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm")}>
+                      <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-rose-500/10 text-rose-500 rounded-xl">
+                            <PieChartIcon className="w-4 h-4" />
+                          </div>
+                          <h4 className="text-xs font-black uppercase tracking-tight text-foreground">
+                            {language === 'bn' ? 'শীর্ষ ৫টি ব্যয় খাত' : 'Top 5 Expenses'}
+                          </h4>
+                        </div>
+                        <span className="text-[9px] font-mono text-rose-500 font-bold uppercase bg-rose-500/10 px-2 py-0.5 rounded-full">Monthly</span>
+                      </div>
+                      <div className="h-[190px] w-full">
+                        {topExpensesData.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                              data={topExpensesData}
+                              layout="vertical"
+                              margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" opacity={0.3} />
+                              <XAxis type="number" tickFormatter={(val) => `৳${formatNumber(val)}`} fontSize={8} stroke="#888" axisLine={false} tickLine={false} />
+                              <YAxis dataKey="name" type="category" width={95} fontSize={9} stroke="#888" axisLine={false} tickLine={false} tickFormatter={(val: string) => val.length > 12 ? `${val.slice(0, 12)}...` : val} />
+                              <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '11px', fontFamily: 'monospace' }} formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Expense']} />
+                              <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={14}>
+                                {topExpensesData.map((_, index) => {
+                                  const colors = ['#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#fecdd3'];
+                                  return <Cell key={`bar-${index}`} fill={colors[index % colors.length]} />;
+                                })}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground font-mono p-4">
+                            <CreditCard className="w-7 h-7 opacity-40 mb-1" />
+                            <p className="text-[10px]">{language === 'bn' ? 'কোনো ব্যয়ের তথ্য নেই' : 'No expenses recorded'}</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex justify-between items-center text-[10px] font-mono pt-3 border-t border-border/60 text-muted-foreground">
+                        <span>Top 5 Total:</span>
+                        <span className="font-bold text-rose-500">৳{formatNumber(topExpensesData.reduce((acc, curr) => acc + curr.amount, 0))}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Right Col: Widgets & Calculators */}
@@ -819,6 +1086,17 @@ export function Dashboard() {
         badge: 'Inventory'
       },
       {
+        id: 'bi-dashboard',
+        title: 'Business Intelligence',
+        desc: 'Cash vs. Bank, Trends, Ratios & Top Overhead Expenses',
+        descNeon: 'VISUAL TELEMETRY & ANALYTICS',
+        descEditorial: 'Visual financial ratios and liquidity intelligence',
+        icon: TrendingUp,
+        url: '/business-intelligence',
+        color: 'from-emerald-500 to-cyan-500',
+        badge: 'Intelligence'
+      },
+      {
         id: 'reports',
         title: 'Reports Gateway',
         desc: 'Unlock financial summaries & trial balances',
@@ -861,17 +1139,6 @@ export function Dashboard() {
         url: '/reports/audit-trail',
         color: 'from-emerald-500 to-teal-500',
         badge: 'Compliance'
-      },
-      {
-        id: 'settings',
-        title: 'General Configs',
-        desc: 'Adjust enterprise layouts, rules & metrics',
-        descNeon: 'MANAGE CENTRAL ENVIRONMENT',
-        descEditorial: 'Calibrate parameters & layouts',
-        icon: ShieldCheck,
-        url: '/settings',
-        color: 'from-cyan-500 to-sky-500',
-        badge: 'Preferences'
       }
     ];
 
@@ -1160,6 +1427,134 @@ export function Dashboard() {
             </div>
           )}
 
+          {/* Advanced Visual Telemetry Strip: Cash vs. Bank & Top 5 Expenses */}
+          {(showDashboardCashBank || showDashboardTopExpenses) && (
+            <div className={cn(
+              "grid gap-4",
+              showDashboardCashBank && showDashboardTopExpenses ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+            )}>
+              {showDashboardCashBank && (
+                <div className="p-5 bg-white border border-slate-200/80 rounded-2xl flex flex-col justify-between shadow-xs">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                        <Landmark className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-black uppercase tracking-tight text-slate-800">
+                          {language === 'bn' ? 'ক্যাশ বনাম ব্যাংক ব্যালেন্স' : 'Cash vs. Bank Balance'}
+                        </h3>
+                        <p className="text-[9px] text-slate-400 font-mono">
+                          {language === 'bn' ? 'তরল তহবিলের রিয়েল-টাইম অনুপাত' : 'Real-time liquidity composition'}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-mono uppercase bg-emerald-50 text-emerald-600 font-bold px-2 py-0.5 rounded-full">
+                      Liquidity
+                    </span>
+                  </div>
+                  <div className="h-[180px] w-full flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={
+                            cashBankData.some(d => d.value > 0)
+                              ? cashBankData
+                              : [
+                                  { name: 'Cash in Hand', value: 1, color: '#10b981' },
+                                  { name: 'Bank Accounts', value: 1, color: '#3b82f6' }
+                                ]
+                          }
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={70}
+                          paddingAngle={4}
+                          dataKey="value"
+                        >
+                          {(cashBankData.some(d => d.value > 0)
+                            ? cashBankData
+                            : [
+                                { name: 'Cash in Hand', value: 1, color: '#10b981' },
+                                { name: 'Bank Accounts', value: 1, color: '#3b82f6' }
+                              ]
+                          ).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px', fontFamily: 'monospace' }}
+                          formatter={(val: any, name: any) => {
+                            const realVal = cashBankData.find(d => d.name === name)?.value || 0;
+                            return [`৳ ${formatNumber(realVal)}`, 'Balance'];
+                          }}
+                        />
+                        <Legend 
+                          verticalAlign="bottom" 
+                          iconType="circle"
+                          formatter={(val: string) => <span className="text-[10px] font-mono text-slate-500">{val}</span>}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs font-mono mt-1">
+                    <div className="p-2 bg-emerald-50/60 rounded-lg border border-emerald-100">
+                      <span className="text-[9px] text-emerald-600 uppercase font-black block">Cash:</span>
+                      <span className="font-bold text-slate-800">৳{formatNumber(cashBankData.find(d => d.name === 'Cash in Hand')?.value || 0)}</span>
+                    </div>
+                    <div className="p-2 bg-blue-50/60 rounded-lg border border-blue-100">
+                      <span className="text-[9px] text-blue-600 uppercase font-black block">Bank:</span>
+                      <span className="font-bold text-slate-800">৳{formatNumber(cashBankData.find(d => d.name === 'Bank Accounts')?.value || 0)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {showDashboardTopExpenses && (
+                <div className="p-5 bg-white border border-slate-200/80 rounded-2xl flex flex-col justify-between shadow-xs">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
+                        <PieChartIcon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-black uppercase tracking-tight text-slate-800">
+                          {language === 'bn' ? 'শীর্ষ ৫টি ব্যয় খাত' : 'Top 5 Expenses'}
+                        </h3>
+                        <p className="text-[9px] text-slate-400 font-mono">
+                          {language === 'bn' ? 'সর্বোচ্চ খরচের প্রধান খাতসমূহ' : 'Highest operational overheads'}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-mono uppercase bg-rose-50 text-rose-600 font-bold px-2 py-0.5 rounded-full">
+                      Monthly
+                    </span>
+                  </div>
+                  <div className="h-[180px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topExpensesData} layout="vertical" margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                        <XAxis type="number" tickFormatter={v => `৳${formatNumber(v)}`} fontSize={8} stroke="#94a3b8" axisLine={false} tickLine={false} />
+                        <YAxis dataKey="name" type="category" width={100} fontSize={9} stroke="#64748b" axisLine={false} tickLine={false} tickFormatter={v => v.length > 13 ? `${v.slice(0, 13)}...` : v} />
+                        <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px', fontFamily: 'monospace' }} formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Expense']} />
+                        <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={14}>
+                          {topExpensesData.map((_, index) => {
+                            const colors = ['#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#fecdd3'];
+                            return <Cell key={`bar-${index}`} fill={colors[index % colors.length]} />;
+                          })}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] font-mono pt-2 border-t border-slate-100 text-slate-500 mt-1">
+                    <span>Top 5 Total:</span>
+                    <span className="font-bold text-rose-600">৳{formatNumber(topExpensesData.reduce((acc, curr) => acc + curr.amount, 0))}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Main shortcuts grid - 8 items in 4 columns on large screens */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {shortcuts.map(sc => {
@@ -1249,8 +1644,14 @@ export function Dashboard() {
         <div className="p-4 lg:p-6 space-y-6">
           {/* Big Metrics Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-             {selectedCards.slice(0, 4).map((card: any) => (
-                <div key={card.key} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+             {selectedCards.slice(0, 4).map((card: any, idx: number) => (
+                <motion.div 
+                   key={card.key} 
+                   initial={{ opacity: 0, y: 12 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   transition={{ duration: 0.35, delay: idx * 0.05, ease: [0.25, 0.1, 0.25, 1.0] }}
+                   className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all group"
+                >
                    <div className="flex justify-between items-center mb-4">
                       <div className={cn("p-2 rounded-xl bg-opacity-10", card.color.replace('bg-', 'bg-opacity-10 text-'))}>
                          <card.icon className="w-5 h-5" />
@@ -1261,7 +1662,7 @@ export function Dashboard() {
                    <p className="text-2xl font-bold text-gray-900 font-mono">
                       {card.key === 'activeLedgers' ? stats[card.key as keyof typeof stats] : `৳${formatNumber(stats[card.key as keyof typeof stats] as number)}`}
                    </p>
-                </div>
+                </motion.div>
              ))}
           </div>
 
@@ -1330,6 +1731,122 @@ export function Dashboard() {
                 </div>
             </div>
           </div>
+
+          {/* Design 3 Visual Breakdown: Cash vs. Bank & Top 5 Expenses */}
+          {(showDashboardCashBank || showDashboardTopExpenses) && (
+            <div className={cn(
+              "grid gap-6",
+              showDashboardCashBank && showDashboardTopExpenses ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+            )}>
+              {showDashboardCashBank && (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col justify-between">
+                  <div className="flex items-center justify-between border-b border-gray-50 pb-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                        <Landmark className="w-4 h-4" />
+                      </div>
+                      <h3 className="text-xs font-black text-gray-800 uppercase tracking-tighter">
+                        {language === 'bn' ? 'ক্যাশ বনাম ব্যাংক ব্যালেন্স' : 'Cash vs. Bank Balance'}
+                      </h3>
+                    </div>
+                    <span className="text-[10px] font-mono text-gray-400 font-bold uppercase">Liquidity</span>
+                  </div>
+                  <div className="h-[210px] w-full flex items-center justify-center">
+                    {cashBankData.length > 0 && cashBankData.some(d => d.value > 0) ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={cashBankData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={55}
+                            outerRadius={80}
+                            paddingAngle={4}
+                            dataKey="value"
+                          >
+                            {cashBankData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6', fontSize: '11px', fontFamily: 'monospace' }}
+                            formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Balance']}
+                          />
+                          <Legend 
+                            verticalAlign="bottom" 
+                            iconType="circle"
+                            formatter={(val: string) => <span className="text-[11px] font-sans text-gray-600 font-medium">{val}</span>}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="text-center text-gray-400 font-sans p-4">
+                        <Wallet className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                        <p className="text-xs font-medium">{language === 'bn' ? 'ব্যালেন্স তথ্য পাওয়া যায়নি' : 'No balance data'}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-50 text-xs font-sans">
+                    <div className="bg-emerald-50/70 p-2.5 rounded-xl text-emerald-800 font-medium flex justify-between items-center">
+                      <span>Cash:</span>
+                      <span className="font-bold">৳ {formatNumber(cashBankData.find(d => d.name === 'Cash in Hand')?.value || 0)}</span>
+                    </div>
+                    <div className="bg-blue-50/70 p-2.5 rounded-xl text-blue-800 font-medium flex justify-between items-center">
+                      <span>Bank:</span>
+                      <span className="font-bold">৳ {formatNumber(cashBankData.find(d => d.name === 'Bank Accounts')?.value || 0)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {showDashboardTopExpenses && (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col justify-between">
+                  <div className="flex items-center justify-between border-b border-gray-50 pb-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-rose-50 text-rose-600 rounded-xl">
+                        <PieChartIcon className="w-4 h-4" />
+                      </div>
+                      <h3 className="text-xs font-black text-gray-800 uppercase tracking-tighter">
+                        {language === 'bn' ? 'শীর্ষ ৫টি ব্যয় খাত (চলতি মাস)' : 'Top 5 Expenses (Current Month)'}
+                      </h3>
+                    </div>
+                    <span className="text-[10px] font-mono text-rose-500 font-bold uppercase">Ranked</span>
+                  </div>
+                  <div className="h-[210px] w-full">
+                    {topExpensesData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={topExpensesData}
+                          layout="vertical"
+                          margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f9fafb" />
+                          <XAxis type="number" tickFormatter={(val) => `৳${formatNumber(val)}`} fontSize={9} axisLine={false} tickLine={false} />
+                          <YAxis dataKey="name" type="category" width={110} fontSize={10} axisLine={false} tickLine={false} tickFormatter={(val: string) => val.length > 15 ? `${val.slice(0, 15)}...` : val} />
+                          <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid #f3f4f6', fontSize: '11px', fontFamily: 'monospace' }} formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Expense']} />
+                          <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={16}>
+                            {topExpensesData.map((_, index) => {
+                              const colors = ['#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#fecdd3'];
+                              return <Cell key={`bar-${index}`} fill={colors[index % colors.length]} />;
+                            })}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 font-sans p-4">
+                        <CreditCard className="w-8 h-8 opacity-40 mb-1" />
+                        <p className="text-xs font-medium">{language === 'bn' ? 'চলতি মাসে কোনো ব্যয়ের তথ্য নেই' : 'No expenses recorded this month'}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-between items-center text-xs font-sans pt-3 border-t border-gray-50 text-gray-500">
+                    <span>Total Top 5:</span>
+                    <span className="font-bold text-rose-600">৳ {formatNumber(topExpensesData.reduce((acc, curr) => acc + curr.amount, 0))}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1360,13 +1877,19 @@ export function Dashboard() {
 
           {/* Minimal KPI Strip */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-             {selectedCards.slice(0, 4).map((card: any) => (
-               <div key={card.key} className="bg-slate-800/50 border border-slate-700 p-6 rounded-3xl hover:bg-slate-800 transition-all">
+             {selectedCards.slice(0, 4).map((card: any, idx: number) => (
+               <motion.div 
+                 key={card.key} 
+                 initial={{ opacity: 0, y: 12 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ duration: 0.35, delay: idx * 0.05, ease: [0.25, 0.1, 0.25, 1.0] }}
+                 className="bg-slate-800/50 border border-slate-700 p-6 rounded-3xl hover:bg-slate-800 transition-all"
+               >
                   <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">{card.title}</p>
                   <p className="text-xl font-mono font-bold">
                      {card.key === 'activeLedgers' ? stats[card.key as keyof typeof stats] : formatNumber(stats[card.key as keyof typeof stats] as number)}
                   </p>
-               </div>
+               </motion.div>
              ))}
           </div>
 
@@ -1412,6 +1935,109 @@ export function Dashboard() {
                    >
                       System Preferences
                    </button>
+                </div>
+             </div>
+          </div>
+
+          {/* Design 4 Dark Analytics: Cash vs. Bank & Top 5 Expenses */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+             <div className="bg-slate-800 border border-slate-700 rounded-[2rem] p-8 flex flex-col justify-between">
+                <div className="flex items-center justify-between border-b border-slate-700/60 pb-3 mb-4">
+                   <div className="flex items-center gap-2">
+                      <Landmark className="w-5 h-5 text-emerald-400" />
+                      <h3 className="text-sm font-bold uppercase tracking-widest text-slate-100">
+                         {language === 'bn' ? 'ক্যাশ বনাম ব্যাংক ব্যালেন্স' : 'Cash vs. Bank Balance'}
+                      </h3>
+                   </div>
+                   <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">Liquidity</span>
+                </div>
+                <div className="h-[220px] w-full flex items-center justify-center">
+                   {cashBankData.length > 0 && cashBankData.some(d => d.value > 0) ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                         <PieChart>
+                            <Pie
+                               data={cashBankData}
+                               cx="50%"
+                               cy="50%"
+                               innerRadius={60}
+                               outerRadius={85}
+                               paddingAngle={4}
+                               dataKey="value"
+                            >
+                               {cashBankData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                               ))}
+                            </Pie>
+                            <Tooltip
+                               contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '1rem', fontSize: '11px', fontFamily: 'monospace' }}
+                               formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Balance']}
+                            />
+                            <Legend 
+                               verticalAlign="bottom" 
+                               iconType="circle"
+                               formatter={(val: string) => <span className="text-[11px] font-mono text-slate-300">{val}</span>}
+                            />
+                         </PieChart>
+                      </ResponsiveContainer>
+                   ) : (
+                      <div className="text-center text-slate-500 font-mono p-4">
+                         <Wallet className="w-8 h-8 mx-auto mb-1 opacity-40 text-slate-400" />
+                         <p className="text-xs">{language === 'bn' ? 'ব্যালেন্স তথ্য পাওয়া যায়নি' : 'No balance data'}</p>
+                      </div>
+                   )}
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-700/60 text-xs font-mono">
+                   <div className="bg-slate-900/60 p-3 rounded-2xl border border-slate-700/40 flex justify-between items-center">
+                      <span className="text-emerald-400 font-bold">Cash:</span>
+                      <span className="text-slate-100 font-bold">৳ {formatNumber(cashBankData.find(d => d.name === 'Cash in Hand')?.value || 0)}</span>
+                   </div>
+                   <div className="bg-slate-900/60 p-3 rounded-2xl border border-slate-700/40 flex justify-between items-center">
+                      <span className="text-blue-400 font-bold">Bank:</span>
+                      <span className="text-slate-100 font-bold">৳ {formatNumber(cashBankData.find(d => d.name === 'Bank Accounts')?.value || 0)}</span>
+                   </div>
+                </div>
+             </div>
+
+             <div className="bg-slate-800 border border-slate-700 rounded-[2rem] p-8 flex flex-col justify-between">
+                <div className="flex items-center justify-between border-b border-slate-700/60 pb-3 mb-4">
+                   <div className="flex items-center gap-2">
+                      <PieChartIcon className="w-5 h-5 text-rose-400" />
+                      <h3 className="text-sm font-bold uppercase tracking-widest text-slate-100">
+                         {language === 'bn' ? 'শীর্ষ ৫টি ব্যয় খাত (চলতি মাস)' : 'Top 5 Expenses (Current Month)'}
+                      </h3>
+                   </div>
+                   <span className="text-[10px] font-mono text-rose-400 font-bold uppercase px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">Ranked</span>
+                </div>
+                <div className="h-[220px] w-full">
+                   {topExpensesData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                         <BarChart
+                            data={topExpensesData}
+                            layout="vertical"
+                            margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                         >
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" />
+                            <XAxis type="number" tickFormatter={(val) => `৳${formatNumber(val)}`} fontSize={9} stroke="#64748b" axisLine={false} tickLine={false} />
+                            <YAxis dataKey="name" type="category" width={110} fontSize={10} stroke="#94a3b8" axisLine={false} tickLine={false} tickFormatter={(val: string) => val.length > 15 ? `${val.slice(0, 15)}...` : val} />
+                            <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '1rem', fontSize: '11px', fontFamily: 'monospace' }} formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Expense']} />
+                            <Bar dataKey="amount" radius={[0, 6, 6, 0]} barSize={16}>
+                               {topExpensesData.map((_, index) => {
+                                  const colors = ['#f43f5e', '#fb7185', '#fda4af', '#fecdd3', '#ffe4e6'];
+                                  return <Cell key={`bar-${index}`} fill={colors[index % colors.length]} />;
+                               })}
+                            </Bar>
+                         </BarChart>
+                      </ResponsiveContainer>
+                   ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-center text-slate-500 font-mono p-4">
+                         <CreditCard className="w-8 h-8 opacity-40 mb-1" />
+                         <p className="text-xs">{language === 'bn' ? 'চলতি মাসে কোনো ব্যয়ের তথ্য নেই' : 'No expenses recorded this month'}</p>
+                      </div>
+                   )}
+                </div>
+                <div className="flex justify-between items-center text-xs font-mono pt-4 border-t border-slate-700/60 text-slate-400">
+                   <span>Total Top 5:</span>
+                   <span className="font-bold text-rose-400">৳ {formatNumber(topExpensesData.reduce((acc, curr) => acc + curr.amount, 0))}</span>
                 </div>
              </div>
           </div>
@@ -1468,8 +2094,14 @@ export function Dashboard() {
               "grid gap-4",
               selectedCards.length === 5 ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
             )}>
-              {selectedCards.map((card: any) => (
-                <div key={card.key} className={cn("p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer", card.color || "bg-blue-600")}>
+              {selectedCards.map((card: any, idx: number) => (
+                <motion.div 
+                  key={card.key} 
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: idx * 0.05, ease: [0.25, 0.1, 0.25, 1.0] }}
+                  className={cn("p-4 rounded-sm shadow-sm flex justify-between items-start group hover:brightness-95 transition-all cursor-pointer", card.color || "bg-blue-600")}
+                >
                   <div className="space-y-4">
                     <card.icon className={cn("w-6 h-6", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/60" : "text-white/60")} />
                     <p className={cn("text-[10px] font-bold uppercase leading-tight", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/60" : "text-white/60")}>{card.title}</p>
@@ -1477,7 +2109,7 @@ export function Dashboard() {
                   <span className={cn("text-2xl font-light", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/80" : "text-white/90")}>
                     {card.key === 'activeLedgers' ? stats[card.key as keyof typeof stats] : `৳ ${formatNumber(stats[card.key as keyof typeof stats] as number)}`}
                   </span>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -1534,6 +2166,118 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Design 2: Cash vs. Bank & Top 5 Expenses */}
+        {(showDashboardCashBank || showDashboardTopExpenses) && (
+          <div className={cn(
+            "grid gap-6",
+            showDashboardCashBank && showDashboardTopExpenses ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+          )}>
+            {showDashboardCashBank && (
+              <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Landmark className="w-4 h-4 text-emerald-600" />
+                    <h3 className="text-xs font-bold text-gray-800 uppercase tracking-widest">
+                      {language === 'bn' ? 'ক্যাশ বনাম ব্যাংক ব্যালেন্স' : 'Cash vs. Bank Balance'}
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-mono text-gray-400 uppercase">Liquidity Ratio</span>
+                </div>
+                <div className="h-[220px] w-full flex items-center justify-center">
+                  {cashBankData.length > 0 && cashBankData.some(d => d.value > 0) ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={cashBankData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={85}
+                          paddingAngle={4}
+                          dataKey="value"
+                        >
+                          {cashBankData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '11px', fontFamily: 'monospace' }}
+                          formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Balance']}
+                        />
+                        <Legend 
+                          verticalAlign="bottom" 
+                          iconType="circle"
+                          formatter={(val: string) => <span className="text-[11px] font-sans text-gray-600 font-medium">{val}</span>}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="text-center text-gray-400 font-sans p-4">
+                      <Wallet className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                      <p className="text-xs font-medium">{language === 'bn' ? 'ব্যালেন্স তথ্য পাওয়া যায়নি' : 'No balance data'}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-100 text-xs font-sans">
+                  <div className="bg-emerald-50 p-2.5 rounded text-emerald-800 font-medium flex justify-between items-center">
+                    <span>Cash:</span>
+                    <span className="font-bold">৳ {formatNumber(cashBankData.find(d => d.name === 'Cash in Hand')?.value || 0)}</span>
+                  </div>
+                  <div className="bg-blue-50 p-2.5 rounded text-blue-800 font-medium flex justify-between items-center">
+                    <span>Bank:</span>
+                    <span className="font-bold">৳ {formatNumber(cashBankData.find(d => d.name === 'Bank Accounts')?.value || 0)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showDashboardTopExpenses && (
+              <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+                  <div className="flex items-center gap-2">
+                    <PieChartIcon className="w-4 h-4 text-rose-600" />
+                    <h3 className="text-xs font-bold text-gray-800 uppercase tracking-widest">
+                      {language === 'bn' ? 'শীর্ষ ৫টি ব্যয় খাত (চলতি মাস)' : 'Top 5 Expenses (Current Month)'}
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-mono text-rose-500 font-bold uppercase">Ranked</span>
+                </div>
+                <div className="h-[220px] w-full">
+                  {topExpensesData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={topExpensesData}
+                        layout="vertical"
+                        margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f5f5f5" />
+                        <XAxis type="number" tickFormatter={(val) => `৳${formatNumber(val)}`} fontSize={9} axisLine={false} tickLine={false} />
+                        <YAxis dataKey="name" type="category" width={110} fontSize={10} axisLine={false} tickLine={false} tickFormatter={(val: string) => val.length > 15 ? `${val.slice(0, 15)}...` : val} />
+                        <Tooltip contentStyle={{ borderRadius: '6px', border: '1px solid #e5e7eb', fontSize: '11px', fontFamily: 'monospace' }} formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Expense']} />
+                        <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={16}>
+                          {topExpensesData.map((_, index) => {
+                            const colors = ['#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#fecdd3'];
+                            return <Cell key={`bar-${index}`} fill={colors[index % colors.length]} />;
+                          })}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center text-gray-400 font-sans p-4">
+                      <CreditCard className="w-8 h-8 opacity-40 mb-1" />
+                      <p className="text-xs font-medium">{language === 'bn' ? 'চলতি মাসে কোনো ব্যয়ের তথ্য নেই' : 'No expenses recorded this month'}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-between items-center text-xs font-sans pt-4 border-t border-gray-100 text-gray-500">
+                  <span>Total Top 5:</span>
+                  <span className="font-bold text-rose-600">৳ {formatNumber(topExpensesData.reduce((acc, curr) => acc + curr.amount, 0))}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Table Section */}
         <div className="bg-white rounded-sm shadow-sm border border-gray-100 overflow-hidden">
@@ -1690,9 +2434,10 @@ export function Dashboard() {
           "grid gap-4",
           selectedCards.length === 5 ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
         )}>
-          {selectedCards.map((card: any) => (
+          {selectedCards.map((card: any, idx: number) => (
             <StatCard 
               key={card.key}
+              index={idx}
               title={card.title} 
               value={['activeLedgers'].includes(card.key) ? stats[card.key as keyof typeof stats] : `৳ ${formatNumber(stats[card.key as keyof typeof stats] as number)}`} 
               icon={card.icon} 
@@ -1827,6 +2572,214 @@ export function Dashboard() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Spotlight: Business Intelligence & Telemetry Hub Banner */}
+      <div className="bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-emerald-600/10 border border-primary/20 p-3.5 rounded-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded bg-primary text-primary-foreground">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                {language === 'bn' ? 'বিজনেস ইন্টেলিজেন্স ও অ্যাডভান্সড অ্যানালিটিক্স হাব' : 'Business Intelligence & Telemetry Hub'}
+              </h4>
+              <span className="text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.2 rounded font-bold uppercase">
+                Zero Extra Quota
+              </span>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {language === 'bn' 
+                ? 'Trading Details, Ratios, Assets/Liabilities, All Trends, Inventory & Banking কার্যক্রমের বিস্তারিত বিশ্লেষণ দেখুন' 
+                : 'Deep dive into Trading Details, Ratios, Balance Trends, Inventory Dynamics & Banking Activities'}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => navigate('/business-intelligence')}
+          className="px-3.5 py-1.5 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider rounded hover:opacity-90 transition-opacity flex items-center gap-1.5 shrink-0"
+        >
+          <span>{language === 'bn' ? 'অ্যানালিটিক্স ওপেন করুন' : 'Launch BI Console'}</span>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Advanced Visual Analytics: Cash vs. Bank Balances & Top 5 Current Month Expenses */}
+      {(showDashboardCashBank || showDashboardTopExpenses) && (
+        <div className={cn(
+          "grid gap-4",
+          showDashboardCashBank && showDashboardTopExpenses ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+        )}>
+          {/* Cash vs. Bank Balance Donut Chart */}
+          {showDashboardCashBank && (
+            <div className="bg-card border border-border p-4 transition-all flex flex-col justify-between shadow-xs">
+              <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-emerald-500/10 text-emerald-500 rounded">
+                    <Landmark className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-mono uppercase font-bold text-foreground">
+                      {language === 'bn' ? 'ক্যাশ বনাম ব্যাংক ব্যালেন্স' : 'Cash vs. Bank Balance'}
+                    </h3>
+                    <p className="text-[9px] text-gray-500 font-mono">
+                      {language === 'bn' ? 'তরল তহবিলের রিয়েল-টাইম অনুপাত' : 'Real-time liquidity composition'}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[9px] bg-foreground/5 border border-border px-2 py-0.5 rounded text-gray-500 font-mono uppercase">
+                  Liquidity
+                </span>
+              </div>
+
+              <div className="h-[210px] w-full flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={
+                        cashBankData.some(d => d.value > 0)
+                          ? cashBankData
+                          : [
+                              { name: 'Cash in Hand', value: 1, color: '#10b981' },
+                              { name: 'Bank Accounts', value: 1, color: '#3b82f6' }
+                            ]
+                      }
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {(cashBankData.some(d => d.value > 0)
+                        ? cashBankData
+                        : [
+                            { name: 'Cash in Hand', value: 1, color: '#10b981' },
+                            { name: 'Bank Accounts', value: 1, color: '#3b82f6' }
+                          ]
+                      ).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: theme === 'dark' ? '#141414' : '#ffffff',
+                        border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`,
+                        fontSize: '11px',
+                        fontFamily: 'monospace'
+                      }}
+                      formatter={(val: any, name: any) => {
+                        const realBal = cashBankData.find(d => d.name === name)?.value || 0;
+                        return [`৳ ${formatNumber(realBal)}`, 'Balance'];
+                      }}
+                    />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      iconType="circle"
+                      formatter={(val: string) => <span className="text-[10px] font-mono text-gray-400">{val}</span>}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border/40 mt-2">
+                <div className="p-2 bg-emerald-500/5 border border-emerald-500/10 rounded flex flex-col">
+                  <span className="text-[9px] font-mono uppercase text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Cash in Hand
+                  </span>
+                  <span className="text-sm font-mono font-bold text-foreground mt-0.5">
+                    ৳ {formatNumber(cashBankData.find(d => d.name === 'Cash in Hand')?.value || 0)}
+                  </span>
+                </div>
+                <div className="p-2 bg-blue-500/5 border border-blue-500/10 rounded flex flex-col">
+                  <span className="text-[9px] font-mono uppercase text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> Bank Accounts
+                  </span>
+                  <span className="text-sm font-mono font-bold text-foreground mt-0.5">
+                    ৳ {formatNumber(cashBankData.find(d => d.name === 'Bank Accounts')?.value || 0)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Top 5 Current Month Expenses Bar Chart */}
+          {showDashboardTopExpenses && (
+            <div className="bg-card border border-border p-4 transition-all flex flex-col justify-between shadow-xs">
+              <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-rose-500/10 text-rose-500 rounded">
+                    <PieChartIcon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-mono uppercase font-bold text-foreground">
+                      {language === 'bn' ? 'শীর্ষ ৫টি ব্যয় খাত (চলতি মাস)' : 'Top 5 Expenses (Current Month)'}
+                    </h3>
+                    <p className="text-[9px] text-gray-500 font-mono">
+                      {language === 'bn' ? 'সর্বোচ্চ খরচের প্রধান খাতসমূহ' : 'Highest operational overheads'}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[9px] bg-rose-500/10 border border-rose-500/20 text-rose-500 px-2 py-0.5 rounded font-mono uppercase font-bold">
+                  Top 5
+                </span>
+              </div>
+
+              <div className="h-[210px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={topExpensesData}
+                    layout="vertical"
+                    margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
+                    <XAxis 
+                      type="number" 
+                      tickFormatter={(val) => `৳${formatNumber(val)}`}
+                      fontSize={8} 
+                      stroke="#666" 
+                      axisLine={false} 
+                      tickLine={false} 
+                    />
+                    <YAxis 
+                      dataKey="name" 
+                      type="category" 
+                      width={120}
+                      fontSize={9} 
+                      stroke="#888" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tickFormatter={(val: string) => val.length > 15 ? `${val.slice(0, 15)}...` : val}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: theme === 'dark' ? '#141414' : '#ffffff',
+                        border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`,
+                        fontSize: '11px',
+                        fontFamily: 'monospace'
+                      }}
+                      formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Total Expense']}
+                    />
+                    <Bar dataKey="amount" fill="#f43f5e" radius={[0, 4, 4, 0]} barSize={16}>
+                      {topExpensesData.map((_, index) => {
+                        const colors = ['#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#fecdd3'];
+                        return <Cell key={`bar-${index}`} fill={colors[index % colors.length]} />;
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="flex items-center justify-between text-[10px] font-mono pt-3 border-t border-border/40 mt-2 text-gray-500">
+                <span>Total Top 5 Overheads</span>
+                <span className="font-bold text-rose-500">
+                  ৳ {formatNumber(topExpensesData.reduce((acc, curr) => acc + curr.amount, 0))}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

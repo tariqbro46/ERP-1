@@ -326,6 +326,11 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
+    match /quota_reset_requests/{requestId} {
+      allow read, update, delete: if isSuperAdmin();
+      allow create: if isAuthenticated();
+    }
+
     match /inquiries/{inquiryId} {
       allow create: if true;
       allow read, delete: if isSuperAdmin();

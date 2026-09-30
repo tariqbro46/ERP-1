@@ -98,6 +98,7 @@ export const NAV_ITEMS: NavGroup[] = [
       { id: 'supply-chain', to: '/supply-chain', icon: Truck, iconName: 'Truck', label: 'Supply Chain', labelKey: 'nav.supplyChain', feature: 'enableSupplyChain' },
       { id: 'inventory-adv', to: '/inventory-advanced', icon: Layers, iconName: 'Layers', label: 'Modern Inventory', labelKey: 'nav.inventoryAdvanced', feature: 'enableInventory' },
       { id: 'data-center', to: '/data-center', icon: Share2, iconName: 'Share2', label: 'Data Center', labelKey: 'nav.dataCenter', feature: 'enableDataExport' },
+      { id: 'bi-analytics', to: '/business-intelligence', icon: BarChart3, iconName: 'BarChart3', label: 'Business Intelligence', labelKey: 'nav.businessIntelligence' },
       { id: 'ai-insights', to: '/ai-insights', icon: Zap, iconName: 'Zap', label: 'AI Insights', labelKey: 'nav.aiInsights', feature: 'enableAI' },
     ]
   },

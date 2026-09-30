@@ -72,6 +72,7 @@ import {
   FileImage,
   Save,
   Loader2,
+  RotateCcw,
   Wrench,
   Sparkles,
   Volume2,
@@ -123,6 +124,8 @@ export default function FounderPanel() {
   const [viewMode, setViewMode] = useState<'companies' | 'users' | 'notifications' | 'activity' | 'settings' | 'siteContent' | 'plans' | 'orders' | 'menu' | 'features' | 'errorLogs' | 'inquiries'>('companies');
   const [inquiries, setInquiries] = useState<any[]>([]);
   const [inquiriesLoading, setInquiriesLoading] = useState(false);
+  const [quotaRequests, setQuotaRequests] = useState<any[]>([]);
+  const [resettingQuotaId, setResettingQuotaId] = useState<string | null>(null);
   const [menuConfig, setMenuConfig] = useState<MenuConfig | null>(null);
   const [isEditingMenu, setIsEditingMenu] = useState(false);
 
@@ -757,13 +760,14 @@ export default function FounderPanel() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [companiesSnap, usersSnap, notificationsData, activityData, plansData, ordersData] = await Promise.all([
+      const [companiesSnap, usersSnap, notificationsData, activityData, plansData, ordersData, quotaRequestsData] = await Promise.all([
         erpService.getAllCompanies(),
         erpService.getAllUsers(),
         erpService.getNotifications(currentUser?.uid || '', currentUser?.companyId || '', true),
         erpService.getActivityLogs(),
         erpService.getSubscriptionPlans(),
-        erpService.getSubscriptionOrders()
+        erpService.getSubscriptionOrders(),
+        erpService.getQuotaResetRequests()
       ]);
       
       setAllUsers(usersSnap);
@@ -771,6 +775,7 @@ export default function FounderPanel() {
       setGlobalActivity(activityData);
       setSubscriptionPlans(plansData);
       setSubscriptionOrders(ordersData);
+      setQuotaRequests(quotaRequestsData || []);
       const companyData = await Promise.all(
         companiesSnap.map(async (data) => {
           const creatorId = data.createdBy || data.ownerId;
@@ -1160,6 +1165,36 @@ export default function FounderPanel() {
     }
   };
 
+  const handleApproveQuotaReset = async (requestId: string, companyId: string, companyName: string) => {
+    if (window.confirm(`Approve quota reset for "${companyName}" and reset daily usage to 0 Ops now? / আপনি কি এখনই এই কোম্পানির কোটা রিসেট অনুমোদন করতে চান?`)) {
+      setResettingQuotaId(requestId || companyId);
+      try {
+        await erpService.approveQuotaResetRequest(requestId, companyId);
+        showNotification('Daily quota usage successfully reset to 0 Ops for ' + companyName, 'success');
+        await fetchData();
+      } catch (err) {
+        showNotification('Failed to reset quota. Please check network connection.', 'error');
+      } finally {
+        setResettingQuotaId(null);
+      }
+    }
+  };
+
+  const handleDirectResetQuota = async (companyId: string, companyName: string) => {
+    if (window.confirm(`Founder: Reset daily database operations quota for "${companyName}" to 0 Ops now? / আপনি কি এখনই এই কোম্পানির কোটা ০-তে রিসেট করতে চান?`)) {
+      setResettingQuotaId(companyId);
+      try {
+        await erpService.resetQuotaNow(companyId);
+        showNotification('Daily quota usage successfully reset to 0 Ops for ' + companyName, 'success');
+        await fetchData();
+      } catch (err) {
+        showNotification('Failed to reset quota. Please check network connection.', 'error');
+      } finally {
+        setResettingQuotaId(null);
+      }
+    }
+  };
+
   const handleSystemLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -1538,10 +1573,51 @@ export default function FounderPanel() {
       )}
 
       {viewMode === 'companies' ? (
-        <div className={cn(
-          "bg-card border border-border rounded-xl shadow-sm overflow-x-auto",
-          uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
-        )}>
+        <div className="space-y-4">
+          {/* Pending Quota Reset Requests Alert Section */}
+          {quotaRequests.filter(r => r.status === 'pending').length > 0 && (
+            <div className="p-4 rounded-xl bg-amber-500/10 border-2 border-amber-500/40 text-foreground shadow-md animate-in fade-in">
+              <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b border-amber-500/30">
+                <div className="flex items-center gap-2">
+                  <RotateCcw className="w-5 h-5 text-amber-500" />
+                  <h4 className="text-sm font-bold text-amber-400">
+                    Pending Quota Reset Requests ({quotaRequests.filter(r => r.status === 'pending').length}) / কোটা রিসেটের অনুরোধ
+                  </h4>
+                </div>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold uppercase tracking-wider">
+                  Action Required
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {quotaRequests.filter(r => r.status === 'pending').map((req) => (
+                  <div key={req.id} className="p-3 bg-card border border-amber-500/30 rounded-lg flex flex-col justify-between gap-3 shadow-sm">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-sm text-foreground">{req.companyName}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-bold uppercase">Pending</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Requested by: <span className="text-foreground font-medium">{req.requestedByName || req.requestedByEmail}</span></p>
+                      <p className="text-[11px] text-muted-foreground">Email: {req.requestedByEmail || 'N/A'}</p>
+                      <p className="text-[10px] text-slate-400 mt-1">Requested: {req.createdAtStr ? safeFormat(req.createdAtStr, 'dd MMM, HH:mm') : 'Recently'}</p>
+                    </div>
+                    <button
+                      disabled={resettingQuotaId === req.id}
+                      onClick={() => handleApproveQuotaReset(req.id, req.companyId, req.companyName)}
+                      className="w-full py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 transition-all shadow cursor-pointer disabled:opacity-50"
+                    >
+                      {resettingQuotaId === req.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+                      <span>Approve & Reset Quota (কোটা রিসেট)</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className={cn(
+            "bg-card border border-border rounded-xl shadow-sm overflow-x-auto",
+            uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+          )}>
           <div className="min-w-[1000px] lg:min-w-0">
             <table className="w-full text-left text-sm">
             <thead className={cn(
@@ -1565,7 +1641,14 @@ export default function FounderPanel() {
                 )}>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="font-medium text-foreground">{company.name}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-medium text-foreground">{company.name}</span>
+                        {(company as any).quotaResetRequested && (
+                          <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/20 text-amber-500 border border-amber-500/30 rounded font-bold uppercase animate-pulse">
+                            Quota Request
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-muted-foreground">{company.email || 'No email'}</span>
                     </div>
                   </td>
@@ -1639,6 +1722,19 @@ export default function FounderPanel() {
                         </div>
                       )}
                       <button 
+                        disabled={resettingQuotaId === company.id}
+                        onClick={() => handleDirectResetQuota(company.id, company.name)}
+                        className={cn(
+                          "p-2 rounded-lg transition-colors cursor-pointer",
+                          (company as any).quotaResetRequested
+                            ? "bg-amber-500/20 text-amber-500 animate-pulse border border-amber-500/40"
+                            : "text-emerald-500 hover:bg-emerald-500/10"
+                        )}
+                        title={(company as any).quotaResetRequested ? "Pending Quota Reset Request - Click to Reset" : "Reset Quota to 0 Ops for this Company"}
+                      >
+                        {resettingQuotaId === company.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+                      </button>
+                      <button 
                         onClick={() => toggleAccess(company)}
                         className={`p-2 rounded-lg transition-colors ${
                           company.isAccessEnabled 
@@ -1670,6 +1766,7 @@ export default function FounderPanel() {
           </table>
           </div>
         </div>
+      </div>
       ) : viewMode === 'siteContent' ? (
         <SiteContentEditor showNotification={showNotification} />
       ) : viewMode === 'users' ? (
@@ -7546,9 +7643,16 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                           <div className="space-y-1.5Packed">
                             <div className="flex items-center justify-between text-xs font-mono bg-muted/40 p-2.5 rounded-lg border border-border">
                               <span className="text-muted-foreground">Usage Stat:</span>
-                              <span className={selectedCompany && selectedCompany.quotaLimit && selectedCompany.quotaUsed !== undefined && selectedCompany.quotaUsed >= selectedCompany.quotaLimit ? "text-rose-500 font-bold animate-pulse" : "text-emerald-500 font-bold"}>
-                                {(selectedCompany.quotaUsed || 0).toLocaleString()} / {(selectedCompany.quotaLimit || 10000).toLocaleString()} ops ({Math.round(((selectedCompany.quotaUsed || 0) / (selectedCompany.quotaLimit || 10000)) * 100)}%)
-                              </span>
+                              {(() => {
+                                const qLim = selectedCompany.quotaLimit || 10000;
+                                const qUsed = Math.min(qLim, selectedCompany.quotaUsed || 0);
+                                const qPct = Math.min(100, Math.round((qUsed / qLim) * 100));
+                                return (
+                                  <span className={selectedCompany && selectedCompany.quotaLimit && selectedCompany.quotaUsed !== undefined && selectedCompany.quotaUsed >= selectedCompany.quotaLimit ? "text-rose-500 font-bold animate-pulse" : "text-emerald-500 font-bold"}>
+                                    {qUsed.toLocaleString()} / {qLim.toLocaleString()} ops ({qPct}%)
+                                  </span>
+                                );
+                              })()}
                             </div>
                             <div className="flex items-center justify-between text-[11px] font-mono bg-muted/20 px-2.5 py-1.5 rounded-lg border border-dashed border-border text-muted-foreground">
                               <span>Display Rule:</span>

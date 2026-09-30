@@ -235,9 +235,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         console.error("[QUOTA] Background quota reset error:", err);
                       });
                     } else {
-                      setCompany(compData);
+                      const limit = compData.quotaLimit || 10000;
+                      const sanitizedUsed = compData.quotaUsed !== undefined ? Math.min(limit, compData.quotaUsed) : 0;
+                      const sanitizedComp = {
+                        ...compData,
+                        quotaUsed: sanitizedUsed
+                      };
+                      setCompany(sanitizedComp);
                       try {
-                        localStorage.setItem('cached_auth_company', JSON.stringify(compData));
+                        localStorage.setItem('cached_auth_company', JSON.stringify(sanitizedComp));
                       } catch (e) {}
                       const isExceeded = (localStorage.getItem('erp_is_demo_mode') !== 'true') && 
                         compData.quotaLimit && 
