@@ -1022,6 +1022,12 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                     active={location.pathname === DASHBOARD_ITEM.to} 
                   />
                   <SidebarItem 
+                    to="/business-intelligence" 
+                    icon={BarChart3} 
+                    label={isSidebarCollapsed ? "" : "Business Intelligence"} 
+                    active={location.pathname === '/business-intelligence'} 
+                  />
+                  <SidebarItem 
                     to="/search" 
                     icon={LucideIcons.Search} 
                     label={isSidebarCollapsed ? "" : t('common.search') || "Search"} 
@@ -1383,6 +1389,33 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                 </Link>
 
                 <Link
+                  to="/business-intelligence"
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all group",
+                    location.pathname === '/business-intelligence'
+                      ? isDarkTheme
+                        ? "bg-slate-800 text-white font-semibold shadow-xs ring-1 ring-white/10"
+                        : "bg-[#e8f0fe] text-[#1967d2] font-semibold shadow-xs ring-1 ring-blue-500/20"
+                      : isDarkTheme
+                        ? "text-slate-300 hover:text-white hover:bg-slate-800/60"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                  )}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <BarChart3 className={cn(
+                      "w-4 h-4 shrink-0 transition-colors",
+                      location.pathname === '/business-intelligence'
+                        ? isDarkTheme ? "text-indigo-400" : "text-[#1967d2]"
+                        : isDarkTheme ? "text-slate-400 group-hover:text-slate-200" : "text-slate-500 group-hover:text-slate-700"
+                    )} />
+                    <span className="truncate">Business Intelligence</span>
+                  </div>
+                  {location.pathname === '/business-intelligence' && (
+                    <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", isDarkTheme ? "bg-indigo-400" : "bg-[#1967d2]")} />
+                  )}
+                </Link>
+
+                <Link
                   to="/search"
                   className={cn(
                     "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all group",
@@ -1432,6 +1465,30 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                     isDarkTheme ? "bg-slate-950 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-800"
                   )}>
                     Dashboard
+                  </div>
+                </Link>
+
+                <Link
+                  to="/business-intelligence"
+                  className={cn(
+                    "w-10 h-10 mx-auto rounded-xl flex items-center justify-center transition-all group relative my-1",
+                    location.pathname === '/business-intelligence'
+                      ? isDarkTheme ? "bg-slate-800 text-white shadow-xs ring-1 ring-white/10" : "bg-[#e8f0fe] text-[#1967d2] shadow-xs ring-1 ring-blue-500/20"
+                      : isDarkTheme ? "text-slate-400 hover:text-white hover:bg-slate-800/60" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/60"
+                  )}
+                  title="Business Intelligence"
+                >
+                  <BarChart3 className={cn(
+                    "w-4 h-4",
+                    location.pathname === '/business-intelligence'
+                      ? isDarkTheme ? "text-indigo-400" : "text-[#1967d2]"
+                      : isDarkTheme ? "text-slate-400 group-hover:text-slate-200" : "text-slate-500 group-hover:text-slate-700"
+                  )} />
+                  <div className={cn(
+                    "absolute left-full ml-3 px-2.5 py-1 text-[11px] font-medium rounded-md whitespace-nowrap shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 border",
+                    isDarkTheme ? "bg-slate-950 border-slate-700 text-slate-100" : "bg-white border-slate-200 text-slate-800"
+                  )}>
+                    Business Intelligence
                   </div>
                 </Link>
 
@@ -1824,6 +1881,15 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
             )}
           >
             {t('nav.dashboard')}
+          </Link>
+          <Link
+            to="/business-intelligence"
+            className={cn(
+              "text-[11px] font-medium px-2 py-1 rounded transition-colors",
+              location.pathname === '/business-intelligence' ? "bg-foreground/5 text-primary" : "text-gray-500 hover:text-foreground"
+            )}
+          >
+            Business Intelligence
           </Link>
           {menuGroups.map(group => (
             <div 

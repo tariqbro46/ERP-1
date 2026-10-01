@@ -22,11 +22,14 @@ const getSignatureHtml = (settings: any) => {
 export const executePrint = (html: string) => {
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
+  iframe.style.left = '-9999px';
+  iframe.style.top = '0';
+  iframe.style.width = '1024px';
+  iframe.style.height = '768px';
   iframe.style.border = '0';
+  iframe.style.opacity = '0';
+  iframe.style.pointerEvents = 'none';
+  iframe.style.zIndex = '-999';
   document.body.appendChild(iframe);
 
   const doc = iframe.contentWindow?.document || iframe.contentDocument;
@@ -37,13 +40,18 @@ export const executePrint = (html: string) => {
   doc.close();
 
   const doPrint = () => {
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch (err) {
+      console.warn('Iframe print error, falling back to window print', err);
+      window.print();
+    }
     setTimeout(() => {
       if (document.body.contains(iframe)) {
         document.body.removeChild(iframe);
       }
-    }, 1000);
+    }, 2500);
   };
 
   const images = doc.getElementsByTagName('img');
@@ -55,9 +63,9 @@ export const executePrint = (html: string) => {
         if (loaded === images.length) doPrint();
       };
     });
-    setTimeout(doPrint, 3000);
+    setTimeout(doPrint, 2500);
   } else {
-    setTimeout(doPrint, 500);
+    setTimeout(doPrint, 400);
   }
 };
 

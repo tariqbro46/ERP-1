@@ -15,6 +15,29 @@
 - Page numbers MUST ONLY appear at the very top right corner of the page (in the top header area).
 - DO NOT place duplicate "Page 1" or page numbers right above table headers or above column headers.
 - Maintain consistent formal company header formatting with single top-right page numbering across all report layouts.
+- Margins: Top 0.5 in (48px), Bottom 1.2 in (115px), Left 0.3 in (29px), Right 0.3 in (29px).
+- Multi-page pagination capacity: Page 1 = 34 items; Subsequent pages = 38 items to prevent large empty spaces at the bottom.
+- Table rows: Height 24px, vertical-align middle, padding (4px top, 5.5px bottom) so text is vertically centered and floats clearly above the bottom underline.
+- Column alignments: # is center/middle; names, address, phone, email are left/middle; closing balance is right/middle with Dr (green) and Cr (red).
+- Omit redundant "Group" column when report header already states the title (e.g. Sundry Debtors Report).
+- Omit summary total bar at table bottom.
+- Save PDF and Print button use the identical PDF blob generator.
+
+## Ledger Address & Country Logic
+- NEVER use `mailing_name` as fallback for address (since in ERP it defaults to the ledger's name).
+- Only consider real street/city/division fields (`address`, `division`, `postal_code`).
+- If a ledger has NO street address:
+  - Always display `"—"` (dash).
+  - Even if "With Country" is checked, if there is no street address, display `"—"` (do not show just the country).
+- If a ledger HAS a street address:
+  - Without Country (default): street address without country.
+  - With Country: `street address, country`.
+
+## Dashboard Charts & Interaction Rules
+- All charts have `select-none` / `user-select: none` to prevent native browser text selection or blue highlighting on click.
+- Hovering shows the report tooltip beside the pointer.
+- Clicking on a month/data point pins the report popup to stay on screen.
+- Hovering over another month or clicking outside unpins and dismisses the popup.
 
 ## Numeric Formatting
 - Quantity values for items with units like "Pcs", "Pc", or "Nos" MUST NOT show any decimal places.

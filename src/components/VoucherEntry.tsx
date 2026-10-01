@@ -2326,14 +2326,18 @@ export function VoucherEntry() {
                           setAccEntries(next);
                         }}
                         onKeyDown={e => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
+                          if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
                             if (idx < accEntries.length - 1) {
-                              const nextInput = document.querySelector(`[tabindex="${100 + (idx + 1) * 10}"]`) as HTMLElement;
-                              nextInput?.focus();
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const nextInput = document.querySelector(`[tabindex="${100 + (idx + 1) * 10}"]`) as HTMLElement;
+                                nextInput?.focus();
+                              }
                             } else if (showBankDetails) {
+                              e.preventDefault();
                               bankTxTypeRef.current?.focus();
-                            } else {
+                            } else if (e.key === 'Enter') {
+                              e.preventDefault();
                               narrationRef.current?.focus();
                             }
                           }
@@ -2351,6 +2355,12 @@ export function VoucherEntry() {
                         type="button"
                         onClick={() => setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
                         tabIndex={500}
+                        onKeyDown={e => {
+                          if (e.key === 'Tab' && !e.shiftKey && showBankDetails) {
+                            e.preventDefault();
+                            bankTxTypeRef.current?.focus();
+                          }
+                        }}
                         className={cn(
                           "text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
                           isLayout2 ? "px-2.5 py-1 text-[8px]" : "px-4 py-1.5 text-[9px]",
@@ -2432,14 +2442,18 @@ export function VoucherEntry() {
                           setAccEntries(next);
                         }} 
                         onKeyDown={e => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
+                          if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
                             if (idx < accEntries.length - 1) {
-                              const nextInput = document.querySelector(`[tabindex="${100 + (idx + 1) * 10}"]`) as HTMLElement;
-                              nextInput?.focus();
-                            } else if (showBankDetails) {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const nextInput = document.querySelector(`[tabindex="${100 + (idx + 1) * 10}"]`) as HTMLElement;
+                                nextInput?.focus();
+                              }
+                            } else if (showBankDetails && entry.type === 'Dr') {
+                              e.preventDefault();
                               bankTxTypeRef.current?.focus();
-                            } else {
+                            } else if (e.key === 'Enter') {
+                              e.preventDefault();
                               narrationRef.current?.focus();
                             }
                           }
@@ -2464,14 +2478,18 @@ export function VoucherEntry() {
                           setAccEntries(next);
                         }} 
                         onKeyDown={e => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
+                          if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
                             if (idx < accEntries.length - 1) {
-                              const nextInput = document.querySelector(`[tabindex="${100 + (idx + 1) * 10}"]`) as HTMLElement;
-                              nextInput?.focus();
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const nextInput = document.querySelector(`[tabindex="${100 + (idx + 1) * 10}"]`) as HTMLElement;
+                                nextInput?.focus();
+                              }
                             } else if (showBankDetails) {
+                              e.preventDefault();
                               bankTxTypeRef.current?.focus();
-                            } else {
+                            } else if (e.key === 'Enter') {
+                              e.preventDefault();
                               narrationRef.current?.focus();
                             }
                           }
@@ -2489,6 +2507,12 @@ export function VoucherEntry() {
                         type="button"
                         onClick={() => setAccEntries([...accEntries, { ledger_id: '', debit: 0, credit: 0, amount: 0, type: 'Dr' }])}
                         tabIndex={500}
+                        onKeyDown={e => {
+                          if (e.key === 'Tab' && !e.shiftKey && showBankDetails) {
+                            e.preventDefault();
+                            bankTxTypeRef.current?.focus();
+                          }
+                        }}
                         className={cn(
                           "text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
                           isLayout2 ? "px-2.5 py-1 text-[8px]" : "px-4 py-1.5 text-[9px]",
@@ -2541,7 +2565,7 @@ export function VoucherEntry() {
                   value={bankDetails.transaction_type}
                   onChange={(e) => setBankDetails({ ...bankDetails, transaction_type: e.target.value as any })}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
                       e.preventDefault();
                       bankInstNoRef.current?.focus();
                     }
@@ -2562,9 +2586,12 @@ export function VoucherEntry() {
                   value={bankDetails.instrument_no}
                   onChange={(e) => setBankDetails({ ...bankDetails, instrument_no: e.target.value })}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
                       e.preventDefault();
                       bankInstDateRef.current?.focus();
+                    } else if (e.key === 'Tab' && e.shiftKey) {
+                      e.preventDefault();
+                      bankTxTypeRef.current?.focus();
                     }
                   }}
                   placeholder={t('common.instNo')}
@@ -2579,9 +2606,12 @@ export function VoucherEntry() {
                   value={bankDetails.instrument_date}
                   onChange={(val) => setBankDetails({ ...bankDetails, instrument_date: val })}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
                       e.preventDefault();
                       bankNameRef.current?.focus();
+                    } else if (e.key === 'Tab' && e.shiftKey) {
+                      e.preventDefault();
+                      bankInstNoRef.current?.focus();
                     }
                   }}
                   className="w-full"
@@ -2598,9 +2628,12 @@ export function VoucherEntry() {
                   value={bankDetails.bank_name}
                   onChange={(e) => setBankDetails({ ...bankDetails, bank_name: e.target.value })}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
                       e.preventDefault();
                       narrationRef.current?.focus();
+                    } else if (e.key === 'Tab' && e.shiftKey) {
+                      e.preventDefault();
+                      bankInstDateRef.current?.focus();
                     }
                   }}
                   placeholder={t('common.bankName')}
@@ -2624,6 +2657,12 @@ export function VoucherEntry() {
                 ref={narrationRef}
                 value={narration || ''}
                 onChange={e => setNarration(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Tab' && e.shiftKey && showBankDetails) {
+                    e.preventDefault();
+                    bankNameRef.current?.focus();
+                  }
+                }}
                 tabIndex={1000}
                 className={cn(
                   "w-full bg-background border border-border text-foreground p-2 text-xs outline-none focus:border-foreground transition-colors resize-none",

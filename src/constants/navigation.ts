@@ -299,5 +299,6 @@ export const PAGE_TITLES: Record<string, string> = {
   '/supply-chain': 'nav.supplyChain',
   '/inventory-advanced': 'nav.inventoryAdvanced',
   '/data-center': 'nav.dataCenter',
+  '/business-intelligence': 'nav.businessIntelligence',
   '/ai-insights': 'nav.aiInsights',
 };
