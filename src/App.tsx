@@ -1,6 +1,4 @@
 import React from 'react';
-import { doc, getDocFromServer } from 'firebase/firestore';
-import { db } from './firebase';
 import { soundService } from './services/soundService';
 import { HashRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS } from './contexts/SettingsContext';
@@ -2984,21 +2982,6 @@ function ProtectedRoute() {
     </Layout>
   );
 }
-
-// async function testConnection() {
-//   try {
-//     await getDocFromServer(doc(db, 'system', 'connection_test'));
-//     console.log("Firestore connection check: SUCCESS");
-//   } catch (error) {
-//     if (error instanceof Error && (error.message.includes('the client is offline') || error.message.includes('unavailable'))) {
-//       console.error("Please check your Firebase configuration or internet connection.");
-//     } else {
-//       console.error("Firestore connection test error:", error);
-//     }
-//   }
-// }
-
-// testConnection();
 
 export default function App() {
   return (

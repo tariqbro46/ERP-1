@@ -68,13 +68,11 @@ In accounting and ERP databases (e.g., Tally, Sapient ERP), `mailing_name` is ty
 ### A. Native Browser Selection & Focus Prevention
 - SVG and canvas charts have `select-none` / `user-select: none; -webkit-user-select: none; outline: none;`.
 - Clicking or dragging on any chart will NOT trigger browser text selection (blue highlighting over chart text or months).
+- Clicking on graphs does NOT trigger disruptive popups, crashes, or pinned states. The user explicitly requested standard, smooth interaction without any abnormal behavior on click.
 
-### B. Pointer Hover vs. Click Pinning
-- **Hover**: As the pointer moves across data points/months, the tooltip dynamically renders the metrics for that point right beside the pointer.
-- **Click**: Clicking on any month/data point **pins** that month's report popup to stay on screen.
-- **Auto-Dismiss / Release**:
-  - If the user moves the pointer to another data point/month on the graph, the pinned tooltip releases and follows the pointer.
-  - If the user clicks anywhere else on the screen, a global listener (`mousedown`) unpins and dismisses the popup.
+### B. Pointer Hover Tooltips
+- As the pointer moves across data points/months, Recharts `<Tooltip>` dynamically and smoothly renders the metrics for that point right beside the pointer.
+- Clean formatting: amounts with currency symbol, standard font family and high contrast.
 
 ---
 
@@ -96,3 +94,41 @@ In accounting and ERP databases (e.g., Tally, Sapient ERP), `mailing_name` is ty
 - **Item Quantities** with units `Pcs`, `Pc`, or `Nos`: Must show **0 decimal places** via `formatQuantity`.
 - **Financial Balances, Amounts, Rates, Turnover**: Max **2 decimal places** via `formatNumber` and `formatCurrency`.
 - **Currency Symbol**: Uses `currencySymbol` (e.g. `৳` / BDT or `$` / USD as configured in settings).
+
+---
+
+## 6. Ground-Truth Accounting & Inventory Telemetry
+
+### A. Ledger Balances & Accounting Truth
+- **Opening Balance Convention**:
+  - `opening_balance` is stored as positive for Dr (Debit) and negative for Cr (Credit).
+- **Transaction Flow**:
+  - Every debit transaction ADDS (`+ debit`).
+  - Every credit transaction SUBTRACTS (`- credit`).
+- **Net Balance Calculation**:
+  - `netBalance = (opening_balance || 0) + sum(debits) - sum(credits)`.
+  - Point-in-time balance as of `periodEnd`: accounts for entries up to `periodEnd`.
+  - Fallback: `current_balance` attribute on the ledger document.
+- **Sundry Debtors (Receivables)**:
+  - `balance = Math.abs(netBalance)`. NEVER fall back to turnover!
+  - `isDr = netBalance >= 0`. Dr = Green (normal outstanding), Cr = Red (customer advance).
+- **Sundry Creditors (Payables)**:
+  - `balance = Math.abs(netBalance)`. NEVER fall back to turnover!
+  - `isDr = netBalance > 0`. Cr (`netBalance <= 0`) = Red (normal payable to supplier), Dr (`netBalance > 0`) = Green (advance paid to supplier).
+
+### B. Stock Items Quantity & Valuation Truth
+- **Calculation Mechanism**:
+  - Exactly matches `StockSummary.tsx` and `_executeRecalculateItemStats`.
+  - Uses `getMovementType` and timestamp sorting from `parseEntryDate`.
+  - Inward movements: Purchase, Receipt Note, Sales Return, Material In, Credit Note.
+  - Outward movements: Sales, Delivery Note, Purchase Return, Material Out, Consumption, Debit Note.
+  - Physical Stock: Overrides stock count.
+  - Starting stock: `opening_qty`.
+  - Fallback: `item.current_stock` if no inventory entries exist.
+- **Valuation**:
+  - `rate = item.avg_cost || item.opening_rate || item.standard_rate || item.standard_cost || 0`.
+  - `closingStockValuation = stockAtEnd * rate`.
+  - `openingStockValuation = stockAtStart * rate`.
+- **No Fabricated / Mock Data**:
+  - Monthly trends must be calculated directly from real voucher dates and actual inward/outward quantities.
+  - NO random sine waves (`Math.sin`), no synthetic multipliers (`* 0.28`, `* 0.16`), and no fake fallbacks (`50000 * factor`). Zero transactions simply display as 0.

@@ -1414,7 +1414,10 @@ export const erpService: any = {
         const data = snapshot.docs.map(doc => ({ ...(doc.data() as any), id: doc.id } as unknown as T));
         
         // Update specific cache if applicable
-        if (colName === 'ledgers') (this as any)._ledgersCache[companyId] = { data: data as any, timestamp: now };
+        if (colName === 'ledgers') {
+          (this as any)._ledgersCache[companyId] = { data: data as any, timestamp: now };
+          (this as any)._genericCollectionsCache[cacheKey] = { data: data as any, timestamp: now };
+        }
         else if (colName === 'items') (this as any)._itemsCache[companyId] = { data: data as any, timestamp: now };
         else if (colName === 'godowns') (this as any)._godownsCache[companyId] = { data: data as any, timestamp: now };
         else if (colName === 'employees') (this as any)._employeesCache[companyId] = { data: data as any, timestamp: now };
@@ -2500,6 +2503,116 @@ export const erpService: any = {
     }
   },
 
+  /**
+   * Targeted Ledger Data Verification & Re-sync:
+   * Re-calculates ledger balances directly from source voucher entries for the specified ledger IDs.
+   * Compares calculated net balance with current_balance.
+   * If any variance exists, atomically synchronizes the ledger in Firestore and local caches.
+   * Highly quota-efficient: only reads entries for the requested target ledger IDs (~200-500 reads max).
+   */
+  async verifyTargetedLedgerBalances(companyId: string, ledgerIds: string[]): Promise<Record<string, { calculated: number; previous: number; adjusted: boolean }>> {
+    if (!companyId || !ledgerIds || ledgerIds.length === 0) return {};
+    
+    // In demo mode
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      const demoLedgers = this._getDemoData('ledgers');
+      const demoEntries = this._getDemoData('voucher_entries');
+      const result: Record<string, { calculated: number; previous: number; adjusted: boolean }> = {};
+      
+      ledgerIds.forEach(id => {
+        const lIndex = demoLedgers.findIndex((l: any) => l.id === id);
+        if (lIndex !== -1) {
+          const l = demoLedgers[lIndex];
+          const lEntries = demoEntries.filter((e: any) => e.ledger_id === id);
+          const debits = lEntries.reduce((sum: number, e: any) => sum + (Number(e.debit) || 0), 0);
+          const credits = lEntries.reduce((sum: number, e: any) => sum + (Number(e.credit) || 0), 0);
+          const calc = (Number(l.opening_balance) || 0) + debits - credits;
+          const prev = Number(l.current_balance !== undefined ? l.current_balance : l.opening_balance || 0);
+          const adjusted = Math.abs(calc - prev) > 0.001;
+          if (adjusted) {
+            demoLedgers[lIndex].current_balance = calc;
+          }
+          result[id] = { calculated: calc, previous: prev, adjusted };
+        }
+      });
+      if (Object.values(result).some(r => r.adjusted)) {
+        this._saveDemoData('ledgers', demoLedgers);
+      }
+      return result;
+    }
+
+    try {
+      const allLedgers = await this.getLedgers(companyId);
+      const targetLedgers = allLedgers.filter(l => ledgerIds.includes(l.id));
+      if (targetLedgers.length === 0) return {};
+
+      const uniqueIds = Array.from(new Set(ledgerIds));
+      const sourceEntries: any[] = [];
+
+      // Query in chunks of 30 using Firestore 'in' operator to avoid query limits
+      for (let i = 0; i < uniqueIds.length; i += 30) {
+        const chunk = uniqueIds.slice(i, i + 30);
+        const q = query(
+          collection(db, 'voucher_entries'),
+          where('companyId', '==', companyId),
+          where('ledger_id', 'in', chunk)
+        );
+        const snap = await getDocs(q);
+        this.trackQuota(companyId, snap.size || 1, 0);
+        sourceEntries.push(...snap.docs.map(d => ({ ...d.data(), id: d.id })));
+      }
+
+      const results: Record<string, { calculated: number; previous: number; adjusted: boolean }> = {};
+      const updatesToCommit: { ref: any; id: string; newBalance: number }[] = [];
+
+      for (const l of targetLedgers) {
+        const lEntries = sourceEntries.filter(e => e.ledger_id === l.id);
+        const debits = lEntries.reduce((sum, e) => sum + (Number(e.debit) || 0), 0);
+        const credits = lEntries.reduce((sum, e) => sum + (Number(e.credit) || 0), 0);
+        const calculated = (Number(l.opening_balance) || 0) + debits - credits;
+        const prev = Number(l.current_balance !== undefined ? l.current_balance : l.opening_balance || 0);
+        const adjusted = Math.abs(calculated - prev) > 0.001;
+
+        results[l.id] = { calculated, previous: prev, adjusted };
+
+        if (adjusted) {
+          const lRef = doc(db, 'ledgers', l.id);
+          updatesToCommit.push({ ref: lRef, id: l.id, newBalance: calculated });
+          l.current_balance = calculated;
+        }
+      }
+
+      // If any discrepancy was found, batch update in Firestore
+      if (updatesToCommit.length > 0) {
+        const batch = firestoreWriteBatch(db);
+        updatesToCommit.forEach(u => {
+          batch.update(u.ref, { current_balance: u.newBalance });
+        });
+        await batch.commit();
+        this.trackQuota(companyId, 0, updatesToCommit.length);
+
+        // Update in-memory & localStorage ledgers cache
+        if (this._ledgersCache[companyId]?.data) {
+          const lMap = new Map(updatesToCommit.map(u => [u.id, u.newBalance]));
+          this._ledgersCache[companyId].data = this._ledgersCache[companyId].data.map(l => {
+            if (lMap.has(l.id)) {
+              return { ...l, current_balance: lMap.get(l.id)! };
+            }
+            return l;
+          });
+          try {
+            localStorage.setItem(`col_cache_ledgers_${companyId}`, JSON.stringify(this._ledgersCache[companyId]));
+          } catch (e) {}
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Targeted ledger verification error:', error);
+      return {};
+    }
+  },
+
   async getCashBankVouchers(companyId: string, from: string, to: string) {
     try {
       const ledgers = await this.getCollection('ledgers', companyId);
@@ -3195,22 +3308,28 @@ export const erpService: any = {
   async getLedgers(companyId: string, forceRefresh = false): Promise<Ledger[]> {
     const now = Date.now();
     if (!forceRefresh && this._ledgersCache[companyId] && (now - this._ledgersCache[companyId].timestamp < this._collectionTTL)) {
-      return this._ledgersCache[companyId].data;
+      const cached = this._ledgersCache[companyId].data;
+      if (Array.isArray(cached) && cached.length > 0) {
+        const hasEnrichedGroup = cached.every((l: any) => l.ledger_groups !== undefined);
+        if (hasEnrichedGroup) {
+          return cached;
+        }
+      }
     }
 
     try {
       console.log('erpService.getLedgers called for companyId:', companyId);
       const [ledgers, groups] = await Promise.all([
         this.getCollection('ledgers', companyId, 5000, forceRefresh),
-        this.getCollection('ledger_groups', companyId, 5000, forceRefresh)
+        this.getLedgerGroups(companyId)
       ]);
       
       const result = ledgers.map(l => {
-        const group = groups.find(g => g.id === l.group_id);
+        const group = groups.find(g => g.id === l.group_id || (g.name && l.group_name && g.name.toLowerCase() === l.group_name.toLowerCase()));
         return {
           ...l,
-          ledger_groups: group,
-          group_name: group?.name || l.group_name
+          ledger_groups: group || l.ledger_groups,
+          group_name: group?.name || l.group_name || 'General Accounts'
         };
       });
 

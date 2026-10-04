@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { erpService } from '../services/erpService';
-import { doc, onSnapshot, collection, getDocFromServer, getDocs, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, onSnapshot, collection, getDoc, getDocs, updateDoc, deleteField } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { SubscriptionPlan } from '../types';
 import { FeatureCategory, APP_FEATURES } from '../constants/features';
@@ -695,8 +695,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             globalConfigLoaded.current = true;
           }
         }, (error) => {
-          if (!error.message?.includes('Quota exceeded')) {
-            console.error("System settings fetch error:", error);
+          if (!error.message?.includes('Quota exceeded') && !error.message?.includes('offline') && !error.message?.includes('backend')) {
+            console.warn("System settings fetch notice:", error);
           }
         });
       } catch (error) {}
@@ -710,8 +710,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         const plans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionPlan));
         setSettings(prev => ({ ...prev, subscriptionPlans: plans }));
       } catch (error: any) {
-        if (!error.message?.includes('Quota exceeded')) {
-          console.error("Subscription plans fetch error:", error);
+        if (!error.message?.includes('Quota exceeded') && !error.message?.includes('offline') && !error.message?.includes('backend')) {
+          console.warn("Subscription plans fetch notice:", error);
         }
       }
     };
@@ -720,7 +720,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const fetchFeatures = async () => {
       try {
         const featuresRef = doc(db, 'system', 'features');
-        const snap = await getDocFromServer(featuresRef);
+        const snap = await getDoc(featuresRef);
         if (snap.exists()) {
           const data = snap.data();
           setSettings(prev => ({ ...prev, appFeatures: data.categories || APP_FEATURES }));
@@ -728,8 +728,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           setSettings(prev => ({ ...prev, appFeatures: APP_FEATURES }));
         }
       } catch (error: any) {
-        if (!error.message?.includes('Quota exceeded')) {
-          console.error("Features configuration fetch error:", error);
+        if (!error.message?.includes('Quota exceeded') && !error.message?.includes('offline') && !error.message?.includes('backend') && !error.message?.includes('Failed to get document')) {
+          console.warn("Features configuration fetch notice:", error);
         }
         setSettings(prev => ({ ...prev, appFeatures: APP_FEATURES }));
       }

@@ -36,8 +36,16 @@
 ## Dashboard Charts & Interaction Rules
 - All charts have `select-none` / `user-select: none` to prevent native browser text selection or blue highlighting on click.
 - Hovering shows the report tooltip beside the pointer.
-- Clicking on a month/data point pins the report popup to stay on screen.
-- Hovering over another month or clicking outside unpins and dismisses the popup.
+- Clicking on graphs does NOT trigger any abnormal popup, crash, or pinned state. Standard, smooth chart interaction is preserved.
+
+## Ledger Balance & Stock Calculations Truth
+- In SAPIENT ERP: `opening_balance` is positive for Dr and negative for Cr.
+- Debits add (`+ debit`), credits subtract (`- credit`).
+- Point-in-time balance: `opening_balance + sum(debit) - sum(credit)`.
+- For Sundry Debtors: `balance = Math.abs(netBalance)` (never fall back to turnover!). `isDr = netBalance >= 0`. Dr is Green, Cr is Red.
+- For Sundry Creditors: `balance = Math.abs(netBalance)` (never fall back to turnover!). `isDr = netBalance > 0`. Cr (`netBalance <= 0`) is Red, Dr (`netBalance > 0`) is Green.
+- Stock quantities and valuations use exact `getMovementType` and timestamp sorting from `StockSummary.tsx`.
+- Never use fake/mock sine waves (`Math.sin`), fake multipliers, or random synthetic fallbacks. All data must come directly from real records.
 
 ## Numeric Formatting
 - Quantity values for items with units like "Pcs", "Pc", or "Nos" MUST NOT show any decimal places.
@@ -50,7 +58,11 @@
 - Fallback mechanics should be maintained when the database quota is reached or offline, ensuring read/write operations fail gracefully (with proper UI notification) rather than crashing the system.
 - Severely limit the number of documents retrieved during non-critical operations to maintain database performance and stay within free tier limits.
 
-## Implemented Database Optimizations (Technical Reference)
+## Business Intelligence & Analytics Period Discipline
+- Cost Centre Allocation, Expense Distribution, and Trends MUST strictly and exclusively reflect only transactions occurring within the user-selected date period (`periodStart` to `periodEnd`).
+- NEVER fall back to all-time cumulative ledger totals or full historical data for period-specific charts. If no expenses exist in the selected period, display 0 / "No expense heads recorded in selected period".
+- Verification functions (`verifyTargetedLedgerBalances`) must NEVER run automatically in background `useEffect` hooks on page load or render; they must strictly only execute when the user explicitly clicks the manual "Verify Balances" button.
+- Expense accounts (Indirect Expenses, Direct Expenses, etc.) must NEVER be classified as Sundry Debtors or Sundry Creditors under any circumstances.
 To drastically reduce Google Cloud console read quota consumption while preserving speed and UI layouts, the following systems have been implemented inside `/src/services/erpService.ts`:
 
 ### 1. Targeted Indexed Range Queries

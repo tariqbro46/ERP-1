@@ -9,13 +9,14 @@ import {
   Activity, TrendingUp, Landmark, Wallet, CreditCard, 
   Package, Boxes, ShieldAlert, AlertCircle, Building2,
   RefreshCw, Calendar, Users, Truck, BookOpen, ChevronDown,
-  Printer, Download, Search, X, Check, FileDown, Phone, Mail, MapPin, SlidersHorizontal
+  Printer, Download, Search, X, Check, FileDown, Phone, Mail, MapPin, SlidersHorizontal,
+  Maximize2, PieChart as PieChartIcon, ShieldCheck, CheckCircle2, RotateCw
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { erpService } from '../services/erpService';
-import { cn, formatNumber, formatQuantity } from '../lib/utils';
+import { cn, formatNumber, formatQuantity, getMovementType, parseEntryDate, formatToYMD } from '../lib/utils';
 import { SkeletonLoader } from './SkeletonLoader';
 import { executePrint } from '../utils/printUtils';
 import { printToPDF } from '../utils/pdfExportService';
@@ -24,8 +25,25 @@ import { jsPDF } from 'jspdf';
 type ActiveTab = 'accounting' | 'inventory' | 'banking';
 type StockSortOption = 'valuation' | 'quantity';
 type ChartRangeOption = '12 MONTHS' | 'JAN-JUN' | 'JUL-DEC';
+type GraphModalType = 
+  | 'sales_purchase' 
+  | 'profit_trend' 
+  | 'cash_flow_volume' 
+  | 'cost_centres' 
+  | 'stock_movement' 
+  | 'stock_groups' 
+  | 'stock_categories' 
+  | 'liquidity_composition' 
+  | 'cash_flow_dynamics' 
+  | null;
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const CATEGORY_COLORS = [
+  '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', 
+  '#06b6d4', '#eab308', '#6366f1', '#14b8a6', '#f97316', 
+  '#a855f7', '#0284c7', '#84cc16', '#d946ef', '#f43f5e',
+  '#22c55e', '#38bdf8', '#fb923c', '#c084fc', '#fb7185'
+];
 
 export interface DetailedLedgerReportItem {
   id: string;
@@ -62,7 +80,7 @@ export function BusinessIntelligence() {
 
   const currencySymbol = baseCurrencySymbol || '৳';
 
-  // Period filters - defaults to current month: 1st date to Last date
+  // Period filters - defaults to current month: 1st date to Today (matching other reports)
   const [periodStart, setPeriodStart] = useState(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -70,13 +88,7 @@ export function BusinessIntelligence() {
     return `${year}-${month}-01`;
   });
   const [periodEnd, setPeriodEnd] = useState(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    const monthStr = String(month + 1).padStart(2, '0');
-    const dayStr = String(lastDay).padStart(2, '0');
-    return `${year}-${monthStr}-${dayStr}`;
+    return formatToYMD(new Date());
   });
 
   // Cached data holders
@@ -87,6 +99,8 @@ export function BusinessIntelligence() {
   const [inventoryEntries, setInventoryEntries] = useState<any[]>([]);
   const [stockGroups, setStockGroups] = useState<any[]>([]);
   const [stockCategories, setStockCategories] = useState<any[]>([]);
+  const [godowns, setGodowns] = useState<any[]>([]);
+  const [ledgerGroups, setLedgerGroups] = useState<any[]>([]);
 
   // Detailed Top Ledgers Modal state
   const [ledgerModalType, setLedgerModalType] = useState<'debtors' | 'creditors' | null>(null);
@@ -99,79 +113,28 @@ export function BusinessIntelligence() {
   const [modalSearchQuery, setModalSearchQuery] = useState<string>('');
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
 
-  // Pinned Chart State (stays pinned on screen when clicked until clicked outside or pointer moves to another point)
-  const [pinnedChart, setPinnedChart] = useState<{
-    chartKey: string;
-    title: string;
-    x: number;
-    y: number;
-    items: Array<{ label: string; value: string; color?: string }>;
-  } | null>(null);
+  // Graph Popup Modal state for all charts
+  const [activeGraphModal, setActiveGraphModal] = useState<GraphModalType>(null);
+  const [graphModalSearch, setGraphModalSearch] = useState<string>('');
+  const [graphModalRange, setGraphModalRange] = useState<ChartRangeOption>('12 MONTHS');
 
-  useEffect(() => {
-    const handleGlobalClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.bi-chart-card')) {
-        setPinnedChart(null);
-      }
-    };
-    window.addEventListener('click', handleGlobalClick);
-    return () => window.removeEventListener('click', handleGlobalClick);
-  }, []);
+  // Targeted verification state
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+  const [verificationStats, setVerificationStats] = useState<{
+    verifiedAt: Date | null;
+    adjustedCount: number;
+    checkedCount: number;
+  }>({
+    verifiedAt: null,
+    adjustedCount: 0,
+    checkedCount: 0
+  });
 
-  const handleChartClick = (chartKey: string, state: any) => {
-    if (!state) return;
-    const payload = state.activePayload || (state.payload ? [state] : []);
-    if (!payload || payload.length === 0) return;
-
-    const label = state.activeLabel || payload[0]?.payload?.month || payload[0]?.payload?.name || '';
-    const rawX = state.chartX ?? 100;
-    const rawY = state.chartY ?? 50;
-
-    const items = payload.map((p: any) => ({
-      label: p.name || p.dataKey || 'Amount',
-      value: `${currencySymbol} ${formatNumber(p.value)}`,
-      color: p.color || p.fill || p.stroke || '#3b82f6'
-    }));
-
-    setPinnedChart({
-      chartKey,
-      title: label,
-      x: Math.min(Math.max(rawX, 20), 380),
-      y: Math.min(Math.max(rawY, 20), 160),
-      items
-    });
-  };
-
-  const renderPinnedTooltip = (chartKey: string) => {
-    if (!pinnedChart || pinnedChart.chartKey !== chartKey) return null;
-    return (
-      <div 
-        className="absolute z-30 pointer-events-auto bg-card/95 dark:bg-[#141414]/95 backdrop-blur-md border border-border shadow-2xl rounded-lg p-2.5 min-w-[170px] text-xs font-mono transition-all animate-in fade-in zoom-in-95 duration-100 select-none"
-        style={{
-          left: Math.min(pinnedChart.x + 12, 340),
-          top: Math.max(pinnedChart.y - 15, 8)
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-border/60 pb-1 mb-1.5 font-bold text-foreground">
-          <span className="text-[11px] uppercase tracking-wide">{pinnedChart.title}</span>
-          <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-semibold">PINNED</span>
-        </div>
-        <div className="space-y-1">
-          {pinnedChart.items.map((it, idx) => (
-            <div key={idx} className="flex items-center justify-between gap-3 text-[10.5px]">
-              <span className="flex items-center gap-1.5 text-muted-foreground truncate">
-                <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: it.color }} />
-                {it.label}
-              </span>
-              <span className="font-bold text-foreground shrink-0">{it.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
+  // Backward compatibility alias for category modal
+  const isCategoryModalOpen = activeGraphModal === 'stock_categories';
+  const setIsCategoryModalOpen = (open: boolean) => setActiveGraphModal(open ? 'stock_categories' : null);
+  const categoryModalSearch = graphModalSearch;
+  const setCategoryModalSearch = setGraphModalSearch;
 
   useEffect(() => {
     let isMounted = true;
@@ -179,6 +142,7 @@ export function BusinessIntelligence() {
       if (!user?.companyId) return;
       setLoading(true);
       try {
+        const shouldForceRefresh = refreshKey > 0;
         const [
           ledgersRes, 
           itemsRes, 
@@ -186,15 +150,19 @@ export function BusinessIntelligence() {
           voucherEntriesRes, 
           inventoryEntriesRes,
           stockGroupsRes, 
-          stockCategoriesRes
+          stockCategoriesRes,
+          godownsRes,
+          ledgerGroupsRes
         ] = await Promise.all([
-          erpService.getLedgers(user.companyId).catch(() => []),
-          erpService.getItems(user.companyId).catch(() => []),
-          erpService.getCollection('vouchers', user.companyId).catch(() => []),
-          erpService.getCollection('voucher_entries', user.companyId).catch(() => []),
-          erpService.getCollection('inventory_entries', user.companyId).catch(() => []),
-          erpService.getCollection('stock_groups', user.companyId).catch(() => []),
-          erpService.getCollection('stock_categories', user.companyId).catch(() => [])
+          erpService.getLedgers(user.companyId, true).catch(() => []),
+          erpService.getItems(user.companyId, shouldForceRefresh).catch(() => []),
+          erpService.getCollection('vouchers', user.companyId, 5000, shouldForceRefresh).catch(() => []),
+          erpService.getCollection('voucher_entries', user.companyId, 5000, shouldForceRefresh).catch(() => []),
+          erpService.getCollection('inventory_entries', user.companyId, 5000, shouldForceRefresh).catch(() => []),
+          erpService.getCollection('stock_groups', user.companyId, 5000).catch(() => []),
+          erpService.getCollection('stock_categories', user.companyId, 5000).catch(() => []),
+          erpService.getCollection('godowns', user.companyId, 5000).catch(() => []),
+          erpService.getLedgerGroups(user.companyId).catch(() => [])
         ]);
 
         if (isMounted) {
@@ -205,6 +173,8 @@ export function BusinessIntelligence() {
           setInventoryEntries(Array.isArray(inventoryEntriesRes) ? inventoryEntriesRes : []);
           setStockGroups(Array.isArray(stockGroupsRes) ? stockGroupsRes : []);
           setStockCategories(Array.isArray(stockCategoriesRes) ? stockCategoriesRes : []);
+          setGodowns(Array.isArray(godownsRes) ? godownsRes : []);
+          setLedgerGroups(Array.isArray(ledgerGroupsRes) ? ledgerGroupsRes : []);
         }
       } catch (err) {
         console.error('Failed to load business intelligence data:', err);
@@ -215,6 +185,18 @@ export function BusinessIntelligence() {
     loadData();
     return () => { isMounted = false; };
   }, [user?.companyId, refreshKey]);
+
+  // Escape key dismiss for open modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (activeGraphModal) setActiveGraphModal(null);
+        if (ledgerModalType) setLedgerModalType(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeGraphModal, ledgerModalType]);
 
   // ==========================================
   // 1. LOOKUP MAPS & INVENTORY TELEMETRY (Client-side Computed from Real Data & Period)
@@ -227,25 +209,96 @@ export function BusinessIntelligence() {
     return map;
   }, [vouchers]);
 
-  // Vouchers strictly within selected period
+  // Enriched inventory entries matching StockSummary.tsx exactly, including embedded voucher inventory
+  const enrichedInventory = useMemo(() => {
+    const list: any[] = (inventoryEntries || []).map((e: any) => {
+      const v = voucherMap[e.voucher_id] || {};
+      const vType = (e.v_type || v.v_type || '').toString();
+      const dateStr = e.date || e.v_date || v.v_date || v.date || '';
+      const movementData = {
+        ...e,
+        v_type: vType,
+        m_type: e.m_type || e.movement_type || e.entry_type || v.m_type || v.movement_type || ''
+      };
+      return {
+        ...e,
+        v_type: vType,
+        date: dateStr,
+        created_at: e.created_at || v.created_at,
+        m_type: getMovementType(movementData)
+      };
+    });
+
+    // Also incorporate embedded inventory from vouchers if not already present in inventory_entries
+    const existingEntryIds = new Set(list.map(e => e.id).filter(Boolean));
+    vouchers.forEach((v: any) => {
+      const embeddedInv = v.inventory || v.inventory_entries;
+      if (Array.isArray(embeddedInv)) {
+        embeddedInv.forEach((e: any, idx: number) => {
+          const pseudoId = e.id || `${v.id}_inv_${idx}`;
+          if (!existingEntryIds.has(pseudoId) && !list.some(item => item.voucher_id === v.id && item.item_id === e.item_id)) {
+            const vType = (e.v_type || v.v_type || '').toString();
+            const dateStr = e.date || v.v_date || v.date || '';
+            const movementData = {
+              ...e,
+              v_type: vType,
+              m_type: e.m_type || e.movement_type || e.entry_type || v.m_type || v.movement_type || ''
+            };
+            list.push({
+              ...e,
+              id: pseudoId,
+              voucher_id: v.id,
+              v_type: vType,
+              date: dateStr,
+              created_at: e.created_at || v.created_at,
+              m_type: getMovementType(movementData)
+            });
+          }
+        });
+      }
+    });
+
+    return list;
+  }, [inventoryEntries, voucherMap, vouchers]);
+
+  // Consolidated voucher entries (collection + any embedded entries from vouchers)
+  const allVoucherEntries = useMemo(() => {
+    const list: any[] = [...(voucherEntries || [])];
+    const existingEntryIds = new Set(voucherEntries.map(e => e.id).filter(Boolean));
+    vouchers.forEach((v: any) => {
+      const embeddedEntries = v.entries || v.voucher_entries;
+      if (Array.isArray(embeddedEntries)) {
+        embeddedEntries.forEach((e: any, idx: number) => {
+          const pseudoId = e.id || `${v.id}_entry_${idx}`;
+          if (!existingEntryIds.has(pseudoId) && !list.some(item => item.voucher_id === v.id && item.ledger_id === e.ledger_id)) {
+            list.push({
+              ...e,
+              id: pseudoId,
+              voucher_id: v.id,
+              date: e.date || v.v_date || v.date || '',
+              created_at: e.created_at || v.created_at
+            });
+          }
+        });
+      }
+    });
+    return list;
+  }, [voucherEntries, vouchers]);
+
+  // Vouchers strictly within selected period using robust date parsing
   const periodVouchers = useMemo(() => {
+    const startStr = formatToYMD(parseEntryDate(periodStart, null));
+    const endStr = formatToYMD(parseEntryDate(periodEnd, null));
     return vouchers.filter(v => {
-      const vDate = v.v_date || v.date;
-      if (!vDate) return true;
-      return vDate >= periodStart && vDate <= periodEnd;
+      const vDateStr = formatToYMD(parseEntryDate(v.v_date || v.date, v.created_at));
+      return vDateStr >= startStr && vDateStr <= endStr;
     });
   }, [vouchers, periodStart, periodEnd]);
 
-  // Vouchers up to period end (for point-in-time balances)
-  const vouchersUpToPeriodEnd = useMemo(() => {
-    return vouchers.filter(v => {
-      const vDate = v.v_date || v.date;
-      if (!vDate) return true;
-      return vDate <= periodEnd;
-    });
-  }, [vouchers, periodEnd]);
-
   const inventoryAnalytics = useMemo(() => {
+    const startStr = formatToYMD(parseEntryDate(periodStart, null));
+    const endStr = formatToYMD(parseEntryDate(periodEnd, null));
+
     const groupNameMap: Record<string, string> = {};
     stockGroups.forEach(g => {
       if (g.id && g.name) groupNameMap[g.id] = g.name;
@@ -254,112 +307,6 @@ export function BusinessIntelligence() {
     const categoryNameMap: Record<string, string> = {};
     stockCategories.forEach(c => {
       if (c.id && c.name) categoryNameMap[c.id] = c.name;
-    });
-
-    // Track movement per item from inventory_entries & vouchers
-    const itemMovements: Record<string, {
-      inwardBeforeStart: number;
-      outwardBeforeStart: number;
-      inwardInPeriod: number;
-      outwardInPeriod: number;
-      inwardUpToEnd: number;
-      outwardUpToEnd: number;
-    }> = {};
-
-    const getMove = (id: string) => {
-      if (!itemMovements[id]) {
-        itemMovements[id] = {
-          inwardBeforeStart: 0,
-          outwardBeforeStart: 0,
-          inwardInPeriod: 0,
-          outwardInPeriod: 0,
-          inwardUpToEnd: 0,
-          outwardUpToEnd: 0
-        };
-      }
-      return itemMovements[id];
-    };
-
-    const recordedEntries = new Set<string>();
-
-    inventoryEntries.forEach(entry => {
-      const itemId = entry.item_id;
-      if (!itemId) return;
-      const v = voucherMap[entry.voucher_id] || {};
-      const dateStr = entry.date || entry.v_date || v.v_date || v.date || '';
-      if (v.id) recordedEntries.add(`${v.id}_${itemId}`);
-
-      const qty = (Number(entry.qty) || 0) + (Number(entry.free_qty) || 0);
-      const vType = (entry.v_type || v.v_type || '').toLowerCase();
-      const entryType = (entry.entry_type || entry.movement_type || '').toLowerCase();
-
-      const isInward = entryType === 'production' || entryType === 'inward' || vType === 'purchase' || vType === 'receipt' || (vType === 'physical stock' && qty >= 0);
-      const isOutward = entryType === 'consumption' || entryType === 'outward' || vType === 'sales' || vType === 'delivery';
-
-      const m = getMove(itemId);
-
-      if (dateStr) {
-        if (dateStr < periodStart) {
-          if (isInward) m.inwardBeforeStart += qty;
-          else if (isOutward) m.outwardBeforeStart += qty;
-        }
-        if (dateStr >= periodStart && dateStr <= periodEnd) {
-          if (isInward) m.inwardInPeriod += qty;
-          else if (isOutward) m.outwardInPeriod += qty;
-        }
-        if (dateStr <= periodEnd) {
-          if (isInward) m.inwardUpToEnd += qty;
-          else if (isOutward) m.outwardUpToEnd += qty;
-        }
-      } else {
-        if (isInward) {
-          m.inwardInPeriod += qty;
-          m.inwardUpToEnd += qty;
-        } else if (isOutward) {
-          m.outwardInPeriod += qty;
-          m.outwardUpToEnd += qty;
-        }
-      }
-    });
-
-    // Check embedded voucher inventory entries
-    vouchers.forEach(v => {
-      const vDate = v.v_date || v.date || '';
-      const vType = (v.v_type || '').toLowerCase();
-      if (Array.isArray(v.inventory)) {
-        v.inventory.forEach((inv: any) => {
-          const itemId = inv.item_id;
-          if (!itemId || recordedEntries.has(`${v.id}_${itemId}`)) return;
-          const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
-          const isInward = vType === 'purchase' || vType === 'receipt';
-          const isOutward = vType === 'sales' || vType === 'delivery';
-
-          const m = getMove(itemId);
-
-          if (vDate) {
-            if (vDate < periodStart) {
-              if (isInward) m.inwardBeforeStart += qty;
-              else if (isOutward) m.outwardBeforeStart += qty;
-            }
-            if (vDate >= periodStart && vDate <= periodEnd) {
-              if (isInward) m.inwardInPeriod += qty;
-              else if (isOutward) m.outwardInPeriod += qty;
-            }
-            if (vDate <= periodEnd) {
-              if (isInward) m.inwardUpToEnd += qty;
-              else if (isOutward) m.outwardUpToEnd += qty;
-            }
-          } else {
-            if (isInward) {
-              m.inwardInPeriod += qty;
-              m.inwardUpToEnd += qty;
-            } else if (isOutward) {
-              m.outwardInPeriod += qty;
-              m.outwardUpToEnd += qty;
-            }
-          }
-        });
-      }
     });
 
     let totalStockValue = 0;
@@ -371,7 +318,7 @@ export function BusinessIntelligence() {
 
     const groupMap: Record<string, { name: string; value: number; count: number; qty: number }> = {};
     const categoryMap: Record<string, { name: string; value: number; count: number; qty: number }> = {};
-    const itemTrendList: { name: string; stock: number; value: number; unit: string; rate: number }[] = [];
+    const itemTrendList: { id: string; name: string; stock: number; value: number; unit: string; rate: number }[] = [];
 
     stockGroups.forEach(g => {
       if (g.name) groupMap[g.name] = { name: g.name, value: 0, count: 0, qty: 0 };
@@ -380,36 +327,102 @@ export function BusinessIntelligence() {
       if (c.name) categoryMap[c.name] = { name: c.name, value: 0, count: 0, qty: 0 };
     });
 
+    // Exact StockSummary.tsx simulation per item
     items.forEach(it => {
-      const opQty = Number(it.opening_qty || 0);
-      const m = itemMovements[it.id];
+      const godownBalances: Record<string, number> = {};
+      (it.opening_godowns || []).forEach((ag: any) => {
+        if (ag.godown_id) {
+          godownBalances[ag.godown_id] = Number(ag.qty) || 0;
+        }
+      });
 
-      let stockAtStart = opQty;
-      let stockAtEnd = opQty;
+      let currentTotalStock = Number(it.opening_qty) || 0;
+      let periodInward = 0;
+      let periodOutward = 0;
+      let periodOpening = 0;
+      let openingFound = false;
 
-      if (m && (m.inwardUpToEnd > 0 || m.outwardUpToEnd > 0 || m.inwardBeforeStart > 0 || m.outwardBeforeStart > 0)) {
-        stockAtStart = opQty + m.inwardBeforeStart - m.outwardBeforeStart;
-        stockAtEnd = opQty + m.inwardUpToEnd - m.outwardUpToEnd;
-      } else {
-        const cur = Number(it.current_stock ?? opQty);
-        stockAtStart = opQty > 0 ? opQty : cur;
-        stockAtEnd = cur;
+      // Filter and sort inventory entries for this item chronologically
+      const relevantEntries = enrichedInventory
+        .filter(inv => String(inv.item_id) === String(it.id))
+        .sort((a, b) => {
+          const d_a = parseEntryDate(a.date, a.created_at);
+          const d_b = parseEntryDate(b.date, b.created_at);
+          if (d_a.getTime() !== d_b.getTime()) return d_a.getTime() - d_b.getTime();
+          return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
+        });
+
+      relevantEntries.forEach(inv => {
+        const entryDateObj = parseEntryDate(inv.date, inv.created_at);
+        const entryDateStr = formatToYMD(entryDateObj);
+
+        if (entryDateStr > endStr) return;
+
+        if (!openingFound && entryDateStr >= startStr) {
+          periodOpening = currentTotalStock;
+          openingFound = true;
+        }
+
+        const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
+        const mType = inv.m_type || getMovementType(inv);
+        const isPhysical = (inv.v_type || '').toLowerCase() === 'physical stock' || !!inv.is_physical_snapshot;
+        const invGodownId = inv.godown_id;
+
+        let adjustment = 0;
+        if (isPhysical) {
+          if (invGodownId) {
+            const oldGodownStock = Number(godownBalances[invGodownId]) || 0;
+            adjustment = qty - oldGodownStock;
+            godownBalances[invGodownId] = qty;
+          } else {
+            adjustment = qty - currentTotalStock;
+            currentTotalStock = qty;
+            Object.keys(godownBalances).forEach(key => {
+              godownBalances[key] = 0;
+            });
+          }
+        } else {
+          adjustment = mType === 'inward' ? qty : -qty;
+          if (invGodownId) {
+            godownBalances[invGodownId] = (Number(godownBalances[invGodownId]) || 0) + adjustment;
+          }
+        }
+
+        if (!isPhysical || invGodownId) {
+          currentTotalStock += adjustment;
+        }
+
+        if (entryDateStr >= startStr && entryDateStr <= endStr) {
+          if (isPhysical) {
+            if (adjustment >= 0) periodInward += adjustment;
+            else periodOutward += Math.abs(adjustment);
+          } else {
+            if (mType === 'inward') periodInward += qty;
+            else periodOutward += qty;
+          }
+        }
+      });
+
+      if (!openingFound) {
+        periodOpening = currentTotalStock;
       }
 
-      const rate = Number(it.avg_cost || it.opening_rate || it.standard_rate || it.standard_cost || 0);
-      const startVal = Math.max(0, stockAtStart * rate);
-      const endVal = Math.max(0, stockAtEnd * rate);
+      const finalClosing = currentTotalStock;
+      // In StockSummary.tsx: rate is avg_cost || opening_rate || 0
+      const rate = Number(it.avg_cost || it.opening_rate || 0);
+      const startVal = periodOpening * rate;
+      const endVal = finalClosing * rate;
 
       openingStockValuation += startVal;
       closingStockValuation += endVal;
 
-      totalStockQty += Math.max(0, stockAtEnd);
+      totalStockQty += finalClosing;
       totalStockValue += endVal;
 
       const reorder = Number(it.low_stock_threshold ?? it.reorder_level ?? 0);
-      if (stockAtEnd <= 0) {
+      if (finalClosing <= 0) {
         outOfStockCount++;
-      } else if (reorder > 0 && stockAtEnd <= reorder) {
+      } else if (reorder > 0 && finalClosing <= reorder) {
         lowStockCount++;
       }
 
@@ -418,6 +431,7 @@ export function BusinessIntelligence() {
         it.group_name ||
         it.group ||
         it.stock_group ||
+        (it.category as string) ||
         'General Items'
       ).trim();
 
@@ -433,33 +447,36 @@ export function BusinessIntelligence() {
       }
       groupMap[gName].value += endVal;
       groupMap[gName].count += 1;
-      groupMap[gName].qty += Math.max(0, stockAtEnd);
+      groupMap[gName].qty += finalClosing;
 
       if (!categoryMap[catName]) {
         categoryMap[catName] = { name: catName, value: 0, count: 0, qty: 0 };
       }
       categoryMap[catName].value += endVal;
       categoryMap[catName].count += 1;
-      categoryMap[catName].qty += Math.max(0, stockAtEnd);
+      categoryMap[catName].qty += finalClosing;
 
       itemTrendList.push({
+        id: it.id,
         name: it.name || 'Stock Item',
-        stock: Math.max(0, stockAtEnd),
+        stock: finalClosing,
         value: endVal,
-        unit: it.unit || 'Pcs',
+        unit: it.unit || it.unit_name || 'Pcs',
         rate
       });
     });
 
-    const topStockGroups = Object.values(groupMap)
+    const allStockGroups = Object.values(groupMap)
       .map(data => ({
         name: data.name,
         value: Math.round(data.value),
         count: data.count,
         qty: data.qty
       }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
+      .filter(data => data.count > 0 || data.value > 0)
+      .sort((a, b) => b.value - a.value);
+
+    const topStockGroups = allStockGroups.slice(0, 5);
 
     const allStockCategories = Object.values(categoryMap)
       .map(data => ({
@@ -468,6 +485,7 @@ export function BusinessIntelligence() {
         count: data.count,
         qty: data.qty
       }))
+      .filter(data => data.count > 0 || data.value > 0)
       .sort((a, b) => b.value - a.value);
 
     const sortedStockItems = [...itemTrendList].sort((a, b) => {
@@ -477,12 +495,25 @@ export function BusinessIntelligence() {
       return b.value - a.value;
     }).slice(0, 5);
 
+    // Real monthly movement and valuation trajectory
     const stockMonthlyTrends = MONTH_NAMES.map((m, idx) => {
-      const vFactor = 0.85 + (Math.sin(idx) * 0.12);
+      let mInward = 0;
+      let mOutward = 0;
+      enrichedInventory.forEach(e => {
+        const entryDateObj = parseEntryDate(e.date, e.created_at);
+        if (isNaN(entryDateObj.getTime())) return;
+        if (entryDateObj.getMonth() === idx) {
+          const qty = (Number(e.qty) || 0) + (Number(e.free_qty) || 0);
+          if (e.m_type === 'inward') mInward += qty;
+          else mOutward += qty;
+        }
+      });
       return {
         month: m,
-        valuation: Math.round((totalStockValue || 50000) * vFactor),
-        turnoverQty: Math.round((totalStockQty || 100) * (0.07 + (idx % 4) * 0.02))
+        valuation: Math.round(totalStockValue),
+        inward: mInward,
+        outward: mOutward,
+        turnoverQty: mInward + mOutward
       };
     });
 
@@ -495,17 +526,21 @@ export function BusinessIntelligence() {
       avgItemValue: items.length > 0 ? Math.round(totalStockValue / items.length) : 0,
       openingStockValuation,
       closingStockValuation,
+      allStockGroups,
       topStockGroups,
       allStockCategories,
       sortedStockItems,
       stockMonthlyTrends
     };
-  }, [items, stockGroups, stockCategories, inventoryEntries, vouchers, voucherMap, periodStart, periodEnd, stockSortBy]);
+  }, [items, stockGroups, stockCategories, enrichedInventory, periodStart, periodEnd, stockSortBy]);
 
   // ==========================================
   // 2. ACCOUNTING TELEMETRY (Client-side Computed from Real Data & Period)
   // ==========================================
   const accountingAnalytics = useMemo(() => {
+    const startStr = formatToYMD(parseEntryDate(periodStart, null));
+    const endStr = formatToYMD(parseEntryDate(periodEnd, null));
+
     let salesTotal = 0;
     let purchaseTotal = 0;
     let directExpense = 0;
@@ -522,26 +557,100 @@ export function BusinessIntelligence() {
 
     const costCenterBalances: Record<string, number> = {};
 
-    // 1. Pre-index voucher entries up to periodEnd and inside period
-    const entriesUpToEndByLedger: Record<string, { debits: number; credits: number }> = {};
-    const entriesInPeriodByLedger: Record<string, { debits: number; credits: number }> = {};
+    // 0. Pre-index Ledger Groups Map & Classification Helpers
+    const ledgerGroupMap: Record<string, any> = {};
+    ledgerGroups.forEach(g => {
+      if (g && g.id) ledgerGroupMap[g.id] = g;
+    });
 
-    voucherEntries.forEach(e => {
+    const isExpenseLedger = (ledger: any) => {
+      if (!ledger) return false;
+      const grp = ledgerGroupMap[ledger.group_id] || ledger.ledger_groups;
+      const gName = (grp?.name || ledger.group_name || ledger.group || '').toLowerCase();
+      const gId = (ledger.group_id || grp?.id || '').toLowerCase();
+      const nat = (ledger.nature || grp?.nature || ledger.ledger_groups?.nature || '').trim().toLowerCase();
+      const lNameLower = ((ledger.name || '') + ' ' + (ledger.alias || '')).toLowerCase();
+
+      return (
+        nat === 'expense' ||
+        gId === 'g_indirect_exp' ||
+        gId === 'g_direct_exp' ||
+        gId.includes('expense') ||
+        gId.includes('expence') ||
+        gName.includes('expense') ||
+        gName.includes('expence') ||
+        gName.includes('খরচ') ||
+        gName.includes('ব্যয়') ||
+        gName.includes('indirect') ||
+        gName.includes('direct exp') ||
+        gName.includes('cost') ||
+        lNameLower.includes('expence') ||
+        lNameLower.includes('expense') ||
+        lNameLower.includes('খরচ') ||
+        lNameLower.includes('ব্যয়') ||
+        lNameLower.includes('godown') ||
+        lNameLower.includes('construction') ||
+        lNameLower.includes('salary') ||
+        lNameLower.includes('rent') ||
+        lNameLower.includes('bill') ||
+        lNameLower.includes('maintenance') ||
+        lNameLower.includes('repair') ||
+        lNameLower.includes('freight') ||
+        lNameLower.includes('wages')
+      );
+    };
+
+    const isIncomeLedger = (ledger: any) => {
+      if (!ledger) return false;
+      const grp = ledgerGroupMap[ledger.group_id] || ledger.ledger_groups;
+      const gName = (grp?.name || ledger.group_name || ledger.group || '').toLowerCase();
+      const gId = (ledger.group_id || grp?.id || '').toLowerCase();
+      const nat = (ledger.nature || grp?.nature || ledger.ledger_groups?.nature || '').trim().toLowerCase();
+      const lNameLower = ((ledger.name || '') + ' ' + (ledger.alias || '')).toLowerCase();
+
+      return (
+        nat === 'income' ||
+        gId === 'g_indirect_inc' ||
+        gId === 'g_direct_inc' ||
+        gId.includes('income') ||
+        gName.includes('income') ||
+        gName.includes('revenue') ||
+        gName.includes('sales') ||
+        gName.includes('আয়') ||
+        lNameLower.includes('income') ||
+        lNameLower.includes('discount received') ||
+        lNameLower.includes('commission received') ||
+        lNameLower.includes('interest received')
+      );
+    };
+
+    // 1. Pre-index voucher entries up to periodEnd, inside period, and after periodEnd
+    const entriesUpToEndByLedger: Record<string, { debits: number; credits: number; count: number }> = {};
+    const entriesInPeriodByLedger: Record<string, { debits: number; credits: number }> = {};
+    const entriesAfterEndByLedger: Record<string, { debits: number; credits: number }> = {};
+
+    allVoucherEntries.forEach(e => {
       const lId = e.ledger_id;
       if (!lId) return;
       const v = voucherMap[e.voucher_id] || {};
-      const d = e.date || e.v_date || v.v_date || v.date || '';
+      const entryDateObj = parseEntryDate(e.date || e.v_date || v.v_date || v.date, e.created_at || v.created_at);
+      const d = formatToYMD(entryDateObj);
       const debit = Number(e.debit || 0);
       const credit = Number(e.credit || 0);
 
-      if (!entriesUpToEndByLedger[lId]) entriesUpToEndByLedger[lId] = { debits: 0, credits: 0 };
+      if (!entriesUpToEndByLedger[lId]) entriesUpToEndByLedger[lId] = { debits: 0, credits: 0, count: 0 };
       if (!entriesInPeriodByLedger[lId]) entriesInPeriodByLedger[lId] = { debits: 0, credits: 0 };
+      if (!entriesAfterEndByLedger[lId]) entriesAfterEndByLedger[lId] = { debits: 0, credits: 0 };
 
-      if (!d || d <= periodEnd) {
+      if (d <= endStr) {
         entriesUpToEndByLedger[lId].debits += debit;
         entriesUpToEndByLedger[lId].credits += credit;
+        entriesUpToEndByLedger[lId].count += 1;
+      } else {
+        entriesAfterEndByLedger[lId].debits += debit;
+        entriesAfterEndByLedger[lId].credits += credit;
       }
-      if (!d || (d >= periodStart && d <= periodEnd)) {
+      if (d >= startStr && d <= endStr) {
         entriesInPeriodByLedger[lId].debits += debit;
         entriesInPeriodByLedger[lId].credits += credit;
       }
@@ -574,12 +683,6 @@ export function BusinessIntelligence() {
         voucherPurchase += amt;
       } else if (vType === 'payment') {
         voucherPayments += amt;
-        const expenseHead = (v.particulars || partyName || 'Operational Expense')
-          .replace(/Account|A\/c|Payment|Ledger/gi, '')
-          .trim();
-        if (expenseHead) {
-          costCenterBalances[expenseHead] = (costCenterBalances[expenseHead] || 0) + amt;
-        }
       } else if (vType === 'receipt') {
         voucherReceipts += amt;
       }
@@ -588,16 +691,18 @@ export function BusinessIntelligence() {
     salesTotal = voucherSales;
     purchaseTotal = voucherPurchase;
 
-    // Direct vs Indirect Expenses and Incomes from voucherEntries in the period
-    voucherEntries.forEach(entry => {
+    // Direct vs Indirect Expenses and Incomes from allVoucherEntries strictly in the selected period (startStr to endStr)
+    allVoucherEntries.forEach(entry => {
       const v = voucherMap[entry.voucher_id] || {};
-      const d = entry.date || entry.v_date || v.v_date || v.date || '';
-      if (d && (d < periodStart || d > periodEnd)) return;
+      const entryDateObj = parseEntryDate(entry.date || entry.v_date || v.v_date || v.date, entry.created_at || v.created_at);
+      const d = formatToYMD(entryDateObj);
+      if (d < startStr || d > endStr) return;
 
       const l = ledgers.find(led => led.id === entry.ledger_id);
       if (!l) return;
-      const gName = (l.group_name || l.ledger_groups?.name || '').toLowerCase();
-      const nature = l.nature || l.ledger_groups?.nature || '';
+      const grp = ledgerGroupMap[l.group_id] || l.ledger_groups;
+      const gName = (grp?.name || l.group_name || l.group || '').toLowerCase();
+      const nature = (l.nature || grp?.nature || l.ledger_groups?.nature || '').trim();
       const debit = Number(entry.debit || 0);
       const credit = Number(entry.credit || 0);
 
@@ -607,23 +712,27 @@ export function BusinessIntelligence() {
         if (purchaseTotal === 0) purchaseTotal += Math.max(0, debit - credit);
       } else if (gName.includes('direct expense') || (nature === 'Expense' && gName.includes('direct'))) {
         directExpense += Math.max(0, debit - credit);
+        const cleanName = (l.name || 'Direct Expense').replace(/Account|A\/c|Ledger/gi, '').trim();
+        if (cleanName) {
+          costCenterBalances[cleanName] = (costCenterBalances[cleanName] || 0) + Math.max(0, debit - credit);
+        }
       } else if (gName.includes('direct income') || (nature === 'Income' && gName.includes('direct'))) {
         directIncome += Math.max(0, credit - debit);
-      } else if (nature === 'Expense' || gName.includes('expense')) {
+      } else if (isExpenseLedger(l) || nature === 'Expense' || gName.includes('expense')) {
         indirectExpense += Math.max(0, debit - credit);
         const cleanName = (l.name || 'Expense Head').replace(/Account|A\/c|Ledger/gi, '').trim();
         if (cleanName) {
           costCenterBalances[cleanName] = (costCenterBalances[cleanName] || 0) + Math.max(0, debit - credit);
         }
-      } else if (nature === 'Income' || gName.includes('income')) {
+      } else if (isIncomeLedger(l) || nature === 'Income' || gName.includes('income')) {
         indirectIncome += Math.max(0, credit - debit);
       }
     });
 
-    // Fallbacks if only top-level vouchers exist
-    if (directExpense === 0 && voucherPayments > 0) {
+    // Fallbacks if only top-level vouchers exist and no voucher_entries were captured
+    if (directExpense === 0 && indirectExpense === 0 && Object.keys(costCenterBalances).length === 0 && voucherPayments > 0) {
       directExpense = Math.round(voucherPayments * 0.35);
-      indirectExpense = Math.max(indirectExpense, Math.round(voucherPayments * 0.65));
+      indirectExpense = Math.round(voucherPayments * 0.65);
     }
     if (directIncome === 0 && voucherReceipts > 0) {
       directIncome = Math.round(voucherReceipts * 0.15);
@@ -633,22 +742,102 @@ export function BusinessIntelligence() {
     const allDebtors: DetailedLedgerReportItem[] = [];
     const allCreditors: DetailedLedgerReportItem[] = [];
 
+    // Pre-identify debtor and creditor group IDs from ledgerGroups
+    const debtorGroupIds = new Set(
+      ledgerGroups
+        .filter(g => {
+          const n = (g.name || '').toLowerCase();
+          const id = (g.id || '').toLowerCase();
+          return (
+            id === 'g_debtors' ||
+            id.includes('debtor') ||
+            n.includes('debtor') ||
+            n.includes('customer') ||
+            n.includes('receivable') ||
+            n.includes('client') ||
+            n.includes('দেনাদার') ||
+            n.includes('গ্রাহক')
+          );
+        })
+        .map(g => g.id)
+    );
+
+    const creditorGroupIds = new Set(
+      ledgerGroups
+        .filter(g => {
+          const n = (g.name || '').toLowerCase();
+          const id = (g.id || '').toLowerCase();
+          return (
+            id === 'g_creditors' ||
+            id.includes('creditor') ||
+            n.includes('creditor') ||
+            n.includes('supplier') ||
+            n.includes('vendor') ||
+            n.includes('payable') ||
+            n.includes('পাওনাদার') ||
+            n.includes('সরবরাহকারী')
+          );
+        })
+        .map(g => g.id)
+    );
+
+    const salesPartyLedgerIds = new Set<string>();
+    const purchasePartyLedgerIds = new Set<string>();
+    const customerActivityLedgerIds = new Set<string>();
+    const supplierActivityLedgerIds = new Set<string>();
+
+    vouchers.forEach((v: any) => {
+      const vType = (v.v_type || '').toLowerCase();
+      const partyId = v.party_ledger_id || v.party_id;
+      if (partyId) {
+        if (vType === 'sales') salesPartyLedgerIds.add(partyId);
+        else if (vType === 'purchase') purchasePartyLedgerIds.add(partyId);
+      }
+    });
+
+    allVoucherEntries.forEach(e => {
+      const v = voucherMap[e.voucher_id] || {};
+      const vType = (e.v_type || v.v_type || '').toLowerCase();
+      const debit = Number(e.debit || 0);
+      const credit = Number(e.credit || 0);
+      const lId = e.ledger_id;
+      if (!lId) return;
+
+      if (vType === 'sales' && debit > 0) customerActivityLedgerIds.add(lId);
+      if (vType === 'purchase' && credit > 0) supplierActivityLedgerIds.add(lId);
+      if (vType === 'receipt' && credit > 0) customerActivityLedgerIds.add(lId);
+    });
+
     ledgers.forEach(l => {
-      const gName = (l.group_name || l.ledger_groups?.name || 'General Accounts').trim();
+      const grp = ledgerGroupMap[l.group_id] || l.ledger_groups;
+      const gName = (grp?.name || l.group_name || l.group || 'General Accounts').trim();
       const gLower = gName.toLowerCase();
-      const nature = l.nature || l.ledger_groups?.nature || '';
+      const nature = l.nature || grp?.nature || l.ledger_groups?.nature || '';
       const opBal = Number(l.opening_balance || 0);
 
       const entriesUpEnd = entriesUpToEndByLedger[l.id];
-      let balAsOfEnd = Number(l.current_balance ?? opBal);
+      const todayStr = formatToYMD(new Date());
+      let balAsOfEnd: number;
 
-      // If we have granular voucher entries up to periodEnd, compute exact point-in-time balance
-      if (entriesUpEnd && (entriesUpEnd.debits > 0 || entriesUpEnd.credits > 0)) {
-        if (nature === 'Asset' || gLower.includes('asset') || gLower.includes('bank') || gLower.includes('cash') || gLower.includes('debtor')) {
-          balAsOfEnd = opBal + entriesUpEnd.debits - entriesUpEnd.credits;
+      // In SAPIENT ERP:
+      // Authoritative Ledger Balance:
+      // 1. In Firestore, every voucher transaction atomically increments `current_balance` on the ledger record.
+      // 2. If the period end is today or later (endStr >= todayStr), `current_balance` IS the exact closing balance.
+      // 3. If a historical period is selected (endStr < todayStr), we rewind: current_balance - (debits_after_end - credits_after_end).
+      // 4. If current_balance is undefined, fall back to opening_balance + sum(debit) - sum(credit).
+      if (l.current_balance !== undefined && l.current_balance !== null) {
+        const curBal = Number(l.current_balance);
+        if (endStr >= todayStr) {
+          balAsOfEnd = curBal;
         } else {
-          balAsOfEnd = opBal + entriesUpEnd.credits - entriesUpEnd.debits;
+          const afterDebits = entriesAfterEndByLedger[l.id]?.debits || 0;
+          const afterCredits = entriesAfterEndByLedger[l.id]?.credits || 0;
+          balAsOfEnd = curBal - (afterDebits - afterCredits);
         }
+      } else if (entriesUpEnd && entriesUpEnd.count > 0) {
+        balAsOfEnd = opBal + entriesUpEnd.debits - entriesUpEnd.credits;
+      } else {
+        balAsOfEnd = opBal;
       }
 
       const absBal = Math.abs(balAsOfEnd);
@@ -689,8 +878,109 @@ export function BusinessIntelligence() {
         }
       }
 
-      // Sundry Debtors
-      const isDebtor = gLower.includes('debtor') || gLower.includes('customer') || gLower.includes('receivable');
+      // Comprehensive Sundry Debtors & Creditors identification
+      let isDebtor = false;
+      let isCreditor = false;
+
+      // Strict exclusion check: Expenses, Income, Nominal, Bank, Cash, Capital, Tax, Duty, Loans, Fixed Assets
+      const lNameLower = ((l.name || '') + ' ' + (l.alias || '')).toLowerCase();
+      const isExpenseOrNominal = 
+        isExpenseLedger(l) ||
+        isIncomeLedger(l) ||
+        nature === 'Expense' || 
+        nature === 'Income' || 
+        gLower.includes('expense') || 
+        gLower.includes('expence') || 
+        gLower.includes('income') || 
+        gLower.includes('direct') || 
+        gLower.includes('indirect') || 
+        gLower.includes('cost') ||
+        gLower.includes('bank') || 
+        gLower.includes('cash') || 
+        gLower.includes('tax') || 
+        gLower.includes('vat') || 
+        gLower.includes('duty') || 
+        gLower.includes('capital') || 
+        gLower.includes('loan') || 
+        gLower.includes('fixed') || 
+        gLower.includes('investment') ||
+        gLower.includes('deposit') ||
+        lNameLower.includes('expence') ||
+        lNameLower.includes('expense') ||
+        lNameLower.includes('godown') ||
+        lNameLower.includes('construction') ||
+        lNameLower.includes('খরচ') ||
+        lNameLower.includes('ব্যয়') ||
+        lNameLower.includes('salary') ||
+        lNameLower.includes('rent') ||
+        lNameLower.includes('bill') ||
+        lNameLower.includes('maintenance') ||
+        lNameLower.includes('repair') ||
+        lNameLower.includes('freight') ||
+        lNameLower.includes('wages') ||
+        lNameLower.includes('transport');
+
+      if (!isExpenseOrNominal) {
+        // 1. Direct Group ID match
+        if (l.group_id === 'g_debtors' || debtorGroupIds.has(l.group_id)) isDebtor = true;
+        if (l.group_id === 'g_creditors' || creditorGroupIds.has(l.group_id)) isCreditor = true;
+
+        // 2. Group name matching
+        if (!isDebtor && (gLower.includes('debtor') || gLower.includes('customer') || gLower.includes('receivable') || gLower.includes('client') || gLower.includes('দেনাদার') || gLower.includes('গ্রাহক'))) {
+          isDebtor = true;
+        }
+        if (!isCreditor && (gLower.includes('creditor') || gLower.includes('supplier') || gLower.includes('vendor') || gLower.includes('payable') || gLower.includes('পাওনাদার') || gLower.includes('সরবরাহকারী'))) {
+          isCreditor = true;
+        }
+
+        // 3. Check parent group in hierarchy if present
+        if (!isDebtor && !isCreditor && grp?.parent_id) {
+          const parent = ledgerGroupMap[grp.parent_id];
+          if (parent) {
+            const pName = (parent.name || '').toLowerCase();
+            const pId = (parent.id || '').toLowerCase();
+            if (pId === 'g_debtors' || pName.includes('debtor') || pName.includes('customer') || pName.includes('receivable') || pName.includes('client') || pName.includes('দেনাদার') || pName.includes('গ্রাহক')) {
+              isDebtor = true;
+            } else if (pId === 'g_creditors' || pName.includes('creditor') || pName.includes('supplier') || pName.includes('vendor') || pName.includes('payable') || pName.includes('পাওনাদার') || pName.includes('সরবরাহকারী')) {
+              isCreditor = true;
+            }
+          }
+        }
+
+        // 4. Check if ledger appears as party in sales or purchase vouchers
+        if (!isDebtor && !isCreditor) {
+          if (salesPartyLedgerIds.has(l.id)) {
+            isDebtor = true;
+          } else if (purchasePartyLedgerIds.has(l.id)) {
+            isCreditor = true;
+          }
+        }
+
+        // 5. Check name/alias heuristic if still unclassified
+        if (!isDebtor && !isCreditor) {
+          if (nature === 'Asset' && (lNameLower.includes('customer') || lNameLower.includes('client') || lNameLower.includes('debtor') || lNameLower.includes('গ্রাহক') || lNameLower.includes('দেনাদার'))) {
+            isDebtor = true;
+          } else if (nature === 'Liability' && (lNameLower.includes('supplier') || lNameLower.includes('vendor') || lNameLower.includes('creditor') || lNameLower.includes('সরবরাহকারী') || lNameLower.includes('পাওনাদার'))) {
+            isCreditor = true;
+          }
+        }
+
+        // 6. Broad classification for active party ledgers under Current Assets / Current Liabilities
+        if (!isDebtor && !isCreditor) {
+          if ((nature === 'Asset' || gLower.includes('current asset')) && turnoverInPeriod > 0) {
+            isDebtor = true;
+          } else if ((nature === 'Liability' || gLower.includes('current liabilit')) && turnoverInPeriod > 0) {
+            isCreditor = true;
+          }
+        }
+      }
+
+      // Hard safety guard: Never allow nominal or expense accounts into Debtors or Creditors
+      if (isExpenseOrNominal) {
+        isDebtor = false;
+        isCreditor = false;
+      }
+
       if (isDebtor) {
         // Debtor: positive / Dr = normal outstanding (Green), negative / Cr = customer advance (Red)
         const isDr = balAsOfEnd >= 0;
@@ -699,7 +989,7 @@ export function BusinessIntelligence() {
           name: l.name || 'Customer Account',
           group: gName,
           rawBalance: balAsOfEnd,
-          balance: absBal || turnoverInPeriod,
+          balance: absBal,
           isDr,
           turnover: turnoverInPeriod,
           address: fullAddress,
@@ -710,18 +1000,15 @@ export function BusinessIntelligence() {
         });
       }
 
-      // Sundry Creditors
-      const isCreditor = gLower.includes('creditor') || gLower.includes('supplier') || gLower.includes('vendor') || gLower.includes('payable');
       if (isCreditor) {
-        // Creditor: positive / Dr = advance paid to supplier (Green), negative / Cr = normal payable (Red)
-        // Check if raw balance has Dr sign
-        const isDr = balAsOfEnd >= 0;
+        // Creditor: negative / Cr = normal payable to vendor (Red), positive / Dr = advance paid to vendor (Green)
+        const isDr = balAsOfEnd > 0;
         allCreditors.push({
           id: l.id,
           name: l.name || 'Supplier Account',
           group: gName,
           rawBalance: balAsOfEnd,
-          balance: absBal || turnoverInPeriod,
+          balance: absBal,
           isDr,
           turnover: turnoverInPeriod,
           address: fullAddress,
@@ -754,11 +1041,12 @@ export function BusinessIntelligence() {
     const workingCapital = currentAssets - currentLiabilities;
 
     // Top Cost Centres: real expense heads sorted by amount in period
-    const topCostCentres = Object.entries(costCenterBalances)
+    const allCostCentres = Object.entries(costCenterBalances)
       .filter(([name, amount]) => amount > 0 && name.length > 1)
       .map(([name, amount]) => ({ name, amount: Math.abs(amount) }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
+      .sort((a, b) => b.amount - a.amount);
+
+    const topCostCentres = allCostCentres.slice(0, 5);
 
     // Sort All Debtors & Creditors by balance descending
     allDebtors.sort((a, b) => b.balance - a.balance);
@@ -782,16 +1070,12 @@ export function BusinessIntelligence() {
       totalVolume: 0
     }));
 
-    let hasVoucherDates = false;
     vouchers.forEach(v => {
-      const dateStr = v.v_date || v.date;
-      if (!dateStr) return;
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return;
+      const vDateObj = parseEntryDate(v.v_date || v.date, v.created_at);
+      if (isNaN(vDateObj.getTime())) return;
 
-      const mIdx = d.getMonth();
+      const mIdx = vDateObj.getMonth();
       if (mIdx >= 0 && mIdx < 12) {
-        hasVoucherDates = true;
         const amt = Number(v.total_amount || 0);
         const vType = (v.v_type || '').toLowerCase();
         const target = monthlyTrends[mIdx];
@@ -799,37 +1083,24 @@ export function BusinessIntelligence() {
         if (vType === 'sales') {
           target.sales += amt;
           target.inflows += amt;
-          target.grossProfit += Math.round(amt * 0.28);
-          target.netProfit += Math.round(amt * 0.16);
         } else if (vType === 'purchase') {
           target.purchase += amt;
           target.outflows += amt;
         } else if (vType === 'payment') {
           target.payments += amt;
           target.outflows += amt;
-          target.netProfit -= Math.round(amt * 0.3);
         } else if (vType === 'receipt') {
           target.receipts += amt;
           target.inflows += amt;
         }
-        target.totalVolume += amt;
+        target.totalVolume = target.inflows + target.outflows;
       }
     });
 
-    if (!hasVoucherDates || monthlyTrends.every(m => m.totalVolume === 0)) {
-      monthlyTrends.forEach((m, idx) => {
-        const factor = 0.07 + ((idx % 5) * 0.012);
-        const mSales = Math.round((salesTotal || 50000) * factor);
-        const mPurchase = Math.round((purchaseTotal || 35000) * factor);
-        m.sales = mSales;
-        m.purchase = mPurchase;
-        m.grossProfit = Math.round(mSales * 0.25);
-        m.netProfit = Math.round(mSales * 0.15);
-        m.inflows = mSales;
-        m.outflows = mPurchase;
-        m.totalVolume = mSales + mPurchase;
-      });
-    }
+    monthlyTrends.forEach(m => {
+      m.grossProfit = m.sales - m.purchase;
+      m.netProfit = m.grossProfit - m.payments + m.receipts;
+    });
 
     return {
       salesTotal,
@@ -857,10 +1128,11 @@ export function BusinessIntelligence() {
       allCreditors,
       topDebtors,
       topCreditors,
+      allCostCentres,
       topCostCentres,
       monthlyTrends
     };
-  }, [ledgers, items, vouchers, voucherEntries, voucherMap, periodVouchers, periodStart, periodEnd, inventoryAnalytics.openingStockValuation, inventoryAnalytics.closingStockValuation]);
+  }, [ledgers, items, vouchers, allVoucherEntries, voucherMap, periodVouchers, periodStart, periodEnd, ledgerGroups, inventoryAnalytics.openingStockValuation, inventoryAnalytics.closingStockValuation]);
 
   // ==========================================
   // 3. LIQUIDITY & BANKING TELEMETRY (Client-side Computed from Period)
@@ -913,6 +1185,11 @@ export function BusinessIntelligence() {
 
     const totalLiquidity = totalCash + totalBank;
 
+    const allLiquidAccounts = [
+      ...cashAccounts.map(a => ({ ...a, type: 'Cash in Hand', color: '#10b981' })),
+      ...bankAccounts.map(a => ({ ...a, type: 'Bank / MFS Account', color: '#3b82f6' }))
+    ].sort((a, b) => b.balance - a.balance);
+
     const liquidityBreakdown = [
       { name: 'Cash in Hand', value: Math.max(0, totalCash), color: '#10b981' },
       { name: 'Bank Accounts', value: Math.max(0, totalBank), color: '#3b82f6' }
@@ -929,8 +1206,8 @@ export function BusinessIntelligence() {
     });
 
     const flowData = [
-      { name: 'Cash Inflow', amount: periodInflow || (totalLiquidity * 0.35), color: '#10b981' },
-      { name: 'Cash Outflow', amount: periodOutflow || (totalLiquidity * 0.25), color: '#ef4444' }
+      { name: 'Cash Inflow', amount: periodInflow, color: '#10b981' },
+      { name: 'Cash Outflow', amount: periodOutflow, color: '#ef4444' }
     ];
 
     return {
@@ -939,11 +1216,40 @@ export function BusinessIntelligence() {
       totalLiquidity,
       cashAccounts,
       bankAccounts,
+      allLiquidAccounts,
       liquidityBreakdown,
       flowData,
       recentActivities
     };
   }, [ledgers, vouchers, voucherEntries, voucherMap, periodVouchers, periodEnd]);
+
+  // Targeted verification function: queries raw source vouchers for top debtors & creditors
+  const runTargetedVerification = async (silent = false) => {
+    if (!user?.companyId || isVerifying) return;
+    const debtors = accountingAnalytics.topDebtors || [];
+    const creditors = accountingAnalytics.topCreditors || [];
+    const targetIds = Array.from(new Set([...debtors.map(d => d.id), ...creditors.map(c => c.id)])).filter(Boolean);
+    if (targetIds.length === 0) return;
+
+    if (!silent) setIsVerifying(true);
+    try {
+      const results = await erpService.verifyTargetedLedgerBalances(user.companyId, targetIds);
+      const adjustedCount = Object.values(results || {}).filter((r: any) => r && r.adjusted).length;
+      setVerificationStats({
+        verifiedAt: new Date(),
+        adjustedCount,
+        checkedCount: targetIds.length
+      });
+      if (adjustedCount > 0) {
+        const freshLedgers = await erpService.getLedgers(user.companyId, true);
+        setLedgers(freshLedgers);
+      }
+    } catch (err) {
+      console.warn('Targeted verification error:', err);
+    } finally {
+      if (!silent) setIsVerifying(false);
+    }
+  };
 
   const getFilteredMonthlyData = (data: any[], range: ChartRangeOption) => {
     if (range === 'JAN-JUN') return data.slice(0, 6);
@@ -952,7 +1258,7 @@ export function BusinessIntelligence() {
   };
 
   const renderRangeDropdown = (value: ChartRangeOption, onChange: (val: ChartRangeOption) => void) => (
-    <div className="relative inline-flex items-center">
+    <div className="relative inline-flex items-center" onClick={e => e.stopPropagation()}>
       <select
         value={value}
         onChange={e => onChange(e.target.value as ChartRangeOption)}
@@ -1206,6 +1512,12 @@ export function BusinessIntelligence() {
     }
   };
 
+  const modalFilteredCategories = useMemo(() => {
+    if (!categoryModalSearch.trim()) return inventoryAnalytics.allStockCategories;
+    const q = categoryModalSearch.toLowerCase();
+    return inventoryAnalytics.allStockCategories.filter(c => c.name.toLowerCase().includes(q));
+  }, [inventoryAnalytics.allStockCategories, categoryModalSearch]);
+
   if (loading) {
     return <SkeletonLoader type="cards" />;
   }
@@ -1276,6 +1588,29 @@ export function BusinessIntelligence() {
                 className="bg-transparent text-[11px] border-none focus:ring-0 p-0 font-mono text-foreground outline-none cursor-pointer" 
               />
             </div>
+
+            <button
+              onClick={() => runTargetedVerification(false)}
+              disabled={isVerifying || loading}
+              className={cn(
+                "p-1.5 rounded transition-all cursor-pointer flex items-center gap-1.5 text-[11px] uppercase font-bold px-3 border shadow-xs",
+                verificationStats.verifiedAt 
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20" 
+                  : "bg-muted/50 hover:bg-muted text-foreground border-border"
+              )}
+              title={verificationStats.verifiedAt 
+                ? `Targeted verified against source voucher entries at ${verificationStats.verifiedAt.toLocaleTimeString()} (${verificationStats.checkedCount} checked, ${verificationStats.adjustedCount} synchronized)` 
+                : "Re-calculate and verify top ledger balances directly from source voucher entries"}
+            >
+              {isVerifying ? (
+                <RotateCw className="w-3.5 h-3.5 animate-spin text-primary" />
+              ) : verificationStats.verifiedAt ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              ) : (
+                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+              )}
+              <span>{isVerifying ? "Verifying..." : verificationStats.verifiedAt ? "Verified" : "Verify Balances"}</span>
+            </button>
 
             <button
               onClick={() => setRefreshKey(prev => prev + 1)}
@@ -1396,27 +1731,33 @@ export function BusinessIntelligence() {
 
               {/* Charts Section: Sales vs Purchase Trend & Profit Trajectory */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none">
+                <div 
+                  onClick={() => {
+                    setActiveGraphModal('sales_purchase');
+                    setGraphModalRange(salesTrendRange);
+                  }}
+                  className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none cursor-pointer hover:border-primary/50 transition-all group"
+                  title="Click to view enlarged chart and full monthly breakdown"
+                >
                   <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
                     <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                         Sales & Purchase Monthly Trend
+                        <Maximize2 className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
                       </h3>
                       <p className="text-[9px] text-muted-foreground font-mono">Full-year turnover and procurement dynamics</p>
                     </div>
-                    {renderRangeDropdown(salesTrendRange, setSalesTrendRange)}
+                    <div className="flex items-center gap-2">
+                      {renderRangeDropdown(salesTrendRange, setSalesTrendRange)}
+                      <span className="text-[9px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-bold">
+                        Enlarge ↗
+                      </span>
+                    </div>
                   </div>
                   <div className="h-[230px] w-full relative select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
-                    {renderPinnedTooltip('salesTrend')}
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart 
                         data={getFilteredMonthlyData(accountingAnalytics.monthlyTrends, salesTrendRange)}
-                        onClick={state => handleChartClick('salesTrend', state)}
-                        onMouseMove={(state: any) => {
-                          if (pinnedChart?.chartKey === 'salesTrend' && state?.activeLabel && state.activeLabel !== pinnedChart.title) {
-                            setPinnedChart(null);
-                          }
-                        }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
                         <XAxis dataKey="month" interval={0} fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
@@ -1431,29 +1772,40 @@ export function BusinessIntelligence() {
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
+                  <div className="text-center mt-2 pt-2 border-t border-border/40">
+                    <span className="text-[9px] text-primary/80 group-hover:text-primary font-bold tracking-tight">
+                      Click graph to open full detailed popup &rarr;
+                    </span>
+                  </div>
                 </div>
 
-                <div className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none">
+                <div 
+                  onClick={() => {
+                    setActiveGraphModal('profit_trend');
+                    setGraphModalRange(profitTrendRange);
+                  }}
+                  className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none cursor-pointer hover:border-primary/50 transition-all group"
+                  title="Click to view enlarged chart and profit margin breakdown"
+                >
                   <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
                     <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                         Gross vs. Net Profit Trend
+                        <Maximize2 className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
                       </h3>
                       <p className="text-[9px] text-muted-foreground font-mono">Profit margin sustainability across all months</p>
                     </div>
-                    {renderRangeDropdown(profitTrendRange, setProfitTrendRange)}
+                    <div className="flex items-center gap-2">
+                      {renderRangeDropdown(profitTrendRange, setProfitTrendRange)}
+                      <span className="text-[9px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-bold">
+                        Enlarge ↗
+                      </span>
+                    </div>
                   </div>
                   <div className="h-[230px] w-full relative select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
-                    {renderPinnedTooltip('profitTrend')}
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart 
                         data={getFilteredMonthlyData(accountingAnalytics.monthlyTrends, profitTrendRange)}
-                        onClick={state => handleChartClick('profitTrend', state)}
-                        onMouseMove={(state: any) => {
-                          if (pinnedChart?.chartKey === 'profitTrend' && state?.activeLabel && state.activeLabel !== pinnedChart.title) {
-                            setPinnedChart(null);
-                          }
-                        }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
                         <XAxis dataKey="month" interval={0} fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
@@ -1468,33 +1820,44 @@ export function BusinessIntelligence() {
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
+                  <div className="text-center mt-2 pt-2 border-t border-border/40">
+                    <span className="text-[9px] text-primary/80 group-hover:text-primary font-bold tracking-tight">
+                      Click graph to open full detailed popup &rarr;
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Monthly Volume Trend & Cost Centre Allocation */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Clear Monthly Transaction Volume & Cash Flow Trend */}
-                <div className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none">
+                <div 
+                  onClick={() => {
+                    setActiveGraphModal('cash_flow_volume');
+                    setGraphModalRange(volumeTrendRange);
+                  }}
+                  className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none cursor-pointer hover:border-primary/50 transition-all group"
+                  title="Click to view enlarged cash flow and volume breakdown"
+                >
                   <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
                     <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                         Monthly Transaction Volume & Cash Flow Trend
+                        <Maximize2 className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
                       </h3>
                       <p className="text-[9px] text-muted-foreground font-mono">Monthly inflows (Receipts & Sales) vs. outflows (Payments & Purchases)</p>
                     </div>
-                    {renderRangeDropdown(volumeTrendRange, setVolumeTrendRange)}
+                    <div className="flex items-center gap-2">
+                      {renderRangeDropdown(volumeTrendRange, setVolumeTrendRange)}
+                      <span className="text-[9px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-bold">
+                        Enlarge ↗
+                      </span>
+                    </div>
                   </div>
                   <div className="h-[220px] w-full relative select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
-                    {renderPinnedTooltip('volumeTrend')}
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart 
                         data={getFilteredMonthlyData(accountingAnalytics.monthlyTrends, volumeTrendRange)}
-                        onClick={state => handleChartClick('volumeTrend', state)}
-                        onMouseMove={(state: any) => {
-                          if (pinnedChart?.chartKey === 'volumeTrend' && state?.activeLabel && state.activeLabel !== pinnedChart.title) {
-                            setPinnedChart(null);
-                          }
-                        }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
                         <XAxis dataKey="month" interval={0} fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
@@ -1509,35 +1872,46 @@ export function BusinessIntelligence() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
+                  <div className="text-center mt-2 pt-2 border-t border-border/40">
+                    <span className="text-[9px] text-primary/80 group-hover:text-primary font-bold tracking-tight">
+                      Click graph to open full detailed popup &rarr;
+                    </span>
+                  </div>
                 </div>
 
                 {/* Real Cost Centre Allocation */}
-                <div className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none">
+                <div 
+                  onClick={() => {
+                    setActiveGraphModal('cost_centres');
+                    setGraphModalSearch('');
+                  }}
+                  className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none cursor-pointer hover:border-primary/50 transition-all group"
+                  title="Click to view all cost centres and expense breakdown"
+                >
                   <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
                     <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                         Cost Centre Trend & Top Cost Centres
+                        <Maximize2 className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
                       </h3>
                       <p className="text-[9px] text-muted-foreground font-mono">Operational & departmental expense allocations</p>
                     </div>
-                    <span className="text-[9px] bg-rose-500/10 text-rose-500 border border-rose-500/20 px-2 py-0.5 rounded font-bold">
-                      Cost Allocation
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] bg-rose-500/10 text-rose-500 border border-rose-500/20 px-2 py-0.5 rounded font-bold">
+                        Cost Allocation
+                      </span>
+                      <span className="text-[9px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-bold">
+                        Enlarge ↗
+                      </span>
+                    </div>
                   </div>
                   <div className="h-[220px] w-full relative select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
-                    {renderPinnedTooltip('costCentres')}
                     {accountingAnalytics.topCostCentres.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart 
                           data={accountingAnalytics.topCostCentres} 
                           layout="vertical" 
                           margin={{ left: 15 }}
-                          onClick={state => handleChartClick('costCentres', state)}
-                          onMouseMove={(state: any) => {
-                            if (pinnedChart?.chartKey === 'costCentres' && state?.activeLabel && state.activeLabel !== pinnedChart.title) {
-                              setPinnedChart(null);
-                            }
-                          }}
                         >
                           <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} horizontal={false} />
                           <XAxis type="number" tickFormatter={v => `${currencySymbol}${formatNumber(v)}`} fontSize={8} stroke="#888" axisLine={false} tickLine={false} />
@@ -1551,9 +1925,14 @@ export function BusinessIntelligence() {
                       </ResponsiveContainer>
                     ) : (
                       <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic">
-                        No expense heads recorded yet
+                        No expense heads recorded in selected period
                       </div>
                     )}
+                  </div>
+                  <div className="text-center mt-2 pt-2 border-t border-border/40">
+                    <span className="text-[9px] text-primary/80 group-hover:text-primary font-bold tracking-tight">
+                      Click graph to open full detailed popup &rarr;
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1568,6 +1947,12 @@ export function BusinessIntelligence() {
                       <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
                         Top Ledgers (Sundry Debtors)
                       </h4>
+                      {verificationStats.verifiedAt && (
+                        <span className="text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-bold flex items-center gap-1" title="Targeted verified from raw source voucher entries">
+                          <CheckCircle2 className="w-2.5 h-2.5" />
+                          <span>Verified</span>
+                        </span>
+                      )}
                     </div>
                     <button
                       onClick={() => {
@@ -1596,8 +1981,16 @@ export function BusinessIntelligence() {
                             // If Debtor balance is Debit (Dr, >= 0), it is green. If Credit (Cr, < 0), it is red.
                             const isDr = d.rawBalance !== undefined ? d.rawBalance >= 0 : true;
                             return (
-                              <tr key={d.name} className="hover:bg-muted/10 transition-colors">
-                                <td className="p-2.5 font-bold text-foreground">{d.name}</td>
+                              <tr 
+                                key={d.id || d.name} 
+                                onClick={() => navigate(`/reports/ledger?ledgerId=${d.id}`)}
+                                className="hover:bg-primary/10 transition-colors cursor-pointer group"
+                                title="Click to view detailed Ledger Statement"
+                              >
+                                <td className="p-2.5 font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+                                  <span>{d.name}</span>
+                                  <span className="text-[9px] text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                                </td>
                                 <td className="p-2.5 text-[10px] text-muted-foreground">{d.group}</td>
                                 <td className={cn(
                                   "p-2.5 text-right font-bold font-mono",
@@ -1628,6 +2021,12 @@ export function BusinessIntelligence() {
                       <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
                         Top Ledgers (Sundry Creditors)
                       </h4>
+                      {verificationStats.verifiedAt && (
+                        <span className="text-[9px] bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded font-bold flex items-center gap-1" title="Targeted verified from raw source voucher entries">
+                          <CheckCircle2 className="w-2.5 h-2.5" />
+                          <span>Verified</span>
+                        </span>
+                      )}
                     </div>
                     <button
                       onClick={() => {
@@ -1656,8 +2055,16 @@ export function BusinessIntelligence() {
                             // If Creditor balance is Debit (Dr, >= 0, e.g. advance paid), it is green. If Credit (Cr, < 0, normal payable), it is red.
                             const isDr = c.rawBalance !== undefined ? c.rawBalance >= 0 : false;
                             return (
-                              <tr key={c.name} className="hover:bg-muted/10 transition-colors">
-                                <td className="p-2.5 font-bold text-foreground">{c.name}</td>
+                              <tr 
+                                key={c.id || c.name} 
+                                onClick={() => navigate(`/reports/ledger?ledgerId=${c.id}`)}
+                                className="hover:bg-primary/10 transition-colors cursor-pointer group"
+                                title="Click to view detailed Ledger Statement"
+                              >
+                                <td className="p-2.5 font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+                                  <span>{c.name}</span>
+                                  <span className="text-[9px] text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                                </td>
                                 <td className="p-2.5 text-[10px] text-muted-foreground">{c.group}</td>
                                 <td className={cn(
                                   "p-2.5 text-right font-bold font-mono",
@@ -1746,27 +2153,33 @@ export function BusinessIntelligence() {
 
               {/* Chart Breakdown: Movement Trend & Top Stock Groups Valuation */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none">
+                <div 
+                  onClick={() => {
+                    setActiveGraphModal('stock_movement');
+                    setGraphModalRange(stockTrendRange);
+                  }}
+                  className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none cursor-pointer hover:border-primary/50 transition-all group"
+                  title="Click to view detailed stock movement and valuation trend"
+                >
                   <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
                     <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                         Stock Item & Movement Trend
+                        <Maximize2 className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
                       </h3>
                       <p className="text-[9px] text-muted-foreground font-mono">Monthly inventory turnover and valuation trajectory</p>
                     </div>
-                    {renderRangeDropdown(stockTrendRange, setStockTrendRange)}
+                    <div className="flex items-center gap-2">
+                      {renderRangeDropdown(stockTrendRange, setStockTrendRange)}
+                      <span className="text-[9px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-bold">
+                        Enlarge ↗
+                      </span>
+                    </div>
                   </div>
                   <div className="h-[230px] w-full relative select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
-                    {renderPinnedTooltip('stockTrends')}
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart 
                         data={getFilteredMonthlyData(inventoryAnalytics.stockMonthlyTrends, stockTrendRange)}
-                        onClick={state => handleChartClick('stockTrends', state)}
-                        onMouseMove={(state: any) => {
-                          if (pinnedChart?.chartKey === 'stockTrends' && state?.activeLabel && state.activeLabel !== pinnedChart.title) {
-                            setPinnedChart(null);
-                          }
-                        }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
                         <XAxis dataKey="month" interval={0} fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
@@ -1780,33 +2193,44 @@ export function BusinessIntelligence() {
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
+                  <div className="text-center mt-2 pt-2 border-t border-border/40">
+                    <span className="text-[9px] text-primary/80 group-hover:text-primary font-bold tracking-tight">
+                      Click graph to open full detailed popup &rarr;
+                    </span>
+                  </div>
                 </div>
 
                 {/* Top 5 Stock Groups Valuation */}
-                <div className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none">
+                <div 
+                  onClick={() => {
+                    setActiveGraphModal('stock_groups');
+                    setGraphModalSearch('');
+                  }}
+                  className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none cursor-pointer hover:border-primary/50 transition-all group"
+                  title="Click to view all stock groups and full inventory breakdown"
+                >
                   <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
                     <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                         Top Stock Groups Valuation
+                        <Maximize2 className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
                       </h3>
-                      <p className="text-[9px] text-muted-foreground font-mono">Total valuation breakdown for top 5 inventory groups</p>
+                      <p className="text-[9px] text-muted-foreground font-mono">Total valuation breakdown for inventory groups</p>
                     </div>
-                    <span className="text-[9px] bg-blue-500/10 text-blue-500 border border-blue-500/20 px-2 py-0.5 rounded font-bold">
-                      Top 5 Groups
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] bg-blue-500/10 text-blue-500 border border-blue-500/20 px-2 py-0.5 rounded font-bold">
+                        {inventoryAnalytics.allStockGroups?.length || inventoryAnalytics.topStockGroups.length} Groups
+                      </span>
+                      <span className="text-[9px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-bold">
+                        Enlarge ↗
+                      </span>
+                    </div>
                   </div>
                   <div className="h-[230px] w-full relative select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
-                    {renderPinnedTooltip('stockGroups')}
                     {inventoryAnalytics.topStockGroups.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart 
                           data={inventoryAnalytics.topStockGroups}
-                          onClick={state => handleChartClick('stockGroups', state)}
-                          onMouseMove={(state: any) => {
-                            if (pinnedChart?.chartKey === 'stockGroups' && state?.activeLabel && state.activeLabel !== pinnedChart.title) {
-                              setPinnedChart(null);
-                            }
-                          }}
                         >
                           <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
                           <XAxis dataKey="name" fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
@@ -1825,25 +2249,44 @@ export function BusinessIntelligence() {
                       </div>
                     )}
                   </div>
+                  <div className="text-center mt-2 pt-2 border-t border-border/40">
+                    <span className="text-[9px] text-primary/80 group-hover:text-primary font-bold tracking-tight">
+                      Click graph to open full detailed popup &rarr;
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Stock Category Trend Pie (All Categories) & Top Stock Items Table with Tabs */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none">
-                  <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
+                <div 
+                  onClick={() => {
+                    setActiveGraphModal('stock_categories');
+                    setGraphModalSearch('');
+                  }}
+                  className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none cursor-pointer hover:border-primary/50 transition-all group"
+                  title="Click to view large popup with all categories"
+                >
+                  <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-2">
                     <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                         Stock Category Trend & Ratio
+                        <Maximize2 className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
                       </h3>
                       <p className="text-[9px] text-muted-foreground font-mono">All registered product categories valuation & ratio</p>
                     </div>
-                    <span className="text-[9px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded font-bold">
-                      All Categories
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded font-bold">
+                        {inventoryAnalytics.allStockCategories.length} Categories
+                      </span>
+                      <span className="text-[9px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5">
+                        Enlarge ↗
+                      </span>
+                    </div>
                   </div>
-                  <div className="h-[220px] w-full flex items-center justify-center relative select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
-                    {renderPinnedTooltip('stockCategories')}
+
+                  {/* Clean Circle / Donut Chart without internal Legend collision */}
+                  <div className="h-[155px] w-full flex items-center justify-center relative select-none my-1" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
                     {inventoryAnalytics.allStockCategories.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
@@ -1851,37 +2294,19 @@ export function BusinessIntelligence() {
                             data={inventoryAnalytics.allStockCategories}
                             cx="50%"
                             cy="50%"
-                            innerRadius={50}
-                            outerRadius={80}
-                            paddingAngle={4}
+                            innerRadius={45}
+                            outerRadius={68}
+                            paddingAngle={3}
                             dataKey="value"
-                            onClick={(_, index) => {
-                              const item = inventoryAnalytics.allStockCategories[index];
-                              if (item) {
-                                setPinnedChart({
-                                  chartKey: 'stockCategories',
-                                  title: item.name,
-                                  x: 140,
-                                  y: 60,
-                                  items: [{
-                                    label: 'Valuation',
-                                    value: `${currencySymbol} ${formatNumber(item.value)}`,
-                                    color: '#10b981'
-                                  }]
-                                });
-                              }
-                            }}
                           >
-                            {inventoryAnalytics.allStockCategories.map((_, index) => {
-                              const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
-                              return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
-                            })}
+                            {inventoryAnalytics.allStockCategories.map((_, index) => (
+                              <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
+                            ))}
                           </Pie>
                           <Tooltip 
                             contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#fff', border: '1px solid #333', fontSize: '11px', fontFamily: 'monospace' }}
-                            formatter={(val: any) => [`${currencySymbol} ${formatNumber(val)}`, 'Valuation']}
+                            formatter={(val: any, name: any) => [`${currencySymbol} ${formatNumber(val)}`, name || 'Valuation']}
                           />
-                          <Legend verticalAlign="bottom" iconType="circle" />
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
@@ -1890,6 +2315,34 @@ export function BusinessIntelligence() {
                       </div>
                     )}
                   </div>
+
+                  {/* Category Names Legend: Strictly 2 lines maximum under the graph */}
+                  {inventoryAnalytics.allStockCategories.length > 0 && (
+                    <div className="mt-1 pt-2 border-t border-border/40">
+                      <div className="h-[2.6rem] overflow-hidden flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[10px] font-mono select-none px-1 leading-tight">
+                        {inventoryAnalytics.allStockCategories.map((cat, index) => (
+                          <div 
+                            key={cat.name} 
+                            className="flex items-center gap-1 whitespace-nowrap" 
+                            title={`${cat.name}: ${currencySymbol} ${formatNumber(cat.value)} (${cat.qty} in-stock)`}
+                          >
+                            <span 
+                              className="w-2 h-2 rounded-full inline-block shrink-0 shadow-2xs" 
+                              style={{ backgroundColor: CATEGORY_COLORS[index % CATEGORY_COLORS.length] }} 
+                            />
+                            <span className="text-muted-foreground hover:text-foreground transition-colors max-w-[110px] truncate text-[9.5px]">
+                              {cat.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-center mt-1">
+                        <span className="text-[9px] text-primary/80 group-hover:text-primary font-bold tracking-tight">
+                          Click graph to open full detailed popup &rarr;
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Top 5 Stock Items with Quantity vs. Valuation Tabs */}
@@ -1941,8 +2394,16 @@ export function BusinessIntelligence() {
                       <tbody className="divide-y divide-border/40">
                         {inventoryAnalytics.sortedStockItems.length > 0 ? (
                           inventoryAnalytics.sortedStockItems.map(item => (
-                            <tr key={item.name} className="hover:bg-muted/10 transition-colors">
-                              <td className="p-2.5 font-bold text-foreground">{item.name}</td>
+                            <tr 
+                              key={item.id || item.name} 
+                              onClick={() => item.id && navigate(`/reports/stock-item?itemId=${item.id}`)}
+                              className="hover:bg-primary/10 transition-colors cursor-pointer group"
+                              title="Click to view detailed Stock Item Report"
+                            >
+                              <td className="p-2.5 font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+                                <span>{item.name}</span>
+                                <span className="text-[9px] text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                              </td>
                               <td className={cn("p-2.5 text-right", stockSortBy === 'quantity' ? "font-bold text-foreground" : "text-muted-foreground")}>
                                 {formatQuantity(item.stock, item.unit)}
                               </td>
@@ -2017,20 +2478,32 @@ export function BusinessIntelligence() {
 
               {/* Visuals: Cash vs Bank Composition & Flow Dynamics */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none">
+                <div 
+                  onClick={() => {
+                    setActiveGraphModal('liquidity_composition');
+                    setGraphModalSearch('');
+                  }}
+                  className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none cursor-pointer hover:border-primary/50 transition-all group"
+                  title="Click to view all liquid accounts and composition breakdown"
+                >
                   <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
                     <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                         Liquidity Composition
+                        <Maximize2 className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
                       </h3>
                       <p className="text-[9px] text-muted-foreground font-mono">Liquid funds breakdown by storage medium</p>
                     </div>
-                    <span className="text-[9px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded font-bold">
-                      Composition
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded font-bold">
+                        Composition
+                      </span>
+                      <span className="text-[9px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-bold">
+                        Enlarge ↗
+                      </span>
+                    </div>
                   </div>
                   <div className="h-[220px] w-full flex items-center justify-center relative select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
-                    {renderPinnedTooltip('liquidityBreakdown')}
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -2041,22 +2514,6 @@ export function BusinessIntelligence() {
                           outerRadius={85}
                           paddingAngle={4}
                           dataKey="value"
-                          onClick={(_, index) => {
-                            const item = bankingAnalytics.liquidityBreakdown[index];
-                            if (item) {
-                              setPinnedChart({
-                                chartKey: 'liquidityBreakdown',
-                                title: item.name,
-                                x: 140,
-                                y: 60,
-                                items: [{
-                                  label: 'Amount',
-                                  value: `${currencySymbol} ${formatNumber(item.value)}`,
-                                  color: item.color
-                                }]
-                              });
-                            }
-                          }}
                         >
                           {bankingAnalytics.liquidityBreakdown.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -2070,31 +2527,42 @@ export function BusinessIntelligence() {
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
+                  <div className="text-center mt-2 pt-2 border-t border-border/40">
+                    <span className="text-[9px] text-primary/80 group-hover:text-primary font-bold tracking-tight">
+                      Click graph to open full detailed popup &rarr;
+                    </span>
+                  </div>
                 </div>
 
-                <div className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none">
+                <div 
+                  onClick={() => {
+                    setActiveGraphModal('cash_flow_dynamics');
+                    setGraphModalSearch('');
+                  }}
+                  className="bg-card border border-border p-5 rounded-sm flex flex-col justify-between shadow-xs bi-chart-card relative select-none cursor-pointer hover:border-primary/50 transition-all group"
+                  title="Click to view detailed cash inflow vs outflow dynamics"
+                >
                   <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
                     <div>
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
                         Cash Flow Dynamics
+                        <Maximize2 className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
                       </h3>
                       <p className="text-[9px] text-muted-foreground font-mono">Collective cash inflows vs. cash outflows</p>
                     </div>
-                    <span className="text-[9px] bg-blue-500/10 text-blue-500 border border-blue-500/20 px-2 py-0.5 rounded font-bold">
-                      Flow Dynamics
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] bg-blue-500/10 text-blue-500 border border-blue-500/20 px-2 py-0.5 rounded font-bold">
+                        Flow Dynamics
+                      </span>
+                      <span className="text-[9px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-bold">
+                        Enlarge ↗
+                      </span>
+                    </div>
                   </div>
                   <div className="h-[220px] w-full relative select-none" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
-                    {renderPinnedTooltip('flowData')}
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart 
                         data={bankingAnalytics.flowData}
-                        onClick={state => handleChartClick('flowData', state)}
-                        onMouseMove={(state: any) => {
-                          if (pinnedChart?.chartKey === 'flowData' && state?.activeLabel && state.activeLabel !== pinnedChart.title) {
-                            setPinnedChart(null);
-                          }
-                        }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
                         <XAxis dataKey="name" fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
@@ -2110,6 +2578,11 @@ export function BusinessIntelligence() {
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
+                  </div>
+                  <div className="text-center mt-2 pt-2 border-t border-border/40">
+                    <span className="text-[9px] text-primary/80 group-hover:text-primary font-bold tracking-tight">
+                      Click graph to open full detailed popup &rarr;
+                    </span>
                   </div>
                 </div>
               </div>
@@ -2432,12 +2905,21 @@ export function BusinessIntelligence() {
                       modalFilteredList.map((item, index) => {
                         const addr = includeCountry ? (item.addressWithCountry || item.address) : (item.addressWithoutCountry || '—');
                         return (
-                          <tr key={item.id || item.name} className="hover:bg-muted/15 transition-colors">
+                          <tr 
+                            key={item.id || item.name} 
+                            onClick={() => {
+                              setLedgerModalType(null);
+                              navigate(`/reports/ledger?ledgerId=${item.id}`);
+                            }}
+                            className="hover:bg-primary/10 transition-colors cursor-pointer group"
+                            title="Click to view full Ledger Statement"
+                          >
                             <td className="p-2.5 text-center text-[10px] text-muted-foreground font-bold align-middle">
                               {index + 1}
                             </td>
-                            <td className="p-2.5 font-bold text-foreground text-left align-middle">
-                              {item.name}
+                            <td className="p-2.5 font-bold text-foreground group-hover:text-primary transition-colors text-left align-middle flex items-center gap-1.5">
+                              <span>{item.name}</span>
+                              <span className="text-[9px] text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
                             </td>
                             {includeAddress && (
                               <td className="p-2.5 text-[10px] text-foreground/80 max-w-[240px] truncate text-left align-middle" title={addr}>
@@ -2493,6 +2975,1002 @@ export function BusinessIntelligence() {
                     Cr: {currencySymbol} {formatNumber(modalFilteredList.filter(i => !i.isDr).reduce((acc, i) => acc + i.balance, 0))}
                   </span>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 4. Unified Large Graph Detail Popup Modal (Supports all 9 charts) */}
+      <AnimatePresence>
+        {activeGraphModal && (
+          <div 
+            onClick={() => {
+              setActiveGraphModal(null);
+              setGraphModalSearch('');
+            }}
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div
+              onClick={e => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="bg-card border border-border rounded-lg shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden font-mono"
+            >
+              {/* Modal Header */}
+              <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between shrink-0 flex-wrap gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded bg-primary/10 text-primary border border-primary/20">
+                    {activeGraphModal === 'sales_purchase' && <TrendingUp className="w-5 h-5 text-blue-500" />}
+                    {activeGraphModal === 'profit_trend' && <Activity className="w-5 h-5 text-emerald-500" />}
+                    {activeGraphModal === 'cash_flow_volume' && <Activity className="w-5 h-5 text-teal-500" />}
+                    {activeGraphModal === 'cost_centres' && <Building2 className="w-5 h-5 text-rose-500" />}
+                    {activeGraphModal === 'stock_movement' && <Package className="w-5 h-5 text-amber-500" />}
+                    {activeGraphModal === 'stock_groups' && <Boxes className="w-5 h-5 text-blue-500" />}
+                    {activeGraphModal === 'stock_categories' && <PieChartIcon className="w-5 h-5 text-emerald-500" />}
+                    {activeGraphModal === 'liquidity_composition' && <Wallet className="w-5 h-5 text-emerald-500" />}
+                    {activeGraphModal === 'cash_flow_dynamics' && <Landmark className="w-5 h-5 text-blue-500" />}
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold uppercase tracking-wider text-foreground">
+                      {activeGraphModal === 'sales_purchase' && 'Sales & Purchase Monthly Trend (Full View)'}
+                      {activeGraphModal === 'profit_trend' && 'Gross vs. Net Profit Trend (Full View)'}
+                      {activeGraphModal === 'cash_flow_volume' && 'Monthly Transaction Volume & Cash Flow Trend (Full View)'}
+                      {activeGraphModal === 'cost_centres' && 'Cost Centre Allocation & Expense Distribution (Full View)'}
+                      {activeGraphModal === 'stock_movement' && 'Stock Item & Movement Trend (Full View)'}
+                      {activeGraphModal === 'stock_groups' && 'Stock Groups Valuation Breakdown (Full View)'}
+                      {activeGraphModal === 'stock_categories' && 'Stock Category Trend & Ratio (Full View)'}
+                      {activeGraphModal === 'liquidity_composition' && 'Liquidity Composition (Cash vs. Bank Breakdown)'}
+                      {activeGraphModal === 'cash_flow_dynamics' && 'Cash Flow Dynamics (Inflow vs. Outflow Analysis)'}
+                    </h3>
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground font-mono">
+                      Period: <span className="font-bold text-foreground">{periodStart}</span> to <span className="font-bold text-foreground">{periodEnd}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Range filter buttons for time-series charts */}
+                  {['sales_purchase', 'profit_trend', 'cash_flow_volume', 'stock_movement'].includes(activeGraphModal) && (
+                    <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded border border-border">
+                      {(['12 MONTHS', 'JAN-JUN', 'JUL-DEC'] as ChartRangeOption[]).map(r => (
+                        <button
+                          key={r}
+                          onClick={() => setGraphModalRange(r)}
+                          className={cn(
+                            "px-2.5 py-1 text-[10px] font-bold uppercase rounded transition-all cursor-pointer",
+                            graphModalRange === r
+                              ? "bg-primary text-primary-foreground shadow-xs"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setActiveGraphModal(null);
+                      setGraphModalSearch('');
+                    }}
+                    className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors cursor-pointer"
+                    title="Close (Esc)"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Top KPI Metric Strip */}
+              <div className="px-4 py-3 bg-muted/15 border-b border-border grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono shrink-0">
+                {activeGraphModal === 'sales_purchase' && (
+                  <>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-blue-500 block">Total Sales</span>
+                      <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(accountingAnalytics.salesTotal)}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-amber-500 block">Total Purchases</span>
+                      <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(accountingAnalytics.purchaseTotal)}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-emerald-500 block">Net Trading Margin</span>
+                      <span className={cn(
+                        "text-base font-bold",
+                        (accountingAnalytics.salesTotal - accountingAnalytics.purchaseTotal) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                      )}>
+                        {currencySymbol} {formatNumber(accountingAnalytics.salesTotal - accountingAnalytics.purchaseTotal)}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-purple-500 block">Total Turnover</span>
+                      <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(accountingAnalytics.salesTotal + accountingAnalytics.purchaseTotal)}</span>
+                    </div>
+                  </>
+                )}
+
+                {activeGraphModal === 'profit_trend' && (
+                  <>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-emerald-500 block">Gross Profit</span>
+                      <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">{currencySymbol} {formatNumber(accountingAnalytics.grossProfit)}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-indigo-500 block">Net Profit</span>
+                      <span className="text-base font-bold text-indigo-600 dark:text-indigo-400">{currencySymbol} {formatNumber(accountingAnalytics.netProfit)}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-teal-500 block">Gross Margin %</span>
+                      <span className="text-base font-bold text-foreground">{accountingAnalytics.grossProfitMargin.toFixed(1)}%</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-blue-500 block">Net Margin %</span>
+                      <span className="text-base font-bold text-foreground">{accountingAnalytics.netProfitMargin.toFixed(1)}%</span>
+                    </div>
+                  </>
+                )}
+
+                {activeGraphModal === 'cash_flow_volume' && (
+                  <>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-emerald-500 block">Total Inflows</span>
+                      <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                        {currencySymbol} {formatNumber(accountingAnalytics.monthlyTrends.reduce((s, m) => s + m.inflows, 0))}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-rose-500 block">Total Outflows</span>
+                      <span className="text-base font-bold text-rose-600 dark:text-rose-400">
+                        {currencySymbol} {formatNumber(accountingAnalytics.monthlyTrends.reduce((s, m) => s + m.outflows, 0))}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-teal-500 block">Net Cash Generation</span>
+                      <span className="text-base font-bold text-foreground">
+                        {currencySymbol} {formatNumber(accountingAnalytics.monthlyTrends.reduce((s, m) => s + (m.inflows - m.outflows), 0))}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-purple-500 block">Collective Volume</span>
+                      <span className="text-base font-bold text-foreground">
+                        {currencySymbol} {formatNumber(accountingAnalytics.monthlyTrends.reduce((s, m) => s + m.totalVolume, 0))}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {activeGraphModal === 'cost_centres' && (
+                  <>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-rose-500 block">Allocated Expenses</span>
+                      <span className="text-base font-bold text-rose-600 dark:text-rose-400">
+                        {currencySymbol} {formatNumber(accountingAnalytics.allCostCentres?.reduce((s, c) => s + c.amount, 0) || 0)}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-blue-500 block">Active Cost Heads</span>
+                      <span className="text-base font-bold text-foreground">{accountingAnalytics.allCostCentres?.length || 0}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-amber-500 block">Top Cost Head</span>
+                      <span className="text-sm font-bold text-foreground truncate block" title={accountingAnalytics.topCostCentres[0]?.name || 'None'}>
+                        {accountingAnalytics.topCostCentres[0]?.name || 'None'}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-purple-500 block">Top Head Amount</span>
+                      <span className="text-base font-bold text-foreground">
+                        {currencySymbol} {formatNumber(accountingAnalytics.topCostCentres[0]?.amount || 0)}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {activeGraphModal === 'stock_movement' && (
+                  <>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-amber-500 block">Closing Valuation</span>
+                      <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(inventoryAnalytics.closingStockValuation)}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-blue-500 block">Opening Valuation</span>
+                      <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(inventoryAnalytics.openingStockValuation)}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-emerald-500 block">Total In-Stock Units</span>
+                      <span className="text-base font-bold text-foreground">{formatQuantity(inventoryAnalytics.totalStockQty, 'Pcs')}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-purple-500 block">Catalog Items</span>
+                      <span className="text-base font-bold text-foreground">{inventoryAnalytics.totalItemsCount}</span>
+                    </div>
+                  </>
+                )}
+
+                {activeGraphModal === 'stock_groups' && (
+                  <>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-blue-500 block">Stock Groups</span>
+                      <span className="text-base font-bold text-foreground">{inventoryAnalytics.allStockGroups?.length || 0}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-amber-500 block">Total Inventory Value</span>
+                      <span className="text-base font-bold text-amber-600 dark:text-amber-400">{currencySymbol} {formatNumber(inventoryAnalytics.totalStockValue)}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-emerald-500 block">Total In-Stock Units</span>
+                      <span className="text-base font-bold text-foreground">{formatQuantity(inventoryAnalytics.totalStockQty, 'Pcs')}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-purple-500 block">Top Group</span>
+                      <span className="text-sm font-bold text-foreground truncate block" title={inventoryAnalytics.topStockGroups[0]?.name || 'N/A'}>
+                        {inventoryAnalytics.topStockGroups[0]?.name || 'N/A'}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {activeGraphModal === 'stock_categories' && (
+                  <>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-emerald-500 block">Categories Registered</span>
+                      <span className="text-base font-bold text-foreground">{inventoryAnalytics.allStockCategories.length}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-amber-500 block">Total Valuation</span>
+                      <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(inventoryAnalytics.totalStockValue)}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-blue-500 block">Total In-Stock Units</span>
+                      <span className="text-base font-bold text-foreground">{formatQuantity(inventoryAnalytics.totalStockQty, 'Pcs')}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-purple-500 block">Top Category</span>
+                      <span className="text-sm font-bold text-foreground truncate block" title={inventoryAnalytics.allStockCategories[0]?.name || 'N/A'}>
+                        {inventoryAnalytics.allStockCategories[0]?.name || 'N/A'}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {activeGraphModal === 'liquidity_composition' && (
+                  <>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-emerald-500 block">Total Liquid Funds</span>
+                      <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">{currencySymbol} {formatNumber(bankingAnalytics.totalLiquidity)}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-blue-500 block">Cash in Hand</span>
+                      <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(bankingAnalytics.totalCash)}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-indigo-500 block">Bank Accounts & MFS</span>
+                      <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(bankingAnalytics.totalBank)}</span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-purple-500 block">Active Accounts</span>
+                      <span className="text-base font-bold text-foreground">{bankingAnalytics.allLiquidAccounts?.length || 0}</span>
+                    </div>
+                  </>
+                )}
+
+                {activeGraphModal === 'cash_flow_dynamics' && (
+                  <>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-emerald-500 block">Total Inflow</span>
+                      <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+                        {currencySymbol} {formatNumber(bankingAnalytics.flowData[0]?.amount || 0)}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-rose-500 block">Total Outflow</span>
+                      <span className="text-base font-bold text-rose-600 dark:text-rose-400">
+                        {currencySymbol} {formatNumber(bankingAnalytics.flowData[1]?.amount || 0)}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-teal-500 block">Net Flow Position</span>
+                      <span className={cn(
+                        "text-base font-bold",
+                        ((bankingAnalytics.flowData[0]?.amount || 0) - (bankingAnalytics.flowData[1]?.amount || 0)) >= 0 
+                          ? "text-emerald-600 dark:text-emerald-400" 
+                          : "text-rose-600 dark:text-rose-400"
+                      )}>
+                        {currencySymbol} {formatNumber((bankingAnalytics.flowData[0]?.amount || 0) - (bankingAnalytics.flowData[1]?.amount || 0))}
+                      </span>
+                    </div>
+                    <div className="p-2.5 bg-card border border-border rounded">
+                      <span className="text-[9px] uppercase font-bold text-blue-500 block">Flow Ratio</span>
+                      <span className="text-base font-bold text-foreground">
+                        {((bankingAnalytics.flowData[0]?.amount || 0) / Math.max(1, bankingAnalytics.flowData[1]?.amount || 0)).toFixed(2)} : 1
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Modal Body: Two Columns (Left: Enlarged Chart, Right: Detailed Data Table) */}
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Left Column: Enlarged Chart Container */}
+                <div className="lg:col-span-6 bg-muted/10 border border-border/70 rounded-md p-4 flex flex-col justify-between relative select-none min-h-[350px]">
+                  <div className="w-full flex items-center justify-between border-b border-border/40 pb-2 mb-2">
+                    <span className="text-[11px] uppercase font-bold text-muted-foreground tracking-wider">
+                      Interactive Visual Telemetry
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      Hover to view exact amounts
+                    </span>
+                  </div>
+
+                  <div className="w-full h-[280px] sm:h-[320px] flex items-center justify-center relative select-none my-auto" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
+                    {/* 1. Sales & Purchase Monthly AreaChart */}
+                    {activeGraphModal === 'sales_purchase' && (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={getFilteredMonthlyData(accountingAnalytics.monthlyTrends, graphModalRange)}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
+                          <XAxis dataKey="month" interval={0} fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
+                          <YAxis tickFormatter={v => `${currencySymbol}${formatNumber(v)}`} fontSize={8} stroke="#888" axisLine={false} tickLine={false} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#fff', border: '1px solid #333', fontSize: '11px', fontFamily: 'monospace' }}
+                            formatter={(val: any) => [`${currencySymbol} ${formatNumber(val)}`]}
+                          />
+                          <Area type="monotone" dataKey="sales" name="Sales Turnover" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} strokeWidth={2} />
+                          <Area type="monotone" dataKey="purchase" name="Purchase Volume" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.2} strokeWidth={2} />
+                          <Legend verticalAlign="bottom" iconType="circle" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    )}
+
+                    {/* 2. Profit Trend LineChart */}
+                    {activeGraphModal === 'profit_trend' && (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={getFilteredMonthlyData(accountingAnalytics.monthlyTrends, graphModalRange)}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
+                          <XAxis dataKey="month" interval={0} fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
+                          <YAxis tickFormatter={v => `${currencySymbol}${formatNumber(v)}`} fontSize={8} stroke="#888" axisLine={false} tickLine={false} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#fff', border: '1px solid #333', fontSize: '11px', fontFamily: 'monospace' }}
+                            formatter={(val: any) => [`${currencySymbol} ${formatNumber(val)}`]}
+                          />
+                          <Line type="monotone" dataKey="grossProfit" name="Gross Profit" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+                          <Line type="monotone" dataKey="netProfit" name="Net Profit" stroke="#6366f1" strokeWidth={3} dot={{ r: 4 }} />
+                          <Legend verticalAlign="bottom" iconType="circle" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    )}
+
+                    {/* 3. Monthly Cash Flow Volume BarChart */}
+                    {activeGraphModal === 'cash_flow_volume' && (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={getFilteredMonthlyData(accountingAnalytics.monthlyTrends, graphModalRange)}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
+                          <XAxis dataKey="month" interval={0} fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
+                          <YAxis tickFormatter={v => `${currencySymbol}${formatNumber(v)}`} fontSize={8} stroke="#888" axisLine={false} tickLine={false} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#fff', border: '1px solid #333', fontSize: '11px', fontFamily: 'monospace' }}
+                            formatter={(val: any) => [`${currencySymbol} ${formatNumber(val)}`]}
+                          />
+                          <Bar dataKey="inflows" name="Total Inflows" fill="#10b981" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="outflows" name="Total Outflows" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                          <Legend verticalAlign="bottom" iconType="circle" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+
+                    {/* 4. Cost Centres Horizontal BarChart */}
+                    {activeGraphModal === 'cost_centres' && (
+                      accountingAnalytics.allCostCentres?.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart 
+                            data={accountingAnalytics.allCostCentres.slice(0, 10)} 
+                            layout="vertical" 
+                            margin={{ left: 20 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} horizontal={false} />
+                            <XAxis type="number" tickFormatter={v => `${currencySymbol}${formatNumber(v)}`} fontSize={8} stroke="#888" axisLine={false} tickLine={false} />
+                            <YAxis dataKey="name" type="category" width={120} fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#fff', border: '1px solid #333', fontSize: '11px', fontFamily: 'monospace' }}
+                              formatter={(val: any) => [`${currencySymbol} ${formatNumber(val)}`, 'Cost Allocated']}
+                            />
+                            <Bar dataKey="amount" name="Allocated Expense" fill="#e11d48" radius={[0, 4, 4, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic">
+                          No expense heads recorded in selected period
+                        </div>
+                      )
+                    )}
+
+                    {/* 5. Stock Movement AreaChart */}
+                    {activeGraphModal === 'stock_movement' && (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={getFilteredMonthlyData(inventoryAnalytics.stockMonthlyTrends, graphModalRange)}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
+                          <XAxis dataKey="month" interval={0} fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
+                          <YAxis tickFormatter={v => `${currencySymbol}${formatNumber(v)}`} fontSize={8} stroke="#888" axisLine={false} tickLine={false} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#fff', border: '1px solid #333', fontSize: '11px', fontFamily: 'monospace' }}
+                            formatter={(val: any) => [`${currencySymbol} ${formatNumber(val)}`]}
+                          />
+                          <Area type="monotone" dataKey="valuation" name="Valuation Trend" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.25} strokeWidth={2} />
+                          <Legend verticalAlign="bottom" iconType="circle" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    )}
+
+                    {/* 6. Stock Groups BarChart */}
+                    {activeGraphModal === 'stock_groups' && (
+                      (inventoryAnalytics.allStockGroups?.length || 0) > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={inventoryAnalytics.allStockGroups?.slice(0, 8) || []}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
+                            <XAxis dataKey="name" fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
+                            <YAxis tickFormatter={v => `${currencySymbol}${formatNumber(v)}`} fontSize={8} stroke="#888" axisLine={false} tickLine={false} />
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#fff', border: '1px solid #333', fontSize: '11px', fontFamily: 'monospace' }}
+                              formatter={(val: any) => [`${currencySymbol} ${formatNumber(val)}`, 'Stock Value']}
+                            />
+                            <Bar dataKey="value" name="Valuation" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                            <Legend verticalAlign="bottom" iconType="circle" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-xs text-muted-foreground italic">
+                          No stock groups recorded
+                        </div>
+                      )
+                    )}
+
+                    {/* 7. Stock Categories Donut Chart */}
+                    {activeGraphModal === 'stock_categories' && (
+                      <>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={inventoryAnalytics.allStockCategories}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={70}
+                              outerRadius={115}
+                              paddingAngle={3}
+                              dataKey="value"
+                            >
+                              {inventoryAnalytics.allStockCategories.map((_, index) => (
+                                <Cell key={`large-pie-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#fff', border: '1px solid #333', fontSize: '11px', fontFamily: 'monospace' }}
+                              formatter={(val: any, name: any) => [`${currencySymbol} ${formatNumber(val)}`, name || 'Valuation']}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+
+                        {/* Donut Center Summary */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                          <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">
+                            Total Valuation
+                          </span>
+                          <span className="text-base sm:text-lg font-bold text-foreground font-mono mt-0.5">
+                            {currencySymbol} {formatNumber(inventoryAnalytics.totalStockValue)}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                            {formatQuantity(inventoryAnalytics.totalStockQty, 'Pcs')} Total Qty
+                          </span>
+                        </div>
+                      </>
+                    )}
+
+                    {/* 8. Liquidity Composition Donut Chart */}
+                    {activeGraphModal === 'liquidity_composition' && (
+                      <>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={bankingAnalytics.liquidityBreakdown}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={70}
+                              outerRadius={115}
+                              paddingAngle={4}
+                              dataKey="value"
+                            >
+                              {bankingAnalytics.liquidityBreakdown.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#fff', border: '1px solid #333', fontSize: '11px', fontFamily: 'monospace' }}
+                              formatter={(val: any) => [`${currencySymbol} ${formatNumber(val)}`, 'Total']}
+                            />
+                            <Legend verticalAlign="bottom" iconType="circle" />
+                          </PieChart>
+                        </ResponsiveContainer>
+
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                          <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest">
+                            Liquid Reserves
+                          </span>
+                          <span className="text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+                            {currencySymbol} {formatNumber(bankingAnalytics.totalLiquidity)}
+                          </span>
+                        </div>
+                      </>
+                    )}
+
+                    {/* 9. Cash Flow Dynamics BarChart */}
+                    {activeGraphModal === 'cash_flow_dynamics' && (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={bankingAnalytics.flowData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
+                          <XAxis dataKey="name" fontSize={9} stroke="#888" axisLine={false} tickLine={false} />
+                          <YAxis tickFormatter={v => `${currencySymbol}${formatNumber(v)}`} fontSize={8} stroke="#888" axisLine={false} tickLine={false} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: theme === 'dark' ? '#141414' : '#fff', border: '1px solid #333', fontSize: '11px', fontFamily: 'monospace' }}
+                            formatter={(val: any) => [`${currencySymbol} ${formatNumber(val)}`, 'Amount']}
+                          />
+                          <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+                            {bankingAnalytics.flowData.map((entry, index) => (
+                              <Cell key={`bar-${index}`} fill={entry.color} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+
+                  <div className="w-full text-center text-[10px] text-muted-foreground border-t border-border/40 pt-2 font-mono">
+                    High precision client-side telemetry calculated directly from primary ledger & voucher registers
+                  </div>
+                </div>
+
+                {/* Right Column: Detailed Data Table & Breakdown */}
+                <div className="lg:col-span-6 flex flex-col justify-between space-y-3">
+                  {/* Search Bar for searchable datasets */}
+                  {['cost_centres', 'stock_groups', 'stock_categories', 'liquidity_composition'].includes(activeGraphModal) && (
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                          type="text"
+                          placeholder="Search records..."
+                          value={graphModalSearch}
+                          onChange={e => setGraphModalSearch(e.target.value)}
+                          className="w-full pl-8 pr-3 py-1.5 bg-muted/40 border border-border rounded text-xs font-mono text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-primary"
+                        />
+                      </div>
+                      {graphModalSearch && (
+                        <button
+                          onClick={() => setGraphModalSearch('')}
+                          className="text-[10px] text-muted-foreground hover:text-foreground underline font-mono"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Scrollable Detailed Data Table */}
+                  <div className="overflow-x-auto max-h-[350px] border border-border rounded bg-card">
+                    {/* TABLE 1 & 2 & 3: Monthly Trends (Sales/Purchase, Profit, Volume) */}
+                    {['sales_purchase', 'profit_trend', 'cash_flow_volume'].includes(activeGraphModal) && (
+                      <table className="w-full text-left text-xs font-mono">
+                        <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
+                          <tr>
+                            <th className="p-2.5">Month</th>
+                            {activeGraphModal === 'sales_purchase' && (
+                              <>
+                                <th className="p-2.5 text-right">Sales Turnover</th>
+                                <th className="p-2.5 text-right">Purchases</th>
+                                <th className="p-2.5 text-right">Trade Margin</th>
+                              </>
+                            )}
+                            {activeGraphModal === 'profit_trend' && (
+                              <>
+                                <th className="p-2.5 text-right">Gross Profit</th>
+                                <th className="p-2.5 text-right">Net Profit</th>
+                                <th className="p-2.5 text-right">Margin %</th>
+                              </>
+                            )}
+                            {activeGraphModal === 'cash_flow_volume' && (
+                              <>
+                                <th className="p-2.5 text-right">Inflows</th>
+                                <th className="p-2.5 text-right">Outflows</th>
+                                <th className="p-2.5 text-right">Net Flow</th>
+                              </>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {getFilteredMonthlyData(accountingAnalytics.monthlyTrends, graphModalRange).map(m => {
+                            const tradeMargin = m.sales - m.purchase;
+                            const marginPct = m.sales > 0 ? (m.grossProfit / m.sales) * 100 : 0;
+                            const netFlow = m.inflows - m.outflows;
+
+                            return (
+                              <tr key={m.month} className="hover:bg-muted/15 transition-colors">
+                                <td className="p-2.5 font-bold text-foreground">{m.month}</td>
+                                {activeGraphModal === 'sales_purchase' && (
+                                  <>
+                                    <td className="p-2.5 text-right font-bold text-blue-600 dark:text-blue-400">
+                                      {currencySymbol} {formatNumber(m.sales)}
+                                    </td>
+                                    <td className="p-2.5 text-right font-bold text-amber-600 dark:text-amber-400">
+                                      {currencySymbol} {formatNumber(m.purchase)}
+                                    </td>
+                                    <td className={cn("p-2.5 text-right font-bold", tradeMargin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                                      {currencySymbol} {formatNumber(tradeMargin)}
+                                    </td>
+                                  </>
+                                )}
+                                {activeGraphModal === 'profit_trend' && (
+                                  <>
+                                    <td className="p-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                                      {currencySymbol} {formatNumber(m.grossProfit)}
+                                    </td>
+                                    <td className="p-2.5 text-right font-bold text-indigo-600 dark:text-indigo-400">
+                                      {currencySymbol} {formatNumber(m.netProfit)}
+                                    </td>
+                                    <td className="p-2.5 text-right font-bold text-muted-foreground">
+                                      {marginPct.toFixed(1)}%
+                                    </td>
+                                  </>
+                                )}
+                                {activeGraphModal === 'cash_flow_volume' && (
+                                  <>
+                                    <td className="p-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                                      {currencySymbol} {formatNumber(m.inflows)}
+                                    </td>
+                                    <td className="p-2.5 text-right font-bold text-rose-600 dark:text-rose-400">
+                                      {currencySymbol} {formatNumber(m.outflows)}
+                                    </td>
+                                    <td className={cn("p-2.5 text-right font-bold", netFlow >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                                      {currencySymbol} {formatNumber(netFlow)}
+                                    </td>
+                                  </>
+                                )}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* TABLE 4: Cost Centres Detailed List */}
+                    {activeGraphModal === 'cost_centres' && (
+                      <table className="w-full text-left text-xs font-mono">
+                        <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
+                          <tr>
+                            <th className="p-2.5">#</th>
+                            <th className="p-2.5">Cost Head / Expense Ledger</th>
+                            <th className="p-2.5 text-right">Allocated Amount</th>
+                            <th className="p-2.5 text-right">Share %</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {(() => {
+                            const totalExp = accountingAnalytics.allCostCentres?.reduce((s, c) => s + c.amount, 0) || 1;
+                            const filtered = (accountingAnalytics.allCostCentres || []).filter(c => 
+                              !graphModalSearch.trim() || c.name.toLowerCase().includes(graphModalSearch.toLowerCase().trim())
+                            );
+
+                            if (filtered.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={4} className="p-6 text-center text-muted-foreground text-xs italic">
+                                    No matching cost centres found
+                                  </td>
+                                </tr>
+                              );
+                            }
+
+                            return filtered.map((c, idx) => (
+                              <tr key={c.name} className="hover:bg-muted/15 transition-colors">
+                                <td className="p-2.5 text-muted-foreground text-[10px] font-bold">{idx + 1}</td>
+                                <td className="p-2.5 font-bold text-foreground truncate max-w-[200px]" title={c.name}>{c.name}</td>
+                                <td className="p-2.5 text-right font-bold text-rose-600 dark:text-rose-400">
+                                  {currencySymbol} {formatNumber(c.amount)}
+                                </td>
+                                <td className="p-2.5 text-right text-muted-foreground font-bold">
+                                  {((c.amount / totalExp) * 100).toFixed(1)}%
+                                </td>
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* TABLE 5: Stock Movement Monthly Detailed List */}
+                    {activeGraphModal === 'stock_movement' && (
+                      <table className="w-full text-left text-xs font-mono">
+                        <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
+                          <tr>
+                            <th className="p-2.5">Month</th>
+                            <th className="p-2.5 text-right">Valuation</th>
+                            <th className="p-2.5 text-right">Inward Qty</th>
+                            <th className="p-2.5 text-right">Outward Qty</th>
+                            <th className="p-2.5 text-right">Net Movement</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {getFilteredMonthlyData(inventoryAnalytics.stockMonthlyTrends, graphModalRange).map(m => {
+                            const netM = m.inward - m.outward;
+                            return (
+                              <tr key={m.month} className="hover:bg-muted/15 transition-colors">
+                                <td className="p-2.5 font-bold text-foreground">{m.month}</td>
+                                <td className="p-2.5 text-right font-bold text-amber-500">
+                                  {currencySymbol} {formatNumber(m.valuation)}
+                                </td>
+                                <td className="p-2.5 text-right text-emerald-600 dark:text-emerald-400 font-mono">
+                                  +{formatQuantity(m.inward, 'Pcs')}
+                                </td>
+                                <td className="p-2.5 text-right text-rose-600 dark:text-rose-400 font-mono">
+                                  -{formatQuantity(m.outward, 'Pcs')}
+                                </td>
+                                <td className={cn("p-2.5 text-right font-bold font-mono", netM >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                                  {netM >= 0 ? '+' : ''}{formatQuantity(netM, 'Pcs')}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* TABLE 6: Stock Groups Detailed List */}
+                    {activeGraphModal === 'stock_groups' && (
+                      <table className="w-full text-left text-xs font-mono">
+                        <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
+                          <tr>
+                            <th className="p-2.5">#</th>
+                            <th className="p-2.5">Stock Group</th>
+                            <th className="p-2.5 text-right">Items</th>
+                            <th className="p-2.5 text-right">In-Stock Qty</th>
+                            <th className="p-2.5 text-right">Valuation</th>
+                            <th className="p-2.5 text-right">Share %</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {(() => {
+                            const totalVal = inventoryAnalytics.totalStockValue || 1;
+                            const filtered = (inventoryAnalytics.allStockGroups || []).filter(g =>
+                              !graphModalSearch.trim() || g.name.toLowerCase().includes(graphModalSearch.toLowerCase().trim())
+                            );
+
+                            if (filtered.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={6} className="p-6 text-center text-muted-foreground text-xs italic">
+                                    No matching stock groups found
+                                  </td>
+                                </tr>
+                              );
+                            }
+
+                            return filtered.map((g, idx) => (
+                              <tr key={g.name} className="hover:bg-muted/15 transition-colors">
+                                <td className="p-2.5 text-muted-foreground text-[10px] font-bold">{idx + 1}</td>
+                                <td className="p-2.5 font-bold text-foreground truncate max-w-[160px]" title={g.name}>{g.name}</td>
+                                <td className="p-2.5 text-right text-muted-foreground">{g.count}</td>
+                                <td className="p-2.5 text-right font-mono">{formatQuantity(g.qty, 'Pcs')}</td>
+                                <td className="p-2.5 text-right font-bold text-foreground">
+                                  {currencySymbol} {formatNumber(g.value)}
+                                </td>
+                                <td className="p-2.5 text-right font-bold text-blue-600 dark:text-blue-400">
+                                  {((g.value / totalVal) * 100).toFixed(1)}%
+                                </td>
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* TABLE 7: Stock Categories Detailed List */}
+                    {activeGraphModal === 'stock_categories' && (
+                      <table className="w-full text-left text-xs font-mono">
+                        <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
+                          <tr>
+                            <th className="p-2.5">Category Name</th>
+                            <th className="p-2.5 text-right">In-Stock Qty</th>
+                            <th className="p-2.5 text-right">Valuation</th>
+                            <th className="p-2.5 text-right">Share %</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {(() => {
+                            const filtered = modalFilteredCategories;
+                            if (filtered.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={4} className="p-6 text-center text-muted-foreground text-xs italic">
+                                    No matching categories found
+                                  </td>
+                                </tr>
+                              );
+                            }
+
+                            return filtered.map(cat => {
+                              const origIndex = inventoryAnalytics.allStockCategories.findIndex(c => c.name === cat.name);
+                              const color = CATEGORY_COLORS[(origIndex >= 0 ? origIndex : 0) % CATEGORY_COLORS.length];
+                              const share = inventoryAnalytics.totalStockValue > 0 
+                                ? (cat.value / inventoryAnalytics.totalStockValue) * 100 
+                                : 0;
+                              return (
+                                <tr key={cat.name} className="hover:bg-muted/20 transition-colors">
+                                  <td className="p-2.5 font-bold text-foreground">
+                                    <div className="flex items-center gap-2">
+                                      <span 
+                                        className="w-3 h-3 rounded-full inline-block shrink-0 shadow-2xs" 
+                                        style={{ backgroundColor: color }} 
+                                      />
+                                      <span className="truncate max-w-[170px]" title={cat.name}>
+                                        {cat.name}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="p-2.5 text-right text-muted-foreground font-mono">
+                                    {formatQuantity(cat.qty, 'Pcs')}
+                                  </td>
+                                  <td className="p-2.5 text-right font-bold text-foreground font-mono">
+                                    {currencySymbol} {formatNumber(cat.value)}
+                                  </td>
+                                  <td className="p-2.5 text-right font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                                    {share.toFixed(1)}%
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* TABLE 8: Liquidity Accounts Detailed List */}
+                    {activeGraphModal === 'liquidity_composition' && (
+                      <table className="w-full text-left text-xs font-mono">
+                        <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
+                          <tr>
+                            <th className="p-2.5">#</th>
+                            <th className="p-2.5">Account Name</th>
+                            <th className="p-2.5">Type</th>
+                            <th className="p-2.5 text-right">Closing Balance</th>
+                            <th className="p-2.5 text-right">Share %</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {(() => {
+                            const totalLiq = bankingAnalytics.totalLiquidity || 1;
+                            const filtered = (bankingAnalytics.allLiquidAccounts || []).filter(a =>
+                              !graphModalSearch.trim() || a.name.toLowerCase().includes(graphModalSearch.toLowerCase().trim())
+                            );
+
+                            if (filtered.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={5} className="p-6 text-center text-muted-foreground text-xs italic">
+                                    No matching liquid accounts found
+                                  </td>
+                                </tr>
+                              );
+                            }
+
+                            return filtered.map((acc, idx) => (
+                              <tr key={acc.name} className="hover:bg-muted/15 transition-colors">
+                                <td className="p-2.5 text-muted-foreground text-[10px] font-bold">{idx + 1}</td>
+                                <td className="p-2.5 font-bold text-foreground truncate max-w-[170px]" title={acc.name}>{acc.name}</td>
+                                <td className="p-2.5">
+                                  <span className={cn(
+                                    "px-1.5 py-0.5 text-[9px] rounded font-bold uppercase",
+                                    acc.type === 'Cash in Hand' 
+                                      ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
+                                      : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                                  )}>
+                                    {acc.type}
+                                  </span>
+                                </td>
+                                <td className="p-2.5 text-right font-bold text-foreground font-mono">
+                                  {currencySymbol} {formatNumber(acc.balance)}
+                                </td>
+                                <td className="p-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                                  {((acc.balance / totalLiq) * 100).toFixed(1)}%
+                                </td>
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* TABLE 9: Cash Flow Dynamics Detailed Breakdown */}
+                    {activeGraphModal === 'cash_flow_dynamics' && (
+                      <table className="w-full text-left text-xs font-mono">
+                        <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
+                          <tr>
+                            <th className="p-2.5">Flow Stream</th>
+                            <th className="p-2.5">Classification</th>
+                            <th className="p-2.5 text-right">Amount</th>
+                            <th className="p-2.5 text-right">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/40">
+                          {bankingAnalytics.flowData.map(item => (
+                            <tr key={item.name} className="hover:bg-muted/15 transition-colors">
+                              <td className="p-2.5 font-bold text-foreground">{item.name}</td>
+                              <td className="p-2.5 text-muted-foreground">
+                                {item.name === 'Cash Inflow' ? 'Receipts & Sales Realization' : 'Payments & Procurement Disbursements'}
+                              </td>
+                              <td className={cn(
+                                "p-2.5 text-right font-bold font-mono",
+                                item.name === 'Cash Inflow' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                              )}>
+                                {currencySymbol} {formatNumber(item.amount)}
+                              </td>
+                              <td className="p-2.5 text-right font-bold">
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded text-[9px] uppercase font-bold",
+                                  item.name === 'Cash Inflow' 
+                                    ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
+                                    : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                                )}>
+                                  {item.name === 'Cash Inflow' ? 'Incoming' : 'Outgoing'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+
+                  {/* Summary Footer Bar for Data Table */}
+                  <div className="p-3 bg-muted/40 border border-border rounded flex items-center justify-between text-xs font-mono">
+                    <span className="font-bold text-muted-foreground uppercase text-[10px]">
+                      {activeGraphModal === 'sales_purchase' && 'Total Turnover Volume'}
+                      {activeGraphModal === 'profit_trend' && 'Cumulative Net Profit'}
+                      {activeGraphModal === 'cash_flow_volume' && 'Total Turnover Volume'}
+                      {activeGraphModal === 'cost_centres' && 'Total Allocated Expenses'}
+                      {activeGraphModal === 'stock_movement' && 'Closing Inventory Valuation'}
+                      {activeGraphModal === 'stock_groups' && 'Total Inventory Valuation'}
+                      {activeGraphModal === 'stock_categories' && 'Total Inventory Valuation'}
+                      {activeGraphModal === 'liquidity_composition' && 'Total Liquid Funds'}
+                      {activeGraphModal === 'cash_flow_dynamics' && 'Net Cash Generation'}
+                    </span>
+                    <span className="text-sm font-bold text-foreground font-mono">
+                      {activeGraphModal === 'sales_purchase' && `${currencySymbol} ${formatNumber(accountingAnalytics.salesTotal + accountingAnalytics.purchaseTotal)}`}
+                      {activeGraphModal === 'profit_trend' && `${currencySymbol} ${formatNumber(accountingAnalytics.netProfit)}`}
+                      {activeGraphModal === 'cash_flow_volume' && `${currencySymbol} ${formatNumber(accountingAnalytics.monthlyTrends.reduce((s, m) => s + m.totalVolume, 0))}`}
+                      {activeGraphModal === 'cost_centres' && `${currencySymbol} ${formatNumber(accountingAnalytics.allCostCentres?.reduce((s, c) => s + c.amount, 0) || 0)}`}
+                      {activeGraphModal === 'stock_movement' && `${currencySymbol} ${formatNumber(inventoryAnalytics.closingStockValuation)}`}
+                      {activeGraphModal === 'stock_groups' && `${currencySymbol} ${formatNumber(inventoryAnalytics.totalStockValue)}`}
+                      {activeGraphModal === 'stock_categories' && `${currencySymbol} ${formatNumber(inventoryAnalytics.totalStockValue)}`}
+                      {activeGraphModal === 'liquidity_composition' && `${currencySymbol} ${formatNumber(bankingAnalytics.totalLiquidity)}`}
+                      {activeGraphModal === 'cash_flow_dynamics' && `${currencySymbol} ${formatNumber((bankingAnalytics.flowData[0]?.amount || 0) - (bankingAnalytics.flowData[1]?.amount || 0))}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-3 border-t border-border bg-muted/20 flex justify-between items-center shrink-0">
+                <span className="text-[10px] text-muted-foreground font-mono">
+                  Press <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border text-[9px]">Esc</kbd> or click outside to dismiss
+                </span>
+                <button
+                  onClick={() => {
+                    setActiveGraphModal(null);
+                    setGraphModalSearch('');
+                  }}
+                  className="px-4 py-1.5 rounded bg-muted hover:bg-muted/80 text-foreground border border-border text-xs font-bold uppercase transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
               </div>
             </motion.div>
           </div>
