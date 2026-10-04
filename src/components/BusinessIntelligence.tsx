@@ -117,6 +117,7 @@ export function BusinessIntelligence() {
   const [activeGraphModal, setActiveGraphModal] = useState<GraphModalType>(null);
   const [graphModalSearch, setGraphModalSearch] = useState<string>('');
   const [graphModalRange, setGraphModalRange] = useState<ChartRangeOption>('12 MONTHS');
+  const [isExportingGraphPdf, setIsExportingGraphPdf] = useState<boolean>(false);
 
   // Targeted verification state
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
@@ -1509,6 +1510,466 @@ export function BusinessIntelligence() {
       console.error('Failed to generate PDF:', err);
     } finally {
       setIsExportingPdf(false);
+    }
+  };
+
+  const exportGraphModalPdf = async (mode: 'download' | 'print') => {
+    if (!activeGraphModal) return;
+    setIsExportingGraphPdf(true);
+
+    try {
+      // 1. Capture the visual graph from the modal DOM
+      const chartContainer = document.getElementById('bi-modal-graph-capture-container');
+      let chartImgData = '';
+      if (chartContainer) {
+        const html2canvasModule: any = await import('html2canvas');
+        const html2canvas = html2canvasModule.default || html2canvasModule;
+        const chartCanvas = await html2canvas(chartContainer, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          onclone: (clonedDoc: Document) => {
+            const el = clonedDoc.getElementById('bi-modal-graph-capture-container');
+            if (el) {
+              el.style.backgroundColor = '#ffffff';
+              el.style.color = '#0f172a';
+              const texts = el.querySelectorAll('text, tspan');
+              texts.forEach((t: any) => {
+                t.style.fill = '#1e293b';
+              });
+              const grids = el.querySelectorAll('.recharts-cartesian-grid line');
+              grids.forEach((g: any) => {
+                g.style.stroke = '#cbd5e1';
+              });
+            }
+          }
+        });
+        chartImgData = chartCanvas.toDataURL('image/jpeg', 0.95);
+      }
+
+      // 2. Configure report metadata, KPIs and table data based on active modal type
+      const companyTitle = (settings?.companyName || 'SAPIENT ERP').toUpperCase();
+      const companyAddress = settings?.companyAddress || '';
+      const companyPhone = settings?.printPhone || '';
+      const companyEmail = settings?.printEmail || '';
+
+      let reportTitle = '';
+      let filePrefix = '';
+      let kpiBoxes: { label: string; value: string }[] = [];
+      let tableHeaders: string[] = [];
+      let tableRows: { cols: (string | number)[]; isRightAligned: boolean[] }[] = [];
+
+      if (activeGraphModal === 'sales_purchase') {
+        reportTitle = 'SALES & PURCHASE MONTHLY TREND REPORT';
+        filePrefix = 'Sales_Purchase_Trend';
+        kpiBoxes = [
+          { label: 'TOTAL SALES', value: `${currencySymbol} ${formatNumber(accountingAnalytics.salesTotal)}` },
+          { label: 'TOTAL PURCHASES', value: `${currencySymbol} ${formatNumber(accountingAnalytics.purchaseTotal)}` },
+          { label: 'NET TRADING MARGIN', value: `${currencySymbol} ${formatNumber(accountingAnalytics.salesTotal - accountingAnalytics.purchaseTotal)}` },
+          { label: 'TOTAL TURNOVER', value: `${currencySymbol} ${formatNumber(accountingAnalytics.salesTotal + accountingAnalytics.purchaseTotal)}` }
+        ];
+        tableHeaders = ['#', 'MONTH', 'SALES TURNOVER', 'PURCHASE VOLUME', 'TRADE MARGIN'];
+        tableRows = getFilteredMonthlyData(accountingAnalytics.monthlyTrends, graphModalRange).map((m, idx) => ({
+          cols: [
+            idx + 1,
+            m.month,
+            `${currencySymbol} ${formatNumber(m.sales)}`,
+            `${currencySymbol} ${formatNumber(m.purchase)}`,
+            `${currencySymbol} ${formatNumber(m.sales - m.purchase)}`
+          ],
+          isRightAligned: [false, false, true, true, true]
+        }));
+      } else if (activeGraphModal === 'profit_trend') {
+        reportTitle = 'GROSS & NET PROFITABILITY TREND REPORT';
+        filePrefix = 'Profitability_Trend';
+        kpiBoxes = [
+          { label: 'GROSS PROFIT', value: `${currencySymbol} ${formatNumber(accountingAnalytics.grossProfit)}` },
+          { label: 'NET PROFIT', value: `${currencySymbol} ${formatNumber(accountingAnalytics.netProfit)}` },
+          { label: 'GROSS MARGIN %', value: `${accountingAnalytics.grossProfitMargin.toFixed(1)}%` },
+          { label: 'NET MARGIN %', value: `${accountingAnalytics.netProfitMargin.toFixed(1)}%` }
+        ];
+        tableHeaders = ['#', 'MONTH', 'GROSS PROFIT', 'NET PROFIT', 'MARGIN %'];
+        tableRows = getFilteredMonthlyData(accountingAnalytics.monthlyTrends, graphModalRange).map((m, idx) => {
+          const marginPct = m.sales > 0 ? (m.grossProfit / m.sales) * 100 : 0;
+          return {
+            cols: [
+              idx + 1,
+              m.month,
+              `${currencySymbol} ${formatNumber(m.grossProfit)}`,
+              `${currencySymbol} ${formatNumber(m.netProfit)}`,
+              `${marginPct.toFixed(1)}%`
+            ],
+            isRightAligned: [false, false, true, true, true]
+          };
+        });
+      } else if (activeGraphModal === 'cash_flow_volume') {
+        reportTitle = 'MONTHLY CASH FLOW & VOLUME REPORT';
+        filePrefix = 'Cash_Flow_Volume';
+        kpiBoxes = [
+          { label: 'TOTAL INFLOWS', value: `${currencySymbol} ${formatNumber(bankingAnalytics.flowData[0]?.amount || 0)}` },
+          { label: 'TOTAL OUTFLOWS', value: `${currencySymbol} ${formatNumber(bankingAnalytics.flowData[1]?.amount || 0)}` },
+          { label: 'NET CASH FLOW', value: `${currencySymbol} ${formatNumber((bankingAnalytics.flowData[0]?.amount || 0) - (bankingAnalytics.flowData[1]?.amount || 0))}` },
+          { label: 'TOTAL LIQUIDITY', value: `${currencySymbol} ${formatNumber(bankingAnalytics.totalLiquidity)}` }
+        ];
+        tableHeaders = ['#', 'MONTH', 'TOTAL INFLOWS', 'TOTAL OUTFLOWS', 'NET CASH FLOW'];
+        tableRows = getFilteredMonthlyData(accountingAnalytics.monthlyTrends, graphModalRange).map((m, idx) => ({
+          cols: [
+            idx + 1,
+            m.month,
+            `${currencySymbol} ${formatNumber(m.inflows)}`,
+            `${currencySymbol} ${formatNumber(m.outflows)}`,
+            `${currencySymbol} ${formatNumber(m.inflows - m.outflows)}`
+          ],
+          isRightAligned: [false, false, true, true, true]
+        }));
+      } else if (activeGraphModal === 'cost_centres') {
+        reportTitle = 'COST CENTRE ALLOCATION & EXPENSE DISTRIBUTION REPORT';
+        filePrefix = 'Cost_Centre_Allocation';
+        const totalAllocated = accountingAnalytics.allCostCentres?.reduce((s, c) => s + c.amount, 0) || 0;
+        kpiBoxes = [
+          { label: 'TOTAL ALLOCATED EXPENSES', value: `${currencySymbol} ${formatNumber(totalAllocated)}` },
+          { label: 'EXPENSE HEADS RECORDED', value: `${accountingAnalytics.allCostCentres?.length || 0}` },
+          { label: 'TOP EXPENSE HEAD', value: accountingAnalytics.topCostCentres[0]?.name || 'N/A' },
+          { label: 'TOP HEAD AMOUNT', value: `${currencySymbol} ${formatNumber(accountingAnalytics.topCostCentres[0]?.amount || 0)}` }
+        ];
+        tableHeaders = ['#', 'COST HEAD / EXPENSE LEDGER', 'ALLOCATED AMOUNT', 'SHARE %'];
+        const filtered = (accountingAnalytics.allCostCentres || []).filter(c => 
+          !graphModalSearch.trim() || c.name.toLowerCase().includes(graphModalSearch.toLowerCase().trim())
+        );
+        tableRows = filtered.map((c, idx) => ({
+          cols: [
+            idx + 1,
+            c.name,
+            `${currencySymbol} ${formatNumber(c.amount)}`,
+            `${((c.amount / (totalAllocated || 1)) * 100).toFixed(1)}%`
+          ],
+          isRightAligned: [false, false, true, true]
+        }));
+      } else if (activeGraphModal === 'stock_movement') {
+        reportTitle = 'STOCK ITEM & INVENTORY MOVEMENT REPORT';
+        filePrefix = 'Stock_Movement_Report';
+        kpiBoxes = [
+          { label: 'CLOSING VALUATION', value: `${currencySymbol} ${formatNumber(inventoryAnalytics.closingStockValuation)}` },
+          { label: 'OPENING VALUATION', value: `${currencySymbol} ${formatNumber(inventoryAnalytics.openingStockValuation)}` },
+          { label: 'TOTAL ITEMS', value: `${inventoryAnalytics.totalItemsCount}` },
+          { label: 'TOTAL STOCK QTY', value: formatQuantity(inventoryAnalytics.totalStockQty, 'Pcs') }
+        ];
+        tableHeaders = ['#', 'MONTH', 'VALUATION', 'INWARD QTY', 'OUTWARD QTY', 'NET MOVEMENT'];
+        tableRows = getFilteredMonthlyData(inventoryAnalytics.stockMonthlyTrends, graphModalRange).map((m, idx) => {
+          const netM = m.inward - m.outward;
+          return {
+            cols: [
+              idx + 1,
+              m.month,
+              `${currencySymbol} ${formatNumber(m.valuation)}`,
+              `+${formatQuantity(m.inward, 'Pcs')}`,
+              `-${formatQuantity(m.outward, 'Pcs')}`,
+              `${netM >= 0 ? '+' : ''}${formatQuantity(netM, 'Pcs')}`
+            ],
+            isRightAligned: [false, false, true, true, true, true]
+          };
+        });
+      } else if (activeGraphModal === 'stock_groups') {
+        reportTitle = 'STOCK GROUPS VALUATION & DISTRIBUTION REPORT';
+        filePrefix = 'Stock_Groups_Report';
+        kpiBoxes = [
+          { label: 'TOTAL STOCK VALUE', value: `${currencySymbol} ${formatNumber(inventoryAnalytics.totalStockValue)}` },
+          { label: 'TOTAL GROUPS', value: `${inventoryAnalytics.allStockGroups?.length || 0}` },
+          { label: 'TOTAL ITEMS', value: `${inventoryAnalytics.totalItemsCount}` },
+          { label: 'TOTAL STOCK QTY', value: formatQuantity(inventoryAnalytics.totalStockQty, 'Pcs') }
+        ];
+        tableHeaders = ['#', 'STOCK GROUP', 'ITEMS', 'IN-STOCK QTY', 'VALUATION', 'SHARE %'];
+        const filtered = (inventoryAnalytics.allStockGroups || []).filter(g =>
+          !graphModalSearch.trim() || g.name.toLowerCase().includes(graphModalSearch.toLowerCase().trim())
+        );
+        tableRows = filtered.map((g, idx) => ({
+          cols: [
+            idx + 1,
+            g.name,
+            g.count,
+            formatQuantity(g.qty, 'Pcs'),
+            `${currencySymbol} ${formatNumber(g.value)}`,
+            `${((g.value / (inventoryAnalytics.totalStockValue || 1)) * 100).toFixed(1)}%`
+          ],
+          isRightAligned: [false, false, true, true, true, true]
+        }));
+      } else if (activeGraphModal === 'stock_categories') {
+        reportTitle = 'STOCK CATEGORIES VALUATION & RATIO REPORT';
+        filePrefix = 'Stock_Categories_Report';
+        kpiBoxes = [
+          { label: 'TOTAL STOCK VALUE', value: `${currencySymbol} ${formatNumber(inventoryAnalytics.totalStockValue)}` },
+          { label: 'TOTAL CATEGORIES', value: `${inventoryAnalytics.allStockCategories?.length || 0}` },
+          { label: 'TOTAL ITEMS', value: `${inventoryAnalytics.totalItemsCount}` },
+          { label: 'TOTAL STOCK QTY', value: formatQuantity(inventoryAnalytics.totalStockQty, 'Pcs') }
+        ];
+        tableHeaders = ['#', 'CATEGORY NAME', 'IN-STOCK QTY', 'VALUATION', 'SHARE %'];
+        tableRows = modalFilteredCategories.map((c, idx) => ({
+          cols: [
+            idx + 1,
+            c.name,
+            formatQuantity(c.qty, 'Pcs'),
+            `${currencySymbol} ${formatNumber(c.value)}`,
+            `${((c.value / (inventoryAnalytics.totalStockValue || 1)) * 100).toFixed(1)}%`
+          ],
+          isRightAligned: [false, false, true, true, true]
+        }));
+      } else if (activeGraphModal === 'liquidity_composition') {
+        reportTitle = 'LIQUIDITY COMPOSITION & CASH/BANK REPORT';
+        filePrefix = 'Liquidity_Composition_Report';
+        kpiBoxes = [
+          { label: 'TOTAL LIQUIDITY', value: `${currencySymbol} ${formatNumber(bankingAnalytics.totalLiquidity)}` },
+          { label: 'CASH IN HAND', value: `${currencySymbol} ${formatNumber(bankingAnalytics.totalCash)}` },
+          { label: 'BANK & MFS ACCOUNTS', value: `${currencySymbol} ${formatNumber(bankingAnalytics.totalBank)}` },
+          { label: 'ACTIVE ACCOUNTS', value: `${bankingAnalytics.allLiquidAccounts?.length || 0}` }
+        ];
+        tableHeaders = ['#', 'ACCOUNT / HEAD', 'CATEGORY', 'CURRENT BALANCE', 'SHARE %'];
+        const filtered = (bankingAnalytics.allLiquidAccounts || []).filter(a =>
+          !graphModalSearch.trim() || a.name.toLowerCase().includes(graphModalSearch.toLowerCase().trim())
+        );
+        tableRows = filtered.map((a, idx) => ({
+          cols: [
+            idx + 1,
+            a.name,
+            a.type === 'cash' ? 'Cash-in-Hand' : 'Bank / MFS',
+            `${currencySymbol} ${formatNumber(a.balance)}`,
+            `${((Math.max(0, a.balance) / (bankingAnalytics.totalLiquidity || 1)) * 100).toFixed(1)}%`
+          ],
+          isRightAligned: [false, false, false, true, true]
+        }));
+      } else if (activeGraphModal === 'cash_flow_dynamics') {
+        reportTitle = 'CASH FLOW DYNAMICS & LIQUIDITY ANALYSIS REPORT';
+        filePrefix = 'Cash_Flow_Dynamics_Report';
+        const totalFlow = (bankingAnalytics.flowData[0]?.amount || 0) + (bankingAnalytics.flowData[1]?.amount || 0);
+        kpiBoxes = [
+          { label: 'TOTAL INFLOW', value: `${currencySymbol} ${formatNumber(bankingAnalytics.flowData[0]?.amount || 0)}` },
+          { label: 'TOTAL OUTFLOW', value: `${currencySymbol} ${formatNumber(bankingAnalytics.flowData[1]?.amount || 0)}` },
+          { label: 'NET FLOW POSITION', value: `${currencySymbol} ${formatNumber((bankingAnalytics.flowData[0]?.amount || 0) - (bankingAnalytics.flowData[1]?.amount || 0))}` },
+          { label: 'FLOW RATIO', value: `${((bankingAnalytics.flowData[0]?.amount || 0) / Math.max(1, bankingAnalytics.flowData[1]?.amount || 0)).toFixed(2)} : 1` }
+        ];
+        tableHeaders = ['#', 'CASH FLOW CATEGORY', 'AMOUNT', 'PROPORTION %'];
+        tableRows = (bankingAnalytics.flowData || []).map((f, idx) => ({
+          cols: [
+            idx + 1,
+            f.name,
+            `${currencySymbol} ${formatNumber(f.amount)}`,
+            `${((f.amount / (totalFlow || 1)) * 100).toFixed(1)}%`
+          ],
+          isRightAligned: [false, false, true, true]
+        }));
+      }
+
+      const fileName = `${filePrefix}_${periodStart}_to_${periodEnd}.pdf`;
+
+      // 3. Multi-page Pagination: Page 1 with chart + KPIs + first 12 items; Page 2+ up to 34 items
+      const page1Cap = chartImgData ? 12 : 28;
+      const otherPagesCap = 34;
+      const pages: typeof tableRows[] = [];
+      const listCopy = [...tableRows];
+
+      if (listCopy.length <= page1Cap) {
+        pages.push(listCopy);
+      } else {
+        pages.push(listCopy.splice(0, page1Cap));
+        while (listCopy.length > 0) {
+          if (listCopy.length <= otherPagesCap) {
+            pages.push(listCopy.splice(0, listCopy.length));
+            break;
+          }
+          pages.push(listCopy.splice(0, otherPagesCap));
+        }
+      }
+
+      const totalPages = pages.length;
+
+      const pagesHtml = pages.map((pageItems, pageIdx) => {
+        const pageNum = pageIdx + 1;
+        const isFirstPage = pageNum === 1;
+
+        const rowsHtml = pageItems.length > 0 ? pageItems.map(row => {
+          return `
+            <tr style="height: 24px;">
+              ${row.cols.map((colVal, cIdx) => {
+                const isRight = row.isRightAligned[cIdx];
+                return `
+                  <td style="text-align: ${isRight ? 'right' : 'left'}; vertical-align: middle; color: #1e293b; font-size: 8.5px; font-weight: ${isRight ? '700' : '500'}; font-family: ${isRight ? 'monospace' : 'inherit'}; padding: 4px 6px 5.5px 6px; border-bottom: 1px solid #e2e8f0; line-height: 1.15; box-sizing: border-box;">
+                    ${colVal}
+                  </td>
+                `;
+              }).join('')}
+            </tr>
+          `;
+        }).join('') : `
+          <tr>
+            <td colspan="${tableHeaders.length}" style="text-align: center; padding: 20px; color: #64748b; font-size: 9px; font-style: italic;">
+              No records recorded in selected period
+            </td>
+          </tr>
+        `;
+
+        return `
+          <div class="pdf-page" style="width: 794px; height: 1123px; box-sizing: border-box; padding: 48px 29px 115px 29px; background: #ffffff; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+            <!-- Top Page Header -->
+            <div style="position: relative; border-bottom: ${isFirstPage ? '2px solid #0f172a' : '1px solid #cbd5e1'}; padding-bottom: ${isFirstPage ? '8px' : '5px'}; margin-bottom: 8px; text-align: center;">
+              <!-- Single Page Number strictly at top-right corner as per persistent instructions -->
+              <div style="position: absolute; top: 0; right: 0; font-size: 9.5px; font-weight: 700; font-family: monospace; color: #475569;">
+                Page ${pageNum}
+              </div>
+
+              ${isFirstPage ? `
+                <div style="font-size: 17px; font-weight: 800; letter-spacing: 0.5px; color: #0f172a; text-transform: uppercase; line-height: 1.25;">
+                  ${companyTitle}
+                </div>
+                ${companyAddress ? `<div style="font-size: 9px; color: #475569; margin-top: 2px; line-height: 1.3;">${companyAddress}</div>` : ''}
+                ${(companyPhone || companyEmail) ? `<div style="font-size: 8.5px; color: #475569; margin-top: 2px;">${[companyPhone && `Tel: ${companyPhone}`, companyEmail && `Email: ${companyEmail}`].filter(Boolean).join(' | ')}</div>` : ''}
+                <div style="font-size: 13px; font-weight: 800; margin-top: 6px; letter-spacing: 0.5px; text-transform: uppercase; color: #0f172a;">
+                  ${reportTitle}
+                </div>
+                <div style="font-size: 9.5px; font-weight: 600; color: #475569; margin-top: 3px;">
+                  Period: ${periodStart} to ${periodEnd}
+                </div>
+              ` : `
+                <div style="display: flex; justify-content: space-between; align-items: baseline; padding-right: 50px;">
+                  <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #0f172a;">
+                    ${companyTitle} &mdash; ${reportTitle}
+                  </span>
+                  <span style="font-size: 9px; font-weight: 600; color: #64748b;">
+                    Period: ${periodStart} to ${periodEnd}
+                  </span>
+                </div>
+              `}
+            </div>
+
+            <!-- Page 1 Visuals: 4-Box KPI Strip & High-Res Graph -->
+            ${isFirstPage ? `
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 6px; margin-bottom: 10px;">
+                ${kpiBoxes.map(b => `
+                  <div style="border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 8px; background-color: #f8fafc;">
+                    <div style="font-size: 7.5px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px;">${b.label}</div>
+                    <div style="font-size: 11px; font-weight: 800; color: #0f172a; margin-top: 2px; font-family: monospace;">${b.value}</div>
+                  </div>
+                `).join('')}
+              </div>
+
+              ${chartImgData ? `
+                <div style="text-align: center; margin-bottom: 10px; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px; background: #ffffff;">
+                  <img src="${chartImgData}" style="max-height: 240px; width: 100%; object-fit: contain;" />
+                </div>
+              ` : ''}
+            ` : ''}
+
+            <!-- Table with repeated Table Header on Every Page -->
+            <table style="width: 100%; border-collapse: collapse; margin-top: 4px;">
+              <thead>
+                <tr>
+                  ${tableHeaders.map((header, hIdx) => {
+                    const isRight = hIdx >= 2;
+                    return `
+                      <th style="text-align: ${isRight ? 'right' : 'left'}; vertical-align: middle; padding: 6px 6px; border-top: 1.5px solid #0f172a; border-bottom: 1.5px solid #0f172a; font-size: 8.5px; font-weight: 800; text-transform: uppercase; background-color: #f8fafc; color: #0f172a;">
+                        ${header}
+                      </th>
+                    `;
+                  }).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }).join('');
+
+      // 4. Render into isolated hidden iframe for html2canvas & jsPDF
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.left = '-9999px';
+      iframe.style.top = '0';
+      iframe.style.width = '794px';
+      iframe.style.height = '1200px';
+      iframe.style.border = 'none';
+      document.body.appendChild(iframe);
+
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) throw new Error('Could not access iframe document');
+
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>${reportTitle}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { margin: 0; padding: 0; background: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Courier New", monospace; }
+          </style>
+        </head>
+        <body>
+          ${pagesHtml}
+        </body>
+        </html>
+      `);
+      iframeDoc.close();
+
+      await new Promise(r => setTimeout(r, 450));
+
+      const html2canvasModule: any = await import('html2canvas');
+      const html2canvas = html2canvasModule.default || html2canvasModule;
+
+      const pageElements = iframeDoc.querySelectorAll('.pdf-page');
+      const pdf = new jsPDF('portrait', 'mm', 'a4');
+
+      for (let i = 0; i < pageElements.length; i++) {
+        if (i > 0) pdf.addPage();
+        const canvas = await html2canvas(pageElements[i] as HTMLElement, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: 794
+        });
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+      }
+
+      iframe.remove();
+
+      // 5. Download or Native Print using the identical PDF blob generator
+      if (mode === 'download') {
+        pdf.save(fileName);
+      } else {
+        const pdfBlob = pdf.output('blob');
+        const blobUrl = URL.createObjectURL(pdfBlob);
+
+        const printIframe = document.createElement('iframe');
+        printIframe.style.position = 'fixed';
+        printIframe.style.left = '-9999px';
+        printIframe.style.top = '0';
+        printIframe.style.width = '1000px';
+        printIframe.style.height = '1000px';
+        printIframe.style.border = '0';
+        printIframe.src = blobUrl;
+        document.body.appendChild(printIframe);
+
+        printIframe.onload = () => {
+          try {
+            printIframe.contentWindow?.focus();
+            printIframe.contentWindow?.print();
+          } catch (e) {
+            window.open(blobUrl, '_blank');
+          }
+          setTimeout(() => {
+            if (document.body.contains(printIframe)) {
+              document.body.removeChild(printIframe);
+            }
+          }, 3500);
+        };
+      }
+    } catch (err) {
+      console.error('Failed to export graph modal report:', err);
+    } finally {
+      setIsExportingGraphPdf(false);
     }
   };
 
@@ -3052,11 +3513,31 @@ export function BusinessIntelligence() {
                   )}
 
                   <button
+                    disabled={isExportingGraphPdf}
+                    onClick={() => exportGraphModalPdf('print')}
+                    className="px-3 py-1.5 rounded bg-muted hover:bg-muted/80 text-foreground border border-border text-xs font-bold uppercase flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                    title="Print Formal Report with Graph"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-primary" />
+                    <span>{isExportingGraphPdf ? 'Preparing...' : 'Print'}</span>
+                  </button>
+
+                  <button
+                    disabled={isExportingGraphPdf}
+                    onClick={() => exportGraphModalPdf('download')}
+                    className="px-3 py-1.5 rounded bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-bold uppercase flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                    title="Save Formal Report as PDF with Graph"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    <span>{isExportingGraphPdf ? 'Generating...' : 'Save PDF'}</span>
+                  </button>
+
+                  <button
                     onClick={() => {
                       setActiveGraphModal(null);
                       setGraphModalSearch('');
                     }}
-                    className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors cursor-pointer"
+                    className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground border border-border transition-colors cursor-pointer ml-1"
                     title="Close (Esc)"
                   >
                     <X className="w-4 h-4" />
@@ -3305,7 +3786,11 @@ export function BusinessIntelligence() {
                     </span>
                   </div>
 
-                  <div className="w-full h-[280px] sm:h-[320px] flex items-center justify-center relative select-none my-auto" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
+                  <div 
+                    id="bi-modal-graph-capture-container" 
+                    className="w-full h-[280px] sm:h-[320px] flex items-center justify-center relative select-none my-auto" 
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                  >
                     {/* 1. Sales & Purchase Monthly AreaChart */}
                     {activeGraphModal === 'sales_purchase' && (
                       <ResponsiveContainer width="100%" height="100%">
