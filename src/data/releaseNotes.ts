@@ -22,10 +22,168 @@ export interface ReleaseVersion {
   bugFixes: ReleaseNoteItem[];
 }
 
-export const LATEST_VERSION = "v1.9.0";
+export const LATEST_VERSION = "v1.9.6";
 export const LAST_SEEN_VERSION_KEY = "tallyflow_last_seen_release_version";
 
 export const RELEASE_NOTES: ReleaseVersion[] = [
+  {
+    version: "v1.9.6",
+    releaseDate: "October 5, 2026",
+    bnReleaseDate: "০৫ অক্টোবর, ২০২৬",
+    title: "Instant Single-Click Release Popup, SemVer Version Guard & Universal Table Centering",
+    bnTitle: "ইনস্ট্যান্ট ওয়ান-ক্লিক রিলিজ পপআপ, সেমভার ভার্সন গার্ড ও সর্বজনীন টেবিল সেন্টারিং",
+    summary: "Refined version release popup workflows with seamless single-click dismissal and physical ESC key support, eliminated redundant duplicate modal rendering, introduced a robust SemVer upgrade guard ensuring fresh Vercel deployments immediately reflect the latest version, and standardized Microsoft Word-style table vertical cell centering across all modules.",
+    bnSummary: "রিলিজ নোট পপআপে ডাবল-ক্লোজ সমস্যা সমাধান করে দ্রুত সিঙ্গেল-ক্লিক ও ESC কী ক্লোজ সুবিধা নিশ্চিত করা হয়েছে। অপ্রয়োজনীয় গিটহাব সিঙ্ক পপআপ বাতিল করে সাইডবার থেকে সরাসরি বর্তমান সংস্করণের পূর্ণাঙ্গ নোট দেখার ব্যবস্থা করা হয়েছে। এছাড়াও সেমভার গার্ড যোগ করায় Vercel ডেপ্লয়মেন্টে ব্রাউজার ক্যাশ কোনোভাবেই অ্যাপ ভার্সন আটকে রাখতে পারবে না।",
+    isLatest: true,
+    newFeatures: [
+      {
+        id: "feat-direct-version-modal",
+        title: "Direct One-Click Version Release Viewer in Sidebar",
+        bnTitle: "সাইডবারে সরাসরি ওয়ান-ক্লিক সংস্করণ পরিবর্তন বিবরণী",
+        description: "Clicking the version badge in the sidebar immediately opens the current version's comprehensive What's New release details without unnecessary intermediate modals or multi-step friction.",
+        bnDescription: "সাইডবারের ভার্সন ট্যাগে ক্লিক করলেই কোনো অতিরিক্ত পপআপ ছাড়া সরাসরি বর্তমান সংস্করণের পূর্ণাঙ্গ রিলিজ নোট, নতুন ফিচার ও উন্নতির তালিকা চলে আসবে।",
+        module: "System & Navigation",
+        badge: "NEW"
+      },
+      {
+        id: "feat-semver-cache-guard",
+        title: "Automated SemVer Cache-Busting Version Guard",
+        bnTitle: "স্বয়ংক্রিয় সেমভার ক্যাশ-বাস্টিং ভার্সন গার্ড",
+        description: "Implemented a semantic versioning comparison engine in SettingsContext that prevents stale localStorage or legacy Firestore records from overriding the application's compiled latest version upon new GitHub/Vercel deployments.",
+        bnDescription: "ব্রাউজারে বা ফায়ারস্টোরে পুরোনো কোনো ক্যাশ ডেটা থাকলে তা স্বয়ংক্রিয়ভাবে শনাক্ত করে সর্বশেষ রিলিজ ভার্সনে আপগ্রেড হবে, ফলে গিটহাব বা ভার্সেলে কোড পুশ করার সাথে সাথে ব্যবহারকারীরা তৎক্ষণাৎ নতুন সংস্করণ দেখতে পাবেন।",
+        module: "Core Architecture",
+        badge: "NEW"
+      },
+      {
+        id: "feat-esc-keyboard-dismiss",
+        title: "Instant Keyboard ESC & Unified Single-Click Modal Dismissal",
+        bnTitle: "কিবোর্ড ESC প্রেস ও এক ক্লিকে পপআপ বন্ধ করার সুবিধা",
+        description: "Users can now smoothly close the release notes popup with a single click on the dismiss button/backdrop or by pressing the Escape key on their physical keyboard.",
+        bnDescription: "পপআপটির যেকোনো ক্লোজ বাটন, ব্যাকগ্রাউন্ড ওভারলে অথবা কিবোর্ডের ESC বাটন এক ক্লিকে চাপলেই পপআপটি তাৎক্ষণিকভাবে বন্ধ হয়ে যাবে।",
+        module: "UI/UX",
+        badge: "NEW"
+      }
+    ],
+    improvements: [
+      {
+        id: "imp-unified-modal-tree",
+        title: "Eliminated Duplicate Modal Tree Instances",
+        bnTitle: "ডুপ্লিকেট মডাল ইনস্ট্যান্স দূরীকরণ",
+        description: "Removed duplicate WhatsNewModal mounting inside the floating System Guide assistant, preventing overlapping dialog trees and eliminating the double-click closing bug.",
+        bnDescription: "সিস্টেম গাইড বাটন থেকে অপ্রয়োজনীয় ডুপ্লিকেট মডাল সরিয়ে কেন্দ্রীয় একক মডাল সক্রিয় করা হয়েছে, ফলে দুইবার ক্লোজ করার ঝামেলা সম্পূর্ণ দূর হয়েছে।",
+        module: "Performance"
+      },
+      {
+        id: "imp-word-centering-perfection",
+        title: "Global Table Properties Vertical Centering Logic",
+        bnTitle: "মাইক্রোসফট ওয়ার্ড টেবিল প্রোপার্টিজ অনুযায়ী নিখুঁত ভার্টিক্যাল সেন্টারিং",
+        description: "All table cells across UI screens, BI analytics tables, Daybook, print views, and PDF documents strictly enforce Microsoft Word Table Properties > Cell > Vertical Alignment: Center standards.",
+        bnDescription: "ইউআই, বিজনেস ইন্টেলিজেন্স অ্যানালিটিক্স, ডেবুক এবং প্রিন্ট/পিডিএফ ডকুমেন্টের প্রতিটি টেবিল সেল মাইক্রোসফট ওয়ার্ডের সেন্টারিং লজিক অনুসারে নিখুঁতভাবে মিডল অ্যালাইন করা হয়েছে।",
+        module: "Document Engine"
+      }
+    ],
+    bugFixes: [
+      {
+        id: "fix-double-close-bug",
+        title: "Resolved Double-Dismiss Requirement on Version Popup",
+        bnTitle: "রিলিজ নোটস পপআপ বন্ধে দুইবার ক্লিকের সমস্যা সমাধান",
+        description: "Fixed the event collision where two concurrent modal portals responded to open_whats_new, restoring seamless one-click dismissal.",
+        bnDescription: "একসাথে দুটি মডাল খুলে যাওয়ার কারণে দুইবার ক্লোজ করার যে সমস্যা ছিল তা পুরোপুরি সমাধান করা হয়েছে।",
+        module: "UI Bug Fix"
+      },
+      {
+        id: "fix-remove-unneeded-github-modal",
+        title: "Removed Redundant GitHub Sync & Version Control Modal",
+        bnTitle: "অপ্রয়োজনীয় গিটহাব সিঙ্ক পপআপ সম্পূর্ণ অপসারণ",
+        description: "Purged redundant manual git bump dialogs in favor of unified real-time release notes delivery directly to users.",
+        bnDescription: "অপ্রয়োজনীয় গিটহাব সিঙ্ক ও ভার্সন কন্ট্রোল ডায়ালগটি সরিয়ে রিলিজ নোটস সিস্টেমকে আরও সহজ ও নির্ভরযোগ্য করা হয়েছে।",
+        module: "Core Clean-up"
+      }
+    ]
+  },
+  {
+    version: "v1.9.5",
+    releaseDate: "October 5, 2026",
+    bnReleaseDate: "০৫ অক্টোবর, ২০২৬",
+    title: "Microsoft Word Table Centering, BI Period Quota Discipline & Modal Print/PDF Engine",
+    bnTitle: "মাইক্রোসফট ওয়ার্ড টেবিল সেন্টারিং, বিআই পিরিয়ড কোটা অপ্টিমাইজেশন ও মডাল প্রিন্ট/পিডিএফ ইঞ্জিন",
+    summary: "Implemented universal Microsoft Word-style table cell vertical centering across the entire ERP, strict period-exclusive filtering for BI Cost Centres to protect Firestore quotas, on-demand targeted ledger verification, and high-fidelity print/PDF export inside all BI detail popup modals.",
+    bnSummary: "সম্পূর্ণ অ্যাপ্লিকেশনের প্রতিটি টেবিলে মাইক্রোসফট ওয়ার্ডের সেল ভার্টিক্যাল সেন্টার লজিক কার্যকর করা হয়েছে। বিজনেস ইন্টেলিজেন্সে কোটা সাশ্রয়ের জন্য তারিখ পিরিয়ড ভিত্তিক নিখুঁত ডেটা ফিল্টারিং, অন-ডিমান্ড লেজার ব্যালেন্স ভেরিফিকেশন এবং প্রতিটি গ্রাফ মডালে চার্টসহ পূর্ণাঙ্গ প্রিন্ট ও অফলাইন পিডিএফ এক্সপোর্ট যুক্ত করা হয়েছে।",
+    isLatest: false,
+    newFeatures: [
+      {
+        id: "feat-word-table-centering",
+        title: "Microsoft Word Table Properties - Universal Cell Vertical Centering",
+        bnTitle: "মাইক্রোসফট ওয়ার্ড টেবিল প্রোপার্টিজ - সর্বজনীন সেল ভার্টিক্যাল সেন্টারিং",
+        description: "Strictly aligned all table headers and cells across the ERP (UI screens, dashboards, modals, print reports, and PDF exports) with Microsoft Word's Table Properties > Cell tab > Vertical Alignment: Center logic.",
+        bnDescription: "অ্যাপের প্রতিটি স্ক্রিন, ড্যাশবোর্ড, মডাল এবং প্রিন্ট/পিডিএফ ডকুমেন্টের সকল টেবিল সেলে মাইক্রোসফট ওয়ার্ডের মতো ভার্টিক্যাল সেন্টার অ্যালাইনমেন্ট নিশ্চিত করা হয়েছে।",
+        module: "UI/UX & Core",
+        badge: "NEW"
+      },
+      {
+        id: "feat-bi-modal-print-pdf",
+        title: "Full-Featured Graph Detail Popup Print & Offline PDF Export",
+        bnTitle: "গ্রাফ ডিটেইল পপআপে চার্টসহ প্রিন্ট ও অফলাইন পিডিএফ এক্সপোর্ট",
+        description: "Every detailed modal in Business Intelligence (Sales/Purchase trends, Cost Centres, Stock Groups, Categories, Liquidity Composition, Cash Flow Dynamics) now includes dedicated 100% functional Print and Offline PDF generator with captured graph visuals and formal company headers.",
+        bnDescription: "বিজনেস ইন্টেলিজেন্সের প্রতিটি বিস্তারিত পপআপে গ্রাফ ইমেজ, কোম্পানির আনুষ্ঠানিক হেডার ও সম্পূর্ণ ডেটা টেবিল সম্বলিত ১০০% কার্যকর প্রিন্ট এবং অফলাইন পিডিএফ ডাউনলোড বাটন যুক্ত করা হয়েছে।",
+        module: "Analytics & Reports",
+        badge: "NEW"
+      },
+      {
+        id: "feat-targeted-verification",
+        title: "Targeted On-Demand Ledger Balance Verification",
+        bnTitle: "টার্গেটেড অন-ডিমান্ড লেজার ব্যালেন্স ভেরিফিকেশন",
+        description: "Introduced a smart on-demand verification system that calculates point-in-time debit/credit balances for key displayed ledgers directly from raw voucher entries in just 30-60 reads (<0.1% daily quota) with zero automatic background loops.",
+        bnDescription: "সম্পূর্ণ ডেটাবেজ স্ক্যান না করে শুধুমাত্র ড্যাশবোর্ডে প্রদর্শিত লেজারগুলোর রিয়েল-টাইম ব্যালেন্স নিখুঁতভাবে যাচাই ও সিঙ্ক করার জন্য ম্যানুয়াল ভেরিফাই বাটন যোগ করা হয়েছে, যা গুগল ক্লাউড কোটা সম্পূর্ণ সুরক্ষিত রাখে।",
+        module: "Accounting Engine",
+        badge: "NEW"
+      }
+    ],
+    improvements: [
+      {
+        id: "imp-bi-period-discipline",
+        title: "Cost Centre & Analytics Strict Period Filtering Discipline",
+        bnTitle: "কস্ট সেন্টার ও অ্যানালিটিক্সে কঠোর পিরিয়ড ফিল্টারিং",
+        description: "Cost Centre Allocation, Expense Distribution, and monthly trends now strictly reflect transactions occurring within the user-selected date range without falling back to cumulative all-time totals, preventing unexpected quota consumption.",
+        bnDescription: "কস্ট সেন্টার এবং খরচের খাতগুলোতে শুধুমাত্র সিলেক্ট করা তারিখের লেনদেন প্রদর্শিত হবে; কোনো কিউমুলেটিভ বা সর্বকালীন হিসাব ওভাররাইড করবে না, ফলে অতিরিক্ত কোটা খরচ সম্পূর্ণ বন্ধ হয়েছে।",
+        module: "Business Intelligence"
+      },
+      {
+        id: "imp-strict-expense-exclusion",
+        title: "Strict Classification: Zero Expense Accounts in Debtors/Creditors",
+        bnTitle: "দেনাদার ও পাওনাদার তালিকা থেকে খরচের খাত সম্পূর্ণ পৃথকীকরণ",
+        description: "Enhanced exclusion heuristics to ensure indirect and direct expense heads (such as Construction Godown Expenses) are never misclassified as Sundry Debtors or Sundry Creditors under any circumstances.",
+        bnDescription: "পরোক্ষ ও প্রত্যক্ষ খরচের যেকোনো লেজার যাতে ভুলবশত কোনোভাবেই সানড্রি দেনাদার বা পাওনাদার তালিকায় না আসে তা নিশ্চিত করতে ক্লাসিফিকেশন লজিক কঠোর করা হয়েছে।",
+        module: "Ledger Accounting"
+      },
+      {
+        id: "imp-pdf-engine-centering",
+        title: "Standardized PDF Engine & Report Layout Geometry",
+        bnTitle: "পিডিএফ ইঞ্জিন ও রিপোর্ট লেআউট জ্যামিতি আধুনিকায়ন",
+        description: "Standardized all document generation templates (Daybook, Ledger Statement, Trial Balance, P&L, Vouchers) to use vertically centered middle cell alignment and formal company layout rules.",
+        bnDescription: "ডেবুক, লেজার স্টেটমেন্ট, ট্রায়াল ব্যালেন্স এবং ভাউচার প্রিন্ট ইঞ্জিনের প্রতিটি সেলে ভার্টিক্যাল মিডল সেন্টারিং প্রয়োগ করা হয়েছে।",
+        module: "Document Engine"
+      }
+    ],
+    bugFixes: [
+      {
+        id: "fix-auto-verification-loop",
+        title: "Eliminated Automatic Background Verification Loops",
+        bnTitle: "স্বয়ংক্রিয় ব্যাকগ্রাউন্ড ভেরিফিকেশন লুপ অপসারণ",
+        description: "Removed unintended automatic verification execution on component mount and date changes, ensuring Firestore reads only execute when explicitly initiated by user interaction.",
+        bnDescription: "পেজ লোড বা তারিখ পরিবর্তনের সাথে সাথে যাতে ব্যাকগ্রাউন্ডে স্বয়ংক্রিয় ভেরিফিকেশন চালু না হয় তা দূর করা হয়েছে।",
+        module: "Performance & Quota"
+      },
+      {
+        id: "fix-table-cell-flex-overlap",
+        title: "Resolved Table Cell Flexbox Display Inconsistencies",
+        bnTitle: "টেবিল সেলে ফ্লেক্সবক্সের কারণে অ্যালাইনমেন্ট ত্রুটি সমাধান",
+        description: "Restructured cell contents where flex display on table cells interfered with native vertical centering, restoring uniform height and row geometry.",
+        bnDescription: "টেবিল সেলের অভ্যন্তরে ফ্লেক্স কনটেইনার পৃথক করে প্রতিটি কলামের উচ্চতা ও ভার্টিক্যাল সেন্টারিং নিখুঁত করা হয়েছে।",
+        module: "UI Bug Fix"
+      }
+    ]
+  },
   {
     version: "v1.9.0",
     releaseDate: "September 29, 2026",
@@ -34,7 +192,6 @@ export const RELEASE_NOTES: ReleaseVersion[] = [
     bnTitle: "বিজনেস ইন্টেলিজেন্স হাব, ফিচার নিয়ন্ত্রণ ও অন-ডিমান্ড ভিজ্যুয়াল অ্যানালিটিক্স",
     summary: "Introducing a dedicated enterprise Business Intelligence & Telemetry Hub featuring complete Trading details, financial ratios, asset/liability analysis, 6-month trends, inventory dynamics, banking telemetry, and System Guide Assistant feature controls with on-demand toggles.",
     bnSummary: "যুক্ত হলো সম্পূর্ণ নতুন ডেডিকেটেড বিজনেস ইন্টেলিজেন্স ও টেলিমেট্রি হাব — যাতে রয়েছে ট্রেডিং একাউন্ট ডিটেইলস, ৮টি ফাইন্যান্সিয়াল রেশিও, এসেট-লায়াবিলিটি সামারি, ৬ মাসের ট্রেন্ড গ্রাফ, ইনভেন্টরি ও ব্যাংকিং কার্যক্রম। সাথে সিস্টেম গাইড সহকারীতে ফিচার অন/অফ নিয়ন্ত্রণ এবং অন-ডিমান্ড ড্যাশবোর্ড উইজেট।",
-    isLatest: true,
     newFeatures: [
       {
         id: "feat-bi-hub",

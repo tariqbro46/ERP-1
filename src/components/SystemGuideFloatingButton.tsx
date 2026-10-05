@@ -9,7 +9,6 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import { WhatsNewModal } from './WhatsNewModal';
 
 export default function SystemGuideFloatingButton() {
   const navigate = useNavigate();
@@ -23,7 +22,6 @@ export default function SystemGuideFloatingButton() {
   } = useSettings();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'features' | 'quick' | 'hotkeys'>('features');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -594,7 +592,7 @@ export default function SystemGuideFloatingButton() {
                   id="guide-whats-new-btn"
                   onClick={() => {
                     setIsOpen(false);
-                    setIsWhatsNewOpen(true);
+                    window.dispatchEvent(new CustomEvent('open_whats_new'));
                   }}
                   className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-amber-500/15 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/35 hover:border-amber-500/50 text-[11px] font-bold rounded-lg transition-all shadow-2xs hover:scale-[1.02] active:scale-[0.98]"
                   title={isBn ? 'বর্তমান সংস্করণে কি কি নতুন পরিবর্তন এসেছে জানুন' : "See What's New in this current version vs previous"}
@@ -642,13 +640,6 @@ export default function SystemGuideFloatingButton() {
           <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
         </span>
       </button>
-
-      {/* What's New Modal opened from Assistant */}
-      <WhatsNewModal 
-        isOpen={isWhatsNewOpen} 
-        onClose={() => setIsWhatsNewOpen(false)} 
-        forceOpen={true} 
-      />
     </div>
   );
 }

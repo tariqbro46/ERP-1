@@ -433,6 +433,18 @@ const defaultSettings: SettingsContextType = {
   updateUserSettings: async () => {}
 };
 
+const compareSemVer = (a: string, b: string): number => {
+  const pa = (a || '').replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
+  const pb = (b || '').replace(/^v/i, '').split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = pa[i] || 0;
+    const nb = pb[i] || 0;
+    if (na > nb) return 1;
+    if (na < nb) return -1;
+  }
+  return 0;
+};
+
 const SettingsContext = createContext<SettingsContextType>(defaultSettings);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
@@ -443,7 +455,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const systemPersisted = localStorage.getItem('swr_system_config');
       const cachedSystem = systemPersisted ? JSON.parse(systemPersisted) : {};
 
-      const resolvedAppVersion = explicitAppVersion || cachedSystem.appVersion || defaultSettings.appVersion;
+      let resolvedAppVersion = explicitAppVersion || cachedSystem.appVersion || defaultSettings.appVersion;
+      // Never allow an older cached string to downgrade the application below the compiled LATEST_VERSION
+      if (compareSemVer(LATEST_VERSION, resolvedAppVersion) > 0) {
+        resolvedAppVersion = LATEST_VERSION;
+        try {
+          localStorage.setItem('tallyflow_active_version', LATEST_VERSION);
+          localStorage.setItem('swr_app_version', LATEST_VERSION);
+        } catch (e) {}
+      }
 
       const keys = Object.keys(localStorage);
       const companyKey = keys.find(k => k.startsWith('swr_settings_'));
@@ -587,12 +607,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         unsubSystem = onSnapshot(systemRef, (snap) => {
           if (snap.exists()) {
             const data = snap.data();
+            const incomingVer = data.appVersion;
+            const effectiveVer = incomingVer && compareSemVer(incomingVer, LATEST_VERSION) > 0 ? incomingVer : LATEST_VERSION;
             try {
               localStorage.setItem('swr_system_config', JSON.stringify(data));
-              if (data.appVersion) {
-                localStorage.setItem('swr_app_version', data.appVersion);
-                localStorage.setItem('tallyflow_active_version', data.appVersion);
-              }
+              localStorage.setItem('swr_app_version', effectiveVer);
+              localStorage.setItem('tallyflow_active_version', effectiveVer);
             } catch (e) {}
             setSettings(prev => ({
               ...prev,
@@ -605,7 +625,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               showTopbarInstructions: data.showTopbarInstructions !== undefined ? data.showTopbarInstructions : true,
               developerContactText: data.developerContactText || prev.developerContactText,
               developerContactAlignment: data.developerContactAlignment || prev.developerContactAlignment,
-              appVersion: data.appVersion || prev.appVersion,
+              appVersion: effectiveVer,
               englishFont: data.englishFont || prev.englishFont,
               banglaFont: data.banglaFont || prev.banglaFont,
               systemLogo: data.systemLogo || prev.systemLogo,

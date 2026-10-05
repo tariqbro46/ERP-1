@@ -123,7 +123,6 @@ import AIInsights from './pages/AIInsights';
 import SystemGuideFloatingButton from './components/SystemGuideFloatingButton';
 import { WhatsNewModal } from './components/WhatsNewModal';
 import { ReleaseNotes } from './components/ReleaseNotes';
-import { GithubVersionReleaseModal } from './components/GithubVersionReleaseModal';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
@@ -669,12 +668,12 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   const [unreadNotificationCount, setUnreadNotificationCount] = React.useState(0);
   const [isQuotaDashboardOpen, setIsQuotaDashboardOpen] = React.useState(false);
   const [isQuotaModalOpen, setIsQuotaModalOpen] = React.useState(false);
-  const [isGithubReleaseModalOpen, setIsGithubReleaseModalOpen] = React.useState(false);
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
 
   React.useEffect(() => {
+    // If any legacy component triggers open_github_version_release, route to current version release notes modal
     const handleOpenGithubRelease = () => {
-      setIsGithubReleaseModalOpen(true);
+      window.dispatchEvent(new CustomEvent('open_whats_new'));
     };
     window.addEventListener('open_github_version_release', handleOpenGithubRelease);
     return () => {
@@ -1136,10 +1135,17 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                 customBgOpt ? (customBgOpt.isDark ? "text-slate-400" : "text-stone-500") : isColorful ? "text-slate-400" : "text-gray-400"
               )}>{statusOnlineText}</span>
             </div>
-            <span className={cn(
-              "text-[8px] font-mono uppercase tracking-widest", 
-              customBgOpt ? (customBgOpt.isDark ? "text-slate-400" : "text-stone-500") : isColorful ? "text-slate-400" : "text-gray-400"
-            )}>{appVersion}</span>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('open_whats_new'))}
+              className={cn(
+                "text-[8px] font-mono uppercase tracking-widest cursor-pointer hover:underline", 
+                customBgOpt ? (customBgOpt.isDark ? "text-slate-400" : "text-stone-500") : isColorful ? "text-slate-400" : "text-gray-400"
+              )}
+              title={language === 'bn' ? `বর্তমান সংস্করণ ${appVersion}-এর রিলিজ নোট দেখুন` : `View What's New in Version ${appVersion}`}
+            >
+              {appVersion}
+            </button>
           </div>
         </div>
       </aside>
@@ -1709,12 +1715,12 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
               <button
                 type="button"
-                onClick={() => setIsGithubReleaseModalOpen(true)}
+                onClick={() => window.dispatchEvent(new CustomEvent('open_whats_new'))}
                 className={cn(
                   "flex items-center gap-1.5 text-[9px] font-mono px-1.5 py-0.5 rounded cursor-pointer transition-all hover:scale-105 group border border-transparent hover:border-border/60",
                   isDarkTheme ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/80"
                 )}
-                title={language === 'bn' ? 'গিটহাবে পুশ ও সংস্করণ পরিবর্তন করুন' : 'Push Changes to GitHub & Update App Version'}
+                title={language === 'bn' ? `বর্তমান সংস্করণ ${appVersion}-এর রিলিজ নোট দেখুন` : `View What's New in Version ${appVersion}`}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse group-hover:bg-indigo-400" />
                 <span className="font-bold">{appVersion}</span>
@@ -2604,7 +2610,6 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       <QuotaDashboardModal isOpen={isQuotaDashboardOpen} onClose={() => setIsQuotaDashboardOpen(false)} company={company} />
       <QuotaExceededModal isOpen={isQuotaModalOpen} onClose={() => setIsQuotaModalOpen(false)} company={company} />
       <WhatsNewModal />
-      <GithubVersionReleaseModal isOpen={isGithubReleaseModalOpen} onClose={() => setIsGithubReleaseModalOpen(false)} />
       {isOffline && (
         <div id="offline-toast" className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] animate-in fade-in slide-in-from-bottom-5 duration-300">
           <div className="bg-slate-900 border border-slate-800 text-slate-100 pl-4 pr-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 select-none">

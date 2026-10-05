@@ -54,6 +54,32 @@ export function WhatsNewModal({ isOpen: controlledIsOpen, onClose, forceOpen = f
     }
   }, [controlledIsOpen, forceOpen]);
 
+  // Support opening via custom event across the app
+  useEffect(() => {
+    const handleOpen = () => {
+      setIsOpen(true);
+      setSelectedVersion(LATEST_VERSION);
+    };
+    window.addEventListener('open_whats_new', handleOpen);
+    window.addEventListener('open_version_release_notes', handleOpen);
+    return () => {
+      window.removeEventListener('open_whats_new', handleOpen);
+      window.removeEventListener('open_version_release_notes', handleOpen);
+    };
+  }, []);
+
+  // Support ESC key to close modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleDismiss();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, dontShowAgain, selectedVersion]);
+
   const activeRelease = useMemo(() => {
     return RELEASE_NOTES.find(r => r.version === selectedVersion) || getLatestRelease();
   }, [selectedVersion]);

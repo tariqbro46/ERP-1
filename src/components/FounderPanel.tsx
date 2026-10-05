@@ -3372,11 +3372,11 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                           </div>
                           <button
                             type="button"
-                            onClick={() => window.dispatchEvent(new CustomEvent('open_github_version_release'))}
+                            onClick={() => window.dispatchEvent(new CustomEvent('open_whats_new'))}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
                           >
-                            <GitBranch className="w-3.5 h-3.5" />
-                            <span>{language === 'bn' ? 'গিটহাবে পুশ ও সংস্করণ রিলিজ' : 'Push to GitHub & Release Version'}</span>
+                            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                            <span>{language === 'bn' ? 'বর্তমান সংস্করণ ও রিলিজ নোটস' : "View What's New & Release Notes"}</span>
                           </button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3444,12 +3444,12 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               </button>
                               <button
                                 type="button"
-                                onClick={() => window.dispatchEvent(new CustomEvent('open_github_version_release'))}
+                                onClick={() => window.dispatchEvent(new CustomEvent('open_whats_new'))}
                                 className="px-3 py-2 bg-muted hover:bg-muted/80 text-foreground border border-border text-xs font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
-                                title="Open Version Release Manager"
+                                title="View Release Notes"
                               >
                                 <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                                <span>Bump</span>
+                                <span>Notes</span>
                               </button>
                             </div>
                           </div>
