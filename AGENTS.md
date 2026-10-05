@@ -23,6 +23,13 @@
 - Omit summary total bar at table bottom.
 - Save PDF and Print button use the identical PDF blob generator.
 
+## Microsoft Word Table Properties - Cell Vertical Alignment (Center) Logic
+- Strictly adhere to Microsoft Word's Table Properties > Cell tab > Vertical Alignment: **Center** logic across ALL tables in the application.
+- In every table cell (`td`, `th`), content MUST be vertically centered (`vertical-align: middle !important;`).
+- Any flex containers inside table cells must use vertical centering (`items-center` / `align-items: center`).
+- Never allow text, numbers, or cell items to align to `top` or `baseline`.
+- This applies universally to: UI tables, dashboard tables, report tables, modal tables, printed reports, and PDF exports.
+
 ## Ledger Address & Country Logic
 - NEVER use `mailing_name` as fallback for address (since in ERP it defaults to the ledger's name).
 - Only consider real street/city/division fields (`address`, `division`, `postal_code`).

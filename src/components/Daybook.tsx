@@ -323,18 +323,18 @@ export function Daybook() {
 
       return `
         <tr style="border-bottom: 1px solid #E5E7EB; ${isStripe ? 'background-color: #F9FAFB;' : ''}">
-          <td style="padding: 5px 6px; vertical-align: top; white-space: nowrap;">${formatDt(v.v_date)}</td>
-          <td style="padding: 5px 6px; vertical-align: top;">
+          <td style="padding: 5px 6px; vertical-align: middle; white-space: nowrap;">${formatDt(v.v_date)}</td>
+          <td style="padding: 5px 6px; vertical-align: middle;">
             <div style="font-weight: bold; color: #000;">${getLedgerName(v)}</div>
             ${subDetailsHtml}
           </td>
-          <td style="padding: 5px 6px; vertical-align: top; font-weight: 500;">${v.v_type}</td>
-          <td style="padding: 5px 6px; vertical-align: top;">${v.v_no || v.reference_no || ''}</td>
-          <td style="padding: 5px 6px; vertical-align: top; text-align: right; font-weight: bold;">
+          <td style="padding: 5px 6px; vertical-align: middle; font-weight: 500;">${v.v_type}</td>
+          <td style="padding: 5px 6px; vertical-align: middle;">${v.v_no || v.reference_no || ''}</td>
+          <td style="padding: 5px 6px; vertical-align: middle; text-align: right; font-weight: bold;">
             ${debitVal > 0 ? formatNumber(debitVal) : ''}
             ${rowInwardsQty > 0 ? `<div style="font-size: 9px; color: #555; font-weight: normal;">${formatQuantity(rowInwardsQty, 'Pcs')}</div>` : ''}
           </td>
-          <td style="padding: 5px 6px; vertical-align: top; text-align: right; font-weight: bold;">
+          <td style="padding: 5px 6px; vertical-align: middle; text-align: right; font-weight: bold;">
             ${creditVal > 0 ? formatNumber(creditVal) : ''}
             ${rowOutwardsQty > 0 ? `<div style="font-size: 9px; color: #555; font-weight: normal;">${formatQuantity(rowOutwardsQty, 'Pcs')}</div>` : ''}
           </td>
@@ -402,6 +402,9 @@ export function Daybook() {
               width: 100%;
               border-collapse: collapse;
               font-size: 11px;
+            }
+            th, td {
+              vertical-align: middle;
             }
             th {
               border-top: 1px solid #000;

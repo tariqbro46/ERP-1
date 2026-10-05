@@ -115,13 +115,13 @@ export function generateLedgerStatementHtml(data: LedgerReportData): string {
     return `
       <tbody style="page-break-inside: avoid; break-inside: avoid;">
         <tr>
-          <td style="padding: 3px 4px; vertical-align: top; white-space: nowrap;">${voucherDate}</td>
-          <td style="padding: 3px 4px; vertical-align: top; font-weight: bold;">${particularsDisplay}</td>
-          <td style="padding: 3px 4px; vertical-align: top; text-align: center;">${voucherType}</td>
-          <td style="padding: 3px 4px; vertical-align: top; text-align: center;">${voucherNo}</td>
-          <td style="padding: 3px 4px; vertical-align: top; text-align: right;">${debitVal > 0 ? formatNumber(debitVal) : ''}</td>
-          <td style="padding: 3px 4px; vertical-align: top; text-align: right;">${creditVal > 0 ? formatNumber(creditVal) : ''}</td>
-          <td style="padding: 3px 4px; vertical-align: top; text-align: right; white-space: nowrap;">${balanceAbsStr} ${balanceSign}</td>
+          <td style="padding: 3px 4px; vertical-align: middle; white-space: nowrap;">${voucherDate}</td>
+          <td style="padding: 3px 4px; vertical-align: middle; font-weight: bold;">${particularsDisplay}</td>
+          <td style="padding: 3px 4px; vertical-align: middle; text-align: center;">${voucherType}</td>
+          <td style="padding: 3px 4px; vertical-align: middle; text-align: center;">${voucherNo}</td>
+          <td style="padding: 3px 4px; vertical-align: middle; text-align: right;">${debitVal > 0 ? formatNumber(debitVal) : ''}</td>
+          <td style="padding: 3px 4px; vertical-align: middle; text-align: right;">${creditVal > 0 ? formatNumber(creditVal) : ''}</td>
+          <td style="padding: 3px 4px; vertical-align: middle; text-align: right; white-space: nowrap;">${balanceAbsStr} ${balanceSign}</td>
         </tr>
         ${inventoryHtml}
         ${narrationHtml}
@@ -225,11 +225,13 @@ export function generateLedgerStatementHtml(data: LedgerReportData): string {
             font-weight: bold;
             font-size: 11px;
             text-align: left;
+            vertical-align: middle;
             background: transparent !important;
           }
           table.report-table td {
             padding: 3px 4px;
             font-size: 10.5px;
+            vertical-align: middle;
           }
           .num-col {
             text-align: right !important;

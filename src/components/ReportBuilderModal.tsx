@@ -341,7 +341,10 @@ export function ReportBuilderModal({ isOpen, onClose, onSave, sampleData }: Repo
 
         htmlSections += `
           <div style="${styleString} margin-top: 10px; width: 100%;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+            <style>
+              .report-builder-table th, .report-builder-table td { vertical-align: middle; }
+            </style>
+            <table class="report-builder-table" style="width: 100%; border-collapse: collapse; font-size: 11px;">
               <thead>
                 <tr style="background-color: ${sec.tableHeaderBg || '#f1f5f9'}; color: ${sec.tableHeaderTextColor || '#000'}; border-top: 1px solid #000; border-bottom: 1px solid #000;">
                   ${cols.date ? `<th style="padding: 6px; text-align: left; border: 1px solid ${sec.tableBorderColor || '#cbd5e1'};">${titles.date || 'Date'}</th>` : ''}

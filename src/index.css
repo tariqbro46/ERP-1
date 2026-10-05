@@ -183,6 +183,22 @@
     color: var(--foreground);
   }
 
+  /* Microsoft Word Table Properties: Cell Vertical Alignment = Center */
+  table td,
+  table th {
+    vertical-align: middle !important;
+  }
+
+  table tbody tr {
+    vertical-align: middle !important;
+  }
+
+  /* Ensure flex items inside table cells are also centered vertically */
+  table td > .flex:not(.flex-col),
+  table th > .flex:not(.flex-col) {
+    align-items: center;
+  }
+
   /* Hide number input arrows */
   input::-webkit-outer-spin-button,
   input::-webkit-inner-spin-button {
@@ -880,11 +896,13 @@
       color: #64748b !important;
       border-bottom: 2px solid #e2e8f0 !important;
       padding: 0.95rem 1.5rem !important;
+      vertical-align: middle !important;
     }
 
     & tbody tr {
       background-color: #ffffff !important;
       transition: background-color 0.15s ease-in-out !important;
+      vertical-align: middle !important;
       
       &:hover {
         background-color: #f8fafc !important;
@@ -894,6 +912,7 @@
         border-bottom: 1px solid #f1f5f9 !important;
         padding: 0.95rem 1.5rem !important;
         font-size: 0.75rem !important;
+        vertical-align: middle !important;
       }
     }
   }

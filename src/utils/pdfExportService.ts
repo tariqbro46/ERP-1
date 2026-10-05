@@ -257,7 +257,7 @@ export async function printToPDF(options: PrintToPdfOptions): Promise<void> {
                 border: 1px solid #111827;
                 padding: 5px 7px;
                 font-size: 9.5px;
-                vertical-align: top;
+                vertical-align: middle;
               }
               th {
                 background-color: #f3f4f6;
@@ -510,7 +510,7 @@ export async function printProfitAndLossToPDF(
           * { box-sizing: border-box; }
           body { font-family: 'JetBrains Mono', Courier, monospace; color: #000; padding: 16px; margin: 0; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-          th, td { border: 1px solid #111; padding: 5px 8px; font-size: 9.5px; }
+          th, td { border: 1px solid #111; padding: 5px 8px; font-size: 9.5px; vertical-align: middle; }
           th { background-color: #f3f4f6; text-transform: uppercase; font-weight: 700; }
         </style>
       </head>
@@ -646,7 +646,7 @@ export async function printDaybookToPDF(
           * { box-sizing: border-box; }
           body { font-family: 'JetBrains Mono', Courier, monospace; color: #000; padding: 16px; margin: 0; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-          th, td { border: 1px solid #111; padding: 5px 8px; font-size: 9.5px; }
+          th, td { border: 1px solid #111; padding: 5px 8px; font-size: 9.5px; vertical-align: middle; }
           th { background-color: #f3f4f6; text-transform: uppercase; font-weight: 700; }
         </style>
       </head>
@@ -766,7 +766,7 @@ export async function printVoucherToPDF(voucher: any, settings: any = {}): Promi
           * { box-sizing: border-box; }
           body { font-family: 'JetBrains Mono', Courier, monospace; color: #000; padding: 16px; margin: 0; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-          th, td { border: 1px solid #111; padding: 6px 8px; font-size: 9.5px; }
+          th, td { border: 1px solid #111; padding: 6px 8px; font-size: 9.5px; vertical-align: middle; }
           th { background-color: #f3f4f6; text-transform: uppercase; font-weight: 700; }
         </style>
       </head>
@@ -872,7 +872,7 @@ export async function printLedgerStatementToPDF(
           * { box-sizing: border-box; }
           body { font-family: 'JetBrains Mono', Courier, monospace; color: #000; padding: 16px; margin: 0; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-          th, td { border: 1px solid #111; padding: 5px 7px; font-size: 9px; }
+          th, td { border: 1px solid #111; padding: 5px 7px; font-size: 9px; vertical-align: middle; }
           th { background-color: #f3f4f6; text-transform: uppercase; font-weight: 700; }
         </style>
       </head>
@@ -966,7 +966,7 @@ export async function printTrialBalanceToPDF(
           * { box-sizing: border-box; }
           body { font-family: 'JetBrains Mono', Courier, monospace; color: #000; padding: 16px; margin: 0; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-          th, td { border: 1px solid #111; padding: 5px 8px; font-size: 9.5px; }
+          th, td { border: 1px solid #111; padding: 5px 8px; font-size: 9.5px; vertical-align: middle; }
           th { background-color: #f3f4f6; text-transform: uppercase; font-weight: 700; }
         </style>
       </head>

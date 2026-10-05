@@ -590,6 +590,7 @@ export function printVoucher(voucher: any, settings: any = {}) {
             border: 1px solid #000;
             padding: 8px 10px;
             font-size: 11px;
+            vertical-align: middle;
           }
           table.data-table th {
             background-color: #f2f2f2;
@@ -904,7 +905,7 @@ export function printReport(title: string, data: any[], columns: string[], setti
           .report-title { font-size: 18px; margin-top: 10px; text-decoration: underline; font-weight: bold; }
           .print-header { font-size: 12px; margin-top: 5px; font-style: italic; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; font-size: 11px; }
+          th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; font-size: 11px; vertical-align: middle; }
           th { background-color: #f2f2f2; font-size: 12px; }
           .amount { text-align: right; }
           .signature { border-top: 1px solid #000; width: 180px; text-align: center; padding-top: 5px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
@@ -973,7 +974,7 @@ export function printElement(elementId: string, title: string, settings: any = {
           @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
           body { font-family: 'JetBrains Mono', Courier, monospace; padding: 20px; color: #000; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; font-size: 10px; }
+          th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; font-size: 10px; vertical-align: middle; }
           th { background-color: #f2f2f2; font-size: 11px; font-weight: bold; text-transform: uppercase; }
           .text-right { text-align: right; }
           .font-bold { font-weight: bold; }

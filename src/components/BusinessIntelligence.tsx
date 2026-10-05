@@ -2431,9 +2431,9 @@ export function BusinessIntelligence() {
                     <table className="w-full text-left text-xs font-mono">
                       <thead className="sticky top-0 bg-card text-[10px] uppercase text-muted-foreground border-b border-border shadow-xs z-10">
                         <tr>
-                          <th className="p-2.5">Customer / Debtor</th>
-                          <th className="p-2.5">Group</th>
-                          <th className="p-2.5 text-right">Closing Balance</th>
+                          <th className="p-2.5 align-middle">Customer / Debtor</th>
+                          <th className="p-2.5 align-middle">Group</th>
+                          <th className="p-2.5 text-right align-middle">Closing Balance</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/40">
@@ -2448,13 +2448,15 @@ export function BusinessIntelligence() {
                                 className="hover:bg-primary/10 transition-colors cursor-pointer group"
                                 title="Click to view detailed Ledger Statement"
                               >
-                                <td className="p-2.5 font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                                  <span>{d.name}</span>
-                                  <span className="text-[9px] text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                                <td className="p-2.5 font-bold text-foreground group-hover:text-primary transition-colors align-middle">
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{d.name}</span>
+                                    <span className="text-[9px] text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                                  </div>
                                 </td>
-                                <td className="p-2.5 text-[10px] text-muted-foreground">{d.group}</td>
+                                <td className="p-2.5 text-[10px] text-muted-foreground align-middle">{d.group}</td>
                                 <td className={cn(
-                                  "p-2.5 text-right font-bold font-mono",
+                                  "p-2.5 text-right font-bold font-mono align-middle",
                                   isDr ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                                 )}>
                                   {currencySymbol} {formatNumber(d.balance)} <span className="text-[10px] font-bold">{isDr ? 'Dr' : 'Cr'}</span>
@@ -2464,7 +2466,7 @@ export function BusinessIntelligence() {
                           })
                         ) : (
                           <tr>
-                            <td colSpan={3} className="p-4 text-center text-muted-foreground text-xs italic">
+                            <td colSpan={3} className="p-4 text-center text-muted-foreground text-xs italic align-middle">
                               No sundry debtors recorded yet
                             </td>
                           </tr>
@@ -2505,9 +2507,9 @@ export function BusinessIntelligence() {
                     <table className="w-full text-left text-xs font-mono">
                       <thead className="sticky top-0 bg-card text-[10px] uppercase text-muted-foreground border-b border-border shadow-xs z-10">
                         <tr>
-                          <th className="p-2.5">Supplier / Creditor</th>
-                          <th className="p-2.5">Group</th>
-                          <th className="p-2.5 text-right">Closing Balance</th>
+                          <th className="p-2.5 align-middle">Supplier / Creditor</th>
+                          <th className="p-2.5 align-middle">Group</th>
+                          <th className="p-2.5 text-right align-middle">Closing Balance</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/40">
@@ -2522,13 +2524,15 @@ export function BusinessIntelligence() {
                                 className="hover:bg-primary/10 transition-colors cursor-pointer group"
                                 title="Click to view detailed Ledger Statement"
                               >
-                                <td className="p-2.5 font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                                  <span>{c.name}</span>
-                                  <span className="text-[9px] text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                                <td className="p-2.5 font-bold text-foreground group-hover:text-primary transition-colors align-middle">
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{c.name}</span>
+                                    <span className="text-[9px] text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                                  </div>
                                 </td>
-                                <td className="p-2.5 text-[10px] text-muted-foreground">{c.group}</td>
+                                <td className="p-2.5 text-[10px] text-muted-foreground align-middle">{c.group}</td>
                                 <td className={cn(
-                                  "p-2.5 text-right font-bold font-mono",
+                                  "p-2.5 text-right font-bold font-mono align-middle",
                                   isDr ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                                 )}>
                                   {currencySymbol} {formatNumber(c.balance)} <span className="text-[10px] font-bold">{isDr ? 'Dr' : 'Cr'}</span>
@@ -2538,7 +2542,7 @@ export function BusinessIntelligence() {
                           })
                         ) : (
                           <tr>
-                            <td colSpan={3} className="p-4 text-center text-muted-foreground text-xs italic">
+                            <td colSpan={3} className="p-4 text-center text-muted-foreground text-xs italic align-middle">
                               No sundry creditors recorded yet
                             </td>
                           </tr>
@@ -2847,9 +2851,9 @@ export function BusinessIntelligence() {
                     <table className="w-full text-left text-xs font-mono">
                       <thead className="sticky top-0 bg-card text-[10px] uppercase text-muted-foreground border-b border-border shadow-xs z-10">
                         <tr>
-                          <th className="p-2.5">Item Name</th>
-                          <th className={cn("p-2.5 text-right", stockSortBy === 'quantity' && "text-primary font-bold")}>In-Stock Qty</th>
-                          <th className={cn("p-2.5 text-right", stockSortBy === 'valuation' && "text-amber-500 font-bold")}>Valuation</th>
+                          <th className="p-2.5 align-middle">Item Name</th>
+                          <th className={cn("p-2.5 text-right align-middle", stockSortBy === 'quantity' && "text-primary font-bold")}>In-Stock Qty</th>
+                          <th className={cn("p-2.5 text-right align-middle", stockSortBy === 'valuation' && "text-amber-500 font-bold")}>Valuation</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/40">
@@ -2861,21 +2865,23 @@ export function BusinessIntelligence() {
                               className="hover:bg-primary/10 transition-colors cursor-pointer group"
                               title="Click to view detailed Stock Item Report"
                             >
-                              <td className="p-2.5 font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                                <span>{item.name}</span>
-                                <span className="text-[9px] text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                              <td className="p-2.5 font-bold text-foreground group-hover:text-primary transition-colors align-middle">
+                                <div className="flex items-center gap-1.5">
+                                  <span>{item.name}</span>
+                                  <span className="text-[9px] text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                                </div>
                               </td>
-                              <td className={cn("p-2.5 text-right", stockSortBy === 'quantity' ? "font-bold text-foreground" : "text-muted-foreground")}>
+                              <td className={cn("p-2.5 text-right align-middle", stockSortBy === 'quantity' ? "font-bold text-foreground" : "text-muted-foreground")}>
                                 {formatQuantity(item.stock, item.unit)}
                               </td>
-                              <td className={cn("p-2.5 text-right font-bold", stockSortBy === 'valuation' ? "text-amber-500" : "text-foreground")}>
+                              <td className={cn("p-2.5 text-right font-bold align-middle", stockSortBy === 'valuation' ? "text-amber-500" : "text-foreground")}>
                                 {currencySymbol} {formatNumber(item.value)}
                               </td>
                             </tr>
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={3} className="p-4 text-center text-muted-foreground text-xs italic">
+                            <td colSpan={3} className="p-4 text-center text-muted-foreground text-xs italic align-middle">
                               No inventory items found
                             </td>
                           </tr>
@@ -3131,18 +3137,18 @@ export function BusinessIntelligence() {
                   <table className="w-full text-left text-xs font-mono">
                     <thead className="sticky top-0 bg-card text-[10px] uppercase text-muted-foreground border-b border-border shadow-xs z-10">
                       <tr>
-                        <th className="p-2.5">Date</th>
-                        <th className="p-2.5">Voucher Type</th>
-                        <th className="p-2.5">Party / Particulars</th>
-                        <th className="p-2.5 text-right">Amount</th>
+                        <th className="p-2.5 align-middle">Date</th>
+                        <th className="p-2.5 align-middle">Voucher Type</th>
+                        <th className="p-2.5 align-middle">Party / Particulars</th>
+                        <th className="p-2.5 text-right align-middle">Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/40">
                       {bankingAnalytics.recentActivities.length > 0 ? (
                         bankingAnalytics.recentActivities.map(v => (
                           <tr key={v.id || v.v_no} className="hover:bg-muted/10 transition-colors">
-                            <td className="p-2.5 text-muted-foreground">{v.v_date || v.date || 'N/A'}</td>
-                            <td className="p-2.5">
+                            <td className="p-2.5 text-muted-foreground align-middle">{v.v_date || v.date || 'N/A'}</td>
+                            <td className="p-2.5 align-middle">
                               <span className={cn(
                                 "px-1.5 py-0.5 text-[9px] rounded font-bold uppercase",
                                 v.v_type?.toLowerCase() === 'receipt' ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" :
@@ -3152,17 +3158,17 @@ export function BusinessIntelligence() {
                                 {v.v_type || 'Voucher'}
                               </span>
                             </td>
-                            <td className="p-2.5 font-bold text-foreground">
+                            <td className="p-2.5 font-bold text-foreground align-middle">
                               {v.party_ledger_name || v.particulars || 'Banking Transfer'}
                             </td>
-                            <td className="p-2.5 text-right font-bold text-foreground">
+                            <td className="p-2.5 text-right font-bold text-foreground align-middle">
                               {currencySymbol} {formatNumber(v.total_amount || 0)}
                             </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={4} className="p-4 text-center text-muted-foreground text-xs italic">
+                          <td colSpan={4} className="p-4 text-center text-muted-foreground text-xs italic align-middle">
                             No recent banking vouchers recorded
                           </td>
                         </tr>
@@ -3378,9 +3384,11 @@ export function BusinessIntelligence() {
                             <td className="p-2.5 text-center text-[10px] text-muted-foreground font-bold align-middle">
                               {index + 1}
                             </td>
-                            <td className="p-2.5 font-bold text-foreground group-hover:text-primary transition-colors text-left align-middle flex items-center gap-1.5">
-                              <span>{item.name}</span>
-                              <span className="text-[9px] text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                            <td className="p-2.5 font-bold text-foreground group-hover:text-primary transition-colors text-left align-middle">
+                              <div className="flex items-center gap-1.5">
+                                <span>{item.name}</span>
+                                <span className="text-[9px] text-muted-foreground group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">&rarr;</span>
+                              </div>
                             </td>
                             {includeAddress && (
                               <td className="p-2.5 text-[10px] text-foreground/80 max-w-[240px] truncate text-left align-middle" title={addr}>
@@ -4047,26 +4055,26 @@ export function BusinessIntelligence() {
                       <table className="w-full text-left text-xs font-mono">
                         <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
                           <tr>
-                            <th className="p-2.5">Month</th>
+                            <th className="p-2.5 align-middle">Month</th>
                             {activeGraphModal === 'sales_purchase' && (
                               <>
-                                <th className="p-2.5 text-right">Sales Turnover</th>
-                                <th className="p-2.5 text-right">Purchases</th>
-                                <th className="p-2.5 text-right">Trade Margin</th>
+                                <th className="p-2.5 text-right align-middle">Sales Turnover</th>
+                                <th className="p-2.5 text-right align-middle">Purchases</th>
+                                <th className="p-2.5 text-right align-middle">Trade Margin</th>
                               </>
                             )}
                             {activeGraphModal === 'profit_trend' && (
                               <>
-                                <th className="p-2.5 text-right">Gross Profit</th>
-                                <th className="p-2.5 text-right">Net Profit</th>
-                                <th className="p-2.5 text-right">Margin %</th>
+                                <th className="p-2.5 text-right align-middle">Gross Profit</th>
+                                <th className="p-2.5 text-right align-middle">Net Profit</th>
+                                <th className="p-2.5 text-right align-middle">Margin %</th>
                               </>
                             )}
                             {activeGraphModal === 'cash_flow_volume' && (
                               <>
-                                <th className="p-2.5 text-right">Inflows</th>
-                                <th className="p-2.5 text-right">Outflows</th>
-                                <th className="p-2.5 text-right">Net Flow</th>
+                                <th className="p-2.5 text-right align-middle">Inflows</th>
+                                <th className="p-2.5 text-right align-middle">Outflows</th>
+                                <th className="p-2.5 text-right align-middle">Net Flow</th>
                               </>
                             )}
                           </tr>
@@ -4079,42 +4087,42 @@ export function BusinessIntelligence() {
 
                             return (
                               <tr key={m.month} className="hover:bg-muted/15 transition-colors">
-                                <td className="p-2.5 font-bold text-foreground">{m.month}</td>
+                                <td className="p-2.5 font-bold text-foreground align-middle">{m.month}</td>
                                 {activeGraphModal === 'sales_purchase' && (
                                   <>
-                                    <td className="p-2.5 text-right font-bold text-blue-600 dark:text-blue-400">
+                                    <td className="p-2.5 text-right font-bold text-blue-600 dark:text-blue-400 align-middle">
                                       {currencySymbol} {formatNumber(m.sales)}
                                     </td>
-                                    <td className="p-2.5 text-right font-bold text-amber-600 dark:text-amber-400">
+                                    <td className="p-2.5 text-right font-bold text-amber-600 dark:text-amber-400 align-middle">
                                       {currencySymbol} {formatNumber(m.purchase)}
                                     </td>
-                                    <td className={cn("p-2.5 text-right font-bold", tradeMargin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                                    <td className={cn("p-2.5 text-right font-bold align-middle", tradeMargin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                                       {currencySymbol} {formatNumber(tradeMargin)}
                                     </td>
                                   </>
                                 )}
                                 {activeGraphModal === 'profit_trend' && (
                                   <>
-                                    <td className="p-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                                    <td className="p-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400 align-middle">
                                       {currencySymbol} {formatNumber(m.grossProfit)}
                                     </td>
-                                    <td className="p-2.5 text-right font-bold text-indigo-600 dark:text-indigo-400">
+                                    <td className="p-2.5 text-right font-bold text-indigo-600 dark:text-indigo-400 align-middle">
                                       {currencySymbol} {formatNumber(m.netProfit)}
                                     </td>
-                                    <td className="p-2.5 text-right font-bold text-muted-foreground">
+                                    <td className="p-2.5 text-right font-bold text-muted-foreground align-middle">
                                       {marginPct.toFixed(1)}%
                                     </td>
                                   </>
                                 )}
                                 {activeGraphModal === 'cash_flow_volume' && (
                                   <>
-                                    <td className="p-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                                    <td className="p-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400 align-middle">
                                       {currencySymbol} {formatNumber(m.inflows)}
                                     </td>
-                                    <td className="p-2.5 text-right font-bold text-rose-600 dark:text-rose-400">
+                                    <td className="p-2.5 text-right font-bold text-rose-600 dark:text-rose-400 align-middle">
                                       {currencySymbol} {formatNumber(m.outflows)}
                                     </td>
-                                    <td className={cn("p-2.5 text-right font-bold", netFlow >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                                    <td className={cn("p-2.5 text-right font-bold align-middle", netFlow >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                                       {currencySymbol} {formatNumber(netFlow)}
                                     </td>
                                   </>
@@ -4131,10 +4139,10 @@ export function BusinessIntelligence() {
                       <table className="w-full text-left text-xs font-mono">
                         <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
                           <tr>
-                            <th className="p-2.5">#</th>
-                            <th className="p-2.5">Cost Head / Expense Ledger</th>
-                            <th className="p-2.5 text-right">Allocated Amount</th>
-                            <th className="p-2.5 text-right">Share %</th>
+                            <th className="p-2.5 align-middle">#</th>
+                            <th className="p-2.5 align-middle">Cost Head / Expense Ledger</th>
+                            <th className="p-2.5 text-right align-middle">Allocated Amount</th>
+                            <th className="p-2.5 text-right align-middle">Share %</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40">
@@ -4147,7 +4155,7 @@ export function BusinessIntelligence() {
                             if (filtered.length === 0) {
                               return (
                                 <tr>
-                                  <td colSpan={4} className="p-6 text-center text-muted-foreground text-xs italic">
+                                  <td colSpan={4} className="p-6 text-center text-muted-foreground text-xs italic align-middle">
                                     No matching cost centres found
                                   </td>
                                 </tr>
@@ -4156,12 +4164,12 @@ export function BusinessIntelligence() {
 
                             return filtered.map((c, idx) => (
                               <tr key={c.name} className="hover:bg-muted/15 transition-colors">
-                                <td className="p-2.5 text-muted-foreground text-[10px] font-bold">{idx + 1}</td>
-                                <td className="p-2.5 font-bold text-foreground truncate max-w-[200px]" title={c.name}>{c.name}</td>
-                                <td className="p-2.5 text-right font-bold text-rose-600 dark:text-rose-400">
+                                <td className="p-2.5 text-muted-foreground text-[10px] font-bold align-middle">{idx + 1}</td>
+                                <td className="p-2.5 font-bold text-foreground truncate max-w-[200px] align-middle" title={c.name}>{c.name}</td>
+                                <td className="p-2.5 text-right font-bold text-rose-600 dark:text-rose-400 align-middle">
                                   {currencySymbol} {formatNumber(c.amount)}
                                 </td>
-                                <td className="p-2.5 text-right text-muted-foreground font-bold">
+                                <td className="p-2.5 text-right text-muted-foreground font-bold align-middle">
                                   {((c.amount / totalExp) * 100).toFixed(1)}%
                                 </td>
                               </tr>
@@ -4176,11 +4184,11 @@ export function BusinessIntelligence() {
                       <table className="w-full text-left text-xs font-mono">
                         <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
                           <tr>
-                            <th className="p-2.5">Month</th>
-                            <th className="p-2.5 text-right">Valuation</th>
-                            <th className="p-2.5 text-right">Inward Qty</th>
-                            <th className="p-2.5 text-right">Outward Qty</th>
-                            <th className="p-2.5 text-right">Net Movement</th>
+                            <th className="p-2.5 align-middle">Month</th>
+                            <th className="p-2.5 text-right align-middle">Valuation</th>
+                            <th className="p-2.5 text-right align-middle">Inward Qty</th>
+                            <th className="p-2.5 text-right align-middle">Outward Qty</th>
+                            <th className="p-2.5 text-right align-middle">Net Movement</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40">
@@ -4188,17 +4196,17 @@ export function BusinessIntelligence() {
                             const netM = m.inward - m.outward;
                             return (
                               <tr key={m.month} className="hover:bg-muted/15 transition-colors">
-                                <td className="p-2.5 font-bold text-foreground">{m.month}</td>
-                                <td className="p-2.5 text-right font-bold text-amber-500">
+                                <td className="p-2.5 font-bold text-foreground align-middle">{m.month}</td>
+                                <td className="p-2.5 text-right font-bold text-amber-500 align-middle">
                                   {currencySymbol} {formatNumber(m.valuation)}
                                 </td>
-                                <td className="p-2.5 text-right text-emerald-600 dark:text-emerald-400 font-mono">
+                                <td className="p-2.5 text-right text-emerald-600 dark:text-emerald-400 font-mono align-middle">
                                   +{formatQuantity(m.inward, 'Pcs')}
                                 </td>
-                                <td className="p-2.5 text-right text-rose-600 dark:text-rose-400 font-mono">
+                                <td className="p-2.5 text-right text-rose-600 dark:text-rose-400 font-mono align-middle">
                                   -{formatQuantity(m.outward, 'Pcs')}
                                 </td>
-                                <td className={cn("p-2.5 text-right font-bold font-mono", netM >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
+                                <td className={cn("p-2.5 text-right font-bold font-mono align-middle", netM >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                                   {netM >= 0 ? '+' : ''}{formatQuantity(netM, 'Pcs')}
                                 </td>
                               </tr>
@@ -4213,12 +4221,12 @@ export function BusinessIntelligence() {
                       <table className="w-full text-left text-xs font-mono">
                         <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
                           <tr>
-                            <th className="p-2.5">#</th>
-                            <th className="p-2.5">Stock Group</th>
-                            <th className="p-2.5 text-right">Items</th>
-                            <th className="p-2.5 text-right">In-Stock Qty</th>
-                            <th className="p-2.5 text-right">Valuation</th>
-                            <th className="p-2.5 text-right">Share %</th>
+                            <th className="p-2.5 align-middle">#</th>
+                            <th className="p-2.5 align-middle">Stock Group</th>
+                            <th className="p-2.5 text-right align-middle">Items</th>
+                            <th className="p-2.5 text-right align-middle">In-Stock Qty</th>
+                            <th className="p-2.5 text-right align-middle">Valuation</th>
+                            <th className="p-2.5 text-right align-middle">Share %</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40">
@@ -4231,7 +4239,7 @@ export function BusinessIntelligence() {
                             if (filtered.length === 0) {
                               return (
                                 <tr>
-                                  <td colSpan={6} className="p-6 text-center text-muted-foreground text-xs italic">
+                                  <td colSpan={6} className="p-6 text-center text-muted-foreground text-xs italic align-middle">
                                     No matching stock groups found
                                   </td>
                                 </tr>
@@ -4240,14 +4248,14 @@ export function BusinessIntelligence() {
 
                             return filtered.map((g, idx) => (
                               <tr key={g.name} className="hover:bg-muted/15 transition-colors">
-                                <td className="p-2.5 text-muted-foreground text-[10px] font-bold">{idx + 1}</td>
-                                <td className="p-2.5 font-bold text-foreground truncate max-w-[160px]" title={g.name}>{g.name}</td>
-                                <td className="p-2.5 text-right text-muted-foreground">{g.count}</td>
-                                <td className="p-2.5 text-right font-mono">{formatQuantity(g.qty, 'Pcs')}</td>
-                                <td className="p-2.5 text-right font-bold text-foreground">
+                                <td className="p-2.5 text-muted-foreground text-[10px] font-bold align-middle">{idx + 1}</td>
+                                <td className="p-2.5 font-bold text-foreground truncate max-w-[160px] align-middle" title={g.name}>{g.name}</td>
+                                <td className="p-2.5 text-right text-muted-foreground align-middle">{g.count}</td>
+                                <td className="p-2.5 text-right font-mono align-middle">{formatQuantity(g.qty, 'Pcs')}</td>
+                                <td className="p-2.5 text-right font-bold text-foreground align-middle">
                                   {currencySymbol} {formatNumber(g.value)}
                                 </td>
-                                <td className="p-2.5 text-right font-bold text-blue-600 dark:text-blue-400">
+                                <td className="p-2.5 text-right font-bold text-blue-600 dark:text-blue-400 align-middle">
                                   {((g.value / totalVal) * 100).toFixed(1)}%
                                 </td>
                               </tr>
@@ -4262,10 +4270,10 @@ export function BusinessIntelligence() {
                       <table className="w-full text-left text-xs font-mono">
                         <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
                           <tr>
-                            <th className="p-2.5">Category Name</th>
-                            <th className="p-2.5 text-right">In-Stock Qty</th>
-                            <th className="p-2.5 text-right">Valuation</th>
-                            <th className="p-2.5 text-right">Share %</th>
+                            <th className="p-2.5 align-middle">Category Name</th>
+                            <th className="p-2.5 text-right align-middle">In-Stock Qty</th>
+                            <th className="p-2.5 text-right align-middle">Valuation</th>
+                            <th className="p-2.5 text-right align-middle">Share %</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40">
@@ -4274,7 +4282,7 @@ export function BusinessIntelligence() {
                             if (filtered.length === 0) {
                               return (
                                 <tr>
-                                  <td colSpan={4} className="p-6 text-center text-muted-foreground text-xs italic">
+                                  <td colSpan={4} className="p-6 text-center text-muted-foreground text-xs italic align-middle">
                                     No matching categories found
                                   </td>
                                 </tr>
@@ -4289,7 +4297,7 @@ export function BusinessIntelligence() {
                                 : 0;
                               return (
                                 <tr key={cat.name} className="hover:bg-muted/20 transition-colors">
-                                  <td className="p-2.5 font-bold text-foreground">
+                                  <td className="p-2.5 font-bold text-foreground align-middle">
                                     <div className="flex items-center gap-2">
                                       <span 
                                         className="w-3 h-3 rounded-full inline-block shrink-0 shadow-2xs" 
@@ -4300,13 +4308,13 @@ export function BusinessIntelligence() {
                                       </span>
                                     </div>
                                   </td>
-                                  <td className="p-2.5 text-right text-muted-foreground font-mono">
+                                  <td className="p-2.5 text-right text-muted-foreground font-mono align-middle">
                                     {formatQuantity(cat.qty, 'Pcs')}
                                   </td>
-                                  <td className="p-2.5 text-right font-bold text-foreground font-mono">
+                                  <td className="p-2.5 text-right font-bold text-foreground font-mono align-middle">
                                     {currencySymbol} {formatNumber(cat.value)}
                                   </td>
-                                  <td className="p-2.5 text-right font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+                                  <td className="p-2.5 text-right font-mono text-emerald-600 dark:text-emerald-400 font-bold align-middle">
                                     {share.toFixed(1)}%
                                   </td>
                                 </tr>
@@ -4322,11 +4330,11 @@ export function BusinessIntelligence() {
                       <table className="w-full text-left text-xs font-mono">
                         <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
                           <tr>
-                            <th className="p-2.5">#</th>
-                            <th className="p-2.5">Account Name</th>
-                            <th className="p-2.5">Type</th>
-                            <th className="p-2.5 text-right">Closing Balance</th>
-                            <th className="p-2.5 text-right">Share %</th>
+                            <th className="p-2.5 align-middle">#</th>
+                            <th className="p-2.5 align-middle">Account Name</th>
+                            <th className="p-2.5 align-middle">Type</th>
+                            <th className="p-2.5 text-right align-middle">Closing Balance</th>
+                            <th className="p-2.5 text-right align-middle">Share %</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40">
@@ -4339,7 +4347,7 @@ export function BusinessIntelligence() {
                             if (filtered.length === 0) {
                               return (
                                 <tr>
-                                  <td colSpan={5} className="p-6 text-center text-muted-foreground text-xs italic">
+                                  <td colSpan={5} className="p-6 text-center text-muted-foreground text-xs italic align-middle">
                                     No matching liquid accounts found
                                   </td>
                                 </tr>
@@ -4348,9 +4356,9 @@ export function BusinessIntelligence() {
 
                             return filtered.map((acc, idx) => (
                               <tr key={acc.name} className="hover:bg-muted/15 transition-colors">
-                                <td className="p-2.5 text-muted-foreground text-[10px] font-bold">{idx + 1}</td>
-                                <td className="p-2.5 font-bold text-foreground truncate max-w-[170px]" title={acc.name}>{acc.name}</td>
-                                <td className="p-2.5">
+                                <td className="p-2.5 text-muted-foreground text-[10px] font-bold align-middle">{idx + 1}</td>
+                                <td className="p-2.5 font-bold text-foreground truncate max-w-[170px] align-middle" title={acc.name}>{acc.name}</td>
+                                <td className="p-2.5 align-middle">
                                   <span className={cn(
                                     "px-1.5 py-0.5 text-[9px] rounded font-bold uppercase",
                                     acc.type === 'Cash in Hand' 
@@ -4360,10 +4368,10 @@ export function BusinessIntelligence() {
                                     {acc.type}
                                   </span>
                                 </td>
-                                <td className="p-2.5 text-right font-bold text-foreground font-mono">
+                                <td className="p-2.5 text-right font-bold text-foreground font-mono align-middle">
                                   {currencySymbol} {formatNumber(acc.balance)}
                                 </td>
-                                <td className="p-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                                <td className="p-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono align-middle">
                                   {((acc.balance / totalLiq) * 100).toFixed(1)}%
                                 </td>
                               </tr>
@@ -4378,26 +4386,26 @@ export function BusinessIntelligence() {
                       <table className="w-full text-left text-xs font-mono">
                         <thead className="sticky top-0 bg-muted/80 backdrop-blur-xs text-[10px] uppercase text-muted-foreground border-b border-border shadow-2xs z-10">
                           <tr>
-                            <th className="p-2.5">Flow Stream</th>
-                            <th className="p-2.5">Classification</th>
-                            <th className="p-2.5 text-right">Amount</th>
-                            <th className="p-2.5 text-right">Status</th>
+                            <th className="p-2.5 align-middle">Flow Stream</th>
+                            <th className="p-2.5 align-middle">Classification</th>
+                            <th className="p-2.5 text-right align-middle">Amount</th>
+                            <th className="p-2.5 text-right align-middle">Status</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/40">
                           {bankingAnalytics.flowData.map(item => (
                             <tr key={item.name} className="hover:bg-muted/15 transition-colors">
-                              <td className="p-2.5 font-bold text-foreground">{item.name}</td>
-                              <td className="p-2.5 text-muted-foreground">
+                              <td className="p-2.5 font-bold text-foreground align-middle">{item.name}</td>
+                              <td className="p-2.5 text-muted-foreground align-middle">
                                 {item.name === 'Cash Inflow' ? 'Receipts & Sales Realization' : 'Payments & Procurement Disbursements'}
                               </td>
                               <td className={cn(
-                                "p-2.5 text-right font-bold font-mono",
+                                "p-2.5 text-right font-bold font-mono align-middle",
                                 item.name === 'Cash Inflow' ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                               )}>
                                 {currencySymbol} {formatNumber(item.amount)}
                               </td>
-                              <td className="p-2.5 text-right font-bold">
+                              <td className="p-2.5 text-right font-bold align-middle">
                                 <span className={cn(
                                   "px-2 py-0.5 rounded text-[9px] uppercase font-bold",
                                   item.name === 'Cash Inflow' 
