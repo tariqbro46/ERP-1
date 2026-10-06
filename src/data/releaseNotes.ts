@@ -62,6 +62,15 @@ export const RELEASE_NOTES: ReleaseVersion[] = [
         bnDescription: "পপআপটির যেকোনো ক্লোজ বাটন, ব্যাকগ্রাউন্ড ওভারলে অথবা কিবোর্ডের ESC বাটন এক ক্লিকে চাপলেই পপআপটি তাৎক্ষণিকভাবে বন্ধ হয়ে যাবে।",
         module: "UI/UX",
         badge: "NEW"
+      },
+      {
+        id: "feat-keyboard-shortcuts-modal",
+        title: "Interactive Keyboard Shortcuts Cheatsheet & Functional Analysis Modal",
+        bnTitle: "ইন্টারেক্টিভ কিবোর্ড শর্টকাট চিটশিট ও বিস্তারিত বিশ্লেষণ মডাল",
+        description: "Comprehensive modal and help section documenting all ERP keyboard shortcuts (Alt+D, Alt+V, Alt+L, Alt+I, Alt+B, Alt+G, F4-F10 voucher function keys, Ctrl+K, /, Esc) with live category filtering, search, and instant Jump Now navigation buttons.",
+        bnDescription: "অ্যাপের সকল কিবোর্ড শর্টকাটের বিস্তারিত বিশ্লেষণ, ক্যাটাগরি ফিল্টার এবং সরাসরি জাম্প সুবিধাসহ আকর্ষণীয় শর্টকাট চিটশিট মডাল যুক্ত করা হয়েছে (যেকোনো সময় '?' বা 'Alt+H' চেপে ওপেন করা যায়)।",
+        module: "Power User & Navigation",
+        badge: "NEW"
       }
     ],
     improvements: [

@@ -42,7 +42,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Check,
-  Loader2
+  Loader2,
+  Keyboard
 } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { VoucherEntry } from './components/VoucherEntry';
@@ -122,6 +123,7 @@ import DataCenter from './pages/DataCenter';
 import AIInsights from './pages/AIInsights';
 import SystemGuideFloatingButton from './components/SystemGuideFloatingButton';
 import { WhatsNewModal } from './components/WhatsNewModal';
+import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { ReleaseNotes } from './components/ReleaseNotes';
 import { cn } from './lib/utils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -833,6 +835,29 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         } else if (key === 's') {
           e.preventDefault();
           navigate('/settings');
+        } else if (key === 'b') {
+          e.preventDefault();
+          navigate('/business-intelligence');
+        } else if (key === 'r') {
+          e.preventDefault();
+          navigate('/reports/daybook');
+        } else if (key === 'n') {
+          e.preventDefault();
+          navigate('/notes');
+        } else if (key === 'h') {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('open_keyboard_shortcuts'));
+        } else if (key === 'm') {
+          e.preventDefault();
+          setIsSidebarCollapsed(prev => !prev);
+        }
+      }
+
+      // '?' key opens Keyboard Shortcuts Cheatsheet (when outside input/textarea)
+      if (e.key === '?' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('open_keyboard_shortcuts'));
         }
       }
 
@@ -2366,20 +2391,44 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
               )}
               
               {showGoToShortcut && (
-                <div className={cn(
-                  "hidden md:flex items-center gap-2 text-[10px] font-mono",
-                  uiStyle === 'UI/UX 2' ? "text-blue-100" : "text-gray-500"
-                )}>
-                  <kbd className={cn(
-                    "px-1.5 py-0.5 border rounded",
-                    uiStyle === 'UI/UX 2' ? "bg-white/10 border-white/20 text-white" : "bg-card border-border text-gray-400"
-                  )}>Alt</kbd>
-                  <span>+</span>
-                  <kbd className={cn(
-                    "px-1.5 py-0.5 border rounded",
-                    uiStyle === 'UI/UX 2' ? "bg-white/10 border-white/20 text-white" : "bg-card border-border text-gray-400"
-                  )}>G</kbd>
-                  <span className="ml-1 uppercase tracking-widest">{t('common.goTo')}</span>
+                <div className="hidden md:flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('open_goto_search'))}
+                    className={cn(
+                      "flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded-lg border transition-all hover:scale-102 cursor-pointer",
+                      uiStyle === 'UI/UX 2' ? "bg-white/10 hover:bg-white/20 border-white/20 text-white" : "bg-muted/60 hover:bg-muted text-gray-500 hover:text-foreground border-border"
+                    )}
+                    title={language === 'bn' ? "যেকোনো মেনু বা পেজে যেতে Alt+G চাপুন" : "Press Alt+G to jump anywhere"}
+                  >
+                    <kbd className={cn(
+                      "px-1 py-0.2 border rounded text-[9px] font-bold",
+                      uiStyle === 'UI/UX 2' ? "bg-white/15 border-white/30 text-white" : "bg-card border-border text-foreground"
+                    )}>Alt</kbd>
+                    <span>+</span>
+                    <kbd className={cn(
+                      "px-1 py-0.2 border rounded text-[9px] font-bold",
+                      uiStyle === 'UI/UX 2' ? "bg-white/15 border-white/30 text-white" : "bg-card border-border text-foreground"
+                    )}>G</kbd>
+                    <span className="ml-0.5 uppercase tracking-widest font-bold">{t('common.goTo')}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('open_keyboard_shortcuts'))}
+                    className={cn(
+                      "flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded-lg border transition-all hover:scale-102 cursor-pointer",
+                      uiStyle === 'UI/UX 2' ? "bg-white/10 hover:bg-white/20 border-white/20 text-white" : "bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border-border"
+                    )}
+                    title={language === 'bn' ? "সকল কিবোর্ড শর্টকাট গাইড ও বিশ্লেষণ (Alt+H অথবা ?)" : "View All Keyboard Shortcuts (Alt+H or ?)"}
+                  >
+                    <Keyboard className="w-3.5 h-3.5 text-primary" />
+                    <span className="font-bold">{language === 'bn' ? 'শর্টকাট' : 'Shortcuts'}</span>
+                    <kbd className={cn(
+                      "px-1 py-0.2 border rounded text-[9px] font-bold",
+                      uiStyle === 'UI/UX 2' ? "bg-white/15 border-white/30 text-white" : "bg-card border-border text-foreground"
+                    )}>?</kbd>
+                  </button>
                 </div>
               )}
               <div className="flex items-center gap-3 relative" ref={dropdownRef}>
@@ -2610,6 +2659,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       <QuotaDashboardModal isOpen={isQuotaDashboardOpen} onClose={() => setIsQuotaDashboardOpen(false)} company={company} />
       <QuotaExceededModal isOpen={isQuotaModalOpen} onClose={() => setIsQuotaModalOpen(false)} company={company} />
       <WhatsNewModal />
+      <KeyboardShortcutsModal />
       {isOffline && (
         <div id="offline-toast" className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] animate-in fade-in slide-in-from-bottom-5 duration-300">
           <div className="bg-slate-900 border border-slate-800 text-slate-100 pl-4 pr-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 select-none">

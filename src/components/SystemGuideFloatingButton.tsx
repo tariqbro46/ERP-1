@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   BookOpen, X, Search, Keyboard, FileText, 
   Lightbulb, ExternalLink, ChevronDown, ChevronUp, HelpCircle,
-  AlertTriangle, BellRing, Sparkles, Sliders, Eye, EyeOff, Check
+  AlertTriangle, BellRing, Sparkles, Sliders, Eye, EyeOff, Check,
+  ArrowRight
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -132,11 +133,16 @@ export default function SystemGuideFloatingButton() {
   ];
 
   const shortcuts = [
-    { key: 'G', label: isBn ? 'গ্লোবাল "Go To" নেভিগেশন সার্চ' : 'Global "Go To" Navigation Search' },
-    { key: 'Alt + V', label: isBn ? 'নতুন ভাউচার এন্ট্রি পাতা' : 'Create New Voucher' },
-    { key: 'Alt + L', label: isBn ? 'নতুন সাধারণ লেজার পাতা' : 'Create General Ledger' },
-    { key: 'Alt + I', label: isBn ? 'নতুন স্টক আইটেম পাতা' : 'Create Stock Item' },
-    { key: 'Esc', label: isBn ? 'ডায়ালগ বা সার্চ ক্লোজ করুন' : 'Go back / Close search' },
+    { key: 'Alt + D', label: isBn ? 'এক্সিকিউটিভ ড্যাশবোর্ডে ফিরে যান' : 'Executive Dashboard' },
+    { key: 'Alt + V', label: isBn ? 'নতুন ভাউচার এন্ট্রি স্ক্রিন' : 'Create New Voucher' },
+    { key: 'Alt + L', label: isBn ? 'নতুন লেজার অ্যাকাউন্ট ফর্ম' : 'Create New Ledger' },
+    { key: 'Alt + I', label: isBn ? 'ইনভেন্টরি আইটেমস ও স্টক' : 'Inventory Items & Stock' },
+    { key: 'Alt + B', label: isBn ? 'বিজনেস ইন্টেলিজেন্স ও রেশিও' : 'Business Intelligence Hub' },
+    { key: 'Alt + G', label: isBn ? 'গ্লোবাল "Go To" দ্রুত জাম্প প্যালেট' : 'Global "Go To" Search' },
+    { key: 'Ctrl + K', label: isBn ? 'সার্বজনীন সার্চ ও ফিল্টারিং' : 'Universal Global Search' },
+    { key: 'F4 - F10', label: isBn ? 'ভাউচার পরিবর্তন (Contra, Sales, Purchase)' : 'Switch Voucher Type' },
+    { key: 'Alt + H / ?', label: isBn ? 'পূর্ণাঙ্গ কিবোর্ড শর্টকাট গাইড' : 'Open Shortcuts Cheatsheet' },
+    { key: 'Esc', label: isBn ? 'যেকোনো পপআপ বা সার্চ ক্লোজ করুন' : 'Close Active Modal / Search' },
   ];
 
   // Filter sections by search query
@@ -545,26 +551,53 @@ export default function SystemGuideFloatingButton() {
                 </div>
               ) : (
                 /* Hotkeys tab */
-                <table className="w-full font-mono text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-border text-left hover:bg-transparent">
-                      <th className="pb-2.5 font-bold uppercase text-[9px] tracking-wider text-muted-foreground">{isBn ? 'কি-বোর্ড সর্টকাট' : 'Hotkey'}</th>
-                      <th className="pb-2.5 font-bold uppercase text-[9px] tracking-wider text-muted-foreground pl-4">{isBn ? 'কার্যক্রম' : 'Description'}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/50 text-foreground/95">
-                    {shortcuts.map((sh, idx) => (
-                      <tr key={idx} className="hover:bg-muted/20 transition-colors">
-                        <td className="py-2.5 whitespace-nowrap">
-                          <kbd className="px-2 py-1 bg-muted border border-border shadow-sm rounded text-[10px] font-bold font-mono tracking-wide text-foreground">
-                            {sh.key}
-                          </kbd>
-                        </td>
-                        <td className="py-2.5 pl-4 text-[11px] font-sans font-medium">{sh.label}</td>
+                <div className="space-y-3">
+                  <table className="w-full font-mono text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-border text-left hover:bg-transparent">
+                        <th className="pb-2.5 font-bold uppercase text-[9px] tracking-wider text-muted-foreground">{isBn ? 'কি-বোর্ড সর্টকাট' : 'Hotkey'}</th>
+                        <th className="pb-2.5 font-bold uppercase text-[9px] tracking-wider text-muted-foreground pl-4">{isBn ? 'কার্যক্রম' : 'Description'}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border/50 text-foreground/95">
+                      {shortcuts.map((sh, idx) => (
+                        <tr key={idx} className="hover:bg-muted/20 transition-colors">
+                          <td className="py-2.5 whitespace-nowrap">
+                            <kbd className="px-2 py-1 bg-muted border border-border shadow-xs rounded text-[10px] font-bold font-mono tracking-wide text-foreground">
+                              {sh.key}
+                            </kbd>
+                          </td>
+                          <td className="py-2.5 pl-4 text-[11px] font-sans font-medium">{sh.label}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Open Full Cheatsheet Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOpen(false);
+                      window.dispatchEvent(new CustomEvent('open_keyboard_shortcuts'));
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-gradient-to-r from-blue-600/15 via-indigo-600/15 to-emerald-600/15 hover:from-blue-600/25 hover:via-indigo-600/25 hover:to-emerald-600/25 border border-blue-500/35 flex items-center justify-between gap-2 text-xs font-bold text-foreground transition-all cursor-pointer shadow-2xs hover:scale-[1.01]"
+                  >
+                    <div className="flex items-center gap-2 text-left">
+                      <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-xs">
+                        <Keyboard className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-extrabold text-blue-700 dark:text-blue-300">
+                          {isBn ? 'সম্পূর্ণ কিবোর্ড শর্টকাট চিটশিট ও বিশ্লেষণ' : 'Full Keyboard Shortcuts & Cheatsheet'}
+                        </div>
+                        <div className="text-[9px] text-muted-foreground font-medium">
+                          {isBn ? 'সকল ফাংশন কি (F4-F10), সার্চ ও প্রিন্ট শর্টকাট' : 'Detailed breakdown of all keys & scopes'}
+                        </div>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  </button>
+                </div>
               )}
             </div>
 

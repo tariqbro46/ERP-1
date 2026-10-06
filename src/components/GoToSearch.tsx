@@ -35,8 +35,14 @@ export function GoToSearch() {
         setIsOpen(false);
       }
     };
+    const handleCustomOpen = () => setIsOpen(true);
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('open_goto_search', handleCustomOpen);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('open_goto_search', handleCustomOpen);
+    };
   }, []);
 
   useEffect(() => {
