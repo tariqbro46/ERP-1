@@ -481,7 +481,7 @@ export function KeyboardShortcutsModal({ isOpen: controlledIsOpen, onClose }: Ke
         onClick={(e) => {
           if (e.target === e.currentTarget) handleClose();
         }}
-        className="fixed inset-0 z-[999999] flex items-center justify-center p-3 sm:p-5 bg-black/65 backdrop-blur-xs animate-in fade-in select-none"
+        className="fixed inset-0 z-[999999] flex items-center justify-center p-3 sm:p-5 md:p-6 bg-black/65 backdrop-blur-xs animate-in fade-in select-none"
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.94, y: 15 }}
@@ -489,7 +489,7 @@ export function KeyboardShortcutsModal({ isOpen: controlledIsOpen, onClose }: Ke
           exit={{ opacity: 0, scale: 0.96, y: 10 }}
           transition={{ duration: 0.18, ease: "easeOut" }}
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-4xl bg-card border border-border shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[92vh] text-card-foreground"
+          className="relative w-full max-w-5xl xl:max-w-6xl 2xl:max-w-7xl bg-card border border-border shadow-2xl rounded-2xl overflow-hidden flex flex-col max-h-[92vh] text-card-foreground"
         >
           {/* Top Banner Header */}
           <div className="relative p-5 sm:p-6 pb-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-emerald-700 text-white overflow-hidden">
@@ -517,7 +517,7 @@ export function KeyboardShortcutsModal({ isOpen: controlledIsOpen, onClose }: Ke
                 <h2 className="text-base sm:text-xl font-black tracking-tight text-white pt-1 leading-snug">
                   {isBn ? "ট্যালিফ্লো ইআরপি-র সকল কিবোর্ড শর্টকাট ও কার্যপদ্ধতি" : "All Available Keyboard Shortcuts & Functional Analysis"}
                 </h2>
-                <p className="text-xs text-white/90 leading-relaxed max-w-2xl">
+                <p className="text-xs text-white/90 leading-relaxed max-w-3xl lg:max-w-4xl">
                   {isBn 
                     ? "ভাউচার তৈরি, দ্রুত মেনু নেভিগেশন, সার্চ এবং রিপোর্ট দেখার জন্য কোন কিবোর্ড বাটন কোথায় কিভাবে কাজ করে তার বিস্তারিত নির্দেশিকা।" 
                     : "Comprehensive guide to navigating vouchers, rapid menu jumping, contextual searching, and instant print commands using keystrokes."}
@@ -585,7 +585,7 @@ export function KeyboardShortcutsModal({ isOpen: controlledIsOpen, onClose }: Ke
           </div>
 
           {/* Shortcuts Grid / List Body */}
-          <div className="p-4 sm:p-5 overflow-y-auto max-h-[60vh] space-y-3 custom-scrollbar bg-background">
+          <div className="p-4 sm:p-6 overflow-y-auto max-h-[65vh] space-y-3.5 custom-scrollbar bg-background">
             {filteredShortcuts.length === 0 ? (
               <div className="py-12 text-center space-y-2">
                 <Keyboard className="w-10 h-10 text-muted-foreground/40 mx-auto" />
@@ -607,7 +607,7 @@ export function KeyboardShortcutsModal({ isOpen: controlledIsOpen, onClose }: Ke
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3.5">
                 {filteredShortcuts.map((item) => (
                   <div
                     key={item.id}

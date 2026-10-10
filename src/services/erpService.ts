@@ -1401,10 +1401,13 @@ export const erpService: any = {
 
     const fetchPromise = (async () => {
       try {
+        const effectiveLimit = ['vouchers', 'voucher_entries', 'inventory_entries'].includes(colName)
+          ? Math.min(limitCount, 300)
+          : limitCount;
         const q = query(
           collection(db, colName), 
           where('companyId', '==', companyId),
-          limit(limitCount)
+          limit(effectiveLimit)
         );
         const snapshot = await getDocs(q);
         
@@ -1556,17 +1559,17 @@ export const erpService: any = {
       const counterSnap = await getDoc(counterRef);
       let lastSerial = (counterSnap.exists() ? counterSnap.data().lastSerial : 0) || 0;
 
-      // Deep scan or force resync: perform a targeted search for all vouchers of this type
-      if (forceResync || isDeepScan || lastSerial === 0) {
+      // Only perform a targeted scan if explicitly forced by user (forceResync) OR counter does not exist and lastSerial === 0
+      if (forceResync || (!counterSnap.exists() && lastSerial === 0)) {
         let foundMax = 0;
 
         try {
-          // 1. Try a targeted query (This is the most reliable way)
-          // Targeted by type avoids the "limit" issue where other voucher types bury your results
+          // Low-limit targeted query to prevent quota exhaustion
           const qTargeted = query(
             collection(db, 'vouchers'),
             where('companyId', '==', companyId),
-            where('v_type', '==', normalizedRequested)
+            where('v_type', '==', normalizedRequested),
+            limit(100)
           );
           
           const snap = await getDocs(qTargeted);
@@ -1575,35 +1578,16 @@ export const erpService: any = {
             snap.docs.forEach(d => {
               const data = d.data();
               const sField = Number(data.serial_no || data.auto_serial_no) || 0;
-              // Check for valid range and ignore outliers
               if (sField > 0 && sField < 1000000 && sField > foundMax) {
                 foundMax = sField;
               }
             });
           }
-
-          // 2. If nothing found by exact match, try lowercase match fallback (for data consistency)
-          if (foundMax === 0) {
-             const qBroad = query(
-               collection(db, 'vouchers'),
-               where('companyId', '==', companyId),
-               limit(5000) 
-             );
-             const snapBroad = await getDocs(qBroad);
-             snapBroad.docs.forEach(d => {
-               const data = d.data();
-               const docType = (data.v_type || '').toString().trim().toLowerCase();
-               if (docType === lowerRequested) {
-                 const sField = Number(data.serial_no || data.auto_serial_no) || 0;
-                 if (sField > 0 && sField > foundMax) foundMax = sField;
-               }
-             });
-          }
         } catch (err) {
-          console.warn('getNextAutoSerialNo scan failed:', err);
+          console.warn('getNextAutoSerialNo targeted scan failed:', err);
         }
 
-        // Update the counter if we found a true maximum from the database
+        // Update the counter document with the determined serial
         if (foundMax > 0 && (foundMax > lastSerial || forceResync)) {
           lastSerial = foundMax;
           try {
@@ -1645,56 +1629,21 @@ export const erpService: any = {
       return cached.data;
     }
 
+    // Try localStorage cache
     try {
-      const q = query(
-        collection(db, 'vouchers'),
-        where('companyId', '==', companyId),
-        orderBy('v_date', 'asc'),
-        limit(2000) // Restricted for performance. Deep scan would need more.
-      );
-      const snap = await getDocs(q);
-      const vouchers = snap.docs.map(doc => ({ ...doc.data(), id: doc.id } as any));
-      
-      // Sort vouchers BEFORE assigning serials to ensure stability
-      // Priority: v_date, then numeric part of v_no, then saved serial_no, then createdAt
-      vouchers.sort((a, b) => {
-        const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
-        if (dateComp !== 0) return dateComp;
+      const stored = localStorage.getItem(`serials_cache_${companyId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.data && (now - (parsed.timestamp || 0) < this._SERIALS_CACHE_TTL)) {
+          this._serialsCache[companyId] = { data: parsed.data, timestamp: parsed.timestamp };
+          return parsed.data;
+        }
+      }
+    } catch (e) {}
 
-        // Try numeric sort for Ref No (v_no)
-        const numA = parseInt(a.v_no?.toString().replace(/\D/g, '') || '0') || 0;
-        const numB = parseInt(b.v_no?.toString().replace(/\D/g, '') || '0') || 0;
-        if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
-
-        // Fallback to saved serial_no
-        const sA = Number(a.serial_no || a.auto_serial_no) || 0;
-        const sB = Number(b.serial_no || b.auto_serial_no) || 0;
-        if (sA !== sB) return sA - sB;
-
-        // Final fallback to v_no string compare
-        const vNoA = (a.v_no || '').toString();
-        const vNoB = (b.v_no || '').toString();
-        const vNoComp = vNoA.localeCompare(vNoB);
-        if (vNoComp !== 0) return vNoComp;
-
-        return (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0);
-      });
-
-      const typeCounters: Record<string, number> = {};
-      const serialMap: Record<string, number> = {};
-      
-      vouchers.forEach(v => {
-        const type = v.v_type;
-        typeCounters[type] = (typeCounters[type] || 0) + 1;
-        serialMap[v.id] = typeCounters[type];
-      });
-
-      this._serialsCache[companyId] = { data: serialMap, timestamp: now };
-      return serialMap;
-    } catch (error) {
-      console.error('Error fetching voucher serials:', error);
-      return {};
-    }
+    // Every voucher document already has serial_no or auto_serial_no persisted directly on it.
+    // We avoid scanning 2,000 vouchers from the server to save quota.
+    return this._serialsCache[companyId]?.data || {};
   },
 
   async migrateVoucherSerials(companyId: string) {
@@ -2251,21 +2200,57 @@ export const erpService: any = {
       return this._vouchersByTypeCache[cacheKey].data;
     }
     try {
-      const [vCollection, eCollection, sMap] = await Promise.all([
-        this.getCollection('vouchers', companyId),
-        this.getCollection('voucher_entries', companyId),
-        this.getVoucherSerials(companyId)
-      ]);
+      let vouchers: any[] = [];
+      let allEntries: any[] = [];
+      let serialMap: Record<string, number> = {};
 
-      const vouchers = vCollection.filter((v: any) => v.v_type === type && v.v_date >= from && v.v_date <= to);
-      const allEntries = eCollection;
-      const serialMap = sMap;
+      try {
+        // Targeted query by company and date range to dramatically reduce read quota
+        const vSnap = await getDocs(query(
+          collection(db, 'vouchers'),
+          where('companyId', '==', companyId),
+          where('v_date', '>=', from),
+          where('v_date', '<=', to)
+        ));
+
+        this.trackQuota(companyId, vSnap.size || 1, 0);
+        vouchers = vSnap.docs
+          .map(d => ({ ...(d.data() as any), id: d.id }))
+          .filter(v => !type || (v.v_type || '').toLowerCase() === type.toLowerCase());
+
+        if (vouchers.length > 0) {
+          const voucherIds = vouchers.map(v => v.id);
+          for (let i = 0; i < voucherIds.length; i += 30) {
+            const chunk = voucherIds.slice(i, i + 30);
+            const eSnap = await getDocs(query(
+              collection(db, 'voucher_entries'),
+              where('voucher_id', 'in', chunk),
+              where('companyId', '==', companyId)
+            ));
+            this.trackQuota(companyId, eSnap.size || 1, 0);
+            allEntries.push(...eSnap.docs.map(d => ({ ...d.data(), id: d.id })));
+          }
+        }
+      } catch (targetedErr) {
+        console.warn('Targeted query for vouchers by type failed, using cached fallback:', targetedErr);
+        try {
+          const fallbackSnap = await getDocs(query(
+            collection(db, 'vouchers'),
+            where('companyId', '==', companyId),
+            limit(100)
+          ));
+          vouchers = fallbackSnap.docs
+            .map(d => ({ ...(d.data() as any), id: d.id }))
+            .filter(v => v.v_date >= from && v.v_date <= to && (!type || (v.v_type || '').toLowerCase() === type.toLowerCase()));
+        } catch {
+          vouchers = [];
+        }
+      }
 
       const result = vouchers.map((v: any) => {
-        const dynamicSerial = serialMap[v.id];
         return {
           ...v,
-          serial_no: dynamicSerial || v.serial_no || v.auto_serial_no || 0,
+          serial_no: v.serial_no || v.auto_serial_no || 0,
           entries: allEntries.filter((e: any) => e.voucher_id === v.id)
         };
       }).sort((a: any, b: any) => {
@@ -2305,12 +2290,9 @@ export const erpService: any = {
       return this._vouchersByGroupCache[cacheKey].data;
     }
     try {
-      const [allGroups, ledgers, serialMap, vCollection, eCollection] = await Promise.all([
+      const [allGroups, ledgers] = await Promise.all([
         this.getCollection('ledger_groups', companyId),
-        this.getCollection('ledgers', companyId),
-        this.getVoucherSerials(companyId),
-        this.getCollection('vouchers', companyId),
-        this.getCollection('voucher_entries', companyId)
+        this.getCollection('ledgers', companyId)
       ]);
       
       const getChildGroupIds = (parentId: string): string[] => {
@@ -2327,18 +2309,58 @@ export const erpService: any = {
       
       if (groupLedgerIds.length === 0) return [];
 
-      const vouchers = vCollection.filter((v: any) => v.v_date >= from && v.v_date <= to);
-      const allEntries = eCollection;
+      let vouchers: any[] = [];
+      let allEntries: any[] = [];
+      let serialMap: Record<string, number> = {};
+
+      try {
+        // Targeted query on vouchers by date range first
+        const vSnap = await getDocs(query(
+          collection(db, 'vouchers'),
+          where('companyId', '==', companyId),
+          where('v_date', '>=', from),
+          where('v_date', '<=', to)
+        ));
+        this.trackQuota(companyId, vSnap.size || 1, 0);
+        vouchers = vSnap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
+
+        if (vouchers.length > 0) {
+          const voucherIds = vouchers.map(v => v.id);
+          for (let i = 0; i < voucherIds.length; i += 30) {
+            const chunk = voucherIds.slice(i, i + 30);
+            const eSnap = await getDocs(query(
+              collection(db, 'voucher_entries'),
+              where('voucher_id', 'in', chunk),
+              where('companyId', '==', companyId)
+            ));
+            this.trackQuota(companyId, eSnap.size || 1, 0);
+            allEntries.push(...eSnap.docs.map(d => ({ ...d.data(), id: d.id })));
+          }
+        }
+      } catch (targetedErr) {
+        console.warn('Targeted query for group vouchers failed, using cached fallback:', targetedErr);
+        try {
+          const fallbackSnap = await getDocs(query(
+            collection(db, 'vouchers'),
+            where('companyId', '==', companyId),
+            limit(100)
+          ));
+          vouchers = fallbackSnap.docs
+            .map(d => ({ ...(d.data() as any), id: d.id }))
+            .filter(v => v.v_date >= from && v.v_date <= to);
+        } catch {
+          vouchers = [];
+        }
+      }
 
       const result = vouchers.map((v: any) => {
-        const dynamicSerial = serialMap[v.id];
         const voucherEntries = allEntries.filter((e: any) => e.voucher_id === v.id);
         const hasMatchingLedger = voucherEntries.some((e: any) => groupLedgerIds.includes(e.ledger_id));
         if (!hasMatchingLedger) return null;
 
         return {
           ...v,
-          serial_no: dynamicSerial || v.serial_no || v.auto_serial_no || 0,
+          serial_no: v.serial_no || v.auto_serial_no || 0,
           entries: voucherEntries
         };
       }).filter(Boolean).sort((a: any, b: any) => {
@@ -4727,23 +4749,64 @@ export const erpService: any = {
       return this._vouchersByDateRangeCache[cacheKey].data;
     }
     try {
-      const [vCollection, eCollection, iCollection, sMap] = await Promise.all([
-        this.getCollection('vouchers', companyId),
-        this.getCollection('voucher_entries', companyId),
-        this.getCollection('inventory_entries', companyId),
-        this.getVoucherSerials(companyId)
-      ]);
+      let vouchers: any[] = [];
+      let allEntries: any[] = [];
+      let allInventory: any[] = [];
+      let serialMap: Record<string, number> = {};
 
-      const vouchers = vCollection.filter((v: any) => v.v_date >= startDate && v.v_date <= endDate);
-      const allEntries = eCollection;
-      const allInventory = iCollection;
-      const serialMap = sMap;
+      try {
+        // Targeted query by company and date range to dramatically cut down document reads
+        const vSnap = await getDocs(query(
+          collection(db, 'vouchers'),
+          where('companyId', '==', companyId),
+          where('v_date', '>=', startDate),
+          where('v_date', '<=', endDate)
+        ));
+
+        this.trackQuota(companyId, vSnap.size || 1, 0);
+        vouchers = vSnap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
+
+        if (vouchers.length > 0) {
+          const voucherIds = vouchers.map(v => v.id);
+          for (let i = 0; i < voucherIds.length; i += 30) {
+            const chunk = voucherIds.slice(i, i + 30);
+            const [eSnap, iSnap] = await Promise.all([
+              getDocs(query(
+                collection(db, 'voucher_entries'),
+                where('voucher_id', 'in', chunk),
+                where('companyId', '==', companyId)
+              )),
+              getDocs(query(
+                collection(db, 'inventory_entries'),
+                where('voucher_id', 'in', chunk),
+                where('companyId', '==', companyId)
+              ))
+            ]);
+            this.trackQuota(companyId, (eSnap.size + iSnap.size) || 1, 0);
+            allEntries.push(...eSnap.docs.map(d => ({ ...d.data(), id: d.id })));
+            allInventory.push(...iSnap.docs.map(d => ({ ...d.data(), id: d.id })));
+          }
+        }
+      } catch (targetedErr) {
+        console.warn('Targeted query for vouchers by date range failed, using cached fallback:', targetedErr);
+        try {
+          const fallbackSnap = await getDocs(query(
+            collection(db, 'vouchers'),
+            where('companyId', '==', companyId),
+            limit(150)
+          ));
+          vouchers = fallbackSnap.docs
+            .map(d => ({ ...(d.data() as any), id: d.id }))
+            .filter(v => v.v_date >= startDate && v.v_date <= endDate);
+        } catch {
+          vouchers = [];
+        }
+      }
 
       const result = vouchers.map((v: any) => {
-        const dynamicSerial = serialMap[v.id];
         return {
           ...v,
-          serial_no: dynamicSerial || v.serial_no || v.auto_serial_no || 0,
+          serial_no: v.serial_no || v.auto_serial_no || 0,
           entries: allEntries.filter((e: any) => e.voucher_id === v.id),
           inventory: allInventory.filter((i: any) => i.voucher_id === v.id)
         };
@@ -6678,11 +6741,11 @@ export const erpService: any = {
       console.warn('Error saving unsaved quota backup:', e);
     }
 
-    // Schedule flush in 10 seconds if not already scheduled
+    // Schedule flush in 30 seconds if not already scheduled
     if (!this._quotaTimer) {
       this._quotaTimer = setTimeout(() => {
         this.flushQuotaBuffer();
-      }, 10000);
+      }, 30000);
     }
   },
 
@@ -6706,18 +6769,23 @@ export const erpService: any = {
 
       try {
         const companyRef = doc(db, "companies", companyId);
-        const compSnap = await getDoc(companyRef);
-        const currentData = compSnap.data() as any;
-        const limitVal = currentData?.quotaLimit || 10000;
-        const currentUsed = currentData?.quotaUsed || 0;
+        
+        // Optimize: use cached company metadata instead of executing a getDoc read every flush cycle
+        let limitVal = 10000;
+        let currentUsed = 0;
+        try {
+          const cachedComp = localStorage.getItem('cached_auth_company');
+          if (cachedComp) {
+            const parsed = JSON.parse(cachedComp);
+            if (parsed.id === companyId || parsed.companyId === companyId) {
+              limitVal = parsed.quotaLimit || 10000;
+              currentUsed = parsed.quotaUsed || 0;
+            }
+          }
+        } catch (e) {}
 
         // If company has already reached 100%, do not increment beyond the limit
         if (currentUsed >= limitVal) {
-          // Cap at limitVal if it drifted above
-          if (currentUsed > limitVal) {
-            await updateDoc(companyRef, { quotaUsed: limitVal });
-          }
-          // Clean up buffer
           const storedKey = `unsaved_quota_${companyId}`;
           localStorage.removeItem(storedKey);
           continue;

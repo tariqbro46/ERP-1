@@ -137,10 +137,10 @@ export function DuePaymentAlerts() {
       if (!user?.companyId) return;
       setLoading(true);
       try {
-        // Uses existing 30-minute in-memory cache to strictly prevent Firestore read quota consumption
+        // Uses existing in-memory cache to strictly prevent Firestore read quota consumption
         const [ledgers, vouchers] = await Promise.all([
           erpService.getLedgers(user.companyId),
-          erpService.getCollection('vouchers', user.companyId).catch(() => [])
+          erpService.getRecentVouchers(user.companyId, 100).catch(() => [])
         ]);
 
         const now = new Date();

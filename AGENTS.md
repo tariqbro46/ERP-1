@@ -75,9 +75,9 @@ To drastically reduce Google Cloud console read quota consumption while preservi
 ### 1. Targeted Indexed Range Queries
 Instead of loading entire collections (e.g., `vouchers`, `voucher_entries`, `inventory_entries`) into memory and filtering client-side, the system uses Firestore's native indexed queries with strict filters:
 - **Functions optimized**: `getVouchersByType`, `getVouchersByGroup`, and `getVouchersByDateRange`.
-- **Filters applied**: Range queries on `v_date`/`date`, matching `companyId`, and specific voucher types where applicable.
+- **Filters applied**: Range queries on `v_date`/`date`, matching `companyId`, and specific voucher types where applicable (with in-memory sub-filtering when composite indexes are absent).
 - **Quota Impact**: Reads only the matched records instead of scanning thousands of documents.
-- **Fail-safe Fallback**: In case of index-creation delays or errors, queries gracefully fall back to the safe full-collection client-side filter model.
+- **Fail-safe Fallback**: In case of index-creation delays or errors, queries NEVER scan whole collections (no 5,000–17,000 document sweeps). Fallbacks MUST use single-indexed `companyId` with tight limits or read directly from the in-memory/localStorage cache.
 
 ### 2. Pre-Aggregated Ledger Balances
 - **Optimized Function**: `getLedgerBalance`.
@@ -89,5 +89,21 @@ To prevent continuous, real-time Firestore write operations during tracking:
 - **Mechanism**: The `trackQuota` method accumulates quota consumption metrics (reads, writes, deletes) in an in-memory buffer (`_quotaBuffer`) and debounces the database updates.
 - **Flushing**: Automatically flushes/batches accumulated metrics to Firebase every **10 seconds**, on page unload (`beforeunload`), or when the browser tab goes to background/inactive (`visibilitychange`).
 - **Resilience & Storage Backing**: Writes pending tracking updates to `localStorage` (as `unsaved_quota_<companyId>`). On application startup, `initQuotaTracking()` recovers and flushes any unsaved metrics, ensuring no quota metrics are lost even if the user reloads or closes the tab.
+
+### 4. Auto-Serial Number Generation & Counter Safety (Zero-Deep-Scan Rule)
+- **Counter Document Authority**: Serial numbers are maintained in dedicated counter docs (`voucher_counters/${companyId}_${vType}`). Fetching the next serial MUST only read that 1 counter document (or 0 reads via in-memory `_serialsCounterCache`).
+- **Strictly No Deep Scan on Normal Entry**: `getNextAutoSerialNo` MUST NEVER run a deep scan (`isDeepScan=true` or full `vouchers` collection query) on page load, voucher type change, or voucher save.
+- **Stored Serial No Reality**: Every voucher document in Firestore ALREADY stores its `serial_no`. Functions (`getVouchersByType`, `getVouchersByGroup`, `getVouchersByDateRange`) MUST NEVER call `getVoucherSerials()` or download hundreds or thousands of extra vouchers just to map serial numbers.
+- **Post-Save Local Patching**: When saving a voucher (`createVoucher`), increment `_serialsCounterCache` locally and update the single counter document. Never invalidate the entire voucher collection cache or trigger full refetches.
+
+### 5. Post-Voucher Creation Efficiency (No Background Scans)
+- **Stock Updates**: In `createVoucher`, stock changes (`current_stock`) must be updated atomically in the batch/transaction and patched in the in-memory items cache.
+- **No Background Recalculation**: Heavy routines like `recalculateItemStats` (which scan all `inventory_entries` for an item) MUST NOT run synchronously on every voucher creation. Only execute during manual data repair tools.
+
+### 6. Dashboard & Aggregate Views Quota Discipline
+- **No Full Vouchers Load**: Dashboard, DuePaymentAlerts, Daybook, etc. must NEVER execute `erpService.getCollection('vouchers')`.
+- **Targeted Endpoints**: Use `erpService.getRecentVouchers(companyId, 5)` (or max 50) and pre-calculated ledger balances.
+- **TTL Cache**: Cache all dashboard aggregates for at least 30 minutes unless the user explicitly presses the manual "Refresh" button.
+
 
 

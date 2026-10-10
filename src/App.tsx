@@ -725,8 +725,8 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       }
     };
     fetchUnreadCount();
-    // Refresh every 2 minutes
-    const interval = setInterval(fetchUnreadCount, 120000);
+    // Refresh every 10 minutes to preserve free read quota
+    const interval = setInterval(fetchUnreadCount, 600000);
     return () => clearInterval(interval);
   }, [user?.uid, user?.companyId, isSuperAdmin]);
 
@@ -3040,10 +3040,8 @@ function ProtectedRoute() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <LanguageProvider>
-        <AppContent />
-      </LanguageProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }

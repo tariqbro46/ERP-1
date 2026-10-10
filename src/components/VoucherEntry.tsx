@@ -507,7 +507,7 @@ export function VoucherEntry() {
     if (!user?.companyId) return;
     if (forceSync) setIsRefreshingSerial(true);
     try {
-      const next = await erpService.getNextAutoSerialNo(user.companyId, vType, true, forceSync);
+      const next = await erpService.getNextAutoSerialNo(user.companyId, vType, false, forceSync);
       setAutoSerialNo(next);
       if (forceSync) {
         showNotification('Counter synced successfully', 'success');
@@ -1096,7 +1096,7 @@ export function VoucherEntry() {
           setSalespersonId('');
           setRefNo(''); 
           // Refresh serial number
-          const nextSerial = await erpService.getNextAutoSerialNo(user.companyId, vType, true);
+          const nextSerial = await erpService.getNextAutoSerialNo(user.companyId, vType, false);
           setAutoSerialNo(nextSerial);
         }
       }

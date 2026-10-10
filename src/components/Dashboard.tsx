@@ -291,11 +291,11 @@ export function Dashboard() {
           // Silent fallback
         }
 
-        // Calculate due payments, Cash vs Bank, and Top 5 Expenses from cached ledgers & vouchers (Real Data!)
+        // Calculate due payments, Cash vs Bank, and Top 5 Expenses from cached ledgers & recent vouchers (Real Data!)
         try {
           const [ledgers, vouchers] = await Promise.all([
             erpService.getLedgers(user.companyId),
-            erpService.getCollection('vouchers', user.companyId).catch(() => [])
+            erpService.getRecentVouchers(user.companyId, 50).catch(() => [])
           ]);
 
           if (ledgers && Array.isArray(ledgers)) {
