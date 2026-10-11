@@ -101,9 +101,25 @@ To prevent continuous, real-time Firestore write operations during tracking:
 - **No Background Recalculation**: Heavy routines like `recalculateItemStats` (which scan all `inventory_entries` for an item) MUST NOT run synchronously on every voucher creation. Only execute during manual data repair tools.
 
 ### 6. Dashboard & Aggregate Views Quota Discipline
-- **No Full Vouchers Load**: Dashboard, DuePaymentAlerts, Daybook, etc. must NEVER execute `erpService.getCollection('vouchers')`.
+- **No Full Vouchers Load**: Dashboard, DuePaymentAlerts, Daybook, Statistics, etc. must NEVER execute `erpService.getCollection('vouchers')`.
 - **Targeted Endpoints**: Use `erpService.getRecentVouchers(companyId, 5)` (or max 50) and pre-calculated ledger balances.
 - **TTL Cache**: Cache all dashboard aggregates for at least 30 minutes unless the user explicitly presses the manual "Refresh" button.
+
+### 7. Item Stats & Row Focus Discipline (Zero In-Entry Scans)
+- **In-Memory Lookup**: When a user selects or focuses on a stock item row in `VoucherEntry`, stock levels (`current_stock`) and rates (`rate`/`purchase_price`) MUST be retrieved directly from the already-loaded `items` master list in memory.
+- **Never Scan Inventory Entries on Row Focus**: `erpService.getItemStats` must NEVER run a collection sweep of `inventory_entries` on row focus. It uses the `current_stock` maintained on the item doc.
+
+### 8. Global & Voucher Search Quota Caps
+- **Strict Limit (100 Max)**: `searchCompanyData` and `searchVouchers` MUST NEVER query 2,000 or 2,500 documents. The hard limit is capped at 100 documents.
+- **Cached Array Filter First**: Always check `col_cache_vouchers_${companyId}` and localStorage search cache before initiating a Firestore read.
+
+### 9. Master Collections & Settings Zero-Read Strategy
+- **Users, Orders, and Settings**: `getCompanyUsers` routes through cached `getUsersByCompany`. `getSettings` uses `swr_settings_${companyId}` from localStorage first. `getOrders` uses `_ordersCache` and localStorage with `limit(50)`.
+- **Collection Counts (`getCollectionCount`)**: Counts for vouchers, items, and entries are cached in `_collectionCountCache` and localStorage for 30 minutes. New entries locally increment the cached counter without querying `getCountFromServer` repeatedly.
+
+### 10. Voucher Save Routine Efficiency
+- **No Count Checks on Unlimited Plans**: Do not call `getCollectionCount` when the company has unlimited vouchers (`-1` or Gold/Custom plan).
+- **Post-Save Atomicity**: Vouchers save atomically with ledger balance and item current stock increments. All in-memory and localStorage caches (`_ledgersCache`, `_itemsCache`, `_serialsCounterCache`, `_recentVouchersCache`) are patched locally with zero extra network reads.
 
 
 

@@ -42,8 +42,8 @@ export function Statistics() {
           erpService.getCollectionCount('inventory_entries', user.companyId)
         ]);
 
-        // Get vouchers for the breakdown (optional: limit or keep for now if small)
-        const vouchers = await erpService.getCollection('vouchers', user.companyId);
+        // Get recent vouchers for the sample breakdown (protects read quota)
+        const vouchers = await erpService.getRecentVouchers(user.companyId, 50);
 
         // Count vouchers by type
         const vouchersByType: Record<string, number> = {};

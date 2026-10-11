@@ -687,6 +687,9 @@ export const erpService: any = {
 
   // Caching mechanism for voucher serials and common collections to significantly reduce reads
   _serialsCache: {} as Record<string, { data: Record<string, number>, timestamp: number }>,
+  _serialsCounterCache: {} as Record<string, { lastSerial: number, timestamp: number }>,
+  _collectionCountCache: {} as Record<string, { count: number, timestamp: number }>,
+  _ordersCache: {} as Record<string, { data: any[], timestamp: number }>,
   _ledgersCache: {} as Record<string, { data: Ledger[], timestamp: number }>,
   _itemsCache: {} as Record<string, { data: Item[], timestamp: number }>,
   _godownsCache: {} as Record<string, { data: any[], timestamp: number }>,
@@ -1554,6 +1557,26 @@ export const erpService: any = {
       const normalizedRequested = vType.trim();
       const lowerRequested = normalizedRequested.toLowerCase();
       const typeKey = lowerRequested.replace(/\s+/g, '_');
+      const counterKey = `${companyId}_${typeKey}`;
+      const now = Date.now();
+
+      // Check in-memory & localStorage counter cache first (Zero server reads on routine entry)
+      if (!forceResync) {
+        if (this._serialsCounterCache[counterKey] && (now - this._serialsCounterCache[counterKey].timestamp < this._SERIALS_CACHE_TTL)) {
+          return this._serialsCounterCache[counterKey].lastSerial + 1;
+        }
+        try {
+          const stored = localStorage.getItem(`counter_${counterKey}`);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed && typeof parsed.lastSerial === 'number' && (now - (parsed.timestamp || 0) < this._SERIALS_CACHE_TTL)) {
+              this._serialsCounterCache[counterKey] = { lastSerial: parsed.lastSerial, timestamp: parsed.timestamp };
+              return parsed.lastSerial + 1;
+            }
+          }
+        } catch (e) {}
+      }
+
       const counterRef = doc(db, 'counters', `${companyId}_voucher_${typeKey}`);
       
       const counterSnap = await getDoc(counterRef);
@@ -1569,7 +1592,7 @@ export const erpService: any = {
             collection(db, 'vouchers'),
             where('companyId', '==', companyId),
             where('v_type', '==', normalizedRequested),
-            limit(100)
+            limit(50)
           );
           
           const snap = await getDocs(qTargeted);
@@ -1613,6 +1636,12 @@ export const erpService: any = {
           }
         }
       }
+
+      // Update in-memory & localStorage counter cache
+      this._serialsCounterCache[counterKey] = { lastSerial, timestamp: now };
+      try {
+        localStorage.setItem(`counter_${counterKey}`, JSON.stringify({ lastSerial, timestamp: now }));
+      } catch (e) {}
 
       return lastSerial + 1;
     } catch (error: any) {
@@ -2151,10 +2180,17 @@ export const erpService: any = {
         
         this._patchCachesOnCreate(companyId, createdVoucher, mappedEntries, mappedInventory);
 
-        if (res.itemIds.length > 0) {
-          for (const itemId of res.itemIds) {
-            this.recalculateItemStats(itemId as string, companyId).catch(console.error);
-          }
+        // Update local serials counter cache and collection count immediately
+        const typeKey = (voucher.v_type || '').toString().trim().toLowerCase().replace(/\s+/g, '_');
+        const counterKey = `${companyId}_${typeKey}`;
+        this._serialsCounterCache[counterKey] = { lastSerial: res.serial_no, timestamp: Date.now() };
+        try {
+          localStorage.setItem(`counter_${counterKey}`, JSON.stringify({ lastSerial: res.serial_no, timestamp: Date.now() }));
+        } catch (e) {}
+
+        const countKey = `vouchers_${companyId}`;
+        if (this._collectionCountCache[countKey]) {
+          this._collectionCountCache[countKey].count += 1;
         }
 
         this.logActivity(
@@ -2196,9 +2232,20 @@ export const erpService: any = {
   async getVouchersByType(companyId: string, type: string, from: string, to: string) {
     const cacheKey = `${companyId}_${type}_${from}_${to}`;
     const now = Date.now();
-    if (this._vouchersByTypeCache[cacheKey]) {
+    const TYPE_CACHE_TTL = 1800000; // 30 minutes
+    if (this._vouchersByTypeCache[cacheKey] && (now - this._vouchersByTypeCache[cacheKey].timestamp < TYPE_CACHE_TTL)) {
       return this._vouchersByTypeCache[cacheKey].data;
     }
+    try {
+      const persisted = localStorage.getItem(`vouchers_type_${cacheKey}`);
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        if (parsed && Array.isArray(parsed.data) && (now - (parsed.timestamp || 0) < TYPE_CACHE_TTL)) {
+          this._vouchersByTypeCache[cacheKey] = parsed;
+          return parsed.data;
+        }
+      }
+    } catch (e) {}
     try {
       let vouchers: any[] = [];
       let allEntries: any[] = [];
@@ -2276,6 +2323,9 @@ export const erpService: any = {
       });
 
       this._vouchersByTypeCache[cacheKey] = { data: result, timestamp: now };
+      try {
+        localStorage.setItem(`vouchers_type_${cacheKey}`, JSON.stringify({ data: result, timestamp: now }));
+      } catch (e) {}
       return result;
     } catch (error) {
       console.error('Error in getVouchersByType:', error);
@@ -2914,9 +2964,9 @@ export const erpService: any = {
     this._patchCachesOnDelete(companyId, id, voucher);
     this.trackQuota(companyId, 0, 0, 1 + eSnap.size + iSnap.size);
 
-    // Trigger recalculation for affected items
-    for (const itemId of itemIdsToRecalc) {
-      this.recalculateItemStats(itemId, companyId).catch(console.error);
+    const countKey = `vouchers_${companyId}`;
+    if (this._collectionCountCache[countKey]) {
+      this._collectionCountCache[countKey].count = Math.max(0, this._collectionCountCache[countKey].count - 1);
     }
 
     this.logActivity(
@@ -3278,11 +3328,6 @@ export const erpService: any = {
 
       if (res && res.success) {
         this._patchCachesOnUpdate(companyId, id, oldVoucher, updatedVoucher, entries, inventoryEntries || []);
-        if (res.itemIds.length > 0) {
-          for (const itemId of res.itemIds) {
-            this.recalculateItemStats(itemId as string, companyId).catch(console.error);
-          }
-        }
       }
 
       const vNo = voucher.reference_no || voucher.v_no || voucher.serial_no || id;
@@ -4225,51 +4270,34 @@ export const erpService: any = {
       return this._itemStatsCache[cacheKey].data;
     }
     try {
-      const item = await this.getItemById(itemId);
+      // 1. Fast path: check in-memory items cache (Zero network reads!)
+      let item = this._itemsCache[companyId]?.data?.find((i: any) => i.id === itemId);
+      if (!item) {
+        try {
+          const stored = localStorage.getItem(`col_cache_items_${companyId}`);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed && Array.isArray(parsed.data)) {
+              item = parsed.data.find((i: any) => i.id === itemId);
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (!item) {
+        item = await this.getItemById(itemId);
+      }
       if (!item) return null;
 
-      const entriesRef = collection(db, 'inventory_entries');
-      const q = query(
-        entriesRef,
-        where('item_id', '==', itemId),
-        where('companyId', '==', companyId)
-      );
-      
-      const snap = await getDocs(q);
-      const sortedEntries = snap.docs.map(d => ({ ...(d.data() as any), id: d.id }))
-        .sort((a, b) => {
-          const dateComp = (a.date || '').localeCompare(b.date || '');
-          if (dateComp !== 0) return dateComp;
-          return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
-        });
-      
-      let currentStock = (item.opening_qty || 0);
-      let totalInward = 0;
-      let totalOutward = 0;
+      // In ERP, item document already maintains current_stock and rate
+      const currentStock = Number(item.current_stock !== undefined ? item.current_stock : (item.opening_qty || 0));
+      const lastRate = Number(item.rate || item.purchase_price || item.opening_rate || 0);
 
-      for (const e of sortedEntries) {
-        const qty = (Number(e.qty) || 0) + (Number(e.free_qty) || 0);
-        const mType = getMovementType(e);
-        
-        if (e.v_type?.toLowerCase() === 'physical stock') {
-          currentStock = (Number(e.qty) || 0);
-          const adj = (e.adjustment_qty !== undefined) ? Number(e.adjustment_qty) : (currentStock - (currentStock - qty)); // approximated if missing
-          if (adj > 0) totalInward += adj;
-          else if (adj < 0) totalOutward += Math.abs(adj);
-        } else if (mType === 'inward') {
-          currentStock += qty;
-          totalInward += qty;
-        } else {
-          currentStock -= qty;
-          totalOutward += qty;
-        }
-      }
-      
       const result = {
         currentStock,
-        totalInward,
-        totalOutward,
-        lastRate: sortedEntries.length > 0 ? sortedEntries[sortedEntries.length - 1].rate : item.opening_rate
+        totalInward: 0,
+        totalOutward: 0,
+        lastRate
       };
       this._itemStatsCache[cacheKey] = { data: result, timestamp: now };
       return result;
@@ -4591,6 +4619,17 @@ export const erpService: any = {
     }
 
     try {
+      const persisted = localStorage.getItem(`dashboard_stats_${cacheKey}`);
+      if (!forceRefresh && persisted) {
+        const parsed = JSON.parse(persisted);
+        if (parsed && (now - (parsed.timestamp || 0) < DASHBOARD_TTL)) {
+          this._dashboardStatsCache[cacheKey] = parsed;
+          return parsed.data;
+        }
+      }
+    } catch (e) {}
+
+    try {
       let q;
       // Optimization: For free quota saving, we limit the documents fetched severely
       // Large companies should move to a summarized document
@@ -4681,6 +4720,9 @@ export const erpService: any = {
         data: stats,
         timestamp: now
       };
+      try {
+        localStorage.setItem(`dashboard_stats_${cacheKey}`, JSON.stringify({ data: stats, timestamp: now }));
+      } catch (e) {}
 
       return stats;
     } catch (err) {
@@ -4745,9 +4787,20 @@ export const erpService: any = {
   async getVouchersByDateRange(companyId: string, startDate: string, endDate: string): Promise<any[]> {
     const cacheKey = `${companyId}_${startDate}_${endDate}`;
     const now = Date.now();
-    if (this._vouchersByDateRangeCache[cacheKey]) {
+    const VOUCHER_RANGE_TTL = 1800000; // 30 minutes
+    if (this._vouchersByDateRangeCache[cacheKey] && (now - this._vouchersByDateRangeCache[cacheKey].timestamp < VOUCHER_RANGE_TTL)) {
       return this._vouchersByDateRangeCache[cacheKey].data;
     }
+    try {
+      const persisted = localStorage.getItem(`vouchers_range_${cacheKey}`);
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        if (parsed && Array.isArray(parsed.data) && (now - (parsed.timestamp || 0) < VOUCHER_RANGE_TTL)) {
+          this._vouchersByDateRangeCache[cacheKey] = parsed;
+          return parsed.data;
+        }
+      }
+    } catch (e) {}
     try {
       let vouchers: any[] = [];
       let allEntries: any[] = [];
@@ -4833,6 +4886,9 @@ export const erpService: any = {
       });
 
       this._vouchersByDateRangeCache[cacheKey] = { data: result, timestamp: now };
+      try {
+        localStorage.setItem(`vouchers_range_${cacheKey}`, JSON.stringify({ data: result, timestamp: now }));
+      } catch (e) {}
       return result;
     } catch (error) {
       console.error('Error in getVouchersByDateRange:', error);
@@ -5054,33 +5110,34 @@ export const erpService: any = {
   },
 
   async getNextVoucherNumber(companyId: string, type: string, format?: string): Promise<string> {
-    const q = query(
-      collection(db, 'vouchers'),
-      where('companyId', '==', companyId),
-      where('v_type', '==', type),
-      orderBy('v_date', 'desc'),
-      orderBy('createdAt', 'desc'),
-      limit(1)
-    );
-    
     let lastNo = '';
-    try {
-      const snapshot = await getDocs(q);
-      if (!snapshot.empty) {
-        lastNo = snapshot.docs[0].data().v_no || '';
+    
+    // Check cached vouchers first to avoid Firestore reads
+    for (const key of Object.keys(this._recentVouchersCache)) {
+      if (key.startsWith(companyId)) {
+        const cached = this._recentVouchersCache[key]?.data || [];
+        const match = cached.find((v: any) => (v.v_type || '').toLowerCase() === type.toLowerCase());
+        if (match && (match.v_no || match.reference_no)) {
+          lastNo = match.v_no || match.reference_no;
+          break;
+        }
       }
-    } catch (err) {
-      console.warn('getNextVoucherNumber strict query failed, trying fallback:', err);
-      const qBroad = query(
-        collection(db, 'vouchers'),
-        where('companyId', '==', companyId),
-        orderBy('v_date', 'desc'),
-        limit(200)
-      );
-      const broadSnap = await getDocs(qBroad);
-      const matchingDoc = broadSnap.docs.find(d => d.data().v_type === type);
-      if (matchingDoc) {
-        lastNo = matchingDoc.data().v_no || '';
+    }
+
+    if (!lastNo) {
+      try {
+        const q = query(
+          collection(db, 'vouchers'),
+          where('companyId', '==', companyId),
+          where('v_type', '==', type),
+          limit(1)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          lastNo = snapshot.docs[0].data().v_no || snapshot.docs[0].data().reference_no || '';
+        }
+      } catch (err) {
+        console.warn('getNextVoucherNumber simple query fallback:', err);
       }
     }
     
@@ -5122,6 +5179,19 @@ export const erpService: any = {
       let ledger: any = null;
       if (companyId && this._ledgersCache[companyId]?.data?.length > 0) {
         ledger = this._ledgersCache[companyId].data.find((l: any) => l.id === ledgerId);
+      }
+
+      // Check localStorage ledgers cache if memory cache was cold
+      if (!ledger && companyId) {
+        try {
+          const stored = localStorage.getItem(`col_cache_ledgers_${companyId}`);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed && Array.isArray(parsed.data)) {
+              ledger = parsed.data.find((l: any) => l.id === ledgerId);
+            }
+          }
+        } catch (e) {}
       }
 
       if (ledger) {
@@ -5354,11 +5424,23 @@ export const erpService: any = {
 
   // Settings
   async getSettings(companyId: string) {
+    if (!companyId) return null;
+    try {
+      const persisted = localStorage.getItem(`swr_settings_${companyId}`);
+      if (persisted) {
+        return JSON.parse(persisted);
+      }
+    } catch (e) {}
+
     try {
       const ref = doc(db, 'settings', companyId);
       const snap = await getDoc(ref);
       if (snap.exists()) {
-        return snap.data();
+        const data = snap.data();
+        try {
+          localStorage.setItem(`swr_settings_${companyId}`, JSON.stringify(data));
+        } catch (e) {}
+        return data;
       }
       return null;
     } catch (error) {
@@ -5448,14 +5530,7 @@ export const erpService: any = {
   },
 
   async getCompanyUsers(companyId: string): Promise<UserProfile[]> {
-    try {
-      const q = query(collection(db, 'users'), where('companyId', '==', companyId));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'users');
-      return [];
-    }
+    return (await this.getUsersByCompany(companyId)) as UserProfile[];
   },
 
   async updateTargetAmount(uid: string, target_amount: number) {
@@ -5615,11 +5690,27 @@ export const erpService: any = {
   },
 
   // Order Management
-  async getOrders(companyId: string): Promise<PrintingOrder[]> {
+  async getOrders(companyId: string, forceRefresh = false): Promise<PrintingOrder[]> {
+    if (!companyId) return [];
+    const now = Date.now();
+    if (!forceRefresh && this._ordersCache[companyId] && (now - this._ordersCache[companyId].timestamp < 600000)) {
+      return this._ordersCache[companyId].data;
+    }
     try {
-      const q = query(collection(db, 'orders'), where('companyId', '==', companyId), orderBy('createdAt', 'desc'));
+      const persisted = localStorage.getItem(`cache_orders_${companyId}`);
+      if (!forceRefresh && persisted) {
+        const parsed = JSON.parse(persisted);
+        if (parsed && Array.isArray(parsed.data) && (now - (parsed.timestamp || 0) < 600000)) {
+          this._ordersCache[companyId] = parsed;
+          return parsed.data;
+        }
+      }
+    } catch (e) {}
+
+    try {
+      const q = query(collection(db, 'orders'), where('companyId', '==', companyId), limit(50));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => {
+      const orders = snapshot.docs.map(doc => {
         const data = doc.data();
         // Migration logic: if items is missing, create it from legacy fields
         if (!data.items && data.itemName) {
@@ -5637,6 +5728,13 @@ export const erpService: any = {
         }
         return { ...(doc.data() as any), id: doc.id } as unknown as PrintingOrder;
       });
+
+      this._ordersCache[companyId] = { data: orders, timestamp: now };
+      try {
+        localStorage.setItem(`cache_orders_${companyId}`, JSON.stringify({ data: orders, timestamp: now }));
+      } catch (e) {}
+
+      return orders;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'orders');
       return [];
@@ -6022,10 +6120,36 @@ export const erpService: any = {
       return cachedLength;
     }
 
+    const countKey = `${colName}_${companyId}`;
+    const now = Date.now();
+    const COUNT_TTL = 1800000; // 30 minutes cache TTL
+
+    if (this._collectionCountCache[countKey] && (now - this._collectionCountCache[countKey].timestamp < COUNT_TTL)) {
+      return this._collectionCountCache[countKey].count;
+    }
+
+    try {
+      const persisted = localStorage.getItem(`cache_count_${countKey}`);
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        if (parsed && typeof parsed.count === 'number' && (now - (parsed.timestamp || 0) < COUNT_TTL)) {
+          this._collectionCountCache[countKey] = parsed;
+          return parsed.count;
+        }
+      }
+    } catch (e) {}
+
     try {
       const q = query(collection(db, colName), where('companyId', '==', companyId));
       const snapshot = await getCountFromServer(q);
-      return snapshot.data().count;
+      const count = snapshot.data().count;
+
+      this._collectionCountCache[countKey] = { count, timestamp: now };
+      try {
+        localStorage.setItem(`cache_count_${countKey}`, JSON.stringify({ count, timestamp: now }));
+      } catch (e) {}
+
+      return count;
     } catch (error) {
       console.warn(`Error getting server count for ${colName}:`, error);
       // Fallback: If quota has been exceeded or database is offline, catch silently and return 0
@@ -6175,43 +6299,67 @@ export const erpService: any = {
       }
     })();
 
-    // 4. Search Vouchers (Optimized with 5-minute session cache and index-safe fallback)
+    // 4. Search Vouchers (Optimized with 30-minute cache and tight limit)
     const voucherResults = await (async () => {
       try {
         const now = Date.now();
+        const SEARCH_TTL = 1800000; // 30 minutes
         let vouchers: any[] = [];
         
-        // Use cache if same company and less than 5 minutes old
+        // 1. Use memory cache if available
         if (this._searchVouchersCache.companyId === companyId && 
-            (now - this._searchVouchersCache.timestamp < 300000) &&
+            (now - this._searchVouchersCache.timestamp < SEARCH_TTL) &&
             Array.isArray(this._searchVouchersCache.data) &&
             this._searchVouchersCache.data.length > 0) {
           vouchers = this._searchVouchersCache.data;
         } else {
+          // 2. Check localStorage collection cache or recent vouchers cache
           try {
-            const vSnap = await getDocs(query(
-              collection(db, 'vouchers'),
-              where('companyId', '==', companyId),
-              orderBy('v_date', 'desc'),
-              limit(2000)
-            ));
-            vouchers = vSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-          } catch (idxError) {
-            console.warn('Search vouchers indexed query failed, falling back to simple query:', idxError);
-            const vSnap = await getDocs(query(
-              collection(db, 'vouchers'),
-              where('companyId', '==', companyId),
-              limit(2500)
-            ));
-            vouchers = vSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-            vouchers.sort((a, b) => String(b.v_date || '').localeCompare(String(a.v_date || '')));
+            const persisted = localStorage.getItem(`cache_search_vouchers_${companyId}`);
+            if (persisted) {
+              const parsed = JSON.parse(persisted);
+              if (parsed && Array.isArray(parsed.data) && (now - (parsed.timestamp || 0) < SEARCH_TTL)) {
+                this._searchVouchersCache = { companyId, data: parsed.data, timestamp: parsed.timestamp };
+                vouchers = parsed.data;
+              }
+            }
+          } catch (e) {}
+
+          // 3. Fallback to cached collection if available
+          if (vouchers.length === 0) {
+            try {
+              const colStored = localStorage.getItem(`col_cache_vouchers_${companyId}`);
+              if (colStored) {
+                const parsedCol = JSON.parse(colStored);
+                if (parsedCol && Array.isArray(parsedCol.data) && parsedCol.data.length > 0) {
+                  vouchers = parsedCol.data;
+                }
+              }
+            } catch (e) {}
           }
 
-          this._searchVouchersCache = {
-            companyId,
-            data: vouchers,
-            timestamp: now
-          };
+          // 4. If still empty, perform a targeted Firestore query with strict limit(100) (NOT 2500!)
+          if (vouchers.length === 0) {
+            try {
+              const vSnap = await getDocs(query(
+                collection(db, 'vouchers'),
+                where('companyId', '==', companyId),
+                limit(100)
+              ));
+              vouchers = vSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+            } catch (idxError) {
+              console.warn('Search vouchers query failed:', idxError);
+            }
+
+            this._searchVouchersCache = {
+              companyId,
+              data: vouchers,
+              timestamp: now
+            };
+            try {
+              localStorage.setItem(`cache_search_vouchers_${companyId}`, JSON.stringify({ data: vouchers, timestamp: now }));
+            } catch (e) {}
+          }
         }
         
         return vouchers

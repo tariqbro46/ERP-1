@@ -270,12 +270,26 @@ export function VoucherEntry() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isInventoryEnabled, showNotification]);
+  const [ledgers, setLedgers] = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>([]);
+  const [godowns, setGodowns] = useState<any[]>([]);
+  const [units, setUnits] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [salespersonId, setSalespersonId] = useState('');
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [itemStats, setItemStats] = useState<any>(null);
 
   useEffect(() => {
     async function fetchStats() {
       if (focusedItemId && user?.companyId) {
+        const foundItem = items.find(i => i.id === focusedItemId);
+        if (foundItem) {
+          setItemStats({
+            currentStock: Number(foundItem.current_stock !== undefined ? foundItem.current_stock : (foundItem.opening_qty || 0)),
+            lastRate: Number(foundItem.rate || foundItem.purchase_price || foundItem.opening_rate || 0)
+          });
+          return;
+        }
         try {
           const stats = await erpService.getItemStats(focusedItemId, user.companyId);
           setItemStats(stats);
@@ -287,7 +301,7 @@ export function VoucherEntry() {
       }
     }
     fetchStats();
-  }, [focusedItemId, user?.companyId]);
+  }, [focusedItemId, user?.companyId, items]);
   const [loading, setLoading] = useState(false);
   const refNoInputRef = useRef<HTMLInputElement>(null);
   const bankTxTypeRef = useRef<HTMLSelectElement>(null);
@@ -313,12 +327,6 @@ export function VoucherEntry() {
     }
   }, [loading]);
   const [showShareMenu, setShowShareMenu] = useState(false);
-  const [ledgers, setLedgers] = useState<any[]>([]);
-  const [items, setItems] = useState<any[]>([]);
-  const [godowns, setGodowns] = useState<any[]>([]);
-  const [units, setUnits] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [salespersonId, setSalespersonId] = useState('');
   
   // Quick Create State
   const [isQuickLedgerOpen, setIsQuickLedgerOpen] = useState(false);
