@@ -22,10 +22,78 @@ export interface ReleaseVersion {
   bugFixes: ReleaseNoteItem[];
 }
 
-export const LATEST_VERSION = "v1.9.6";
+export const LATEST_VERSION = "v1.9.7";
 export const LAST_SEEN_VERSION_KEY = "tallyflow_last_seen_release_version";
 
 export const RELEASE_NOTES: ReleaseVersion[] = [
+  {
+    version: "v1.9.7",
+    releaseDate: "October 13, 2026",
+    bnReleaseDate: "১৩ অক্টোবর, ২০২৬",
+    title: "Persistent Search State & History Preservation, Match Type Filtering & Quota-Optimized Search Engine",
+    bnTitle: "সার্চ স্টেট ও হিস্ট্রি সংরক্ষণ, ম্যাচ টাইপ ফিল্টারিং এবং কোটা-বান্ধব আধুনিক সার্চ ইঞ্জিন",
+    summary: "Introduced persistent search session restoration across navigations (retaining query, tab, and match type filters when returning from View Voucher or View Ledger), interactive multi-category match type filtering (Serial No, Voucher Ref, Amount, Narration, Party, Item, Date), strict Enter/Search-button execution discipline, pure English search interface localization, and resolved voucher search demo function errors in erpService.",
+    bnSummary: "সার্চ রেজাল্ট থেকে ভাউচার বা লেজার দেখে ব্যাকে আসলে পূর্বের সার্চ কিউয়ার্ড, ফিল্টার ও রেজাল্ট যাতে মুছে না যায় তার জন্য স্থায়ী স্টেট ক্যাশিং সিস্টেম যোগ করা হয়েছে। সাথে ম্যাচ টাইপ ফিল্টারিং (সিরিয়াল নম্বর, ভাউচার রেফ, অ্যামাউন্ট, ন্যারেশন, পার্টি, আইটেম ইত্যাদি অনুসারে ফিল্টার), শুধু এন্টার চাপলে বা সার্চ বাটনে ক্লিক করলে সার্চ এক্সিকিউশন, শতভাগ ইংরেজি ইন্টারফেস এবং erpService সার্চ ত্রুটি দূর করা হয়েছে।",
+    isLatest: true,
+    newFeatures: [
+      {
+        id: "feat-search-state-persistence",
+        title: "Persistent Search State & Seamless Back Navigation Restoration",
+        bnTitle: "সার্চ স্টেট স্থায়ী সংরক্ষণ ও ব্যাক নেভিগেশনে নিরবচ্ছিন্ন রিস্টোরেশন",
+        description: "When users navigate to inspect a voucher, ledger, or inventory item from the search results and return via the Back button, the full search context (input query, active tab, match filter, and results list) is preserved with zero data loss or unnecessary database re-fetches.",
+        bnDescription: "সার্চ রেজাল্ট থেকে যেকোনো ভাউচার বা লেজার দেখে ব্যাকে আসলে আগের সার্চ কিউয়ার্ড, ক্যাটাগরি ট্যাব ও ফিল্টার রেজাল্ট হুবহু আগের মতোই থাকবে, পুনরায় সার্চ করতে হবে না বা কোনো ডেটা হারাবে না।",
+        module: "Search & Navigation",
+        badge: "NEW"
+      },
+      {
+        id: "feat-search-match-type-filter",
+        title: "Multi-Criteria Match Type Filtering & Dynamic Badges",
+        bnTitle: "মাল্টি-ক্রাইটেরিয়া ম্যাচ টাইপ ফিল্টারিং ও ডায়নামিক ব্যাজ",
+        description: "Search results now visually identify exact matching criteria (Serial No, Voucher Ref, Amount, Narration, Party Name, Stock Item, Date, Contact, SKU) with an interactive filter bar positioned above Search Scope Info to quickly filter results by specific match type.",
+        bnDescription: "সার্চ কিউয়ার্ডের সাথে রেজাল্টগুলোর কোথায় মিল রয়েছে (সিরিয়াল নম্বর, ভাউচার রেফ, অ্যামাউন্ট, ন্যারেশন, পার্টি, আইটেম ইত্যাদি) তা স্পষ্ট ব্যাজের মাধ্যমে প্রদর্শিত হয় এবং Search Scope Info-এর উপরে থাকা ফিল্টার বার থেকে নির্দিষ্ট ম্যাচ টাইপ বেছে নিয়ে দ্রুত ফলাফল ফিল্টার করা যায়।",
+        module: "Search Experience",
+        badge: "NEW"
+      },
+      {
+        id: "feat-search-trigger-discipline",
+        title: "Controlled Search Execution on Enter Key & Search Button",
+        bnTitle: "এন্টার কী ও সার্চ বাটনে নিয়ন্ত্রিত সার্চ এক্সিকিউশন",
+        description: "Optimized the search workflow so searches strictly fire only when the user presses Enter or explicitly clicks the Search button, preventing unwanted partial queries during typing and protecting Firestore read quota.",
+        bnDescription: "সার্চ বক্সে টাইপ করার সময় অপ্রয়োজনীয় স্বয়ংক্রিয় সার্চ বন্ধ করে শুধুমাত্র কিবোর্ডের Enter চাপলে অথবা Search বাটনে ক্লিক করলেই রেজাল্ট লোড হওয়ার কঠোর শৃঙ্খলা নিশ্চিত করা হয়েছে।",
+        module: "Quota & Performance",
+        badge: "NEW"
+      },
+      {
+        id: "feat-search-english-localization",
+        title: "Pure Professional English Search Interface",
+        bnTitle: "সার্চ ইন্টারফেসে শতভাগ পেশাদার ইংরেজি পরিভাষা",
+        description: "Streamlined all Match Type Filters, badge titles, scope details, and control labels to clear, professional English terminology across classic and modern search layouts.",
+        bnDescription: "ম্যাচ টাইপ ফিল্টার এবং সার্চ স্কোপ বিবরণীর সকল টেক্সট সম্পূর্ণ প্রমিত ও পেশাদার ইংরেজি ভাষায় রূপান্তর করা হয়েছে।",
+        module: "Localization",
+        badge: "ENHANCED"
+      }
+    ],
+    improvements: [
+      {
+        id: "imp-search-session-cache",
+        title: "In-Memory & Session Storage Hybrid Search Cache",
+        bnTitle: "ইন-মেমোরি ও সেশন স্টোরেজ হাইব্রিড সার্চ ক্যাশ",
+        description: "Employed a synchronized dual-layer cache architecture that keeps search sessions instantly available without consuming network bandwidth or Firestore read quotas.",
+        bnDescription: "ডুয়াল-লেয়ার ক্যাশ আর্কিটেকচারের মাধ্যমে দ্রুততম সময়ে ব্রাউজার হিস্ট্রি ও ব্যাক নেভিগেশনে সার্চ ডেটা ইনস্ট্যান্ট ফিরিয়ে আনার ব্যবস্থা করা হয়েছে।",
+        module: "Architecture"
+      }
+    ],
+    bugFixes: [
+      {
+        id: "fix-search-vouchers-isdemo-error",
+        title: "Fixed TypeError in Voucher Search (this._isDemo)",
+        bnTitle: "ভাউচার সার্চে TypeError (this._isDemo) সমাধান",
+        description: "Resolved the TypeError runtime exception when executing voucher queries in erpService.ts, ensuring seamless search operations across all accounts.",
+        bnDescription: "erpService.ts ফাইলের ভাউচার সার্চ মেথডে ডেমো ফাংশন সংক্রান্ত ত্রুটি দূর করে নির্ভরযোগ্য সার্চ কার্যক্রম নিশ্চিত করা হয়েছে।",
+        module: "Bug Fix"
+      }
+    ]
+  },
   {
     version: "v1.9.6",
     releaseDate: "October 5, 2026",
@@ -34,7 +102,7 @@ export const RELEASE_NOTES: ReleaseVersion[] = [
     bnTitle: "ইনস্ট্যান্ট ওয়ান-ক্লিক রিলিজ পপআপ, সেমভার ভার্সন গার্ড ও সর্বজনীন টেবিল সেন্টারিং",
     summary: "Refined version release popup workflows with seamless single-click dismissal and physical ESC key support, eliminated redundant duplicate modal rendering, introduced a robust SemVer upgrade guard ensuring fresh Vercel deployments immediately reflect the latest version, and standardized Microsoft Word-style table vertical cell centering across all modules.",
     bnSummary: "রিলিজ নোট পপআপে ডাবল-ক্লোজ সমস্যা সমাধান করে দ্রুত সিঙ্গেল-ক্লিক ও ESC কী ক্লোজ সুবিধা নিশ্চিত করা হয়েছে। অপ্রয়োজনীয় গিটহাব সিঙ্ক পপআপ বাতিল করে সাইডবার থেকে সরাসরি বর্তমান সংস্করণের পূর্ণাঙ্গ নোট দেখার ব্যবস্থা করা হয়েছে। এছাড়াও সেমভার গার্ড যোগ করায় Vercel ডেপ্লয়মেন্টে ব্রাউজার ক্যাশ কোনোভাবেই অ্যাপ ভার্সন আটকে রাখতে পারবে না।",
-    isLatest: true,
+    isLatest: false,
     newFeatures: [
       {
         id: "feat-direct-version-modal",

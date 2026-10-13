@@ -1,2 +1,0 @@
-    'settings.menuBarStyleDesc': 'Choose your preferred navigation layout.',
-    'settings.menuBarStyleDesc': 'আপনার পছন্দ�    'subscription.active': 'সক্রিয়',

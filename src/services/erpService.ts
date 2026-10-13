@@ -564,6 +564,10 @@ export const erpService: any = {
     return localStorage.getItem('erp_is_demo_mode') === 'true';
   },
 
+  _isDemo(companyId?: string) {
+    return companyId === 'demo' || companyId === 'demo_company' || this.isDemoMode();
+  },
+
   _getDemoData(colName: string): any[] {
     const dbStr = localStorage.getItem('erp_demo_db');
     let dataObj: any = {};
@@ -6223,27 +6227,311 @@ export const erpService: any = {
   _searchVouchersCache: { companyId: '', data: [] as any[], timestamp: 0 },
 
   async searchCompanyData(companyId: string, searchTerm: string) {
-    if (!searchTerm || searchTerm.length < 2 || !companyId) return [];
-    const lowerSearch = searchTerm.toLowerCase();
+    if (!searchTerm || !searchTerm.trim() || !companyId) return [];
+    const trimmedSearch = searchTerm.trim();
+    const lowerSearch = trimmedSearch.toLowerCase();
+    const normalizedQuery = lowerSearch.replace(/[:#\-_,./]/g, ' ').replace(/\s+/g, ' ').trim();
+    const queryTokens = normalizedQuery.split(' ').filter(t => t.length > 0);
     
+    // Helper to detect specific match reasons for vouchers
+    const detectVoucherMatches = (v: any, term: string) => {
+      const lower = term.toLowerCase().trim();
+      const matchedFields = new Set<string>();
+      const matchBadges: { label: string; text: string; category: string }[] = [];
+
+      const sNum = v.serial_no !== undefined && v.serial_no !== null && v.serial_no !== '' 
+        ? String(v.serial_no).trim() 
+        : (v.auto_serial_no !== undefined && v.auto_serial_no !== null ? String(v.auto_serial_no).trim() : '');
+
+      // 1. Serial No match
+      if (sNum) {
+        const sLower = sNum.toLowerCase();
+        const isExact = sLower === lower;
+        const isContained = sLower.includes(lower);
+        const isKeywordSerial = lower.includes('serial') || lower.includes('sl') || lower.includes('সিরিয়াল');
+        if (isExact || isContained || (isKeywordSerial && lower.includes(sLower))) {
+          matchedFields.add('serial_no');
+          matchBadges.push({ label: 'Serial No', text: `#${sNum}`, category: 'serial_no' });
+        }
+      }
+
+      // 2. Voucher / Ref / Memo / Chalan / Bill No match
+      const vNoFields = [
+        { key: 'v_no', label: 'Voucher No', val: v.v_no },
+        { key: 'reference_no', label: 'Ref No', val: v.reference_no },
+        { key: 'memo_no', label: 'Memo No', val: v.memo_no || v.memoNo },
+        { key: 'invoice_no', label: 'Invoice No', val: v.invoice_no || v.invoiceNo },
+        { key: 'chalan_no', label: 'Chalan No', val: v.chalan_no || v.chalanNo },
+        { key: 'bill_no', label: 'Bill No', val: v.bill_no || v.billNo }
+      ];
+      for (const f of vNoFields) {
+        if (f.val && String(f.val).toLowerCase().includes(lower)) {
+          matchedFields.add('voucher_no');
+          matchBadges.push({ label: f.label, text: String(f.val), category: 'voucher_no' });
+          break;
+        }
+      }
+
+      // 3. Amount match (total_amount, grand_total, tax_amount, discount_amount, entry amounts, inventory rates)
+      const amounts = [
+        { label: 'Amount', val: v.total_amount },
+        { label: 'Grand Total', val: v.grand_total },
+        { label: 'Tax', val: v.tax_amount },
+        { label: 'Discount', val: v.discount_amount }
+      ];
+      const cleanLower = lower.replace(/,/g, '');
+      let amountMatched = false;
+      for (const a of amounts) {
+        if (a.val !== undefined && a.val !== null && a.val !== '') {
+          const aStr = String(a.val);
+          const cleanA = aStr.replace(/,/g, '');
+          if (aStr.includes(lower) || (cleanLower.length > 0 && cleanA.includes(cleanLower))) {
+            matchedFields.add('amount');
+            matchBadges.push({ label: a.label, text: `৳${a.val}`, category: 'amount' });
+            amountMatched = true;
+            break;
+          }
+        }
+      }
+      if (Array.isArray(v.entries)) {
+        for (const e of v.entries) {
+          const eAmt = e.amount !== undefined ? e.amount : (e.debit !== undefined ? e.debit : e.credit);
+          if (eAmt !== undefined && eAmt !== null && eAmt !== '') {
+            const eStr = String(eAmt);
+            const cleanE = eStr.replace(/,/g, '');
+            if (eStr.includes(lower) || (cleanLower.length > 0 && cleanE.includes(cleanLower))) {
+              matchedFields.add('amount');
+              const entryLedger = e.ledger_name ? ` (${e.ledger_name})` : '';
+              matchBadges.push({ label: 'Entry Amount', text: `৳${eAmt}${entryLedger}`, category: 'amount' });
+              amountMatched = true;
+              break;
+            }
+          }
+        }
+      }
+      const invList = v.inventory_entries || v.inventory;
+      if (Array.isArray(invList)) {
+        for (const i of invList) {
+          const iAmt = i.amount !== undefined ? i.amount : i.rate;
+          if (iAmt !== undefined && iAmt !== null && iAmt !== '') {
+            const iStr = String(iAmt);
+            const cleanI = iStr.replace(/,/g, '');
+            if (iStr.includes(lower) || (cleanLower.length > 0 && cleanI.includes(cleanLower))) {
+              matchedFields.add('amount');
+              const iName = i.item_name ? ` (${i.item_name})` : '';
+              matchBadges.push({ label: 'Item Rate/Amt', text: `৳${iAmt}${iName}`, category: 'amount' });
+              amountMatched = true;
+              break;
+            }
+          }
+        }
+      }
+
+      // 4. Party / Ledger Name match
+      const partyStr = String(v.party_name || v.party_ledger_name || v.ledger_name || '').toLowerCase();
+      let partyMatched = false;
+      if (partyStr && partyStr.includes(lower)) {
+        matchedFields.add('party');
+        matchBadges.push({ label: 'Party', text: v.party_name || v.party_ledger_name || v.ledger_name, category: 'party' });
+        partyMatched = true;
+      }
+      if (!partyMatched && Array.isArray(v.entries)) {
+        for (const e of v.entries) {
+          if (e.ledger_name && String(e.ledger_name).toLowerCase().includes(lower)) {
+            matchedFields.add('party');
+            matchBadges.push({ label: 'Ledger', text: e.ledger_name, category: 'party' });
+            partyMatched = true;
+            break;
+          }
+        }
+      }
+
+      // 5. Narration & Particulars match
+      const narr = String(v.narration || v.notes || v.remarks || '');
+      const parts = String(v.particulars || '');
+      if (narr && narr.toLowerCase().includes(lower)) {
+        matchedFields.add('narration');
+        const idx = narr.toLowerCase().indexOf(lower);
+        const start = Math.max(0, idx - 15);
+        const end = Math.min(narr.length, idx + lower.length + 25);
+        const snippet = (start > 0 ? '...' : '') + narr.substring(start, end).trim() + (end < narr.length ? '...' : '');
+        matchBadges.push({ label: 'Narration', text: snippet || narr, category: 'narration' });
+      } else if (parts && parts.toLowerCase().includes(lower) && !partyMatched) {
+        matchedFields.add('narration');
+        matchBadges.push({ label: 'Particulars', text: v.particulars, category: 'narration' });
+      }
+      if (!matchedFields.has('narration') && Array.isArray(v.entries)) {
+        for (const e of v.entries) {
+          const eNarr = String(e.narration || e.description || e.remarks || '');
+          if (eNarr && eNarr.toLowerCase().includes(lower)) {
+            matchedFields.add('narration');
+            matchBadges.push({ label: 'Line Narration', text: eNarr, category: 'narration' });
+            break;
+          }
+        }
+      }
+
+      // 6. Stock Item match
+      const itemNames = String(v.item_names || '');
+      if (itemNames && itemNames.toLowerCase().includes(lower)) {
+        matchedFields.add('item');
+        matchBadges.push({ label: 'Item', text: itemNames, category: 'item' });
+      } else if (Array.isArray(invList)) {
+        for (const i of invList) {
+          if (i && (String(i.item_name || '').toLowerCase().includes(lower) || String(i.item_id || '').toLowerCase().includes(lower) || String(i.part_no || '').toLowerCase().includes(lower))) {
+            matchedFields.add('item');
+            matchBadges.push({ label: 'Stock Item', text: i.item_name || i.item_id, category: 'item' });
+            break;
+          }
+        }
+      }
+
+      // 7. Date match
+      const dStr = String(v.v_date || v.date || '').toLowerCase();
+      if (dStr && dStr.includes(lower)) {
+        matchedFields.add('other');
+        matchBadges.push({ label: 'Date', text: v.v_date || v.date, category: 'other' });
+      }
+
+      // 8. Bank details match
+      if (v.bank_details) {
+        const bName = String(v.bank_details.bank_name || '');
+        const instNo = String(v.bank_details.instrument_no || '');
+        if (bName.toLowerCase().includes(lower) || instNo.toLowerCase().includes(lower)) {
+          matchedFields.add('other');
+          matchBadges.push({ label: 'Bank/Chq', text: `${bName} ${instNo}`.trim(), category: 'other' });
+        }
+      }
+
+      if (matchedFields.size === 0) {
+        matchedFields.add('other');
+        matchBadges.push({ label: 'Content', text: term, category: 'other' });
+      }
+
+      return {
+        matchedFields: Array.from(matchedFields),
+        matchBadges
+      };
+    };
+
+    // Helper for Ledger match detection
+    const detectLedgerMatches = (l: any, term: string) => {
+      const lower = term.toLowerCase().trim();
+      const matchedFields = new Set<string>();
+      const matchBadges: { label: string; text: string; category: string }[] = [];
+      if (String(l.name || '').toLowerCase().includes(lower)) {
+        matchedFields.add('party');
+        matchBadges.push({ label: 'Ledger Name', text: l.name, category: 'party' });
+      }
+      if (String(l.alias || '').toLowerCase().includes(lower)) {
+        matchedFields.add('party');
+        matchBadges.push({ label: 'Alias', text: l.alias, category: 'party' });
+      }
+      if (String((l as any).ledger_groups?.name || l.group_name || '').toLowerCase().includes(lower)) {
+        matchedFields.add('other');
+        matchBadges.push({ label: 'Group', text: (l as any).ledger_groups?.name || l.group_name, category: 'other' });
+      }
+      if (String(l.phone || (l as any).mobile || '').includes(lower)) {
+        matchedFields.add('other');
+        matchBadges.push({ label: 'Phone', text: l.phone || (l as any).mobile, category: 'other' });
+      }
+      if (String(l.address || '').toLowerCase().includes(lower)) {
+        matchedFields.add('other');
+        matchBadges.push({ label: 'Address', text: l.address, category: 'other' });
+      }
+      if (matchedFields.size === 0) {
+        matchedFields.add('party');
+        matchBadges.push({ label: 'Ledger', text: l.name, category: 'party' });
+      }
+      return { matchedFields: Array.from(matchedFields), matchBadges };
+    };
+
+    // Helper for Item match detection
+    const detectItemMatches = (i: any, term: string) => {
+      const lower = term.toLowerCase().trim();
+      const matchedFields = new Set<string>();
+      const matchBadges: { label: string; text: string; category: string }[] = [];
+      if (String(i.name || '').toLowerCase().includes(lower)) {
+        matchedFields.add('item');
+        matchBadges.push({ label: 'Item Name', text: i.name, category: 'item' });
+      }
+      if (String(i.part_no || '').toLowerCase().includes(lower)) {
+        matchedFields.add('item');
+        matchBadges.push({ label: 'Part No', text: i.part_no, category: 'item' });
+      }
+      if (String(i.barcode || '').toLowerCase().includes(lower)) {
+        matchedFields.add('item');
+        matchBadges.push({ label: 'Barcode', text: i.barcode, category: 'item' });
+      }
+      if (String(i.current_stock ?? '').includes(lower)) {
+        matchedFields.add('amount');
+        matchBadges.push({ label: 'Stock Qty', text: `${i.current_stock} ${i.unit || ''}`, category: 'amount' });
+      }
+      if (String(i.purchase_price ?? '').includes(lower) || String(i.sales_price ?? '').includes(lower) || String(i.rate ?? '').includes(lower)) {
+        matchedFields.add('amount');
+        matchBadges.push({ label: 'Price', text: `৳${i.sales_price || i.rate || i.purchase_price}`, category: 'amount' });
+      }
+      if (matchedFields.size === 0) {
+        matchedFields.add('item');
+        matchBadges.push({ label: 'Item', text: i.name, category: 'item' });
+      }
+      return { matchedFields: Array.from(matchedFields), matchBadges };
+    };
+
+    // Helper for Employee match detection
+    const detectEmployeeMatches = (e: any, term: string) => {
+      const lower = term.toLowerCase().trim();
+      const matchedFields = new Set<string>();
+      const matchBadges: { label: string; text: string; category: string }[] = [];
+      if (String(e.name || '').toLowerCase().includes(lower)) {
+        matchedFields.add('party');
+        matchBadges.push({ label: 'Employee', text: e.name, category: 'party' });
+      }
+      if (String(e.employee_id || e.id || '').toLowerCase().includes(lower)) {
+        matchedFields.add('party');
+        matchBadges.push({ label: 'Staff ID', text: e.employee_id || e.id, category: 'party' });
+      }
+      if (String(e.mobile || '').includes(lower)) {
+        matchedFields.add('other');
+        matchBadges.push({ label: 'Phone', text: e.mobile, category: 'other' });
+      }
+      if (matchedFields.size === 0) {
+        matchedFields.add('party');
+        matchBadges.push({ label: 'Staff', text: e.name, category: 'party' });
+      }
+      return { matchedFields: Array.from(matchedFields), matchBadges };
+    };
+
     // 1. Search Ledgers
     const ledgerResults = await (async () => {
       try {
         const ledgers = await this.getLedgers(companyId);
         return ledgers
-          .filter(l => 
-            l.name.toLowerCase().includes(lowerSearch) || 
-            l.alias?.toLowerCase().includes(lowerSearch) ||
-            (l as any).ledger_groups?.name?.toLowerCase().includes(lowerSearch)
-          )
-          .map(l => ({
-            id: l.id,
-            title: l.name,
-            subtitle: `Ledger • ${(l as any).ledger_groups?.name || 'Group'}`,
-            type: 'ledger' as const,
-            category: 'Masters',
-            metadata: l
-          }));
+          .filter(l => {
+            const name = String(l.name || '').toLowerCase();
+            const alias = String(l.alias || '').toLowerCase();
+            const group = String((l as any).ledger_groups?.name || l.group_name || '').toLowerCase();
+            const phone = String(l.phone || (l as any).mobile || '').toLowerCase();
+            const email = String(l.email || '').toLowerCase();
+            const address = String(l.address || '').toLowerCase();
+            const combined = `${name} ${alias} ${group} ${phone} ${email} ${address}`;
+            if (combined.includes(lowerSearch)) return true;
+            if (queryTokens.length > 1 && queryTokens.every(tok => combined.includes(tok))) return true;
+            return false;
+          })
+          .map(l => {
+            const matchInfo = detectLedgerMatches(l, trimmedSearch);
+            return {
+              id: l.id,
+              title: l.name,
+              subtitle: `Ledger • ${(l as any).ledger_groups?.name || l.group_name || 'Group'}`,
+              type: 'ledger' as const,
+              category: 'Masters',
+              metadata: l,
+              matchedFields: matchInfo.matchedFields,
+              matchBadges: matchInfo.matchBadges
+            };
+          });
       } catch (e) {
         console.error('Search Ledgers error:', e);
         return [];
@@ -6255,20 +6543,31 @@ export const erpService: any = {
       try {
         const items = await this.getItems(companyId);
         return items
-          .filter(i => 
-            i.name.toLowerCase().includes(lowerSearch) || 
-            i.part_no?.toLowerCase().includes(lowerSearch) || 
-            i.barcode?.toLowerCase().includes(lowerSearch) ||
-            i.description?.toLowerCase().includes(lowerSearch)
-          )
-          .map(i => ({
-            id: i.id,
-            title: i.name,
-            subtitle: `Stock Item • ${i.part_no || 'No Part No'}`,
-            type: 'item' as const,
-            category: 'Masters',
-            metadata: i
-          }));
+          .filter(i => {
+            const name = String(i.name || '').toLowerCase();
+            const partNo = String(i.part_no || '').toLowerCase();
+            const barcode = String(i.barcode || '').toLowerCase();
+            const desc = String(i.description || '').toLowerCase();
+            const category = String(i.category || '').toLowerCase();
+            const unit = String(i.unit || '').toLowerCase();
+            const combined = `${name} ${partNo} ${barcode} ${desc} ${category} ${unit}`;
+            if (combined.includes(lowerSearch)) return true;
+            if (queryTokens.length > 1 && queryTokens.every(tok => combined.includes(tok))) return true;
+            return false;
+          })
+          .map(i => {
+            const matchInfo = detectItemMatches(i, trimmedSearch);
+            return {
+              id: i.id,
+              title: i.name,
+              subtitle: `Stock Item • ${i.part_no || 'No Part No'} • Stock: ${i.current_stock ?? 0} ${i.unit || ''}`,
+              type: 'item' as const,
+              category: 'Masters',
+              metadata: i,
+              matchedFields: matchInfo.matchedFields,
+              matchBadges: matchInfo.matchBadges
+            };
+          });
       } catch (e) {
         console.error('Search Items error:', e);
         return [];
@@ -6280,136 +6579,324 @@ export const erpService: any = {
       try {
         const employees = await this.getEmployees(companyId);
         return employees
-          .filter(e => 
-            e.name.toLowerCase().includes(lowerSearch) || 
-            e.employee_id?.toLowerCase().includes(lowerSearch) ||
-            e.mobile?.toLowerCase().includes(lowerSearch)
-          )
-          .map(e => ({
-            id: e.id,
-            title: e.name,
-            subtitle: `Employee • ${e.employee_id || 'No ID'}`,
-            type: 'employee' as const,
-            category: 'Masters',
-            metadata: e
-          }));
+          .filter(e => {
+            const name = String(e.name || '').toLowerCase();
+            const empId = String(e.employee_id || e.id || '').toLowerCase();
+            const mobile = String(e.mobile || '').toLowerCase();
+            const desig = String(e.designation || '').toLowerCase();
+            const dept = String(e.department || '').toLowerCase();
+            const combined = `${name} ${empId} ${mobile} ${desig} ${dept}`;
+            if (combined.includes(lowerSearch)) return true;
+            if (queryTokens.length > 1 && queryTokens.every(tok => combined.includes(tok))) return true;
+            return false;
+          })
+          .map(e => {
+            const matchInfo = detectEmployeeMatches(e, trimmedSearch);
+            return {
+              id: e.id,
+              title: e.name,
+              subtitle: `Employee • ${e.employee_id || 'No ID'} • ${e.designation || 'Staff'}`,
+              type: 'employee' as const,
+              category: 'Masters',
+              metadata: e,
+              matchedFields: matchInfo.matchedFields,
+              matchBadges: matchInfo.matchBadges
+            };
+          });
       } catch (e) {
         console.error('Search Employees error:', e);
         return [];
       }
     })();
 
-    // 4. Search Vouchers (Optimized with 30-minute cache and tight limit)
+    // 4. Search Vouchers (Comprehensive match across ANY content, with caching)
     const voucherResults = await (async () => {
       try {
         const now = Date.now();
-        const SEARCH_TTL = 1800000; // 30 minutes
-        let vouchers: any[] = [];
+        const voucherMap = new Map<string, any>();
         
-        // 1. Use memory cache if available
+        // 1. Gather all in-memory cached vouchers
         if (this._searchVouchersCache.companyId === companyId && 
-            (now - this._searchVouchersCache.timestamp < SEARCH_TTL) &&
-            Array.isArray(this._searchVouchersCache.data) &&
-            this._searchVouchersCache.data.length > 0) {
-          vouchers = this._searchVouchersCache.data;
-        } else {
-          // 2. Check localStorage collection cache or recent vouchers cache
-          try {
-            const persisted = localStorage.getItem(`cache_search_vouchers_${companyId}`);
-            if (persisted) {
-              const parsed = JSON.parse(persisted);
-              if (parsed && Array.isArray(parsed.data) && (now - (parsed.timestamp || 0) < SEARCH_TTL)) {
-                this._searchVouchersCache = { companyId, data: parsed.data, timestamp: parsed.timestamp };
-                vouchers = parsed.data;
-              }
+            Array.isArray(this._searchVouchersCache.data)) {
+          this._searchVouchersCache.data.forEach((v: any) => v && v.id && voucherMap.set(v.id, v));
+        }
+
+        // 2. Gather from recent vouchers cache
+        for (const key of Object.keys(this._recentVouchersCache)) {
+          if (key.startsWith(companyId)) {
+            const cachedArr = this._recentVouchersCache[key]?.data;
+            if (Array.isArray(cachedArr)) {
+              cachedArr.forEach((v: any) => v && v.id && voucherMap.set(v.id, v));
             }
-          } catch (e) {}
-
-          // 3. Fallback to cached collection if available
-          if (vouchers.length === 0) {
-            try {
-              const colStored = localStorage.getItem(`col_cache_vouchers_${companyId}`);
-              if (colStored) {
-                const parsedCol = JSON.parse(colStored);
-                if (parsedCol && Array.isArray(parsedCol.data) && parsedCol.data.length > 0) {
-                  vouchers = parsedCol.data;
-                }
-              }
-            } catch (e) {}
           }
+        }
 
-          // 4. If still empty, perform a targeted Firestore query with strict limit(100) (NOT 2500!)
-          if (vouchers.length === 0) {
+        // 3. Gather from localStorage
+        try {
+          const persisted = localStorage.getItem(`cache_search_vouchers_${companyId}`);
+          if (persisted) {
+            const parsed = JSON.parse(persisted);
+            if (parsed && Array.isArray(parsed.data)) {
+              parsed.data.forEach((v: any) => v && v.id && voucherMap.set(v.id, v));
+            }
+          }
+        } catch (e) {}
+
+        try {
+          const colStored = localStorage.getItem(`col_cache_vouchers_${companyId}`);
+          if (colStored) {
+            const parsedCol = JSON.parse(colStored);
+            if (parsedCol && Array.isArray(parsedCol.data)) {
+              parsedCol.data.forEach((v: any) => v && v.id && voucherMap.set(v.id, v));
+            }
+          }
+        } catch (e) {}
+
+        // Demo data support
+        const isDemoModeActive = (typeof this._isDemo === 'function' && this._isDemo(companyId)) || (typeof this.isDemoMode === 'function' && this.isDemoMode()) || companyId === 'demo';
+        if (isDemoModeActive && typeof this._getDemoData === 'function') {
+          const demoV = this._getDemoData('vouchers');
+          if (Array.isArray(demoV)) {
+            demoV.forEach((v: any) => v && v.id && voucherMap.set(v.id, v));
+          }
+        }
+
+        // 4. If voucherMap is empty, fetch initial 100 recent vouchers from Firestore
+        if (voucherMap.size === 0) {
+          try {
+            let vSnap;
             try {
-              const vSnap = await getDocs(query(
+              vSnap = await getDocs(query(
+                collection(db, 'vouchers'),
+                where('companyId', '==', companyId),
+                orderBy('v_date', 'desc'),
+                limit(100)
+              ));
+            } catch (orderErr) {
+              vSnap = await getDocs(query(
                 collection(db, 'vouchers'),
                 where('companyId', '==', companyId),
                 limit(100)
               ));
-              vouchers = vSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-            } catch (idxError) {
-              console.warn('Search vouchers query failed:', idxError);
             }
-
-            this._searchVouchersCache = {
-              companyId,
-              data: vouchers,
-              timestamp: now
-            };
-            try {
-              localStorage.setItem(`cache_search_vouchers_${companyId}`, JSON.stringify({ data: vouchers, timestamp: now }));
-            } catch (e) {}
+            vSnap.docs.forEach(doc => {
+              voucherMap.set(doc.id, { ...doc.data(), id: doc.id });
+            });
+          } catch (idxError) {
+            console.warn('Search vouchers query failed:', idxError);
           }
         }
-        
-        return vouchers
-          .filter(v => {
-            const vNo = String(v.v_no || '').toLowerCase();
-            const refNo = String(v.reference_no || '').toLowerCase();
-            const memoNo = String(v.memo_no || v.memoNo || '').toLowerCase();
-            const invNo = String(v.invoice_no || v.invoiceNo || '').toLowerCase();
-            const serialNo = String(v.serial_no || v.auto_serial_no || '').toLowerCase();
-            const chalanNo = String(v.chalan_no || v.chalanNo || '').toLowerCase();
-            const billNo = String(v.bill_no || v.billNo || '').toLowerCase();
-            const narration = String(v.narration || '').toLowerCase();
-            const vType = String(v.v_type || '').toLowerCase();
-            const partyName = String(v.party_name || '').toLowerCase();
-            const docId = String(v.id || '').toLowerCase();
 
-            const matchEntries = (v.entries || []).some((e: any) => 
-              String(e.ledger_name || '').toLowerCase().includes(lowerSearch)
-            );
-            const matchItems = (v.inventory_entries || []).some((i: any) => 
-              String(i.item_name || i.item_id || '').toLowerCase().includes(lowerSearch)
-            );
+        let vouchersList = Array.from(voucherMap.values());
 
-            return (
-              vNo.includes(lowerSearch) ||
-              refNo.includes(lowerSearch) ||
-              memoNo.includes(lowerSearch) ||
-              invNo.includes(lowerSearch) ||
-              serialNo.includes(lowerSearch) ||
-              chalanNo.includes(lowerSearch) ||
-              billNo.includes(lowerSearch) ||
-              narration.includes(lowerSearch) ||
-              vType.includes(lowerSearch) ||
-              partyName.includes(lowerSearch) ||
-              docId.includes(lowerSearch) ||
-              matchEntries ||
-              matchItems
+        // Helper to check if a voucher matches the search keyword against ANY content
+        const matchesVoucher = (v: any): boolean => {
+          if (!v) return false;
+          const sNum = v.serial_no !== undefined && v.serial_no !== null && v.serial_no !== '' 
+            ? String(v.serial_no).trim() 
+            : (v.auto_serial_no !== undefined && v.auto_serial_no !== null ? String(v.auto_serial_no).trim() : '');
+
+          const parts: string[] = [
+            String(v.id || ''),
+            String(v.v_type || ''),
+            String(v.v_no || ''),
+            String(v.reference_no || ''),
+            String(v.ref_no || ''),
+            String(v.memo_no || v.memoNo || ''),
+            String(v.invoice_no || v.invoiceNo || ''),
+            String(v.chalan_no || v.chalanNo || ''),
+            String(v.bill_no || v.billNo || ''),
+            String(v.narration || ''),
+            String(v.particulars || ''),
+            String(v.party_name || ''),
+            String(v.party_ledger_name || ''),
+            String(v.ledger_name || ''),
+            String(v.party_address || ''),
+            String(v.item_names || ''),
+            String(v.total_amount !== undefined ? v.total_amount : ''),
+            String(v.grand_total !== undefined ? v.grand_total : ''),
+            String(v.tax_amount !== undefined ? v.tax_amount : ''),
+            String(v.discount_amount !== undefined ? v.discount_amount : ''),
+            String(v.v_date || v.date || ''),
+            String(v.createdBy || ''),
+            String(v.salesperson_id || '')
+          ];
+
+          // Serial number labels and variations (e.g. "Serial no 1", "SL 1", "Serial 1", "Serial no", "sl no")
+          if (sNum) {
+            parts.push(
+              sNum,
+              `serial ${sNum}`,
+              `serial no ${sNum}`,
+              `serial no. ${sNum}`,
+              `serial no: ${sNum}`,
+              `serial: ${sNum}`,
+              `serial #${sNum}`,
+              `sl ${sNum}`,
+              `sl no ${sNum}`,
+              `sl no. ${sNum}`,
+              `sl: ${sNum}`,
+              `sl #${sNum}`,
+              `s/n ${sNum}`,
+              `sn ${sNum}`,
+              `no ${sNum}`,
+              `#${sNum}`,
+              `serial`,
+              `serial no`,
+              `serial no.`,
+              `serial number`,
+              `sl no`,
+              `সিরিয়াল ${sNum}`,
+              `সিরিয়াল নং ${sNum}`,
+              `সিরিয়াল`,
+              `${v.v_type} ${sNum}`,
+              `${v.v_type}-${sNum}`,
+              `${v.v_type} #${sNum}`,
+              `${v.v_type} serial ${sNum}`,
+              `${v.v_type} serial no ${sNum}`
             );
-          })
-          .map(v => {
-            const displayNo = v.v_no || v.memo_no || v.memoNo || v.reference_no || v.serial_no || v.id;
-            return {
-              id: v.id,
-              title: `${v.v_type || 'Voucher'} - ${displayNo}`,
-              subtitle: `Voucher • ${v.v_date || 'N/A'} • ${v.party_name ? 'Party: ' + v.party_name + ' • ' : ''}${String(v.narration || '').substring(0, 50) || 'No narration'}`,
-              type: 'voucher' as const,
-              category: 'Transactions',
-              metadata: v
-            };
-          });
+          }
+
+          if (v.v_no) {
+            parts.push(
+              `voucher ${v.v_no}`,
+              `voucher no ${v.v_no}`,
+              `vno ${v.v_no}`,
+              `ref ${v.v_no}`
+            );
+          }
+
+          if (v.bank_details) {
+            parts.push(
+              String(v.bank_details.bank_name || ''),
+              String(v.bank_details.instrument_no || ''),
+              String(v.bank_details.transaction_type || '')
+            );
+          }
+
+          if (Array.isArray(v.entries)) {
+            for (const e of v.entries) {
+              if (e) {
+                parts.push(
+                  String(e.ledger_name || ''),
+                  String(e.particulars || ''),
+                  String(e.amount || ''),
+                  String(e.debit || ''),
+                  String(e.credit || '')
+                );
+              }
+            }
+          }
+
+          const invList = v.inventory_entries || v.inventory;
+          if (Array.isArray(invList)) {
+            for (const i of invList) {
+              if (i) {
+                parts.push(
+                  String(i.item_name || ''),
+                  String(i.item_id || ''),
+                  String(i.unit || ''),
+                  String(i.batch_no || ''),
+                  String(i.godown_name || ''),
+                  String(i.qty || ''),
+                  String(i.rate || ''),
+                  String(i.amount || '')
+                );
+              }
+            }
+          }
+
+          const combinedText = parts.join(' ').toLowerCase();
+
+          // 1. Exact or substring match in combined content
+          if (combinedText.includes(lowerSearch)) return true;
+
+          // 2. Normalized punctuation match (e.g., "Serial no: 1" -> "serial no 1")
+          const normalizedTarget = combinedText.replace(/[:#\-_,./]/g, ' ').replace(/\s+/g, ' ');
+          if (normalizedTarget.includes(normalizedQuery)) return true;
+
+          // 3. All tokens in the user query must match somewhere in the voucher content
+          if (queryTokens.length > 1 && queryTokens.every(tok => combinedText.includes(tok) || normalizedTarget.includes(tok))) {
+            return true;
+          }
+
+          return false;
+        };
+
+        let matchedVouchers = vouchersList.filter(matchesVoucher);
+
+        // 5. Targeted Fallback Query for Serial Number or Voucher Number:
+        // If no match was found in cache and query looks like a serial number or voucher number,
+        // perform a single targeted indexed Firestore query (1-5 docs max)
+        if (matchedVouchers.length === 0 && !isDemoModeActive) {
+          const numMatch = lowerSearch.match(/\d+/);
+          const targetNum = numMatch ? parseInt(numMatch[0], 10) : null;
+          const extraDocs: any[] = [];
+
+          if (targetNum !== null && !isNaN(targetNum)) {
+            try {
+              const snap = await getDocs(query(
+                collection(db, 'vouchers'),
+                where('companyId', '==', companyId),
+                where('serial_no', '==', targetNum),
+                limit(5)
+              ));
+              extraDocs.push(...snap.docs.map(d => ({ ...d.data(), id: d.id })));
+            } catch (e) {}
+          }
+
+          // Also check by v_no or reference_no directly if applicable
+          if (trimmedSearch.length >= 2 && extraDocs.length === 0) {
+            try {
+              const snap = await getDocs(query(
+                collection(db, 'vouchers'),
+                where('companyId', '==', companyId),
+                where('v_no', '==', trimmedSearch),
+                limit(5)
+              ));
+              extraDocs.push(...snap.docs.map(d => ({ ...d.data(), id: d.id })));
+            } catch (e) {}
+          }
+
+          if (extraDocs.length > 0) {
+            extraDocs.forEach(d => {
+              voucherMap.set(d.id, d);
+            });
+            vouchersList = Array.from(voucherMap.values());
+            matchedVouchers = extraDocs.filter(matchesVoucher);
+          }
+        }
+
+        // Keep search cache updated
+        this._searchVouchersCache = {
+          companyId,
+          data: vouchersList,
+          timestamp: now
+        };
+        try {
+          localStorage.setItem(`cache_search_vouchers_${companyId}`, JSON.stringify({ data: vouchersList.slice(0, 100), timestamp: now }));
+        } catch (e) {}
+
+        return matchedVouchers.map(v => {
+          const sNum = v.serial_no !== undefined && v.serial_no !== null && v.serial_no !== '' 
+            ? String(v.serial_no) 
+            : (v.auto_serial_no ? String(v.auto_serial_no) : '');
+          const displayNo = v.v_no || v.reference_no || v.memo_no || v.memoNo || (sNum ? `SN-${sNum}` : v.id);
+          const party = v.party_name || v.party_ledger_name || v.particulars || 'No Party';
+          const serialLabel = sNum ? `Serial #${sNum}` : '';
+          const matchInfo = detectVoucherMatches(v, trimmedSearch);
+
+          return {
+            id: v.id,
+            title: `${v.v_type || 'Voucher'} • ${serialLabel ? serialLabel + ' • ' : ''}${displayNo}`,
+            subtitle: `${v.v_date || 'N/A'} • Party: ${party} • Amount: ৳${v.total_amount ?? 0}${v.narration ? ` • ${String(v.narration).substring(0, 50)}` : ''}`,
+            type: 'voucher' as const,
+            category: 'Transactions',
+            metadata: v,
+            matchedFields: matchInfo.matchedFields,
+            matchBadges: matchInfo.matchBadges
+          };
+        });
       } catch (e) {
         console.error('Search Vouchers error:', e);
         return [];

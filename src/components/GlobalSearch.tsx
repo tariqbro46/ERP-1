@@ -48,14 +48,15 @@ export const GlobalSearch: React.FC<{ isOpen: boolean; onClose: () => void }> = 
 
   useEffect(() => {
     const handler = setTimeout(async () => {
-      if (!query || query.length < 2) {
+      const trimmed = query.trim();
+      if (!trimmed) {
         setResults([]);
         return;
       }
       
       setLoading(true);
       try {
-        const data = await erpService.searchCompanyData(company?.id || '', query);
+        const data = await erpService.searchCompanyData(company?.id || '', trimmed);
         setResults(data as SearchResult[]);
         setSelectedIndex(0);
       } catch (err) {
