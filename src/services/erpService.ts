@@ -1,5 +1,5 @@
 import { db, auth } from '../firebase';
-import { ensureDate, formatToYMD, parseEntryDate, getMovementType } from '../lib/utils';
+import { ensureDate, formatToYMD, parseEntryDate, getMovementType, compareLedgerVouchers, getVoucherTypeSortPriority } from '../lib/utils';
 import { errorService } from './errorService';
 import { LATEST_VERSION } from '../data/releaseNotes';
 import { 
@@ -88,9 +88,7 @@ function isExemptFromQuotaBlock(path: string): boolean {
 async function getDoc(docRef: any) {
   const path = getPathFromRef(docRef);
   if (!isFounderBypass() && localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
-    triggerQuotaEvent(path);
     try {
-      console.log("[QUOTA] Offline-mode reading getDoc from cache:", path);
       return await getDocFromCache(docRef);
     } catch (cacheErr) {
       console.warn("[QUOTA] Cache read failed in over-quota mode:", cacheErr);
@@ -137,9 +135,7 @@ async function getDoc(docRef: any) {
 async function getDocs(queryRef: any) {
   const path = getPathFromRef(queryRef);
   if (!isFounderBypass() && localStorage.getItem('company_quota_exceeded') === 'true' && !isExemptFromQuotaBlock(path)) {
-    triggerQuotaEvent(path);
     try {
-      console.log("[QUOTA] Offline-mode reading getDocs from cache:", path);
       return await getDocsFromCache(queryRef);
     } catch (cacheErr) {
       console.warn("[QUOTA] Cache query failed in over-quota mode:", cacheErr);
@@ -4642,18 +4638,7 @@ export const erpService: any = {
         voucher_entries: allSiblingEntries.filter((e: any) => e.voucher_id === v.id),
         inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id),
         serial_no: v.serial_no || v.auto_serial_no || 0
-      })).sort((a, b) => {
-        const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
-        if (dateComp !== 0) return dateComp;
-        const vTypeComp = (a.v_type || '').localeCompare(b.v_type || '');
-        if (vTypeComp !== 0) return vTypeComp;
-        const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
-        const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
-        if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
-        const vNoComp = (a.v_no || '').localeCompare(b.v_no || '', undefined, { numeric: true });
-        if (vNoComp !== 0) return vNoComp;
-        return (a.serial_no || 0) - (b.serial_no || 0);
-      });
+      })).sort(compareLedgerVouchers);
 
       this._voucherWithEntriesCache[cacheKey] = { data: result, timestamp: now };
       return result;
@@ -4920,27 +4905,7 @@ export const erpService: any = {
           entries: allEntries.filter((e: any) => e.voucher_id === v.id),
           inventory: allInventory.filter((i: any) => i.voucher_id === v.id)
         };
-      }).sort((a: any, b: any) => {
-        const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
-        if (dateComp !== 0) return dateComp;
-        
-        const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
-        const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
-        if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
-
-        const vNoComp = (a.v_no || '').localeCompare(b.v_no || '');
-        if (vNoComp !== 0) return vNoComp;
-
-        const serialA = a.serial_no || a.auto_serial_no || 0;
-        const serialB = b.serial_no || b.auto_serial_no || 0;
-        if (serialA !== serialB) return serialA - serialB;
-
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
-        if (timeA !== timeB) return timeA - timeB;
-
-        return a.id.localeCompare(b.id);
-      });
+      }).sort(compareLedgerVouchers);
 
       this._vouchersByDateRangeCache[cacheKey] = { data: result, timestamp: now };
       try {

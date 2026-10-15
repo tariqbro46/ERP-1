@@ -22,10 +22,42 @@ export interface ReleaseVersion {
   bugFixes: ReleaseNoteItem[];
 }
 
-export const LATEST_VERSION = "v1.9.7";
+export const LATEST_VERSION = "v1.9.8";
 export const LAST_SEEN_VERSION_KEY = "tallyflow_last_seen_release_version";
 
 export const RELEASE_NOTES: ReleaseVersion[] = [
+  {
+    version: "v1.9.8",
+    releaseDate: "October 15, 2026",
+    bnReleaseDate: "১৫ অক্টোবর, ২০২৬",
+    title: "Ledger Statement Chronological Order (Sales/Purchase Prioritization) & Ultra-Low Quota Engine",
+    bnTitle: "লেজার স্টেটমেন্টে একই তারিখের ভাউচার ক্রমানুসারে সাজানো (সেলস/পার্চেস অগ্রাধিকার) এবং আল্ট্রা-লো কোটা ইঞ্জিন",
+    summary: "Ledger statements, printouts, and Daybook now automatically sort transactions on identical dates so that Sales and Purchase vouchers appear first, followed by Receipt and Payment settlement vouchers. In addition, the Firestore quota engine has been upgraded to run on targeted indexed reads, silent cache serving, debounced write tracking, and auto-recovery to prevent quota exhaustion.",
+    bnSummary: "লেজার স্টেটমেন্ট, প্রিন্ট ও ডে-বুকে একই তারিখে একাধিক ভাউচার থাকলে স্বয়ংক্রিয়ভাবে প্রথমে সেলস ও পার্চেস ভাউচার প্রদর্শিত হবে, এরপর রিসিট ও পেমেন্ট ভাউচার আসবে। সাথে সাথে ফায়ারস্টোর ডেটাবেজে ন্যূনতম কোটা ব্যবহারে টার্গেটেড ইনডেক্সড কুয়েরি, সাইলেন্ট ক্যাশ রিড এবং স্বয়ংক্রিয় কোটা রিকভারি নিশ্চিত করা হয়েছে।",
+    isLatest: true,
+    newFeatures: [
+      {
+        id: "feat-ledger-sorting-priority",
+        title: "Same-Date Sales & Purchase Voucher Priority in Ledger Statements",
+        bnTitle: "লেজার স্টেটমেন্টে একই তারিখে সেলস ও পার্চেস ভাউচারের অগ্রাধিকার",
+        description: "Transactions occurring on the exact same date are now chronologically structured so that Sales and Purchase invoices are processed first before Receipt and Payment transactions, ensuring real-time running balances accurately reflect initial bill generation followed by monetary settlement.",
+        bnDescription: "একই তারিখে সেলস, পার্চেস, রিসিট ও পেমেন্ট ভাউচার থাকলে প্রথমে ইনভয়েস (সেলস/পার্চেস) আসবে এবং পরে টাকা প্রাপ্তি বা পরিশোধ (রিসিট/পেমেন্ট) হিসাবভুক্ত হবে, ফলে রানিং ব্যালেন্স নিখুঁত থাকে।",
+        module: "Ledger Statement & Reports",
+        badge: "NEW"
+      },
+      {
+        id: "feat-ultra-low-quota-engine",
+        title: "Targeted Database Engine with Minimum Quota Consumption",
+        bnTitle: "ন্যূনতম কোটা খরচে টার্গেটেড ডেটাবেজ ইঞ্জিন ও অটো-রিকভারি",
+        description: "Eliminated full collection sweeps across voucher viewing and ledger statements. Background cache reads are completely silent with zero quota penalty, writes are batched, and Admins can smoothly reset quotas without lockouts.",
+        bnDescription: "ভাউচার ভিউ ও লেজার রিপোর্টে অপ্রয়োজনীয় কালেকশন স্ক্যান বন্ধ করা হয়েছে। অফলাইন ও লোকাল ক্যাশ থেকে রিড করার সময় কোনো কোটা খরচ হবে না এবং লকআউট ছাড়াই অ্যাডমিনরা সরাসরি কোটা পরিচালনা করতে পারবেন।",
+        module: "Database & Performance",
+        badge: "OPTIMIZED"
+      }
+    ],
+    improvements: [],
+    bugFixes: []
+  },
   {
     version: "v1.9.7",
     releaseDate: "October 13, 2026",
@@ -34,7 +66,7 @@ export const RELEASE_NOTES: ReleaseVersion[] = [
     bnTitle: "সার্চ স্টেট ও হিস্ট্রি সংরক্ষণ, ম্যাচ টাইপ ফিল্টারিং এবং কোটা-বান্ধব আধুনিক সার্চ ইঞ্জিন",
     summary: "Introduced persistent search session restoration across navigations (retaining query, tab, and match type filters when returning from View Voucher or View Ledger), interactive multi-category match type filtering (Serial No, Voucher Ref, Amount, Narration, Party, Item, Date), strict Enter/Search-button execution discipline, pure English search interface localization, and resolved voucher search demo function errors in erpService.",
     bnSummary: "সার্চ রেজাল্ট থেকে ভাউচার বা লেজার দেখে ব্যাকে আসলে পূর্বের সার্চ কিউয়ার্ড, ফিল্টার ও রেজাল্ট যাতে মুছে না যায় তার জন্য স্থায়ী স্টেট ক্যাশিং সিস্টেম যোগ করা হয়েছে। সাথে ম্যাচ টাইপ ফিল্টারিং (সিরিয়াল নম্বর, ভাউচার রেফ, অ্যামাউন্ট, ন্যারেশন, পার্টি, আইটেম ইত্যাদি অনুসারে ফিল্টার), শুধু এন্টার চাপলে বা সার্চ বাটনে ক্লিক করলে সার্চ এক্সিকিউশন, শতভাগ ইংরেজি ইন্টারফেস এবং erpService সার্চ ত্রুটি দূর করা হয়েছে।",
-    isLatest: true,
+    isLatest: false,
     newFeatures: [
       {
         id: "feat-search-state-persistence",

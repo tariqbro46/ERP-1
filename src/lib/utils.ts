@@ -115,3 +115,62 @@ export function getMovementType(item: any): 'inward' | 'outward' {
   // Default fallback
   return 'inward';
 }
+
+/**
+ * Priority for sorting vouchers on the same date in Ledger Reports:
+ * 1. Sales & Purchase vouchers come first (invoice creation / primary transactions)
+ * 2. Credit Note & Debit Note (adjustments / returns)
+ * 3. Receipt & Payment vouchers come next (cash/bank collections & settlements)
+ * 4. Contra & Journal
+ * 5. Other vouchers
+ */
+export function getVoucherTypeSortPriority(vType?: string): number {
+  if (!vType) return 99;
+  const t = vType.trim().toLowerCase();
+  if (t === 'sales') return 10;
+  if (t === 'purchase') return 11;
+  if (t === 'credit note') return 20;
+  if (t === 'debit note') return 21;
+  if (t === 'receipt') return 30;
+  if (t === 'payment') return 31;
+  if (t === 'contra') return 40;
+  if (t === 'journal') return 50;
+  return 60;
+}
+
+export function compareLedgerVouchers(a: any, b: any): number {
+  const vA = a?.vouchers || a || {};
+  const vB = b?.vouchers || b || {};
+
+  const dateA = (vA.v_date || a?.v_date || '').toString();
+  const dateB = (vB.v_date || b?.v_date || '').toString();
+  const dateComp = dateA.localeCompare(dateB);
+  if (dateComp !== 0) return dateComp;
+
+  // Same date: Sales/Purchase first, then Receipt/Payment
+  const prioA = getVoucherTypeSortPriority(vA.v_type || a?.v_type);
+  const prioB = getVoucherTypeSortPriority(vB.v_type || b?.v_type);
+  if (prioA !== prioB) return prioA - prioB;
+
+  // Secondary: Voucher Number numeric comparison
+  const noA = (vA.v_no || a?.v_no || '').toString();
+  const noB = (vB.v_no || b?.v_no || '').toString();
+  const numA = parseInt(noA.replace(/\D/g, '') || '0', 10) || 0;
+  const numB = parseInt(noB.replace(/\D/g, '') || '0', 10) || 0;
+  if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+  const vNoComp = noA.localeCompare(noB, undefined, { numeric: true });
+  if (vNoComp !== 0) return vNoComp;
+
+  // Tertiary: Serial number
+  const serialA = Number(vA.serial_no || vA.auto_serial_no || a?.serial_no || 0);
+  const serialB = Number(vB.serial_no || vB.auto_serial_no || b?.serial_no || 0);
+  if (serialA !== serialB) return serialA - serialB;
+
+  // Quaternary: Timestamp if available
+  const timeA = vA.createdAt?.seconds || a?.createdAt?.seconds || 0;
+  const timeB = vB.createdAt?.seconds || b?.createdAt?.seconds || 0;
+  if (timeA !== timeB) return timeA - timeB;
+
+  return (vA.id || a?.id || '').toString().localeCompare((vB.id || b?.id || '').toString());
+}

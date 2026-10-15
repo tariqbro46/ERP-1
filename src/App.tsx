@@ -686,17 +686,16 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
   React.useEffect(() => {
     const handleQuotaExceededAttempt = (e: Event) => {
+      if (isAdmin || isSuperAdmin) return;
       setQuotaExceededFlag(true);
       localStorage.setItem('company_quota_exceeded', 'true');
-      if (!isSuperAdmin) {
-        setIsQuotaModalOpen(true);
-      }
+      setIsQuotaModalOpen(true);
     };
     window.addEventListener('erp_quota_exceeded_attempt', handleQuotaExceededAttempt);
     return () => {
       window.removeEventListener('erp_quota_exceeded_attempt', handleQuotaExceededAttempt);
     };
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, isAdmin]);
 
   React.useEffect(() => {
     const handleOnline = () => setIsOffline(false);

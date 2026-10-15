@@ -1,5 +1,5 @@
 import { formatDate } from '../dateUtils';
-import { formatNumber, formatQuantity } from '../../lib/utils';
+import { formatNumber, formatQuantity, compareLedgerVouchers } from '../../lib/utils';
 
 export interface LedgerReportData {
   companyName: string;
@@ -50,8 +50,9 @@ export function generateLedgerStatementHtml(data: LedgerReportData): string {
   let totalDebit = 0;
   let totalCredit = 0;
 
-  // Process transaction rows
-  const rowsHtml = entries.map((entry, index) => {
+  // Process transaction rows sorted: same date -> Sales/Purchase first, then Receipt/Payment
+  const sortedEntries = [...entries].sort(compareLedgerVouchers);
+  const rowsHtml = sortedEntries.map((entry, index) => {
     const debitVal = entry.debit || 0;
     const creditVal = entry.credit || 0;
     totalDebit += debitVal;

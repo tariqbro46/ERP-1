@@ -144,12 +144,16 @@ export function Daybook() {
         });
         break;
       default:
-        // Default Sort: Type Order (Payment, Receipt, Sales, Purchase) then Voucher Number then Serial No
+        // Default Sort: Type Order (Sales, Purchase, Credit Note, Debit Note, Receipt, Payment) then Voucher Number then Serial No
         const typeOrder: Record<string, number> = {
-          'Payment': 1,
-          'Receipt': 2,
-          'Sales': 3,
-          'Purchase': 4
+          'Sales': 1,
+          'Purchase': 2,
+          'Credit Note': 3,
+          'Debit Note': 4,
+          'Receipt': 5,
+          'Payment': 6,
+          'Contra': 7,
+          'Journal': 8
         };
         sorted.sort((a, b) => {
           const dateA = parseEntryDate(a.v_date, a.createdAt).getTime();
