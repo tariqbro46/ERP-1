@@ -27,7 +27,8 @@ import {
   arrayRemove,
   DocumentReference,
   DocumentSnapshot,
-  getCountFromServer as firestoreGetCountFromServer
+  getCountFromServer as firestoreGetCountFromServer,
+  documentId
 } from 'firebase/firestore';
 
 // Custom wrappers to enforce cache-only reads and prevent any database traffic when over quota
@@ -51,7 +52,11 @@ function getPathFromRef(ref: any): string {
   return "";
 }
 
+let _lastQuotaEventTime = 0;
 function triggerQuotaEvent(path: string) {
+  const now = Date.now();
+  if (now - _lastQuotaEventTime < 30000) return;
+  _lastQuotaEventTime = now;
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('erp_quota_exceeded_attempt', { detail: { path } }));
   }
@@ -223,7 +228,7 @@ function isFounderBypass(): boolean {
     const cachedProfile = localStorage.getItem('cached_auth_profile');
     if (cachedProfile) {
       const profile = JSON.parse(cachedProfile);
-      if (profile?.email?.toLowerCase() === 'sapientman46@gmail.com' || profile?.role === 'Founder') {
+      if (profile?.email?.toLowerCase() === 'sapientman46@gmail.com' || profile?.role === 'Founder' || profile?.role === 'Admin') {
         return true;
       }
     }
@@ -2461,44 +2466,38 @@ export const erpService: any = {
 
       const ledgerIds = cashBankLedgers.map(l => l.id);
       
-      // Fetch all vouchers in the company
-      const vQuery = query(
-        collection(db, 'vouchers'),
-        where('companyId', '==', companyId)
-      );
-      const vSnap = await getDocs(vQuery);
-      const allVouchers = vSnap.docs.map(d => ({ ...d.data(), id: d.id } as any));
-
-      const vouchersInRange = allVouchers.filter(v => v.v_date >= from && v.v_date <= to);
-      const vouchersBeforeRange = allVouchers.filter(v => v.v_date < from);
-
-      const vIdsInRange = vouchersInRange.map(v => v.id);
-      const vIdsBeforeRange = vouchersBeforeRange.map(v => v.id);
-
-      // Fetch entries in chunks
-      const entriesInRange: any[] = [];
-      for (let i = 0; i < vIdsInRange.length; i += 30) {
-        const chunk = vIdsInRange.slice(i, i + 30);
-        const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId)));
-        entriesInRange.push(...eSnap.docs.map(d => d.data()).filter((e: any) => ledgerIds.includes(e.ledger_id)));
+      const cacheKey = `${companyId}_${from}_${to}`;
+      const now = Date.now();
+      const CASH_BANK_TTL = 1800000; // 30 minutes
+      if ((this as any)._cashBankSummaryCache && (this as any)._cashBankSummaryCache[cacheKey] && (now - (this as any)._cashBankSummaryCache[cacheKey].timestamp < CASH_BANK_TTL)) {
+        return (this as any)._cashBankSummaryCache[cacheKey].data;
       }
 
-      const entriesBeforeRange: any[] = [];
-      for (let i = 0; i < vIdsBeforeRange.length; i += 30) {
-        const chunk = vIdsBeforeRange.slice(i, i + 30);
-        const eSnap = await getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId)));
-        entriesBeforeRange.push(...eSnap.docs.map(d => d.data()).filter((e: any) => ledgerIds.includes(e.ledger_id)));
+      // Targeted: Query only entries for these specific cash/bank ledgers! (Zero vouchers scan)
+      const allEntries: any[] = [];
+      for (let i = 0; i < ledgerIds.length; i += 30) {
+        const chunk = ledgerIds.slice(i, i + 30);
+        const eSnap = await getDocs(query(
+          collection(db, 'voucher_entries'),
+          where('companyId', '==', companyId),
+          where('ledger_id', 'in', chunk)
+        ));
+        this.trackQuota(companyId, eSnap.size || 1, 0);
+        allEntries.push(...eSnap.docs.map(d => d.data() as any));
       }
 
-      return cashBankLedgers.map(l => {
+      const entriesInRange = allEntries.filter((e: any) => e.date >= from && e.date <= to);
+      const entriesBeforeRange = allEntries.filter((e: any) => e.date < from);
+
+      const result = cashBankLedgers.map(l => {
         const ledgerOpEntries = entriesBeforeRange.filter((e: any) => e.ledger_id === l.id);
         const ledgerEntries = entriesInRange.filter((e: any) => e.ledger_id === l.id);
         
-        const openingFromEntries = ledgerOpEntries.reduce((sum, e) => sum + (e.debit || 0) - (e.credit || 0), 0);
+        const openingFromEntries = ledgerOpEntries.reduce((sum: number, e: any) => sum + (e.debit || 0) - (e.credit || 0), 0);
         const openingBalance = (l.opening_balance || 0) + openingFromEntries;
         
-        const debit = ledgerEntries.reduce((sum, e) => sum + (e.debit || 0), 0);
-        const credit = ledgerEntries.reduce((sum, e) => sum + (e.credit || 0), 0);
+        const debit = ledgerEntries.reduce((sum: number, e: any) => sum + (e.debit || 0), 0);
+        const credit = ledgerEntries.reduce((sum: number, e: any) => sum + (e.credit || 0), 0);
         const closingBalance = openingBalance + debit - credit;
 
         return {
@@ -2510,8 +2509,12 @@ export const erpService: any = {
           closingBalance
         };
       });
+
+      if (!(this as any)._cashBankSummaryCache) (this as any)._cashBankSummaryCache = {};
+      (this as any)._cashBankSummaryCache[cacheKey] = { data: result, timestamp: now };
+      return result;
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'vouchers');
+      handleFirestoreError(error, OperationType.LIST, 'cashBankSummary');
       return [];
     }
   },
@@ -2526,9 +2529,30 @@ export const erpService: any = {
     }
   },
 
+  _groupSummaryCache: {} as Record<string, { data: any[]; timestamp: number }>,
+
   async getGroupSummary(companyId: string, groupId: string, from: string, to: string) {
+    const cacheKey = `${companyId}_${groupId}_${from}_${to}`;
+    const now = Date.now();
+    const TTL = 1800000; // 30 minutes
+    if (this._groupSummaryCache && this._groupSummaryCache[cacheKey] && (now - this._groupSummaryCache[cacheKey].timestamp < TTL)) {
+      return this._groupSummaryCache[cacheKey].data;
+    }
+
     try {
-      const allLedgers = await this.getCollection('ledgers', companyId);
+      const persisted = localStorage.getItem(`group_summary_${cacheKey}`);
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        if (parsed && Array.isArray(parsed.data) && (now - (parsed.timestamp || 0) < TTL)) {
+          if (!this._groupSummaryCache) this._groupSummaryCache = {};
+          this._groupSummaryCache[cacheKey] = parsed;
+          return parsed.data;
+        }
+      }
+    } catch (e) {}
+
+    try {
+      const allLedgers = await this.getLedgers(companyId);
       const groupLedgers = allLedgers.filter(l => l.group_id === groupId);
       
       if (groupLedgers.length === 0) return [];
@@ -2548,10 +2572,11 @@ export const erpService: any = {
           where('date', '<=', to)
         );
         const snap = await getDocs(q);
+        this.trackQuota(companyId, snap.size || 1, 0);
         entries.push(...snap.docs.map(d => d.data()));
       }
       
-      return groupLedgers.map(l => {
+      const result = groupLedgers.map(l => {
         const ledgerEntries = entries.filter(e => e.ledger_id === l.id);
         const openingEntries = ledgerEntries.filter(e => e.date < from);
         const periodEntries = ledgerEntries.filter(e => e.date >= from && e.date <= to);
@@ -2573,6 +2598,14 @@ export const erpService: any = {
           current_balance: closingBalance // For compatibility with existing UI
         };
       });
+
+      if (!this._groupSummaryCache) this._groupSummaryCache = {};
+      this._groupSummaryCache[cacheKey] = { data: result, timestamp: now };
+      try {
+        localStorage.setItem(`group_summary_${cacheKey}`, JSON.stringify({ data: result, timestamp: now }));
+      } catch (e) {}
+
+      return result;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'groupSummary');
       return [];
@@ -2722,61 +2755,8 @@ export const erpService: any = {
   },
    async getVoucherById(id: string): Promise<any> {
      const now = Date.now();
-     if (this._voucherDetailCache[id]) {
+     if (this._voucherDetailCache[id] && (now - this._voucherDetailCache[id].timestamp < 3600000)) {
        return this._voucherDetailCache[id].data;
-     }
-     
-     // Try loading from cached local collections first
-     const lastCompanyId = localStorage.getItem('last_company_id') || localStorage.getItem('current_company_id');
-     if (lastCompanyId) {
-       try {
-         const [vouchers, allEntries, allInventory, ledgers, items, godowns, serialMap] = await Promise.all([
-           this.getCollection('vouchers', lastCompanyId),
-           this.getCollection('voucher_entries', lastCompanyId),
-           this.getCollection('inventory_entries', lastCompanyId),
-           this.getCollection('ledgers', lastCompanyId),
-           this.getCollection('items', lastCompanyId),
-           this.getCollection('godowns', lastCompanyId),
-           this.getVoucherSerials(lastCompanyId)
-         ]);
-
-         const voucher = vouchers.find((v: any) => v.id === id);
-         if (voucher) {
-           const entries = allEntries
-             .filter((e: any) => e.voucher_id === id)
-             .map((e: any) => {
-               const ledger = ledgers.find((l: any) => l.id === e.ledger_id);
-               return {
-                 ...e,
-                 ledger_name: ledger?.name || 'Unknown Ledger'
-               };
-             })
-             .sort((a: any, b: any) => (a.entry_index || 0) - (b.entry_index || 0));
-
-           const inventory = allInventory
-             .filter((i: any) => i.voucher_id === id)
-             .map((i: any) => {
-               const item = items.find((itm: any) => itm.id === i.item_id);
-               const godown = godowns.find((g: any) => g.id === i.godown_id);
-               return {
-                 ...i,
-                 item_name: item?.name || 'Unknown Item',
-                 godown_name: godown?.name || 'N/A'
-               };
-             });
-
-           const result = {
-             ...voucher,
-             entries,
-             inventory,
-             serial_no: serialMap[id] || voucher.serial_no || voucher.auto_serial_no || 0
-           };
-           this._voucherDetailCache[id] = { data: result, timestamp: now };
-           return result;
-         }
-       } catch (cacheErr) {
-         console.warn('Error reading from local cache inside getVoucherById:', cacheErr);
-       }
      }
 
      try {
@@ -2785,16 +2765,17 @@ export const erpService: any = {
        const voucher = vSnap.data();
        const companyId = voucher.companyId;
 
-       const [eSnap, iSnap, ledgers, items, godowns, serialMap] = await Promise.all([
+       // Fetch ONLY the specific entries for this voucher (typically 2-4 docs total)
+       const [eSnap, iSnap, ledgers, items, godowns] = await Promise.all([
          getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId))),
          getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', '==', id), where('companyId', '==', companyId))),
          this.getLedgers(companyId),
          this.getItems(companyId),
-         this.getGodowns(companyId),
-         this.getVoucherSerials(companyId)
+         this.getGodowns(companyId)
        ]);
 
-       this.trackQuota(companyId, (1 + eSnap.size + iSnap.size) || 1, 0);
+       // Track only real documents read (1 voucher + entries)
+       this.trackQuota(companyId, 1 + eSnap.size + iSnap.size, 0);
 
        const entries = eSnap.docs.map(d => {
          const data = d.data();
@@ -2818,7 +2799,13 @@ export const erpService: any = {
          };
        });
 
-       const result = { ...voucher, entries, inventory, id: vSnap.id, serial_no: serialMap[vSnap.id] || voucher.serial_no || voucher.auto_serial_no || 0 };
+       const result = { 
+         ...voucher, 
+         entries, 
+         inventory, 
+         id: vSnap.id, 
+         serial_no: voucher.serial_no || voucher.auto_serial_no || 0 
+       };
        this._voucherDetailCache[id] = { data: result, timestamp: now };
        return result;
      } catch (error) {
@@ -3416,6 +3403,14 @@ export const erpService: any = {
     const now = Date.now();
     if (this._singleLedgerCache[id] && (now - this._singleLedgerCache[id].timestamp < 300000)) { // 5-minute single ledger cache TTL
       return this._singleLedgerCache[id].data;
+    }
+    // Check in-memory ledgers cache first (0 reads!)
+    for (const compId of Object.keys(this._ledgersCache)) {
+      const match = this._ledgersCache[compId]?.data?.find((l: any) => l.id === id);
+      if (match) {
+        this._singleLedgerCache[id] = { data: match, timestamp: now };
+        return match;
+      }
     }
     try {
       const snap = await getDoc(doc(db, 'ledgers', id));
@@ -4422,7 +4417,28 @@ export const erpService: any = {
     }
   },
 
+  _voucherEntriesByDateCache: {} as Record<string, { data: any[]; timestamp: number }>,
+  _voucherEntriesByDateRangeCache: {} as Record<string, { data: any[]; timestamp: number }>,
+
   async getVoucherEntriesByDate(companyId: string, asOnDate: string): Promise<any[]> {
+    const cacheKey = `${companyId}_${asOnDate}`;
+    const now = Date.now();
+    const TTL = 1800000; // 30 minutes
+    if (this._voucherEntriesByDateCache && this._voucherEntriesByDateCache[cacheKey] && (now - this._voucherEntriesByDateCache[cacheKey].timestamp < TTL)) {
+      return this._voucherEntriesByDateCache[cacheKey].data;
+    }
+    try {
+      const persisted = localStorage.getItem(`entries_by_date_${cacheKey}`);
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        if (parsed && Array.isArray(parsed.data) && (now - (parsed.timestamp || 0) < TTL)) {
+          if (!this._voucherEntriesByDateCache) this._voucherEntriesByDateCache = {};
+          this._voucherEntriesByDateCache[cacheKey] = parsed;
+          return parsed.data;
+        }
+      }
+    } catch (e) {}
+
     try {
       const [allEntries, allVouchers] = await Promise.all([
         this.getCollection('voucher_entries', companyId),
@@ -4442,12 +4458,20 @@ export const erpService: any = {
         return acc;
       }, {});
 
-      return allEntries
+      const result = allEntries
         .filter((e: any) => voucherIds.includes(e.voucher_id))
         .map((e: any) => ({
           ...e,
           v_date: voucherMap[e.voucher_id]?.v_date
         }));
+
+      if (!this._voucherEntriesByDateCache) this._voucherEntriesByDateCache = {};
+      this._voucherEntriesByDateCache[cacheKey] = { data: result, timestamp: now };
+      try {
+        localStorage.setItem(`entries_by_date_${cacheKey}`, JSON.stringify({ data: result, timestamp: now }));
+      } catch (e) {}
+
+      return result;
     } catch (error) {
       console.error('Error in getVoucherEntriesByDate:', error);
       return [];
@@ -4455,6 +4479,24 @@ export const erpService: any = {
   },
 
   async getVoucherEntriesByDateRange(companyId: string, startDate: string, endDate: string) {
+    const cacheKey = `${companyId}_${startDate}_${endDate}`;
+    const now = Date.now();
+    const TTL = 1800000; // 30 minutes
+    if (this._voucherEntriesByDateRangeCache && this._voucherEntriesByDateRangeCache[cacheKey] && (now - this._voucherEntriesByDateRangeCache[cacheKey].timestamp < TTL)) {
+      return this._voucherEntriesByDateRangeCache[cacheKey].data;
+    }
+    try {
+      const persisted = localStorage.getItem(`entries_range_${cacheKey}`);
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        if (parsed && Array.isArray(parsed.data) && (now - (parsed.timestamp || 0) < TTL)) {
+          if (!this._voucherEntriesByDateRangeCache) this._voucherEntriesByDateRangeCache = {};
+          this._voucherEntriesByDateRangeCache[cacheKey] = parsed;
+          return parsed.data;
+        }
+      }
+    } catch (e) {}
+
     try {
       const [allEntries, allVouchers] = await Promise.all([
         this.getCollection('voucher_entries', companyId),
@@ -4469,12 +4511,20 @@ export const erpService: any = {
         return acc;
       }, {});
       
-      return allEntries
+      const result = allEntries
         .filter((e: any) => voucherIds.includes(e.voucher_id))
         .map((e: any) => ({
           ...e,
           v_date: voucherMap[e.voucher_id]?.v_date
         }));
+
+      if (!this._voucherEntriesByDateRangeCache) this._voucherEntriesByDateRangeCache = {};
+      this._voucherEntriesByDateRangeCache[cacheKey] = { data: result, timestamp: now };
+      try {
+        localStorage.setItem(`entries_range_${cacheKey}`, JSON.stringify({ data: result, timestamp: now }));
+      } catch (e) {}
+
+      return result;
     } catch (error) {
       console.error('Error in getVoucherEntriesByDateRange:', error);
       return [];
@@ -4541,73 +4591,76 @@ export const erpService: any = {
       return this._voucherWithEntriesCache[cacheKey].data;
     }
 
-    const [vouchersSnap, serialMap] = await Promise.all([
-      getDocs(query(
-        collection(db, 'vouchers'),
+    try {
+      // 1. Query ONLY the voucher entries for this specific ledger
+      const entriesSnap = await getDocs(query(
+        collection(db, 'voucher_entries'),
         where('companyId', '==', companyId),
-        where('v_date', '>=', startDate),
-        where('v_date', '<=', endDate)
-      )),
-      this.getVoucherSerials(companyId)
-    ]);
-    const vouchers = vouchersSnap.docs.map(d => {
-      const data = d.data() as any;
-      const dynamicSerial = serialMap[d.id];
-      return { 
-        ...data,
-        id: d.id, 
-        serial_no: dynamicSerial || data.serial_no || data.auto_serial_no || 0
-      };
-    });
-    
-    if (vouchers.length === 0) return [];
-    
-    const voucherIds = vouchers.map(v => v.id);
-    const allEntries: any[] = [];
-    const allInvEntries: any[] = [];
+        where('ledger_id', '==', ledgerId)
+      ));
 
-    // Fetch entries in chunks to avoid "in" query limits if many vouchers
-    for (let i = 0; i < voucherIds.length; i += 30) {
-      const chunk = voucherIds.slice(i, i + 30);
-      const [eSnap, iSnap] = await Promise.all([
-        getDocs(query(collection(db, 'voucher_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId))),
-        getDocs(query(collection(db, 'inventory_entries'), where('voucher_id', 'in', chunk), where('companyId', '==', companyId)))
-      ]);
-      allEntries.push(...eSnap.docs.map(d => ({ ...d.data(), id: d.id })));
-      allInvEntries.push(...iSnap.docs.map(d => ({ ...d.data(), id: d.id })));
+      // Filter by date range in memory
+      const matchingEntries = entriesSnap.docs
+        .map(d => ({ ...(d.data() as any), id: d.id }))
+        .filter((e: any) => {
+          if (!e.date) return true;
+          return e.date >= startDate && e.date <= endDate;
+        });
+
+      if (matchingEntries.length === 0) {
+        this._voucherWithEntriesCache[cacheKey] = { data: [], timestamp: now };
+        return [];
+      }
+
+      const targetVoucherIds = Array.from(new Set(matchingEntries.map((e: any) => e.voucher_id).filter(Boolean)));
+      if (targetVoucherIds.length === 0) {
+        this._voucherWithEntriesCache[cacheKey] = { data: [], timestamp: now };
+        return [];
+      }
+
+      // 2. Fetch only the matching vouchers and their sibling entries in small chunks (up to 30)
+      const vouchers: any[] = [];
+      const allSiblingEntries: any[] = [];
+      const allInvEntries: any[] = [];
+
+      for (let i = 0; i < targetVoucherIds.length; i += 30) {
+        const chunk = targetVoucherIds.slice(i, i + 30);
+        const [vSnap, sSnap, iSnap] = await Promise.all([
+          getDocs(query(collection(db, 'vouchers'), where('companyId', '==', companyId), where(documentId(), 'in', chunk))),
+          getDocs(query(collection(db, 'voucher_entries'), where('companyId', '==', companyId), where('voucher_id', 'in', chunk))),
+          getDocs(query(collection(db, 'inventory_entries'), where('companyId', '==', companyId), where('voucher_id', 'in', chunk)))
+        ]);
+        vouchers.push(...vSnap.docs.map(d => ({ ...(d.data() as any), id: d.id })));
+        allSiblingEntries.push(...sSnap.docs.map(d => ({ ...(d.data() as any), id: d.id })));
+        allInvEntries.push(...iSnap.docs.map(d => ({ ...(d.data() as any), id: d.id })));
+      }
+
+      this.trackQuota(companyId, entriesSnap.size + vouchers.length + allSiblingEntries.length + allInvEntries.length, 0);
+
+      const result = vouchers.map((v: any) => ({
+        ...v,
+        voucher_entries: allSiblingEntries.filter((e: any) => e.voucher_id === v.id),
+        inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id),
+        serial_no: v.serial_no || v.auto_serial_no || 0
+      })).sort((a, b) => {
+        const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
+        if (dateComp !== 0) return dateComp;
+        const vTypeComp = (a.v_type || '').localeCompare(b.v_type || '');
+        if (vTypeComp !== 0) return vTypeComp;
+        const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
+        const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
+        if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+        const vNoComp = (a.v_no || '').localeCompare(b.v_no || '', undefined, { numeric: true });
+        if (vNoComp !== 0) return vNoComp;
+        return (a.serial_no || 0) - (b.serial_no || 0);
+      });
+
+      this._voucherWithEntriesCache[cacheKey] = { data: result, timestamp: now };
+      return result;
+    } catch (err) {
+      console.error('Error in getVoucherWithEntries:', err);
+      return [];
     }
-    
-    // Filter vouchers that have an entry for the specific ledger
-    const filteredVouchers = vouchers.filter((v: any) => 
-      allEntries.some((e: any) => e.voucher_id === v.id && e.ledger_id === ledgerId)
-    );
-    
-    // Map them together
-    const result = filteredVouchers.map((v: any) => ({
-      ...v,
-      voucher_entries: allEntries.filter((e: any) => e.voucher_id === v.id),
-      inventory: allInvEntries.filter((i: any) => i.voucher_id === v.id)
-    })).sort((a, b) => {
-      const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
-      if (dateComp !== 0) return dateComp;
-      
-      const vTypeComp = (a.v_type || '').localeCompare(b.v_type || '');
-      if (vTypeComp !== 0) return vTypeComp;
-
-      const numA = parseInt(a.v_no?.replace(/\D/g, '') || '0') || 0;
-      const numB = parseInt(b.v_no?.replace(/\D/g, '') || '0') || 0;
-      if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
-
-      const vNoComp = (a.v_no || '').localeCompare(b.v_no || '', undefined, { numeric: true });
-      if (vNoComp !== 0) return vNoComp;
-
-      const serialA = a.serial_no || a.auto_serial_no || 0;
-      const serialB = b.serial_no || b.auto_serial_no || 0;
-      return serialA - serialB;
-    });
-
-    this._voucherWithEntriesCache[cacheKey] = { data: result, timestamp: now };
-    return result;
   },
 
   // Dashboard Stats
@@ -5546,13 +5599,22 @@ export const erpService: any = {
     }
   },
 
+  _notificationsCache: {} as Record<string, { data: AppNotification[]; timestamp: number }>,
+
   // Notifications
   async getNotifications(userId: string, companyId: string, isSuperAdmin: boolean): Promise<AppNotification[]> {
+    const cacheKey = `${userId}_${companyId}_${isSuperAdmin}`;
+    const now = Date.now();
+    const TTL = 300000; // 5 minutes cache
+    if (this._notificationsCache && this._notificationsCache[cacheKey] && (now - this._notificationsCache[cacheKey].timestamp < TTL)) {
+      return this._notificationsCache[cacheKey].data;
+    }
+
     try {
       let allNotifications: AppNotification[] = [];
 
       if (isSuperAdmin) {
-        const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'), limit(50));
         const snapshot = await getDocs(q);
         allNotifications = snapshot.docs.map(doc => {
           const data = doc.data();
@@ -5565,11 +5627,10 @@ export const erpService: any = {
           } as AppNotification;
         });
       } else {
-        // For non-admins, fetch targeted notifications
-        // We avoid orderBy here to prevent index requirements for non-admin queries
-        const qAll = query(collection(db, 'notifications'), where('targetType', '==', 'all'));
-        const qCompany = query(collection(db, 'notifications'), where('targetType', '==', 'company'), where('targetId', '==', companyId));
-        const qUser = query(collection(db, 'notifications'), where('targetType', '==', 'user'), where('targetId', '==', userId));
+        // For non-admins, fetch targeted notifications with strict caps
+        const qAll = query(collection(db, 'notifications'), where('targetType', '==', 'all'), limit(20));
+        const qCompany = query(collection(db, 'notifications'), where('targetType', '==', 'company'), where('targetId', '==', companyId), limit(20));
+        const qUser = query(collection(db, 'notifications'), where('targetType', '==', 'user'), where('targetId', '==', userId), limit(20));
         
         const [snapAll, snapCompany, snapUser] = await Promise.all([
           getDocs(qAll),
@@ -5594,15 +5655,19 @@ export const erpService: any = {
         }).sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
       }
       
-      if (isSuperAdmin) return allNotifications;
-      
-      const now = new Date();
-      return allNotifications.filter(n => {
-        // Only show sent or scheduled for now
-        if (n.status === 'draft') return false;
-        if (n.status === 'scheduled' && n.scheduledAt && n.scheduledAt > now) return false;
-        return true;
-      });
+      let finalResult = allNotifications;
+      if (!isSuperAdmin) {
+        const nowDate = new Date();
+        finalResult = allNotifications.filter(n => {
+          if (n.status === 'draft') return false;
+          if (n.status === 'scheduled' && n.scheduledAt && n.scheduledAt > nowDate) return false;
+          return true;
+        });
+      }
+
+      if (!this._notificationsCache) this._notificationsCache = {};
+      this._notificationsCache[cacheKey] = { data: finalResult, timestamp: now };
+      return finalResult;
     } catch (error) {
       console.error('Error fetching notifications:', error);
       return [];
@@ -7120,23 +7185,24 @@ export const erpService: any = {
       const cachedProfile = localStorage.getItem('cached_auth_profile');
       if (cachedProfile) {
         const profile = JSON.parse(cachedProfile);
-        if (profile?.email?.toLowerCase() === 'sapientman46@gmail.com' || profile?.role === 'Founder') {
+        if (profile?.email?.toLowerCase() === 'sapientman46@gmail.com' || profile?.role === 'Founder' || profile?.role === 'Admin') {
           return false;
         }
       }
     } catch (e) {}
 
-    if (localStorage.getItem('company_quota_exceeded') === 'true') return true;
     try {
       const companyCached = localStorage.getItem('cached_auth_company');
       if (companyCached) {
         const comp = JSON.parse(companyCached);
-        if (comp && comp.quotaLimit && comp.quotaUsed !== undefined) {
-          if (comp.quotaUsed >= comp.quotaLimit) return true;
+        const limitVal = Math.max(50000, comp.quotaLimit || 50000);
+        if (comp && comp.quotaUsed !== undefined) {
+          if (comp.quotaUsed >= limitVal) return true;
         }
       }
     } catch (e) {}
-    return false;
+
+    return localStorage.getItem('company_quota_exceeded') === 'true';
   },
 
   async resetQuotaNow(companyId: string): Promise<void> {
@@ -7376,11 +7442,38 @@ export const erpService: any = {
       console.warn('Error saving unsaved quota backup:', e);
     }
 
-    // Schedule flush in 30 seconds if not already scheduled
-    if (!this._quotaTimer) {
+    // Keep client-side cache in sync in real time (zero Firestore network operations!)
+    try {
+      const cached = localStorage.getItem('cached_auth_company');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.id === companyId || parsed.companyId === companyId) {
+          parsed.quotaUsed = (parsed.quotaUsed || 0) + reads + writes + deletes;
+          parsed.quotaReads = (parsed.quotaReads || 0) + reads;
+          parsed.quotaWrites = (parsed.quotaWrites || 0) + writes;
+          parsed.quotaDeletes = (parsed.quotaDeletes || 0) + deletes;
+          localStorage.setItem('cached_auth_company', JSON.stringify(parsed));
+        }
+      }
+    } catch (e) {}
+
+    // Flush schedule optimization:
+    // Pure reads should never burn network writes on a frantic 30-second loop.
+    // Flush fast (15s) only if writes/deletes occurred or if 50+ ops accumulated; otherwise batch with a 5-minute interval!
+    const buf = this._quotaBuffer[companyId];
+    const hasWrites = buf.writes > 0 || buf.deletes > 0;
+    const totalOps = buf.reads + buf.writes + buf.deletes;
+    const delay = hasWrites || totalOps >= 50 ? 15000 : 300000;
+
+    if (this._quotaTimer) {
+      if (hasWrites) {
+        clearTimeout(this._quotaTimer);
+        this._quotaTimer = setTimeout(() => this.flushQuotaBuffer(), 15000);
+      }
+    } else {
       this._quotaTimer = setTimeout(() => {
         this.flushQuotaBuffer();
-      }, 30000);
+      }, delay);
     }
   },
 
@@ -7406,14 +7499,14 @@ export const erpService: any = {
         const companyRef = doc(db, "companies", companyId);
         
         // Optimize: use cached company metadata instead of executing a getDoc read every flush cycle
-        let limitVal = 10000;
+        let limitVal = 50000;
         let currentUsed = 0;
         try {
           const cachedComp = localStorage.getItem('cached_auth_company');
           if (cachedComp) {
             const parsed = JSON.parse(cachedComp);
             if (parsed.id === companyId || parsed.companyId === companyId) {
-              limitVal = parsed.quotaLimit || 10000;
+              limitVal = Math.max(50000, parsed.quotaLimit || 50000);
               currentUsed = parsed.quotaUsed || 0;
             }
           }
@@ -7426,7 +7519,7 @@ export const erpService: any = {
           continue;
         }
 
-        const addedOps = readsToSave + writesToSave * 5 + deletesToSave * 2;
+        const addedOps = readsToSave + writesToSave + deletesToSave;
         const newUsed = Math.min(limitVal, currentUsed + addedOps);
 
         await updateDoc(companyRef, {
@@ -7435,6 +7528,21 @@ export const erpService: any = {
           quotaDeletes: increment(deletesToSave),
           quotaUsed: newUsed,
         });
+
+        // Keep local cache in sync with updated quota metrics
+        try {
+          const cachedComp = localStorage.getItem('cached_auth_company');
+          if (cachedComp) {
+            const parsed = JSON.parse(cachedComp);
+            if (parsed.id === companyId || parsed.companyId === companyId) {
+              parsed.quotaUsed = newUsed;
+              parsed.quotaReads = (parsed.quotaReads || 0) + readsToSave;
+              parsed.quotaWrites = (parsed.quotaWrites || 0) + writesToSave;
+              parsed.quotaDeletes = (parsed.quotaDeletes || 0) + deletesToSave;
+              localStorage.setItem('cached_auth_company', JSON.stringify(parsed));
+            }
+          }
+        } catch (e) {}
 
         // Success! Clean up localStorage backup
         const storedKey = `unsaved_quota_${companyId}`;
@@ -7537,6 +7645,11 @@ export const erpService: any = {
     this._voucherWithEntriesCache = {};
     this._ledgerMovementBeforeDateCache = {};
     this._itemStatsCache = {};
+    this._cashBankSummaryCache = {};
+    this._voucherEntriesByDateCache = {};
+    this._voucherEntriesByDateRangeCache = {};
+    this._groupSummaryCache = {};
+    this._notificationsCache = {};
 
     // 2. Clear relevant localStorage caches without logging out
     const preserveKeys = ['theme', 'app_language', 'erp_is_demo_mode', 'erp_demo_visitor', 'erp_demo_db', 'erp_demo_db_initialized'];

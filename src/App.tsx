@@ -624,27 +624,28 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     return localStorage.getItem('company_quota_exceeded') === 'true';
   });
 
+  const effectiveQuotaLimit = Math.max(50000, company?.quotaLimit || 50000);
   const isQuotaExceeded = Boolean(
-    !isSuperAdmin && (
-      (company && company.quotaLimit && company.quotaUsed !== undefined && company.quotaUsed >= company.quotaLimit) ||
+    !isSuperAdmin && !isAdmin && (
+      (company && company.quotaUsed !== undefined && company.quotaUsed >= effectiveQuotaLimit) ||
       quotaExceededFlag ||
       localStorage.getItem('company_quota_exceeded') === 'true'
     )
   );
 
   React.useEffect(() => {
-    if (company && company.quotaLimit && company.quotaUsed !== undefined) {
-      if (company.quotaUsed < company.quotaLimit) {
+    if (company && company.quotaUsed !== undefined) {
+      if (company.quotaUsed < effectiveQuotaLimit) {
         if (localStorage.getItem('company_quota_exceeded') === 'true') {
           localStorage.removeItem('company_quota_exceeded');
           setQuotaExceededFlag(false);
         }
-      } else {
+      } else if (!isAdmin && !isSuperAdmin) {
         localStorage.setItem('company_quota_exceeded', 'true');
         setQuotaExceededFlag(true);
       }
     }
-  }, [company?.quotaUsed, company?.quotaLimit]);
+  }, [company?.quotaUsed, company?.quotaLimit, isAdmin, isSuperAdmin, effectiveQuotaLimit]);
 
   React.useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {

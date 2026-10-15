@@ -102,7 +102,7 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
 
   if (!isOpen) return null;
 
-  const quotaLimit = company?.quotaLimit || 10000;
+  const quotaLimit = Math.max(50000, company?.quotaLimit || 50000);
   const rawQuotaUsed = company?.quotaUsed || 0;
   // Strict 100% cap
   const quotaUsed = Math.min(quotaLimit, rawQuotaUsed);
@@ -336,7 +336,7 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
           <div className="p-3 border-t border-slate-800 bg-slate-950/30 flex items-center justify-between gap-2">
             <div>
               {company?.id && (
-                isFounder ? (
+                (isFounder || isSuperAdmin || isAdmin) ? (
                   <button
                     type="button"
                     disabled={isResetting}

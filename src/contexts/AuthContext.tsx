@@ -235,21 +235,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         console.error("[QUOTA] Background quota reset error:", err);
                       });
                     } else {
-                      const limit = compData.quotaLimit || 10000;
-                      const sanitizedUsed = compData.quotaUsed !== undefined ? Math.min(limit, compData.quotaUsed) : 0;
-                      const sanitizedComp = {
-                        ...compData,
-                        quotaUsed: sanitizedUsed
-                      };
-                      setCompany(sanitizedComp);
-                      try {
-                        localStorage.setItem('cached_auth_company', JSON.stringify(sanitizedComp));
-                      } catch (e) {}
-                      const isExceeded = (localStorage.getItem('erp_is_demo_mode') !== 'true') && 
-                        compData.quotaLimit && 
-                        compData.quotaUsed !== undefined && 
-                        compData.quotaUsed >= compData.quotaLimit;
-                      localStorage.setItem('company_quota_exceeded', isExceeded ? 'true' : 'false');
+                      const limit = Math.max(50000, compData.quotaLimit || 50000);
+                      const hasActivePlan = compData.subscriptionStatus === 'active' || compData.planType === 'monthly' || compData.planType === 'yearly';
+                      
+                      // Auto-repair: If company reached limit due to previous collection scan bug, or has active plan / admin, auto-reset
+                      if ((compData.quotaUsed !== undefined && compData.quotaUsed >= limit) && (hasActivePlan || userData.role === 'Admin' || userData.role === 'Founder')) {
+                        console.log("[QUOTA] Auto-recovering quota for company:", userData.companyId);
+                        const autoResetComp = {
+                          ...compData,
+                          quotaLimit: limit,
+                          quotaUsed: 0,
+                          quotaReads: 0,
+                          quotaWrites: 0,
+                          quotaDeletes: 0,
+                          quotaLastReset: Date.now(),
+                          quotaLastResetDateStr: new Date().toISOString()
+                        };
+                        setCompany(autoResetComp);
+                        try {
+                          localStorage.setItem('cached_auth_company', JSON.stringify(autoResetComp));
+                          localStorage.removeItem('company_quota_exceeded');
+                        } catch (e) {}
+                        erpService.resetCompanyQuota(userData.companyId, Date.now()).catch(err => {
+                          console.error("[QUOTA] Background quota auto-recover error:", err);
+                        });
+                      } else {
+                        const sanitizedUsed = compData.quotaUsed !== undefined ? Math.min(limit, compData.quotaUsed) : 0;
+                        const sanitizedComp = {
+                          ...compData,
+                          quotaLimit: limit,
+                          quotaUsed: sanitizedUsed
+                        };
+                        setCompany(sanitizedComp);
+                        try {
+                          localStorage.setItem('cached_auth_company', JSON.stringify(sanitizedComp));
+                        } catch (e) {}
+                        const isExceeded = (localStorage.getItem('erp_is_demo_mode') !== 'true') && 
+                          userData.role !== 'Founder' &&
+                          userData.role !== 'Admin' &&
+                          compData.quotaUsed !== undefined && 
+                          compData.quotaUsed >= limit;
+                        localStorage.setItem('company_quota_exceeded', isExceeded ? 'true' : 'false');
+                        if (!isExceeded) {
+                          localStorage.removeItem('company_quota_exceeded');
+                        }
+                      }
                     }
                   } else {
                     setCompany(null);

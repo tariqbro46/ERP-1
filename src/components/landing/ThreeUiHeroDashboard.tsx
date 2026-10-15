@@ -32,12 +32,17 @@ import {
   ChevronDown,
   ChevronsUpDown,
   PanelLeftClose,
-  Maximize2
+  Maximize2,
+  BellRing,
+  Landmark,
+  AlertTriangle,
+  ArrowUpRight
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { cn } from '../../lib/utils';
+import { LATEST_VERSION } from '../../data/releaseNotes';
 
 interface ThreeUiHeroDashboardProps {
   content: {
@@ -364,7 +369,7 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
     ? 'from-amber-500/20 via-orange-500/10 to-transparent'
     : 'from-cyan-500/20 via-blue-500/10 to-transparent';
 
-  // 6 Primary Executive Action Cards from User's Actual Dashboard
+  // 8 Executive Action Cards from User's Actual App Dashboard (Design 6)
   const dashboardCards = [
     {
       id: 'voucher',
@@ -372,7 +377,7 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
       desc: 'Log sales, receipts, payments & purchases',
       badge: 'TRANSACTIONS',
       icon: FileText,
-      iconColor: 'bg-blue-600 text-white',
+      iconColor: 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm',
       badgeBg: 'bg-blue-50 text-blue-600 border border-blue-100',
       glowBorder: 'hover:border-blue-500 hover:shadow-[0_10px_25px_rgba(37,99,235,0.15)]',
       route: '/vouchers/new'
@@ -383,7 +388,7 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
       desc: 'Monitor company accounts & opening credits',
       badge: 'ACCOUNTING',
       icon: Users,
-      iconColor: 'bg-emerald-600 text-white',
+      iconColor: 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white shadow-sm',
       badgeBg: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
       glowBorder: 'hover:border-emerald-500 hover:shadow-[0_10px_25px_rgba(16,185,129,0.15)]',
       route: '/accounts'
@@ -394,18 +399,29 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
       desc: 'View active items, batch definitions & stores',
       badge: 'INVENTORY',
       icon: Package,
-      iconColor: 'bg-orange-500 text-white',
-      badgeBg: 'bg-orange-50 text-orange-600 border border-orange-100',
-      glowBorder: 'hover:border-orange-500 hover:shadow-[0_10px_25px_rgba(249,115,22,0.15)]',
+      iconColor: 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-sm',
+      badgeBg: 'bg-amber-50 text-amber-600 border border-amber-100',
+      glowBorder: 'hover:border-amber-500 hover:shadow-[0_10px_25px_rgba(249,115,22,0.15)]',
       route: '/inventory/items'
+    },
+    {
+      id: 'bi-dashboard',
+      title: 'BUSINESS INTELLIGENCE',
+      desc: 'Cash vs. Bank, Trends, Ratios & Top Expenses',
+      badge: 'INTELLIGENCE',
+      icon: TrendingUp,
+      iconColor: 'bg-gradient-to-br from-emerald-500 to-cyan-500 text-white shadow-sm',
+      badgeBg: 'bg-cyan-50 text-cyan-600 border border-cyan-100',
+      glowBorder: 'hover:border-cyan-500 hover:shadow-[0_10px_25px_rgba(6,182,212,0.15)]',
+      route: '/business-intelligence'
     },
     {
       id: 'reports',
       title: 'REPORTS GATEWAY',
       desc: 'Unlock financial summaries & trial balances',
       badge: 'ANALYTICS',
-      icon: TrendingUp,
-      iconColor: 'bg-pink-600 text-white',
+      icon: BarChart3,
+      iconColor: 'bg-gradient-to-br from-pink-500 to-rose-500 text-white shadow-sm',
       badgeBg: 'bg-pink-50 text-pink-600 border border-pink-100',
       glowBorder: 'hover:border-pink-500 hover:shadow-[0_10px_25px_rgba(219,39,119,0.15)]',
       route: '/reports'
@@ -414,23 +430,34 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
       id: 'daybook',
       title: 'DAYBOOK STREAM',
       desc: "Examine today's running register list",
-      badge: 'AUDIT TRAIL',
+      badge: 'DAYBOOK',
       icon: Clock,
-      iconColor: 'bg-purple-600 text-white',
+      iconColor: 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-sm',
       badgeBg: 'bg-purple-50 text-purple-600 border border-purple-100',
       glowBorder: 'hover:border-purple-500 hover:shadow-[0_10px_25px_rgba(147,51,234,0.15)]',
       route: '/reports/daybook'
     },
     {
-      id: 'settings',
-      title: 'GENERAL CONFIGS',
-      desc: 'Adjust enterprise layouts, rules & metrics',
-      badge: 'PREFERENCES',
+      id: 'due-payments',
+      title: 'DUE PAYMENT ALERTS',
+      desc: 'Follow up receivables with WhatsApp & Notices',
+      badge: 'REMINDERS',
+      icon: BellRing,
+      iconColor: 'bg-gradient-to-br from-amber-500 to-rose-500 text-white shadow-sm',
+      badgeBg: 'bg-amber-50 text-amber-600 border border-amber-100',
+      glowBorder: 'hover:border-amber-500 hover:shadow-[0_10px_25px_rgba(245,158,11,0.15)]',
+      route: '/reports/due-payments'
+    },
+    {
+      id: 'audit-trail',
+      title: 'AUDIT TRAIL & LOGS',
+      desc: 'Track voucher alterations & certified logs',
+      badge: 'COMPLIANCE',
       icon: ShieldCheck,
-      iconColor: 'bg-cyan-500 text-white',
-      badgeBg: 'bg-cyan-50 text-cyan-600 border border-cyan-100',
-      glowBorder: 'hover:border-cyan-500 hover:shadow-[0_10px_25px_rgba(6,182,212,0.15)]',
-      route: '/settings'
+      iconColor: 'bg-gradient-to-br from-emerald-600 to-teal-500 text-white shadow-sm',
+      badgeBg: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+      glowBorder: 'hover:border-emerald-500 hover:shadow-[0_10px_25px_rgba(16,185,129,0.15)]',
+      route: '/reports/audit-trail'
     }
   ];
 
@@ -755,6 +782,18 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
                         <span>Ratio Analysis</span>
                       </div>
                       <div className="px-2.5 py-1.5 rounded-md text-slate-600 hover:bg-slate-200/40 flex items-center gap-2 cursor-pointer transition-colors">
+                        <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Business Intelligence</span>
+                      </div>
+                      <div className="px-2.5 py-1.5 rounded-md text-slate-600 hover:bg-slate-200/40 flex items-center gap-2 cursor-pointer transition-colors">
+                        <BellRing className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Due Payment Alerts</span>
+                      </div>
+                      <div className="px-2.5 py-1.5 rounded-md text-slate-600 hover:bg-slate-200/40 flex items-center gap-2 cursor-pointer transition-colors">
+                        <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Audit Trail & Logs</span>
+                      </div>
+                      <div className="px-2.5 py-1.5 rounded-md text-slate-600 hover:bg-slate-200/40 flex items-center gap-2 cursor-pointer transition-colors">
                         <Layers className="w-3.5 h-3.5 text-slate-400" />
                         <span>Display More Reports</span>
                       </div>
@@ -830,7 +869,14 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
                     <span className="flex items-center gap-1 hover:text-slate-600 cursor-pointer">
                       <PanelLeftClose className="w-3 h-3" /> Collapse
                     </span>
-                    <span className="text-emerald-500 font-bold">● v1.8.2</span>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 text-[9px] font-mono px-2 py-0.5 rounded text-emerald-700 bg-emerald-50 border border-emerald-200/90 font-bold hover:bg-emerald-100 transition-colors cursor-default"
+                      title={`Current Version: ${LATEST_VERSION}`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>{LATEST_VERSION}</span>
+                    </button>
                   </div>
                 </div>
 
@@ -876,8 +922,136 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
                   </div>
                 </div>
 
-                {/* 6 Executive Action Shortcut Cards Grid (3 Columns x 2 Rows) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 max-w-5xl mx-auto w-full">
+                {/* Live Simulated Event Toast */}
+                {livePulse && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -12, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -12, scale: 0.95 }}
+                    className="mb-4 mx-auto max-w-2xl bg-slate-900/95 border border-cyan-500/50 text-cyan-200 px-4 py-2.5 rounded-xl text-xs font-mono font-bold shadow-2xl backdrop-blur-md flex items-center justify-between gap-3 select-none"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-400 animate-bounce shrink-0" />
+                      <span>Simulated: Sales Voucher #SV-2026-089 (৳85,000 to M/S Rahim Traders) logged & ledger updated!</span>
+                    </div>
+                    <span className="text-[9px] uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-bold shrink-0">
+                      LIVE SYNC
+                    </span>
+                  </motion.div>
+                )}
+
+                {/* Real-time Enterprise Alert Banners (Modeled directly from App Dashboard) */}
+                <div className="max-w-5xl mx-auto w-full space-y-2.5 mb-5">
+                  {/* Low Stock Warning Banner */}
+                  <div className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-3.5 bg-rose-50/90 border border-rose-200/90 hover:border-rose-300 rounded-xl text-left text-rose-800 text-xs font-medium shadow-xs transition-all group cursor-pointer">
+                    <div className="flex items-center gap-2.5">
+                      <AlertTriangle className="w-4 h-4 text-rose-600 animate-bounce shrink-0" />
+                      <span><strong>Low Stock Warning:</strong> 3 Items currently below safety reorder level.</span>
+                    </div>
+                    <span className="text-[11px] font-bold text-rose-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform mt-1 sm:mt-0">
+                      Review Stock & Reorder <ChevronRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+
+                  {/* Due Receivables Alert Banner */}
+                  <div className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-3.5 bg-amber-50/90 border border-amber-200/90 hover:border-amber-300 rounded-xl text-left text-amber-900 text-xs font-medium shadow-xs transition-all group cursor-pointer">
+                    <div className="flex items-center gap-2.5">
+                      <BellRing className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span><strong>Due Receivables Alert:</strong> 5 customers have overdue balance (৳48,500).</span>
+                    </div>
+                    <span className="text-[11px] font-bold text-amber-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform mt-1 sm:mt-0">
+                      Send Reminders <ChevronRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Advanced Visual Telemetry Strip: Cash vs. Bank & Top Expenses */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-5xl mx-auto w-full mb-6">
+                  {/* Cash vs Bank Liquidity */}
+                  <div className="p-4 bg-white border border-slate-200/90 rounded-2xl shadow-xs text-left flex flex-col justify-between">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                          <Landmark className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-tight text-slate-800">
+                            Cash vs. Bank Balance
+                          </h3>
+                          <p className="text-[9px] text-slate-400 font-mono">Real-time liquidity composition</p>
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-mono uppercase bg-emerald-50 text-emerald-600 font-bold px-2 py-0.5 rounded-full border border-emerald-100">
+                        Liquidity
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                      <div className="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-100">
+                        <span className="text-[9px] text-emerald-700 uppercase font-black block">Cash in Hand</span>
+                        <span className="font-bold text-slate-900 text-sm">৳1,240,500</span>
+                      </div>
+                      <div className="p-2.5 bg-blue-50/70 rounded-xl border border-blue-100">
+                        <span className="text-[9px] text-blue-700 uppercase font-black block">Bank Accounts</span>
+                        <span className="font-bold text-slate-900 text-sm">৳3,039,500</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] font-mono text-slate-500">
+                      <span>Total Available Liquid Reserves:</span>
+                      <span className="font-bold text-emerald-600 text-xs">৳4,280,000</span>
+                    </div>
+                  </div>
+
+                  {/* Top 5 Expenses */}
+                  <div className="p-4 bg-white border border-slate-200/90 rounded-2xl shadow-xs text-left flex flex-col justify-between">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-rose-50 text-rose-600 rounded-lg">
+                          <BarChart3 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-tight text-slate-800">
+                            Top Operational Expenses
+                          </h3>
+                          <p className="text-[9px] text-slate-400 font-mono">Highest overhead expenditure</p>
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-mono uppercase bg-rose-50 text-rose-600 font-bold px-2 py-0.5 rounded-full border border-rose-100">
+                        Monthly
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 text-[11px] font-mono">
+                      <div>
+                        <div className="flex justify-between items-center text-[10px] text-slate-600 mb-1">
+                          <span>Staff Salaries & Wages</span>
+                          <span className="font-bold text-slate-900">৳345,000</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                          <div className="bg-rose-500 h-full rounded-full" style={{ width: '53%' }} />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center text-[10px] text-slate-600 mb-1">
+                          <span>Factory Rent & Power</span>
+                          <span className="font-bold text-slate-900">৳204,200</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                          <div className="bg-amber-500 h-full rounded-full" style={{ width: '31%' }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] font-mono text-slate-500">
+                      <span>Top 5 Operating Total:</span>
+                      <span className="font-bold text-rose-600 text-xs">৳649,700</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 8 Modern Executive Action Shortcut Cards Grid (4 Columns x 2 Rows) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-4.5 max-w-5xl mx-auto w-full">
                   {dashboardCards.map((card) => {
                     const Icon = card.icon;
                     return (

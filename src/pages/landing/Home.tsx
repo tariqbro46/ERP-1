@@ -22,6 +22,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { erpService } from '../../services/erpService';
 import { ThreeUiHeroDashboard } from '../../components/landing/ThreeUiHeroDashboard';
+import { LATEST_VERSION } from '../../data/releaseNotes';
 
 export const Home = () => {
   const { t, language } = useLanguage();
@@ -30,7 +31,7 @@ export const Home = () => {
     adaptiveLoaderEnabled = true, 
     skeletonEnabled = true, 
     skeletonDashboardOnly = true,
-    heroDesignStyle = 'default',
+    heroDesignStyle = 'threeui',
     heroThreeUiTheme = 'aurora-navy',
     heroThreeUiGlowColor = 'cyan',
     heroThreeUiPerspective = 'cinematic',
@@ -456,6 +457,10 @@ export const Home = () => {
                             <div className="w-2 h-2 rounded-[1px] bg-[#eab308]" />
                           </div>
                           <span className="text-xs font-bold text-slate-800 tracking-tight">TallyFlow ERP</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-bold ml-1.5 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            {LATEST_VERSION}
+                          </span>
                         </div>
                       </div>
                       

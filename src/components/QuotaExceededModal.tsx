@@ -19,7 +19,7 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
   const [timeLeft, setTimeLeft] = useState('');
   const [showRequestModal, setShowRequestModal] = useState(false);
 
-  const quotaLimit = company?.quotaLimit || 10000;
+  const quotaLimit = Math.max(50000, company?.quotaLimit || 50000);
   const rawQuotaUsed = company?.quotaUsed || 0;
   // Strict 100% cap
   const quotaUsed = Math.min(quotaLimit, rawQuotaUsed);
@@ -321,7 +321,7 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
             {/* Actions bar */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
               {company?.id && (
-                isFounder ? (
+                (isFounder || isSuperAdmin || isAdmin) ? (
                   <button
                     type="button"
                     disabled={isResetting}
