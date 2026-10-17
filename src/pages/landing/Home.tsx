@@ -22,6 +22,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { erpService } from '../../services/erpService';
 import { ThreeUiHeroDashboard } from '../../components/landing/ThreeUiHeroDashboard';
+import { MonochromeParallaxHero } from '../../components/landing/MonochromeParallaxHero';
 import { LATEST_VERSION } from '../../data/releaseNotes';
 
 export const Home = () => {
@@ -333,7 +334,12 @@ export const Home = () => {
       <main className="flex-1">
         {/* Hero Section */}
         {content.showHero && (
-          heroDesignStyle === 'threeui' ? (
+          (heroDesignStyle === 'monochrome-parallax' || heroDesignStyle === 'three-interactive' || heroDesignStyle === 'three-matrix') ? (
+            <MonochromeParallaxHero
+              content={content}
+              onOpenDemoModal={() => setShowDemoModal(true)}
+            />
+          ) : heroDesignStyle === 'threeui' ? (
             <ThreeUiHeroDashboard
               content={content}
               onOpenDemoModal={() => setShowDemoModal(true)}

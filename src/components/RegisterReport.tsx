@@ -4,7 +4,7 @@ import { Search, Printer, Download, ArrowLeft, Loader2, MoreVertical } from 'luc
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, formatVoucherNo, cn } from '../lib/utils';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { EditableHeader } from './EditableHeader';
@@ -78,44 +78,45 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
     };
 
     if (['Receipt', 'Payment', 'Contra'].includes(v.v_type)) {
-      const otherEntries = v.entries.filter((e: any) => {
+      const otherEntries = (v.entries || []).filter((e: any) => {
         const ledger = ledgers.find(l => l.id === e.ledger_id);
-        return ledger && !isBankCash(ledger);
+        return ledger ? !isBankCash(ledger) : true;
       });
 
       if (otherEntries.length === 1) {
-        return ledgers.find(l => l.id === otherEntries[0].ledger_id)?.name || 'N/A';
+        return ledgers.find(l => l.id === otherEntries[0].ledger_id)?.name || otherEntries[0].ledger_name || v.party_ledger_name || v.particulars || 'General Ledger';
       } else if (otherEntries.length > 1) {
-        const names = otherEntries.map((e: any) => ledgers.find(l => l.id === e.ledger_id)?.name).filter(Boolean);
+        const names = otherEntries.map((e: any) => ledgers.find(l => l.id === e.ledger_id)?.name || e.ledger_name).filter(Boolean);
         return names.length > 0 ? names.join(', ') : 'Multiple Ledgers';
       }
     }
 
     if (['Sales', 'Purchase'].includes(v.v_type)) {
       const isSalesPurchaseAccount = (l: any) => {
-        const name = l.name?.toLowerCase() || '';
-        const group = l.ledger_groups?.name?.toLowerCase() || l.group_name?.toLowerCase() || '';
-        return group.includes('sales account') || group.includes('purchase account') ||
-               name === 'sales' || name === 'purchase' || name === 'sales account' || name === 'purchase account';
+        const name = (l.name || '').toLowerCase();
+        const group = (l.ledger_groups?.name || l.group_name || '').toLowerCase();
+        return group.includes('sales') || group.includes('purchase') ||
+               name.includes('sales account') || name.includes('purchase account');
       };
 
-      const otherEntries = v.entries.filter((e: any) => {
+      const otherEntries = (v.entries || []).filter((e: any) => {
         const ledger = ledgers.find(l => l.id === e.ledger_id);
-        return ledger && !isSalesPurchaseAccount(ledger);
+        return ledger ? !isSalesPurchaseAccount(ledger) : true;
       });
       if (otherEntries.length > 0) {
-        return ledgers.find(l => l.id === otherEntries[0].ledger_id)?.name || 'N/A';
+        const foundName = ledgers.find(l => l.id === otherEntries[0].ledger_id)?.name || otherEntries[0].ledger_name;
+        if (foundName) return foundName;
       }
     }
 
     if (v.v_type === 'Journal') {
-      const drEntries = v.entries.filter((e: any) => e.type === 'Dr');
+      const drEntries = (v.entries || []).filter((e: any) => e.type === 'Dr');
       if (drEntries.length > 0) {
-        return ledgers.find(l => l.id === drEntries[0].ledger_id)?.name || 'N/A';
+        return ledgers.find(l => l.id === drEntries[0].ledger_id)?.name || drEntries[0].ledger_name || 'Journal Entry';
       }
     }
 
-    return v.party_ledger_name || 'N/A';
+    return v.party_ledger_name || v.particulars || (v.entries && v.entries[0]?.ledger_name) || 'General Account';
   };
 
   const filteredVouchers = vouchers.filter(v => 
@@ -251,7 +252,7 @@ export function RegisterReport({ type, title }: RegisterReportProps) {
                       {formatReportDate(v.v_date, settings.dateFormat)}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      {v.v_no || v.reference_no}
+                      {formatVoucherNo(v.v_no || v.reference_no)}
                     </td>
                     <td className="px-6 py-4 text-sm font-mono text-emerald-600">
                       {v.serial_no || v.auto_serial_no || '-'}

@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { formatPrintedAmount, formatPrintedQuantity, convertNumberToWords } from './printUtils';
 import { formatDate as formatReportDate } from './dateUtils';
+import { formatVoucherNo } from '../lib/utils';
 
 export interface PrintToPdfOptions {
   title: string;
@@ -674,7 +675,7 @@ export async function printDaybookToPDF(
                     ${v.narration ? `<div style="font-size: 8px; color: #4b5563; font-style: italic; margin-top: 1px;">(${v.narration})</div>` : ''}
                   </td>
                   <td style="text-transform: uppercase;">${v.v_type}</td>
-                  <td>${v.v_no}</td>
+                  <td>${formatVoucherNo(v.v_no || v.reference_no)}</td>
                   <td style="text-align: right; font-weight: 700;">${formatPrintedAmount(v.total_amount)}</td>
                 </tr>
               `;
@@ -854,7 +855,7 @@ export async function printLedgerStatementToPDF(
           ${e.narration ? `<div style="font-size: 8px; color: #555; font-style: italic;">(${e.narration})</div>` : ''}
         </td>
         <td style="text-transform: uppercase;">${e.vouchers?.v_type || ''}</td>
-        <td>${e.vouchers?.v_no || ''}</td>
+        <td>${formatVoucherNo(e.vouchers?.v_no || e.vouchers?.ref_no || e.vouchers?.reference_no)}</td>
         <td style="text-align: right;">${dr > 0 ? formatPrintedAmount(dr) : ''}</td>
         <td style="text-align: right;">${cr > 0 ? formatPrintedAmount(cr) : ''}</td>
         <td style="text-align: right; font-weight: 700;">${formatPrintedAmount(Math.abs(runningBal))} ${runningBal >= 0 ? 'Dr' : 'Cr'}</td>

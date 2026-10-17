@@ -2722,6 +2722,7 @@ function AppContent() {
     loaderTheme = 'glass',
     adaptiveLoaderEnabled = true,
     maintenanceEnabled = false,
+    landingPageEnabled = true,
     loading: settingsLoading
   } = useSettings();
 
@@ -2811,11 +2812,21 @@ function AppContent() {
     <Router>
       <Routes>
         {/* Public Landing & Documentation Pages */}
-        <Route path="/" element={<Home />} />
-        <Route path="/features" element={<Features />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/" element={
+          landingPageEnabled ? <Home /> : (user ? <Navigate to="/dashboard" replace /> : <LoginWrapper />)
+        } />
+        <Route path="/features" element={
+          landingPageEnabled ? <Features /> : (user ? <Navigate to="/dashboard" replace /> : <LoginWrapper />)
+        } />
+        <Route path="/about" element={
+          landingPageEnabled ? <About /> : (user ? <Navigate to="/dashboard" replace /> : <LoginWrapper />)
+        } />
+        <Route path="/contact" element={
+          landingPageEnabled ? <Contact /> : (user ? <Navigate to="/dashboard" replace /> : <LoginWrapper />)
+        } />
+        <Route path="/pricing" element={
+          landingPageEnabled ? <Pricing /> : (user ? <Navigate to="/dashboard" replace /> : <LoginWrapper />)
+        } />
         <Route path="/docs" element={<HelpPage />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/instructions" element={<HelpPage />} />

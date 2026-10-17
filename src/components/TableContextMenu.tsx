@@ -22,7 +22,7 @@ import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
 import { pdfService } from '../services/pdfService';
 import { erpService } from '../services/erpService';
-import { formatNumber, cn } from '../lib/utils';
+import { formatNumber, formatVoucherNo, cn } from '../lib/utils';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 
 export interface ContextMenuItem {
@@ -242,7 +242,7 @@ export function VoucherContextMenu({
 
   const voucherId = voucher.id || voucher.v_id;
   const vType = voucher.v_type || voucher.vouchers?.v_type || 'Voucher';
-  const vNo = voucher.v_no || voucher.vouchers?.v_no || voucher.reference_no || voucher.vouchers?.reference_no || voucher.ref_no || '-';
+  const vNo = formatVoucherNo(voucher.v_no || voucher.vouchers?.v_no || voucher.reference_no || voucher.vouchers?.reference_no || voucher.ref_no);
   const serialNo = voucher.serial_no || voucher.auto_serial_no || voucher.vouchers?.serial_no || voucher.vouchers?.auto_serial_no || '';
   const resolvedDate = date || voucher.v_date || voucher.vouchers?.v_date || voucher.date || '';
   const resolvedParticulars = particulars || voucher.party_name || voucher.party_ledger_name || voucher.particulars || 'Transaction';

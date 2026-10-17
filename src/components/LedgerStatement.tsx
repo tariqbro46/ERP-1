@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Printer, Download, ArrowLeft, Calculator, FileText, Settings as SettingsIcon, Loader2, Layout, MoreVertical } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { cn, formatCurrency, formatNumber, formatQuantity, compareLedgerVouchers } from '../lib/utils';
+import { cn, formatCurrency, formatNumber, formatQuantity, formatVoucherNo, compareLedgerVouchers } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -638,7 +638,7 @@ export function LedgerStatement() {
                                 </td>
                                 <td className="px-6 py-4 uppercase text-[10px] text-black">{e.vouchers?.v_type}</td>
                                 <td className="px-6 py-4 text-[10px] text-black">
-                                  {e.vouchers?.v_no || e.vouchers?.ref_no || e.vouchers?.reference_no}
+                                  {formatVoucherNo(e.vouchers?.v_no || e.vouchers?.ref_no || e.vouchers?.reference_no)}
                                 </td>
                                 <td className="px-6 py-4 text-black font-mono text-[10px]">
                                   {e.vouchers?.serial_no || e.vouchers?.auto_serial_no || '-'}

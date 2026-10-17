@@ -299,6 +299,7 @@ export default function FounderPanel() {
     maintenanceEndTime,
     maintenanceReason,
     maintenanceUpdates,
+    landingPageEnabled,
     developerContactAlignment,
     alterPageUiStyle,
     reportsPageUiStyle,
@@ -390,7 +391,10 @@ export default function FounderPanel() {
     heroThreeUiShowSimulateVoucher,
     heroThreeUiEnableTiltDefault
   } = useSettings();
-  const [localHeroDesignStyle, setLocalHeroDesignStyle] = useState<'default' | 'threeui'>(heroDesignStyle || 'default');
+  const [localHeroDesignStyle, setLocalHeroDesignStyle] = useState<'default' | 'threeui' | 'monochrome-parallax'>(
+    heroDesignStyle === 'threeui' ? 'threeui' : (heroDesignStyle === 'default' ? 'default' : 'monochrome-parallax')
+  );
+  const [localLandingPageEnabled, setLocalLandingPageEnabled] = useState<boolean>(landingPageEnabled !== false);
   const [localHeroThreeUiTheme, setLocalHeroThreeUiTheme] = useState<'cyber-dark' | 'glass-light' | 'aurora-navy' | 'emerald-obsidian'>(heroThreeUiTheme || 'aurora-navy');
   const [localHeroThreeUiGlowColor, setLocalHeroThreeUiGlowColor] = useState<'cyan' | 'emerald' | 'indigo' | 'amber'>(heroThreeUiGlowColor || 'cyan');
   const [localHeroThreeUiPerspective, setLocalHeroThreeUiPerspective] = useState<'subtle' | 'cinematic' | 'extreme'>(heroThreeUiPerspective || 'cinematic');
@@ -555,6 +559,14 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalMaintenanceUpdates(maintenanceUpdates || '');
   }, [maintenanceUpdates]);
+
+  useEffect(() => {
+    setLocalLandingPageEnabled(landingPageEnabled !== false);
+  }, [landingPageEnabled]);
+
+  useEffect(() => {
+    setLocalHeroDesignStyle(heroDesignStyle === 'threeui' ? 'threeui' : (heroDesignStyle === 'default' ? 'default' : 'monochrome-parallax'));
+  }, [heroDesignStyle]);
 
   useEffect(() => {
     setLocalSystemLogo(systemLogo || '');
@@ -3237,6 +3249,7 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       soundDelete: localSoundDelete,
                       soundClick: localSoundClick,
                       soundNavigation: localSoundNavigation,
+                      landingPageEnabled: localLandingPageEnabled,
                       heroDesignStyle: localHeroDesignStyle,
                       heroThreeUiTheme: localHeroThreeUiTheme,
                       heroThreeUiGlowColor: localHeroThreeUiGlowColor,
@@ -3827,46 +3840,90 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       </a>
                     </div>
 
-                    {/* Group 1: Master Hero Style Selector */}
+                    {/* Group 1: Master Hero Style & Landing Visibility Selector */}
                     {showDesignPicker && (
                       <div className={cn(
-                        "bg-card border border-border rounded-xl p-5 space-y-4 shadow-xs",
+                        "bg-card border border-border rounded-xl p-5 space-y-5 shadow-xs",
                         uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
                       )}>
-                        <div className="flex items-center gap-2 border-b border-border pb-3">
-                          <LayoutDashboard className="w-4 h-4 text-primary" />
-                          <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Hero Design Architecture</h4>
+                        {/* Master Landing Page Toggle */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-border bg-muted/20">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Globe className={cn("w-4 h-4", localLandingPageEnabled ? "text-emerald-500" : "text-muted-foreground")} />
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Landing Page Public Access</h4>
+                              <span className={cn(
+                                "text-[9px] uppercase px-2 py-0.5 rounded font-mono font-bold",
+                                localLandingPageEnabled ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/20" : "bg-red-500/15 text-red-500 border border-red-500/20"
+                              )}>
+                                {localLandingPageEnabled ? "PUBLIC LANDING ACTIVE" : "OFF (DIRECT LOGIN ONLY)"}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                              When toggled OFF, root visitors (/) will bypass the landing page entirely and be routed straight to the login screen.
+                            </p>
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => setLocalLandingPageEnabled(!localLandingPageEnabled)}
+                            className={cn(
+                              "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                              localLandingPageEnabled ? "bg-emerald-500" : "bg-neutral-600"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
+                                localLandingPageEnabled ? "translate-x-5" : "translate-x-0"
+                              )}
+                            />
+                          </button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Option 1: Classic Default */}
+                        <div className="flex items-center gap-2 border-b border-border pb-3">
+                          <LayoutDashboard className="w-4 h-4 text-primary" />
+                          <div>
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Hero Design Architecture</h4>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Select the active landing hero experience visible to visitors.</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Option 1: Monochromatic Parallax 3D (New Three.js) */}
                           <div 
-                            onClick={() => setLocalHeroDesignStyle('default')}
+                            onClick={() => setLocalHeroDesignStyle('monochrome-parallax')}
                             className={cn(
                               "p-4 rounded-xl border-2 cursor-pointer transition-all relative overflow-hidden flex flex-col justify-between group",
-                              localHeroDesignStyle === 'default'
-                                ? "border-primary bg-primary/5 shadow-sm"
+                              localHeroDesignStyle === 'monochrome-parallax'
+                                ? "border-foreground bg-foreground/5 shadow-md shadow-black/10 ring-1 ring-foreground/20"
                                 : "border-border hover:border-muted-foreground/40 bg-background"
                             )}
                           >
-                            {localHeroDesignStyle === 'default' && (
-                              <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
-                                <Check className="w-3 h-3" />
+                            <div className="absolute -top-6 -right-6 w-20 h-20 bg-foreground/10 rounded-full blur-xl pointer-events-none" />
+                            {localHeroDesignStyle === 'monochrome-parallax' && (
+                              <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-foreground text-background font-black flex items-center justify-center shadow-xs">
+                                <Check className="w-3 h-3 stroke-[3]" />
                               </div>
                             )}
                             <div className="space-y-2">
                               <div className="flex items-center gap-2">
-                                <span className="text-base">📄</span>
-                                <h5 className="text-xs font-bold text-foreground">Classic Clean Light SaaS</h5>
+                                <span className="text-base">⚡</span>
+                                <h5 className="text-xs font-extrabold text-foreground flex items-center gap-1.5">
+                                  Monochrome Parallax 3D
+                                  <span className="text-[8px] uppercase px-1.5 py-0.5 rounded bg-foreground/10 text-foreground font-mono font-bold">
+                                    NEW
+                                  </span>
+                                </h5>
                               </div>
                               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                Standard bright aesthetic with soft background geometric vectors, flat dashboard card preview, and static department tabs.
+                                High-craft black & white monochromatic design with Three.js crystal data monolith, continuous dual-axis (vertical + horizontal) parallax scrolling without slide snaps, and interactive module conveyor.
                               </p>
                             </div>
                             <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
-                              <span>Style: Minimalist White</span>
-                              <span className={localHeroDesignStyle === 'default' ? "text-primary font-bold" : ""}>
-                                {localHeroDesignStyle === 'default' ? "ACTIVE DEFAULT" : "Click to select"}
+                              <span>Three.js + Parallax</span>
+                              <span className={localHeroDesignStyle === 'monochrome-parallax' ? "text-foreground font-bold" : ""}>
+                                {localHeroDesignStyle === 'monochrome-parallax' ? "ACTIVE 3D HERO" : "Click to select"}
                               </span>
                             </div>
                           </div>
@@ -3891,20 +3948,49 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               <div className="flex items-center gap-2">
                                 <span className="text-base">✨</span>
                                 <h5 className="text-xs font-extrabold text-foreground flex items-center gap-1.5">
-                                  ThreeUI 3D Holographic Hero
-                                  <span className="text-[8px] uppercase px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-mono font-bold">
-                                    NEW
-                                  </span>
+                                  ThreeUI 3D Hologram
                                 </h5>
                               </div>
                               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                Ultra-modern 3D isometric perspective tilting with mouse tracking, particle constellation canvas, live telemetry counters, glowing auras, and interactive executive command dashboard.
+                                Isometric 3D tilt perspective with mouse tracking, particle constellation, live telemetry counters, and glowing holographic aura.
                               </p>
                             </div>
                             <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
-                              <span>Style: ThreeUI Interactive 3D</span>
+                              <span>Isometric 3D Tilt</span>
                               <span className={localHeroDesignStyle === 'threeui' ? "text-cyan-500 font-bold" : ""}>
-                                {localHeroDesignStyle === 'threeui' ? "ACTIVE 3D HERO" : "Click to activate"}
+                                {localHeroDesignStyle === 'threeui' ? "ACTIVE 3D HERO" : "Click to select"}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Option 3: Classic Default */}
+                          <div 
+                            onClick={() => setLocalHeroDesignStyle('default')}
+                            className={cn(
+                              "p-4 rounded-xl border-2 cursor-pointer transition-all relative overflow-hidden flex flex-col justify-between group",
+                              localHeroDesignStyle === 'default'
+                                ? "border-primary bg-primary/5 shadow-sm"
+                                : "border-border hover:border-muted-foreground/40 bg-background"
+                            )}
+                          >
+                            {localHeroDesignStyle === 'default' && (
+                              <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+                                <Check className="w-3 h-3" />
+                              </div>
+                            )}
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">📄</span>
+                                <h5 className="text-xs font-bold text-foreground">Classic Clean Light SaaS</h5>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Standard bright aesthetic with soft background geometric vectors, flat dashboard card preview, and static department tabs.
+                              </p>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+                              <span>Minimalist White</span>
+                              <span className={localHeroDesignStyle === 'default' ? "text-primary font-bold" : ""}>
+                                {localHeroDesignStyle === 'default' ? "ACTIVE DEFAULT" : "Click to select"}
                               </span>
                             </div>
                           </div>

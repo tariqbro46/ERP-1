@@ -5,8 +5,7 @@ import { SkeletonLoader } from './SkeletonLoader';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { formatCurrency } from '../lib/utils';
-import { cn } from '../lib/utils';
+import { formatCurrency, formatVoucherNo, cn } from '../lib/utils';
 import { EditableHeader } from './EditableHeader';
 import { ReportPrintHeader, ReportPrintFooter } from './ReportPrintHeader';
 import { printUtils } from '../utils/printUtils';
@@ -81,24 +80,24 @@ export function GroupVoucher() {
     const groupLedgerIds = ledgers.filter(l => targetGroupIds.includes(l.group_id)).map(l => l.id);
     
     // For a group report, users often want to see which specific ledger in that group was used.
-    const inGroupEntries = v.entries.filter((e: any) => groupLedgerIds.includes(e.ledger_id));
+    const inGroupEntries = (v.entries || []).filter((e: any) => groupLedgerIds.includes(e.ledger_id));
     if (inGroupEntries.length === 1) {
-      return ledgers.find(l => l.id === inGroupEntries[0].ledger_id)?.name || 'N/A';
+      return ledgers.find(l => l.id === inGroupEntries[0].ledger_id)?.name || inGroupEntries[0].ledger_name || 'Group Ledger';
     } else if (inGroupEntries.length > 1) {
-      const names = inGroupEntries.map((e: any) => ledgers.find(l => l.id === e.ledger_id)?.name).filter(Boolean);
+      const names = inGroupEntries.map((e: any) => ledgers.find(l => l.id === e.ledger_id)?.name || e.ledger_name).filter(Boolean);
       return names.length > 0 ? names.join(', ') : 'Multiple Ledgers';
     }
 
     // Fallback back to the other side if no entry is in the group (shouldn't happen with group vouchers)
-    const otherEntries = v.entries.filter((e: any) => !groupLedgerIds.includes(e.ledger_id));
+    const otherEntries = (v.entries || []).filter((e: any) => !groupLedgerIds.includes(e.ledger_id));
     if (otherEntries.length === 1) {
-      return ledgers.find(l => l.id === otherEntries[0].ledger_id)?.name || 'N/A';
+      return ledgers.find(l => l.id === otherEntries[0].ledger_id)?.name || otherEntries[0].ledger_name || v.party_ledger_name || 'General Ledger';
     } else if (otherEntries.length > 1) {
-      const names = otherEntries.map((e: any) => ledgers.find(l => l.id === e.ledger_id)?.name).filter(Boolean);
+      const names = otherEntries.map((e: any) => ledgers.find(l => l.id === e.ledger_id)?.name || e.ledger_name).filter(Boolean);
       return names.length > 0 ? names.join(', ') : 'Multiple Ledgers';
     }
     
-    return v.party_ledger_name || 'N/A';
+    return v.party_ledger_name || v.particulars || 'General Ledger';
   };
 
   const filteredVouchers = vouchers.filter(v => 
@@ -244,7 +243,7 @@ export function GroupVoucher() {
                           {new Date(v.v_date).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                          {v.v_no}
+                          {formatVoucherNo(v.v_no)}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600 font-medium group-hover:text-primary transition-colors">
                           {getCounterpartyName(v)}

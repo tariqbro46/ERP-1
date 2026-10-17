@@ -24,6 +24,7 @@ export function StockItemReport() {
   const [items, setItems] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [godowns, setGodowns] = useState<any[]>([]);
+  const [ledgers, setLedgers] = useState<any[]>([]);
   const [selectedGodown, setSelectedGodown] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -54,23 +55,25 @@ export function StockItemReport() {
     async function fetchData() {
       if (!user?.companyId) return;
       try {
-        const [stockItems, unitsRes, godownsRes] = await Promise.all([
+        const [stockItems, unitsRes, godownsRes, ledgersRes] = await Promise.all([
           erpService.getItems(user.companyId),
           erpService.getCollection('units', user.companyId),
-          erpService.getGodowns(user.companyId)
+          erpService.getGodowns(user.companyId),
+          erpService.getLedgers(user.companyId)
         ]);
         setItems(stockItems);
         setUnits(unitsRes);
         setGodowns(godownsRes || []);
+        setLedgers(ledgersRes || []);
         
         const forceId = searchParams.get('id') || locationState?.itemId;
         if (forceId) {
           const item = stockItems.find(i => String(i.id) === String(forceId));
           if (item) {
-            handleItemSelect(item, stockItems, unitsRes, startDate, endDate);
+            handleItemSelect(item, stockItems, unitsRes, startDate, endDate, ledgersRes);
           }
         } else if (stockItems.length > 0) {
-          handleItemSelect(stockItems[0], stockItems, unitsRes, startDate, endDate);
+          handleItemSelect(stockItems[0], stockItems, unitsRes, startDate, endDate, ledgersRes);
         }
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -84,11 +87,18 @@ export function StockItemReport() {
   // Handle filter change
   useEffect(() => {
     if (selectedItem) {
-      handleItemSelect(selectedItem, items, units, startDate, endDate);
+      handleItemSelect(selectedItem, items, units, startDate, endDate, ledgers);
     }
   }, [startDate, endDate, selectedGodown]);
 
-  async function handleItemSelect(item: any, allItems: any[] = items, allUnits: any[] = units, from: string = startDate, to: string = endDate) {
+  async function handleItemSelect(
+    item: any, 
+    allItems: any[] = items, 
+    allUnits: any[] = units, 
+    from: string = startDate, 
+    to: string = endDate,
+    allLedgers: any[] = ledgers
+  ) {
     const itemWithUnit = {
       ...item,
       unitName: allUnits.find(u => u.id === item.unit_id)?.name || item.unit || 'pcs'
@@ -97,49 +107,14 @@ export function StockItemReport() {
     setActiveIndex(-1);
     setLoading(true);
     try {
-      const [allInvEntries, allVouchers] = await Promise.all([
-        erpService.getCollection('inventory_entries', user!.companyId),
-        erpService.getCollection('vouchers', user!.companyId)
-      ]);
+      // 1. Fetch ALL inventory entries for THIS item (targeted indexed query, zero 300-doc truncation)
+      const allInvEntries = await erpService.getItemInventoryEntries(user!.companyId, item.id);
       
-      // Calculate Auto Serial Numbers
-      const sortedVouchers = [...allVouchers].sort((a, b) => {
-        const dateComp = (a.v_date || '').localeCompare(b.v_date || '');
-        if (dateComp !== 0) return dateComp;
+      // 2. Collect unique voucher IDs associated with this item's movements
+      const uniqueVoucherIds = Array.from(new Set(allInvEntries.map((e: any) => e.voucher_id).filter(Boolean)));
 
-        // Try numeric sort for Ref No (v_no)
-        const numA = parseInt(a.v_no?.toString().replace(/\D/g, '') || '0') || 0;
-        const numB = parseInt(b.v_no?.toString().replace(/\D/g, '') || '0') || 0;
-        if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
-
-        // Fallback to saved serial_no
-        const sA = Number(a.serial_no || a.auto_serial_no) || 0;
-        const sB = Number(b.serial_no || b.auto_serial_no) || 0;
-        if (sA !== sB) return sA - sB;
-
-        // Lexicographical fallback
-        const vNoComp = (a.v_no || '').toString().localeCompare((b.v_no || '').toString());
-        if (vNoComp !== 0) return vNoComp;
-
-        // Time fallback
-        const timeA = ensureDate(a.createdAt || a.created_at).getTime();
-        const timeB = ensureDate(b.createdAt || b.created_at).getTime();
-        if (timeA !== timeB) return timeA - timeB;
-
-        return a.id.localeCompare(b.id);
-      });
-
-      const typeCounters: Record<string, number> = {};
-      const serialMap: Record<string, number> = {};
-      sortedVouchers.forEach(v => {
-        typeCounters[v.v_type] = (typeCounters[v.v_type] || 0) + 1;
-        serialMap[v.id] = typeCounters[v.v_type];
-      });
-
-      const voucherMap = allVouchers.reduce((acc: any, v: any) => {
-        acc[v.id] = { ...v, serial_no: serialMap[v.id] || v.serial_no || v.auto_serial_no };
-        return acc;
-      }, {});
+      // 3. Fetch ONLY matching vouchers (cached, targeted batch fetch)
+      const voucherMap = await erpService.getVouchersByIds(user!.companyId, uniqueVoucherIds);
 
       const compareRecordSequence = (a: any, b: any) => {
         // 1. Midnight local date comparison (for dates themselves)
@@ -179,11 +154,23 @@ export function StockItemReport() {
         return (a.id || '').localeCompare(b.id || '');
       };
 
+      const currentLedgersList = allLedgers && allLedgers.length > 0 ? allLedgers : ledgers;
+
       // Enrich entries with voucher data for more robust reporting
       const enrichedInvEntries = allInvEntries.map((e: any) => {
         const v = voucherMap[e.voucher_id] || {};
-        const vType = (e.v_type || v.v_type || '').toString();
+        const vType = (v.v_type || e.v_type || '').toString();
+        const voucherId = e.voucher_id || v.id;
         
+        let partyName = v.party_ledger_name || v.particulars || e.party_name || '';
+        if (!partyName && v.party_ledger_id) {
+          const l = currentLedgersList.find((ledger: any) => ledger.id === v.party_ledger_id);
+          if (l) partyName = l.name;
+        }
+        if (!partyName) {
+          partyName = getMovementType(e) === 'inward' ? 'Supplier Account' : 'Customer Account';
+        }
+
         const movementData = {
           ...e,
           v_type: vType,
@@ -192,12 +179,15 @@ export function StockItemReport() {
         
         return {
           ...e,
-          v_type: vType,
+          v_id: voucherId,
+          voucher_id: voucherId,
+          v_type: vType || (getMovementType(movementData) === 'inward' ? 'Purchase' : 'Sales'),
           date: e.date || v.v_date || '',
           m_type: getMovementType(movementData),
-          v_no: v.v_no || 'N/A',
-          v_serial_no: v.serial_no || e.serial_no || 0,
-          v_createdAt: v.createdAt || v.created_at || null
+          v_no: v.v_no || v.reference_no || e.v_no || '-',
+          v_serial_no: v.serial_no || v.auto_serial_no || e.serial_no || 0,
+          party_name: partyName,
+          v_createdAt: v.createdAt || v.created_at || e.created_at || null
         };
       });
 
@@ -469,13 +459,16 @@ export function StockItemReport() {
       let currentRunningBalance = openingBalance;
       const sortedEntries = itemEntries.map((e: any) => {
           const v = voucherMap[e.voucher_id] || {};
+          const vId = v.id || e.voucher_id || e.v_id;
+          const movementType = getMovementType(e);
           return {
             ...e,
             date: e.date || v.v_date || '', // Prioritize entry date, fallback to voucher date
-            v_no: v.v_no || 'N/A',
-            v_type: v.v_type || 'N/A',
-            party_name: v.particulars || v.party_ledger_name || 'N/A',
-            v_id: v.id,
+            v_no: v.v_no || v.reference_no || e.v_no || '-',
+            v_type: v.v_type || e.v_type || (movementType === 'inward' ? 'Purchase' : 'Sales'),
+            party_name: v.particulars || v.party_ledger_name || e.party_name || (movementType === 'inward' ? 'Supplier Account' : 'Customer Account'),
+            v_id: vId,
+            voucher_id: vId,
             created_at_time: e.created_at?.seconds || 0
           };
         }).sort(compareRecordSequence);
@@ -558,7 +551,7 @@ export function StockItemReport() {
           const row: any = {};
           row['date'] = formatReportDate(tx.date || tx.created_at?.toDate?.() || '', settings.dateFormat);
           row['type'] = tx.v_type;
-          row['vch_no'] = `${tx.v_no}${(tx.serial_no || tx.auto_serial_no) ? ` / SN:${tx.serial_no || tx.auto_serial_no}` : ''}`;
+          row['vch_no'] = (tx.v_no && tx.v_no !== '-') ? `${tx.v_no}${(tx.serial_no || tx.auto_serial_no) ? ` / SN:${tx.serial_no || tx.auto_serial_no}` : ''}` : '-';
           row['particulars'] = tx.party_name;
           row[`qty_(${unit.toLowerCase()})`] = formatQty(tx.qty + (tx.free_qty || 0));
           row['rate'] = tx.rate;
@@ -878,7 +871,10 @@ export function StockItemReport() {
                           {transactions.map((tx, idx) => (
                           <tr 
                             key={idx} 
-                            onClick={() => tx.v_id && navigate(`/vouchers/view/${tx.v_id}`)}
+                            onClick={() => {
+                              const targetId = tx.v_id || tx.voucher_id;
+                              if (targetId) navigate(`/vouchers/view/${targetId}`);
+                            }}
                             className="hover:bg-primary/5 transition-colors cursor-pointer group"
                           >
                             <td className="px-6 py-3 text-sm text-gray-900 group-hover:text-primary">
@@ -888,7 +884,12 @@ export function StockItemReport() {
                               {tx.v_type}
                             </td>
                             <td className="px-6 py-3 text-sm text-gray-600">
-                              {tx.v_no}{(tx.serial_no || tx.auto_serial_no) ? ` / SN:${tx.serial_no || tx.auto_serial_no}` : ''}
+                              {tx.v_no && tx.v_no !== '-' ? (
+                                <>
+                                  {tx.v_no}
+                                  {(tx.serial_no || tx.auto_serial_no) ? ` / SN:${tx.serial_no || tx.auto_serial_no}` : ''}
+                                </>
+                              ) : '-'}
                             </td>
                             <td className="px-6 py-3 text-sm font-medium text-gray-900 capitalize">
                               {tx.party_name}

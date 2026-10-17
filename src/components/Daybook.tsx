@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, Printer, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft, Eye, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { cn, formatNumber, formatQuantity, parseEntryDate } from '../lib/utils';
+import { cn, formatNumber, formatQuantity, formatVoucherNo, parseEntryDate } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { pdfService } from '../services/pdfService';
 import { useAuth } from '../contexts/AuthContext';
@@ -333,7 +333,7 @@ export function Daybook() {
             ${subDetailsHtml}
           </td>
           <td style="padding: 5px 6px; vertical-align: middle; font-weight: 500;">${v.v_type}</td>
-          <td style="padding: 5px 6px; vertical-align: middle;">${v.v_no || v.reference_no || ''}</td>
+          <td style="padding: 5px 6px; vertical-align: middle;">${formatVoucherNo(v.v_no || v.reference_no)}</td>
           <td style="padding: 5px 6px; vertical-align: middle; text-align: right; font-weight: bold;">
             ${debitVal > 0 ? formatNumber(debitVal) : ''}
             ${rowInwardsQty > 0 ? `<div style="font-size: 9px; color: #555; font-weight: normal;">${formatQuantity(rowInwardsQty, 'Pcs')}</div>` : ''}
@@ -723,7 +723,7 @@ export function Daybook() {
                     {config.showEnteredBy && (
                       <span className="text-[8px] text-gray-400 uppercase">{t('common.providedBy')}: {users.find(u => u.uid === v.createdBy)?.displayName || 'System'}</span>
                     )}
-                    <span className="text-[10px] text-gray-500">{v.v_no}{(v.serial_no || v.auto_serial_no) ? ` / SN:${v.serial_no || v.auto_serial_no}` : ''}</span>
+                    <span className="text-[10px] text-gray-500">{formatVoucherNo(v.v_no || v.reference_no)}{(v.serial_no || v.auto_serial_no) ? ` / SN:${v.serial_no || v.auto_serial_no}` : ''}</span>
                   </div>
                   <span className="text-sm font-bold text-foreground">৳ {formatNumber(v.total_amount)}</span>
                 </div>
@@ -807,7 +807,7 @@ export function Daybook() {
                         </div>
                       </td>
                       <td className="px-4 lg:px-6 py-4 uppercase text-[10px] text-gray-500">{v.v_type}</td>
-                      <td className="px-4 lg:px-6 py-4">{v.v_no || v.reference_no}</td>
+                      <td className="px-4 lg:px-6 py-4">{formatVoucherNo(v.v_no || v.reference_no)}</td>
                       <td className="px-4 lg:px-6 py-4 font-mono text-[10px] text-emerald-600">
                         {v.serial_no || v.auto_serial_no || '-'}
                       </td>

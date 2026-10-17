@@ -28,6 +28,24 @@ export function formatQuantity(amount: number, unit?: string): string {
   }).format(amount || 0);
 }
 
+/**
+ * Formats a voucher number for display.
+ * If empty or matches auto-generated placeholder format (e.g. VCH-JsnR5, VCH-kZtKM),
+ * cleanly returns '-' as requested.
+ */
+export function formatVoucherNo(vNo?: string | null): string {
+  if (!vNo) return '-';
+  const trimmed = String(vNo).trim();
+  if (!trimmed || trimmed === '-' || trimmed.toLowerCase() === 'n/a' || trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null') {
+    return '-';
+  }
+  // Filter out any auto-generated random ID prefixes like VCH-JsnR5 or VCH-kZtKM
+  if (/^vch[-_][a-z0-9]{4,10}$/i.test(trimmed)) {
+    return '-';
+  }
+  return trimmed;
+}
+
 export function ensureDate(date: any): Date {
   if (!date) return new Date();
   
