@@ -13,7 +13,10 @@ import {
   Globe,
   Database,
   Sparkles,
-  X
+  X,
+  Layers,
+  Cpu,
+  Activity
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useSiteContent } from '../../hooks/useSiteContent';
@@ -23,6 +26,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { erpService } from '../../services/erpService';
 import { ThreeUiHeroDashboard } from '../../components/landing/ThreeUiHeroDashboard';
 import { MonochromeParallaxHero } from '../../components/landing/MonochromeParallaxHero';
+import { cn } from '../../lib/utils';
 import { LATEST_VERSION } from '../../data/releaseNotes';
 
 export const Home = () => {
@@ -327,14 +331,59 @@ export const Home = () => {
     }
   }
 
+  const isMonochrome = heroDesignStyle === 'monochrome-parallax' || heroDesignStyle === 'three-interactive' || heroDesignStyle === 'three-matrix';
+
   return (
-    <div className="min-h-screen flex flex-col bg-white text-slate-900 selection:bg-slate-200 selection:text-slate-900 transition-colors duration-300 animate-fadeIn">
-      <Navbar />
+    <div className={cn(
+      "min-h-screen flex flex-col transition-colors duration-300 animate-fadeIn",
+      isMonochrome 
+        ? "bg-[#0c0d10] text-[#f4f4f5] selection:bg-neutral-800 selection:text-white" 
+        : "bg-white text-slate-900 selection:bg-slate-200 selection:text-slate-900"
+    )}>
+      {!isMonochrome && <Navbar />}
       
+      {/* Floating Quick Navigation Dock on Right-Center for Telemetry, Capabilities, Architecture */}
+      {!isMonochrome && (
+        <div 
+          className="fixed right-3 sm:right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col items-end gap-2.5 pointer-events-auto select-none"
+          aria-label="Section Quick Navigation"
+        >
+          {[
+            { id: 'telemetry', label: language === 'bn' ? 'টেলিমেট্রি' : 'Telemetry', icon: Activity },
+            { id: 'modules', label: language === 'bn' ? 'ক্যাপাবিলিটিজ' : 'Capabilities', icon: Layers },
+            { id: 'architecture', label: language === 'bn' ? 'আর্কিটেকচার' : 'Architecture', icon: Cpu }
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById(item.id);
+                  if (el) {
+                    const topOffset = el.getBoundingClientRect().top + window.pageYOffset - 80;
+                    window.scrollTo({ top: topOffset, behavior: 'smooth' });
+                  }
+                }}
+                className="group relative flex items-center justify-end p-2 sm:p-2.5 rounded-2xl bg-white/95 hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 text-slate-700 hover:text-slate-900 transition-all cursor-pointer backdrop-blur-md active:scale-95 shadow-md hover:shadow-lg"
+                title={item.label}
+              >
+                <span className="hidden md:inline-block max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-300 ease-out text-xs font-mono font-bold text-slate-700 px-0 group-hover:px-2.5">
+                  {item.label}
+                </span>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-800 border border-slate-200 group-hover:border-slate-300 transition-all">
+                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600 group-hover:text-slate-900 transition-colors" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <main className="flex-1">
         {/* Hero Section */}
         {content.showHero && (
-          (heroDesignStyle === 'monochrome-parallax' || heroDesignStyle === 'three-interactive' || heroDesignStyle === 'three-matrix') ? (
+          isMonochrome ? (
             <MonochromeParallaxHero
               content={content}
               onOpenDemoModal={() => setShowDemoModal(true)}
@@ -408,7 +457,7 @@ export const Home = () => {
                       id="hero-primary-cta"
                       className="w-full sm:w-auto px-7 py-3 rounded-lg text-[13px] font-semibold bg-[#1e293b] hover:bg-[#0f172a] text-white transition-all shadow-[0_1px_2px_rgba(0,0,0,0.08)] active:scale-[0.99] flex items-center justify-center gap-2 group cursor-pointer"
                     >
-                      {user ? t('nav.dashboard') : content.heroCtaPrimary}
+                      {user ? (language === 'bn' ? 'লঞ্চ কনসোল' : 'Launch Console') : content.heroCtaPrimary}
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Link>
 
@@ -439,10 +488,11 @@ export const Home = () => {
 
                 {/* Light-Themed Dashboard Preview Card matching Floating Card on Login Page */}
                 <motion.div
+                  id="telemetry"
                   initial={{ opacity: 0, scale: 0.98, y: 30 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   transition={{ duration: 0.8, delay: 0.15 }}
-                  className="mt-14 relative max-w-5xl mx-auto z-20"
+                  className="mt-14 relative max-w-5xl mx-auto z-20 scroll-mt-24"
                 >
                   <div className="relative rounded-2xl bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden text-slate-900 text-left">
                     
@@ -701,7 +751,7 @@ export const Home = () => {
         )}
 
         {/* Stats Section */}
-        {content.showStats && (
+        {!isMonochrome && content.showStats && (
           <section 
             className="py-16 border-y border-slate-100 relative bg-[#fafafa]"
           >
@@ -732,9 +782,10 @@ export const Home = () => {
         )}
 
         {/* Trending Bento Grid Features Section */}
-        {content.showFeatures && (
+        {!isMonochrome && content.showFeatures && (
           <section 
-            className="py-24 sm:py-32 relative overflow-hidden bg-white border-b border-slate-100" 
+            id="modules"
+            className="py-24 sm:py-32 relative overflow-hidden bg-white border-b border-slate-100 scroll-mt-20" 
           >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
               <div className="text-center mb-16 sm:mb-20 max-w-2xl mx-auto">
@@ -854,9 +905,10 @@ export const Home = () => {
         )}
 
         {/* CTA Section */}
-        {content.showCta && (
+        {!isMonochrome && content.showCta && (
           <section 
-            className="relative py-24 sm:py-32 overflow-hidden text-center bg-[#fafafa] border-t border-slate-100"
+            id="architecture"
+            className="relative py-24 sm:py-32 overflow-hidden text-center bg-[#fafafa] border-t border-slate-100 scroll-mt-20"
           >
             {/* Subtle grid pattern */}
             <div 
@@ -878,7 +930,7 @@ export const Home = () => {
                 to={user ? "/dashboard" : "/register"}
                 className="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg text-sm font-semibold bg-[#1e293b] hover:bg-[#0f172a] text-white shadow-sm hover:shadow-md transition-all active:scale-[0.99]"
               >
-                {user ? t('nav.dashboard') : content.ctaButton}
+                {user ? (language === 'bn' ? 'লঞ্চ কনসোল' : 'Launch Console') : content.ctaButton}
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -1030,7 +1082,7 @@ export const Home = () => {
         </div>
       )}
 
-      <Footer />
+      <Footer isMonochrome={isMonochrome} />
     </div>
   );
 };

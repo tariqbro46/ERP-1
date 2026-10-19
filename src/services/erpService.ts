@@ -1,5 +1,5 @@
 import { db, auth } from '../firebase';
-import { ensureDate, formatToYMD, parseEntryDate, getMovementType, compareLedgerVouchers, getVoucherTypeSortPriority } from '../lib/utils';
+import { ensureDate, formatToYMD, parseEntryDate, getMovementType, compareLedgerVouchers, getVoucherTypeSortPriority, compareInventorySequence } from '../lib/utils';
 import { errorService } from './errorService';
 import { LATEST_VERSION } from '../data/releaseNotes';
 import { 
@@ -739,11 +739,16 @@ export const erpService: any = {
       }
       
       if (op === 'add') {
-        if (!data.some(existing => existing.id === item.id)) {
+        const targetId = item.id || ('id_' + Date.now() + Math.random().toString(36).substring(2, 7));
+        item.id = targetId;
+        const existsIndex = data.findIndex(existing => existing.id && existing.id === targetId);
+        if (existsIndex === -1) {
           data.push(item);
+        } else {
+          data[existsIndex] = { ...data[existsIndex], ...item };
         }
       } else if (op === 'update') {
-        data = data.map(existing => existing.id === item.id ? { ...existing, ...item } : existing);
+        data = data.map(existing => (existing.id && existing.id === item.id) ? { ...existing, ...item } : existing);
       } else if (op === 'delete') {
         data = data.filter(existing => existing.id !== item.id);
       }
@@ -784,7 +789,12 @@ export const erpService: any = {
       }
       
       data = data.filter((item: any) => item.voucher_id !== voucherId);
-      data.push(...newEntries);
+      const cleanNewEntries = (newEntries || []).map((e: any, idx: number) => ({
+        ...e,
+        voucher_id: e.voucher_id || voucherId,
+        id: e.id || (`${voucherId}_${idx}`)
+      }));
+      data.push(...cleanNewEntries);
       
       const timestamp = Date.now();
       localStorage.setItem(`col_cache_${cacheKey}`, JSON.stringify({ data, timestamp }));
@@ -792,6 +802,10 @@ export const erpService: any = {
     } catch (e) {
       console.warn('Error replacing cached subcollection:', e);
     }
+  },
+
+  _removeCachedSubCollection(colName: string, companyId: string, voucherId: string) {
+    this._replaceCachedSubCollection(colName, companyId, voucherId, []);
   },
 
   invalidateLedgersCache(companyId: string) {
@@ -1018,11 +1032,15 @@ export const erpService: any = {
     entries.forEach(e => this._updateCachedCollection('voucher_entries', companyId, e, 'add'));
     inventoryEntries.forEach(i => this._updateCachedCollection('inventory_entries', companyId, i, 'add'));
 
-    // 8. Delete cache entries for item stats so they dynamically recalculate accurate stats based on updated inventory_entries
+    // 8. Delete cache entries for item stats & inventory entries so they dynamically recalculate accurate stats
     if (inventoryEntries && inventoryEntries.length > 0) {
       inventoryEntries.forEach(i => {
         if (i.item_id) {
           delete this._itemStatsCache[`${companyId}_${i.item_id}`];
+          delete this._itemInventoryEntriesCache[`${companyId}_${i.item_id}`];
+          try {
+            localStorage.removeItem(`item_inv_entries_${companyId}_${i.item_id}`);
+          } catch (e) {}
         }
       });
     }
@@ -1199,12 +1217,16 @@ export const erpService: any = {
     this._replaceCachedSubCollection('voucher_entries', companyId, id, newEntries);
     this._replaceCachedSubCollection('inventory_entries', companyId, id, newInventory || []);
 
-    // 8. Delete cache entries for item stats so they dynamically recalculate
+    // 8. Delete cache entries for item stats & inventory entries so they dynamically recalculate
     const oldItemIds = oldVoucher.inventory?.map((i: any) => i.item_id).filter(Boolean) || [];
     const newItemIds = newInventory?.map(i => i.item_id).filter(Boolean) || [];
     const allItemIds = Array.from(new Set([...oldItemIds, ...newItemIds]));
     allItemIds.forEach(itemId => {
       delete this._itemStatsCache[`${companyId}_${itemId}`];
+      delete this._itemInventoryEntriesCache[`${companyId}_${itemId}`];
+      try {
+        localStorage.removeItem(`item_inv_entries_${companyId}_${itemId}`);
+      } catch (e) {}
     });
   },
 
@@ -1290,10 +1312,14 @@ export const erpService: any = {
     this._replaceCachedSubCollection('voucher_entries', companyId, id, []);
     this._replaceCachedSubCollection('inventory_entries', companyId, id, []);
 
-    // 8. Delete cache entries for item stats so they dynamically recalculate
+    // 8. Delete cache entries for item stats & inventory entries so they dynamically recalculate
     const itemIds = voucher.inventory?.map((i: any) => i.item_id).filter(Boolean) || [];
     itemIds.forEach((itemId: string) => {
       delete this._itemStatsCache[`${companyId}_${itemId}`];
+      delete this._itemInventoryEntriesCache[`${companyId}_${itemId}`];
+      try {
+        localStorage.removeItem(`item_inv_entries_${companyId}_${itemId}`);
+      } catch (e) {}
     });
   },
 
@@ -1386,21 +1412,26 @@ export const erpService: any = {
         if (item) {
           const parsed = JSON.parse(item);
           if (parsed && Array.isArray(parsed.data)) {
-            const data = parsed.data;
-            if (colName === 'ledgers') (this as any)._ledgersCache[companyId] = { data, timestamp: parsed.timestamp || now };
-            else if (colName === 'items') (this as any)._itemsCache[companyId] = { data, timestamp: parsed.timestamp || now };
-            else if (colName === 'godowns') (this as any)._godownsCache[companyId] = { data, timestamp: parsed.timestamp || now };
-            else if (colName === 'employees') (this as any)._employeesCache[companyId] = { data, timestamp: parsed.timestamp || now };
-            else if (colName === 'units') (this as any)._unitsCache[companyId] = { data, timestamp: parsed.timestamp || now };
-            else if (colName === 'ledger_groups') (this as any)._ledgerGroupsCache[companyId] = { data, timestamp: parsed.timestamp || now };
-            else if (colName === 'voucher_types') (this as any)._voucherTypesCache[companyId] = { data, timestamp: parsed.timestamp || now };
-            else if (colName === 'stock_groups') (this as any)._stockGroupsCache[companyId] = { data, timestamp: parsed.timestamp || now };
-            else if (colName === 'stock_categories') (this as any)._stockCategoriesCache[companyId] = { data, timestamp: parsed.timestamp || now };
-            else if (colName === 'employee_groups') (this as any)._employeeGroupsCache[companyId] = { data, timestamp: parsed.timestamp || now };
-            else {
-              (this as any)._genericCollectionsCache[cacheKey] = { data, timestamp: parsed.timestamp || now };
+            // Self-healing: if cached collection was truncated by the 300 bug, or contains corrupted inventory entries without voucher_id or date, bypass it and fetch complete data
+            const wasTruncatedBug = ['vouchers', 'voucher_entries', 'inventory_entries'].includes(colName) && parsed.data.length === 300;
+            const hasCorruptedEntries = colName === 'inventory_entries' && parsed.data.some((d: any) => !d.voucher_id || !d.date);
+            if (!wasTruncatedBug && !hasCorruptedEntries) {
+              const data = parsed.data;
+              if (colName === 'ledgers') (this as any)._ledgersCache[companyId] = { data, timestamp: parsed.timestamp || now };
+              else if (colName === 'items') (this as any)._itemsCache[companyId] = { data, timestamp: parsed.timestamp || now };
+              else if (colName === 'godowns') (this as any)._godownsCache[companyId] = { data, timestamp: parsed.timestamp || now };
+              else if (colName === 'employees') (this as any)._employeesCache[companyId] = { data, timestamp: parsed.timestamp || now };
+              else if (colName === 'units') (this as any)._unitsCache[companyId] = { data, timestamp: parsed.timestamp || now };
+              else if (colName === 'ledger_groups') (this as any)._ledgerGroupsCache[companyId] = { data, timestamp: parsed.timestamp || now };
+              else if (colName === 'voucher_types') (this as any)._voucherTypesCache[companyId] = { data, timestamp: parsed.timestamp || now };
+              else if (colName === 'stock_groups') (this as any)._stockGroupsCache[companyId] = { data, timestamp: parsed.timestamp || now };
+              else if (colName === 'stock_categories') (this as any)._stockCategoriesCache[companyId] = { data, timestamp: parsed.timestamp || now };
+              else if (colName === 'employee_groups') (this as any)._employeeGroupsCache[companyId] = { data, timestamp: parsed.timestamp || now };
+              else {
+                (this as any)._genericCollectionsCache[cacheKey] = { data, timestamp: parsed.timestamp || now };
+              }
+              return data;
             }
-            return data;
           }
         }
       } catch (err) {
@@ -1410,9 +1441,7 @@ export const erpService: any = {
 
     const fetchPromise = (async () => {
       try {
-        const effectiveLimit = ['vouchers', 'voucher_entries', 'inventory_entries'].includes(colName)
-          ? Math.min(limitCount, 300)
-          : limitCount;
+        const effectiveLimit = limitCount || 10000;
         const q = query(
           collection(db, colName), 
           where('companyId', '==', companyId),
@@ -2181,8 +2210,28 @@ export const erpService: any = {
           v_no: voucher.v_no || '',
           companyId
         };
-        const mappedEntries = entries.map(e => ({ ...e, voucher_id: res.id, date: res.v_date, companyId }));
-        const mappedInventory = (inventoryEntries || []).map(i => ({ ...i, voucher_id: res.id, companyId }));
+        const mappedEntries = entries.map((e, idx) => ({ ...e, id: e.id || ('entry_' + res.id + '_' + idx), voucher_id: res.id, date: res.v_date, companyId }));
+        const vTypeLower = (voucher.v_type || '').toLowerCase();
+        const isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'material out', 'debit note'].includes(vTypeLower);
+        const mappedInventory = (inventoryEntries || []).map((i, idx) => {
+          const entryOutward = isOutward ||
+            (i.entry_type || '').toLowerCase() === 'consumption' ||
+            (i.movement_type || '').toLowerCase() === 'outward' ||
+            (i.m_type || '').toLowerCase() === 'outward';
+          const dir = entryOutward ? 'Outward' : 'Inward';
+          return {
+            ...i,
+            id: i.id || ('inv_' + res.id + '_' + idx),
+            voucher_id: res.id,
+            companyId,
+            v_type: voucher.v_type,
+            date: res.v_date,
+            created_at: new Date(),
+            movement_type: dir,
+            m_type: dir,
+            entry_type: i.entry_type || dir
+          };
+        });
         
         this._patchCachesOnCreate(companyId, createdVoucher, mappedEntries, mappedInventory);
 
@@ -3399,7 +3448,29 @@ export const erpService: any = {
       });
 
       if (res && res.success) {
-        this._patchCachesOnUpdate(companyId, id, oldVoucher, updatedVoucher, entries, inventoryEntries || []);
+        const vDateYMD = formatToYMD(voucher.v_date || updatedVoucher.v_date || oldVoucher?.v_date);
+        const vTypeLower = (vType || oldVoucher?.v_type || '').toLowerCase();
+        const isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'material out', 'debit note'].includes(vTypeLower);
+        const mappedNewInventory = (inventoryEntries || []).map((i: any, idx: number) => {
+          const entryOutward = isOutward ||
+            (i.entry_type || '').toLowerCase() === 'consumption' ||
+            (i.movement_type || '').toLowerCase() === 'outward' ||
+            (i.m_type || '').toLowerCase() === 'outward';
+          const dir = entryOutward ? 'Outward' : 'Inward';
+          return {
+            ...i,
+            id: i.id || ('inv_' + id + '_' + idx),
+            voucher_id: id,
+            companyId,
+            v_type: vType || oldVoucher?.v_type,
+            date: vDateYMD,
+            created_at: new Date(),
+            movement_type: dir,
+            m_type: dir,
+            entry_type: i.entry_type || dir
+          };
+        });
+        this._patchCachesOnUpdate(companyId, id, oldVoucher, updatedVoucher, entries, mappedNewInventory);
       }
 
       const vNo = voucher.reference_no || voucher.v_no || voucher.serial_no || id;
@@ -4422,81 +4493,93 @@ export const erpService: any = {
         const itemRef = doc(db, 'items', itemId);
         let effectiveItemData = itemData;
   
-      if (!effectiveItemData) {
-        const itemSnap = await getDoc(itemRef);
-        if (!itemSnap.exists()) return;
-        effectiveItemData = itemSnap.data();
-      }
-
-      const effectiveCompanyId = companyId || effectiveItemData.companyId;
-      if (!effectiveCompanyId) return;
-
-      const q = query(
-        collection(db, 'inventory_entries'),
-        where('item_id', '==', itemId),
-        where('companyId', '==', effectiveCompanyId)
-      );
-      const snap = await getDocs(q);
-      const entries = snap.docs.map(d => ({ ...(d.data() as any), id: d.id }))
-        .sort((a, b) => {
-          const d_a = parseEntryDate(a.date, a.created_at);
-          const d_b = parseEntryDate(b.date, b.created_at);
-          if (d_a.getTime() !== d_b.getTime()) return d_a.getTime() - d_b.getTime();
-          return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
-        });
-      
-      let stock = Number(effectiveItemData.opening_qty) || 0;
-      let totalValue = stock * (Number(effectiveItemData.opening_rate) || 0);
-      let totalQty = stock;
-
-      // Track godown balances during recalculation if we want perfectly accurate global physical stock handling
-      const godownBalances: Record<string, number> = {};
-      (effectiveItemData.opening_godowns || []).forEach((ag: any) => {
-        godownBalances[ag.godown_id] = Number(ag.qty) || 0;
-      });
-
-      for (const e of entries) {
-        const vType = e.v_type;
-        const mType = getMovementType(e);
-        const qty = Number(e.qty) || 0;
-        const freeQty = Number(e.free_qty) || 0;
-        const rate = Number(e.rate) || 0;
-        const totalEntryQty = qty + freeQty;
-        const godownId = e.godown_id;
-
-        if (vType?.toLowerCase() === 'physical stock') {
-          if (!godownId) {
-            stock = qty;
-            totalQty = stock;
-          } else {
-            const oldGodownStock = godownBalances[godownId] || 0;
-            const adjustment = qty - oldGodownStock;
-            stock += adjustment;
-            godownBalances[godownId] = qty;
-            totalQty += adjustment;
-          }
-        } else if (mType === 'inward') {
-          stock += totalEntryQty;
-          totalValue += (qty * rate);
-          totalQty += totalEntryQty; // Included free_qty in totalQty for weighted average cost calculation
-          if (godownId) godownBalances[godownId] = (godownBalances[godownId] || 0) + totalEntryQty;
-        } else {
-          stock -= totalEntryQty;
-          if (godownId) godownBalances[godownId] = (godownBalances[godownId] || 0) - totalEntryQty;
+        if (!effectiveItemData) {
+          const itemSnap = await getDoc(itemRef);
+          if (!itemSnap.exists()) return;
+          effectiveItemData = itemSnap.data();
         }
-      }
-      
-      const avgCost = totalQty > 0 ? totalValue / totalQty : (Number(effectiveItemData.opening_rate) || 0);
 
-      await updateDoc(itemRef, { 
-        current_stock: stock,
-        avg_cost: avgCost,
-        companyId: effectiveCompanyId // Ensure companyId field persists
-      });
-    } catch (error) {
-      console.error('Error recalculating item stats:', error);
-    }
-  },
+        const effectiveCompanyId = companyId || effectiveItemData.companyId;
+        if (!effectiveCompanyId) return;
+
+        // Retrieve all inventory entries using authoritative helper with fresh data
+        const rawEntries = await this.getItemInventoryEntries(effectiveCompanyId, itemId, true);
+        const uniqueVoucherIds = Array.from(new Set((rawEntries || []).map((e: any) => e.voucher_id).filter(Boolean)));
+        const voucherMap = await this.getVouchersByIds(effectiveCompanyId, uniqueVoucherIds);
+
+        const entries = (rawEntries || [])
+          .map((e: any) => {
+            const v = voucherMap[e.voucher_id] || {};
+            const vType = (e.v_type || v.v_type || '').toString();
+            const movementData = {
+              ...e,
+              v_type: vType,
+              m_type: e.m_type || e.movement_type || e.entry_type || v.m_type || v.movement_type || ''
+            };
+            return {
+              ...e,
+              v_type: vType,
+              date: e.date || v.v_date || '',
+              m_type: getMovementType(movementData)
+            };
+          })
+          .sort((a: any, b: any) => compareInventorySequence(a, b));
+        
+        let stock = Number(effectiveItemData.opening_qty) || 0;
+        let totalValue = stock * (Number(effectiveItemData.opening_rate) || 0);
+        let totalQty = stock;
+
+        // Track godown balances during recalculation if we want perfectly accurate global physical stock handling
+        const godownBalances: Record<string, number> = {};
+        (effectiveItemData.opening_godowns || []).forEach((ag: any) => {
+          if (ag.godown_id) godownBalances[ag.godown_id] = Number(ag.qty) || 0;
+        });
+
+        for (const e of entries) {
+          const vType = e.v_type;
+          const mType = getMovementType(e);
+          const qty = Number(e.qty) || 0;
+          const freeQty = Number(e.free_qty) || 0;
+          const rate = Number(e.rate) || 0;
+          const totalEntryQty = qty + freeQty;
+          const godownId = e.godown_id;
+
+          if (vType?.toLowerCase() === 'physical stock' || e.is_physical_snapshot) {
+            if (!godownId) {
+              stock = qty;
+              totalQty = stock;
+            } else {
+              const oldGodownStock = godownBalances[godownId] || 0;
+              const adjustment = qty - oldGodownStock;
+              stock += adjustment;
+              godownBalances[godownId] = qty;
+              totalQty += adjustment;
+            }
+          } else if (mType === 'inward') {
+            stock += totalEntryQty;
+            totalValue += (qty * rate);
+            totalQty += totalEntryQty;
+            if (godownId) godownBalances[godownId] = (godownBalances[godownId] || 0) + totalEntryQty;
+          } else {
+            stock -= totalEntryQty;
+            if (godownId) godownBalances[godownId] = (godownBalances[godownId] || 0) - totalEntryQty;
+          }
+        }
+        
+        const avgCost = totalQty > 0 ? totalValue / totalQty : (Number(effectiveItemData.opening_rate) || 0);
+
+        await updateDoc(itemRef, { 
+          current_stock: stock,
+          avg_cost: avgCost,
+          companyId: effectiveCompanyId
+        });
+
+        // Immediately update in-memory and localStorage cache
+        this._updateCachedCollection('items', effectiveCompanyId, { id: itemId, current_stock: stock, avg_cost: avgCost }, 'update');
+      } catch (error) {
+        console.error('Error recalculating item stats:', error);
+      }
+    },
 
   _voucherEntriesByDateCache: {} as Record<string, { data: any[]; timestamp: number }>,
   _voucherEntriesByDateRangeCache: {} as Record<string, { data: any[]; timestamp: number }>,
@@ -4645,10 +4728,12 @@ export const erpService: any = {
     const now = Date.now();
     const CACHE_TTL = 900000; // 15 minutes
 
+    // 1. Check in-memory item entries cache
     if (!forceRefresh && this._itemInventoryEntriesCache[cacheKey] && (now - this._itemInventoryEntriesCache[cacheKey].timestamp < CACHE_TTL)) {
       return this._itemInventoryEntriesCache[cacheKey].data;
     }
 
+    // 2. Check localStorage item entries cache
     if (!forceRefresh) {
       try {
         const stored = localStorage.getItem(`item_inv_entries_${cacheKey}`);
@@ -4662,6 +4747,19 @@ export const erpService: any = {
       } catch (e) {}
     }
 
+    // 3. Check generic collection cache if already in memory
+    const colCacheKey = `inventory_entries_${companyId}`;
+    if (!forceRefresh && this._genericCollectionsCache[colCacheKey]?.data) {
+      const allCached = this._genericCollectionsCache[colCacheKey].data;
+      if (Array.isArray(allCached) && allCached.length > 0) {
+        const matched = allCached.filter((e: any) => String(e.item_id) === String(itemId));
+        if (matched.length > 0) {
+          this._itemInventoryEntriesCache[cacheKey] = { data: matched, timestamp: now };
+          return matched;
+        }
+      }
+    }
+
     try {
       const q = query(
         collection(db, 'inventory_entries'),
@@ -4669,8 +4767,22 @@ export const erpService: any = {
         where('item_id', '==', itemId)
       );
       const snap = await getDocs(q);
-      const entries = snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
+      let entries = snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
       this.trackQuota(companyId, snap.size || 1, 0);
+
+      // Fallback check if item_id was stored as number
+      if (entries.length === 0 && !isNaN(Number(itemId))) {
+        const qNum = query(
+          collection(db, 'inventory_entries'),
+          where('companyId', '==', companyId),
+          where('item_id', '==', Number(itemId))
+        );
+        const snapNum = await getDocs(qNum);
+        if (!snapNum.empty) {
+          entries = snapNum.docs.map(d => ({ ...(d.data() as any), id: d.id }));
+          this.trackQuota(companyId, snapNum.size || 1, 0);
+        }
+      }
 
       this._itemInventoryEntriesCache[cacheKey] = { data: entries, timestamp: now };
       try {
@@ -4680,6 +4792,16 @@ export const erpService: any = {
       return entries;
     } catch (err) {
       console.error('Error in getItemInventoryEntries:', err);
+      // Fallback to local storage collection cache if Firestore fails
+      try {
+        const colStored = localStorage.getItem(`col_cache_${colCacheKey}`);
+        if (colStored) {
+          const parsed = JSON.parse(colStored);
+          if (parsed && Array.isArray(parsed.data)) {
+            return parsed.data.filter((e: any) => String(e.item_id) === String(itemId));
+          }
+        }
+      } catch (e) {}
       return [];
     }
   },

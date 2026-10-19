@@ -5,7 +5,7 @@ import { exportToCSV, exportToPDF } from '../utils/exportUtils';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
-import { cn, formatNumber, formatQuantity, ensureDate, parseEntryDate, getMovementType, formatToYMD } from '../lib/utils';
+import { cn, formatNumber, formatQuantity, ensureDate, parseEntryDate, getMovementType, formatToYMD, compareInventorySequence } from '../lib/utils';
 import { SkeletonLoader } from './SkeletonLoader';
 import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
@@ -44,11 +44,25 @@ export function StockSummary() {
   const isInitialMount = React.useRef(true);
 
   const handleRecalculateAll = async () => {
+    if (!user?.companyId) return;
     setRecalculating(true);
     try {
       for (const item of items) {
-        await erpService.recalculateItemStats(item.id);
+        await erpService.recalculateItemStats(item.id, user.companyId, item);
       }
+      // Bust stale cached collections so fresh complete data is retrieved
+      try {
+        localStorage.removeItem(`col_cache_inventory_entries_${user.companyId}`);
+        localStorage.removeItem(`col_cache_vouchers_${user.companyId}`);
+        localStorage.removeItem(`col_cache_items_${user.companyId}`);
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith(`item_inv_entries_${user.companyId}`) || key.startsWith(`col_cache_inventory_entries_${user.companyId}`))) {
+            localStorage.removeItem(key);
+          }
+        }
+      } catch (e) {}
+      erpService.invalidateAllCaches(user.companyId);
       showNotification('All item statistics recalculated successfully');
       setRefreshKey(prev => prev + 1);
     } catch (err) {
@@ -75,9 +89,9 @@ export function StockSummary() {
         const [allItems, godownsRes, allInv, catsRes, allVouchers] = await Promise.all([
           erpService.getItems(user.companyId, isForced),
           erpService.getGodowns(user.companyId, isForced),
-          erpService.getCollection('inventory_entries', user.companyId, 5000, isForced),
+          erpService.getCollection('inventory_entries', user.companyId, 10000, isForced),
           erpService.getCollection('stock_categories', user.companyId, 5000, isForced),
-          erpService.getCollection('vouchers', user.companyId, 5000, isForced)
+          erpService.getCollection('vouchers', user.companyId, 10000, isForced)
         ]);
         
         const vMap = (allVouchers || []).reduce((acc: any, v: any) => {
@@ -104,6 +118,40 @@ export function StockSummary() {
           };
         });
 
+        const existingEntryIds = new Set(enrichedInv.map(e => e.id).filter(Boolean));
+        const existingPairs = new Set(enrichedInv.map(e => `${e.voucher_id}_${e.item_id}`));
+        (allVouchers || []).forEach((v: any) => {
+          const embeddedInv = v.inventory || v.inventory_entries;
+          if (Array.isArray(embeddedInv)) {
+            embeddedInv.forEach((e: any, idx: number) => {
+              if (e.item_id) {
+                const pairKey = `${v.id}_${e.item_id}`;
+                const pseudoId = e.id || `${v.id}_inv_${idx}`;
+                if (!existingEntryIds.has(pseudoId) && !existingPairs.has(pairKey)) {
+                  const vType = (e.v_type || v.v_type || '').toString();
+                  const dateStr = e.date || v.v_date || v.date || '';
+                  const movementData = {
+                    ...e,
+                    v_type: vType,
+                    m_type: e.m_type || e.movement_type || e.entry_type || v.m_type || v.movement_type || ''
+                  };
+                  enrichedInv.push({
+                    ...e,
+                    id: pseudoId,
+                    voucher_id: v.id,
+                    v_type: vType,
+                    date: dateStr,
+                    created_at: e.created_at || v.created_at,
+                    m_type: getMovementType(movementData)
+                  });
+                  existingPairs.add(pairKey);
+                  existingEntryIds.add(pseudoId);
+                }
+              }
+            });
+          }
+        });
+
         setInventory(enrichedInv);
         setItems(allItems);
         setGodowns(godownsRes || []);
@@ -118,7 +166,7 @@ export function StockSummary() {
       }
     }
     fetchData();
-  }, [user?.companyId, endDate, refreshKey]);
+  }, [user?.companyId, startDate, endDate, refreshKey]);
 
   const getStockDetails = (itemId: string, godownId: string | null) => {
     const item = items.find(i => i.id === itemId);
@@ -126,8 +174,7 @@ export function StockSummary() {
 
     const startD = parseEntryDate(startDate, null);
     const endD = parseEntryDate(endDate, null);
-    const startStr = formatToYMD(startD);
-    const endStr = formatToYMD(endD);
+    endD.setHours(23, 59, 59, 999);
 
     // Track godown balances precisely during the simulation
     const godownBalances: Record<string, number> = {};
@@ -140,35 +187,21 @@ export function StockSummary() {
     // Total opening includes all allocated and unallocated stock
     let currentTotalStock = Number(item.opening_qty) || 0;
 
+    let periodOpening = godownId ? (godownBalances[godownId] || 0) : currentTotalStock;
     let periodInward = 0;
     let periodOutward = 0;
-    let periodOpening = 0;
-    let openingFound = false;
 
-    // Filter by item and sort by ACTUAL date time
+    // Filter by item and sort by ACTUAL date time deterministically
     const relevantEntries = inventory
       .filter(inv => String(inv.item_id) === String(itemId))
-      .sort((a, b) => {
-        const d_a = parseEntryDate(a.date, a.created_at);
-        const d_b = parseEntryDate(b.date, b.created_at);
-        if (d_a.getTime() !== d_b.getTime()) return d_a.getTime() - d_b.getTime();
-        return (a.created_at?.seconds || 0) - (b.created_at?.seconds || 0);
-      });
+      .sort((a, b) => compareInventorySequence(a, b));
 
     relevantEntries.forEach(inv => {
       const entryDateObj = parseEntryDate(inv.date, inv.created_at);
-      const entryDateStr = formatToYMD(entryDateObj);
-      
-      if (entryDateStr > endStr) return;
-      
-      // Before we process the first entry of the period, we mark what the stock was at the start
-      if (!openingFound && entryDateStr >= startStr) {
-        periodOpening = godownId ? (godownBalances[godownId] || 0) : currentTotalStock;
-        openingFound = true;
-      }
+      if (entryDateObj > endD) return;
 
       const qty = (Number(inv.qty) || 0) + (Number(inv.free_qty) || 0);
-      const mType = getMovementType(inv);
+      const mType = inv.m_type || getMovementType(inv);
       const isPhysical = (inv.v_type || '').toLowerCase() === 'physical stock' || !!inv.is_physical_snapshot;
       const invGodownId = inv.godown_id;
 
@@ -196,7 +229,9 @@ export function StockSummary() {
         currentTotalStock += adjustment;
       }
 
-      if (entryDateStr >= startStr && entryDateStr <= endStr) {
+      if (entryDateObj < startD) {
+        periodOpening = godownId ? (godownBalances[godownId] || 0) : currentTotalStock;
+      } else {
         const matchesGodownFilter = !godownId || invGodownId === godownId;
         if (matchesGodownFilter) {
           if (isPhysical) {
@@ -209,10 +244,6 @@ export function StockSummary() {
         }
       }
     });
-
-    if (!openingFound) {
-      periodOpening = godownId ? (godownBalances[godownId] || 0) : currentTotalStock;
-    }
 
     const finalClosing = godownId ? (godownBalances[godownId] || 0) : currentTotalStock;
 

@@ -1066,15 +1066,20 @@ export function VoucherEntry() {
         }));
       }
 
-      const inventoryData = isInventory ? invEntries.filter(i => i.item_id).map(i => ({ 
-        ...i, 
-        entry_type: i.entry_type || (['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out'].includes(vType.toLowerCase()) ? 'Outward' : 'Inward'),
-        item_name: items.find(item => item.id === i.item_id)?.name,
-        m_type: ['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out'].includes(vType.toLowerCase()) ? 'Outward' : 'Inward' 
-      })) : (isStockJournal ? [...consumptionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Consumption' as const })), ...productionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Production' as const }))].map(i => ({
+      const inventoryData = isInventory ? invEntries.filter(i => i.item_id).map(i => {
+        const vTypeLower = vType.toLowerCase();
+        const isOutward = ['sales', 'delivery note', 'rejection out', 'purchase return', 'material out', 'debit note'].includes(vTypeLower);
+        const direction = isOutward ? 'Outward' : 'Inward';
+        return { 
+          ...i, 
+          entry_type: direction,
+          m_type: direction,
+          movement_type: direction,
+          item_name: items.find(item => item.id === i.item_id)?.name
+        };
+      }) : (isStockJournal ? [...consumptionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Consumption' as const, m_type: 'Outward', movement_type: 'Outward' })), ...productionEntries.filter(i => i.item_id).map(e => ({ ...e, entry_type: 'Production' as const, m_type: 'Inward', movement_type: 'Inward' }))].map(i => ({
         ...i,
-        item_name: items.find(item => item.id === i.item_id)?.name,
-        m_type: i.entry_type === 'Consumption' ? 'Outward' : 'Inward'
+        item_name: items.find(item => item.id === i.item_id)?.name
       })) : []);
 
       if (isEdit) {

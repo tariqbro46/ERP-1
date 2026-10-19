@@ -111,7 +111,9 @@ export function parseEntryDate(dateStr: any, fallback: any): Date {
 }
 
 export function getMovementType(item: any): 'inward' | 'outward' {
-  const vType = (item.v_type || '').toString().toLowerCase();
+  if (!item) return 'inward';
+  
+  const vType = (item.v_type || '').toString().toLowerCase().trim();
   
   // Specific overrides for movement type field names
   const movement = (
@@ -120,18 +122,71 @@ export function getMovementType(item: any): 'inward' | 'outward' {
     item.entry_type ||
     item.type || 
     ''
-  ).toString().toLowerCase();
+  ).toString().toLowerCase().trim();
 
-  // HEURISTIC: Prioritize Voucher Type if it's a standard one
-  if (['sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out', 'consumption', 'debit note'].includes(vType)) return 'outward';
+  // 1. Stock Journal consumption & production take top precedence
+  if (movement === 'consumption') return 'outward';
+  if (movement === 'production') return 'inward';
+
+  // 2. Standard voucher types take top precedence over generic entry strings
+  if (['sales', 'delivery note', 'rejection out', 'purchase return', 'material out', 'debit note'].includes(vType)) return 'outward';
   if (['purchase', 'receipt note', 'sales return', 'rejection in', 'material in', 'credit note'].includes(vType)) return 'inward';
 
-  // Fallback to specific movement fields if vType is unknown
-  if (['outward', 'out', 'consumption', 'sale', 'sales', 'delivery note', 'rejection out', 'purchase return', 'physical stock', 'material out'].includes(movement)) return 'outward';
-  if (['inward', 'in', 'production', 'purchase', 'receipt note', 'sales return', 'rejection in', 'material in'].includes(movement)) return 'inward';
-  
+  // 3. Explicit movement direction on entry when voucher type is generic/empty
+  if (movement === 'outward' || movement === 'out') return 'outward';
+  if (movement === 'inward' || movement === 'in') return 'inward';
+
+  // 4. Fallback matching on movement string
+  if (['sale', 'sales', 'delivery note', 'rejection out', 'purchase return', 'material out', 'debit note'].includes(movement)) return 'outward';
+  if (['purchase', 'receipt note', 'sales return', 'rejection in', 'material in', 'credit note'].includes(movement)) return 'inward';
+
+  // 5. Physical stock adjustment check
+  if (vType === 'physical stock' || item.is_physical_snapshot) {
+    if (typeof item.adjustment_qty === 'number') {
+      return item.adjustment_qty >= 0 ? 'inward' : 'outward';
+    }
+  }
+
   // Default fallback
   return 'inward';
+}
+
+export function compareInventorySequence(a: any, b: any): number {
+  // 1. Midnight local date comparison (for dates themselves)
+  const d_a = parseEntryDate(a.date, a.v_createdAt || a.created_at);
+  const d_b = parseEntryDate(b.date, b.v_createdAt || b.created_at);
+  if (d_a.getTime() !== d_b.getTime()) return d_a.getTime() - d_b.getTime();
+  
+  // 2. Movement type (Inward viz. Purchase/Inward first, outward viz. Sales/Outward later)
+  const mTypeA = a.m_type || getMovementType(a);
+  const mTypeB = b.m_type || getMovementType(b);
+  if (mTypeA !== mTypeB) {
+    return mTypeA === 'inward' ? -1 : 1;
+  }
+
+  // 3. Try numeric sort for Ref No (v_no)
+  const vNoA = String(a.v_no || '');
+  const vNoB = String(b.v_no || '');
+  const numA = parseInt(vNoA.replace(/\D/g, '') || '0', 10) || 0;
+  const numB = parseInt(vNoB.replace(/\D/g, '') || '0', 10) || 0;
+  if (numA !== numB && numA !== 0 && numB !== 0) return numA - numB;
+
+  // 4. Try auto-serial numbers
+  const seqA = a.v_serial_no || a.serial_no || 0;
+  const seqB = b.v_serial_no || b.serial_no || 0;
+  if (seqA !== seqB) return seqA - seqB;
+
+  // 5. Lexicographical fallback of v_no
+  const vNoComp = vNoA.localeCompare(vNoB);
+  if (vNoComp !== 0) return vNoComp;
+
+  // 6. Time fallback
+  const tsA = ensureDate(a.v_createdAt || a.created_at).getTime();
+  const tsB = ensureDate(b.v_createdAt || b.created_at).getTime();
+  if (tsA !== tsB) return tsA - tsB;
+
+  // 7. Hard ID fallback
+  return (a.id || '').localeCompare(b.id || '');
 }
 
 /**

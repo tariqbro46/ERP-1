@@ -80,7 +80,8 @@ import {
   Monitor,
   Play,
   Eye,
-  GitBranch
+  GitBranch,
+  Sliders
 } from 'lucide-react';
 import { soundService } from '../services/soundService';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -389,7 +390,20 @@ export default function FounderPanel() {
     heroThreeUiShowFloatingBadges,
     heroThreeUiShowExperienceHubDemo,
     heroThreeUiShowSimulateVoucher,
-    heroThreeUiEnableTiltDefault
+    heroThreeUiEnableTiltDefault,
+    heroShowExperienceHubDemo,
+    heroEyebrowText,
+    heroTitleText,
+    heroSubtitleText,
+    heroCtaPrimaryText,
+    heroCtaDemoText,
+    heroNavActionText,
+    heroMetric1Value,
+    heroMetric1Label,
+    heroMetric2Value,
+    heroMetric2Label,
+    heroMetric3Value,
+    heroMetric3Label
   } = useSettings();
   const [localHeroDesignStyle, setLocalHeroDesignStyle] = useState<'default' | 'threeui' | 'monochrome-parallax'>(
     heroDesignStyle === 'threeui' ? 'threeui' : (heroDesignStyle === 'default' ? 'default' : 'monochrome-parallax')
@@ -403,6 +417,22 @@ export default function FounderPanel() {
   const [localHeroThreeUiShowExperienceHubDemo, setLocalHeroThreeUiShowExperienceHubDemo] = useState<boolean>(heroThreeUiShowExperienceHubDemo ?? true);
   const [localHeroThreeUiShowSimulateVoucher, setLocalHeroThreeUiShowSimulateVoucher] = useState<boolean>(heroThreeUiShowSimulateVoucher ?? true);
   const [localHeroThreeUiEnableTiltDefault, setLocalHeroThreeUiEnableTiltDefault] = useState<boolean>(heroThreeUiEnableTiltDefault ?? false);
+  
+  // Dynamic Hero Content States
+  const [localHeroShowExperienceHubDemo, setLocalHeroShowExperienceHubDemo] = useState<boolean>(heroShowExperienceHubDemo ?? false);
+  const [localHeroEyebrowText, setLocalHeroEyebrowText] = useState(heroEyebrowText || 'ERP ARCHITECTURE // SOVEREIGN FINANCIAL KERNEL');
+  const [localHeroTitleText, setLocalHeroTitleText] = useState(heroTitleText || 'Absolute Truth in Commercial Ledgering.');
+  const [localHeroSubtitleText, setLocalHeroSubtitleText] = useState(heroSubtitleText || 'Atomic double-entry balance computation, multi-location godown stock velocity, and board-level liquidity reporting on zero-overhead in-memory persistence. Pure accounting truth.');
+  const [localHeroCtaPrimaryText, setLocalHeroCtaPrimaryText] = useState(heroCtaPrimaryText || 'Enter Production Console');
+  const [localHeroCtaDemoText, setLocalHeroCtaDemoText] = useState(heroCtaDemoText || 'Experience Hub Demo');
+  const [localHeroNavActionText, setLocalHeroNavActionText] = useState(heroNavActionText || 'Launch Console');
+  const [localHeroMetric1Value, setLocalHeroMetric1Value] = useState(heroMetric1Value || '0 ms');
+  const [localHeroMetric1Label, setLocalHeroMetric1Label] = useState(heroMetric1Label || 'Balance Drift Latency');
+  const [localHeroMetric2Value, setLocalHeroMetric2Value] = useState(heroMetric2Value || '100%');
+  const [localHeroMetric2Label, setLocalHeroMetric2Label] = useState(heroMetric2Label || 'Real FIFO Valuation');
+  const [localHeroMetric3Value, setLocalHeroMetric3Value] = useState(heroMetric3Value || 'Gold+');
+  const [localHeroMetric3Label, setLocalHeroMetric3Label] = useState(heroMetric3Label || 'Quota Protection');
+
   const [localSoundEnabled, setLocalSoundEnabled] = useState(soundEnabled ?? true);
   const [localSoundVolume, setLocalSoundVolume] = useState(soundVolume ?? 0.5);
   const [localSoundScheme, setLocalSoundScheme] = useState(soundScheme || 'system');
@@ -587,6 +617,40 @@ export default function FounderPanel() {
   useEffect(() => {
     setLocalReportsPageUiStyle(reportsPageUiStyle || 'classic');
   }, [reportsPageUiStyle]);
+
+  useEffect(() => {
+    if (heroShowExperienceHubDemo !== undefined) {
+      setLocalHeroShowExperienceHubDemo(heroShowExperienceHubDemo);
+    }
+  }, [heroShowExperienceHubDemo]);
+
+  useEffect(() => {
+    if (heroEyebrowText) setLocalHeroEyebrowText(heroEyebrowText);
+    if (heroTitleText) setLocalHeroTitleText(heroTitleText);
+    if (heroSubtitleText) setLocalHeroSubtitleText(heroSubtitleText);
+    if (heroCtaPrimaryText) setLocalHeroCtaPrimaryText(heroCtaPrimaryText);
+    if (heroCtaDemoText) setLocalHeroCtaDemoText(heroCtaDemoText);
+    if (heroNavActionText) setLocalHeroNavActionText(heroNavActionText);
+    if (heroMetric1Value) setLocalHeroMetric1Value(heroMetric1Value);
+    if (heroMetric1Label) setLocalHeroMetric1Label(heroMetric1Label);
+    if (heroMetric2Value) setLocalHeroMetric2Value(heroMetric2Value);
+    if (heroMetric2Label) setLocalHeroMetric2Label(heroMetric2Label);
+    if (heroMetric3Value) setLocalHeroMetric3Value(heroMetric3Value);
+    if (heroMetric3Label) setLocalHeroMetric3Label(heroMetric3Label);
+  }, [
+    heroEyebrowText,
+    heroTitleText,
+    heroSubtitleText,
+    heroCtaPrimaryText,
+    heroCtaDemoText,
+    heroNavActionText,
+    heroMetric1Value,
+    heroMetric1Label,
+    heroMetric2Value,
+    heroMetric2Label,
+    heroMetric3Value,
+    heroMetric3Label
+  ]);
 
   useEffect(() => {
     setLocalSearchPageUiStyle(searchPageUiStyle || 'classic');
@@ -3258,7 +3322,20 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                       heroThreeUiShowFloatingBadges: localHeroThreeUiShowFloatingBadges,
                       heroThreeUiShowExperienceHubDemo: localHeroThreeUiShowExperienceHubDemo,
                       heroThreeUiShowSimulateVoucher: localHeroThreeUiShowSimulateVoucher,
-                      heroThreeUiEnableTiltDefault: localHeroThreeUiEnableTiltDefault
+                      heroThreeUiEnableTiltDefault: localHeroThreeUiEnableTiltDefault,
+                      heroShowExperienceHubDemo: localHeroShowExperienceHubDemo,
+                      heroEyebrowText: localHeroEyebrowText,
+                      heroTitleText: localHeroTitleText,
+                      heroSubtitleText: localHeroSubtitleText,
+                      heroCtaPrimaryText: localHeroCtaPrimaryText,
+                      heroCtaDemoText: localHeroCtaDemoText,
+                      heroNavActionText: localHeroNavActionText,
+                      heroMetric1Value: localHeroMetric1Value,
+                      heroMetric1Label: localHeroMetric1Label,
+                      heroMetric2Value: localHeroMetric2Value,
+                      heroMetric2Label: localHeroMetric2Label,
+                      heroMetric3Value: localHeroMetric3Value,
+                      heroMetric3Label: localHeroMetric3Label
                     });
                     showNotification('System configuration updated successfully', 'success');
                   } catch (err) {
@@ -3992,6 +4069,203 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               <span className={localHeroDesignStyle === 'default' ? "text-primary font-bold" : ""}>
                                 {localHeroDesignStyle === 'default' ? "ACTIVE DEFAULT" : "Click to select"}
                               </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Group: Hero & Landing Page Content Customizer */}
+                    {showDesignPicker && (
+                      <div className={cn(
+                        "bg-card border border-border rounded-xl p-5 space-y-6 shadow-xs",
+                        uiStyle === 'UI/UX 2' && "border-blue-100 shadow-md"
+                      )}>
+                        <div className="flex items-center justify-between border-b border-border pb-3">
+                          <div className="flex items-center gap-2">
+                            <Sliders className="w-4 h-4 text-primary" />
+                            <div>
+                              <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">Hero Content & Buttons Customizer</h4>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">Customize texts, button labels, and visibility for landing hero visitors.</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Experience Hub Demo Toggle */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-border bg-muted/20">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className={cn("w-4 h-4", localHeroShowExperienceHubDemo ? "text-emerald-500" : "text-muted-foreground")} />
+                              <h5 className="text-xs font-bold uppercase tracking-wider text-foreground">Show Experience Hub Demo Button</h5>
+                              <span className={cn(
+                                "text-[9px] uppercase px-2 py-0.5 rounded font-mono font-bold",
+                                localHeroShowExperienceHubDemo ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/20" : "bg-neutral-500/15 text-neutral-400 border border-neutral-500/20"
+                              )}>
+                                {localHeroShowExperienceHubDemo ? "VISIBLE TO VISITORS" : "HIDDEN (OFF)"}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                              When toggled ON, the secondary "Experience Hub Demo" button will be visible on the landing hero for visitors to launch the demo modal.
+                            </p>
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => setLocalHeroShowExperienceHubDemo(!localHeroShowExperienceHubDemo)}
+                            className={cn(
+                              "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                              localHeroShowExperienceHubDemo ? "bg-emerald-500" : "bg-neutral-600"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
+                                localHeroShowExperienceHubDemo ? "translate-x-5" : "translate-x-0"
+                              )}
+                            />
+                          </button>
+                        </div>
+
+                        {/* Hero Text Fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                              Hero Eyebrow / Kicker Badge
+                            </label>
+                            <input
+                              type="text"
+                              value={localHeroEyebrowText}
+                              onChange={(e) => setLocalHeroEyebrowText(e.target.value)}
+                              placeholder="ERP ARCHITECTURE // SOVEREIGN FINANCIAL KERNEL"
+                              className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                              Hero Main Headline Title
+                            </label>
+                            <input
+                              type="text"
+                              value={localHeroTitleText}
+                              onChange={(e) => setLocalHeroTitleText(e.target.value)}
+                              placeholder="Absolute Truth in Commercial Ledgering."
+                              className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-bold"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                              Hero Subtitle Description
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={localHeroSubtitleText}
+                              onChange={(e) => setLocalHeroSubtitleText(e.target.value)}
+                              placeholder="Atomic double-entry balance computation..."
+                              className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed"
+                            />
+                          </div>
+
+                          {/* Button Labels */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                              Primary CTA Button Text
+                            </label>
+                            <input
+                              type="text"
+                              value={localHeroCtaPrimaryText}
+                              onChange={(e) => setLocalHeroCtaPrimaryText(e.target.value)}
+                              placeholder="Enter Production Console"
+                              className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-semibold"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                              Top Nav Launch Button Text
+                            </label>
+                            <input
+                              type="text"
+                              value={localHeroNavActionText}
+                              onChange={(e) => setLocalHeroNavActionText(e.target.value)}
+                              placeholder="Launch Console"
+                              className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-semibold"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                              Experience Hub Demo Button Text
+                            </label>
+                            <input
+                              type="text"
+                              value={localHeroCtaDemoText}
+                              onChange={(e) => setLocalHeroCtaDemoText(e.target.value)}
+                              placeholder="Experience Hub Demo"
+                              className="w-full px-3 py-2 text-xs rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Trust Metrics Customizer */}
+                        <div className="space-y-3 pt-3 border-t border-border">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest block">
+                            Key Metrics (Values & Labels)
+                          </label>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="p-3 rounded-lg border border-border bg-muted/10 space-y-2">
+                              <span className="text-[9px] font-mono font-bold text-muted-foreground uppercase">Metric 1</span>
+                              <input
+                                type="text"
+                                value={localHeroMetric1Value}
+                                onChange={(e) => setLocalHeroMetric1Value(e.target.value)}
+                                placeholder="0 ms"
+                                className="w-full px-2.5 py-1 text-xs rounded border border-border bg-background font-mono font-bold"
+                              />
+                              <input
+                                type="text"
+                                value={localHeroMetric1Label}
+                                onChange={(e) => setLocalHeroMetric1Label(e.target.value)}
+                                placeholder="Balance Drift Latency"
+                                className="w-full px-2.5 py-1 text-[11px] rounded border border-border bg-background text-muted-foreground"
+                              />
+                            </div>
+
+                            <div className="p-3 rounded-lg border border-border bg-muted/10 space-y-2">
+                              <span className="text-[9px] font-mono font-bold text-muted-foreground uppercase">Metric 2</span>
+                              <input
+                                type="text"
+                                value={localHeroMetric2Value}
+                                onChange={(e) => setLocalHeroMetric2Value(e.target.value)}
+                                placeholder="100%"
+                                className="w-full px-2.5 py-1 text-xs rounded border border-border bg-background font-mono font-bold"
+                              />
+                              <input
+                                type="text"
+                                value={localHeroMetric2Label}
+                                onChange={(e) => setLocalHeroMetric2Label(e.target.value)}
+                                placeholder="Real FIFO Valuation"
+                                className="w-full px-2.5 py-1 text-[11px] rounded border border-border bg-background text-muted-foreground"
+                              />
+                            </div>
+
+                            <div className="p-3 rounded-lg border border-border bg-muted/10 space-y-2">
+                              <span className="text-[9px] font-mono font-bold text-muted-foreground uppercase">Metric 3</span>
+                              <input
+                                type="text"
+                                value={localHeroMetric3Value}
+                                onChange={(e) => setLocalHeroMetric3Value(e.target.value)}
+                                placeholder="Gold+"
+                                className="w-full px-2.5 py-1 text-xs rounded border border-border bg-background font-mono font-bold"
+                              />
+                              <input
+                                type="text"
+                                value={localHeroMetric3Label}
+                                onChange={(e) => setLocalHeroMetric3Label(e.target.value)}
+                                placeholder="Quota Protection"
+                                className="w-full px-2.5 py-1 text-[11px] rounded border border-border bg-background text-muted-foreground"
+                              />
                             </div>
                           </div>
                         </div>

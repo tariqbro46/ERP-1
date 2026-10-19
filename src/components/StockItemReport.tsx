@@ -31,15 +31,21 @@ export function StockItemReport() {
   const [activeIndex, setActiveIndex] = useState(-1);
   const [openingBalance, setOpeningBalance] = useState(0);
   const [openingValue, setOpeningValue] = useState(0);
+  const [calculatedCurrentStock, setCalculatedCurrentStock] = useState<number | null>(null);
   
   const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    // Default to Jan 1st of current year as requested
-    return new Date(d.getFullYear(), 0, 1).toLocaleDateString('en-CA');
+    return searchParams.get('from') || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA');
   });
   const [endDate, setEndDate] = useState(() => {
-    return new Date().toLocaleDateString('en-CA');
+    return searchParams.get('to') || new Date().toLocaleDateString('en-CA');
   });
+
+  useEffect(() => {
+    const fromParam = searchParams.get('from');
+    const toParam = searchParams.get('to');
+    if (fromParam) setStartDate(fromParam);
+    if (toParam) setEndDate(toParam);
+  }, [searchParams]);
 
   const filteredItems = items.filter(i => 
     i.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -116,6 +122,35 @@ export function StockItemReport() {
       // 3. Fetch ONLY matching vouchers (cached, targeted batch fetch)
       const voucherMap = await erpService.getVouchersByIds(user!.companyId, uniqueVoucherIds);
 
+      // Also include any embedded inventory entries in vouchers that were not in inventory_entries collection
+      const existingEntryIds = new Set(allInvEntries.map((e: any) => e.id).filter(Boolean));
+      const existingPairs = new Set(allInvEntries.map((e: any) => `${e.voucher_id}_${e.item_id}`));
+      const allVouchers = await erpService.getCollection('vouchers', user!.companyId, 10000);
+      (allVouchers || []).forEach((v: any) => {
+        const embedded = v.inventory || v.inventory_entries;
+        if (Array.isArray(embedded)) {
+          embedded.forEach((invItem: any, idx: number) => {
+            if (String(invItem.item_id) === String(item.id)) {
+              const pairKey = `${v.id}_${invItem.item_id}`;
+              const pseudoId = invItem.id || `inv_${v.id}_${idx}`;
+              if (!existingEntryIds.has(pseudoId) && !existingPairs.has(pairKey)) {
+                allInvEntries.push({
+                  ...invItem,
+                  id: pseudoId,
+                  voucher_id: v.id,
+                  v_type: invItem.v_type || v.v_type || '',
+                  date: invItem.date || v.v_date || '',
+                  created_at: invItem.created_at || v.created_at
+                });
+                voucherMap[v.id] = v;
+                existingPairs.add(pairKey);
+                existingEntryIds.add(pseudoId);
+              }
+            }
+          });
+        }
+      });
+
       const compareRecordSequence = (a: any, b: any) => {
         // 1. Midnight local date comparison (for dates themselves)
         const d_a = parseEntryDate(a.date, a.v_createdAt || a.created_at);
@@ -191,9 +226,9 @@ export function StockItemReport() {
         };
       });
 
-        const start = parseEntryDate(from, null);
-        const end = parseEntryDate(to, null);
-        end.setHours(23, 59, 59, 999); 
+      const start = parseEntryDate(from, null);
+      const end = parseEntryDate(to, null);
+      end.setHours(23, 59, 59, 999); 
       
       // Tracking godown balances for accurate simulation
       const godownBalances: Record<string, number> = {};
@@ -212,6 +247,7 @@ export function StockItemReport() {
 
       sortedHistory.forEach(e => {
         const dateObj = parseEntryDate(e.date, e.created_at);
+        if (dateObj > end) return;
 
         const qty = (Number(e.qty) || 0) + (Number(e.free_qty) || 0);
         const mType = getMovementType(e);
@@ -248,6 +284,9 @@ export function StockItemReport() {
 
       setOpeningBalance(openingBalance);
       setOpeningValue(openingValue);
+
+      const periodClosingStock = selectedGodown ? (godownBalances[selectedGodown] || 0) : runningTotal;
+      setCalculatedCurrentStock(periodClosingStock);
 
       const itemEntries = sortedHistory.filter((e: any) => {
         const dateObj = parseEntryDate(e.date, e.created_at);
@@ -730,7 +769,13 @@ export function StockItemReport() {
                   <span className="font-bold text-gray-900 capitalize">{selectedItem.name}</span>
                 </div>
                 <div className="text-sm text-gray-500">
-                  {t('stockItem.currentStock')} <span className="font-bold text-primary">{formatQty(selectedItem.current_stock)} {selectedItem.unitName}</span>
+                  {t('stockItem.currentStock')}{' '}
+                  <span className={cn(
+                    "font-bold font-mono",
+                    (calculatedCurrentStock !== null ? calculatedCurrentStock : Number(selectedItem.current_stock || 0)) < 0 ? "text-rose-600" : "text-primary"
+                  )}>
+                    {formatQty(calculatedCurrentStock !== null ? calculatedCurrentStock : Number(selectedItem.current_stock || 0))} {selectedItem.unitName}
+                  </span>
                 </div>
               </div>
               

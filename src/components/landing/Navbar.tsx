@@ -19,12 +19,12 @@ export const Navbar = () => {
   });
 
   const navLinks = [
-    { name: t('nav.home'), href: '/' },
-    { name: t('nav.features'), href: '/features' },
-    { name: t('nav.pricing'), href: '/pricing' },
-    { name: language === 'bn' ? 'ডকুমেন্টেশন' : 'Docs', href: '/docs' },
-    { name: t('nav.about'), href: '/about' },
-    { name: t('nav.contact'), href: '/contact' },
+    { name: t('nav.home') || (language === 'bn' ? 'হোম' : 'Home'), href: '/' },
+    { name: t('nav.features') || (language === 'bn' ? 'ফিচার' : 'Features'), href: '/features' },
+    { name: t('nav.pricing') || (language === 'bn' ? 'প্রাইসিং' : 'Pricing'), href: '/pricing' },
+    { name: language === 'bn' ? 'ডকুমেন্টস' : 'Docs', href: '/docs' },
+    { name: t('nav.about') || (language === 'bn' ? 'আমাদের সম্পর্কে' : 'About'), href: '/about' },
+    { name: t('nav.contact') || (language === 'bn' ? 'যোগাযোগ' : 'Contact'), href: '/contact' },
   ];
 
   return (
@@ -90,7 +90,7 @@ export const Navbar = () => {
                 className="px-4 py-2 bg-[#1e293b] hover:bg-[#0f172a] text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 active:scale-[0.99]"
               >
                 <LayoutDashboard className="w-3.5 h-3.5" />
-                {t('nav.dashboard')}
+                {language === 'bn' ? 'লঞ্চ কনসোল' : 'Launch Console'}
               </Link>
             ) : (
               <div className="flex items-center gap-3">
@@ -98,14 +98,14 @@ export const Navbar = () => {
                   to="/login"
                   className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-colors"
                 >
-                  {t('nav.signIn')}
+                  {language === 'bn' ? 'সাইন ইন' : 'Sign in'}
                 </Link>
                 {globalSettings.registrationEnabled && (
                   <Link
                     to="/register"
                     className="px-4 py-2 bg-[#1e293b] hover:bg-[#0f172a] text-white rounded-lg text-xs font-semibold shadow-sm transition-all active:scale-[0.99]"
                   >
-                    {t('nav.getStarted')}
+                    {language === 'bn' ? 'গেট স্টার্টেড' : 'Get Started'}
                   </Link>
                 )}
               </div>
@@ -180,7 +180,7 @@ export const Navbar = () => {
                 className="w-full py-2.5 bg-[#1e293b] hover:bg-[#0f172a] text-white rounded-lg text-center text-xs font-semibold flex items-center justify-center gap-2 shadow-sm"
               >
                 <LayoutDashboard className="w-4 h-4" />
-                {t('nav.dashboard')}
+                {language === 'bn' ? 'লঞ্চ কনসোল' : 'Launch Console'}
               </Link>
             ) : (
               <>
@@ -189,7 +189,7 @@ export const Navbar = () => {
                   onClick={() => setIsOpen(false)}
                   className="w-full py-2 text-center text-xs font-semibold text-slate-700 hover:text-slate-900 border border-slate-200 rounded-lg bg-white"
                 >
-                  {t('nav.signIn')}
+                  {language === 'bn' ? 'সাইন ইন' : 'Sign in'}
                 </Link>
                 {globalSettings.registrationEnabled && (
                   <Link
@@ -197,7 +197,7 @@ export const Navbar = () => {
                     onClick={() => setIsOpen(false)}
                     className="w-full py-2.5 bg-[#1e293b] hover:bg-[#0f172a] text-white rounded-lg text-center text-xs font-semibold shadow-sm"
                   >
-                    {t('nav.getStarted')}
+                    {language === 'bn' ? 'গেট স্টার্টেড' : 'Get Started'}
                   </Link>
                 )}
               </>

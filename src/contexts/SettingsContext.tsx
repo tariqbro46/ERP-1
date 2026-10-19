@@ -233,6 +233,19 @@ interface SettingsContextType {
   heroThreeUiShowExperienceHubDemo?: boolean;
   heroThreeUiShowSimulateVoucher?: boolean;
   heroThreeUiEnableTiltDefault?: boolean;
+  heroShowExperienceHubDemo?: boolean;
+  heroEyebrowText?: string;
+  heroTitleText?: string;
+  heroSubtitleText?: string;
+  heroCtaPrimaryText?: string;
+  heroCtaDemoText?: string;
+  heroNavActionText?: string;
+  heroMetric1Value?: string;
+  heroMetric1Label?: string;
+  heroMetric2Value?: string;
+  heroMetric2Label?: string;
+  heroMetric3Value?: string;
+  heroMetric3Label?: string;
   features: FeatureSettings[];
   appFeatures: FeatureCategory[];
   subscriptionPlans: SubscriptionPlan[];
@@ -424,6 +437,19 @@ const defaultSettings: SettingsContextType = {
   heroThreeUiShowExperienceHubDemo: true,
   heroThreeUiShowSimulateVoucher: true,
   heroThreeUiEnableTiltDefault: false,
+  heroShowExperienceHubDemo: false,
+  heroEyebrowText: 'ERP ARCHITECTURE // SOVEREIGN FINANCIAL KERNEL',
+  heroTitleText: 'Absolute Truth in Commercial Ledgering.',
+  heroSubtitleText: 'Atomic double-entry balance computation, multi-location godown stock velocity, and board-level liquidity reporting on zero-overhead in-memory persistence. Pure accounting truth.',
+  heroCtaPrimaryText: 'Enter Production Console',
+  heroCtaDemoText: 'Experience Hub Demo',
+  heroNavActionText: 'Launch Console',
+  heroMetric1Value: '0 ms',
+  heroMetric1Label: 'Balance Drift Latency',
+  heroMetric2Value: '100%',
+  heroMetric2Label: 'Real FIFO Valuation',
+  heroMetric3Value: 'Gold+',
+  heroMetric3Label: 'Quota Protection',
   features: [],
   appFeatures: [],
   subscriptionPlans: [],

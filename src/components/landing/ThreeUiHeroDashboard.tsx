@@ -557,7 +557,7 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
                   id="threeui-hero-primary-cta"
                   className="w-full sm:w-auto px-7 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:shadow-[0_0_40px_rgba(6,182,212,0.6)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 group cursor-pointer border border-cyan-300/30"
                 >
-                  {user ? t('nav.dashboard') : content.heroCtaPrimary}
+                  {user ? (language === 'bn' ? 'লঞ্চ কনসোল' : 'Launch Console') : content.heroCtaPrimary}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               )}
@@ -604,8 +604,8 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
               rotateY: is3DOrbitActive ? rotateY : 0,
               transformStyle: 'preserve-3d',
             }}
-            transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-            className="relative rounded-2xl sm:rounded-3xl border border-slate-700/60 bg-[#0f172a]/95 backdrop-blur-2xl shadow-[0_30px_100px_rgba(0,0,0,0.75),0_0_60px_rgba(6,182,212,0.18)] overflow-hidden transition-shadow duration-300 text-left"
+            id="telemetry"
+            className="relative rounded-2xl sm:rounded-3xl border border-slate-700/60 bg-[#0f172a]/95 backdrop-blur-2xl shadow-[0_30px_100px_rgba(0,0,0,0.75),0_0_60px_rgba(6,182,212,0.18)] overflow-hidden transition-shadow duration-300 text-left scroll-mt-24"
           >
             {/* Top Unified Application Navbar (Exact copy from real App Screenshot) */}
             <div className="border-b border-slate-200/90 px-4 sm:px-6 py-3 flex items-center justify-between bg-white text-slate-800 select-none">
