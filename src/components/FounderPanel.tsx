@@ -1193,8 +1193,15 @@ export default function FounderPanel() {
     try {
       const companyRef = doc(db, 'companies', companyId);
       const mostRecentResetTime = erpService.getMostRecent130PM(new Date()).getTime();
+      const isQuotaReset = updates.quotaUsed === 0;
       const finalUpdates = {
         ...updates,
+        ...(isQuotaReset ? {
+          quotaReads: 0,
+          quotaWrites: 0,
+          quotaDeletes: 0,
+          forceRefreshAt: Date.now()
+        } : {}),
         quotaLastReset: mostRecentResetTime,
         quotaLastResetDateStr: new Date(mostRecentResetTime).toISOString()
       };

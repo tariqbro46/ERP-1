@@ -8,6 +8,7 @@ import db from "./db.ts";
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
+import { execSync } from "child_process";
 
 const firebaseConfig = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "firebase-applet-config.json"), "utf8"));
 
@@ -257,6 +258,231 @@ async function startServer() {
     doc.fontSize(8).text("This is a computer generated document.", { align: 'center' });
 
     doc.end();
+  });
+
+  // Helper to run shell commands safely
+  const runGitCmd = (cmd: string): { success: boolean; output: string } => {
+    try {
+      const output = execSync(cmd, { cwd: process.cwd(), encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
+      return { success: true, output: (output || "").trim() };
+    } catch (err: any) {
+      const stderr = err.stderr ? err.stderr.toString() : "";
+      const stdout = err.stdout ? err.stdout.toString() : "";
+      return { success: false, output: (stderr || stdout || err.message || "Unknown error").trim() };
+    }
+  };
+
+  // API: Get Git & Version Status
+  app.get("/api/github/status", (req, res) => {
+    try {
+      const isGitRepo = fs.existsSync(path.resolve(process.cwd(), ".git"));
+      const pkgPath = path.resolve(process.cwd(), "package.json");
+      const pkg = fs.existsSync(pkgPath) ? JSON.parse(fs.readFileSync(pkgPath, "utf8")) : {};
+      
+      let currentBranch = "main";
+      let remoteUrl = "";
+      let hasChanges = false;
+      let lastCommit = "";
+      let gitTags: string[] = [];
+      let statusLog = "";
+
+      if (isGitRepo) {
+        const branchRes = runGitCmd("git rev-parse --abbrev-ref HEAD");
+        if (branchRes.success) currentBranch = branchRes.output || "main";
+
+        const remoteRes = runGitCmd("git config --get remote.origin.url");
+        if (remoteRes.success) remoteUrl = remoteRes.output;
+
+        const statusRes = runGitCmd("git status --porcelain");
+        if (statusRes.success) {
+          hasChanges = statusRes.output.length > 0;
+          statusLog = statusRes.output;
+        }
+
+        const logRes = runGitCmd('git log -1 --format="%h - %s (%cr)"');
+        if (logRes.success) lastCommit = logRes.output;
+
+        const tagRes = runGitCmd("git tag -l");
+        if (tagRes.success && tagRes.output) {
+          gitTags = tagRes.output.split("\n").filter(Boolean);
+        }
+      }
+
+      // Read releaseNotes.ts latest version
+      let releaseNotesLatest = "v" + (pkg.version || "1.9.9");
+      try {
+        const rnPath = path.resolve(process.cwd(), "src/data/releaseNotes.ts");
+        if (fs.existsSync(rnPath)) {
+          const content = fs.readFileSync(rnPath, "utf8");
+          const match = content.match(/export const LATEST_VERSION = ["']([^"']+)["']/);
+          if (match && match[1]) releaseNotesLatest = match[1];
+        }
+      } catch (e) {}
+
+      res.json({
+        isGitRepo,
+        currentBranch,
+        remoteUrl,
+        hasChanges,
+        lastCommit,
+        gitTags,
+        statusLog,
+        appVersion: releaseNotesLatest,
+        packageVersion: pkg.version || "1.9.9",
+        timestamp: new Date().toISOString()
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // API: Push Changes to GitHub
+  app.post("/api/github/push", (req, res) => {
+    const { 
+      version = "v1.9.9", 
+      commitMessage = "Release update", 
+      branch = "main", 
+      remoteUrl = "",
+      autoTag = true,
+      releaseNoteTitle = "",
+      releaseNoteSummary = ""
+    } = req.body;
+
+    const logs: string[] = [];
+    const normalizedTag = version.startsWith("v") ? version : `v${version}`;
+    const semVer = normalizedTag.replace(/^v/, "");
+
+    try {
+      logs.push(`[1/6] Initializing Git & Environment for ${normalizedTag}...`);
+      const isGitRepo = fs.existsSync(path.resolve(process.cwd(), ".git"));
+      if (!isGitRepo) {
+        const initRes = runGitCmd("git init");
+        logs.push(`git init: ${initRes.output}`);
+      }
+
+      runGitCmd('git config user.name "TallyFlow ERP"');
+      runGitCmd('git config user.email "bot@tallyflow.erp"');
+      runGitCmd(`git branch -M ${branch}`);
+
+      if (remoteUrl && remoteUrl.trim()) {
+        const cleanRemote = remoteUrl.trim();
+        runGitCmd("git remote remove origin");
+        const addRemoteRes = runGitCmd(`git remote add origin ${cleanRemote}`);
+        logs.push(`Configured remote origin: ${cleanRemote} (${addRemoteRes.success ? "OK" : addRemoteRes.output})`);
+      }
+
+      // 2. Synchronize package.json version
+      logs.push(`[2/6] Synchronizing package.json version to ${semVer}...`);
+      const pkgPath = path.resolve(process.cwd(), "package.json");
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+        pkg.version = semVer;
+        fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+      }
+
+      // 3. Check and synchronize release notes in src/data/releaseNotes.ts
+      logs.push(`[3/6] Validating Release Notes for ${normalizedTag}...`);
+      const rnPath = path.resolve(process.cwd(), "src/data/releaseNotes.ts");
+      if (fs.existsSync(rnPath)) {
+        let rnContent = fs.readFileSync(rnPath, "utf8");
+        // Ensure LATEST_VERSION is set to normalizedTag
+        rnContent = rnContent.replace(
+          /export const LATEST_VERSION = ["'][^"']+["'];/,
+          `export const LATEST_VERSION = "${normalizedTag}";`
+        );
+
+        // If version entry does not exist in release notes, prepend it
+        if (!rnContent.includes(`version: "${normalizedTag}"`)) {
+          const today = new Date();
+          const enDate = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+          const newEntry = `  {
+    version: "${normalizedTag}",
+    releaseDate: "${enDate}",
+    bnReleaseDate: "${enDate}",
+    title: "${releaseNoteTitle || `Version ${normalizedTag} Release`}",
+    bnTitle: "${releaseNoteTitle || `সংস্করণ ${normalizedTag} রিলিজ`}",
+    summary: "${releaseNoteSummary || `Application upgraded to version ${normalizedTag} with system improvements.`}",
+    bnSummary: "${releaseNoteSummary || `সিস্টেমের সার্বিক পারফরম্যান্স ও ফিচার উন্নয়নসহ সংস্করণ ${normalizedTag} কার্যকর করা হয়েছে।`}",
+    isLatest: true,
+    newFeatures: [
+      {
+        id: "feat-${normalizedTag.replace(/\\./g, '-')}-release",
+        title: "Version ${normalizedTag} Feature Rollout",
+        bnTitle: "সংস্করণ ${normalizedTag} ফিচার আপডেট",
+        description: "${releaseNoteSummary || `Version ${normalizedTag} successfully deployed with enhanced features.`}",
+        bnDescription: "নতুন সংস্করণের ফিচার ও ডেটাবেজ অপ্টিমাইজেশন সম্পন্ন হয়েছে।",
+        module: "Core & Version Control",
+        badge: "NEW"
+      }
+    ],
+    improvements: [],
+    bugFixes: []
+  },\n`;
+          // Prepend right after export const RELEASE_NOTES: ReleaseVersion[] = [\n
+          rnContent = rnContent.replace(
+            /(export const RELEASE_NOTES: ReleaseVersion\[\] = \[\n)/,
+            `$1${newEntry}`
+          );
+        }
+        fs.writeFileSync(rnPath, rnContent, "utf8");
+      }
+
+      // 4. Git Stage
+      logs.push(`[4/6] Staging all project changes (git add -A)...`);
+      const addRes = runGitCmd("git add -A");
+      if (!addRes.success) {
+        logs.push(`Warning on git add: ${addRes.output}`);
+      }
+
+      // 5. Commit & Tag
+      logs.push(`[5/6] Creating release commit for ${normalizedTag}...`);
+      const finalCommitMsg = `Release ${normalizedTag}: ${commitMessage.trim() || 'System updates and release notes'}`;
+      const commitRes = runGitCmd(`git commit -m "${finalCommitMsg}" --allow-empty`);
+      logs.push(`Commit result: ${commitRes.output}`);
+
+      if (autoTag) {
+        const tagRes = runGitCmd(`git tag -fa "${normalizedTag}" -m "Release ${normalizedTag}"`);
+        logs.push(`Tagging ${normalizedTag}: ${tagRes.success ? "Success" : tagRes.output}`);
+      }
+
+      // 6. Push to remote
+      logs.push(`[6/6] Pushing to GitHub (${branch})...`);
+      const remoteCheck = runGitCmd("git config --get remote.origin.url");
+      let pushSuccess = false;
+      let pushMessage = "";
+
+      if (remoteCheck.success && remoteCheck.output) {
+        const pushRes = runGitCmd(`git push origin ${branch} --tags`);
+        logs.push(`git push: ${pushRes.output}`);
+        if (pushRes.success) {
+          pushSuccess = true;
+          pushMessage = `Successfully pushed ${normalizedTag} to GitHub (${remoteCheck.output})`;
+        } else {
+          pushMessage = `Local commit & release notes created for ${normalizedTag}. Push notice: ${pushRes.output}`;
+        }
+      } else {
+        pushMessage = `Version ${normalizedTag} and Release Notes committed locally. Set GitHub Remote URL to push to remote repository.`;
+        logs.push("No remote origin configured. Changes and release notes are committed and tagged locally.");
+      }
+
+      const hashRes = runGitCmd('git log -1 --format="%h"');
+
+      res.json({
+        success: true,
+        pushSuccess,
+        version: normalizedTag,
+        commitHash: hashRes.output || "HEAD",
+        message: pushMessage,
+        logs: logs.join("\n")
+      });
+    } catch (err: any) {
+      logs.push(`Error: ${err.message}`);
+      res.status(500).json({
+        success: false,
+        error: err.message,
+        logs: logs.join("\n")
+      });
+    }
   });
 
   // Vite middleware for development

@@ -935,27 +935,160 @@ export async function printLedgerStatementToPDF(
 export async function printTrialBalanceToPDF(
   ledgers: any[],
   settings: any = {},
-  asOnDate?: string
+  asOnDate?: string,
+  options?: {
+    viewFormat?: 'condensed' | 'detailed';
+    groups?: any[];
+    profitAndLoss?: any;
+    diff?: any;
+    grandTotalDebit?: number;
+    grandTotalCredit?: number;
+    startDate?: string;
+    endDate?: string;
+  }
 ): Promise<void> {
-  let totalDebit = 0;
-  let totalCredit = 0;
+  const isHierarchical = !!(options && options.groups && options.groups.length > 0);
+  const viewFormat = options?.viewFormat || 'condensed';
 
-  const rows = ledgers.map(l => {
-    const bal = Number(l.current_balance ?? l.closingBalance ?? 0);
-    const dr = bal > 0 ? bal : 0;
-    const cr = bal < 0 ? Math.abs(bal) : 0;
-    totalDebit += dr;
-    totalCredit += cr;
+  let tableHtml = '';
 
-    return `
-      <tr>
-        <td><strong>${l.name}</strong></td>
-        <td>${l.ledger_groups?.name || l.group_name || ''}</td>
-        <td style="text-align: right;">${dr > 0 ? formatPrintedAmount(dr) : ''}</td>
-        <td style="text-align: right;">${cr > 0 ? formatPrintedAmount(cr) : ''}</td>
-      </tr>
+  if (isHierarchical) {
+    const groups = options!.groups!;
+    const pnl = options?.profitAndLoss;
+    const diff = options?.diff;
+    const grandDebit = options?.grandTotalDebit ?? 0;
+    const grandCredit = options?.grandTotalCredit ?? 0;
+
+    let rowsHtml = '';
+
+    groups.forEach(group => {
+      // Primary group row
+      rowsHtml += `
+        <tr style="background-color: #f3f4f6; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #cbd5e1;">
+          <td style="padding: 5px 8px; text-transform: uppercase; font-size: 10px;">${group.name}</td>
+          <td style="padding: 5px 8px; text-align: right; font-size: 10px;">${group.debit > 0 ? formatPrintedAmount(group.debit) : ''}</td>
+          <td style="padding: 5px 8px; text-align: right; font-size: 10px;">${group.credit > 0 ? formatPrintedAmount(group.credit) : ''}</td>
+        </tr>
+      `;
+
+      if (viewFormat === 'detailed') {
+        // Subgroups
+        group.subgroups?.forEach((sub: any) => {
+          rowsHtml += `
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+              <td style="padding: 4px 8px 4px 22px; font-weight: 600; font-size: 9.5px;">${sub.name}</td>
+              <td style="padding: 4px 8px; text-align: right; font-size: 9.5px;">${sub.debit > 0 ? formatPrintedAmount(sub.debit) : ''}</td>
+              <td style="padding: 4px 8px; text-align: right; font-size: 9.5px;">${sub.credit > 0 ? formatPrintedAmount(sub.credit) : ''}</td>
+            </tr>
+          `;
+        });
+
+        // Direct ledgers
+        group.directLedgers?.forEach((ledger: any) => {
+          rowsHtml += `
+            <tr style="border-bottom: 1px solid #e2e8f0; font-style: italic;">
+              <td style="padding: 4px 8px 4px 22px; font-size: 9.5px; color: #1e293b;">${ledger.name}</td>
+              <td style="padding: 4px 8px; text-align: right; font-size: 9.5px;">${ledger.debit > 0 ? formatPrintedAmount(ledger.debit) : ''}</td>
+              <td style="padding: 4px 8px; text-align: right; font-size: 9.5px;">${ledger.credit > 0 ? formatPrintedAmount(ledger.credit) : ''}</td>
+            </tr>
+          `;
+        });
+      }
+    });
+
+    if (pnl) {
+      rowsHtml += `
+        <tr style="border-top: 1px solid #000; font-style: italic;">
+          <td style="padding: 5px 8px; font-size: 9.5px;">${pnl.name}</td>
+          <td style="padding: 5px 8px; text-align: right; font-size: 9.5px;">${pnl.debit > 0 ? formatPrintedAmount(pnl.debit) : ''}</td>
+          <td style="padding: 5px 8px; text-align: right; font-size: 9.5px; font-weight: 600;">${pnl.credit > 0 ? formatPrintedAmount(pnl.credit) : ''}</td>
+        </tr>
+      `;
+    }
+
+    if (diff && diff.hasDiff) {
+      rowsHtml += `
+        <tr style="border-top: 1px solid #cbd5e1; font-style: italic;">
+          <td style="padding: 5px 8px; font-size: 9.5px;">Difference in opening balances</td>
+          <td style="padding: 5px 8px; text-align: right; font-size: 9.5px; font-weight: 600;">${diff.diffDebit > 0 ? formatPrintedAmount(diff.diffDebit) : ''}</td>
+          <td style="padding: 5px 8px; text-align: right; font-size: 9.5px; font-weight: 600;">${diff.diffCredit > 0 ? formatPrintedAmount(diff.diffCredit) : ''}</td>
+        </tr>
+      `;
+    }
+
+    tableHtml = `
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2" style="width: 55%; text-align: left; vertical-align: middle;">PARTICULARS</th>
+            <th colspan="2" style="width: 45%; text-align: center; border-bottom: 1px solid #111;">CLOSING BALANCE</th>
+          </tr>
+          <tr>
+            <th style="width: 22.5%; text-align: right;">DEBIT (৳)</th>
+            <th style="width: 22.5%; text-align: right;">CREDIT (৳)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+        <tfoot>
+          <tr style="font-weight: 900; border-top: 2px solid #000; border-bottom: 3px double #000; background-color: #f9fafb;">
+            <td style="letter-spacing: 2px; padding: 6px 8px;">G R A N D   T O T A L</td>
+            <td style="text-align: right; padding: 6px 8px;">${formatPrintedAmount(grandDebit)}</td>
+            <td style="text-align: right; padding: 6px 8px;">${formatPrintedAmount(grandCredit)}</td>
+          </tr>
+        </tfoot>
+      </table>
     `;
-  }).join('');
+  } else {
+    // Legacy flat list fallback
+    let totalDebit = 0;
+    let totalCredit = 0;
+
+    const rows = ledgers.map(l => {
+      const bal = Number(l.current_balance ?? l.closingBalance ?? 0);
+      const dr = bal > 0 ? bal : 0;
+      const cr = bal < 0 ? Math.abs(bal) : 0;
+      totalDebit += dr;
+      totalCredit += cr;
+
+      return `
+        <tr>
+          <td><strong>${l.name}</strong></td>
+          <td>${l.ledger_groups?.name || l.group_name || ''}</td>
+          <td style="text-align: right;">${dr > 0 ? formatPrintedAmount(dr) : ''}</td>
+          <td style="text-align: right;">${cr > 0 ? formatPrintedAmount(cr) : ''}</td>
+        </tr>
+      `;
+    }).join('');
+
+    tableHtml = `
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 45%; text-align: left;">PARTICULARS</th>
+            <th style="width: 25%; text-align: left;">GROUP</th>
+            <th style="width: 15%; text-align: right;">DEBIT (৳)</th>
+            <th style="width: 15%; text-align: right;">CREDIT (৳)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+        <tfoot>
+          <tr style="font-weight: 800; border-top: 2px solid #000; border-bottom: 3px double #000; background-color: #f9fafb;">
+            <td colspan="2" style="text-align: right; text-transform: uppercase;">TOTAL:</td>
+            <td style="text-align: right;">৳ ${formatPrintedAmount(totalDebit)}</td>
+            <td style="text-align: right;">৳ ${formatPrintedAmount(totalCredit)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    `;
+  }
+
+  const periodSubtitle = options?.startDate && options?.endDate
+    ? `Period: ${formatReportDate(options.startDate, settings.dateFormat)} to ${formatReportDate(options.endDate, settings.dateFormat)} (${viewFormat === 'condensed' ? 'Condensed' : 'Detailed'})`
+    : asOnDate ? `As on ${formatReportDate(asOnDate, settings.dateFormat)}` : undefined;
 
   const contentHtml = `
     <!DOCTYPE html>
@@ -972,28 +1105,9 @@ export async function printTrialBalanceToPDF(
         </style>
       </head>
       <body>
-        ${getPdfHeaderHtml(settings, 'TRIAL BALANCE', asOnDate ? `As on ${formatReportDate(asOnDate, settings.dateFormat)}` : undefined)}
+        ${getPdfHeaderHtml(settings, `TRIAL BALANCE (${viewFormat.toUpperCase()})`, periodSubtitle)}
         
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 45%; text-align: left;">PARTICULARS</th>
-              <th style="width: 25%; text-align: left;">GROUP</th>
-              <th style="width: 15%; text-align: right;">DEBIT (৳)</th>
-              <th style="width: 15%; text-align: right;">CREDIT (৳)</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-          <tfoot>
-            <tr style="font-weight: 800; border-top: 2px solid #000; border-bottom: 3px double #000; background-color: #f9fafb;">
-              <td colspan="2" style="text-align: right; text-transform: uppercase;">TOTAL:</td>
-              <td style="text-align: right;">৳ ${formatPrintedAmount(totalDebit)}</td>
-              <td style="text-align: right;">৳ ${formatPrintedAmount(totalCredit)}</td>
-            </tr>
-          </tfoot>
-        </table>
+        ${tableHtml}
 
         ${getPdfSignaturesHtml(settings)}
         ${getPdfFooterHtml(settings)}
@@ -1002,9 +1116,9 @@ export async function printTrialBalanceToPDF(
   `;
 
   return printToPDF({
-    title: 'Trial Balance',
-    subtitle: asOnDate ? `As on ${formatReportDate(asOnDate, settings.dateFormat)}` : undefined,
-    fileName: `Trial_Balance_${asOnDate || new Date().toISOString().split('T')[0]}`,
+    title: `Trial Balance (${viewFormat === 'condensed' ? 'Condensed' : 'Detailed'})`,
+    subtitle: periodSubtitle,
+    fileName: `Trial_Balance_${viewFormat}_${options?.endDate || asOnDate || new Date().toISOString().split('T')[0]}`,
     htmlContent: contentHtml,
     settings
   });

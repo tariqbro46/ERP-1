@@ -38,19 +38,20 @@ export function GroupSummary() {
       if (!user?.companyId) return;
       try {
         const data = await erpService.getLedgerGroups(user.companyId);
-        setGroups(data);
+        const unique = Array.from(new Map(data.map(g => [g.name.trim().toLowerCase(), g])).values());
+        setGroups(unique);
         
         const paramGroupId = searchParams.get('groupId');
         const paramGroupName = searchParams.get('groupName');
         
-        if (paramGroupId && data.some(g => g.id === paramGroupId)) {
+        if (paramGroupId && unique.some(g => g.id === paramGroupId)) {
           setSelectedGroup(paramGroupId);
         } else if (paramGroupName) {
-          const group = data.find(g => g.name.toLowerCase() === paramGroupName.toLowerCase());
+          const group = unique.find(g => g.name.toLowerCase() === paramGroupName.toLowerCase());
           if (group) setSelectedGroup(group.id);
-          else if (data.length > 0) setSelectedGroup(data[0].id);
-        } else if (data.length > 0 && !selectedGroup) {
-          setSelectedGroup(data[0].id);
+          else if (unique.length > 0) setSelectedGroup(unique[0].id);
+        } else if (unique.length > 0 && !selectedGroup) {
+          setSelectedGroup(unique[0].id);
         }
       } catch (err) {
         console.error('Error fetching groups:', err);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2, Package, Volume2, Layout } from 'lucide-react';
+import { Search, Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2, Package, Volume2, Layout, GitBranch, GitCommit, UploadCloud, Terminal, ExternalLink, RefreshCw } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -15,6 +15,7 @@ import { useTheme, Theme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { soundService } from '../services/soundService';
 import { ReportBuilderModal } from './ReportBuilderModal';
+import { RELEASE_NOTES, LATEST_VERSION } from '../data/releaseNotes';
 
 export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const { user, logout } = useAuth();
@@ -529,6 +530,108 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     showNotification('Search settings updated successfully!');
   };
 
+  // GitHub & Version Control State
+  const [gitStatus, setGitStatus] = useState<any>(null);
+  const [gitLoading, setGitLoading] = useState(false);
+  const [gitPushing, setGitPushing] = useState(false);
+  const [gitVersionInput, setGitVersionInput] = useState(appVersion || 'v1.9.9');
+  const [gitCommitMsg, setGitCommitMsg] = useState('Stock Calculation & Movement Truth Engine, Report Synchronization');
+  const [gitBranch, setGitBranch] = useState('main');
+  const [gitRemoteUrl, setGitRemoteUrl] = useState(() => localStorage.getItem('tallyflow_github_remote_url') || '');
+  const [gitAutoTag, setGitAutoTag] = useState(true);
+  const [gitSyncReleaseNote, setGitSyncReleaseNote] = useState(true);
+  const [gitCustomReleaseTitle, setGitCustomReleaseTitle] = useState('');
+  const [gitCustomReleaseSummary, setGitCustomReleaseSummary] = useState('');
+  const [gitLogs, setGitLogs] = useState<string>('');
+  const [gitLastPushedTime, setGitLastPushedTime] = useState<string>(() => localStorage.getItem('tallyflow_github_last_push') || '');
+
+  const fetchGitStatus = React.useCallback(async () => {
+    try {
+      setGitLoading(true);
+      const res = await fetch('/api/github/status');
+      if (res.ok) {
+        const data = await res.json();
+        setGitStatus(data);
+        if (data.remoteUrl && !gitRemoteUrl) {
+          setGitRemoteUrl(data.remoteUrl);
+        }
+        if (data.currentBranch) {
+          setGitBranch(data.currentBranch);
+        }
+        if (data.appVersion) {
+          setGitVersionInput(data.appVersion);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch git status:', e);
+    } finally {
+      setGitLoading(false);
+    }
+  }, [gitRemoteUrl]);
+
+  React.useEffect(() => {
+    if (activeTab === 'github' || activeTab === 'integrations') {
+      fetchGitStatus();
+    }
+  }, [activeTab, fetchGitStatus]);
+
+  const handlePushToGithub = async () => {
+    try {
+      setGitPushing(true);
+      const startLog = `[1/6] Connecting to GitHub push engine for ${gitVersionInput || appVersion || 'v1.9.9'}...\n`;
+      setGitLogs(startLog);
+      soundService.play('click');
+
+      if (gitRemoteUrl.trim()) {
+        localStorage.setItem('tallyflow_github_remote_url', gitRemoteUrl.trim());
+      }
+
+      const payload = {
+        version: (gitVersionInput || appVersion || 'v1.9.9').trim(),
+        commitMessage: (gitCommitMsg || 'System updates and enhancements').trim(),
+        branch: (gitBranch || 'main').trim(),
+        remoteUrl: gitRemoteUrl.trim(),
+        autoTag: gitAutoTag,
+        releaseNoteTitle: gitCustomReleaseTitle.trim(),
+        releaseNoteSummary: gitCustomReleaseSummary.trim()
+      };
+
+      const res = await fetch('/api/github/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (data.logs) {
+        setGitLogs(data.logs);
+      }
+
+      if (data.success) {
+        const nowStr = new Date().toLocaleString(language === 'bn' ? 'bn-BD' : 'en-US');
+        setGitLastPushedTime(nowStr);
+        localStorage.setItem('tallyflow_github_last_push', nowStr);
+        soundService.play('success');
+        showNotification(
+          language === 'bn'
+            ? `সংস্করণ ${data.version} সফলভাবে গিটহাবে পুশ ও রিলিজ নোট আপডেট হয়েছে!`
+            : `Version ${data.version} successfully pushed to GitHub & Release Notes updated!`,
+          'success'
+        );
+        fetchGitStatus();
+      } else {
+        soundService.play('error');
+        showNotification(data.error || 'Failed to push changes', 'error');
+      }
+    } catch (err: any) {
+      soundService.play('error');
+      setGitLogs(prev => prev + `\nNetwork/Client Error: ${err.message}`);
+      showNotification(err.message || 'Error executing push', 'error');
+    } finally {
+      setGitPushing(false);
+    }
+  };
+
   const tabs = [
     { id: 'company', label: t('settings.companyInfo'), icon: Building2 },
     { id: 'ui', label: t('settings.uiCustomization'), icon: SettingsIcon },
@@ -545,6 +648,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     { id: 'shortcuts', label: t('settings.shortcuts'), icon: Keyboard },
     { id: 'backup', label: t('settings.backupExport'), icon: Download },
     { id: 'integrations', label: t('settings.integrations'), icon: Globe },
+    { id: 'github', label: language === 'bn' ? 'গিটহাব ও রিলিজ' : 'GitHub & Release', icon: GitBranch },
   ];
 
   const shortcuts = [
@@ -2218,6 +2322,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     </div>
                   </div>
                 </div>
+
                 <div className="space-y-4">
                   <h3 className="text-foreground text-sm font-bold uppercase tracking-widest border-b border-border pb-2">Third-Party Services</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2235,6 +2340,411 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       </div>
                       <p className="text-[9px] text-gray-500 uppercase">Send transaction alerts via SMS.</p>
                     </div>
+                    <div className="p-4 border border-border bg-foreground/5 space-y-2 md:col-span-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold uppercase flex items-center gap-1.5">
+                          <GitBranch className="w-3.5 h-3.5 text-emerald-500" />
+                          GitHub Version Control
+                        </span>
+                        <span className={cn(
+                          "text-[8px] px-1.5 py-0.5 rounded font-bold uppercase",
+                          gitStatus?.remoteUrl ? "bg-emerald-500 text-white" : "bg-emerald-600/20 text-emerald-500 border border-emerald-500/30"
+                        )}>
+                          {appVersion || 'v1.9.9'}
+                        </span>
+                      </div>
+                      <p className="text-[9px] text-gray-500 uppercase">
+                        {language === 'bn' ? `বর্তমান সংস্করণ ${appVersion || 'v1.9.9'} গিটহাবে পুশ ও রিলিজ নোট সিঙ্ক করুন` : `Push ${appVersion || 'v1.9.9'} to GitHub & sync version release notes.`}
+                      </p>
+                      <button
+                        onClick={() => setActiveTab('github')}
+                        className="mt-2 w-full py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold uppercase tracking-wider rounded flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <UploadCloud className="w-3 h-3" />
+                        {language === 'bn' ? 'গিটহাবে পুশ করুন (Push Changes to GitHub)' : 'Push Changes to GitHub'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'github' && (
+              <div className="space-y-6">
+                {/* Header Banner */}
+                <div className="p-5 border border-border bg-card/60 backdrop-blur-sm rounded-xl space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-500 shrink-0 shadow-inner">
+                        <GitBranch className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-base font-bold text-foreground">
+                            {language === 'bn' ? 'গিটহাব ও রিলিজ সংস্করণ অটোমেশন' : 'GitHub & Release Version Automation'}
+                          </h2>
+                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 rounded-full text-[10px] font-bold">
+                            {appVersion || 'v1.9.9'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {language === 'bn' 
+                            ? 'এক ক্লিকে গিটহাবে কোড পুশ করুন এবং স্বয়ংক্রিয়ভাবে রিলিজ নোটস আপডেট নিশ্চিত করুন।'
+                            : 'Push changes directly to your GitHub repository and automatically manage versioned release notes.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={fetchGitStatus}
+                        disabled={gitLoading}
+                        className="px-3 py-1.5 border border-border text-foreground hover:bg-accent text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                        title={language === 'bn' ? 'স্ট্যাটাস রিফ্রেশ করুন' : 'Refresh Git Status'}
+                      >
+                        <RefreshCw className={cn("w-3.5 h-3.5", gitLoading && "animate-spin")} />
+                        <span>{language === 'bn' ? 'রিফ্রেশ' : 'Refresh'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => navigate('/release-notes')}
+                        className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>{language === 'bn' ? 'রিলিজ নোট দেখুন' : 'Release Notes'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Status Metrics Strip */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-border/60">
+                    <div className="p-3 bg-muted/40 rounded-lg border border-border/40">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        {language === 'bn' ? 'সিস্টেম সংস্করণ' : 'System Version'}
+                      </div>
+                      <div className="text-sm font-bold text-emerald-500 font-mono mt-0.5">
+                        {appVersion || 'v1.9.9'}
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-muted/40 rounded-lg border border-border/40">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        {language === 'bn' ? 'টার্গেট ব্রাঞ্চ' : 'Target Branch'}
+                      </div>
+                      <div className="text-sm font-bold text-foreground font-mono mt-0.5">
+                        {gitBranch || gitStatus?.currentBranch || 'main'}
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-muted/40 rounded-lg border border-border/40">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        {language === 'bn' ? 'রিপোজিটরি লিঙ্ক' : 'Remote Repo'}
+                      </div>
+                      <div className="text-sm font-bold text-foreground truncate mt-0.5" title={gitRemoteUrl || 'Local'}>
+                        {gitRemoteUrl ? 'Configured' : (gitStatus?.remoteUrl ? 'Configured' : 'Local / Not Set')}
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-muted/40 rounded-lg border border-border/40">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        {language === 'bn' ? 'সর্বশেষ পুশ' : 'Last Pushed'}
+                      </div>
+                      <div className="text-xs font-medium text-foreground truncate mt-0.5">
+                        {gitLastPushedTime || (language === 'bn' ? 'এই সেশনে হয়নি' : 'Not yet')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Main Action Console */}
+                <div className="p-6 border border-border bg-card rounded-xl space-y-5">
+                  <div className="flex items-center justify-between border-b border-border pb-3">
+                    <div className="flex items-center gap-2">
+                      <UploadCloud className="w-5 h-5 text-emerald-500" />
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">
+                        {language === 'bn' ? 'গিটহাবে পুশ করার কনফিগারেশন' : 'Push to GitHub Configuration'}
+                      </h3>
+                    </div>
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      {language === 'bn' ? 'যেকোনো সংস্করণ ইনপুট দিয়ে সরাসরি পুশ ও রিলিজ নোট তৈরি হবে' : 'Automatically creates release commit, tag, and updates release notes'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Version Field */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                        <span>{language === 'bn' ? 'রিলিজ সংস্করণ (Version)' : 'Release Version'}</span>
+                        <span className="text-[10px] text-emerald-500 font-mono font-normal">
+                          {language === 'bn' ? 'ডিফল্ট: বর্তমান সংস্করণ' : 'Default: current version'}
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        value={gitVersionInput}
+                        onChange={(e) => setGitVersionInput(e.target.value)}
+                        placeholder="e.g. v1.9.9"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        {language === 'bn' 
+                          ? 'এই সংস্করণটি package.json, গিট রিলিজ ট্যাগ এবং রিলিজ নোটসে ব্যবহৃত হবে।' 
+                          : 'This version will be stamped into package.json, Git release tag, and Release Notes.'}
+                      </p>
+                    </div>
+
+                    {/* Branch Field */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-foreground">
+                        {language === 'bn' ? 'টার্গেট ব্রাঞ্চ (Branch)' : 'Target Branch'}
+                      </label>
+                      <input
+                        type="text"
+                        value={gitBranch}
+                        onChange={(e) => setGitBranch(e.target.value)}
+                        placeholder="main"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        {language === 'bn' ? 'সাধারণত main বা master ব্রাঞ্চ ব্যবহার করা হয়।' : 'Usually main or master branch.'}
+                      </p>
+                    </div>
+
+                    {/* Remote URL Field */}
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                        <span>{language === 'bn' ? 'গিটহাব রিপোজিটরি ইউআরএল (GitHub Remote URL)' : 'GitHub Remote URL'}</span>
+                        <span className="text-[10px] text-muted-foreground font-normal">
+                          {language === 'bn' ? 'ঐচ্ছিক (যদি ইতোমধ্যে রিমোট কনফিগার করা থাকে)' : 'Optional if already configured'}
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        value={gitRemoteUrl}
+                        onChange={(e) => setGitRemoteUrl(e.target.value)}
+                        placeholder="https://github.com/username/repository.git"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        {language === 'bn' 
+                          ? 'আপনার GitHub রিপোজিটরির HTTPS URL দিন (যেমন: https://github.com/your-username/tallyflow-erp.git)।' 
+                          : 'Provide your GitHub HTTPS clone/push URL (e.g., https://github.com/your-username/tallyflow-erp.git).'}
+                      </p>
+                    </div>
+
+                    {/* Commit Message */}
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="text-xs font-bold text-foreground">
+                        {language === 'bn' ? 'কমিট মেসেজ (Commit Message)' : 'Release Commit Message'}
+                      </label>
+                      <input
+                        type="text"
+                        value={gitCommitMsg}
+                        onChange={(e) => setGitCommitMsg(e.target.value)}
+                        placeholder="e.g. Stock Calculation & Movement Truth Engine, Report Synchronization"
+                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Toggles */}
+                  <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-border">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={gitAutoTag}
+                        onChange={(e) => setGitAutoTag(e.target.checked)}
+                        className="rounded border-border text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                      />
+                      <span>{language === 'bn' ? `স্বয়ংক্রিয় গিট ট্যাগ তৈরি করুন (${gitVersionInput || 'v1.9.9'})` : `Auto-create Git Tag (${gitVersionInput || 'v1.9.9'})`}</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={gitSyncReleaseNote}
+                        onChange={(e) => setGitSyncReleaseNote(e.target.checked)}
+                        className="rounded border-border text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
+                      />
+                      <span>{language === 'bn' ? 'রিলিজ নোটস যাচাই ও স্বয়ংক্রিয় সিঙ্ক' : 'Auto-sync and verify Release Notes'}</span>
+                    </label>
+                  </div>
+
+                  {/* Push Button */}
+                  <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+                    <button
+                      onClick={handlePushToGithub}
+                      disabled={gitPushing}
+                      className="w-full sm:w-auto px-8 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] disabled:opacity-50 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md shadow-emerald-900/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    >
+                      {gitPushing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>{language === 'bn' ? 'গিটহাবে পুশ ও রিলিজ প্রসেস হচ্ছে...' : 'Pushing to GitHub & Syncing...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <UploadCloud className="w-4 h-4" />
+                          <span>{language === 'bn' ? 'Push Changes to Github (গিটহাবে পুশ করুন)' : 'Push Changes to Github'}</span>
+                        </>
+                      )}
+                    </button>
+
+                    <p className="text-[11px] text-muted-foreground text-center sm:text-left">
+                      {language === 'bn' 
+                        ? 'ক্লিক করার সাথে সাথে লোকাল চেঞ্জেস কমিট হবে, সংস্করণ ট্যাগ হবে এবং রিলিজ নোট সংযুক্ত হবে।' 
+                        : 'Commits local changes, updates package version, creates git release tag, and pushes to remote.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Release Notes for Current Version Card */}
+                {(() => {
+                  const currentRel = RELEASE_NOTES.find(r => r.version === (gitVersionInput || appVersion || 'v1.9.9')) || RELEASE_NOTES[0];
+                  if (!currentRel) return null;
+                  return (
+                    <div className="p-6 border border-border bg-card rounded-xl space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3">
+                        <div className="flex items-center gap-2.5">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-bold text-foreground">
+                                {language === 'bn' ? `সংস্করণ ${currentRel.version}-এর রিলিজ নোটস` : `Release Notes for ${currentRel.version}`}
+                              </h3>
+                              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-500 text-[10px] font-bold rounded">
+                                {currentRel.isLatest ? 'LATEST' : currentRel.version}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              {language === 'bn' ? currentRel.bnReleaseDate : currentRel.releaseDate}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => navigate('/release-notes')}
+                          className="px-3 py-1.5 border border-border hover:bg-accent text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer self-start sm:self-auto"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>{language === 'bn' ? 'সম্পূর্ণ রিলিজ নোটস পেজ' : 'View Full Release Notes'}</span>
+                        </button>
+                      </div>
+
+                      <div className="bg-muted/30 p-3.5 rounded-lg border border-border/50">
+                        <div className="font-bold text-xs text-foreground mb-1">
+                          {language === 'bn' ? currentRel.bnTitle : currentRel.title}
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {language === 'bn' ? currentRel.bnSummary : currentRel.summary}
+                        </p>
+                      </div>
+
+                      {/* Items Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                        {/* New Features */}
+                        <div className="space-y-2">
+                          <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-500 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                            {language === 'bn' ? 'নতুন ফিচারসমূহ' : 'New Features'} ({currentRel.newFeatures.length})
+                          </div>
+                          <div className="space-y-1.5">
+                            {currentRel.newFeatures.map((f) => (
+                              <div key={f.id} className="p-2.5 bg-background border border-border/70 rounded-lg text-xs space-y-1">
+                                <div className="font-bold text-foreground text-[11px]">
+                                  {language === 'bn' ? f.bnTitle : f.title}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground line-clamp-2">
+                                  {language === 'bn' ? f.bnDescription : f.description}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Improvements */}
+                        <div className="space-y-2">
+                          <div className="text-[11px] font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+                            {language === 'bn' ? 'উন্নয়ন ও পারফরম্যান্স' : 'Improvements'} ({currentRel.improvements.length})
+                          </div>
+                          <div className="space-y-1.5">
+                            {currentRel.improvements.map((imp) => (
+                              <div key={imp.id} className="p-2.5 bg-background border border-border/70 rounded-lg text-xs space-y-1">
+                                <div className="font-bold text-foreground text-[11px]">
+                                  {language === 'bn' ? imp.bnTitle : imp.title}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground line-clamp-2">
+                                  {language === 'bn' ? imp.bnDescription : imp.description}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Bug Fixes */}
+                        <div className="space-y-2">
+                          <div className="text-[11px] font-bold uppercase tracking-wider text-blue-500 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
+                            {language === 'bn' ? 'বাগ সংশোধন' : 'Bug Fixes'} ({currentRel.bugFixes.length})
+                          </div>
+                          <div className="space-y-1.5">
+                            {currentRel.bugFixes.map((fix) => (
+                              <div key={fix.id} className="p-2.5 bg-background border border-border/70 rounded-lg text-xs space-y-1">
+                                <div className="font-bold text-foreground text-[11px]">
+                                  {language === 'bn' ? fix.bnTitle : fix.title}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground line-clamp-2">
+                                  {language === 'bn' ? fix.bnDescription : fix.description}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Git Console & Execution Terminal */}
+                <div className="p-5 border border-border bg-card rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Terminal className="w-4 h-4 text-emerald-500" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                        {language === 'bn' ? 'গিট টার্মিনাল ও এক্সিকিউশন লগ' : 'Git Terminal & Execution Logs'}
+                      </h4>
+                    </div>
+
+                    {gitLogs && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(gitLogs);
+                            showNotification(language === 'bn' ? 'লগ কপি হয়েছে' : 'Logs copied to clipboard', 'info');
+                          }}
+                          className="px-2.5 py-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground border border-border rounded transition-all cursor-pointer"
+                        >
+                          {language === 'bn' ? 'লগ কপি করুন' : 'Copy'}
+                        </button>
+                        <button
+                          onClick={() => setGitLogs('')}
+                          className="px-2.5 py-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground border border-border rounded transition-all cursor-pointer"
+                        >
+                          {language === 'bn' ? 'মুছে ফেলুন' : 'Clear'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="font-mono text-[11px] leading-relaxed bg-slate-950 text-emerald-400 p-4 rounded-lg overflow-x-auto max-h-56 overflow-y-auto border border-slate-800 whitespace-pre-wrap select-text">
+                    {gitLogs || (
+                      <span className="text-slate-500 italic">
+                        {language === 'bn' 
+                          ? '> সিস্টেম রেডি। উপরে "Push Changes to Github" বাটনে ক্লিক করলে কমান্ড এক্সিকিউশন শুরু হবে।' 
+                          : '> Engine ready. Click "Push Changes to Github" above to run version commit, tag, and push.'}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

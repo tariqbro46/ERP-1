@@ -70,11 +70,12 @@ export function LedgerCreation() {
       setError(null);
       try {
         const gData = await erpService.getLedgerGroups(user.companyId);
-        setGroups(gData);
+        const uniqueGroups = Array.from(new Map(gData.map(g => [g.name.trim().toLowerCase(), g])).values());
+        setGroups(uniqueGroups);
 
         if (isEdit) {
           const [lData, hasTx] = await Promise.all([
-            erpService.getLedgerById(id!),
+            erpService.getLedgerById(id!, true),
             erpService.checkLedgerTransactions(id!, user.companyId)
           ]);
           
@@ -86,13 +87,27 @@ export function LedgerCreation() {
 
           setOriginalLedger(lData);
           setHasTransactions(hasTx);
+
+          // Reliably find the matching group in uniqueGroups by id or by normalized name
+          let matchedGroupId = lData.group_id || '';
+          if (!uniqueGroups.some(g => g.id === matchedGroupId)) {
+            const byName = uniqueGroups.find(g => 
+              (lData.group_name && g.name.toLowerCase().trim() === lData.group_name.toLowerCase().trim()) ||
+              (lData.ledger_groups?.name && g.name.toLowerCase().trim() === lData.ledger_groups.name.toLowerCase().trim())
+            );
+            if (byName) matchedGroupId = byName.id;
+          }
+          const currentGroup = uniqueGroups.find(g => g.id === matchedGroupId);
+
           const ob = lData.opening_balance || 0;
           setFormData({
             ...formData,
             ...lData,
             name: lData.name || '',
             alias: lData.alias || '',
-            group_id: lData.group_id || '',
+            group_id: matchedGroupId,
+            group_name: currentGroup?.name || lData.group_name || '',
+            parent_group_id: currentGroup?.parent_id || currentGroup?.parent_group_id || matchedGroupId,
             mailing_name: lData.mailing_name || '',
             address: lData.address || '',
             division: lData.division || '',
@@ -114,9 +129,15 @@ export function LedgerCreation() {
             provide_contact_details: !!(lData.contact_name || lData.contact_phone || lData.contact_email),
             provide_bank_details: !!(lData.bank_account_no || lData.bank_name)
           });
-        } else if (gData.length > 0) {
-          const sundryDebtors = gData.find(g => g.name === 'Sundry Debtors');
-          setFormData(prev => ({ ...prev, group_id: sundryDebtors?.id || gData[0].id }));
+        } else if (uniqueGroups.length > 0) {
+          const sundryDebtors = uniqueGroups.find(g => g.name === 'Sundry Debtors');
+          const defaultGrp = sundryDebtors || uniqueGroups[0];
+          setFormData(prev => ({ 
+            ...prev, 
+            group_id: defaultGrp.id,
+            group_name: defaultGrp.name,
+            parent_group_id: defaultGrp.parent_id || defaultGrp.parent_group_id || defaultGrp.id
+          }));
         }
       } catch (err: any) {
         console.error('Error initializing ledger form:', err);
@@ -156,6 +177,9 @@ export function LedgerCreation() {
         }
       }
 
+      const selectedGroup = groups.find(g => g.id === formData.group_id);
+      const groupName = selectedGroup?.name || (formData as any).group_name || '';
+
       // Clean the data: Remove joined objects and internal fields that are not columns
       const { 
         ledger_groups, 
@@ -165,10 +189,18 @@ export function LedgerCreation() {
         provide_bank_details, 
         opening_balance,
         opening_balance_type,
-        ...cleanData 
+        ...cleanFormData 
       } = formData as any;
 
       const finalOpeningBalance = opening_balance_type === 'Dr' ? Math.abs(opening_balance) : -Math.abs(opening_balance);
+
+      const payload = {
+        ...cleanFormData,
+        group_id: formData.group_id,
+        group_name: groupName,
+        parent_group_id: selectedGroup?.parent_id || selectedGroup?.parent_group_id || formData.group_id,
+        opening_balance: finalOpeningBalance,
+      };
 
       if (isEdit) {
         const oldOpeningBalance = originalLedger?.opening_balance || 0;
@@ -176,13 +208,15 @@ export function LedgerCreation() {
         const newCurrentBalance = (originalLedger?.current_balance || 0) + balanceDiff;
 
         await erpService.updateLedger(id!, { 
-          ...cleanData, 
-          opening_balance: finalOpeningBalance,
+          ...payload, 
           current_balance: newCurrentBalance
         });
         showNotification(notifications.ledgerCreated.replace('created', 'updated'));
       } else {
-        await erpService.createLedger(user!.companyId, { ...cleanData, opening_balance: finalOpeningBalance });
+        await erpService.createLedger(user!.companyId, { 
+          ...payload, 
+          current_balance: finalOpeningBalance 
+        });
         showNotification(notifications.ledgerCreated);
         // If not isEdit, stay on page and clear data
         setFormData({
@@ -347,20 +381,23 @@ export function LedgerCreation() {
                       onChange={e => {
                         const groupId = e.target.value;
                         const selectedGroup = groups.find(g => g.id === groupId);
-                        const groupName = selectedGroup?.name.toLowerCase() || '';
+                        const groupName = selectedGroup?.name || '';
+                        const lowerName = groupName.toLowerCase();
                         
                         let newBalanceType = formData.opening_balance_type;
-                        if (groupName.includes('debtor')) {
+                        if (lowerName.includes('debtor')) {
                           newBalanceType = 'Dr';
-                        } else if (groupName.includes('creditor')) {
+                        } else if (lowerName.includes('creditor')) {
                           newBalanceType = 'Cr';
                         }
                         
-                        setFormData({ 
-                          ...formData, 
+                        setFormData(prev => ({ 
+                          ...prev, 
                           group_id: groupId,
+                          group_name: groupName,
+                          parent_group_id: selectedGroup?.parent_id || selectedGroup?.parent_group_id || groupId,
                           opening_balance_type: newBalanceType
-                        });
+                        }));
                       }}
                       className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
                     >

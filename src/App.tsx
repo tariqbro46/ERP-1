@@ -613,12 +613,6 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
   const currentPageTitle = getPageTitle();
 
-  // If access is disabled and user is not a super admin, show subscription required page
-  // We only block if isAccessEnabled is explicitly false
-  if (company && company.isAccessEnabled === false && !isSuperAdmin) {
-    return <SubscriptionRequired />;
-  }
-
   // Quota Exceeded Check
   const [quotaExceededFlag, setQuotaExceededFlag] = React.useState<boolean>(() => {
     return localStorage.getItem('company_quota_exceeded') === 'true';
@@ -2222,6 +2216,12 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       </>
     );
   };
+
+  // If access is disabled and user is not a super admin, show subscription required page
+  // (Safely evaluated after all React hooks have run to prevent React Error #310)
+  if (company && company.isAccessEnabled === false && !isSuperAdmin) {
+    return <SubscriptionRequired />;
+  }
 
   return (
     <div 

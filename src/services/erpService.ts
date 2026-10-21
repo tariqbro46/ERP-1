@@ -559,6 +559,20 @@ export function deduplicateMenuConfig(config: MenuConfig | null): MenuConfig | n
   };
 }
 
+export function deduplicateByName<T extends { id?: string; name?: string }>(items: T[], keyField: keyof T = 'name' as keyof T): T[] {
+  if (!Array.isArray(items)) return [];
+  const map = new Map<string, T>();
+  for (const item of items) {
+    if (!item) continue;
+    const val = String((item as any)[keyField] || (item as any).name || (item as any).id || '').trim().toLowerCase();
+    if (!val) continue;
+    if (!map.has(val)) {
+      map.set(val, item);
+    }
+  }
+  return Array.from(map.values());
+}
+
 export const erpService: any = {
   // Demo Mode Client-side Database Helpers
   isDemoMode() {
@@ -2596,8 +2610,19 @@ export const erpService: any = {
     } catch (e) {}
 
     try {
+      const allGroups = await this.getLedgerGroups(companyId);
+      const selectedGroup = allGroups.find(g => g.id === groupId || (g.name && g.name.toLowerCase().trim() === groupId.toLowerCase().trim()));
+      const selectedName = selectedGroup?.name?.toLowerCase().trim();
+
       const allLedgers = await this.getLedgers(companyId);
-      const groupLedgers = allLedgers.filter(l => l.group_id === groupId);
+      const groupLedgers = allLedgers.filter(l => {
+        if (l.group_id === groupId || (l as any).parent_group_id === groupId) return true;
+        if (selectedName) {
+          const lGroupName = (l.group_name || l.ledger_groups?.name || '').toLowerCase().trim();
+          if (lGroupName === selectedName) return true;
+        }
+        return false;
+      });
       
       if (groupLedgers.length === 0) return [];
       
@@ -3535,11 +3560,34 @@ export const erpService: any = {
       ]);
       
       const result = ledgers.map(l => {
-        const group = groups.find(g => g.id === l.group_id || (g.name && l.group_name && g.name.toLowerCase() === l.group_name.toLowerCase()));
+        const targetGroupId = l.group_id || l.parent_group_id || (l as any).groupId || '';
+        const group = groups.find(g => 
+          (targetGroupId && g.id === targetGroupId) || 
+          (g.name && l.group_name && g.name.toLowerCase().trim() === String(l.group_name).toLowerCase().trim()) ||
+          (targetGroupId === 'g_debtors' && (g.id === 'g_debtors' || g.name.toLowerCase().includes('debtor'))) ||
+          (targetGroupId === 'g_creditors' && (g.id === 'g_creditors' || g.name.toLowerCase().includes('creditor'))) ||
+          (targetGroupId === 'g_cash' && (g.id === 'g_cash' || g.name.toLowerCase().includes('cash'))) ||
+          (targetGroupId === 'g_bank' && (g.id === 'g_bank' || g.name.toLowerCase().includes('bank')))
+        );
+
+        const resolvedGroupName = group?.name || (
+          targetGroupId === 'g_debtors' ? 'Sundry Debtors' :
+          targetGroupId === 'g_creditors' ? 'Sundry Creditors' :
+          targetGroupId === 'g_cash' ? 'Cash-in-Hand' :
+          targetGroupId === 'g_bank' ? 'Bank Accounts' :
+          targetGroupId === 'g_sales' ? 'Sales Accounts' :
+          targetGroupId === 'g_purchase' ? 'Purchase Accounts' :
+          targetGroupId === 'g_indirect_exp' ? 'Indirect Expenses' :
+          targetGroupId === 'g_direct_exp' ? 'Direct Expenses' :
+          targetGroupId === 'g_capital' ? 'Capital Account' :
+          (l.group_name && l.group_name !== 'General Accounts' ? l.group_name : 'General Accounts')
+        );
+
         return {
           ...l,
-          ledger_groups: group || l.ledger_groups,
-          group_name: group?.name || l.group_name || 'General Accounts'
+          group_id: l.group_id || targetGroupId || group?.id || '',
+          ledger_groups: group || l.ledger_groups || { id: targetGroupId || 'g_general', name: resolvedGroupName, nature: 'Asset' },
+          group_name: resolvedGroupName
         };
       });
 
@@ -3551,17 +3599,19 @@ export const erpService: any = {
     }
   },
 
-  async getLedgerById(id: string): Promise<Ledger | null> {
+  async getLedgerById(id: string, forceFresh = false): Promise<Ledger | null> {
     const now = Date.now();
-    if (this._singleLedgerCache[id] && (now - this._singleLedgerCache[id].timestamp < 300000)) { // 5-minute single ledger cache TTL
+    if (!forceFresh && this._singleLedgerCache[id] && (now - this._singleLedgerCache[id].timestamp < 300000)) { // 5-minute single ledger cache TTL
       return this._singleLedgerCache[id].data;
     }
-    // Check in-memory ledgers cache first (0 reads!)
-    for (const compId of Object.keys(this._ledgersCache)) {
-      const match = this._ledgersCache[compId]?.data?.find((l: any) => l.id === id);
-      if (match) {
-        this._singleLedgerCache[id] = { data: match, timestamp: now };
-        return match;
+    if (!forceFresh) {
+      // Check in-memory ledgers cache first (0 reads!)
+      for (const compId of Object.keys(this._ledgersCache)) {
+        const match = this._ledgersCache[compId]?.data?.find((l: any) => l.id === id);
+        if (match) {
+          this._singleLedgerCache[id] = { data: match, timestamp: now };
+          return match;
+        }
       }
     }
     try {
@@ -3601,11 +3651,13 @@ export const erpService: any = {
       const groups = await this.getCollection('ledger_groups', companyId);
       if (groups.length === 0) {
         const seeded = await this.seedDefaultGroups(companyId);
-        this._ledgerGroupsCache[companyId] = { data: seeded, timestamp: now };
-        return seeded;
+        const uniqueSeeded = deduplicateByName(seeded);
+        this._ledgerGroupsCache[companyId] = { data: uniqueSeeded, timestamp: now };
+        return uniqueSeeded;
       }
-      this._ledgerGroupsCache[companyId] = { data: groups, timestamp: now };
-      return groups;
+      const uniqueGroups = deduplicateByName(groups);
+      this._ledgerGroupsCache[companyId] = { data: uniqueGroups, timestamp: now };
+      return uniqueGroups;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'ledger_groups');
       return [];
@@ -3621,11 +3673,13 @@ export const erpService: any = {
       const types = await this.getCollection('voucher_types', companyId);
       if (types.length === 0) {
         const seeded = await this.seedDefaultVoucherTypes(companyId);
-        this._voucherTypesCache[companyId] = { data: seeded, timestamp: now };
-        return seeded;
+        const uniqueSeeded = deduplicateByName(seeded);
+        this._voucherTypesCache[companyId] = { data: uniqueSeeded, timestamp: now };
+        return uniqueSeeded;
       }
-      this._voucherTypesCache[companyId] = { data: types, timestamp: now };
-      return types;
+      const uniqueTypes = deduplicateByName(types);
+      this._voucherTypesCache[companyId] = { data: uniqueTypes, timestamp: now };
+      return uniqueTypes;
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, 'voucher_types');
       return [];
@@ -3643,16 +3697,32 @@ export const erpService: any = {
       { name: 'Credit Note', base_type: 'Credit Note' },
       { name: 'Debit Note', base_type: 'Debit Note' }
     ];
-    const batch = writeBatch(db);
-    const results: any[] = [];
-    for (const v of defaults) {
-      const ref = doc(collection(db, 'voucher_types'));
-      const data = cleanData({ ...v, id: ref.id, companyId });
-      batch.set(ref, data);
-      results.push(data);
+    try {
+      const existingSnap = await getDocs(query(
+        collection(db, 'voucher_types'),
+        where('companyId', '==', companyId)
+      ));
+      const existingNames = new Set(existingSnap.docs.map(d => (d.data().name || '').trim().toLowerCase()));
+
+      const batch = writeBatch(db);
+      const results: any[] = [];
+      for (const v of defaults) {
+        if (existingNames.has(v.name.trim().toLowerCase())) {
+          continue;
+        }
+        const ref = doc(collection(db, 'voucher_types'));
+        const data = cleanData({ ...v, id: ref.id, companyId });
+        batch.set(ref, data);
+        results.push(data);
+      }
+      if (results.length > 0) {
+        await batch.commit();
+      }
+      return results;
+    } catch (e) {
+      console.warn('Error in seedDefaultVoucherTypes:', e);
+      return [];
     }
-    await batch.commit();
-    return results;
   },
 
   async getStockGroups(companyId: string): Promise<any[]> {
@@ -3661,8 +3731,9 @@ export const erpService: any = {
       return this._stockGroupsCache[companyId].data;
     }
     const result = await this.getCollection('stock_groups', companyId);
-    this._stockGroupsCache[companyId] = { data: result, timestamp: now };
-    return result;
+    const unique = deduplicateByName(result);
+    this._stockGroupsCache[companyId] = { data: unique, timestamp: now };
+    return unique;
   },
 
   async getStockCategories(companyId: string): Promise<any[]> {
@@ -3671,8 +3742,9 @@ export const erpService: any = {
       return this._stockCategoriesCache[companyId].data;
     }
     const result = await this.getCollection('stock_categories', companyId);
-    this._stockCategoriesCache[companyId] = { data: result, timestamp: now };
-    return result;
+    const unique = deduplicateByName(result);
+    this._stockCategoriesCache[companyId] = { data: unique, timestamp: now };
+    return unique;
   },
 
   async getEmployeeGroups(companyId: string): Promise<any[]> {
@@ -3681,8 +3753,9 @@ export const erpService: any = {
       return this._employeeGroupsCache[companyId].data;
     }
     const result = await this.getCollection('employee_groups', companyId);
-    this._employeeGroupsCache[companyId] = { data: result, timestamp: now };
-    return result;
+    const unique = deduplicateByName(result);
+    this._employeeGroupsCache[companyId] = { data: unique, timestamp: now };
+    return unique;
   },
 
   async updateLedgerGroup(id: string, group: any) {
@@ -3912,16 +3985,32 @@ export const erpService: any = {
       { name: 'Capital Account', nature: 'Liability' }
     ];
 
-    const batch = writeBatch(db);
-    const results: any[] = [];
-    for (const g of defaultGroups) {
-      const ref = doc(collection(db, 'ledger_groups'));
-      const data = cleanData({ ...g, id: ref.id, companyId });
-      batch.set(ref, data);
-      results.push(data);
+    try {
+      const existingSnap = await getDocs(query(
+        collection(db, 'ledger_groups'),
+        where('companyId', '==', companyId)
+      ));
+      const existingNames = new Set(existingSnap.docs.map(d => (d.data().name || '').trim().toLowerCase()));
+
+      const batch = writeBatch(db);
+      const results: any[] = [];
+      for (const g of defaultGroups) {
+        if (existingNames.has(g.name.trim().toLowerCase())) {
+          continue;
+        }
+        const ref = doc(collection(db, 'ledger_groups'));
+        const data = cleanData({ ...g, id: ref.id, companyId });
+        batch.set(ref, data);
+        results.push(data);
+      }
+      if (results.length > 0) {
+        await batch.commit();
+      }
+      return results;
+    } catch (e) {
+      console.warn('Error in seedDefaultGroups:', e);
+      return [];
     }
-    await batch.commit();
-    return results;
   },
 
   async createLedger(companyId: string, ledger: any) {
@@ -3982,14 +4071,24 @@ export const erpService: any = {
       const ref = doc(db, 'ledgers', id);
       const snap = await getDoc(ref);
       let companyId = '';
+      let existingData: any = {};
       if (snap.exists()) {
-        companyId = snap.data().companyId;
+        existingData = snap.data();
+        companyId = existingData.companyId;
       }
-      await updateDoc(ref, ledger);
+      const cleaned = cleanData(ledger);
+      await updateDoc(ref, cleaned);
+
+      const mergedLedger = { ...existingData, ...cleaned, id };
+
+      // Invalidate and refresh single ledger cache immediately!
+      this._singleLedgerCache[id] = { data: mergedLedger, timestamp: Date.now() };
+
+      // Update in-memory ledgers collection cache
       if (companyId) {
-        this._updateCachedCollection('ledgers', companyId, { id, ...ledger }, 'update');
+        this._updateCachedCollection('ledgers', companyId, mergedLedger, 'update');
       }
-      return { id, ...ledger };
+      return mergedLedger;
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `ledgers/${id}`);
     }
@@ -4053,11 +4152,13 @@ export const erpService: any = {
     const units = await this.getCollection('units', companyId);
     if (units.length === 0) {
       const seeded = await this.seedDefaultUnits(companyId);
-      this._unitsCache[companyId] = { data: seeded, timestamp: now };
-      return seeded;
+      const uniqueSeeded = deduplicateByName(seeded);
+      this._unitsCache[companyId] = { data: uniqueSeeded, timestamp: now };
+      return uniqueSeeded;
     }
-    this._unitsCache[companyId] = { data: units, timestamp: now };
-    return units;
+    const uniqueUnits = deduplicateByName(units);
+    this._unitsCache[companyId] = { data: uniqueUnits, timestamp: now };
+    return uniqueUnits;
   },
 
   async seedDefaultUnits(companyId: string) {
@@ -4068,16 +4169,32 @@ export const erpService: any = {
       { name: 'Box', formal_name: 'Boxes' },
       { name: 'Nos', formal_name: 'Numbers' }
     ];
-    const batch = writeBatch(db);
-    const results: any[] = [];
-    for (const u of defaults) {
-      const ref = doc(collection(db, 'units'));
-      const data = cleanData({ ...u, id: ref.id, companyId });
-      batch.set(ref, data);
-      results.push(data);
+    try {
+      const existingSnap = await getDocs(query(
+        collection(db, 'units'),
+        where('companyId', '==', companyId)
+      ));
+      const existingNames = new Set(existingSnap.docs.map(d => (d.data().name || '').trim().toLowerCase()));
+
+      const batch = writeBatch(db);
+      const results: any[] = [];
+      for (const u of defaults) {
+        if (existingNames.has(u.name.trim().toLowerCase())) {
+          continue;
+        }
+        const ref = doc(collection(db, 'units'));
+        const data = cleanData({ ...u, id: ref.id, companyId });
+        batch.set(ref, data);
+        results.push(data);
+      }
+      if (results.length > 0) {
+        await batch.commit();
+      }
+      return results;
+    } catch (e) {
+      console.warn('Error in seedDefaultUnits:', e);
+      return [];
     }
-    await batch.commit();
-    return results;
   },
 
   async getItems(companyId: string, forceRefresh = false): Promise<Item[]> {
@@ -4192,8 +4309,9 @@ export const erpService: any = {
       return this._godownsCache[companyId].data;
     }
     const result = await this.getCollection('godowns', companyId, 5000, forceRefresh);
-    this._godownsCache[companyId] = { data: result, timestamp: now };
-    return result;
+    const unique = deduplicateByName(result);
+    this._godownsCache[companyId] = { data: unique, timestamp: now };
+    return unique;
   },
 
   async createGodown(companyId: string, godown: any) {
@@ -7508,6 +7626,10 @@ export const erpService: any = {
         const comp = JSON.parse(companyCached);
         const limitVal = Math.max(50000, comp.quotaLimit || 50000);
         if (comp && comp.quotaUsed !== undefined) {
+          if (comp.quotaUsed < limitVal) {
+            localStorage.removeItem('company_quota_exceeded');
+            return false;
+          }
           if (comp.quotaUsed >= limitVal) return true;
         }
       }

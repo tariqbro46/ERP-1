@@ -34,10 +34,11 @@ export function GroupVoucher() {
           erpService.getLedgerGroups(user.companyId),
           erpService.getLedgers(user.companyId)
         ]);
-        setGroups(gData);
+        const uniqueGroups = Array.from(new Map(gData.map(g => [g.name.trim().toLowerCase(), g])).values());
+        setGroups(uniqueGroups);
         setLedgers(lData);
-        if (gData.length > 0 && !selectedGroup) {
-          setSelectedGroup(gData[0].id);
+        if (uniqueGroups.length > 0 && !selectedGroup) {
+          setSelectedGroup(uniqueGroups[0].id);
         }
       } catch (err) {
         console.error('Error fetching groups:', err);

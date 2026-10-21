@@ -41,19 +41,30 @@ export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: Q
     if (!user?.companyId) return;
     try {
       const data = await erpService.getLedgerGroups(user.companyId);
-      setGroups(data);
+      const unique = Array.from(new Map(data.map(g => [g.name.trim().toLowerCase(), g])).values());
+      setGroups(unique);
       
       // Try to find a matching group based on initialGroup hint
       if (initialGroup) {
-        const matchingGroup = data.find(g => g.name.toLowerCase().includes(initialGroup.toLowerCase()));
+        const matchingGroup = unique.find(g => g.name.toLowerCase().includes(initialGroup.toLowerCase()));
         if (matchingGroup) {
-          setFormData(prev => ({ ...prev, group_id: matchingGroup.id }));
+          setFormData(prev => ({ 
+            ...prev, 
+            group_id: matchingGroup.id,
+            group_name: matchingGroup.name,
+            parent_group_id: matchingGroup.parent_id || matchingGroup.parent_group_id || matchingGroup.id
+          }));
           return;
         }
       }
       
-      if (data.length > 0 && !formData.group_id) {
-        setFormData(prev => ({ ...prev, group_id: data[0].id }));
+      if (unique.length > 0 && !formData.group_id) {
+        setFormData(prev => ({ 
+          ...prev, 
+          group_id: unique[0].id,
+          group_name: unique[0].name,
+          parent_group_id: unique[0].parent_id || unique[0].parent_group_id || unique[0].id
+        }));
       }
     } catch (err) {
       console.error('Error fetching groups:', err);
@@ -66,7 +77,12 @@ export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: Q
 
     setLoading(true);
     try {
-      const newLedger = await erpService.createLedger(user!.companyId, formData);
+      const selectedGroup = groups.find(g => g.id === formData.group_id);
+      const newLedger = await erpService.createLedger(user!.companyId, {
+        ...formData,
+        group_name: selectedGroup?.name || (formData as any).group_name || '',
+        parent_group_id: selectedGroup?.parent_id || selectedGroup?.parent_group_id || formData.group_id
+      });
       onSuccess(newLedger);
       onClose();
       setFormData({ name: '', group_id: '', opening_balance: 0 });

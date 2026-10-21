@@ -22,10 +22,76 @@ export interface ReleaseVersion {
   bugFixes: ReleaseNoteItem[];
 }
 
-export const LATEST_VERSION = "v1.9.8";
+export const LATEST_VERSION = "v1.9.9";
 export const LAST_SEEN_VERSION_KEY = "tallyflow_last_seen_release_version";
 
 export const RELEASE_NOTES: ReleaseVersion[] = [
+  {
+    version: "v1.9.9",
+    releaseDate: "October 20, 2026",
+    bnReleaseDate: "২০ অক্টোবর, ২০২৬",
+    title: "Stock Calculation & Movement Truth Engine, Report Synchronization & GitHub Release Automation",
+    bnTitle: "স্টক গণনা ও মুভমেন্ট ট্রুথ ইঞ্জিন, রিপোর্ট সিঙ্ক্রোনাইজেশন এবং গিটহাব রিলিজ অটোমেশন",
+    summary: "Resolved stock discrepancies across Stock Summary and Stock Item Detail reports with high-precedence voucher movement type classification, synchronized date parameter handling across navigation routes, enriched real-time voucher inventory cache tracking, and introduced native GitHub version control push with automated release note management inside Settings.",
+    bnSummary: "স্টক সামারি এবং স্টক আইটেম রিপোর্টের মধ্যকার অমিল দূর করে ভাউচার টাইপ অগ্রাধিকারের মাধ্যমে স্টক মুভমেন্ট গণনা নিখুঁত করা হয়েছে। এছাড়া স্টক রিপোর্ট নেভিগেশনে তারিখ রেঞ্জ সিঙ্ক, রিয়েল-টাইম ইনভেন্টরি ক্যাশ সমৃদ্ধকরণ এবং সেটিংস থেকে সরাসরি গিটহাবে পুশ ও স্বয়ংক্রিয় রিলিজ নোট ব্যবস্থাপনার সুবিধা যুক্ত করা হয়েছে।",
+    isLatest: true,
+    newFeatures: [
+      {
+        id: "feat-github-push-settings",
+        title: "One-Click GitHub Push & Release Automation in Settings",
+        bnTitle: "সেটিংস থেকে এক ক্লিকে গিটহাব পুশ ও রিলিজ অটোমেশন",
+        description: "Integrated a dedicated GitHub & Version Control console within Settings. Users can push project updates directly to their GitHub repository with automatic version detection (v1.9.9), automated release commit messages, git tagging, and real-time release notes synchronization.",
+        bnDescription: "সেটিংসের মধ্যে একটি আধুনিক গিটহাব ও ভার্সন কন্ট্রোল কনসোল যুক্ত করা হয়েছে। বর্তমান সংস্করণের (v1.9.9) সাথে সামঞ্জস্য রেখে এক ক্লিকে গিটহাব রিপোজিটরিতে কোড পুশ, স্বয়ংক্রিয় রিলিজ কমিট ও ট্যাগ তৈরি এবং রিলিজ নোট সিঙ্ক করার সুবিধা নিশ্চিত করা হয়েছে।",
+        module: "Settings & Version Control",
+        badge: "NEW"
+      },
+      {
+        id: "feat-stock-movement-truth-engine",
+        title: "High-Precedence Stock Movement Direction Engine",
+        bnTitle: "ভাউচার টাইপ ভিত্তিক নিখুঁত স্টক মুভমেন্ট ক্যালকুলেশন ইঞ্জিন",
+        description: "Upgraded getMovementType so standard voucher types (Sales, Purchase, Credit Note / Sales Return, Debit Note / Purchase Return, Material In/Out) strictly dictate stock entry directions, preventing generic movement flags or stale cache labels from corrupting inventory valuation.",
+        bnDescription: "getMovementType ইঞ্জিনে ভাউচার টাইপকে শীর্ষ অগ্রাধিকার দেওয়া হয়েছে। সেলস, পার্চেস, ক্রেডিট নোট (সেলস রিটার্ন), ডেবিট নোট (পার্চেস রিটার্ন) ইত্যাদি ভাউচারের ক্ষেত্রে ইনওয়ার্ড ও আউটওয়ার্ড মুভমেন্ট শতভাগ নির্ভুলভাবে গণনাকৃত হয়।",
+        module: "Inventory & Stock",
+        badge: "CORE"
+      }
+    ],
+    improvements: [
+      {
+        id: "imp-stock-reports-sync",
+        title: "Seamless Stock Summary & Stock Item Detail Report Synchronization",
+        bnTitle: "স্টক সামারি ও স্টক আইটেম রিপোর্টের মধ্যে নিরবচ্ছিন্ন ডেটা সিঙ্ক্রোনাইজেশন",
+        description: "Synchronized URL search parameter handling (from and to date ranges) when drilling down from Stock Summary to Stock Item Report. Monthly stock summaries, inward/outward breakdown, and closing stock quantities now match 100% identically across all inventory reports.",
+        bnDescription: "স্টক সামারি থেকে কোনো আইটেমে ক্লিক করে স্টক আইটেম রিপোর্টে গেলে তারিখ ফিল্টার (From এবং To) স্বয়ংক্রিয়ভাবে কার্যকর হয়। ফলে মাসিক স্টক সামারি এবং আইটেম ডিটেইলের ক্লোজিং স্টক ও মুভমেন্ট শতভাগ একই সংখ্যা প্রদর্শন করে।",
+        module: "Stock Reports"
+      },
+      {
+        id: "imp-inventory-cache-enrichment",
+        title: "Full Inventory Metadata Injection into Local Caches",
+        bnTitle: "লোকাল ক্যাশে ইনভেন্টরি এন্ট্রির পূর্ণাঙ্গ মেটাডেটা প্রিজারভেশন",
+        description: "createVoucher and updateVoucher routines now systematically inject date, v_type, and voucher_id into the in-memory and localStorage inventory caches, eliminating missing date fallbacks or untyped ghost entries.",
+        bnDescription: "ভাউচার তৈরি বা এডিট করার সময় লোকাল ক্যাশের ইনভেন্টরি এন্ট্রিতে স্বয়ংক্রিয়ভাবে ভাউচার তারিখ, টাইপ এবং আইডি যুক্ত করা হচ্ছে, ফলে ডেট মিসিং বা ভুল টাইপের কারণে ক্যাশ নষ্ট হওয়ার সুযোগ নেই।",
+        module: "Performance & Quota"
+      }
+    ],
+    bugFixes: [
+      {
+        id: "fix-item-recalculation-vtype",
+        title: "Resolved Untyped Inward Bias in Item Stats Recalculation",
+        bnTitle: "আইটেম পরিসংখ্যান পুনর্গণনায় সেলস ভাউচার ইনওয়ার্ড হয়ে যাওয়ার ত্রুটি দূর",
+        description: "Fixed an edge case in _executeRecalculateItemStats where inventory entries lacking local v_type inadvertently defaulted to inward movements, guaranteeing accurate item stock re-computations.",
+        bnDescription: "_executeRecalculateItemStats ফাংশনে v_type অনুপস্থিত থাকলে সেলস এন্ট্রিগুলো যাতে ভুলবশত ইনওয়ার্ড হিসেবে গণ্য না হয় সেই ত্রুটি সমাধান করা হয়েছে।",
+        module: "Inventory Bug Fix"
+      },
+      {
+        id: "fix-voucher-entry-inv-direction",
+        title: "Strict Voucher-to-Inventory Direction Mapping on Voucher Entry",
+        bnTitle: "ভাউচার এন্ট্রির সময় ডিরেকশন ম্যাপিং সংশোধন",
+        description: "Enforced strict voucher type direction assignment during multi-item inventory voucher saving, ensuring credit notes and debit notes accurately log their respective return directions.",
+        bnDescription: "ভাউচার এন্ট্রির সময় ইনভেন্টরি ডেটা সেভ হওয়ার ক্ষেত্রে ভাউচার টাইপ অনুসারে সঠিক ইনওয়ার্ড বা আউটওয়ার্ড ডিরেকশন নিশ্চিত করা হয়েছে।",
+        module: "Voucher Entry Bug Fix"
+      }
+    ]
+  },
   {
     version: "v1.9.8",
     releaseDate: "October 15, 2026",
@@ -34,7 +100,7 @@ export const RELEASE_NOTES: ReleaseVersion[] = [
     bnTitle: "লেজার স্টেটমেন্টে একই তারিখের ভাউচার ক্রমানুসারে সাজানো (সেলস/পার্চেস অগ্রাধিকার) এবং আল্ট্রা-লো কোটা ইঞ্জিন",
     summary: "Ledger statements, printouts, and Daybook now automatically sort transactions on identical dates so that Sales and Purchase vouchers appear first, followed by Receipt and Payment settlement vouchers. In addition, the Firestore quota engine has been upgraded to run on targeted indexed reads, silent cache serving, debounced write tracking, and auto-recovery to prevent quota exhaustion.",
     bnSummary: "লেজার স্টেটমেন্ট, প্রিন্ট ও ডে-বুকে একই তারিখে একাধিক ভাউচার থাকলে স্বয়ংক্রিয়ভাবে প্রথমে সেলস ও পার্চেস ভাউচার প্রদর্শিত হবে, এরপর রিসিট ও পেমেন্ট ভাউচার আসবে। সাথে সাথে ফায়ারস্টোর ডেটাবেজে ন্যূনতম কোটা ব্যবহারে টার্গেটেড ইনডেক্সড কুয়েরি, সাইলেন্ট ক্যাশ রিড এবং স্বয়ংক্রিয় কোটা রিকভারি নিশ্চিত করা হয়েছে।",
-    isLatest: true,
+    isLatest: false,
     newFeatures: [
       {
         id: "feat-ledger-sorting-priority",
