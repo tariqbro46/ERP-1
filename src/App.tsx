@@ -2341,13 +2341,26 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                     </Link>
                     {activePlan && (
                       <div className={cn(
-                        "px-1.5 py-0.5 rounded text-[7px] font-bold uppercase tracking-tighter flex items-center gap-0.5",
+                        "hidden sm:flex px-1.5 py-0.5 rounded text-[7px] font-bold uppercase tracking-tighter items-center gap-0.5",
                         uiStyle === 'UI/UX 2' ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
                       )}>
                         <Award className="w-2 h-2" />
                         {activePlan.name}
                       </div>
                     )}
+                    <Link
+                      to="/release-notes"
+                      className={cn(
+                        "px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-mono font-bold tracking-wider flex items-center gap-1 transition-all hover:scale-105 border shrink-0",
+                        uiStyle === 'UI/UX 2'
+                          ? "bg-emerald-500/25 text-emerald-100 border-emerald-400/30 hover:bg-emerald-500/40"
+                          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/20"
+                      )}
+                      title={language === 'bn' ? `বর্তমান সিস্টেম সংস্করণ: ${LATEST_VERSION} (রিলিজ নোট দেখতে ক্লিক করুন)` : `Current App Version: ${LATEST_VERSION} (Click to view release notes)`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>{LATEST_VERSION}</span>
+                    </Link>
                   </div>
                 </div>
               )}

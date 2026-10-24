@@ -70,7 +70,7 @@ export function LedgerCreation() {
       setError(null);
       try {
         const gData = await erpService.getLedgerGroups(user.companyId);
-        const uniqueGroups = Array.from(new Map(gData.map(g => [g.name.trim().toLowerCase(), g])).values());
+        const uniqueGroups = Array.from(new Map<string, any>(gData.map((g: any) => [g.name.trim().toLowerCase(), g])).values());
         setGroups(uniqueGroups);
 
         if (isEdit) {

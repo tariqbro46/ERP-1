@@ -23,6 +23,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { EditableHeader } from './EditableHeader';
 import { cn } from '../lib/utils';
 import { executePrint } from '../utils/printUtils';
+import { ReleaseManagerModal } from './ReleaseManagerModal';
 
 export function ReleaseNotes() {
   const { language } = useLanguage();
@@ -32,6 +33,7 @@ export function ReleaseNotes() {
   const [selectedVersion, setSelectedVersion] = useState<string>(LATEST_VERSION);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<'all' | 'new' | 'improvements' | 'fixes'>('all');
+  const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false);
 
   const activeRelease = useMemo(() => {
     return RELEASE_NOTES.find(r => r.version === selectedVersion) || RELEASE_NOTES[0];
@@ -183,6 +185,16 @@ export function ReleaseNotes() {
                   className="w-full pl-9 pr-3 py-1.5 bg-background border border-border rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-hidden"
                 />
               </div>
+
+              <button
+                type="button"
+                onClick={() => setIsReleaseModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground hover:opacity-90 text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+                title={isBn ? 'নতুন ভার্সন রিলিজ করুন' : 'Publish new version'}
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>{isBn ? 'নতুন রিলিজ' : 'New Release'}</span>
+              </button>
 
               <button
                 type="button"
@@ -491,6 +503,14 @@ export function ReleaseNotes() {
           </div>
         </div>
       </div>
+
+      <ReleaseManagerModal 
+        isOpen={isReleaseModalOpen} 
+        onClose={() => setIsReleaseModalOpen(false)} 
+        onPublished={(newVer) => {
+          setSelectedVersion(newVer);
+        }}
+      />
     </div>
   );
 }

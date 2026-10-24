@@ -602,7 +602,7 @@ export function VoucherEntry() {
           type: e.debit > 0 ? 'Dr' : 'Cr',
           amount: Math.max(e.debit || 0, e.credit || 0)
         })));
-      } else if (v.v_type === 'Payment' || v.v_type === 'Receipt' || v.v_type === 'Contra') {
+      } else if (v.v_type === 'Payment' || v.v_type === 'Receipt') {
         // In our save logic: last entry is bank/cash
         const mainEntry = v.entries[v.entries.length - 1];
         setBankCashLedgerId(mainEntry?.ledger_id || '');
@@ -904,10 +904,95 @@ export function VoucherEntry() {
     return "";
   };
 
+  const isCashOrBankLedger = (ledger: any) => {
+    if (!ledger) return false;
+    const gName = String(ledger.group_name || ledger.ledger_groups?.name || '').toLowerCase().trim();
+    const lName = String(ledger.name || '').toLowerCase().trim();
+    const gId = String(ledger.group_id || ledger.parent_group_id || '').toLowerCase().trim();
+
+    // Direct Group IDs for Bank and Cash
+    if (gId === 'g_bank' || gId === 'g_cash') return true;
+
+    // Check group name for bank or cash keywords (e.g. Bank Accounts, Cash-in-Hand, Bank OCC, Bank OD)
+    if (
+      gName.includes('bank') ||
+      gName.includes('cash') ||
+      gName === 'cash-in-hand' ||
+      gName === 'bank accounts' ||
+      gName === 'bank account' ||
+      gName.includes('bank occ') ||
+      gName.includes('bank od')
+    ) {
+      return true;
+    }
+
+    // Check if ledger explicitly contains bank details
+    if (
+      Boolean(ledger.bank_account_no && String(ledger.bank_account_no).trim()) ||
+      Boolean(ledger.bank_name && String(ledger.bank_name).trim())
+    ) {
+      return true;
+    }
+
+    // Check ledger name for bank / cash naming (excluding debtors, creditors, expense heads)
+    const isExcludedGroup = (
+      gName.includes('debtor') ||
+      gName.includes('creditor') ||
+      gName.includes('expense') ||
+      gName.includes('income') ||
+      gName.includes('purchase') ||
+      gName.includes('sales')
+    );
+
+    if (!isExcludedGroup) {
+      if (
+        lName.includes('bank') ||
+        lName.includes('cash') ||
+        lName.startsWith('ibbl') ||
+        lName.includes('islami bank') ||
+        lName.includes('city bank') ||
+        lName.includes('bkash') ||
+        lName.includes('nagad') ||
+        lName.includes('rocket') ||
+        lName.includes('upay')
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   const isBankLedger = (ledgerId: string) => {
     const ledger = ledgers.find(l => l.id === ledgerId);
-    return ledger?.group_name?.toLowerCase().includes('bank') || 
-           ledger?.ledger_groups?.name?.toLowerCase().includes('bank');
+    if (!ledger) return false;
+    const gName = String(ledger.group_name || ledger.ledger_groups?.name || '').toLowerCase().trim();
+    const lName = String(ledger.name || '').toLowerCase().trim();
+    const gId = String(ledger.group_id || ledger.parent_group_id || '').toLowerCase().trim();
+
+    if (gId === 'g_bank') return true;
+    if (gName.includes('bank') && !gName.includes('cash')) return true;
+    if (
+      Boolean(ledger.bank_account_no && String(ledger.bank_account_no).trim()) ||
+      Boolean(ledger.bank_name && String(ledger.bank_name).trim())
+    ) {
+      return true;
+    }
+    const isExcludedGroup = (
+      gName.includes('debtor') ||
+      gName.includes('creditor') ||
+      gName.includes('expense') ||
+      gName.includes('income')
+    );
+    if (!isExcludedGroup && (
+      lName.includes('bank') || 
+      lName.startsWith('ibbl') || 
+      lName.includes('islami bank') || 
+      lName.includes('city bank')
+    )) {
+      return true;
+    }
+    return false;
   };
 
   const showBankDetails = (isSingleEntry && isBankLedger(bankCashLedgerId)) || 
@@ -1452,7 +1537,7 @@ export function VoucherEntry() {
                       </button>
                     </div>
                     <SearchableSelect
-                      options={ledgers.filter(l => l.ledger_groups?.name.includes('Bank') || l.ledger_groups?.name.includes('Cash'))}
+                      options={ledgers.filter(isCashOrBankLedger)}
                       value={bankCashLedgerId}
                       onChange={setBankCashLedgerId}
                       placeholder={t('voucher.selectAccount')}
@@ -1487,7 +1572,13 @@ export function VoucherEntry() {
                       </button>
                     </div>
                     <SearchableSelect
-                      options={ledgers.filter(l => l.ledger_groups?.name.includes(vType))}
+                      options={ledgers.filter(l => {
+                        const gName = String(l.group_name || l.ledger_groups?.name || '').toLowerCase().trim();
+                        const vTypeLower = vType.toLowerCase();
+                        return gName.includes(vTypeLower) || 
+                               (vTypeLower === 'sales' && (l.group_id === 'g_sales' || l.name?.toLowerCase().includes('sales'))) ||
+                               (vTypeLower === 'purchase' && (l.group_id === 'g_purchase' || l.name?.toLowerCase().includes('purchase')));
+                      })}
                       value={salesPurchaseLedgerId}
                       onChange={setSalesPurchaseLedgerId}
                       placeholder={vType === 'Sales' ? t('common.salesLedger') : t('common.purchaseLedger')}

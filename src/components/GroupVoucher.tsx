@@ -34,7 +34,7 @@ export function GroupVoucher() {
           erpService.getLedgerGroups(user.companyId),
           erpService.getLedgers(user.companyId)
         ]);
-        const uniqueGroups = Array.from(new Map(gData.map(g => [g.name.trim().toLowerCase(), g])).values());
+        const uniqueGroups = Array.from(new Map<string, any>(gData.map((g: any) => [g.name.trim().toLowerCase(), g])).values());
         setGroups(uniqueGroups);
         setLedgers(lData);
         if (uniqueGroups.length > 0 && !selectedGroup) {

@@ -1,0 +1,6 @@
+{
+  "summary":  "Implementation plan for automated App Versioning and Release Notes management via both In-App GUI Release Manager and Chat workflow, with seamless synchronization across Header, Settings, Release Notes, and What's New modal before GitHub push.",
+  "updatedAt":  "2026-10-24T06:33:59.442716310Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

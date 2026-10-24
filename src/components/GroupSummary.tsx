@@ -38,7 +38,7 @@ export function GroupSummary() {
       if (!user?.companyId) return;
       try {
         const data = await erpService.getLedgerGroups(user.companyId);
-        const unique = Array.from(new Map(data.map(g => [g.name.trim().toLowerCase(), g])).values());
+        const unique = Array.from(new Map<string, any>(data.map((g: any) => [g.name.trim().toLowerCase(), g])).values());
         setGroups(unique);
         
         const paramGroupId = searchParams.get('groupId');

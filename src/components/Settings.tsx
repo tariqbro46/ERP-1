@@ -16,6 +16,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { soundService } from '../services/soundService';
 import { ReportBuilderModal } from './ReportBuilderModal';
 import { RELEASE_NOTES, LATEST_VERSION } from '../data/releaseNotes';
+import { ReleaseManagerModal } from './ReleaseManagerModal';
 
 export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const { user, logout } = useAuth();
@@ -544,6 +545,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [gitCustomReleaseSummary, setGitCustomReleaseSummary] = useState('');
   const [gitLogs, setGitLogs] = useState<string>('');
   const [gitLastPushedTime, setGitLastPushedTime] = useState<string>(() => localStorage.getItem('tallyflow_github_last_push') || '');
+  const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false);
 
   const fetchGitStatus = React.useCallback(async () => {
     try {
@@ -2397,6 +2399,15 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
 
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => setIsReleaseModalOpen(true)}
+                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                        title={language === 'bn' ? 'নতুন সংস্করণ ও রিলিজ নোটস কনফিগার করুন' : 'Configure new version & release notes'}
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>{language === 'bn' ? 'রিলিজ ম্যানেজার' : 'Release Manager'}</span>
+                      </button>
+
+                      <button
                         onClick={fetchGitStatus}
                         disabled={gitLoading}
                         className="px-3 py-1.5 border border-border text-foreground hover:bg-accent text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
@@ -3350,6 +3361,14 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
 
         </div>
       </div>
+
+      <ReleaseManagerModal 
+        isOpen={isReleaseModalOpen} 
+        onClose={() => setIsReleaseModalOpen(false)} 
+        onPublished={() => {
+          fetchGitStatus();
+        }}
+      />
     </div>
   );
 }

@@ -2514,10 +2514,20 @@ export const erpService: any = {
     try {
       const ledgers = await this.getLedgers(companyId);
       const cashBankLedgers = ledgers.filter(l => {
-        const groupName = (l as any).ledger_groups?.name || (l as any).group_name || '';
-        return groupName.includes('Cash') || 
-               groupName.includes('Bank') ||
-               ((l as any).nature === 'Asset' && (l.name.toLowerCase().includes('cash') || l.name.toLowerCase().includes('bank')));
+        const groupName = String((l as any).ledger_groups?.name || (l as any).group_name || '').toLowerCase();
+        const lName = String(l.name || '').toLowerCase();
+        const gId = String((l as any).group_id || (l as any).parent_group_id || '').toLowerCase();
+
+        if (gId === 'g_bank' || gId === 'g_cash') return true;
+        if (groupName.includes('cash') || groupName.includes('bank')) return true;
+        if (Boolean((l as any).bank_account_no && String((l as any).bank_account_no).trim()) || 
+            Boolean((l as any).bank_name && String((l as any).bank_name).trim())) return true;
+        
+        const isExcluded = groupName.includes('debtor') || groupName.includes('creditor') || groupName.includes('expense') || groupName.includes('income');
+        if (!isExcluded && (lName.includes('cash') || lName.includes('bank') || lName.startsWith('ibbl') || lName.includes('islami bank') || lName.includes('city bank'))) {
+          return true;
+        }
+        return false;
       });
 
       if (cashBankLedgers.length === 0) return [];
@@ -3561,32 +3571,48 @@ export const erpService: any = {
       
       const result = ledgers.map(l => {
         const targetGroupId = l.group_id || l.parent_group_id || (l as any).groupId || '';
+        const lGroupName = String(l.group_name || '').trim();
+        const lowerGName = lGroupName.toLowerCase();
+        const lName = String(l.name || '').toLowerCase();
+
         const group = groups.find(g => 
           (targetGroupId && g.id === targetGroupId) || 
-          (g.name && l.group_name && g.name.toLowerCase().trim() === String(l.group_name).toLowerCase().trim()) ||
+          (g.name && lGroupName && g.name.toLowerCase().trim() === lowerGName) ||
           (targetGroupId === 'g_debtors' && (g.id === 'g_debtors' || g.name.toLowerCase().includes('debtor'))) ||
           (targetGroupId === 'g_creditors' && (g.id === 'g_creditors' || g.name.toLowerCase().includes('creditor'))) ||
           (targetGroupId === 'g_cash' && (g.id === 'g_cash' || g.name.toLowerCase().includes('cash'))) ||
-          (targetGroupId === 'g_bank' && (g.id === 'g_bank' || g.name.toLowerCase().includes('bank')))
+          (targetGroupId === 'g_bank' && (g.id === 'g_bank' || g.name.toLowerCase().includes('bank'))) ||
+          (lowerGName.includes('bank') && g.name.toLowerCase().includes('bank')) ||
+          (lowerGName.includes('cash') && g.name.toLowerCase().includes('cash'))
         );
 
         const resolvedGroupName = group?.name || (
-          targetGroupId === 'g_debtors' ? 'Sundry Debtors' :
-          targetGroupId === 'g_creditors' ? 'Sundry Creditors' :
-          targetGroupId === 'g_cash' ? 'Cash-in-Hand' :
-          targetGroupId === 'g_bank' ? 'Bank Accounts' :
-          targetGroupId === 'g_sales' ? 'Sales Accounts' :
-          targetGroupId === 'g_purchase' ? 'Purchase Accounts' :
+          targetGroupId === 'g_debtors' || lowerGName.includes('debtor') ? 'Sundry Debtors' :
+          targetGroupId === 'g_creditors' || lowerGName.includes('creditor') ? 'Sundry Creditors' :
+          targetGroupId === 'g_cash' || lowerGName.includes('cash') ? 'Cash-in-Hand' :
+          targetGroupId === 'g_bank' || lowerGName.includes('bank') || Boolean(l.bank_account_no) || Boolean(l.bank_name) ? 'Bank Accounts' :
+          targetGroupId === 'g_sales' || lowerGName.includes('sales') ? 'Sales Accounts' :
+          targetGroupId === 'g_purchase' || lowerGName.includes('purchase') ? 'Purchase Accounts' :
           targetGroupId === 'g_indirect_exp' ? 'Indirect Expenses' :
           targetGroupId === 'g_direct_exp' ? 'Direct Expenses' :
           targetGroupId === 'g_capital' ? 'Capital Account' :
-          (l.group_name && l.group_name !== 'General Accounts' ? l.group_name : 'General Accounts')
+          (lGroupName && lGroupName !== 'General Accounts' ? lGroupName : (
+            lName.includes('bank') || lName.startsWith('ibbl') ? 'Bank Accounts' :
+            lName.includes('cash') ? 'Cash-in-Hand' : 'General Accounts'
+          ))
+        );
+
+        const resolvedNature = group?.nature || (
+          ['Sundry Debtors', 'Bank Accounts', 'Cash-in-Hand', 'Current Assets', 'Fixed Assets'].includes(resolvedGroupName) ? 'Asset' :
+          ['Sundry Creditors', 'Current Liabilities', 'Capital Account'].includes(resolvedGroupName) ? 'Liability' :
+          ['Direct Expenses', 'Indirect Expenses', 'Purchase Accounts'].includes(resolvedGroupName) ? 'Expense' :
+          ['Direct Incomes', 'Indirect Incomes', 'Sales Accounts'].includes(resolvedGroupName) ? 'Income' : 'Asset'
         );
 
         return {
           ...l,
           group_id: l.group_id || targetGroupId || group?.id || '',
-          ledger_groups: group || l.ledger_groups || { id: targetGroupId || 'g_general', name: resolvedGroupName, nature: 'Asset' },
+          ledger_groups: group || { id: targetGroupId || group?.id || 'g_general', name: resolvedGroupName, nature: resolvedNature },
           group_name: resolvedGroupName
         };
       });
@@ -4036,6 +4062,7 @@ export const erpService: any = {
       if (isDuplicate) throw new Error(`Ledger "${ledger.name}" already exists.`);
 
       const ref = doc(collection(db, 'ledgers'));
+      const groupName = ledger.group_name || 'General Accounts';
       const data = cleanData({
         ...ledger,
         id: ref.id,
@@ -4043,8 +4070,18 @@ export const erpService: any = {
         current_balance: ledger.opening_balance || 0
       });
       await setDoc(ref, data);
-      this._updateCachedCollection('ledgers', companyId, data, 'add');
-      return data;
+
+      const enrichedData = {
+        ...data,
+        group_name: groupName,
+        ledger_groups: ledger.ledger_groups || {
+          id: ledger.group_id || ledger.parent_group_id || 'g_general',
+          name: groupName,
+          nature: ledger.nature || 'Asset'
+        }
+      };
+      this._updateCachedCollection('ledgers', companyId, enrichedData, 'add');
+      return enrichedData;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'ledgers');
     }
@@ -4079,7 +4116,18 @@ export const erpService: any = {
       const cleaned = cleanData(ledger);
       await updateDoc(ref, cleaned);
 
-      const mergedLedger = { ...existingData, ...cleaned, id };
+      const groupName = cleaned.group_name || existingData.group_name || 'General Accounts';
+      const mergedLedger = { 
+        ...existingData, 
+        ...cleaned, 
+        id,
+        group_name: groupName,
+        ledger_groups: cleaned.ledger_groups || existingData.ledger_groups || {
+          id: cleaned.group_id || existingData.group_id || 'g_general',
+          name: groupName,
+          nature: cleaned.nature || existingData.nature || 'Asset'
+        }
+      };
 
       // Invalidate and refresh single ledger cache immediately!
       this._singleLedgerCache[id] = { data: mergedLedger, timestamp: Date.now() };

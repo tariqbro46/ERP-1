@@ -337,6 +337,161 @@ async function startServer() {
   });
 
   // API: Push Changes to GitHub
+  // Helper function to update package.json, releaseNotes.ts and create Git commit & tag
+  const applyReleaseUpdate = ({
+    version = "v1.9.9",
+    title = "",
+    bnTitle = "",
+    summary = "",
+    bnSummary = "",
+    newFeatures = [],
+    improvements = [],
+    bugFixes = [],
+    commitMessage = ""
+  }: any) => {
+    const logs: string[] = [];
+    const normalizedTag = version.startsWith("v") ? version : `v${version}`;
+    const semVer = normalizedTag.replace(/^v/, "");
+
+    // 1. Synchronize package.json version
+    logs.push(`Synchronizing package.json version to ${semVer}...`);
+    const pkgPath = path.resolve(process.cwd(), "package.json");
+    if (fs.existsSync(pkgPath)) {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+      pkg.version = semVer;
+      fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+    }
+
+    // 2. Synchronize release notes in src/data/releaseNotes.ts
+    logs.push(`Synchronizing Release Notes for ${normalizedTag}...`);
+    const rnPath = path.resolve(process.cwd(), "src/data/releaseNotes.ts");
+    if (fs.existsSync(rnPath)) {
+      let rnContent = fs.readFileSync(rnPath, "utf8");
+      
+      // Update LATEST_VERSION
+      rnContent = rnContent.replace(
+        /export const LATEST_VERSION = ["'][^"']+["'];/,
+        `export const LATEST_VERSION = "${normalizedTag}";`
+      );
+
+      // Set previous entries isLatest to false
+      rnContent = rnContent.replace(/isLatest:\s*true/g, "isLatest: false");
+
+      const today = new Date();
+      const enDate = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      const bnMonths = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
+      const bnNumbers = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
+      const toBnNum = (n: number | string) => String(n).split('').map(c => bnNumbers[Number(c)] ?? c).join('');
+      const bnDate = `${toBnNum(today.getDate())} ${bnMonths[today.getMonth()]}, ${toBnNum(today.getFullYear())}`;
+
+      const formattedFeatures = (Array.isArray(newFeatures) && newFeatures.length > 0 ? newFeatures : [
+        {
+          id: `feat-${normalizedTag.replace(/\./g, '-')}-core`,
+          title: title || `Version ${normalizedTag} Rollout`,
+          bnTitle: bnTitle || `সংস্করণ ${normalizedTag} আপডেট`,
+          description: summary || `Application upgraded to version ${normalizedTag} with new features.`,
+          bnDescription: bnSummary || `সিস্টেমের নতুন সংস্করণ ${normalizedTag} কার্যকর করা হয়েছে।`,
+          module: "Core & Version Control",
+          badge: "NEW"
+        }
+      ]).map((f: any, idx: number) => ({
+        id: f.id || `feat-${normalizedTag.replace(/\./g, '-')}-${idx + 1}`,
+        title: f.title || "Feature Update",
+        bnTitle: f.bnTitle || f.title || "ফিচার আপডেট",
+        description: f.description || "",
+        bnDescription: f.bnDescription || f.description || "",
+        module: f.module || "Core",
+        badge: f.badge || "NEW"
+      }));
+
+      const formattedImprovements = (Array.isArray(improvements) ? improvements : []).map((imp: any, idx: number) => ({
+        id: imp.id || `imp-${normalizedTag.replace(/\./g, '-')}-${idx + 1}`,
+        title: imp.title || "System Improvement",
+        bnTitle: imp.bnTitle || imp.title || "সিস্টেম উন্নয়ন",
+        description: imp.description || "",
+        bnDescription: imp.bnDescription || imp.description || "",
+        module: imp.module || "Performance",
+        badge: imp.badge || "IMPROVEMENT"
+      }));
+
+      const formattedBugFixes = (Array.isArray(bugFixes) ? bugFixes : []).map((fix: any, idx: number) => ({
+        id: fix.id || `fix-${normalizedTag.replace(/\./g, '-')}-${idx + 1}`,
+        title: fix.title || "Bug Fix",
+        bnTitle: fix.bnTitle || fix.title || "বাগ সমাধান",
+        description: fix.description || "",
+        bnDescription: fix.bnDescription || fix.description || "",
+        module: fix.module || "Bug Fix",
+        badge: fix.badge || "FIX"
+      }));
+
+      const newReleaseObj = {
+        version: normalizedTag,
+        releaseDate: enDate,
+        bnReleaseDate: bnDate,
+        title: title || `Version ${normalizedTag} Release`,
+        bnTitle: bnTitle || `সংস্করণ ${normalizedTag} রিলিজ`,
+        summary: summary || `Application upgraded to version ${normalizedTag} with system improvements.`,
+        bnSummary: bnSummary || `সিস্টেমের সার্বিক পারফরম্যান্স ও ফিচার উন্নয়নসহ সংস্করণ ${normalizedTag} কার্যকর করা হয়েছে।`,
+        isLatest: true,
+        newFeatures: formattedFeatures,
+        improvements: formattedImprovements,
+        bugFixes: formattedBugFixes
+      };
+
+      const serializedEntry = "  " + JSON.stringify(newReleaseObj, null, 2).replace(/\n/g, "\n  ") + ",\n";
+
+      // If version entry already exists in release notes, replace it; otherwise prepend
+      const versionRegex = new RegExp(`\\{\\s*version:\\s*["']${normalizedTag}["'][\\s\\S]*?\\n\\s*\\},?`, 'm');
+      if (versionRegex.test(rnContent)) {
+        rnContent = rnContent.replace(versionRegex, serializedEntry.trimEnd());
+      } else {
+        rnContent = rnContent.replace(
+          /(export const RELEASE_NOTES: ReleaseVersion\[\] = \[\n)/,
+          `$1${serializedEntry}`
+        );
+      }
+
+      fs.writeFileSync(rnPath, rnContent, "utf8");
+    }
+
+    // 3. Git Stage & Commit locally
+    logs.push(`Staging local changes and creating release commit for ${normalizedTag}...`);
+    runGitCmd("git add -A");
+    const finalCommitMsg = `Release ${normalizedTag}: ${commitMessage.trim() || title.trim() || 'System updates and release notes'}`;
+    const commitRes = runGitCmd(`git commit -m "${finalCommitMsg}" --allow-empty`);
+    runGitCmd(`git tag -fa "${normalizedTag}" -m "Release ${normalizedTag}"`);
+
+    const hashRes = runGitCmd('git log -1 --format="%h"');
+
+    return {
+      success: true,
+      normalizedTag,
+      semVer,
+      commitHash: hashRes.output || "HEAD",
+      logs
+    };
+  };
+
+  // API: Save and Publish Release Notes & Version Locally
+  app.post("/api/github/release", (req, res) => {
+    try {
+      const result = applyReleaseUpdate(req.body);
+      res.json({
+        success: true,
+        version: result.normalizedTag,
+        commitHash: result.commitHash,
+        message: `Version ${result.normalizedTag} & Release Notes successfully saved and committed! Click "Push changes to GitHub" in AI Studio to push to remote and deploy to Vercel.`,
+        logs: result.logs.join("\n")
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        success: false,
+        error: err.message
+      });
+    }
+  });
+
+  // API: Push Changes to GitHub
   app.post("/api/github/push", (req, res) => {
     const { 
       version = "v1.9.9", 
@@ -345,15 +500,19 @@ async function startServer() {
       remoteUrl = "",
       autoTag = true,
       releaseNoteTitle = "",
-      releaseNoteSummary = ""
+      releaseNoteSummary = "",
+      bnTitle = "",
+      bnSummary = "",
+      newFeatures = [],
+      improvements = [],
+      bugFixes = []
     } = req.body;
 
     const logs: string[] = [];
     const normalizedTag = version.startsWith("v") ? version : `v${version}`;
-    const semVer = normalizedTag.replace(/^v/, "");
 
     try {
-      logs.push(`[1/6] Initializing Git & Environment for ${normalizedTag}...`);
+      logs.push(`[1/5] Initializing Git & Environment for ${normalizedTag}...`);
       const isGitRepo = fs.existsSync(path.resolve(process.cwd(), ".git"));
       if (!isGitRepo) {
         const initRes = runGitCmd("git init");
@@ -371,82 +530,23 @@ async function startServer() {
         logs.push(`Configured remote origin: ${cleanRemote} (${addRemoteRes.success ? "OK" : addRemoteRes.output})`);
       }
 
-      // 2. Synchronize package.json version
-      logs.push(`[2/6] Synchronizing package.json version to ${semVer}...`);
-      const pkgPath = path.resolve(process.cwd(), "package.json");
-      if (fs.existsSync(pkgPath)) {
-        const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-        pkg.version = semVer;
-        fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
-      }
+      // 2. Synchronize release notes, package.json, and commit
+      logs.push(`[2/5] Applying version bump and Release Notes synchronization...`);
+      const updateResult = applyReleaseUpdate({
+        version: normalizedTag,
+        title: releaseNoteTitle,
+        bnTitle,
+        summary: releaseNoteSummary,
+        bnSummary,
+        newFeatures,
+        improvements,
+        bugFixes,
+        commitMessage
+      });
+      logs.push(...updateResult.logs);
 
-      // 3. Check and synchronize release notes in src/data/releaseNotes.ts
-      logs.push(`[3/6] Validating Release Notes for ${normalizedTag}...`);
-      const rnPath = path.resolve(process.cwd(), "src/data/releaseNotes.ts");
-      if (fs.existsSync(rnPath)) {
-        let rnContent = fs.readFileSync(rnPath, "utf8");
-        // Ensure LATEST_VERSION is set to normalizedTag
-        rnContent = rnContent.replace(
-          /export const LATEST_VERSION = ["'][^"']+["'];/,
-          `export const LATEST_VERSION = "${normalizedTag}";`
-        );
-
-        // If version entry does not exist in release notes, prepend it
-        if (!rnContent.includes(`version: "${normalizedTag}"`)) {
-          const today = new Date();
-          const enDate = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-          const newEntry = `  {
-    version: "${normalizedTag}",
-    releaseDate: "${enDate}",
-    bnReleaseDate: "${enDate}",
-    title: "${releaseNoteTitle || `Version ${normalizedTag} Release`}",
-    bnTitle: "${releaseNoteTitle || `সংস্করণ ${normalizedTag} রিলিজ`}",
-    summary: "${releaseNoteSummary || `Application upgraded to version ${normalizedTag} with system improvements.`}",
-    bnSummary: "${releaseNoteSummary || `সিস্টেমের সার্বিক পারফরম্যান্স ও ফিচার উন্নয়নসহ সংস্করণ ${normalizedTag} কার্যকর করা হয়েছে।`}",
-    isLatest: true,
-    newFeatures: [
-      {
-        id: "feat-${normalizedTag.replace(/\\./g, '-')}-release",
-        title: "Version ${normalizedTag} Feature Rollout",
-        bnTitle: "সংস্করণ ${normalizedTag} ফিচার আপডেট",
-        description: "${releaseNoteSummary || `Version ${normalizedTag} successfully deployed with enhanced features.`}",
-        bnDescription: "নতুন সংস্করণের ফিচার ও ডেটাবেজ অপ্টিমাইজেশন সম্পন্ন হয়েছে।",
-        module: "Core & Version Control",
-        badge: "NEW"
-      }
-    ],
-    improvements: [],
-    bugFixes: []
-  },\n`;
-          // Prepend right after export const RELEASE_NOTES: ReleaseVersion[] = [\n
-          rnContent = rnContent.replace(
-            /(export const RELEASE_NOTES: ReleaseVersion\[\] = \[\n)/,
-            `$1${newEntry}`
-          );
-        }
-        fs.writeFileSync(rnPath, rnContent, "utf8");
-      }
-
-      // 4. Git Stage
-      logs.push(`[4/6] Staging all project changes (git add -A)...`);
-      const addRes = runGitCmd("git add -A");
-      if (!addRes.success) {
-        logs.push(`Warning on git add: ${addRes.output}`);
-      }
-
-      // 5. Commit & Tag
-      logs.push(`[5/6] Creating release commit for ${normalizedTag}...`);
-      const finalCommitMsg = `Release ${normalizedTag}: ${commitMessage.trim() || 'System updates and release notes'}`;
-      const commitRes = runGitCmd(`git commit -m "${finalCommitMsg}" --allow-empty`);
-      logs.push(`Commit result: ${commitRes.output}`);
-
-      if (autoTag) {
-        const tagRes = runGitCmd(`git tag -fa "${normalizedTag}" -m "Release ${normalizedTag}"`);
-        logs.push(`Tagging ${normalizedTag}: ${tagRes.success ? "Success" : tagRes.output}`);
-      }
-
-      // 6. Push to remote
-      logs.push(`[6/6] Pushing to GitHub (${branch})...`);
+      // 3. Push to remote
+      logs.push(`[3/5] Pushing to GitHub (${branch})...`);
       const remoteCheck = runGitCmd("git config --get remote.origin.url");
       let pushSuccess = false;
       let pushMessage = "";
@@ -461,7 +561,7 @@ async function startServer() {
           pushMessage = `Local commit & release notes created for ${normalizedTag}. Push notice: ${pushRes.output}`;
         }
       } else {
-        pushMessage = `Version ${normalizedTag} and Release Notes committed locally. Set GitHub Remote URL to push to remote repository.`;
+        pushMessage = `Version ${normalizedTag} and Release Notes committed locally. Set GitHub Remote URL or use AI Studio's "Push changes to GitHub" button to push to GitHub and trigger Vercel deployment.`;
         logs.push("No remote origin configured. Changes and release notes are committed and tagged locally.");
       }
 
