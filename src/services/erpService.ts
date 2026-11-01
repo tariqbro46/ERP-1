@@ -2622,15 +2622,99 @@ export const erpService: any = {
     try {
       const allGroups = await this.getLedgerGroups(companyId);
       const selectedGroup = allGroups.find(g => g.id === groupId || (g.name && g.name.toLowerCase().trim() === groupId.toLowerCase().trim()));
-      const selectedName = selectedGroup?.name?.toLowerCase().trim();
+      const selectedName = selectedGroup?.name?.toLowerCase().trim() || groupId.toLowerCase().trim();
+
+      // Collect all matching group IDs and group names (including aliases & child groups)
+      const matchingGroupIds = new Set<string>();
+      const matchingGroupNames = new Set<string>();
+
+      if (groupId) matchingGroupIds.add(groupId);
+      if (selectedGroup?.id) matchingGroupIds.add(selectedGroup.id);
+      if (selectedName) matchingGroupNames.add(selectedName);
+
+      allGroups.forEach(g => {
+        if (g.name && g.name.toLowerCase().trim() === selectedName) {
+          matchingGroupIds.add(g.id);
+          matchingGroupNames.add(g.name.toLowerCase().trim());
+        }
+      });
+
+      const isCreditorQuery = selectedName.includes('creditor') || groupId === 'g_creditors' || selectedGroup?.id === 'g_creditors';
+      const isDebtorQuery = selectedName.includes('debtor') || groupId === 'g_debtors' || selectedGroup?.id === 'g_debtors';
+
+      if (isCreditorQuery) {
+        matchingGroupIds.add('g_creditors');
+        matchingGroupNames.add('sundry creditors');
+        matchingGroupNames.add('sundry creditor');
+        matchingGroupNames.add('creditors');
+        matchingGroupNames.add('creditor');
+        matchingGroupNames.add('suppliers');
+        matchingGroupNames.add('vendors');
+        matchingGroupNames.add('সরবরাহকারী');
+        matchingGroupNames.add('পাওনাদার');
+        allGroups.forEach(g => {
+          const gn = (g.name || '').toLowerCase().trim();
+          if (gn.includes('creditor') || gn.includes('supplier') || gn.includes('vendor') || gn.includes('পাওনাদার') || gn.includes('সরবরাহকারী')) {
+            matchingGroupIds.add(g.id);
+            matchingGroupNames.add(gn);
+          }
+        });
+      }
+
+      if (isDebtorQuery) {
+        matchingGroupIds.add('g_debtors');
+        matchingGroupNames.add('sundry debtors');
+        matchingGroupNames.add('sundry debtor');
+        matchingGroupNames.add('debtors');
+        matchingGroupNames.add('debtor');
+        matchingGroupNames.add('customers');
+        matchingGroupNames.add('দেনাদার');
+        allGroups.forEach(g => {
+          const gn = (g.name || '').toLowerCase().trim();
+          if (gn.includes('debtor') || gn.includes('customer') || gn.includes('client') || gn.includes('দেনাদার')) {
+            matchingGroupIds.add(g.id);
+            matchingGroupNames.add(gn);
+          }
+        });
+      }
+
+      // Recursively include all child/sub-groups whose parent matches
+      let addedMore = true;
+      while (addedMore) {
+        addedMore = false;
+        allGroups.forEach(g => {
+          if (!matchingGroupIds.has(g.id)) {
+            const pid = g.parent_id || g.parent_group_id || (g as any).parentId;
+            const pname = (g.parent_name || (g as any).parent || '').toLowerCase().trim();
+            if ((pid && matchingGroupIds.has(pid)) || (pname && matchingGroupNames.has(pname))) {
+              matchingGroupIds.add(g.id);
+              if (g.name) matchingGroupNames.add(g.name.toLowerCase().trim());
+              addedMore = true;
+            }
+          }
+        });
+      }
 
       const allLedgers = await this.getLedgers(companyId);
       const groupLedgers = allLedgers.filter(l => {
-        if (l.group_id === groupId || (l as any).parent_group_id === groupId) return true;
-        if (selectedName) {
-          const lGroupName = (l.group_name || l.ledger_groups?.name || '').toLowerCase().trim();
-          if (lGroupName === selectedName) return true;
+        const lGId = l.group_id || (l as any).parent_group_id || (l as any).groupId;
+        if (lGId && matchingGroupIds.has(lGId)) return true;
+
+        const lGName = (l.group_name || l.ledger_groups?.name || '').toLowerCase().trim();
+        if (lGName && matchingGroupNames.has(lGName)) return true;
+
+        if (isCreditorQuery) {
+          if (lGId === 'g_creditors') return true;
+          if (lGName.includes('creditor') || lGName.includes('supplier') || lGName.includes('vendor') || lGName.includes('পাওনাদার') || lGName.includes('সরবরাহকারী')) return true;
+          if ((l as any).party_type === 'supplier' || (l as any).is_supplier) return true;
         }
+
+        if (isDebtorQuery) {
+          if (lGId === 'g_debtors') return true;
+          if (lGName.includes('debtor') || lGName.includes('customer') || lGName.includes('দেনাদার')) return true;
+          if ((l as any).party_type === 'customer' || (l as any).is_customer) return true;
+        }
+
         return false;
       });
       
@@ -2640,19 +2724,22 @@ export const erpService: any = {
       
       // Fetch all entries for these ledgers up to 'to' date
       const entries: any[] = [];
-      
-      // Process in chunks of 30 because of Firestore 'in' query limit
-      for (let i = 0; i < ledgerIds.length; i += 30) {
-        const chunk = ledgerIds.slice(i, i + 30);
-        const q = query(
-          collection(db, 'voucher_entries'),
-          where('companyId', '==', companyId),
-          where('ledger_id', 'in', chunk),
-          where('date', '<=', to)
-        );
-        const snap = await getDocs(q);
-        this.trackQuota(companyId, snap.size || 1, 0);
-        entries.push(...snap.docs.map(d => d.data()));
+      try {
+        // Process in chunks of 30 because of Firestore 'in' query limit
+        for (let i = 0; i < ledgerIds.length; i += 30) {
+          const chunk = ledgerIds.slice(i, i + 30);
+          const q = query(
+            collection(db, 'voucher_entries'),
+            where('companyId', '==', companyId),
+            where('ledger_id', 'in', chunk),
+            where('date', '<=', to)
+          );
+          const snap = await getDocs(q);
+          this.trackQuota(companyId, snap.size || 1, 0);
+          entries.push(...snap.docs.map(d => d.data()));
+        }
+      } catch (entryErr) {
+        console.warn('Could not query voucher_entries for group summary, will use ledger balance:', entryErr);
       }
       
       const result = groupLedgers.map(l => {
@@ -2660,13 +2747,22 @@ export const erpService: any = {
         const openingEntries = ledgerEntries.filter(e => e.date < from);
         const periodEntries = ledgerEntries.filter(e => e.date >= from && e.date <= to);
         
-        const openingBalance = (l.opening_balance || 0) + 
-          openingEntries.reduce((sum, e) => sum + (e.debit || 0) - (e.credit || 0), 0);
-        
-        const debit = periodEntries.reduce((sum, e) => sum + (e.debit || 0), 0);
-        const credit = periodEntries.reduce((sum, e) => sum + (e.credit || 0), 0);
-        
-        const closingBalance = openingBalance + debit - credit;
+        let openingBalance = l.opening_balance || 0;
+        let debit = 0;
+        let credit = 0;
+        let closingBalance = l.current_balance ?? l.opening_balance ?? 0;
+
+        if (ledgerEntries.length > 0) {
+          openingBalance = (l.opening_balance || 0) + 
+            openingEntries.reduce((sum, e) => sum + (e.debit || 0) - (e.credit || 0), 0);
+          
+          debit = periodEntries.reduce((sum, e) => sum + (e.debit || 0), 0);
+          credit = periodEntries.reduce((sum, e) => sum + (e.credit || 0), 0);
+          
+          closingBalance = openingBalance + debit - credit;
+        } else if (entries.length === 0 && l.current_balance !== undefined) {
+          closingBalance = l.current_balance;
+        }
         
         return {
           ...l,
@@ -5564,7 +5660,7 @@ export const erpService: any = {
     await updateDoc(userRef, { role });
   },
 
-  async adminAddUser(data: { email: string; password: string; displayName: string; role: string; companyId: string; target_amount?: number }) {
+  async adminAddUser(data: { email: string; password: string; displayName: string; role: string; companyId: string; target_amount?: number; quotaLimit?: number }) {
     if (!data.password || data.password.length < 6) {
       throw new Error('Password must be at least 6 characters long');
     }
@@ -5581,6 +5677,8 @@ export const erpService: any = {
         role: data.role,
         companyId: data.companyId,
         target_amount: data.target_amount || 0,
+        quotaLimit: data.quotaLimit !== undefined ? Number(data.quotaLimit) : 10000,
+        quotaUsed: 0,
         createdAt: serverTimestamp(),
       }));
 
@@ -7672,7 +7770,11 @@ export const erpService: any = {
       const companyCached = localStorage.getItem('cached_auth_company');
       if (companyCached) {
         const comp = JSON.parse(companyCached);
-        const limitVal = Math.max(50000, comp.quotaLimit || 50000);
+        const limitVal = comp.quotaLimit !== undefined ? Number(comp.quotaLimit) : 10000;
+        if (limitVal === -1) {
+          localStorage.removeItem('company_quota_exceeded');
+          return false;
+        }
         if (comp && comp.quotaUsed !== undefined) {
           if (comp.quotaUsed < limitVal) {
             localStorage.removeItem('company_quota_exceeded');
@@ -7814,6 +7916,11 @@ export const erpService: any = {
   },
 
   getMostRecent130PM(now: Date): Date {
+    return this.getMostRecent100PM(now);
+  },
+
+  getMostRecent100PM(now: Date): Date {
+    // 01:00 PM BST (Asia/Dhaka) is exactly 07:00 AM UTC (synchronized with Firestore midnight PDT quota reset)
     const tz = "Asia/Dhaka";
     try {
       const formatter = new Intl.DateTimeFormat("en-US", {
@@ -7825,20 +7932,20 @@ export const erpService: any = {
       const parts = formatter.formatToParts(now);
       const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
 
-      const today130PM = new Date(
+      const today100PM = new Date(
         Date.UTC(
           parseInt(map.year),
           parseInt(map.month) - 1,
           parseInt(map.day),
           7,
-          30,
+          0,
           0,
           0
         )
       );
 
-      if (now.getTime() >= today130PM.getTime()) {
-        return today130PM;
+      if (now.getTime() >= today100PM.getTime()) {
+        return today100PM;
       } else {
         const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         const yParts = formatter.formatToParts(yesterday);
@@ -7849,7 +7956,7 @@ export const erpService: any = {
             parseInt(yMap.month) - 1,
             parseInt(yMap.day),
             7,
-            30,
+            0,
             0,
             0
           )
@@ -7857,7 +7964,7 @@ export const erpService: any = {
       }
     } catch (e) {
       const fallback = new Date(now);
-      fallback.setUTCHours(7, 30, 0, 0);
+      fallback.setUTCHours(7, 0, 0, 0);
       if (now.getTime() >= fallback.getTime()) {
         return fallback;
       } else {
@@ -7881,6 +7988,47 @@ export const erpService: any = {
       console.log(`[QUOTA] Successfully reset daily quota in Firestore for company ${companyId}.`);
     } catch (err) {
       console.warn("[QUOTA] Error in resetCompanyQuota:", err);
+    }
+  },
+
+  async updateCompanyQuotaLimit(companyId: string, quotaLimit: number) {
+    if (!companyId || companyId === "placeholder" || companyId === "test") return;
+    try {
+      const companyRef = doc(db, "companies", companyId);
+      await updateDoc(companyRef, {
+        quotaLimit: Number(quotaLimit)
+      });
+      try {
+        const cached = localStorage.getItem('cached_auth_company');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.id === companyId || parsed.companyId === companyId) {
+            parsed.quotaLimit = Number(quotaLimit);
+            localStorage.setItem('cached_auth_company', JSON.stringify(parsed));
+            if (quotaLimit === -1 || (parsed.quotaUsed || 0) < quotaLimit) {
+              localStorage.removeItem('company_quota_exceeded');
+            }
+          }
+        }
+      } catch (e) {}
+      console.log(`[QUOTA] Successfully updated quota limit for company ${companyId} to ${quotaLimit}`);
+    } catch (err) {
+      console.error("[QUOTA] Error updating company quota limit:", err);
+      throw err;
+    }
+  },
+
+  async updateUserQuotaLimit(userId: string, quotaLimit: number) {
+    if (!userId) return;
+    try {
+      const userRef = doc(db, "users", userId);
+      await updateDoc(userRef, {
+        quotaLimit: Number(quotaLimit)
+      });
+      console.log(`[QUOTA] Successfully updated user ${userId} quota limit to ${quotaLimit}`);
+    } catch (err) {
+      console.error("[QUOTA] Error updating user quota limit:", err);
+      throw err;
     }
   },
 
@@ -7980,28 +8128,30 @@ export const erpService: any = {
         const companyRef = doc(db, "companies", companyId);
         
         // Optimize: use cached company metadata instead of executing a getDoc read every flush cycle
-        let limitVal = 50000;
+        let limitVal = 10000;
+        let isUnlimited = false;
         let currentUsed = 0;
         try {
           const cachedComp = localStorage.getItem('cached_auth_company');
           if (cachedComp) {
             const parsed = JSON.parse(cachedComp);
             if (parsed.id === companyId || parsed.companyId === companyId) {
-              limitVal = Math.max(50000, parsed.quotaLimit || 50000);
+              limitVal = parsed.quotaLimit !== undefined ? Number(parsed.quotaLimit) : 10000;
+              isUnlimited = limitVal === -1;
               currentUsed = parsed.quotaUsed || 0;
             }
           }
         } catch (e) {}
 
         // If company has already reached 100%, do not increment beyond the limit
-        if (currentUsed >= limitVal) {
+        if (!isUnlimited && currentUsed >= limitVal) {
           const storedKey = `unsaved_quota_${companyId}`;
           localStorage.removeItem(storedKey);
           continue;
         }
 
         const addedOps = readsToSave + writesToSave + deletesToSave;
-        const newUsed = Math.min(limitVal, currentUsed + addedOps);
+        const newUsed = isUnlimited ? currentUsed + addedOps : Math.min(limitVal, currentUsed + addedOps);
 
         await updateDoc(companyRef, {
           quotaReads: increment(readsToSave),

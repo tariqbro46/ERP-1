@@ -1194,19 +1194,44 @@ export default function FounderPanel() {
       const companyRef = doc(db, 'companies', companyId);
       const mostRecentResetTime = erpService.getMostRecent130PM(new Date()).getTime();
       const isQuotaReset = updates.quotaUsed === 0;
+      const parsedQuotaLimit = updates.quotaLimit !== undefined && updates.quotaLimit !== '' 
+        ? Number(updates.quotaLimit) 
+        : 10000;
+      const parsedQuotaUsed = updates.quotaUsed !== undefined && updates.quotaUsed !== ''
+        ? Number(updates.quotaUsed)
+        : 0;
+
       const finalUpdates = {
         ...updates,
+        quotaLimit: parsedQuotaLimit,
+        quotaUsed: parsedQuotaUsed,
+        forceRefreshAt: Date.now(), // Broadcast remote force refresh so all user tabs recalculate immediately
         ...(isQuotaReset ? {
           quotaReads: 0,
           quotaWrites: 0,
           quotaDeletes: 0,
-          forceRefreshAt: Date.now()
         } : {}),
         quotaLastReset: mostRecentResetTime,
         quotaLastResetDateStr: new Date(mostRecentResetTime).toISOString()
       };
       await updateDoc(companyRef, finalUpdates);
       
+      // Keep local storage cache in sync if this is the active company
+      try {
+        const cached = localStorage.getItem('cached_auth_company');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.id === companyId || parsed.companyId === companyId) {
+            parsed.quotaLimit = parsedQuotaLimit;
+            parsed.quotaUsed = parsedQuotaUsed;
+            if (parsedQuotaLimit === -1 || parsedQuotaUsed < parsedQuotaLimit) {
+              localStorage.removeItem('company_quota_exceeded');
+            }
+            localStorage.setItem('cached_auth_company', JSON.stringify(parsed));
+          }
+        }
+      } catch (e) {}
+
       const updatedCompanies = companies.map(c => 
         c.id === companyId ? { ...c, ...finalUpdates } : c
       );
@@ -1217,8 +1242,10 @@ export default function FounderPanel() {
       }
       
       setIsEditingSubscription(false);
+      showNotification('Company subscription & quota limit updated successfully! / কোম্পানির কোটা লিমিট সফলভাবে হালনাগাদ করা হয়েছে!', 'success');
     } catch (error) {
       console.error('Error updating subscription:', error);
+      showNotification('Failed to update subscription. Please check network connection.', 'error');
     }
   };
 
@@ -7897,19 +7924,51 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                         </div>
 
                         <div className="space-y-3 border-t border-border pt-4">
-                          <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Firebase/Firestore Quota (Operations Limit)</label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                              Firebase/Firestore Daily Quota (Operations Limit)
+                            </label>
+                            <span className="text-[10px] font-mono text-primary font-bold">
+                              {Number(editDraft.quotaLimit) === -1 ? '∞ Unlimited' : String(Number(editDraft.quotaLimit) || 10000) + ' Ops'}
+                            </span>
+                          </div>
+
+                          {/* Quick Preset Buttons */}
+                          <div className="space-y-1">
+                            <label className="text-[9px] uppercase font-bold text-muted-foreground">Quick Presets (সহজ প্রিসেট বাটন)</label>
+                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                              {[5000, 10000, 20000, 25000, 50000, -1].map((val) => (
+                                <button
+                                  key={val}
+                                  type="button"
+                                  onClick={() => setEditDraft(prev => prev ? { ...prev, quotaLimit: val } : null)}
+                                  className={cn(
+                                    "py-1.5 px-2 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider border transition-all text-center cursor-pointer",
+                                    Number(editDraft.quotaLimit) === val
+                                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                      : "bg-background border-border text-muted-foreground hover:border-foreground"
+                                  )}
+                                >
+                                  {val === -1 ? '∞ Unltd' : String(val / 1000) + 'k Ops'}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                              <label className="text-[9px] uppercase font-bold text-muted-foreground">Firestore Quota Limit (Ops)</label>
+                              <label className="text-[9px] uppercase font-bold text-muted-foreground">
+                                Firestore Quota Limit (কাস্টম লিমিট লিখুন, -1 = আনলিমিটেড)
+                              </label>
                               <input
                                 type="number"
-                                value={editDraft.quotaLimit ?? 10000}
-                                placeholder="10000"
+                                value={editDraft.quotaLimit ?? ''}
+                                placeholder="e.g. 10000 or -1"
                                 onChange={(e) => {
-                                  const val = e.target.value === '' ? 10000 : Number(e.target.value);
-                                  setEditDraft(prev => prev ? { ...prev, quotaLimit: val } : null);
+                                  const val = e.target.value === '' ? '' : Number(e.target.value);
+                                  setEditDraft(prev => prev ? { ...prev, quotaLimit: val as any } : null);
                                 }}
-                                className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary"
+                                className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary font-mono"
                               />
                             </div>
                             <div className="space-y-1">
@@ -7923,16 +7982,22 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                                     const val = e.target.value === '' ? 0 : Number(e.target.value);
                                     setEditDraft(prev => prev ? { ...prev, quotaUsed: val } : null);
                                   }}
-                                  className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary flex-1"
+                                  className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary flex-1 font-mono"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => setEditDraft(prev => prev ? { ...prev, quotaUsed: 0 } : null)}
-                                  className="px-3 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors"
+                                  className="px-3 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                  title="Reset quota usage to 0 Ops"
                                 >
                                   Reset
                                 </button>
                               </div>
+                            </div>
+                            <div className="sm:col-span-2">
+                              <p className="text-[9px] text-muted-foreground font-mono">
+                                💡 আপনি এখানে যে ভ্যালুই দেবেন (যেমন: ৫,০০০, ১০,০০০, ২৫,০০০ বা -১), ঠিক সেই মান পুরো সিস্টেমে কোম্পানির জন্য গণনা করা হবে।
+                              </p>
                             </div>
                             <div className="space-y-1 sm:col-span-2">
                               <label className="text-[9px] uppercase font-bold text-muted-foreground">Sidebar Quota Display Rule</label>
@@ -8011,12 +8076,13 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                             <div className="flex items-center justify-between text-xs font-mono bg-muted/40 p-2.5 rounded-lg border border-border">
                               <span className="text-muted-foreground">Usage Stat:</span>
                               {(() => {
-                                const qLim = selectedCompany.quotaLimit || 10000;
-                                const qUsed = Math.min(qLim, selectedCompany.quotaUsed || 0);
-                                const qPct = Math.min(100, Math.round((qUsed / qLim) * 100));
+                                const qLim = selectedCompany.quotaLimit !== undefined ? selectedCompany.quotaLimit : 10000;
+                                const isUnlimited = qLim === -1;
+                                const qUsed = isUnlimited ? (selectedCompany.quotaUsed || 0) : Math.min(qLim, selectedCompany.quotaUsed || 0);
+                                const qPct = isUnlimited ? 0 : Math.min(100, Math.round((qUsed / qLim) * 100));
                                 return (
-                                  <span className={selectedCompany && selectedCompany.quotaLimit && selectedCompany.quotaUsed !== undefined && selectedCompany.quotaUsed >= selectedCompany.quotaLimit ? "text-rose-500 font-bold animate-pulse" : "text-emerald-500 font-bold"}>
-                                    {qUsed.toLocaleString()} / {qLim.toLocaleString()} ops ({qPct}%)
+                                  <span className={!isUnlimited && selectedCompany && selectedCompany.quotaLimit && selectedCompany.quotaUsed !== undefined && selectedCompany.quotaUsed >= selectedCompany.quotaLimit ? "text-rose-500 font-bold animate-pulse" : "text-emerald-500 font-bold"}>
+                                    {isUnlimited ? `${qUsed.toLocaleString()} / ∞ (Unlimited)` : `${qUsed.toLocaleString()} / ${qLim.toLocaleString()} ops (${qPct}%)`}
                                   </span>
                                 );
                               })()}

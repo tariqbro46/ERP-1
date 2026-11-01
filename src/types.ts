@@ -107,6 +107,8 @@ export interface UserProfile {
   companyId: string;
   target_amount?: number;
   permissions?: string[]; // List of feature labels or route paths
+  quotaLimit?: number;
+  quotaUsed?: number;
 }
 
 export interface VoucherEntry {

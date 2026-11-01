@@ -43,7 +43,8 @@ export const UserManagement: React.FC = () => {
     password: '',
     displayName: '',
     role: 'Staff' as UserRole,
-    target_amount: 0
+    target_amount: 0,
+    quotaLimit: 10000
   });
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -111,7 +112,7 @@ export const UserManagement: React.FC = () => {
         companyId: user!.companyId
       });
       setShowAddModal(false);
-      setNewUser({ email: '', password: '', displayName: '', role: 'Staff', target_amount: 0 });
+      setNewUser({ email: '', password: '', displayName: '', role: 'Staff', target_amount: 0, quotaLimit: 10000 });
       fetchProfiles();
     } catch (err: any) {
       setAddError(err.message || 'Failed to add user');
@@ -309,6 +310,10 @@ export const UserManagement: React.FC = () => {
                       uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
                     )}>Sales Target</th>
                     <th className={cn(
+                      "px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-center",
+                      uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
+                    )}>Daily Quota</th>
+                    <th className={cn(
                       "px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-right",
                       uiStyle === 'UI/UX 2' ? "text-white" : "text-gray-500"
                     )}>Actions</th>
@@ -317,13 +322,13 @@ export const UserManagement: React.FC = () => {
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center">
+                  <td colSpan={5} className="px-6 py-12 text-center">
                     <Loader2 className="w-6 h-6 text-gray-500 animate-spin mx-auto" />
                   </td>
                 </tr>
               ) : filteredProfiles.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500 text-xs font-mono">
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500 text-xs font-mono">
                     No users found matching your search.
                   </td>
                 </tr>
@@ -375,6 +380,37 @@ export const UserManagement: React.FC = () => {
                         }}
                         className="w-24 bg-background border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-indigo-500 text-right"
                       />
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="inline-flex items-center gap-1.5 justify-center">
+                        <input
+                          type="number"
+                          defaultValue={profile.quotaLimit !== undefined ? profile.quotaLimit : 10000}
+                          placeholder="10000"
+                          title="Daily Ops Quota Limit (-1 for Unlimited)"
+                          onFocus={e => e.target.select()}
+                          onBlur={async (e) => {
+                            const val = Number(e.target.value);
+                            if (val !== profile.quotaLimit) {
+                              try {
+                                await erpService.updateUserQuotaLimit(profile.uid, val);
+                                setProfiles(profiles.map(p => p.uid === profile.uid ? { ...p, quotaLimit: val } : p));
+                              } catch (err) {
+                                console.error('Error updating quota limit:', err);
+                              }
+                            }
+                          }}
+                          className={cn(
+                            "w-24 bg-background border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-indigo-500 text-center font-mono",
+                            profile.quotaLimit === -1 && "text-emerald-500 font-bold border-emerald-500/30"
+                          )}
+                        />
+                        {profile.quotaLimit === -1 ? (
+                          <span className="text-[10px] text-emerald-500 font-bold">∞</span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground font-mono">Ops</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-3">
@@ -590,6 +626,48 @@ export const UserManagement: React.FC = () => {
                   className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
                   placeholder="0"
                 />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold">
+                    Daily Quota Limit (Ops) / দৈনিক কোটা
+                  </label>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    {newUser.quotaLimit === -1 ? 'Unlimited' : `${newUser.quotaLimit.toLocaleString()} Ops`}
+                  </span>
+                </div>
+                <div className="flex gap-1.5 mb-2">
+                  {[
+                    { label: '5k', val: 5000 },
+                    { label: '10k', val: 10000 },
+                    { label: '25k', val: 25000 },
+                    { label: '50k', val: 50000 },
+                    { label: '∞ Unlimited', val: -1 },
+                  ].map(item => (
+                    <button
+                      key={item.val}
+                      type="button"
+                      onClick={() => setNewUser({ ...newUser, quotaLimit: item.val })}
+                      className={cn(
+                        "flex-1 py-1 text-xs rounded border transition-colors text-center font-mono",
+                        newUser.quotaLimit === item.val
+                          ? "bg-indigo-600 text-white border-indigo-600 font-bold"
+                          : "bg-background border-border text-foreground hover:bg-foreground/5"
+                      )}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="number"
+                  value={newUser.quotaLimit}
+                  onChange={(e) => setNewUser({ ...newUser, quotaLimit: Number(e.target.value) })}
+                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500 font-mono"
+                  placeholder="10000 (-1 for Unlimited)"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">Set specific operations quota for this user. -1 = Unlimited Ops.</p>
               </div>
               <div className="pt-4 flex gap-3">
                 <button

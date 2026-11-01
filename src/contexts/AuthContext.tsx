@@ -16,6 +16,8 @@ export interface Profile {
   permissions?: string[];
   photoURL?: string;
   showSystemGuide?: boolean;
+  quotaLimit?: number;
+  quotaUsed?: number;
 }
 
 export interface CompanyData {
@@ -235,11 +237,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         console.error("[QUOTA] Background quota reset error:", err);
                       });
                     } else {
-                      const limit = Math.max(50000, compData.quotaLimit || 50000);
+                      const limit = compData.quotaLimit !== undefined ? Number(compData.quotaLimit) : 10000;
+                      const isUnlimited = limit === -1;
                       const hasActivePlan = compData.subscriptionStatus === 'active' || compData.planType === 'monthly' || compData.planType === 'yearly';
                       
                       // Auto-repair: If company reached limit due to previous collection scan bug, or has active plan / admin, auto-reset
-                      if ((compData.quotaUsed !== undefined && compData.quotaUsed >= limit) && (hasActivePlan || userData.role === 'Admin' || userData.role === 'Founder')) {
+                      if (!isUnlimited && (compData.quotaUsed !== undefined && compData.quotaUsed >= limit) && (hasActivePlan || userData.role === 'Admin' || userData.role === 'Founder')) {
                         console.log("[QUOTA] Auto-recovering quota for company:", userData.companyId);
                         const autoResetComp = {
                           ...compData,
@@ -260,7 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                           console.error("[QUOTA] Background quota auto-recover error:", err);
                         });
                       } else {
-                        const sanitizedUsed = compData.quotaUsed !== undefined ? Math.min(limit, compData.quotaUsed) : 0;
+                        const sanitizedUsed = isUnlimited ? (compData.quotaUsed || 0) : (compData.quotaUsed !== undefined ? Math.min(limit, compData.quotaUsed) : 0);
                         const sanitizedComp = {
                           ...compData,
                           quotaLimit: limit,
@@ -270,11 +273,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         try {
                           localStorage.setItem('cached_auth_company', JSON.stringify(sanitizedComp));
                         } catch (e) {}
+                        const isUserExceeded = !isUnlimited && userData.quotaLimit !== undefined && userData.quotaLimit !== -1 && userData.quotaUsed !== undefined && userData.quotaUsed >= userData.quotaLimit;
                         const isExceeded = (localStorage.getItem('erp_is_demo_mode') !== 'true') && 
                           userData.role !== 'Founder' &&
                           userData.role !== 'Admin' &&
-                          compData.quotaUsed !== undefined && 
-                          compData.quotaUsed >= limit;
+                          !isUnlimited &&
+                          ((compData.quotaUsed !== undefined && compData.quotaUsed >= limit) || isUserExceeded);
                         localStorage.setItem('company_quota_exceeded', isExceeded ? 'true' : 'false');
                         if (!isExceeded) {
                           localStorage.removeItem('company_quota_exceeded');

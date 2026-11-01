@@ -19,13 +19,14 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
   const [timeLeft, setTimeLeft] = useState('');
   const [showRequestModal, setShowRequestModal] = useState(false);
 
-  const quotaLimit = Math.max(50000, company?.quotaLimit || 50000);
+  const isUnlimited = company?.quotaLimit === -1;
+  const quotaLimit = company?.quotaLimit !== undefined ? Number(company.quotaLimit) : 10000;
   const rawQuotaUsed = company?.quotaUsed || 0;
   // Strict 100% cap
-  const quotaUsed = Math.min(quotaLimit, rawQuotaUsed);
-  const percentUsed = Math.min(100, Math.max(0, Math.round((quotaUsed / quotaLimit) * 100)));
+  const quotaUsed = isUnlimited ? rawQuotaUsed : Math.min(quotaLimit, rawQuotaUsed);
+  const percentUsed = isUnlimited ? 0 : Math.min(100, Math.max(0, Math.round((quotaUsed / quotaLimit) * 100)));
 
-  // Helper to calculate exact next 1:30 PM Bangladesh Time (Asia/Dhaka)
+  // Helper to calculate exact next 01:00 PM Bangladesh Time (Asia/Dhaka)
   const getNextResetTime = (): Date => {
     const now = new Date();
     const tz = "Asia/Dhaka";
@@ -39,14 +40,14 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
       const parts = formatter.formatToParts(now);
       const map = Object.fromEntries(parts.map((p) => [p.type, p.value]));
 
-      // 1:30 PM BST is 7:30 AM UTC
+      // 01:00 PM BST is 07:00 AM UTC (synchronized with Firestore midnight PDT reset)
       const today130PM = new Date(
         Date.UTC(
           parseInt(map.year),
           parseInt(map.month) - 1,
           parseInt(map.day),
           7,
-          30,
+          0,
           0,
           0
         )
@@ -72,7 +73,7 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
       }
     } catch (e) {
       const fallback = new Date();
-      fallback.setUTCHours(7, 30, 0, 0);
+      fallback.setUTCHours(7, 0, 0, 0);
       if (now.getTime() < fallback.getTime()) {
         return fallback;
       } else {
@@ -124,7 +125,7 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
       return { en, bn };
     } catch (e) {
       return {
-        en: "Today/Tomorrow at 1:30 PM (BST)",
+        en: "Today/Tomorrow at 01:00 PM (BST)",
         bn: "আজ/আগামীকাল দুপুর ১:৩০ মিনিটে"
       };
     }
@@ -244,7 +245,7 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
                 </div>
                 <div className="text-left">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-300">Automatic Reset Schedule</h4>
-                  <p className="text-[10px] text-slate-400">Resets daily at 1:30 PM Bangladesh Time (BST)</p>
+                  <p className="text-[10px] text-slate-400">Resets daily at 01:00 PM Bangladesh Time (BST)</p>
                   <p className="text-[10px] text-slate-400">প্রতিদিন দুপুর ০১:৩০ মিনিটে স্বয়ংক্রিয়ভাবে রিসেট হবে।</p>
                 </div>
               </div>

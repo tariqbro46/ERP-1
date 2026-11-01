@@ -22,10 +22,81 @@ export interface ReleaseVersion {
   bugFixes: ReleaseNoteItem[];
 }
 
-export const LATEST_VERSION = "v1.9.9";
+export const LATEST_VERSION = "v1.9.9.03";
 export const LAST_SEEN_VERSION_KEY = "tallyflow_last_seen_release_version";
 
 export const RELEASE_NOTES: ReleaseVersion[] = [
+  {
+    version: "v1.9.9.03",
+    releaseDate: "November 01, 2026",
+    bnReleaseDate: "০১ নভেম্বর, ২০২৬",
+    title: "Executive Database Quota Intelligence Center, Dynamic Quota Limits & 01:00 PM BST Firestore Sync",
+    bnTitle: "এক্সিকিউটিভ ডাটাবেজ কোটা ইন্টেলিজেন্স সেন্টার, ডায়নামিক কোটা লিমিট এবং ০১:০০ PM BST ফায়ারস্টোর সিঙ্ক",
+    summary: "Upgraded the Database Quota dialog into a professional multi-tab Operations Intelligence Center (Overview, Module Breakdown, Team Quota, Admin Controls). Removed hardcoded 50k floor to enable 100% custom operations limits (or unlimited -1) per company and per user with live forceRefreshAt broadcast. Synchronized daily reset schedule to 01:00 PM BST matching Firestore midnight PDT, elevated modal layering to z-[99999] with full backdrop masking, and standardized interface styling into clean English.",
+    bnSummary: "ডাটাবেজ কোটা ডায়লগটিকে একটি পূর্ণাঙ্গ মাল্টি-ট্যাব অপারেশন্স ইন্টেলিজেন্স সেন্টারে রূপান্তর করা হয়েছে। হার্ডকোডেড ৫০,০০০ ফ্লোর সরিয়ে কোম্পানি ও ইউজার ভিত্তিক যেকোনো কাস্টম কোটা লিমিট (বা আনলিমিটেড -১) নির্ধারণের সুবিধা নিশ্চিত করা হয়েছে। ফায়ারস্টোরের সাথে মিলিয়ে দৈনিক কোটা রিসেট ০১:০০ PM BST-তে সিঙ্ক করা হয়েছে এবং টপ বার ওভারল্যাপ প্রতিরোধে z-[99999] ফুল-স্ক্রিন ব্যাকড্রপ লেয়ারিং নিশ্চিত করা হয়েছে।",
+    isLatest: true,
+    newFeatures: [
+      {
+        id: "feat-executive-quota-dashboard",
+        title: "Multi-Tab Database Quota & Operations Intelligence Center",
+        bnTitle: "মাল্টি-ট্যাব ডাটাবেজ কোটা ও অপারেশন্স ইন্টেলিজেন্স সেন্টার",
+        description: "Introduced an executive 4-tab intelligence dashboard: Overview (live operations meter, reads/writes/deletes breakdown, SWR cache performance), Module Breakdown (traffic distribution across vouchers, inventory, ledgers, and auth), Team Quota (member utilization and inline limit editor), and Admin Controls.",
+        bnDescription: "লাইভ মিটার, অপস ব্রেকডাউন, ইন-মেমোরি ক্যাশ পারফরম্যান্স, মডিউল বিশ্লেষণ, টিম মেম্বারদের ইউজার কোটা ম্যানেজমেন্ট এবং অ্যাডমিন প্রিসেট বাটনসহ একটি আধুনিক ৪-ট্যাব বিশিষ্ট কোটা ড্যাশবোর্ড যুক্ত করা হয়েছে।",
+        module: "Database & Quota",
+        badge: "CORE"
+      },
+      {
+        id: "feat-dynamic-custom-limits",
+        title: "100% Dynamic Quota Limits & Instant Session Broadcast",
+        bnTitle: "১০০% ডায়নামিক কোটা লিমিট এবং তাৎক্ষণিক সেশন ব্রডকাস্ট",
+        description: "Admins and Founders can now assign ANY custom operations limit (e.g. 5,000, 10,000, 20,000, 50,000, or -1 for Unlimited) from the Founder Panel or Quota Modal. Changes immediately persist to Firestore and trigger a remote forceRefreshAt signal so all active tabs synchronize in real-time.",
+        bnDescription: "ফাউন্ডার প্যানেল বা কোটা মডাল থেকে কোম্পানি ও ইউজারদের জন্য যেকোনো কাস্টম সীমা (যেমন: ৫,০০০, ১০,০০০, ২০,০০০ বা -১ আনলিমিটেড) নির্ধারণ করা যায়, যা সাথে সাথে সকল অ্যাক্টিভ ব্রাউজার সেশনে সিঙ্ক হয়ে যায়।",
+        module: "Founder & Admin Hub",
+        badge: "ENHANCED"
+      },
+      {
+        id: "feat-firestore-0100pm-sync",
+        title: "Google Cloud Firestore 01:00 PM BST Daily Reset Sync",
+        bnTitle: "গুগল ক্লাউড ফায়ারস্টোর ০১:০০ PM BST দৈনিক রিসেট সিঙ্ক",
+        description: "Aligned the daily operations reset schedule with Google Cloud Firestore midnight PDT (07:00 UTC = 01:00 PM Dhaka Time). Includes persistent live digital countdown timer and automated counter reset routines.",
+        bnDescription: "গুগল ক্লাউড ফায়ারস্টোরের দৈনিক রিসেটের সাথে মিলিয়ে সিস্টেমের অটো-রিসেট সময়সূচী দুপুর ০১:০০ PM BST (০৭:০০ AM UTC)-তে নির্ধারণ করা হয়েছে।",
+        module: "Database & Cloud",
+        badge: "SYNC"
+      }
+    ],
+    improvements: [
+      {
+        id: "imp-modal-zindex-layering",
+        title: "Z-[99999] Modal Layering & Full Screen Backdrop Blur",
+        bnTitle: "Z-[99999] মডাল লেয়ারিং এবং ফুল স্ক্রিন ব্যাকড্রপ ব্লার",
+        description: "Elevated the Quota Modal overlay to z-[99999] with a full-screen backdrop mask, completely preventing the fixed top bar or sidebars from appearing above the dialog.",
+        bnDescription: "পপআপের লেয়ারিং z-[99999]-এ উন্নীত করা হয়েছে যাতে অ্যাপের টপ বার বা সাইডবার কোনোভাবেই পপআপের উপরে ভেসে না থাকে।",
+        module: "UI/UX",
+        badge: "FIX"
+      },
+      {
+        id: "imp-pure-english-quota-ui",
+        title: "Standardized Professional English & App Theme Design Tokens",
+        bnTitle: "প্রফেশনাল ইংরেজি এবং অ্যাপ থিম ডিজাইন টোকেন স্ট্যান্ডার্ডাইজেশন",
+        description: "Harmonized all modal text, metric cards, and navigation tab titles into professional English, styled with standard ERP theme tokens (bg-card, border-border, text-foreground).",
+        bnDescription: "পপআপের সমস্ত টেক্সট, শিরোনাম ও মেট্রিক সম্পূর্ণ ইংরেজিতে এবং অ্যাপের থিম কালার অনুযায়ী নিখুঁতভাবে সাজানো হয়েছে।",
+        module: "UI/UX",
+        badge: "POLISH"
+      }
+    ],
+    bugFixes: [
+      {
+        id: "fix-quota-50k-floor",
+        title: "Eliminated Hardcoded 50,000 Operations Floor",
+        bnTitle: "হার্ডকোডেড ৫০,০০০ অপারেশন্স ফ্লোর নিরসন",
+        description: "Fixed issue where setting a 10,000 quota limit in Founder Panel was overridden by a legacy 50,000 floor on deployed instances. Any limit is now strictly calculated and respected.",
+        bnDescription: "ফাউন্ডার প্যানেলে ১০,০০০ সেট করা সত্ত্বেও পূর্বে ৫০,০০০ ফ্লোর কার্যকর হওয়ার সমস্যাটি সমাধান করা হয়েছে। এখন যেকোনো ভ্যালু হুবহু কার্যকর হয়।",
+        module: "Database & Quota",
+        badge: "RESOLVED"
+      }
+    ]
+  },
+
   {
     version: "v1.9.9",
     releaseDate: "October 20, 2026",
@@ -34,7 +105,7 @@ export const RELEASE_NOTES: ReleaseVersion[] = [
     bnTitle: "স্টক গণনা ও মুভমেন্ট ট্রুথ ইঞ্জিন, রিপোর্ট সিঙ্ক্রোনাইজেশন এবং গিটহাব রিলিজ অটোমেশন",
     summary: "Resolved stock discrepancies across Stock Summary and Stock Item Detail reports with high-precedence voucher movement type classification, synchronized date parameter handling across navigation routes, enriched real-time voucher inventory cache tracking, and introduced native GitHub version control push with automated release note management inside Settings.",
     bnSummary: "স্টক সামারি এবং স্টক আইটেম রিপোর্টের মধ্যকার অমিল দূর করে ভাউচার টাইপ অগ্রাধিকারের মাধ্যমে স্টক মুভমেন্ট গণনা নিখুঁত করা হয়েছে। এছাড়া স্টক রিপোর্ট নেভিগেশনে তারিখ রেঞ্জ সিঙ্ক, রিয়েল-টাইম ইনভেন্টরি ক্যাশ সমৃদ্ধকরণ এবং সেটিংস থেকে সরাসরি গিটহাবে পুশ ও স্বয়ংক্রিয় রিলিজ নোট ব্যবস্থাপনার সুবিধা যুক্ত করা হয়েছে।",
-    isLatest: true,
+    isLatest: false,
     newFeatures: [
       {
         id: "feat-github-push-settings",

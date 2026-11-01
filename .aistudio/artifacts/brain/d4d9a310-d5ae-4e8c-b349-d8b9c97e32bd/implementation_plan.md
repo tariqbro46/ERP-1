@@ -1,72 +1,114 @@
-# Implementation Plan: App Versioning & Release Notes Automation Engine
+# Executive Database Quota & Operations Intelligence Modal
 
-## 1. Problem Analysis & Core Cause
-When you click **"Push changes to GitHub"** in the Google AI Studio sidebar:
-- It runs a Git synchronization tool that commits and pushes whatever code already exists in your local repository to GitHub (`main` branch), which Vercel then deploys.
-- It **does not** automatically create code or write release notes on its own.
-- **Why Release Notes & Version didn't update previously:** The version number and release notes data live inside your application's source files (`src/data/releaseNotes.ts`, `server.ts`, and `package.json`). If the files were not updated with the new version and changelog **before** clicking "Push changes to GitHub", the pushed commit contains the old version and notes.
+Redesign the Database Quota Metrics popup into an authentic, informative, multi-tab executive dashboard featuring real-time telemetry, module-wise usage, cache efficiency analytics, and inline administrative controls for company and user quotas.
 
----
+## User Review & Critical Decisions
 
-## 2. Proposed Architecture & Solution
-To fulfill your exact request, we will establish a **Unified Dual Release Management System**:
+> [!IMPORTANT]
+> The user confirmed the following architectural and visual choices:
+> - **Highlighted Metrics**: Real-time breakdown, module usage, and cache efficiency.
+> - **Visual Style & Layout**: Multi-tab executive dashboard with live charts and statistics.
+> - **Administrative Controls**: Quick company limit adjuster, manual instant reset, and inline user quota management.
 
-### System 1: In-App Interactive Release Manager (UI Console)
-- Add a dedicated **"Publish New Release & Version Manager"** modal and tab inside **Settings > GitHub & Release (`/settings?tab=github`)** and from the **Release Notes (`/release-notes`)** page.
-- **Custom Version Input:** Allows entering any semantic version (e.g., `1.1.11`, `1.1.2`, `1.2.0`, `2.0.0`).
-- **Changelog Builder:**
-  - Release Title & Summary (in English & Bangla)
-  - Interactive item entries for **New Features (নতুন ফিচার)**, **Improvements (উন্নয়ন)**, and **Bug Fixes (বাগ ফিক্স)**.
-- **One-Click Publish:**
-  - Persists the new release into Firestore (`system/release_notes` & `system/config`).
-  - Calls backend synchronization route (`/api/github/release`) to update `src/data/releaseNotes.ts`, `server.ts`, and `package.json`.
-  - Immediately broadcasts the new version across the frontend.
-
-### System 2: Chat-Driven Release Management
-- When working in chat, you can simply tell the Assistant:
-  > *"I want to publish version 1.2.0 with the ledger fixes and bank account enhancements."*
-- The Assistant will immediately write the structured changelog entry into `src/data/releaseNotes.ts`, update `LATEST_VERSION` to `v1.2.0`, and update `package.json`.
-- All you do next is click **"Push changes to GitHub"** in the AI Studio panel — and your GitHub and Vercel live app will instantly showcase the new version!
+- **Confirmed Decision 1**: Authentic live tracking without synthetic/random mock numbers—reflecting genuine Firestore reads, writes, deletes, and true in-memory/localStorage cache savings.
+- **Confirmed Decision 2**: Dhaka Standard Time (01:30 PM BST) auto-reset synchronization with persistent live countdown.
+- **Confirmed Decision 3**: Full adherence to project table centering (`vertical-align: middle !important;`) and clean unboxed typography discipline (no pill enclosures for static metadata).
 
 ---
 
-## 3. Reflection Across the Entire System
-The newly published version will be dynamically reflected everywhere you requested:
-1. **Header / Navbar:** The top-left/top-right brand badge displays the active version badge (`v1.2.0` or user-defined version) with an instant link to Release Notes.
-2. **Settings:** Settings header, System Info, and the GitHub & Release tab show the current version and release history.
-3. **Release Notes Page (`/release-notes`):** Automatically selects and renders the newly created version as `isLatest: true`, with categorized tabs (All, New Features, Improvements, Bug Fixes) and bilingual support (Bangla & English).
-4. **What's New Modal (`WhatsNewModal.tsx`):** Automatically compares `LAST_SEEN_VERSION_KEY` with the new version and presents a celebration popup highlighting what's new.
+## 1. Overview & Core Concept
+
+### What It Does
+Upgrades the simple quota dialog into a high-density, informative **Database Quota & Operations Intelligence Center**. It provides business owners, system administrators, and staff with deep transparency into how ERP actions consume database operations, how intelligent client caching prevents unnecessary cloud costs, and enables instant control over company and user-level daily limits.
+
+### Target Audience & Persona
+- **Founders & System Admins**: Need granular insight into database operation burn rates, caching health, and the power to adjust user/company limits or trigger manual resets instantly.
+- **Accountants & Operators**: Need clear status awareness of remaining daily operations before reaching quota thresholds, without disruption.
+
+### Key Value
+- **Zero Hallucination / 100% Authentic**: Reflects actual database read/write/delete operations and authentic cache hit efficiency.
+- **Cost & Quota Visibility**: Clear visualization of read-to-write ratios, module consumption, and cloud quota safety.
+- **Empowered Admin Governance**: Direct in-modal editing of individual user quotas and company ceiling limits.
 
 ---
 
-## 4. Proposed Changes
+## 2. User Experience & Visual Design
 
-### Backend & Data Services
-- **`server.ts`**:
-  - Add `/api/github/release` endpoint that programmatically updates `src/data/releaseNotes.ts`, updates `package.json` version, commits changes with a standardized release tag (`git commit` + `git tag`), and returns updated metadata.
-- **`src/services/erpService.ts`**:
-  - Add `publishReleaseNote(releaseData)` and `getLiveReleaseNotes()` to sync release records with Firestore for multi-device visibility.
+### Key User Flows
+1. **Modal Entry**: User clicks the Quota widget in the sidebar or top bar. The executive modal appears with a smooth backdrop blur and four structured tabs:
+   - **Tab 1: Live Overview (লাইভ ওভারভিউ)**: Quota progress meter (with Unlimited mode handling), BST 01:30 PM countdown, Reads/Writes/Deletes traffic ratio, and Cache Efficiency rate.
+   - **Tab 2: Module Breakdown (মডিউল অ্যানালিটিক্স)**: Operational distribution across Vouchers, Inventory, Ledgers, and System Masters.
+   - **Tab 3: Team & Users (টিম ও ইউজার কোটা)**: Table of company team members showing real-time usage, individual limits, and inline quick-edit controls.
+   - **Tab 4: Admin Controls (কোটা কন্ট্রোল ও অ্যাডমিন)**: Preset buttons (5k, 10k, 25k, 50k, 100k, Unlimited), custom numeric input, and immediate Reset Quota with safe confirmation.
+2. **Switching Tabs**: Zero-delay tab navigation with subtle active indicators.
+3. **Adjusting Quota**: Admin modifies user quota or company quota; saves instantly to Firestore and updates state without full page reload.
 
-### Frontend UI Components
-- **`src/components/ReleaseManagerModal.tsx` (New Component)**:
-  - Intuitive modal for authoring releases: version input, title, summary, dynamic list of New Features, Improvements, and Bug Fixes, with live preview.
-- **`src/components/Settings.tsx`**:
-  - Upgrade the **GitHub & Release** tab with a "Publish New Release" trigger button and live version switcher.
-- **`src/components/ReleaseNotes.tsx`**:
-  - Add an admin/founder **"Create Release"** button that opens `ReleaseManagerModal`.
-- **Top Header (`src/App.tsx` or Header components)**:
-  - Ensure the version badge reflects the live active version dynamically.
-- **`src/components/WhatsNewModal.tsx`**:
-  - Ensure it reads from the active live release notes data.
+### Visual Identity & Theme
+- **Aesthetic Direction**: Executive Dark Slate (`#0B0F19` / `#111827`) with precision hairline borders (`border-white/10` and `border-slate-800`), avoiding garish gradients or decorative AI pill badges.
+- **Palette**: Deep slate canvas (60%), slate-800/900 cards and table containers (30%), with purposeful semantic status indicators (Emerald for safe/active, Amber for warning/pending, Rose for critical, Indigo for administrative actions).
+- **Typography**: Clean hierarchy with tabular figures (`font-mono tabular-nums`) for all operation counts, timestamps, and percentages.
+- **Zero-Pill Discipline**: All status labels, timestamps, and metadata display as clean, unboxed text separated by typographic middots (`·`).
 
 ---
 
-## 5. Verification Plan
-1. **Build & Lint Verification:** Run `compile_applet` and `lint_applet` to guarantee 0 build or TypeScript errors.
-2. **Version Publishing Test:** Test creating and publishing a sample version (e.g. `1.1.2` or `1.2.0`) via the Release Manager.
-3. **Multi-location Check:**
-   - Verify version badge in Header.
-   - Verify version in Settings.
-   - Verify version in `/release-notes`.
-   - Verify What's New modal opens for unread version.
-4. **Git Sync Readiness:** Confirm that files are staged and ready for clean one-click pushing via the AI Studio GitHub panel.
+## 3. Key Product Decisions & Trade-Offs
+
+### Decision 1: Multi-Tab Executive Architecture vs. Single Cluttered Card
+- **Chosen Approach**: Segment into 4 focused tabs (Live Overview, Module Breakdown, Team Quotas, Admin Controls).
+- **Why**: Allows in-depth data (module analytics and team member tables) without forcing the user to scroll through a cramped vertical modal.
+- **Alternatives Considered**: A single vertical scrollable view—rejected because it quickly becomes overwhelming when listing users and multiple metric charts.
+
+### Decision 2: Authentic In-Memory & Local Cache Metrics
+- **Chosen Approach**: Derive cache efficiency from actual `_quotaBuffer`, localStorage read timestamps, and tracked Firestore queries vs avoided queries.
+- **Why**: Adheres strictly to the persistent project rule: *"Never use fake/mock sine waves, fake multipliers, or random synthetic fallbacks. All data must come directly from real records."*
+
+---
+
+## 4. Technical Architecture & Data Strategy
+
+```
+┌────────────────────────────────────────────────────────┐
+│               QuotaDashboardModal (React)              │
+│ ┌────────────────────────────────────────────────────┐ │
+│ │ Header: Title · BST Dhaka 1:30 PM Sync · Company   │ │
+│ ├────────────────────────────────────────────────────┤ │
+│ │ Tab Bar: [Overview] [Modules] [Team] [Admin Hub]   │ │
+│ └────────────────────────────────────────────────────┘ │
+│                            │                           │
+│     ┌──────────────────────┼─────────────────────┐     │
+│     ▼                      ▼                     ▼     │
+│ [Tab 1: Overview]   [Tab 2: Modules]      [Tab 3: Team]│
+│ - Live Ops Meter    - Vouchers & Invoices - User list  │
+│ - Reads/Writes Bar  - Stock & Inventory   - Usage bars │
+│ - Cache Efficiency  - Ledgers & Reports   - Inline edit│
+│                            │                           │
+│                            ▼                           │
+│                   [Tab 4: Admin Hub]                   │
+│                   - Preset limits & Custom             │
+│                   - Instant Quota Reset                │
+│                   - Reset request history              │
+└────────────────────────────┬───────────────────────────┘
+                             │
+                             ▼
+┌────────────────────────────────────────────────────────┐
+│                erpService.ts & AuthContext             │
+│  - trackQuota() & _quotaBuffer memory analytics        │
+│  - updateCompanyQuotaLimit() / updateUserQuotaLimit()  │
+│  - resetQuotaNow() / getCompanyUsers()                 │
+│  - Real-time Firestore sync & localStorage fallback    │
+└────────────────────────────────────────────────────────┘
+```
+
+### Component Hierarchy & Handlers
+- **`QuotaDashboardModal.tsx`**:
+  - `activeTab`: `'overview' | 'modules' | 'users' | 'admin'`
+  - `users`: Fetched via `erpService.getCompanyUsers(company.id)` with real `quotaUsed` and `quotaLimit`.
+  - `handleUpdateUserLimit(userId, limit)`: Saves via `erpService.updateUserQuotaLimit`.
+  - `handleUpdateCompanyLimit(limit)`: Saves via `erpService.updateCompanyQuotaLimit`.
+  - `handleResetQuotaNow()`: Executes `erpService.resetQuotaNow(company.id)`.
+  - `cacheStats`: Computes authenticated session metrics (total operations executed, estimated Firestore reads prevented via SWR cache).
+
+### Strict Guidelines Compliance
+- Table cells adhere to `vertical-align: middle !important;` per persistent instructions.
+- All numbers use `tabular-nums` / `font-mono`.
+- Language in chat: Bangla.

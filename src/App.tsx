@@ -618,16 +618,28 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     return localStorage.getItem('company_quota_exceeded') === 'true';
   });
 
-  const effectiveQuotaLimit = Math.max(50000, company?.quotaLimit || 50000);
+  const effectiveQuotaLimit = company?.quotaLimit !== undefined ? Number(company.quotaLimit) : 10000;
+  const isUnlimited = effectiveQuotaLimit === -1;
+  const isUserQuotaExceeded = Boolean(
+    !isSuperAdmin && !isAdmin && user?.quotaLimit !== undefined && user.quotaLimit !== -1 && (user?.quotaUsed || 0) >= user.quotaLimit
+  );
   const isQuotaExceeded = Boolean(
-    !isSuperAdmin && !isAdmin && (
+    !isSuperAdmin && !isAdmin && !isUnlimited && (
       (company && company.quotaUsed !== undefined && company.quotaUsed >= effectiveQuotaLimit) ||
+      isUserQuotaExceeded ||
       quotaExceededFlag ||
       localStorage.getItem('company_quota_exceeded') === 'true'
     )
   );
 
   React.useEffect(() => {
+    if (isUnlimited) {
+      if (localStorage.getItem('company_quota_exceeded') === 'true') {
+        localStorage.removeItem('company_quota_exceeded');
+        setQuotaExceededFlag(false);
+      }
+      return;
+    }
     if (company && company.quotaUsed !== undefined) {
       if (company.quotaUsed < effectiveQuotaLimit) {
         if (localStorage.getItem('company_quota_exceeded') === 'true') {
@@ -639,7 +651,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         setQuotaExceededFlag(true);
       }
     }
-  }, [company?.quotaUsed, company?.quotaLimit, isAdmin, isSuperAdmin, effectiveQuotaLimit]);
+  }, [company?.quotaUsed, company?.quotaLimit, isAdmin, isSuperAdmin, effectiveQuotaLimit, isUnlimited]);
 
   React.useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -1101,10 +1113,11 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         )}>
           {company && !isSidebarCollapsed && (() => {
             const used = company.quotaUsed || 0;
-            const limitVal = company.quotaLimit || 10000;
-            const pct = Math.round((used / limitVal) * 100);
+            const limitVal = company.quotaLimit !== undefined ? Number(company.quotaLimit) : 10000;
+            const isUnlimited = limitVal === -1;
+            const pct = isUnlimited ? 0 : Math.round((used / limitVal) * 100);
             const displayRule = company.quotaDisplayRule || 'exceed_50';
-            const shouldShow = displayRule === 'always' || pct >= 50;
+            const shouldShow = isUnlimited ? displayRule === 'always' : (displayRule === 'always' || pct >= 50);
 
             if (!shouldShow) return null;
 
@@ -1677,10 +1690,11 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
           {/* Quota widget if applicable */}
           {company && !isSidebarCollapsed && (() => {
             const used = company.quotaUsed || 0;
-            const limitVal = company.quotaLimit || 10000;
-            const pct = Math.round((used / limitVal) * 100);
+            const limitVal = company.quotaLimit !== undefined ? Number(company.quotaLimit) : 10000;
+            const isUnlimited = limitVal === -1;
+            const pct = isUnlimited ? 0 : Math.round((used / limitVal) * 100);
             const displayRule = company.quotaDisplayRule || 'exceed_50';
-            const shouldShow = displayRule === 'always' || pct >= 50;
+            const shouldShow = isUnlimited ? displayRule === 'always' : (displayRule === 'always' || pct >= 50);
             if (!shouldShow) return null;
 
             return (

@@ -92,9 +92,10 @@ export function VoucherEntry() {
   const settings = useSettings();
   const isLayout2 = settings.voucherLayout === 'Layout 2';
 
-  const effectiveQuotaLimit = Math.max(50000, company?.quotaLimit || 50000);
+  const effectiveQuotaLimit = company?.quotaLimit !== undefined ? Number(company.quotaLimit) : 10000;
+  const isUnlimited = effectiveQuotaLimit === -1;
   const isCompanyQuotaExceeded = Boolean(
-    !isSuperAdmin && !isAdmin && (
+    !isSuperAdmin && !isAdmin && !isUnlimited && (
       erpService.isQuotaExceeded(user?.companyId) ||
       (company && company.quotaUsed !== undefined && company.quotaUsed >= effectiveQuotaLimit) ||
       localStorage.getItem('company_quota_exceeded') === 'true'
