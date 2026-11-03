@@ -11,7 +11,8 @@ import {
   Timestamp,
   getDoc,
   onSnapshot,
-  deleteDoc
+  deleteDoc,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
@@ -1193,28 +1194,52 @@ export default function FounderPanel() {
     try {
       const companyRef = doc(db, 'companies', companyId);
       const mostRecentResetTime = erpService.getMostRecent130PM(new Date()).getTime();
-      const isQuotaReset = updates.quotaUsed === 0;
       const parsedQuotaLimit = updates.quotaLimit !== undefined && updates.quotaLimit !== '' 
         ? Number(updates.quotaLimit) 
         : 10000;
       const parsedQuotaUsed = updates.quotaUsed !== undefined && updates.quotaUsed !== ''
         ? Number(updates.quotaUsed)
         : 0;
+      const isQuotaReset = parsedQuotaUsed === 0;
 
-      const finalUpdates = {
+      const finalUpdates: any = {
         ...updates,
         quotaLimit: parsedQuotaLimit,
         quotaUsed: parsedQuotaUsed,
         forceRefreshAt: Date.now(), // Broadcast remote force refresh so all user tabs recalculate immediately
-        ...(isQuotaReset ? {
-          quotaReads: 0,
-          quotaWrites: 0,
-          quotaDeletes: 0,
-        } : {}),
         quotaLastReset: mostRecentResetTime,
         quotaLastResetDateStr: new Date(mostRecentResetTime).toISOString()
       };
+
+      if (isQuotaReset) {
+        finalUpdates.quotaReads = 0;
+        finalUpdates.quotaWrites = 0;
+        finalUpdates.quotaDeletes = 0;
+      } else {
+        // Keep quotaReads aligned with quotaUsed so Overview stats reflect the exact ops
+        finalUpdates.quotaReads = parsedQuotaUsed;
+        finalUpdates.quotaWrites = 0;
+        finalUpdates.quotaDeletes = 0;
+      }
+
       await updateDoc(companyRef, finalUpdates);
+
+      // If resetting quota to 0, also reset all users of this company so team quota matches 0
+      if (isQuotaReset) {
+        try {
+          const usersQuery = query(collection(db, 'users'), where('companyId', '==', companyId));
+          const usersSnap = await getDocs(usersQuery);
+          if (!usersSnap.empty) {
+            const b = writeBatch(db);
+            usersSnap.docs.forEach(uDoc => {
+              b.update(uDoc.ref, { quotaUsed: 0 });
+            });
+            await b.commit();
+          }
+        } catch (uErr) {
+          console.warn('[FOUNDER] Could not reset users quotaUsed:', uErr);
+        }
+      }
       
       // Keep local storage cache in sync if this is the active company
       try {
@@ -1224,6 +1249,9 @@ export default function FounderPanel() {
           if (parsed.id === companyId || parsed.companyId === companyId) {
             parsed.quotaLimit = parsedQuotaLimit;
             parsed.quotaUsed = parsedQuotaUsed;
+            parsed.quotaReads = finalUpdates.quotaReads;
+            parsed.quotaWrites = finalUpdates.quotaWrites;
+            parsed.quotaDeletes = finalUpdates.quotaDeletes;
             if (parsedQuotaLimit === -1 || parsedQuotaUsed < parsedQuotaLimit) {
               localStorage.removeItem('company_quota_exceeded');
             }
@@ -7976,11 +8004,11 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                               <div className="flex gap-2">
                                 <input
                                   type="number"
-                                  value={editDraft.quotaUsed ?? 0}
+                                  value={editDraft.quotaUsed === 0 ? '0' : (editDraft.quotaUsed ?? '')}
                                   placeholder="0"
                                   onChange={(e) => {
-                                    const val = e.target.value === '' ? 0 : Number(e.target.value);
-                                    setEditDraft(prev => prev ? { ...prev, quotaUsed: val } : null);
+                                    const val = e.target.value === '' ? '' : Number(e.target.value);
+                                    setEditDraft(prev => prev ? { ...prev, quotaUsed: val as any } : null);
                                   }}
                                   className="w-full bg-background border border-border rounded-lg p-2 text-xs outline-none focus:border-primary flex-1 font-mono"
                                 />

@@ -8402,6 +8402,26 @@ export const erpService: any = {
         quotaLastReset: resetTimestamp,
         quotaLastResetDateStr: new Date(resetTimestamp).toISOString(),
       });
+      // Also reset team members' quotaUsed for this company
+      try {
+        const usersQuery = query(collection(db, 'users'), where('companyId', '==', companyId));
+        const usersSnap = await getDocs(usersQuery);
+        if (!usersSnap.empty) {
+          const b = firestoreWriteBatch(db);
+          usersSnap.docs.forEach(uDoc => {
+            b.update(uDoc.ref, { quotaUsed: 0 });
+          });
+          await b.commit();
+        }
+        const cachedProf = localStorage.getItem('cached_auth_profile');
+        if (cachedProf) {
+          const p = JSON.parse(cachedProf);
+          p.quotaUsed = 0;
+          localStorage.setItem('cached_auth_profile', JSON.stringify(p));
+        }
+      } catch (uErr) {
+        console.warn("[QUOTA] Error resetting users in resetCompanyQuota:", uErr);
+      }
       console.log(`[QUOTA] Successfully reset daily quota in Firestore for company ${companyId}.`);
     } catch (err) {
       console.warn("[QUOTA] Error in resetCompanyQuota:", err);
@@ -8591,13 +8611,12 @@ export const erpService: any = {
         }
 
         const addedOps = readsToSave + writesToSave + deletesToSave;
-        const newUsed = isUnlimited ? currentUsed + addedOps : Math.min(limitVal, currentUsed + addedOps);
 
         await updateDoc(companyRef, {
           quotaReads: increment(readsToSave),
           quotaWrites: increment(writesToSave),
           quotaDeletes: increment(deletesToSave),
-          quotaUsed: newUsed,
+          quotaUsed: increment(addedOps),
         });
 
         // Keep local cache in sync with updated quota metrics
@@ -8606,7 +8625,7 @@ export const erpService: any = {
           if (cachedComp) {
             const parsed = JSON.parse(cachedComp);
             if (parsed.id === companyId || parsed.companyId === companyId) {
-              parsed.quotaUsed = newUsed;
+              parsed.quotaUsed = (parsed.quotaUsed || 0) + addedOps;
               parsed.quotaReads = (parsed.quotaReads || 0) + readsToSave;
               parsed.quotaWrites = (parsed.quotaWrites || 0) + writesToSave;
               parsed.quotaDeletes = (parsed.quotaDeletes || 0) + deletesToSave;

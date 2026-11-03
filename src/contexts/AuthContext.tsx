@@ -239,40 +239,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     } else {
                       const limit = compData.quotaLimit !== undefined ? Number(compData.quotaLimit) : 10000;
                       const isUnlimited = limit === -1;
-                      const hasActivePlan = compData.subscriptionStatus === 'active' || compData.planType === 'monthly' || compData.planType === 'yearly';
-                      
-                      // Auto-repair: If company reached limit due to previous collection scan bug, or has active plan / admin, auto-reset
-                      if (!isUnlimited && (compData.quotaUsed !== undefined && compData.quotaUsed >= limit) && (hasActivePlan || userData.role === 'Admin' || userData.role === 'Founder')) {
-                        console.log("[QUOTA] Auto-recovering quota for company:", userData.companyId);
-                        const autoResetComp = {
-                          ...compData,
-                          quotaLimit: limit,
-                          quotaUsed: 0,
-                          quotaReads: 0,
-                          quotaWrites: 0,
-                          quotaDeletes: 0,
-                          quotaLastReset: Date.now(),
-                          quotaLastResetDateStr: new Date().toISOString()
-                        };
-                        setCompany(autoResetComp);
-                        try {
-                          localStorage.setItem('cached_auth_company', JSON.stringify(autoResetComp));
-                          localStorage.removeItem('company_quota_exceeded');
-                        } catch (e) {}
-                        erpService.resetCompanyQuota(userData.companyId, Date.now()).catch(err => {
-                          console.error("[QUOTA] Background quota auto-recover error:", err);
-                        });
-                      } else {
-                        const sanitizedUsed = isUnlimited ? (compData.quotaUsed || 0) : (compData.quotaUsed !== undefined ? Math.min(limit, compData.quotaUsed) : 0);
-                        const sanitizedComp = {
-                          ...compData,
-                          quotaLimit: limit,
-                          quotaUsed: sanitizedUsed
-                        };
-                        setCompany(sanitizedComp);
-                        try {
-                          localStorage.setItem('cached_auth_company', JSON.stringify(sanitizedComp));
-                        } catch (e) {}
+                      const sanitizedUsed = isUnlimited ? (compData.quotaUsed || 0) : (compData.quotaUsed !== undefined ? Math.min(limit, compData.quotaUsed) : 0);
+                      const sanitizedComp = {
+                        ...compData,
+                        quotaLimit: limit,
+                        quotaUsed: sanitizedUsed
+                      };
+                      setCompany(sanitizedComp);
+                      try {
+                        localStorage.setItem('cached_auth_company', JSON.stringify(sanitizedComp));
+                      } catch (e) {}
                         const isUserExceeded = !isUnlimited && userData.quotaLimit !== undefined && userData.quotaLimit !== -1 && userData.quotaUsed !== undefined && userData.quotaUsed >= userData.quotaLimit;
                         const isExceeded = (localStorage.getItem('erp_is_demo_mode') !== 'true') && 
                           userData.role !== 'Founder' &&
@@ -284,11 +260,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                           localStorage.removeItem('company_quota_exceeded');
                         }
                       }
+                    } else {
+                      setCompany(null);
+                      localStorage.setItem('company_quota_exceeded', 'false');
                     }
-                  } else {
-                    setCompany(null);
-                    localStorage.setItem('company_quota_exceeded', 'false');
-                  }
                   setLoading(false);
                 }, (err) => {
                   console.error("Company snapshot error:", err);

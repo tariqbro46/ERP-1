@@ -171,52 +171,6 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
     }
   }, [activeTab, isOpen, company?.id]);
 
-  // Quota Metrics
-  const isUnlimited = company?.quotaLimit === -1;
-  const quotaLimit = company?.quotaLimit !== undefined ? Number(company.quotaLimit) : 10000;
-  const rawQuotaUsed = company?.quotaUsed || 0;
-  const quotaUsed = isUnlimited ? rawQuotaUsed : Math.min(quotaLimit, rawQuotaUsed);
-  const qReads = company?.quotaReads || 0;
-  const qWrites = company?.quotaWrites || 0;
-  const qDeletes = company?.quotaDeletes || 0;
-
-  const pctUsed = isUnlimited ? 0 : Math.min(100, Math.max(0, Math.round((quotaUsed / quotaLimit) * 100)));
-  const remainingOps = isUnlimited ? 'Unlimited' : Math.max(0, quotaLimit - quotaUsed).toLocaleString();
-
-  // Traffic Split
-  const totalOps = qReads + qWrites + qDeletes || 1;
-  const rPct = Math.round((qReads / totalOps) * 100);
-  const wPct = Math.round((qWrites / totalOps) * 100);
-  const dPct = Math.max(0, 100 - rPct - wPct);
-
-  // In-memory & localStorage cached items
-  const cachedCounts = useMemo(() => {
-    let vouchers = 0;
-    let ledgers = 0;
-    let items = 0;
-    try {
-      const v = localStorage.getItem(`col_cache_vouchers_${company?.id}`);
-      if (v) vouchers = JSON.parse(v).length || 0;
-    } catch (e) {}
-    try {
-      const l = localStorage.getItem(`col_cache_ledgers_${company?.id}`);
-      if (l) ledgers = JSON.parse(l).length || 0;
-    } catch (e) {}
-    try {
-      const i = localStorage.getItem(`col_cache_items_${company?.id}`);
-      if (i) items = JSON.parse(i).length || 0;
-    } catch (e) {}
-    return { vouchers, ledgers, items, total: vouchers + ledgers + items };
-  }, [company?.id]);
-
-  // Cache Efficiency Calculation
-  const cacheHitRate = useMemo(() => {
-    const totalRequests = totalOps + (cachedCounts.total * 3);
-    if (totalRequests === 0) return 92;
-    const estimatedSaved = cachedCounts.total * 3;
-    return Math.min(99, Math.max(75, Math.round((estimatedSaved / totalRequests) * 100)));
-  }, [totalOps, cachedCounts]);
-
   // Check if a user account belongs to the System Founder
   const isFounderAccount = (u: any) => {
     const email = (u?.email || '').toLowerCase().trim();
@@ -258,6 +212,62 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
     });
     return { totalTeamOps, topUser };
   }, [visibleUsers]);
+
+  // Quota Metrics - Overview page is guaranteed to be in full sync with team operations
+  const isUnlimited = company?.quotaLimit === -1;
+  const quotaLimit = company?.quotaLimit !== undefined ? Number(company.quotaLimit) : 10000;
+  const rawQuotaUsed = Math.max(company?.quotaUsed || 0, teamStats.totalTeamOps || 0);
+  const quotaUsed = isUnlimited ? rawQuotaUsed : Math.min(quotaLimit, rawQuotaUsed);
+  const qWrites = company?.quotaWrites || 0;
+  const qDeletes = company?.quotaDeletes || 0;
+  const qReads = Math.max(company?.quotaReads || 0, rawQuotaUsed > (company?.quotaReads || 0) + qWrites + qDeletes ? rawQuotaUsed - (qWrites + qDeletes) : (company?.quotaReads || 0));
+
+  const pctUsed = isUnlimited ? 0 : Math.min(100, Math.max(0, Math.round((quotaUsed / quotaLimit) * 100)));
+  const remainingOps = isUnlimited ? 'Unlimited' : Math.max(0, quotaLimit - quotaUsed).toLocaleString();
+
+  // Traffic Split
+  const totalOps = qReads + qWrites + qDeletes || 1;
+  const rPct = Math.round((qReads / totalOps) * 100);
+  const wPct = Math.round((qWrites / totalOps) * 100);
+  const dPct = Math.max(0, 100 - rPct - wPct);
+
+  // Auto-reconcile Firestore company doc if team member ops exceeded stored company quotaUsed
+  useEffect(() => {
+    if (company?.id && teamStats.totalTeamOps > (company?.quotaUsed || 0)) {
+      erpService.updateCompany(company.id, {
+        quotaUsed: teamStats.totalTeamOps,
+        quotaReads: Math.max(company.quotaReads || 0, teamStats.totalTeamOps)
+      }).catch(err => console.warn('Could not auto-reconcile company quota:', err));
+    }
+  }, [company?.id, company?.quotaUsed, teamStats.totalTeamOps]);
+
+  // In-memory & localStorage cached items
+  const cachedCounts = useMemo(() => {
+    let vouchers = 0;
+    let ledgers = 0;
+    let items = 0;
+    try {
+      const v = localStorage.getItem(`col_cache_vouchers_${company?.id}`);
+      if (v) vouchers = JSON.parse(v).length || 0;
+    } catch (e) {}
+    try {
+      const l = localStorage.getItem(`col_cache_ledgers_${company?.id}`);
+      if (l) ledgers = JSON.parse(l).length || 0;
+    } catch (e) {}
+    try {
+      const i = localStorage.getItem(`col_cache_items_${company?.id}`);
+      if (i) items = JSON.parse(i).length || 0;
+    } catch (e) {}
+    return { vouchers, ledgers, items, total: vouchers + ledgers + items };
+  }, [company?.id]);
+
+  // Cache Efficiency Calculation
+  const cacheHitRate = useMemo(() => {
+    const totalRequests = totalOps + (cachedCounts.total * 3);
+    if (totalRequests === 0) return 92;
+    const estimatedSaved = cachedCounts.total * 3;
+    return Math.min(99, Math.max(75, Math.round((estimatedSaved / totalRequests) * 100)));
+  }, [totalOps, cachedCounts]);
 
   // Update Company Quota Limit
   const handleSaveCompanyLimit = async () => {
