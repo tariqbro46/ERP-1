@@ -171,7 +171,7 @@ export interface Employee {
   phone?: string; // Alias for contactNumber if needed
   email?: string;
   address?: string;
-  status: 'Active' | 'Inactive' | 'On Leave';
+  status: 'Active' | 'Inactive' | 'On Leave' | 'Resigned';
   fatherName?: string;
   motherName?: string;
   bloodGroup?: string;
@@ -194,10 +194,23 @@ export interface Employee {
   emergencyContact3Relation?: string;
   emergencyContact3Phone?: string;
   joining_date?: string; // Standard format from firebase
+  resignation_date?: string;
+  salaryIncrements?: SalaryIncrement[];
   photo?: string;
   role?: string;
   createdAt: any;
   updatedAt?: any;
+}
+
+export interface SalaryIncrement {
+  id: string;
+  effectiveDate: string;
+  previousSalary: number;
+  newSalary: number;
+  incrementAmount: number;
+  incrementType: 'Fixed' | 'Percentage';
+  notes?: string;
+  createdAt?: any;
 }
 
 export interface AppNotification {
@@ -227,24 +240,39 @@ export interface Attendance {
   createdAt: any;
 }
 
+export interface EmployeeGroup {
+  id: string;
+  companyId: string;
+  name: string;
+  description?: string;
+  createdAt?: any;
+}
+
 export interface PayHead {
   id: string;
   companyId: string;
   name: string;
   type: 'Earning' | 'Deduction';
-  calculationType: 'Fixed' | 'On Attendance' | 'Percentage';
+  calculationType: 'Fixed' | 'On Attendance' | 'Percentage' | 'On Overtime';
   basePayHeadId?: string; // For percentage calculation
   percentage?: number;
+  expenseLedgerId?: string;
+  ratePerHour?: number;
+  description?: string;
   createdAt: any;
 }
 
 export interface SalaryStructure {
   id: string;
   companyId: string;
-  employeeId: string;
+  targetType?: 'Employee' | 'Group';
+  employeeId?: string;
+  groupId?: string;
   payHeadId: string;
   payHeadName: string;
   amount: number;
+  percentage?: number;
+  effectiveFrom?: string;
   createdAt: any;
 }
 
@@ -264,8 +292,20 @@ export interface SalarySheet {
   paymentDate?: string;
   paymentMethod?: string;
   voucherId?: string; // Reference to the payment voucher
+  journalVoucherId?: string; // Reference to the journal voucher
+  journalVoucherNo?: string;
   type?: 'Salary' | 'Bonus';
   bonusType?: string; // Eid-ul-Fitr, Eid-ul-Adha, etc.
+  presentDays?: number;
+  totalDays?: number;
+  overtimeHours?: number;
+  overtimeAmount?: number;
+  payBreakdown?: {
+    payHeadId: string;
+    payHeadName: string;
+    type: 'Earning' | 'Deduction';
+    amount: number;
+  }[];
   createdAt: any;
 }
 

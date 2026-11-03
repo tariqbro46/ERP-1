@@ -1,114 +1,127 @@
-# Executive Database Quota & Operations Intelligence Modal
+# পেরোল ম্যানেজমেন্ট আধুনিকায়ন, ডুপ্লিকেট সমাধান ও টালিফ্লো ডকস পূর্ণাঙ্গ গাইড
 
-Redesign the Database Quota Metrics popup into an authentic, informative, multi-tab executive dashboard featuring real-time telemetry, module-wise usage, cache efficiency analytics, and inline administrative controls for company and user quotas.
+পেরোল ম্যানেজমেন্ট পেজের অপ্রয়োজনীয় হেডার টেক্সট/সিম্বল অপসারণ, স্যালারি প্রসেসিং টেবিল থেকে ১-ক্লিকে ডুপ্লিকেট ডাটা মুছে ফেলা ও প্রিভেন্ট করা, মাসিক হাজিরা এডিট ও স্বয়ংক্রিয় বেতন হিসাব, এমপ্লয়ি জয়েনিং/রিসাইন ও স্যালারি ইনক্রিমেন্ট হিস্ট্রি ট্র্যাকিং, ডিপার্টমেন্ট সিঙ্ক, এডভান্স/লোন স্ট্যাটাস ম্যানেজমেন্ট এবং নতুন সাধারণ ইউজারদের জন্য টালিফ্লো ডকসে সম্পূর্ণ গাইড যুক্ত করার পূর্ণাঙ্গ পরিকল্পনা।
 
-## User Review & Critical Decisions
+---
+
+## ব্যবহারকারী রিভিউ ও নিশ্চিতকৃত সিদ্ধান্ত (User Review & Confirmed Decisions)
 
 > [!IMPORTANT]
-> The user confirmed the following architectural and visual choices:
-> - **Highlighted Metrics**: Real-time breakdown, module usage, and cache efficiency.
-> - **Visual Style & Layout**: Multi-tab executive dashboard with live charts and statistics.
-> - **Administrative Controls**: Quick company limit adjuster, manual instant reset, and inline user quota management.
-
-- **Confirmed Decision 1**: Authentic live tracking without synthetic/random mock numbers—reflecting genuine Firestore reads, writes, deletes, and true in-memory/localStorage cache savings.
-- **Confirmed Decision 2**: Dhaka Standard Time (01:30 PM BST) auto-reset synchronization with persistent live countdown.
-- **Confirmed Decision 3**: Full adherence to project table centering (`vertical-align: middle !important;`) and clean unboxed typography discipline (no pill enclosures for static metadata).
+> ব্যবহারকারীর সাথে প্রশ্নোত্তর পর্বে নিশ্চিত হওয়া সিদ্ধান্তসমূহ:
+> - **সিদ্ধান্ত ১ (ডুপ্লিকেট ডাটা সমাধান)**: স্যালারি প্রসেসিং পেজে ১-ক্লিক "Clean Duplicates" বাটন থাকবে যা অতিরিক্ত ডুপ্লিকেট রেকর্ড ফিল্টার করে মুছে ফেলবে এবং প্রতিটি রো-তে আলাদাভাবে ডিলিট (Trash) বাটন থাকবে। পাশাপাশি ভবিষ্যতে অটো-ক্যালকুলেট করার সময় যাতে একই কর্মীর ডুপ্লিকেট এন্ট্রি তৈরি না হয় তা কোড লেভেলে নিশ্চিত করা হবে।
+> - **সিদ্ধান্ত ২ (ইনক্রিমেন্ট ও সার্ভিস হিস্ট্রি)**: পেরোল ম্যানেজমেন্টের ভেতরেই "Employee Service & Increment Profile" ব্যবস্থাপনা যুক্ত করা হবে, যেখানে জয়েনিং ডেট, পদত্যাগ/রিসাইন ডেট, স্ট্যাটাস এবং পূর্বের সকল বেতন বৃদ্ধির বিস্তারিত হিস্ট্রি লগ সংরক্ষিত ও দৃশ্যমান থাকবে।
 
 ---
 
-## 1. Overview & Core Concept
+## ১. সারসংক্ষেপ ও প্রধান উদ্দেশ্য (Overview & Core Concept)
 
-### What It Does
-Upgrades the simple quota dialog into a high-density, informative **Database Quota & Operations Intelligence Center**. It provides business owners, system administrators, and staff with deep transparency into how ERP actions consume database operations, how intelligent client caching prevents unnecessary cloud costs, and enables instant control over company and user-level daily limits.
-
-### Target Audience & Persona
-- **Founders & System Admins**: Need granular insight into database operation burn rates, caching health, and the power to adjust user/company limits or trigger manual resets instantly.
-- **Accountants & Operators**: Need clear status awareness of remaining daily operations before reaching quota thresholds, without disruption.
-
-### Key Value
-- **Zero Hallucination / 100% Authentic**: Reflects actual database read/write/delete operations and authentic cache hit efficiency.
-- **Cost & Quota Visibility**: Clear visualization of read-to-write ratios, module consumption, and cloud quota safety.
-- **Empowered Admin Governance**: Direct in-modal editing of individual user quotas and company ceiling limits.
+- **উদ্দেশ্য**: একজন সম্পূর্ণ সাধারণ বা নতুন ব্যবহারকারী যাতে কোনো প্রকার বিভ্রান্তি ছাড়াই সহজ ধাপে কর্মীদের বেতন তৈরি, হাজিরা নিয়ন্ত্রণ, লোন/এডভান্স কর্তন এবং হিসাবের বইয়ে ভাউচার পোস্ট করতে পারেন।
+- **সমাধানকৃত বিষয়সমূহ**:
+  1. পেজের উপরের অপ্রয়োজনীয় `Payroll Management` আইকন ও ডুপ্লিকেট টেক্সট সরিয়ে ন্যাভিগেশন ট্যাবগুলোকে আরও পরিষ্কার ও বড় ভিউ দেওয়া।
+  2. স্যালারি প্রসেসিং-এ ভুলবশত আসা ডুপ্লিকেট কর্মী ডাটা (যেমন: ২৬/১৩) ১-ক্লিকে মুছে ফেলা এবং প্রতি সারিতে ডিলিট অপশন দেওয়া।
+  3. মাসিক এটেনডেন্স রেজিস্টারে সরাসরি হাজিরা/ওভারটাইম লিখে সেভ করা এবং সাথে সাথে স্বয়ংক্রিয়ভাবে চলতি মাসের বেতন রি-ক্যালকুলেট হওয়া।
+  4. কর্মীদের বেতন বৃদ্ধির (Increment) সম্পূর্ণ হিস্ট্রি, জয়েনিং ও রিসাইন ডেট স্টোর ও ট্র্যাক করা।
+  5. কর্মী তৈরির সময় দেওয়া ডিপার্টমেন্ট বা গ্রুপগুলোকে "Employee Groups" পেজে স্বয়ংক্রিয়ভাবে প্রদর্শন ও সংগঠিত করা।
+  6. Advances & Loans পেজের "Pending" স্ট্যাটাসগুলো সরাসরি Approve, Settled/Recovered করা অথবা ডিলিট করার অ্যাকশন বাটন যুক্ত করা।
+  7. টালিফ্লো ডকসে (`TallyFlow Docs`) নতুন ও সাধারণ ব্যবহারকারীদের জন্য সহজ বাংলা ও ইংরেজিতে ধাপে ধাপে সচিত্র পূর্ণাঙ্গ পেরোল ইউজার ম্যানুয়াল যুক্ত করা।
 
 ---
 
-## 2. User Experience & Visual Design
+## ২. ইউজার ইন্টারফেস ও ব্যবহারকারী অভিজ্ঞতা (UX & Visual Design)
 
-### Key User Flows
-1. **Modal Entry**: User clicks the Quota widget in the sidebar or top bar. The executive modal appears with a smooth backdrop blur and four structured tabs:
-   - **Tab 1: Live Overview (লাইভ ওভারভিউ)**: Quota progress meter (with Unlimited mode handling), BST 01:30 PM countdown, Reads/Writes/Deletes traffic ratio, and Cache Efficiency rate.
-   - **Tab 2: Module Breakdown (মডিউল অ্যানালিটিক্স)**: Operational distribution across Vouchers, Inventory, Ledgers, and System Masters.
-   - **Tab 3: Team & Users (টিম ও ইউজার কোটা)**: Table of company team members showing real-time usage, individual limits, and inline quick-edit controls.
-   - **Tab 4: Admin Controls (কোটা কন্ট্রোল ও অ্যাডমিন)**: Preset buttons (5k, 10k, 25k, 50k, 100k, Unlimited), custom numeric input, and immediate Reset Quota with safe confirmation.
-2. **Switching Tabs**: Zero-delay tab navigation with subtle active indicators.
-3. **Adjusting Quota**: Admin modifies user quota or company quota; saves instantly to Firestore and updates state without full page reload.
+### ক. পেরোল পেজের হেডার ও ট্যাব বার
+- শীর্ষ ট্যাব বার থেকে অপ্রয়োজনীয় আইকন ও `Payroll Management` টেক্সট লেবেল সরিয়ে ফেলা হবে, যাতে ৮টি এক্সিকিউটিভ ট্যাব পূর্ণাঙ্গ প্রস্থজুড়ে মার্জিতভাবে অবস্থান নেয়।
+- পেজের ডান কোণে সরাসরি **"📖 User Guide / গাইড"** কুইক বাটন থাকবে, যা ক্লিক করলেই টালিফ্লো ডকসের পেরোল গাইড সরাসরি ওপেন হবে।
 
-### Visual Identity & Theme
-- **Aesthetic Direction**: Executive Dark Slate (`#0B0F19` / `#111827`) with precision hairline borders (`border-white/10` and `border-slate-800`), avoiding garish gradients or decorative AI pill badges.
-- **Palette**: Deep slate canvas (60%), slate-800/900 cards and table containers (30%), with purposeful semantic status indicators (Emerald for safe/active, Amber for warning/pending, Rose for critical, Indigo for administrative actions).
-- **Typography**: Clean hierarchy with tabular figures (`font-mono tabular-nums`) for all operation counts, timestamps, and percentages.
-- **Zero-Pill Discipline**: All status labels, timestamps, and metadata display as clean, unboxed text separated by typographic middots (`·`).
+### খ. স্যালারি প্রসেসিং ও ডুপ্লিকেট ক্লিনআপ
+- ফিল্টার বারে নতুন বাটন: **"🧹 Clean Duplicates"** (একটি ক্লিকেই সব অতিরিক্ত ডুপ্লিকেট সারি মুছে ফেলে ১৩/১৩ ক্লিন স্টেট ফিরিয়ে আনবে)।
+- প্রতিটি কর্মীর সারির Actions কলামে পে-স্লিপ প্রিন্ট বাটনের পাশাপাশি থাকবে **"🗑️ Delete Row"** বাটন।
+
+### গ. মাসিক এটেনডেন্স রেজিস্টার ও অটো-ক্যালকুলেশন
+- এটেনডেন্স রেজিস্টারের হেডারে **"Auto-fill 26 Days"**, **"Auto-fill 30 Days"** এবং স্পষ্ট **"💾 Save & Recalculate Payroll"** বাটন থাকবে।
+- হাজিরা বা ওভারটাইম এডিট করে সেভ করলেই চলতি মাসের স্যালারি শিটে স্বয়ংক্রিয়ভাবে উপস্থিতির অনুপাত ও ওভারটাইমের টাকা আপডেট হয়ে যাবে।
+
+### ঘ. এমপ্লয়ি সার্ভিস ও স্যালারি ইনক্রিমেন্ট হিস্ট্রি
+- পেরোল পেজে কর্মী প্রোফাইল ও ইনক্রিমেন্ট ড্রয়ার/মডেল:
+  - কর্মীর জয়েনিং ডেট ও রিসাইন ডেট প্রদর্শন ও পরিবর্তনের সুবিধা।
+  - কর্মীর স্ট্যাটাস: `Active`, `Resigned`, `On Leave`।
+  - **"➕ Add Salary Increment"**: কার্যকর তারিখ (Effective Date), পুরাতন বেতন, বৃদ্ধির পরিমাণ/শতকরা হার, নতুন কার্যকর বেতন এবং বৃদ্ধির কারণ/মন্তব্য লিখে সেভ করার সুবিধা।
+  - নিচে টাইমলাইন টেবিলে বিগত সকল ইনক্রিমেন্টের তারিখ, পরিমাণ ও নোটের সম্পূর্ণ তালিকা সংরক্ষিত থাকবে।
+
+### ঙ. ডিপার্টমেন্ট ও গ্রুপ প্রদর্শন
+- কর্মী মাস্টার থেকে সকল কর্মীর `department` এবং `role` স্বয়ংক্রিয়ভাবে একত্রিত (Aggregate) করে Employee Groups ট্যাবে কার্ড আকারে দেখানো হবে (যেমন: Office, Accounts, Factory, Staff ইত্যাদি)।
+- প্রতিটি গ্রুপ কার্ডে ওই ডিপার্টমেন্টের কর্মীদের তালিকা ও সদস্য সংখ্যা প্রদর্শিত হবে।
+
+### চ. এডভান্স ও লোন স্ট্যাটাস ম্যানেজমেন্ট
+- Advances ও Loans টেবিলে স্ট্যাটাস কলামের পাশে Actions যুক্ত হবে:
+  - **Approve / Mark Settled (সবুজ টিক)**: বেতন থেকে কর্তন হলে বা পরিশোধ হলে স্ট্যাটাস `Settled` হবে।
+  - **Edit (পেন্সিল আইকন)**: টাকার পরিমাণ বা তারিখ সংশোধন।
+  - **Delete (লাল ডিলিট আইকন)**: ভুল বা অনাকাঙ্ক্ষিত এডভান্স এন্ট্রি পুরোপুরি মুছে ফেলা।
 
 ---
 
-## 3. Key Product Decisions & Trade-Offs
-
-### Decision 1: Multi-Tab Executive Architecture vs. Single Cluttered Card
-- **Chosen Approach**: Segment into 4 focused tabs (Live Overview, Module Breakdown, Team Quotas, Admin Controls).
-- **Why**: Allows in-depth data (module analytics and team member tables) without forcing the user to scroll through a cramped vertical modal.
-- **Alternatives Considered**: A single vertical scrollable view—rejected because it quickly becomes overwhelming when listing users and multiple metric charts.
-
-### Decision 2: Authentic In-Memory & Local Cache Metrics
-- **Chosen Approach**: Derive cache efficiency from actual `_quotaBuffer`, localStorage read timestamps, and tracked Firestore queries vs avoided queries.
-- **Why**: Adheres strictly to the persistent project rule: *"Never use fake/mock sine waves, fake multipliers, or random synthetic fallbacks. All data must come directly from real records."*
-
----
-
-## 4. Technical Architecture & Data Strategy
+## ৩. আর্কিটেকচার ও ডেটা ফ্লো ডায়াগ্রাম
 
 ```
-┌────────────────────────────────────────────────────────┐
-│               QuotaDashboardModal (React)              │
-│ ┌────────────────────────────────────────────────────┐ │
-│ │ Header: Title · BST Dhaka 1:30 PM Sync · Company   │ │
-│ ├────────────────────────────────────────────────────┤ │
-│ │ Tab Bar: [Overview] [Modules] [Team] [Admin Hub]   │ │
-│ └────────────────────────────────────────────────────┘ │
-│                            │                           │
-│     ┌──────────────────────┼─────────────────────┐     │
-│     ▼                      ▼                     ▼     │
-│ [Tab 1: Overview]   [Tab 2: Modules]      [Tab 3: Team]│
-│ - Live Ops Meter    - Vouchers & Invoices - User list  │
-│ - Reads/Writes Bar  - Stock & Inventory   - Usage bars │
-│ - Cache Efficiency  - Ledgers & Reports   - Inline edit│
-│                            │                           │
-│                            ▼                           │
-│                   [Tab 4: Admin Hub]                   │
-│                   - Preset limits & Custom             │
-│                   - Instant Quota Reset                │
-│                   - Reset request history              │
-└────────────────────────────┬───────────────────────────┘
-                             │
-                             ▼
-┌────────────────────────────────────────────────────────┐
-│                erpService.ts & AuthContext             │
-│  - trackQuota() & _quotaBuffer memory analytics        │
-│  - updateCompanyQuotaLimit() / updateUserQuotaLimit()  │
-│  - resetQuotaNow() / getCompanyUsers()                 │
-│  - Real-time Firestore sync & localStorage fallback    │
-└────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                        TallyFlow ERP - Payroll                         │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │
+         ┌───────────────────────────┼───────────────────────────┐
+         ▼                           ▼                           ▼
+┌──────────────────┐       ┌──────────────────┐        ┌──────────────────┐
+│ Attendance       │       │ Employee Service │        │ Advances & Loans │
+│ Register         │       │ & Increments     │        │ Management       │
+│ - Present/Absent │       │ - Joining Date   │        │ - Status Actions │
+│ - Overtime Hours │       │ - Resignation Dt │        │ - Approve/Settle │
+│ - Auto-Recalc    │       │ - Increment Log  │        │ - Auto-Deduction │
+└────────┬─────────┘       └────────┬─────────┘        └────────┬─────────┘
+         │                          │                           │
+         └──────────────────┬───────┴───────────────────────────┘
+                            ▼
+               ┌──────────────────────────┐
+               │ Salary Calculation Engine│
+               │ - Single Sheet Guarantee │
+               │ - Clean Duplicates       │
+               │ - Row Delete Action      │
+               └────────────┬─────────────┘
+                            ▼
+               ┌──────────────────────────┐
+               │ Firestore & Cache Sync   │
+               │ - salary_sheets          │
+               │ - attendance / advances  │
+               │ - employees (increments) │
+               └──────────────────────────┘
 ```
 
-### Component Hierarchy & Handlers
-- **`QuotaDashboardModal.tsx`**:
-  - `activeTab`: `'overview' | 'modules' | 'users' | 'admin'`
-  - `users`: Fetched via `erpService.getCompanyUsers(company.id)` with real `quotaUsed` and `quotaLimit`.
-  - `handleUpdateUserLimit(userId, limit)`: Saves via `erpService.updateUserQuotaLimit`.
-  - `handleUpdateCompanyLimit(limit)`: Saves via `erpService.updateCompanyQuotaLimit`.
-  - `handleResetQuotaNow()`: Executes `erpService.resetQuotaNow(company.id)`.
-  - `cacheStats`: Computes authenticated session metrics (total operations executed, estimated Firestore reads prevented via SWR cache).
+---
 
-### Strict Guidelines Compliance
-- Table cells adhere to `vertical-align: middle !important;` per persistent instructions.
-- All numbers use `tabular-nums` / `font-mono`.
-- Language in chat: Bangla.
+## ৪. টালিফ্লো ডকস (TallyFlow Docs) সংযোজন পরিকল্পনা
+
+`src/constants/helpContent.ts`-এ নতুন ক্যাটাগরি **"Payroll Management & Employee Compensation"** (`payroll-guide`) যোগ করা হবে। এতে থাকবে:
+1. **নতুন ইউজারদের জন্য সহজ ওভারভিউ**: পেরোল কী এবং কীভাবে ব্যবসা প্রতিষ্ঠানের বেতন নির্ভুলভাবে স্বয়ংক্রিয় করা যায়।
+2. **ধাপ ১ - কর্মী ও ডিপার্টমেন্ট প্রস্তুত করা**: কর্মী যোগ করা, মূল বেতন ও যোগদানের তারিখ নির্ধারণ।
+3. **ধাপ ২ - বেতন কাঠামো (Pay Components & Structures)**: বেসিক পে, বাড়ি ভাড়া, চিকিৎসা ভাতা ও প্রভিডেন্ট ফান্ড কর্তন কনফিগারেশন।
+4. **ধাপ ৩ - মাসিক হাজিরা ও ওভারটাইম রেজিস্টার**: দৈনিক বা মাসিক উপস্থিতি ইনপুট এবং এক ক্লিকে ২৬/৩০ দিনের হিসাব তৈরি।
+5. **ধাপ ৪ - বেতন অগ্রিম ও ঋণ সমন্বয়**: অগ্রিম টাকা প্রদান এবং মাস শেষে তা বেতন থেকে স্বয়ংক্রিয় সমন্বয়।
+6. **ধাপ ৫ - স্বয়ংক্রিয় বেতন হিসাব ও পর্যালোচনা**: ১-ক্লিকে চলতি মাসের বেতন তৈরি, পে-স্লিপ প্রিন্ট এবং ভুল ডাটা ক্লিনআপ।
+7. **ধাপ ৬ - হিসাবের জার্নাল ভাউচার পোস্টিং ও বিতরণ**: ক্যাশ বা ব্যাংক লেজার থেকে কর্মীদের সরাসরি বেতন প্রদান ও সাধারণ খতিয়ানে অটো-পোস্টিং।
+8. **ধাপ ৭ - বেতন বৃদ্ধি ও সার্ভিস হিস্ট্রি**: কর্মীদের ইনক্রিমেন্ট ট্র্যাকিং এবং পদত্যাগ ব্যবস্থাপনার নিয়মাবলী।
+9. **সমস্যা সমাধান (Troubleshooting FAQ)**: ডুপ্লিকেট সারি দেখা দিলে কী করবেন, পেন্ডিং লোন কীভাবে সেটেল করবেন ইত্যাদি।
+
+---
+
+## ৫. পরিবর্তনযোগ্য ফাইলের তালিকা
+
+1. `src/constants/helpContent.ts`: টালিফ্লো ডকসে পূর্ণাঙ্গ দ্বিভাষিক (বাংলা ও ইংরেজি) পেরোল গাইড ক্যাটাগরি সংযোজন।
+2. `src/components/PayrollManagement.tsx`:
+   - হেডার টেক্সট/সিম্বল অপসারণ।
+   - স্যালারি প্রসেসিং-এ "Clean Duplicates" বাটন এবং প্রতিটি সারিতে ডিলিট অপশন।
+   - অটো-ক্যালকুলেশনে ডুপ্লিকেট রোধ।
+   - এটেনডেন্স হেডারে সেভ ও অটো-রিক্যালকুলেট বাটন।
+   - এমপ্লয়ি ইনক্রিমেন্ট ও সার্ভিস হিস্ট্রি মডাল/ড্রয়ার।
+   - কর্মী ডিপার্টমেন্ট ও গ্রুপগুলোর নিখুঁত এগ্রিগেশন।
+   - এডভান্স ও লোনে স্ট্যাটাস ম্যানেজমেন্ট ও অ্যাকশন বাটন।
+   - টালিফ্লো ডকসে যাওয়ার কুইক হেল্প বাটন।
+3. `src/services/erpService.ts`: কর্মীদের ইনক্রিমেন্ট হিস্ট্রি আপডেট ও সেভ করার মেথড।
+4. `src/types.ts`: ইনক্রিমেন্ট হিস্ট্রি এবং এমপ্লয়ি সার্ভিস ডেটা টাইপ আপডেট।

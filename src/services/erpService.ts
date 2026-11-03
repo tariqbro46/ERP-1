@@ -4528,9 +4528,75 @@ export const erpService: any = {
     const snap = await getDoc(ref);
     if (snap.exists()) {
       const companyId = snap.data().companyId;
-      if (companyId) this._employeesCache[companyId] = { data: [], timestamp: 0 };
+      if (companyId) {
+        this._employeesCache[companyId] = { data: [], timestamp: 0 };
+        this._updateCachedCollection('employees', companyId, { id, ...employee }, 'update');
+      }
     }
-    await updateDoc(ref, { ...employee, updatedAt: serverTimestamp() });
+    await updateDoc(ref, { ...cleanData(employee), updatedAt: serverTimestamp() });
+  },
+
+  async addEmployeeSalaryIncrement(companyId: string, employeeId: string, increment: any) {
+    const ref = doc(db, 'employees', employeeId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) throw new Error('Employee not found');
+    const empData = snap.data();
+    const existingIncrements = Array.isArray(empData.salaryIncrements) ? empData.salaryIncrements : [];
+    const newIncrement = {
+      ...increment,
+      id: increment.id || `inc_${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    const updatedIncrements = [newIncrement, ...existingIncrements];
+    
+    // Update basicSalary and salary on employee document
+    const updatedFields: any = {
+      salaryIncrements: updatedIncrements,
+      basicSalary: Number(increment.newSalary) || empData.basicSalary,
+      salary: Number(increment.newSalary) || empData.salary,
+      updatedAt: serverTimestamp()
+    };
+
+    await updateDoc(ref, updatedFields);
+    if (companyId) {
+      this._employeesCache[companyId] = { data: [], timestamp: 0 };
+      this._updateCachedCollection('employees', companyId, { id: employeeId, ...empData, ...updatedFields }, 'update');
+    }
+    return newIncrement;
+  },
+
+  async updateEmployeeServiceStatus(companyId: string, employeeId: string, payload: { status?: string; joining_date?: string; resignation_date?: string }) {
+    const ref = doc(db, 'employees', employeeId);
+    const cleaned = cleanData(payload);
+    await updateDoc(ref, { ...cleaned, updatedAt: serverTimestamp() });
+    if (companyId) {
+      this._employeesCache[companyId] = { data: [], timestamp: 0 };
+      this._updateCachedCollection('employees', companyId, { id: employeeId, ...cleaned }, 'update');
+    }
+  },
+
+  async cleanDuplicateSalarySheets(companyId: string, month: string) {
+    const sheets = await this.getSalarySheets(companyId, true);
+    const monthSheets = sheets.filter((s: any) => s.month === month);
+    const seenEmp = new Map<string, any>();
+    const duplicatesToDelete: string[] = [];
+
+    for (const sheet of monthSheets) {
+      if (seenEmp.has(sheet.employeeId)) {
+        duplicatesToDelete.push(sheet.id);
+      } else {
+        seenEmp.set(sheet.employeeId, sheet);
+      }
+    }
+
+    for (const sheetId of duplicatesToDelete) {
+      await this.deleteSalarySheet(sheetId, companyId);
+    }
+
+    return {
+      deletedCount: duplicatesToDelete.length,
+      remainingCount: seenEmp.size
+    };
   },
 
   async deleteEmployee(id: string) {
@@ -4538,50 +4604,74 @@ export const erpService: any = {
     const snap = await getDoc(ref);
     if (snap.exists()) {
       const companyId = snap.data().companyId;
-      if (companyId) this._employeesCache[companyId] = { data: [], timestamp: 0 };
+      if (companyId) {
+        this._employeesCache[companyId] = { data: [], timestamp: 0 };
+        this._updateCachedCollection('employees', companyId, { id }, 'delete');
+      }
     }
     await deleteDoc(ref);
   },
 
   // Salary Sheets
-  async getSalarySheets(companyId: string) {
-    return this.getCollection('salary_sheets', companyId);
+  async getSalarySheets(companyId: string, forceRefresh = false) {
+    return this.getCollection('salary_sheets', companyId, 5000, forceRefresh);
   },
 
   async createSalarySheet(companyId: string, data: any) {
     const ref = doc(collection(db, 'salary_sheets'));
     const docData = cleanData({ ...data, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, docData);
+    this._updateCachedCollection('salary_sheets', companyId, docData, 'add');
     return docData;
   },
 
-  async updateSalarySheet(id: string, data: any) {
-    await updateDoc(doc(db, 'salary_sheets', id), { ...data, updatedAt: serverTimestamp() });
+  async updateSalarySheet(id: string, data: any, companyId?: string) {
+    const cleaned = cleanData(data);
+    await updateDoc(doc(db, 'salary_sheets', id), { ...cleaned, updatedAt: serverTimestamp() });
+    const cId = companyId || data.companyId;
+    if (cId) {
+      this._updateCachedCollection('salary_sheets', cId, { id, ...cleaned }, 'update');
+    }
   },
 
-  async deleteSalarySheet(id: string) {
+  async deleteSalarySheet(id: string, companyId?: string) {
     await deleteDoc(doc(db, 'salary_sheets', id));
+    if (companyId) {
+      this._updateCachedCollection('salary_sheets', companyId, { id }, 'delete');
+    }
   },
 
   // Pay Heads
-  async getPayHeads(companyId: string) {
-    return this.getCollection('pay_heads', companyId);
+  async getPayHeads(companyId: string, forceRefresh = false) {
+    return this.getCollection('pay_heads', companyId, 5000, forceRefresh);
   },
+
   async createPayHead(companyId: string, data: any) {
     const ref = doc(collection(db, 'pay_heads'));
     const docData = cleanData({ ...data, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, docData);
+    this._updateCachedCollection('pay_heads', companyId, docData, 'add');
     return docData;
   },
-  async updatePayHead(id: string, data: any) {
-    await updateDoc(doc(db, 'pay_heads', id), { ...data, updatedAt: serverTimestamp() });
+
+  async updatePayHead(id: string, data: any, companyId?: string) {
+    const cleaned = cleanData(data);
+    await updateDoc(doc(db, 'pay_heads', id), { ...cleaned, updatedAt: serverTimestamp() });
+    const cId = companyId || data.companyId;
+    if (cId) {
+      this._updateCachedCollection('pay_heads', cId, { id, ...cleaned }, 'update');
+    }
   },
-  async deletePayHead(id: string) {
+
+  async deletePayHead(id: string, companyId?: string) {
     await deleteDoc(doc(db, 'pay_heads', id));
+    if (companyId) {
+      this._updateCachedCollection('pay_heads', companyId, { id }, 'delete');
+    }
   },
 
   // Salary Structures
-  async getSalaryStructures(companyId: string, employeeId?: string) {
+  async getSalaryStructures(companyId: string, employeeId?: string, forceRefresh = false) {
     if (employeeId) {
       const q = query(
         collection(db, 'salary_structures'),
@@ -4591,89 +4681,365 @@ export const erpService: any = {
       const snap = await getDocs(q);
       return snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
     }
-    return this.getCollection('salary_structures', companyId);
+    return this.getCollection('salary_structures', companyId, 5000, forceRefresh);
   },
+
   async createSalaryStructure(companyId: string, data: any) {
     const ref = doc(collection(db, 'salary_structures'));
     const docData = cleanData({ ...data, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, docData);
+    this._updateCachedCollection('salary_structures', companyId, docData, 'add');
     return docData;
   },
-  async updateSalaryStructure(id: string, data: any) {
-    await updateDoc(doc(db, 'salary_structures', id), { ...data, updatedAt: serverTimestamp() });
+
+  async updateSalaryStructure(id: string, data: any, companyId?: string) {
+    const cleaned = cleanData(data);
+    await updateDoc(doc(db, 'salary_structures', id), { ...cleaned, updatedAt: serverTimestamp() });
+    const cId = companyId || data.companyId;
+    if (cId) {
+      this._updateCachedCollection('salary_structures', cId, { id, ...cleaned }, 'update');
+    }
   },
-  async deleteSalaryStructure(id: string) {
+
+  async deleteSalaryStructure(id: string, companyId?: string) {
     await deleteDoc(doc(db, 'salary_structures', id));
+    if (companyId) {
+      this._updateCachedCollection('salary_structures', companyId, { id }, 'delete');
+    }
   },
 
   // Attendance
-  async getAttendance(companyId: string, startDate?: string, endDate?: string) {
-    let q = query(collection(db, 'attendance'), where('companyId', '==', companyId));
+  async getAttendance(companyId: string, startDate?: string, endDate?: string, forceRefresh = false) {
     if (startDate && endDate) {
-      q = query(q, where('date', '>=', startDate), where('date', '<=', endDate));
+      const q = query(
+        collection(db, 'attendance'), 
+        where('companyId', '==', companyId),
+        where('date', '>=', startDate), 
+        where('date', '<=', endDate)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
     }
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ ...(d.data() as any), id: d.id }));
+    return this.getCollection('attendance', companyId, 5000, forceRefresh);
   },
+
   async createAttendance(companyId: string, data: any) {
     const ref = doc(collection(db, 'attendance'));
     const docData = cleanData({ ...data, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, docData);
+    this._updateCachedCollection('attendance', companyId, docData, 'add');
     return docData;
   },
+
   async bulkCreateAttendance(companyId: string, records: any[]) {
     const batch = writeBatch(db);
     records.forEach(r => {
       const ref = doc(collection(db, 'attendance'));
-      batch.set(ref, cleanData({ ...r, id: ref.id, companyId, createdAt: serverTimestamp() }));
+      const docData = cleanData({ ...r, id: ref.id, companyId, createdAt: serverTimestamp() });
+      batch.set(ref, docData);
+      this._updateCachedCollection('attendance', companyId, docData, 'add');
     });
     await batch.commit();
   },
-  async updateAttendance(id: string, data: any) {
-    await updateDoc(doc(db, 'attendance', id), { ...data, updatedAt: serverTimestamp() });
+
+  async updateAttendance(id: string, data: any, companyId?: string) {
+    const cleaned = cleanData(data);
+    await updateDoc(doc(db, 'attendance', id), { ...cleaned, updatedAt: serverTimestamp() });
+    const cId = companyId || data.companyId;
+    if (cId) {
+      this._updateCachedCollection('attendance', cId, { id, ...cleaned }, 'update');
+    }
   },
-  async deleteAttendance(id: string) {
+
+  async deleteAttendance(id: string, companyId?: string) {
     await deleteDoc(doc(db, 'attendance', id));
+    if (companyId) {
+      this._updateCachedCollection('attendance', companyId, { id }, 'delete');
+    }
   },
 
   // Advances
-  async getAdvances(companyId: string) {
-    return this.getCollection('advances', companyId);
+  async getAdvances(companyId: string, forceRefresh = false) {
+    return this.getCollection('advances', companyId, 5000, forceRefresh);
   },
 
   async createAdvance(companyId: string, data: any) {
     const ref = doc(collection(db, 'advances'));
     const docData = cleanData({ ...data, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, docData);
+    this._updateCachedCollection('advances', companyId, docData, 'add');
     return docData;
   },
 
-  async updateAdvance(id: string, data: any) {
-    await updateDoc(doc(db, 'advances', id), { ...data, updatedAt: serverTimestamp() });
+  async updateAdvance(id: string, data: any, companyId?: string) {
+    const cleaned = cleanData(data);
+    await updateDoc(doc(db, 'advances', id), { ...cleaned, updatedAt: serverTimestamp() });
+    const cId = companyId || data.companyId;
+    if (cId) {
+      this._updateCachedCollection('advances', cId, { id, ...cleaned }, 'update');
+    }
   },
 
-  async deleteAdvance(id: string) {
+  async deleteAdvance(id: string, companyId?: string) {
     await deleteDoc(doc(db, 'advances', id));
+    if (companyId) {
+      this._updateCachedCollection('advances', companyId, { id }, 'delete');
+    }
   },
 
   // Loans
-  async getLoans(companyId: string) {
-    return this.getCollection('loans', companyId);
+  async getLoans(companyId: string, forceRefresh = false) {
+    return this.getCollection('loans', companyId, 5000, forceRefresh);
   },
 
   async createLoan(companyId: string, data: any) {
     const ref = doc(collection(db, 'loans'));
     const docData = cleanData({ ...data, id: ref.id, companyId, createdAt: serverTimestamp() });
     await setDoc(ref, docData);
+    this._updateCachedCollection('loans', companyId, docData, 'add');
     return docData;
   },
 
-  async updateLoan(id: string, data: any) {
-    await updateDoc(doc(db, 'loans', id), { ...data, updatedAt: serverTimestamp() });
+  async updateLoan(id: string, data: any, companyId?: string) {
+    const cleaned = cleanData(data);
+    await updateDoc(doc(db, 'loans', id), { ...cleaned, updatedAt: serverTimestamp() });
+    const cId = companyId || data.companyId;
+    if (cId) {
+      this._updateCachedCollection('loans', cId, { id, ...cleaned }, 'update');
+    }
   },
 
-  async deleteLoan(id: string) {
+  async deleteLoan(id: string, companyId?: string) {
     await deleteDoc(doc(db, 'loans', id));
+    if (companyId) {
+      this._updateCachedCollection('loans', companyId, { id }, 'delete');
+    }
+  },
+
+  invalidatePayrollCache(companyId: string) {
+    if (!companyId) return;
+    const collections = ['salary_sheets', 'pay_heads', 'salary_structures', 'attendance', 'advances', 'loans', 'employee_groups', 'employees'];
+    collections.forEach(col => {
+      delete this._genericCollectionsCache[`${col}_${companyId}`];
+      try {
+        localStorage.removeItem(`col_cache_${col}_${companyId}`);
+      } catch (e) {}
+    });
+  },
+
+  async getOrCreatePayrollLedgers(companyId: string) {
+    const ledgers = await this.getLedgers(companyId);
+    
+    // 1. Salary Expense Ledger (Indirect Expenses)
+    let salaryExpense = ledgers.find((l: any) => 
+      l.nature === 'Expense' && (
+        l.name.toLowerCase().includes('salary') || 
+        l.name.toLowerCase().includes('salaries') || 
+        l.name.toLowerCase().includes('wage')
+      )
+    );
+    if (!salaryExpense) {
+      salaryExpense = await this.createLedger(companyId, {
+        name: 'Salaries & Wages',
+        group_name: 'Indirect Expenses',
+        nature: 'Expense',
+        opening_balance: 0,
+        current_balance: 0
+      });
+    }
+
+    // 2. Salary Payable Ledger (Current Liabilities)
+    let salaryPayable = ledgers.find((l: any) => 
+      l.nature === 'Liability' && (
+        l.name.toLowerCase().includes('salary payable') || 
+        l.name.toLowerCase().includes('salaries payable') ||
+        l.name.toLowerCase().includes('wages payable')
+      )
+    );
+    if (!salaryPayable) {
+      salaryPayable = await this.createLedger(companyId, {
+        name: 'Salary Payable',
+        group_name: 'Current Liabilities',
+        nature: 'Liability',
+        opening_balance: 0,
+        current_balance: 0
+      });
+    }
+
+    // 3. Advance Salary Ledger (Current Assets)
+    let advanceAsset = ledgers.find((l: any) => 
+      l.nature === 'Asset' && (
+        l.name.toLowerCase().includes('advance salary') || 
+        l.name.toLowerCase().includes('staff advance') ||
+        l.name.toLowerCase().includes('employee advance')
+      )
+    );
+    if (!advanceAsset) {
+      advanceAsset = await this.createLedger(companyId, {
+        name: 'Employee Advances',
+        group_name: 'Current Assets',
+        nature: 'Asset',
+        opening_balance: 0,
+        current_balance: 0
+      });
+    }
+
+    return {
+      salaryExpenseLedger: salaryExpense,
+      salaryPayableLedger: salaryPayable,
+      advanceAssetLedger: advanceAsset
+    };
+  },
+
+  async postPayrollJournalVoucher(companyId: string, runData: {
+    month: string;
+    date?: string;
+    totalGross: number;
+    totalNet: number;
+    totalAdvanceDeduction: number;
+    totalLoanDeduction: number;
+    totalOtherDeductions: number;
+    employeeCount: number;
+    sheetIds?: string[];
+  }) {
+    const { salaryExpenseLedger, salaryPayableLedger, advanceAssetLedger } = await this.getOrCreatePayrollLedgers(companyId);
+    
+    const vDate = runData.date || `${runData.month}-28`;
+    const narration = `Monthly compensation processing for ${runData.month} (${runData.employeeCount} employees)`;
+    
+    const entries: any[] = [
+      // Debit Salary Expense for Gross
+      {
+        ledger_id: salaryExpenseLedger.id,
+        ledger_name: salaryExpenseLedger.name,
+        debit: Number(runData.totalGross) || 0,
+        credit: 0,
+        narration: `Gross compensation for ${runData.month}`,
+        companyId,
+        date: vDate
+      },
+      // Credit Salary Payable for Net Salary
+      {
+        ledger_id: salaryPayableLedger.id,
+        ledger_name: salaryPayableLedger.name,
+        debit: 0,
+        credit: Number(runData.totalNet) || 0,
+        narration: `Net salary payable for ${runData.month}`,
+        companyId,
+        date: vDate
+      }
+    ];
+
+    // Credit Advance Asset for advance deduction if any
+    if (Number(runData.totalAdvanceDeduction) > 0) {
+      entries.push({
+        ledger_id: advanceAssetLedger.id,
+        ledger_name: advanceAssetLedger.name,
+        debit: 0,
+        credit: Number(runData.totalAdvanceDeduction) || 0,
+        narration: `Advance recovery for ${runData.month}`,
+        companyId,
+        date: vDate
+      });
+    }
+
+    // If loan deductions or other deductions exist, balance to Salary Payable or separate deduction
+    const remainderCredit = Number(runData.totalGross) - (Number(runData.totalNet) + Number(runData.totalAdvanceDeduction || 0));
+    if (remainderCredit > 0) {
+      entries.push({
+        ledger_id: salaryPayableLedger.id,
+        ledger_name: salaryPayableLedger.name,
+        debit: 0,
+        credit: remainderCredit,
+        narration: `Statutory, loan and other deductions for ${runData.month}`,
+        companyId,
+        date: vDate
+      });
+    }
+
+    const voucherData = {
+      v_type: 'Journal',
+      v_date: vDate,
+      narration,
+      total_amount: Number(runData.totalGross) || 0,
+      companyId
+    };
+
+    const result = await this.createVoucher(voucherData, entries);
+    
+    // Update salary_sheets records with journal voucher link
+    if (runData.sheetIds && runData.sheetIds.length > 0 && result?.id) {
+      const batch = writeBatch(db);
+      for (const sId of runData.sheetIds) {
+        batch.update(doc(db, 'salary_sheets', sId), {
+          journalVoucherId: result.id,
+          journalVoucherNo: result.v_no || result.serial_no || '',
+          updatedAt: serverTimestamp()
+        });
+      }
+      await batch.commit();
+    }
+
+    return result;
+  },
+
+  async disbursePayrollPayment(companyId: string, paymentData: {
+    month: string;
+    paymentDate: string;
+    bankOrCashLedgerId: string;
+    bankOrCashLedgerName: string;
+    totalAmount: number;
+    sheetIds?: string[];
+  }) {
+    const { salaryPayableLedger } = await this.getOrCreatePayrollLedgers(companyId);
+    const narration = `Salary disbursement for ${paymentData.month} via ${paymentData.bankOrCashLedgerName}`;
+    
+    const entries = [
+      {
+        ledger_id: salaryPayableLedger.id,
+        ledger_name: salaryPayableLedger.name,
+        debit: Number(paymentData.totalAmount) || 0,
+        credit: 0,
+        narration: `Salary paid for ${paymentData.month}`,
+        companyId,
+        date: paymentData.paymentDate
+      },
+      {
+        ledger_id: paymentData.bankOrCashLedgerId,
+        ledger_name: paymentData.bankOrCashLedgerName,
+        debit: 0,
+        credit: Number(paymentData.totalAmount) || 0,
+        narration: `Paid from ${paymentData.bankOrCashLedgerName}`,
+        companyId,
+        date: paymentData.paymentDate
+      }
+    ];
+
+    const voucherData = {
+      v_type: 'Payment',
+      v_date: paymentData.paymentDate,
+      narration,
+      total_amount: Number(paymentData.totalAmount) || 0,
+      companyId
+    };
+
+    const result = await this.createVoucher(voucherData, entries);
+
+    if (paymentData.sheetIds && paymentData.sheetIds.length > 0) {
+      const batch = writeBatch(db);
+      for (const sId of paymentData.sheetIds) {
+        batch.update(doc(db, 'salary_sheets', sId), {
+          paymentStatus: 'Paid',
+          paymentDate: paymentData.paymentDate,
+          voucherId: result.id,
+          paymentMethod: paymentData.bankOrCashLedgerName,
+          updatedAt: serverTimestamp()
+        });
+      }
+      await batch.commit();
+    }
+
+    return result;
   },
 
   async getItemStats(itemId: string, companyId: string) {
@@ -6161,8 +6527,8 @@ export const erpService: any = {
     }
   },
 
-  async getCompanyUsers(companyId: string): Promise<UserProfile[]> {
-    return (await this.getUsersByCompany(companyId)) as UserProfile[];
+  async getCompanyUsers(companyId: string, forceRefresh = false): Promise<UserProfile[]> {
+    return (await this.getUsersByCompany(companyId, forceRefresh)) as UserProfile[];
   },
 
   async updateTargetAmount(uid: string, target_amount: number) {
@@ -6566,17 +6932,46 @@ export const erpService: any = {
     }
   },
 
-  async getUsersByCompany(companyId: string): Promise<any[]> {
+  async getUsersByCompany(companyId: string, forceRefresh = false): Promise<any[]> {
     if (!companyId) return [];
     const now = Date.now();
-    if (this._usersCache[companyId] && (now - this._usersCache[companyId].timestamp < this._collectionTTL)) {
+    // Cache for 30s instead of 30m so user usage and quota metrics reflect promptly; bypass if forceRefresh is true
+    if (!forceRefresh && this._usersCache[companyId] && (now - this._usersCache[companyId].timestamp < 30000)) {
       return this._usersCache[companyId].data;
     }
 
     try {
       const q = query(collection(db, 'users'), where('companyId', '==', companyId), limit(500));
       const snapshot = await getDocs(q);
-      const data = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+
+      // Deduplicate by email in case of multiple auth documents (e.g., admin pre-creation vs Google sign-in)
+      const usersMap = new Map<string, any>();
+      snapshot.docs.forEach(docSnap => {
+        const uData = docSnap.data() as any;
+        const emailKey = (uData.email || '').toLowerCase().trim();
+        const userObj = { uid: docSnap.id, id: docSnap.id, ...uData };
+
+        if (!emailKey) {
+          usersMap.set(docSnap.id, userObj);
+        } else {
+          if (!usersMap.has(emailKey)) {
+            usersMap.set(emailKey, userObj);
+          } else {
+            const existing = usersMap.get(emailKey);
+            usersMap.set(emailKey, {
+              ...existing,
+              ...userObj,
+              // Merge quotaUsed so no ops are lost across duplicate records
+              quotaUsed: Math.max(existing.quotaUsed || 0, userObj.quotaUsed || 0),
+              displayName: existing.displayName || userObj.displayName,
+              role: existing.role || userObj.role,
+              quotaLimit: existing.quotaLimit !== undefined ? existing.quotaLimit : userObj.quotaLimit
+            });
+          }
+        }
+      });
+
+      const data = Array.from(usersMap.values());
       this._usersCache[companyId] = { data, timestamp: now };
       return data;
     } catch (error) {
@@ -7831,6 +8226,28 @@ export const erpService: any = {
         console.warn('Could not mark quota_reset_requests as completed:', err);
       }
 
+      // Reset individual users' quotaUsed for this company
+      try {
+        const usersQuery = query(collection(db, 'users'), where('companyId', '==', companyId));
+        const usersSnap = await getDocs(usersQuery);
+        if (!usersSnap.empty) {
+          const b = firestoreWriteBatch(db);
+          usersSnap.docs.forEach(uDoc => {
+            b.update(uDoc.ref, { quotaUsed: 0 });
+          });
+          await b.commit();
+        }
+        // Also reset local profile quota
+        const cachedProf = localStorage.getItem('cached_auth_profile');
+        if (cachedProf) {
+          const p = JSON.parse(cachedProf);
+          p.quotaUsed = 0;
+          localStorage.setItem('cached_auth_profile', JSON.stringify(p));
+        }
+      } catch (uErr) {
+        console.warn('Could not reset users quotaUsed:', uErr);
+      }
+
       window.dispatchEvent(new CustomEvent('company_quota_reset_success'));
     } catch (err) {
       console.error('Failed to reset quota now:', err);
@@ -8084,20 +8501,43 @@ export const erpService: any = {
           localStorage.setItem('cached_auth_company', JSON.stringify(parsed));
         }
       }
+      const cachedProfile = localStorage.getItem('cached_auth_profile');
+      let currentUid = auth.currentUser?.uid || '';
+      let currentEmail = auth.currentUser?.email?.toLowerCase().trim() || '';
+
+      if (cachedProfile) {
+        try {
+          const parsedProf = JSON.parse(cachedProfile);
+          parsedProf.quotaUsed = (parsedProf.quotaUsed || 0) + reads + writes + deletes;
+          if (!currentUid) currentUid = parsedProf.uid || parsedProf.id || '';
+          if (!currentEmail && parsedProf.email) currentEmail = parsedProf.email.toLowerCase().trim();
+          localStorage.setItem('cached_auth_profile', JSON.stringify(parsedProf));
+        } catch (e) {}
+      }
+
+      // Immediately patch in-memory _usersCache on this client so Team Quota tab reflects live ops without delay
+      if (this._usersCache && this._usersCache[companyId]?.data) {
+        const ops = reads + writes + deletes;
+        this._usersCache[companyId].data.forEach(u => {
+          const uEmail = (u.email || '').toLowerCase().trim();
+          if ((currentUid && u.uid === currentUid) || (currentEmail && uEmail === currentEmail)) {
+            u.quotaUsed = (u.quotaUsed || 0) + ops;
+          }
+        });
+      }
     } catch (e) {}
 
-    // Flush schedule optimization:
-    // Pure reads should never burn network writes on a frantic 30-second loop.
-    // Flush fast (15s) only if writes/deletes occurred or if 50+ ops accumulated; otherwise batch with a 5-minute interval!
+    // Flush schedule:
+    // Flush within 10s if writes/deletes occurred or totalOps >= 10; otherwise 25s max to keep team quota accurate
     const buf = this._quotaBuffer[companyId];
     const hasWrites = buf.writes > 0 || buf.deletes > 0;
     const totalOps = buf.reads + buf.writes + buf.deletes;
-    const delay = hasWrites || totalOps >= 50 ? 15000 : 300000;
+    const delay = hasWrites || totalOps >= 10 ? 10000 : 25000;
 
     if (this._quotaTimer) {
       if (hasWrites) {
         clearTimeout(this._quotaTimer);
-        this._quotaTimer = setTimeout(() => this.flushQuotaBuffer(), 15000);
+        this._quotaTimer = setTimeout(() => this.flushQuotaBuffer(), 10000);
       }
     } else {
       this._quotaTimer = setTimeout(() => {
@@ -8174,6 +8614,66 @@ export const erpService: any = {
             }
           }
         } catch (e) {}
+
+        // Keep active user's Firestore usage in sync reliably
+        try {
+          let targetUid = '';
+          let targetEmail = '';
+
+          // 1. Check current authenticated user
+          if (auth.currentUser) {
+            targetUid = auth.currentUser.uid;
+            targetEmail = auth.currentUser.email?.toLowerCase().trim() || '';
+          }
+
+          // 2. Check cached profile fallback
+          const cachedProf = localStorage.getItem('cached_auth_profile');
+          if (cachedProf) {
+            try {
+              const p = JSON.parse(cachedProf);
+              if (!targetUid) targetUid = p.uid || p.id;
+              if (!targetEmail && p.email) targetEmail = p.email.toLowerCase().trim();
+            } catch (e) {}
+          }
+
+          if (addedOps > 0) {
+            // Update document by UID with merge: true so it creates or updates safely without failing
+            if (targetUid) {
+              await setDoc(doc(db, 'users', targetUid), {
+                quotaUsed: increment(addedOps)
+              }, { merge: true });
+            }
+
+            // Also update any matching document by email (in case an admin invited user or UID mismatch occurred)
+            if (targetEmail) {
+              try {
+                const emailQuery = query(collection(db, 'users'), where('email', '==', targetEmail), limit(5));
+                const emailSnap = await getDocs(emailQuery);
+                for (const uDoc of emailSnap.docs) {
+                  if (uDoc.id !== targetUid) {
+                    await setDoc(uDoc.ref, {
+                      quotaUsed: increment(addedOps)
+                    }, { merge: true });
+                  }
+                }
+              } catch (emErr) {
+                console.warn('[QUOTA] Email sync fallback note:', emErr);
+              }
+            }
+
+            // Update in-memory user cache on this machine
+            if (this._usersCache && this._usersCache[companyId]?.data) {
+              this._usersCache[companyId].data.forEach(u => {
+                const uEmail = (u.email || '').toLowerCase().trim();
+                if ((targetUid && u.uid === targetUid) || (targetEmail && uEmail === targetEmail)) {
+                  u.quotaUsed = (u.quotaUsed || 0) + addedOps;
+                }
+              });
+            }
+          }
+        } catch (uErr) {
+          console.warn('[QUOTA] Failed to update user quotaUsed:', uErr);
+        }
 
         // Success! Clean up localStorage backup
         const storedKey = `unsaved_quota_${companyId}`;

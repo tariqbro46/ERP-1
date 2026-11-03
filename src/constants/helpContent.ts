@@ -949,6 +949,131 @@ export const HELP_DOCS: DocCategory[] = [
     ]
   },
   {
+    id: "payroll-guide",
+    iconName: "users",
+    badge: "Enterprise",
+    title: "Payroll Management & Employee Compensation Guide",
+    bnTitle: "পেরোল ম্যানেজমেন্ট ও বেতন ব্যবস্থাপনা নির্দেশিকা",
+    description: "Complete beginner-friendly master guide for managing employee records, attendance, salary structures, advances, 1-click payroll processing, increments, and accounting ledger posting.",
+    bnDescription: "কর্মচারীদের তালিকা, দৈনিক/মাসিক হাজিরা, বেতন কাঠামো, অগ্রিম ঋণ সমন্বয়, ১-ক্লিকে স্বয়ংক্রিয় বেতন তৈরি, ইনক্রিমেন্ট ট্র্যাকিং ও খতিয়ানে পোস্টিংয়ের পূর্ণাঙ্গ নির্দেশিকা।",
+    sections: [
+      {
+        id: "payroll-overview-steps",
+        title: "1. Beginner's Guide: Complete 6-Step Payroll Workflow",
+        bnTitle: "১. নতুনদের জন্য পেরোলের প্রাথমিক ধারণা ও সহজ ৬-ধাপের নিয়ম",
+        path: "/payroll",
+        hotkey: "Alt+P",
+        planBadge: "Gold & Above",
+        whereToFind: "Left Sidebar > Payroll > Payroll Management (or URL /payroll)",
+        bnWhereToFind: "বাম সাইডবার > Payroll > Payroll Management (অথবা সরাসরি লিঙ্ক /payroll)",
+        content: "If you are new to payroll management, follow these 6 straightforward steps to process error-free monthly salaries and auto-post them directly into your accounting books:\n\n### Step 1: Add Employees & Departments (কর্মী যুক্ত করা)\nGo to Employee Master (or User Management) and add your active staff members with Name, Designation, Department (e.g. Office, Accounts, Factory), Joining Date, and Basic Salary.\n\n### Step 2: Configure Pay Components & Structures (বেতন কাঠামো)\nDefine your salary heads in 'Pay Components' (Basic Pay, House Rent, Medical, Overtime, Provident Fund). In 'Salary Structures', allocate these earnings and deductions per employee or per group.\n\n### Step 3: Enter Monthly Attendance (মাসিক হাজিরা রেজিস্টার)\nUnder 'Attendance Register', select your processing month (e.g., November 2026). Use quick 'Auto-fill 26/30 Days' or adjust individual Present, Absent, and Overtime production hours. Click 'Save & Recalculate'.\n\n### Step 4: Record Salary Advances or Loans (অগ্রিম বা লোন)\nIf any employee took an advance payment during the month, record it under 'Advances & Loans'. The system will auto-deduct it from their monthly salary.\n\n### Step 5: 1-Click Auto-Calculate Payroll (স্বয়ংক্রিয় বেতন হিসাব)\nClick 'Auto-Calculate Monthly Payroll'. The system calculates exact gross pay, attendance deductions, advances, and net payable. If duplicate rows ever appear, click 'Clean Duplicates' to instantly fix them.\n\n### Step 6: Post Journal & Disburse Payments (হিসাবের বইয়ে পোস্টিং ও বিতরণ)\nClick 'Post Accounting Journal' to debit Salary Expense and credit Salary Payable. Then click 'Disburse Payment' to pay from Cash or Bank ledger and print official payslips.",
+        bnContent: "আপনি যদি পেরোল বা বেতন ব্যবস্থাপনায় সম্পূর্ণ নতুন হন, তবে নিচের সহজ ৬টি ধাপ অনুসরণ করে প্রতি মাসে নির্ভুলভাবে বেতন তৈরি ও হিসাবের খতিয়ানে এন্ট্রি করতে পারবেন:\n\n### ধাপ ১: কর্মী ও ডিপার্টমেন্ট যুক্ত করা (Add Employees)\nপ্রথমে Employee Master বা User Management-এ গিয়ে আপনার অফিসের কর্মীদের নাম, পদবী, ডিপার্টমেন্ট (যেমন: Office, Accounts, Factory), যোগদানের তারিখ এবং মূল বেতন দিয়ে সেভ করুন।\n\n### ধাপ ২: বেতন কাঠামো প্রস্তুত করা (Pay Components & Structures)\n'Pay Components' ট্যাবে গিয়ে আয়ের খাত (Basic Pay, House Rent, Medical Allowance, Overtime) এবং কর্তনের খাত (PF, Tax) নির্ধারণ করুন। এরপর 'Salary Structures'-এ গিয়ে কর্মী বা গ্রুপের জন্য বেতন স্কেল বরাদ্দ করুন।\n\n### ধাপ ৩: মাসিক হাজিরা এন্ট্রি করা (Attendance Register)\n'Attendance Register' ট্যাবে গিয়ে সংশ্লিষ্ট মাস (যেমন: নভেম্বর ২০২৬) সিলেক্ট করুন। 'Auto-fill 26 Days' বা 'Auto-fill 30 Days' বাটনে ক্লিক করে এক ক্লিকে সবার হাজিরা দিন অথবা প্রয়োজনে কারো অনুপস্থিতি ও ওভারটাইম ঘন্টা লিখে 'Save & Recalculate' বাটনে ক্লিক করুন।\n\n### ধাপ ৪: অগ্রিম বেতন ও লোন এন্ট্রি (Advances & Loans)\nকোনো কর্মী চলতি মাসে অগ্রিম বেতন নিয়ে থাকলে তা 'Advances & Loans' ট্যাবে লিখে রাখুন। মাস শেষে বেতন তৈরি করার সময় সিস্টেম এই টাকা স্বয়ংক্রিয়ভাবে মোট বেতন থেকে কেটে নেবে।\n\n### ধাপ ৫: ১-ক্লিকে স্বয়ংক্রিয় বেতন তৈরি (Auto-Calculate Payroll)\n'Salary Processing' ট্যাবে গিয়ে 'Auto-Calculate Monthly Payroll' বাটনে ক্লিক করুন। সিস্টেম সবার মূল বেতন, হাজিরার অনুপাত, ওভারটাইম এবং এডভান্স বাদ দিয়ে এক ক্লিকে নিট প্রদেয় বেতন তৈরি করবে। ভুলবশত কোনো কর্মীর নাম ডুপ্লিকেট আসলে 'Clean Duplicates' বাটনে ক্লিক করলেই অতিরিক্ত সারি মুছে যাবে।\n\n### ধাপ ৬: হিসাবের বইয়ে পোস্টিং ও বেতন বিতরণ (Journal & Disbursement)\n'Post Accounting Journal' বাটনে চাপ দিলে স্বয়ংক্রিয়ভাবে খতিয়ানে 'Salary Expense' ডেবিট এবং 'Salary Payable' ক্রেডিট হয়ে যাবে। এরপর 'Disburse Payment' ক্লিক করে ক্যাশ বা ব্যাংক থেকে বেতন পরিশোধ করুন এবং পে-স্লিপ প্রিন্ট করুন।",
+        points: [
+          "1. 100% Automated Calculations: Basic pay pro-rated by attendance days, overtime hours, and loan deductions.",
+          "2. Zero Manual Math: Eliminates Excel sheet errors and accidental double payments.",
+          "3. Instant Journal Posting: Creates balanced double-entry accounting vouchers with one click.",
+          "4. Professional Payslips: Ready-to-print salary slips with company header, earnings, and deductions."
+        ],
+        bnPoints: [
+          "১. ১০০% স্বয়ংক্রিয় গণনা: হাজিরার দিন, ওভারটাইম এবং লোন সমন্বয় অনুযায়ী স্বয়ংক্রিয় বেতন হিসাব।",
+          "২. ম্যানুয়াল ভুলের অবসান: এক্সেল শিটে হিসাবের ঝামেলা বা বাড়তি বেতন চলে যাওয়ার কোনো ঝুঁকি নেই।",
+          "৩. স্বয়ংক্রিয় জার্নাল এন্ট্রি: এক ক্লিকে ব্যালেন্স শিট ও লাভ-ক্ষতির খতিয়ানে খরচের হিসাব সমন্বিত হয়।",
+          "৪. প্রাতিষ্ঠানিক পে-স্লিপ: কোম্পানির নাম, লোগো, আয়ের বিবরণী ও কর্তন সহ পেশাদার পে-স্লিপ প্রিন্ট করার সুবিধা।"
+        ]
+      },
+      {
+        id: "payroll-attendance-guide",
+        title: "2. Attendance Register, Overtime & Auto Recalculation",
+        bnTitle: "২. মাসিক হাজিরা খাতা, ওভারটাইম এবং স্বয়ংক্রিয় পুনঃগণনা",
+        path: "/payroll",
+        content: "Understanding the Attendance Register:\n- **Present Days**: Total days worked. In a 30-day month, if an employee worked 26 days, their attendance-based compensation will be calculated as (26 / 30) of basic.\n- **Leave / LWP (Days)**: Unpaid absence days.\n- **Overtime (Hours)**: Overtime production hours. Multiplied by hourly overtime rate.\n- **Auto Recalculation**: Whenever you modify attendance inputs and click 'Save Attendance Register & Recalculate', the system automatically updates the current month's salary sheet so net salary immediately matches the updated attendance.",
+        bnContent: "হাজিরা খাতা ও ওভারটাইম ব্যবহারের নিয়মাবলী:\n- **উপস্থিতির দিন (Present Days)**: কর্মী মোট কতদিন কাজ করেছেন। ৩০ দিনের মাসে কর্মী ২৬ দিন কাজ করলে তার উপস্থিতি ভিত্তিক বেতন (২৬ / ৩০) অনুপাতে হিসাব হবে।\n- **ছুটি / অবৈতনিক ছুটি (LWP Days)**: যে কয়দিনের জন্য বেতন কাটা যাবে।\n- **ওভারটাইম ঘন্টা (Overtime Hours)**: অতিরিক্ত কাজের সময়। ঘণ্টার রেট অনুযায়ী ওভারটাইমের টাকা বেতনের সাথে যোগ হবে।\n- **স্বয়ংক্রিয় পুনঃগণনা (Auto Recalculation)**: হাজিরা খাতায় দিন বা ওভারটাইম পরিবর্তন করে 'Save Attendance Register & Recalculate' বাটনে ক্লিক করলেই সাথে সাথে চলতি মাসের স্যালারি শিট স্বয়ংক্রিয়ভাবে নতুন হাজিরা অনুযায়ী আপডেট হয়ে যাবে।",
+        points: [
+          "Quick Auto-fill: Use 'Auto-fill 26 Days' or 'Auto-fill 30 Days' to fill entire company in 1 second.",
+          "Inline Editing: Type directly into the Present, Leave, or Overtime input boxes.",
+          "Instant Recalculation: No need to delete and re-create monthly sheets."
+        ],
+        bnPoints: [
+          "কুইক অটো-ফিল: 'Auto-fill 26 Days' বা 'Auto-fill 30 Days' বাটনে ক্লিক করে এক সেকেন্ডেই সবার হাজিরা দিয়ে ফেলুন।",
+          "ইনলাইন এডিটিং: কোনো জটিলতা ছাড়াই সরাসরি টেবিলের ঘরে উপস্থিতির সংখ্যা বা ওভারটাইম লিখুন।",
+          "মুহূর্তেই রি-ক্যালকুলেশন: আগের শিট ডিলিট না করেই হাজিরা সেভ করার সাথে সাথে বেতন আপডেট হয়ে যাবে।"
+        ]
+      },
+      {
+        id: "payroll-duplicates-fix",
+        title: "3. Duplicate Employee Cleanup & Single Row Deletion",
+        bnTitle: "৩. ডুপ্লিকেট কর্মী ডাটা ঠিক করা এবং একক সারি মুছে ফেলা",
+        path: "/payroll",
+        content: "How to fix duplicate rows in Salary Processing:\n- **Why Duplicates Occur**: If multiple salary sheets were created for the same month previously without clearing, duplicate rows may appear (e.g. 26 staff instead of 13).\n- **One-Click Clean Duplicates**: Click the 'Clean Duplicates' button in the toolbar. The system detects multiple rows for the same employee, deletes the redundant documents, and restores the exact count (e.g. 13 / 13).\n- **Individual Row Delete**: In the table's 'Actions' column, click the Trash icon to remove any erroneous or unwanted employee record from that month's sheet.\n- **Built-in Protection**: Future Auto-Calculate runs automatically update the single existing record per employee, preventing duplicates permanently.",
+        bnContent: "স্যালারি প্রসেসিং টেবিলে ডুপ্লিকেট ডাটা ঠিক করার নিয়ম:\n- **ডুপ্লিকেট হওয়ার কারণ**: পূর্বে একাধিকবার একই মাসের জন্য অটো-ক্যালকুলেট ক্লিক করলে বা পুরনো ক্যাশ থাকলে একই কর্মীর নাম দুইবার বা তার বেশি আসতে পারে (যেমন: ১৩ জনের জায়গায় ২৬ জন)।\n- **১-ক্লিক ক্লিন ডুপ্লিকেটস**: স্যালারি প্রসেসিং ফিল্টার বারে থাকা 'Clean Duplicates' বাটনে ক্লিক করুন। সিস্টেম মুহূর্তের মধ্যে অতিরিক্ত ডুপ্লিকেট এন্ট্রিগুলো মুছে ফেলে সঠিক সংখ্যা (১৩ / ১৩) ফিরিয়ে আনবে।\n- **একক সারি ডিলিট (Delete Row)**: টেবিলের ডানদিকের Actions কলামে থাকা লাল ট্র্যাশ/ডিলিট আইকনে ক্লিক করে যেকোনো কর্মীর সারি সরাসরি মুছে ফেলা যায়।\n- **স্থায়ী নিরাপত্তা**: কোডে স্বয়ংক্রিয় সুরক্ষা যুক্ত করা হয়েছে যাতে পরবর্তীতে অটো-ক্যালকুলেট করলেও কখনোই আর ডুপ্লিকেট সারি তৈরি না হয়।",
+        points: [
+          "One-Click Cleanup: Permanently cleans database and in-memory cache.",
+          "Granular Row Delete: Complete control to delete any specific employee row.",
+          "Safe Deduplication: Preserves valid salary and payment data."
+        ],
+        bnPoints: [
+          "১-ক্লিক ক্লিনআপ: মুহূর্তেই ডাটাবেজ ও ক্যাশ থেকে অতিরিক্ত ডুপ্লিকেট রেকর্ড পরিষ্কার করে।",
+          "ব্যক্তিগত সারি ডিলিট: যেকোনো কর্মীর এন্ট্রি আলাদাভাবে ডিলিট করার পূর্ণ স্বাধীনতা।",
+          "নিরাপদ ফিল্টারিং: মূল বেতন ও পেমেন্ট হিস্ট্রি সম্পূর্ণ অক্ষত থাকে।"
+        ]
+      },
+      {
+        id: "payroll-increments-guide",
+        title: "4. Employee Salary Increments & Employment Service History",
+        bnTitle: "৪. কর্মচারীদের বেতন বৃদ্ধি (Increment) ও চাকরির ইতিহাস",
+        path: "/payroll",
+        content: "Managing Employee Service Life Cycle and Salary Increments:\n- **Joining Date & Resignation Date**: Every employee has recorded joining dates and resignation dates. Status can be switched between Active, Resigned, and On Leave.\n- **Recording Salary Increment**: Click 'Employee Profiles & Increments'. Select employee and click 'Add Salary Increment'. Enter Effective Date, Increment Amount (or percentage), and reason/notes.\n- **Historical Increment Log**: All past increments are preserved in an immutable chronological history log, showing previous salary, increment granted, new salary, and notes.\n- **Future Payroll Sync**: When an increment is applied, the employee's active basic salary is automatically updated for all subsequent monthly payroll runs.",
+        bnContent: "কর্মচারীদের চাকরির ইতিহাস এবং বেতন বৃদ্ধির (Increment) নিয়মাবলী:\n- **যোগদান ও পদত্যাগ তারিখ (Joining & Resignation Date)**: প্রতিটি কর্মীর যোগদানের তারিখ এবং চাকরি ছাড়ার তারিখ সিস্টেমে সংরক্ষিত থাকে। স্ট্যাটাস Active, Resigned অথবা On Leave রাখা যায়।\n- **বেতন বৃদ্ধি রেকর্ড করা (Add Increment)**: 'Employee Profiles & Increments' অপশনে গিয়ে কর্মী সিলেক্ট করে 'Add Salary Increment' এ ক্লিক করুন। কার্যকর হওয়ার তারিখ, বৃদ্ধির পরিমাণ (টাকা বা শতকরা) এবং বৃদ্ধির কারণ/মন্তব্য লিখে সেভ করুন।\n- **বেতন বৃদ্ধির ইতিহাস (Increment History Log)**: কর্মীর ইতিপূর্বে কতবার বেতন বেড়েছে, কোন তারিখে কত টাকা বেড়েছে এবং আগের বেতন কত ছিল তা বিস্তারিত তালিকায় চিরতরে সংরক্ষিত থাকবে।\n- **পরবর্তী মাসের বেতনে সমন্বয়**: ইনক্রিমেন্ট সেভ করার সাথে সাথে কর্মীর মূল বেতন আপডেট হয়ে যাবে, ফলে পরবর্তী মাসের অটো-ক্যালকুলেশনে স্বয়ংক্রিয়ভাবে নতুন বর্ধিত বেতন প্রযোজ্য হবে।",
+        points: [
+          "Full Audit Trail: Track every promotion, appraisal, and increment with dates and notes.",
+          "Service Status: Easily manage resignations without deleting historical vouchers.",
+          "Automatic Base Rate Update: Increments flow directly into future salary structures."
+        ],
+        bnPoints: [
+          "পূর্ণাঙ্গ অডিট ট্রেইল: প্রতিটি প্রমোশন, ইনক্রিমেন্ট ও মূল্যায়নের তারিখ সহ স্থায়ী লগ।",
+          "চাকরির স্থিতি: পূর্ববর্তী হিসাবের কোনো ক্ষতি না করেই পদত্যাগ বা ছুটি পরিচালনা।",
+          "স্বয়ংক্রিয় আপডেট: নতুন ইনক্রিমেন্ট স্বয়ংক্রিয়ভাবে পরবর্তী মাসের বেতন হিসাবে যুক্ত হয়।"
+        ]
+      },
+      {
+        id: "payroll-advances-loans-guide",
+        title: "5. Advances, Loans & Status Management (Pending / Settled)",
+        bnTitle: "৫. অগ্রিম বেতন, লোন এবং স্ট্যাটাস ম্যানেজমেন্ট (Pending / Settled)",
+        path: "/payroll",
+        content: "Understanding Advances & Loans:\n- **Why Status is 'Pending'**: When an advance is issued (e.g. ৳5,000 to Md Shahidul Islam), its status starts as 'Pending' indicating it has not yet been recovered or settled.\n- **Auto-Deduction in Payroll**: When processing the monthly salary sheet, the pending advance is automatically included in the 'ADV / LOAN' deduction column, reducing net payable.\n- **Settling or Deleting Advances**: In the Advances & Loans tab, use the Action buttons to mark an advance as 'Settled' (recovered), approve it, edit the amount, or delete it if recorded by mistake.",
+        bnContent: "অগ্রিম বেতন ও লোন ব্যবস্থাপনার নিয়মাবলী:\n- **পেন্ডিং (Pending) দেখানোর কারণ**: কোনো কর্মীকে অগ্রিম টাকা দেওয়া হলে (যেমন: মো: শহিদুল ইসলামকে ৫,০০০ টাকা) তা প্রাথমিকভাবে 'Pending' দেখায়, যার অর্থ এই টাকাটি এখনো তার বেতন থেকে সমন্বয় বা আদায় সম্পন্ন হয়নি।\n- **বেতন থেকে স্বয়ংক্রিয় কর্তন**: মাস শেষে যখন 'Salary Processing' চালানো হয়, তখন এই পেন্ডিং টাকাটি স্বয়ংক্রিয়ভাবে 'ADV / LOAN' ঘরে মাইনাস হিসেবে চলে আসে এবং নিট বেতন থেকে কেটে নেওয়া হয়।\n- **সেটেল বা ডিলিট করার নিয়ম**: Advances & Loans পেজে প্রতিটি এন্ট্রির পাশে অ্যাকশন বাটন যুক্ত রয়েছে। সেখান থেকে আপনি সরাসরি টিক চিহ্নে ক্লিক করে 'Settled' (আদায় হয়েছে) মার্ক করতে পারেন, অথবা ভুল এন্ট্রি হলে লাল ডিলিট বাটনে চাপ দিয়ে পুরোপুরি মুছে ফেলতে পারেন।",
+        points: [
+          "Automatic Recovery: Advances auto-populate in the monthly deduction column.",
+          "Status Actions: Mark as Settled, Edit amount, or Delete directly from the table.",
+          "Zero Leakage: Ensures no company advance is ever forgotten or unpaid."
+        ],
+        bnPoints: [
+          "স্বয়ংক্রিয় সমন্বয়: মাসিক বেতনের সময় পেন্ডিং অগ্রিম স্বয়ংক্রিয়ভাবে কর্তন হয়।",
+          "স্ট্যাটাস অ্যাকশন: এক ক্লিকে সেটেলড মার্ক, টাকার অংক এডিট বা ডিলিট করার সুবিধা।",
+          "আর্থিক নিরাপত্তা: প্রতিষ্ঠানের অগ্রিম দেওয়া কোনো টাকা ভুলে যাওয়ার বা হিসাব না থাকার কোনো সুযোগ নেই।"
+        ]
+      },
+      {
+        id: "payroll-groups-departments-guide",
+        title: "6. Employee Groups & Departments Auto-Synchronization",
+        bnTitle: "৬. কর্মী গ্রুপ ও ডিপার্টমেন্ট স্বয়ংক্রিয় সিঙ্ক্রোনাইজেশন",
+        path: "/payroll",
+        content: "How Employee Departments and Groups Work:\n- **Automatic Aggregation**: When you create employees in Employee Master or User Management with departments like 'Office', 'Accounts', 'Factory', or 'Staff', the system automatically aggregates them into the 'Employee Groups & Departments' tab.\n- **Department Headcount**: View how many active staff members belong to each department at a glance.\n- **Assign Department Pay Scales**: Click 'Set Pay Scale' on any department card to configure standardized pay heads and allowance rules for all employees within that department.",
+        bnContent: "ডিপার্টমেন্ট ও কর্মী গ্রুপ স্বয়ংক্রিয় সিঙ্ক্রোনাইজেশন:\n- **স্বয়ংক্রিয় উপস্থিতি**: কর্মী তৈরি করার সময় আপনি যে ডিপার্টমেন্ট (যেমন: Office, Accounts, Factory, Staff) দিয়েছিলেন, সিস্টেম তা স্বয়ংক্রিয়ভাবে বিশ্লেষণ করে 'Employee Groups & Departments' পেজে কার্ড আকারে সাজিয়ে দেয়।\n- **ডিপার্টমেন্টভিত্তিক কর্মী সংখ্যা**: কোন ডিপার্টমেন্টে কতজন কর্মী কর্মরত আছেন তা এক নজরে দেখা যায়।\n- **ডিপার্টমেন্ট বেতন স্কেল নির্ধারণ**: যেকোনো ডিপার্টমেন্ট কার্ডে 'Set Pay Scale' বাটনে ক্লিক করে পুরো ডিপার্টমেন্টের সকল কর্মীর জন্য একবারে স্ট্যান্ডার্ড বেতন কাঠামো ও ভাতা নির্ধারণ করা যায়।",
+        points: [
+          "Zero Redundant Setup: Existing employee departments display automatically.",
+          "Group Pay Scales: Assign allowances to an entire department at once.",
+          "Visual Workforce Distribution: Clean breakdown of workforce by functional unit."
+        ],
+        bnPoints: [
+          "কোনো বাড়তি সেটআপ ছাড়াই: কর্মীদের পূর্বে দেওয়া ডিপার্টমেন্টগুলো স্বয়ংক্রিয়ভাবে গ্রুপ হিসেবে দৃশ্যমান হয়।",
+          "গ্রুপ বেতন স্কেল: একক ক্লিকে পুরো ডিপার্টমেন্টের জন্য বাড়ি ভাড়া বা অন্যান্য ভাতার নিয়ম বরাদ্দ করা যায়।",
+          "কর্মীবাহিনীর সুন্দর বিভাজন: কোন বিভাগে কতজন লোক কাজ করছেন তার পরিষ্কার চিত্র।"
+        ]
+      }
+    ]
+  },
+  {
     id: "desktop-app",
     iconName: "layers",
     badge: "Desktop .EXE",

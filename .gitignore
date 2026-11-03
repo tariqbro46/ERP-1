@@ -4,5 +4,7 @@ dist/
 coverage/
 .DS_Store
 *.log
+app.db
+dist_setup/
 .env*
 !.env.example

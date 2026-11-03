@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for redesigning the Database Quota Metrics popup into a professional, authentic, multi-tab executive dashboard with live breakdown, module usage, cache efficiency, and administrative controls.",
-  "updatedAt":  "2026-10-27T13:53:47.623578157Z",
+  "summary":  "পেরোল ম্যানেজমেন্ট মডিউলের পূর্ণাঙ্গ সমাধান এবং ব্যবহারকারী নির্দেশিকার বিস্তারিত ইমপ্লিমেন্টেশন প্ল্যান। এতে ডুপ্লিকেট ডাটা ক্লিনআপ, এটেনডেন্স অটো-ক্যালকুলেশন, এমপ্লয়ি ইনক্রিমেন্ট ও সার্ভিস হিস্ট্রি, ডিপার্টমেন্ট ও গ্রুপ সিঙ্ক্রোনাইজেশন, এডভান্স/লোন স্ট্যাটাস ম্যানেজমেন্ট এবং টালিফ্লো ডকসে পূর্ণাঙ্গ ইউজার গাইড অন্তর্ভুক্ত।",
+  "updatedAt":  "2026-11-01T09:42:17.105905820Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

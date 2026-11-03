@@ -2,13 +2,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Database, Clock, Eye, Edit2, Trash2, ShieldCheck, X, HelpCircle, 
   CheckCircle2, RotateCcw, Loader2, Sliders, Users, 
-  Layers, Activity, Search, Save, HardDrive, Info, Check, RefreshCw
+  Layers, Activity, Search, Save, HardDrive, Info, Check, RefreshCw,
+  Lock, ShieldAlert, AlertTriangle, Send
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { erpService } from '../services/erpService';
 import { QuotaResetRequestModal } from './QuotaResetRequestModal';
+import { FirebaseUsageChart } from './FirebaseUsageChart';
 import { UserProfile } from '../types';
 
 interface QuotaDashboardModalProps {
@@ -17,7 +19,7 @@ interface QuotaDashboardModalProps {
   company: any;
 }
 
-type TabType = 'overview' | 'modules' | 'users' | 'admin';
+type TabType = 'overview' | 'modules' | 'users' | 'operations';
 
 export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaDashboardModalProps) {
   const { isFounder, isSuperAdmin, isAdmin, user } = useAuth();
@@ -26,6 +28,22 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
   const [isResetting, setIsResetting] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
   
+  // Founder-controlled toggle for the 24h timeline graph (Off by default as requested)
+  const [showTimelineGraph, setShowTimelineGraph] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('erp_founder_show_timeline_graph') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const handleToggleTimelineGraph = (val: boolean) => {
+    setShowTimelineGraph(val);
+    try {
+      localStorage.setItem('erp_founder_show_timeline_graph', String(val));
+    } catch (e) {}
+  };
+
   // Company limit configuration state
   const [selectedLimit, setSelectedLimit] = useState<number | string>(
     company?.quotaLimit !== undefined ? company.quotaLimit : 10000
@@ -127,12 +145,12 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
     return () => clearInterval(interval);
   }, [isOpen]);
 
-  // Load company users when modal opens
-  const loadUsers = async () => {
+  // Load company users when modal opens or tab changes
+  const loadUsers = async (forceRefresh = false) => {
     if (!company?.id) return;
     setLoadingUsers(true);
     try {
-      const fetched = await erpService.getCompanyUsers(company.id);
+      const fetched = await erpService.getCompanyUsers(company.id, forceRefresh);
       setUsers(fetched || []);
     } catch (err) {
       console.error('Failed to load company users for quota modal:', err);
@@ -143,9 +161,15 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
 
   useEffect(() => {
     if (isOpen && company?.id) {
-      loadUsers();
+      loadUsers(true);
     }
   }, [isOpen, company?.id]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'users' && company?.id) {
+      loadUsers(true);
+    }
+  }, [activeTab, isOpen, company?.id]);
 
   // Quota Metrics
   const isUnlimited = company?.quotaLimit === -1;
@@ -193,17 +217,47 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
     return Math.min(99, Math.max(75, Math.round((estimatedSaved / totalRequests) * 100)));
   }, [totalOps, cachedCounts]);
 
-  // Filtered Users for Tab 3
+  // Check if a user account belongs to the System Founder
+  const isFounderAccount = (u: any) => {
+    const email = (u?.email || '').toLowerCase().trim();
+    const role = (u?.role || '').toLowerCase().trim();
+    return u?.isFounder || role === 'founder' || email === 'sapientman46@gmail.com';
+  };
+
+  // Visible users in Team Quota: Founder's usage and account are hidden from regular users and admins
+  const visibleUsers = useMemo(() => {
+    return isFounder ? users : users.filter(u => !isFounderAccount(u));
+  }, [users, isFounder]);
+
+  // Filtered Users for Tab 3 (using visibleUsers only)
   const filteredUsers = useMemo(() => {
-    if (!userSearch.trim()) return users;
+    if (!userSearch.trim()) return visibleUsers;
     const term = userSearch.toLowerCase();
-    return users.filter(u => 
+    return visibleUsers.filter(u => 
       (u.displayName || '').toLowerCase().includes(term) ||
       ((u as any).name || '').toLowerCase().includes(term) ||
       (u.email || '').toLowerCase().includes(term) ||
       (u.role || '').toLowerCase().includes(term)
     );
-  }, [users, userSearch]);
+  }, [visibleUsers, userSearch]);
+
+  // Team Aggregated Stats for Tab 3 (derived strictly from visible users)
+  const teamStats = useMemo(() => {
+    let totalTeamOps = 0;
+    let topUser: { name: string; ops: number; role?: string } | null = null;
+    visibleUsers.forEach(u => {
+      const ops = u.quotaUsed || 0;
+      totalTeamOps += ops;
+      if (!topUser || ops > topUser.ops) {
+        topUser = { 
+          name: u.displayName || (u as any).name || u.email?.split('@')[0] || 'User', 
+          ops,
+          role: u.role || 'Member'
+        };
+      }
+    });
+    return { totalTeamOps, topUser };
+  }, [visibleUsers]);
 
   // Update Company Quota Limit
   const handleSaveCompanyLimit = async () => {
@@ -240,20 +294,55 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
     }
   };
 
-  // Immediate Quota Reset
-  const handleResetCompanyQuota = async () => {
+  // Confirmation Dialog Modal State for Sensitive Operations
+  const [isConfirmResetModalOpen, setIsConfirmResetModalOpen] = useState(false);
+  const [isSubmittingReset, setIsSubmittingReset] = useState(false);
+  const [resetFeedbackMsg, setResetFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Triggered when clicking the Quota Reset button
+  const handleOpenResetDialog = () => {
+    setResetFeedbackMsg(null);
+    setIsConfirmResetModalOpen(true);
+  };
+
+  // Execute action upon confirmation inside the Dialog
+  const handleExecuteResetAction = async () => {
     if (!company?.id) return;
-    if (window.confirm('Are you sure you want to reset this company daily quota usage to 0 Ops now?')) {
-      setIsResetting(true);
-      try {
+    setIsSubmittingReset(true);
+    setResetFeedbackMsg(null);
+
+    try {
+      if (isFounder) {
+        // Founder has authority to directly execute instant reset
         await erpService.resetQuotaNow(company.id);
-        onClose();
-        window.location.reload();
-      } catch (err) {
-        alert('Failed to reset quota. Please check network connection.');
-      } finally {
-        setIsResetting(false);
+        setResetFeedbackMsg({ type: 'success', text: 'Daily quota usage successfully reset to 0 Ops.' });
+        setTimeout(() => {
+          setIsConfirmResetModalOpen(false);
+          onClose();
+          window.location.reload();
+        }, 1200);
+      } else {
+        // Non-founder submits a pending request to the Founder
+        await erpService.requestQuotaReset(
+          company.id,
+          company.name || 'Company',
+          {
+            name: user?.displayName || (user as any)?.name || 'User',
+            email: user?.email || '',
+            userId: user?.uid || '',
+            quotaUsed,
+            quotaLimit
+          }
+        );
+        setIsConfirmResetModalOpen(false);
+        // Show contact/notification modal with founder details
+        setShowRequestModal(true);
       }
+    } catch (err: any) {
+      console.error('Error executing quota reset action:', err);
+      setResetFeedbackMsg({ type: 'error', text: 'Failed to process request. Please check your network and try again.' });
+    } finally {
+      setIsSubmittingReset(false);
     }
   };
 
@@ -363,25 +452,25 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                 >
                   <Users className="w-4 h-4" />
                   <span>Team Quota</span>
-                  {users.length > 0 && (
+                  {visibleUsers.length > 0 && (
                     <span className="text-[10px] px-1.5 py-0.5 bg-muted text-foreground rounded font-mono font-medium">
-                      {users.length}
+                      {visibleUsers.length}
                     </span>
                   )}
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('admin')}
+                  onClick={() => setActiveTab('operations')}
                   className={cn(
                     "flex items-center gap-2 px-4 py-2.5 text-xs font-semibold rounded-t-lg transition-all cursor-pointer whitespace-nowrap",
-                    activeTab === 'admin'
+                    activeTab === 'operations'
                       ? "bg-card text-primary border-t-2 border-primary shadow-sm"
                       : "text-muted-foreground hover:text-foreground hover:bg-card/50"
                   )}
                 >
                   <Sliders className="w-4 h-4" />
-                  <span>Admin Controls</span>
+                  <span>Operation Controls</span>
                 </button>
               </div>
 
@@ -470,6 +559,53 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                         />
                       </div>
                     </div>
+
+                    {/* Founder Toggle Banner for Operations Timeline Graph */}
+                    {isFounder && (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-card border border-border rounded-xl shadow-xs">
+                        <div className="flex items-center gap-2.5">
+                          <Activity className="w-4 h-4 text-primary shrink-0" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-foreground">
+                                Operations Timeline Graph
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                Founder Feature
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              Toggle the 24-hour progression visual chart of document reads, writes, and real-time operations.
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTimelineGraph(!showTimelineGraph)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 border transition-all cursor-pointer shadow-xs self-start sm:self-auto shrink-0",
+                            showTimelineGraph 
+                              ? "bg-primary text-primary-foreground border-primary" 
+                              : "bg-muted hover:bg-muted/80 text-foreground border-border"
+                          )}
+                        >
+                          <span className={cn("w-2 h-2 rounded-full", showTimelineGraph ? "bg-white animate-pulse" : "bg-slate-400")} />
+                          <span>{showTimelineGraph ? 'Timeline Graph: ON' : 'Timeline Graph: OFF'}</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* 24h Operations Timeline Graph (Rendered only when turned ON by Founder) */}
+                    {showTimelineGraph && (
+                      <FirebaseUsageChart
+                        reads={qReads}
+                        writes={qWrites}
+                        deletes={qDeletes}
+                        quotaLimit={quotaLimit}
+                        isFounder={isFounder}
+                      />
+                    )}
 
                     {/* Breakdown Cards (Reads, Writes, Deletes) */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -733,15 +869,73 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                         </p>
                       </div>
 
-                      <div className="relative">
-                        <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
-                        <input
-                          type="text"
-                          value={userSearch}
-                          onChange={(e) => setUserSearch(e.target.value)}
-                          placeholder="Search member by name, email, or role..."
-                          className="bg-background border border-border rounded-lg pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary w-full sm:w-64 font-sans"
-                        />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => loadUsers(true)}
+                          disabled={loadingUsers}
+                          className="p-1.5 bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground rounded-lg border border-border text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                          title="Refresh user quota data"
+                        >
+                          <RefreshCw className={cn("w-3.5 h-3.5", loadingUsers && "animate-spin text-primary")} />
+                          <span className="text-[11px] font-semibold">Refresh</span>
+                        </button>
+                        <div className="relative">
+                          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-2.5" />
+                          <input
+                            type="text"
+                            value={userSearch}
+                            onChange={(e) => setUserSearch(e.target.value)}
+                            placeholder="Search member by name, email, or role..."
+                            className="bg-background border border-border rounded-lg pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary w-full sm:w-60 font-sans"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Team Quota Executive Summary KPI Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="p-3.5 bg-card border border-border rounded-xl shadow-xs">
+                        <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
+                          <span className="font-semibold">Total Team Members</span>
+                          <Users className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="text-lg font-bold text-foreground font-mono">
+                          {visibleUsers.length} <span className="text-xs text-muted-foreground font-sans font-normal">Active Staff</span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          Assigned to this company
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 bg-card border border-border rounded-xl shadow-xs">
+                        <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
+                          <span className="font-semibold">Team Total Usage (Ops)</span>
+                          <Activity className="w-4 h-4 text-emerald-500" />
+                        </div>
+                        <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                          {teamStats.totalTeamOps.toLocaleString()} <span className="text-xs text-muted-foreground font-sans font-normal">Ops</span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          Combined database usage today
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 bg-card border border-border rounded-xl shadow-xs">
+                        <div className="flex items-center justify-between text-muted-foreground text-xs mb-1">
+                          <span className="font-semibold">Top User Contributor</span>
+                          <HardDrive className="w-4 h-4 text-amber-500" />
+                        </div>
+                        <div className="text-sm font-bold text-foreground truncate">
+                          {teamStats.topUser && teamStats.topUser.ops > 0 
+                            ? teamStats.topUser.name 
+                            : 'No ops recorded yet'}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">
+                          {teamStats.topUser && teamStats.topUser.ops > 0 
+                            ? `${teamStats.topUser.ops.toLocaleString()} Ops consumed` 
+                            : 'All team members at 0 Ops'}
+                        </div>
                       </div>
                     </div>
 
@@ -762,12 +956,12 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                             <thead className="sticky top-0 bg-muted border-b border-border z-10 text-[10px] uppercase font-mono text-muted-foreground">
                               <tr>
                                 <th className="py-3 px-4 text-center w-12" style={{ verticalAlign: 'middle' }}>#</th>
-                                <th className="py-3 px-4" style={{ verticalAlign: 'middle' }}>Team Member</th>
-                                <th className="py-3 px-4 text-right" style={{ verticalAlign: 'middle' }}>Usage (Ops)</th>
-                                <th className="py-3 px-4 text-right" style={{ verticalAlign: 'middle' }}>Daily Limit</th>
-                                <th className="py-3 px-4 text-center" style={{ verticalAlign: 'middle' }}>Status</th>
+                                <th className="py-3 px-4 min-w-[170px]" style={{ verticalAlign: 'middle' }}>Team Member</th>
+                                <th className="py-3 px-4 min-w-[200px]" style={{ verticalAlign: 'middle' }}>Usage (Ops)</th>
+                                <th className="py-3 px-4 text-right min-w-[120px]" style={{ verticalAlign: 'middle' }}>Daily Limit</th>
+                                <th className="py-3 px-4 text-center min-w-[90px]" style={{ verticalAlign: 'middle' }}>Status</th>
                                 {(isFounder || isSuperAdmin || isAdmin) && (
-                                  <th className="py-3 px-4 text-right" style={{ verticalAlign: 'middle' }}>Action</th>
+                                  <th className="py-3 px-4 text-right min-w-[110px]" style={{ verticalAlign: 'middle' }}>Action</th>
                                 )}
                               </tr>
                             </thead>
@@ -796,8 +990,29 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                                         </span>
                                       </div>
                                     </td>
-                                    <td className="py-2.5 px-4 text-right text-foreground font-semibold" style={{ verticalAlign: 'middle' }}>
-                                      {uUsed.toLocaleString()}
+                                    <td className="py-2.5 px-4" style={{ verticalAlign: 'middle' }}>
+                                      <div className="flex flex-col">
+                                        <div className="flex items-center justify-between text-xs mb-1">
+                                          <span className="font-bold text-foreground text-sm font-mono">
+                                            {uUsed.toLocaleString()} <span className="text-[10px] text-muted-foreground font-sans font-normal">Ops</span>
+                                          </span>
+                                          <span className="text-[10px] font-mono text-muted-foreground font-semibold">
+                                            {isUserUnlimited ? 'Unlimited' : `${uPct}%`}
+                                          </span>
+                                        </div>
+                                        <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                                          <div 
+                                            style={{ width: `${isUserUnlimited ? Math.min(100, Math.max(6, (uUsed / 10000) * 100)) : uPct}%` }}
+                                            className={cn(
+                                              "h-full rounded-full transition-all duration-300",
+                                              uPct >= 90 ? "bg-rose-500" : uPct >= 75 ? "bg-amber-500" : "bg-emerald-500"
+                                            )}
+                                          />
+                                        </div>
+                                        <span className="text-[10px] text-muted-foreground mt-0.5 block font-sans">
+                                          {isUserUnlimited ? 'Unlimited Ops ceiling' : `${uUsed.toLocaleString()} of ${uLimit.toLocaleString()} Ops`}
+                                        </span>
+                                      </div>
                                     </td>
                                     <td className="py-2.5 px-4 text-right" style={{ verticalAlign: 'middle' }}>
                                       {isEditing ? (
@@ -822,7 +1037,9 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                                     </td>
                                     <td className="py-2.5 px-4 text-center" style={{ verticalAlign: 'middle' }}>
                                       {isUserUnlimited ? (
-                                        <span className="text-[10px] font-sans text-primary font-bold">Unlimited</span>
+                                        <span className="text-[10px] px-2 py-0.5 rounded font-sans font-bold bg-primary/10 text-primary border border-primary/20">
+                                          Unlimited
+                                        </span>
                                       ) : (
                                         <span className={cn(
                                           "text-[10px] px-2 py-0.5 rounded font-sans font-medium",
@@ -830,7 +1047,7 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                                           uPct >= 75 ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" :
                                           "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                                         )}>
-                                          {uPct}%
+                                          {uPct}% Used
                                         </span>
                                       )}
                                     </td>
@@ -889,69 +1106,106 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                   </div>
                 )}
 
-                {/* ================= TAB 4: ADMIN CONTROLS ================= */}
-                {activeTab === 'admin' && (
+                {/* ================= TAB 4: OPERATION CONTROLS ================= */}
+                {activeTab === 'operations' && (
                   <div className="space-y-6">
-                    <div>
-                      <h3 className="text-sm font-bold text-foreground tracking-tight">
-                        Company Quota Configuration & Emergency Reset
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Manage company-wide daily database limits or trigger immediate operational resets.
-                      </p>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-foreground tracking-tight flex items-center gap-2">
+                          <span>Operation Controls</span>
+                          {isFounder ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                              <ShieldCheck className="w-3 h-3" />
+                              Founder Authorized
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-muted text-muted-foreground border border-border flex items-center gap-1">
+                              <Lock className="w-3 h-3 text-amber-500" />
+                              Restricted Control Mode
+                            </span>
+                          )}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Manage company-wide daily database limits or trigger immediate operational resets.
+                        </p>
+                      </div>
                     </div>
 
-                    {(isFounder || isSuperAdmin || isAdmin) ? (
-                      <div className="space-y-5">
-                        {/* Company Daily Quota Ceiling Box */}
-                        <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-4">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-foreground flex items-center gap-2">
-                              <Sliders className="w-4 h-4 text-primary" />
-                              Configure Company Daily Operations Ceiling
-                            </span>
+                    <div className="space-y-5">
+                      {/* Company Daily Quota Ceiling Box */}
+                      <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-foreground flex items-center gap-2">
+                            <Sliders className="w-4 h-4 text-primary" />
+                            Configure Company Daily Operations Ceiling
+                          </span>
+                          <div className="flex items-center gap-2">
+                            {!isFounder && (
+                              <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 flex items-center gap-1">
+                                <Lock className="w-2.5 h-2.5" /> Founder Only Setting
+                              </span>
+                            )}
                             <span className="text-xs font-mono font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded border border-primary/20">
                               Current: {isUnlimited ? '∞ Unlimited' : `${quotaLimit.toLocaleString()} Ops`}
                             </span>
                           </div>
+                        </div>
 
-                          {/* Quick Presets */}
-                          <div>
-                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block mb-2">
+                        {/* Quick Presets */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">
                               Quick Presets
                             </span>
-                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                              {[5000, 10000, 20000, 25000, 50000, -1].map((val) => (
-                                <button
-                                  key={val}
-                                  type="button"
-                                  onClick={() => setSelectedLimit(val)}
-                                  className={cn(
-                                    "px-3 py-2 rounded-lg text-xs font-mono font-semibold border transition-all text-center cursor-pointer",
-                                    Number(selectedLimit) === val
-                                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                      : "bg-muted/40 text-foreground border-border hover:border-foreground/30 hover:bg-muted"
-                                  )}
-                                >
-                                  {val === -1 ? '∞ Unlimited' : `${(val / 1000)}k Ops`}
-                                </button>
-                              ))}
-                            </div>
+                            {!isFounder && (
+                              <span className="text-[10px] text-muted-foreground italic">
+                                Read-only for non-founders
+                              </span>
+                            )}
                           </div>
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                            {[5000, 10000, 20000, 25000, 50000, -1].map((val) => (
+                              <button
+                                key={val}
+                                type="button"
+                                disabled={!isFounder}
+                                onClick={() => isFounder && setSelectedLimit(val)}
+                                title={!isFounder ? "Only the system founder can modify the company limit" : undefined}
+                                className={cn(
+                                  "px-3 py-2 rounded-lg text-xs font-mono font-semibold border transition-all text-center",
+                                  isFounder ? "cursor-pointer" : "cursor-not-allowed opacity-60",
+                                  Number(selectedLimit) === val
+                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                    : "bg-muted/40 text-foreground border-border hover:border-foreground/30 hover:bg-muted"
+                                )}
+                              >
+                                {val === -1 ? '∞ Unlimited' : `${(val / 1000)}k Ops`}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
 
-                          {/* Custom Numeric Input */}
-                          <div>
-                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block mb-1.5">
-                              Custom Daily Ops Limit (-1 for Unlimited)
-                            </span>
-                            <div className="flex flex-col sm:flex-row gap-2.5">
-                              <input
-                                type="number"
-                                value={selectedLimit}
-                                onChange={(e) => setSelectedLimit(e.target.value === '' ? '' : Number(e.target.value))}
-                                placeholder="e.g. 20000 or -1"
-                                className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-xs text-foreground font-mono focus:outline-none focus:border-primary shadow-sm"
-                              />
+                        {/* Custom Numeric Input */}
+                        <div>
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block mb-1.5">
+                            Custom Daily Ops Limit (-1 for Unlimited)
+                          </span>
+                          <div className="flex flex-col sm:flex-row gap-2.5">
+                            <input
+                              type="number"
+                              disabled={!isFounder}
+                              readOnly={!isFounder}
+                              value={selectedLimit}
+                              onChange={(e) => isFounder && setSelectedLimit(e.target.value === '' ? '' : Number(e.target.value))}
+                              placeholder="e.g. 20000 or -1"
+                              className={cn(
+                                "flex-1 border rounded-lg px-3 py-2 text-xs font-mono shadow-sm focus:outline-none",
+                                isFounder 
+                                  ? "bg-background border-border text-foreground focus:border-primary" 
+                                  : "bg-muted/60 border-border text-muted-foreground cursor-not-allowed"
+                              )}
+                            />
+                            {isFounder ? (
                               <button
                                 type="button"
                                 disabled={isSavingLimit || selectedLimit === ''}
@@ -967,78 +1221,103 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                                 )}
                                 <span>{limitSaveSuccess ? 'Saved Successfully!' : 'Save Limit'}</span>
                               </button>
-                            </div>
-                            <p className="text-[11px] text-muted-foreground mt-2">
-                              Any value saved here will take immediate effect and be calculated across the company and all active users.
-                            </p>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={true}
+                                className="px-5 py-2 bg-muted text-muted-foreground border border-border text-xs font-bold rounded-lg flex items-center justify-center gap-2 cursor-not-allowed opacity-75 shadow-sm"
+                              >
+                                <Lock className="w-3.5 h-3.5 text-amber-500" />
+                                <span>Locked (Founder Only)</span>
+                              </button>
+                            )}
                           </div>
-                        </div>
-
-                        {/* Emergency Instant Reset Box */}
-                        <div className="bg-card border border-border rounded-xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <RotateCcw className="w-4 h-4 text-emerald-500" />
-                              <span className="text-xs font-bold text-foreground">
-                                Instant Quota Reset
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Reset today's recorded database operations count back to 0 Ops immediately.
-                            </p>
-                          </div>
-
-                          <button
-                            type="button"
-                            disabled={isResetting}
-                            onClick={handleResetCompanyQuota}
-                            className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shrink-0 shadow-sm"
-                          >
-                            {isResetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-                            <span>{isResetting ? 'Resetting...' : 'Reset Quota to 0 Ops'}</span>
-                          </button>
+                          <p className="text-[11px] text-muted-foreground mt-2">
+                            {isFounder 
+                              ? "Any value saved here will take immediate effect and be calculated across the company and all active users." 
+                              : "Note: Company daily ceiling and presets are restricted to the System Founder. Authorized workspace members can perform Instant Quota Reset below."}
+                          </p>
                         </div>
                       </div>
-                    ) : (
-                      /* Regular Staff View */
-                      <div className="bg-card border border-border rounded-xl p-6 text-center space-y-3 shadow-sm">
-                        <ShieldCheck className="w-10 h-10 text-primary mx-auto opacity-80" />
+
+                      {/* Emergency Instant Reset Box - FOUNDER APPROVAL WORKFLOW */}
+                      <div className="bg-card border border-border rounded-xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                          <h4 className="text-sm font-bold text-foreground">
-                            Supervised Quota Management
-                          </h4>
-                          <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1">
-                            If your account or company reaches its daily operations threshold, you can request an instant quota reset or limit increase from workspace administrators.
+                          <div className="flex items-center gap-2">
+                            {isFounder ? (
+                              <RotateCcw className="w-4 h-4 text-emerald-500" />
+                            ) : (
+                              <ShieldAlert className="w-4 h-4 text-amber-500" />
+                            )}
+                            <span className="text-xs font-bold text-foreground">
+                              {isFounder ? 'Instant Quota Reset (0 Ops)' : 'Request Quota Reset (0 Ops)'}
+                            </span>
+                            {isFounder ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                Direct Founder Access
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                Requires Founder Approval
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {isFounder 
+                              ? "Reset today's recorded database operations count back to 0 Ops immediately for all workspace users."
+                              : "Submitting a reset request will forward it to the System Founder. Operations will reset to 0 Ops upon Founder approval."}
                           </p>
                         </div>
 
                         <button
                           type="button"
-                          disabled={isResetting}
-                          onClick={async () => {
-                            setIsResetting(true);
-                            try {
-                              await erpService.requestQuotaReset(company.id, company.name, {
-                                name: user?.displayName || (user as any)?.name,
-                                email: user?.email,
-                                userId: user?.uid,
-                                quotaUsed,
-                                quotaLimit
-                              });
-                              setShowRequestModal(true);
-                            } catch (err) {
-                              setShowRequestModal(true);
-                            } finally {
-                              setIsResetting(false);
-                            }
-                          }}
-                          className="px-5 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold rounded-lg inline-flex items-center gap-2 transition-all cursor-pointer shadow-sm"
+                          onClick={handleOpenResetDialog}
+                          className={cn(
+                            "px-4 py-2 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0 shadow-sm",
+                            isFounder
+                              ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                              : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                          )}
                         >
-                          {isResetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-                          <span>Request Quota Increase</span>
+                          {isFounder ? <RotateCcw className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                          <span>{isFounder ? 'Reset Quota to 0 Ops' : 'Request Quota Reset'}</span>
                         </button>
                       </div>
-                    )}
+
+                      {/* Timeline Graph Display Switch - FOUNDER CONTROL */}
+                      {isFounder && (
+                        <div className="bg-card border border-border rounded-xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <Activity className="w-4 h-4 text-primary" />
+                              <span className="text-xs font-bold text-foreground">
+                                Operations Timeline Graph Display
+                              </span>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                Founder Feature
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Enable or disable the 24-hour visual progression timeline graph in the Overview tab.
+                            </p>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleTimelineGraph(!showTimelineGraph)}
+                            className={cn(
+                              "px-4 py-2 text-xs font-bold rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0 shadow-sm",
+                              showTimelineGraph
+                                ? "bg-primary text-primary-foreground border border-primary"
+                                : "bg-muted hover:bg-muted/80 text-foreground border border-border"
+                            )}
+                          >
+                            <span className={cn("w-2 h-2 rounded-full", showTimelineGraph ? "bg-white animate-pulse" : "bg-slate-400")} />
+                            <span>{showTimelineGraph ? 'Graph Display: Active (ON)' : 'Graph Display: Inactive (OFF)'}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1060,6 +1339,159 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                     Close
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sensitive Operation Confirmation Dialog Popup Modal - 100% English & High Contrast */}
+      <AnimatePresence>
+        {isConfirmResetModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+            onClick={() => !isSubmittingReset && setIsConfirmResetModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0, y: 8 }}
+              transition={{ duration: 0.18 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden text-foreground flex flex-col"
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-border bg-muted/40 flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center border shrink-0",
+                    isFounder 
+                      ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+                      : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                  )}>
+                    {isFounder ? <RotateCcw className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">
+                      {isFounder ? 'Confirm Instant Quota Reset' : 'Confirm Quota Reset Request'}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {isFounder ? 'Direct administrative action' : 'Requires System Founder approval'}
+                    </p>
+                  </div>
+                </div>
+                {!isSubmittingReset && (
+                  <button
+                    type="button"
+                    onClick={() => setIsConfirmResetModalOpen(false)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Body */}
+              <div className="p-5 space-y-4 text-xs">
+                {/* Notice Card - High Contrast without pale yellow */}
+                <div className={cn(
+                  "p-4 rounded-xl border leading-relaxed",
+                  isFounder 
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-100" 
+                    : "bg-slate-100 dark:bg-slate-800/90 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+                )}>
+                  {isFounder ? (
+                    <p>
+                      <strong className="font-semibold text-emerald-900 dark:text-emerald-200">Direct Reset:</strong> As the System Founder, you have full administrative authority to immediately reset today's database operations count back to <strong className="font-semibold">0 Ops</strong> for all members of this company. This change applies across the workspace instantly.
+                    </p>
+                  ) : (
+                    <p>
+                      <strong className="font-semibold text-amber-900 dark:text-amber-300">Approval Policy:</strong> Standard users and company admins cannot reset operations directly. Submitting this request will automatically notify the System Founder. Operations will be reset to <strong className="font-semibold">0 Ops</strong> as soon as the Founder approves your request.
+                    </p>
+                  )}
+                </div>
+
+                {/* Operation Summary Box */}
+                <div className="bg-muted/40 rounded-xl p-3.5 border border-border space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground font-medium">Company Name:</span>
+                    <span className="font-semibold text-foreground">{company?.name || 'Your Company'}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground font-medium">Current Usage:</span>
+                    <span className="font-mono font-bold text-foreground">
+                      {quotaUsed.toLocaleString()} / {isUnlimited ? '∞' : quotaLimit.toLocaleString()} Ops ({pctUsed}%)
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground font-medium">Requested By:</span>
+                    <span className="font-semibold text-foreground">{user?.displayName || user?.email || 'Authorized Member'}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs pt-1 border-t border-border/60">
+                    <span className="text-muted-foreground font-medium">Action:</span>
+                    <span className="font-semibold text-primary">Reset daily count to 0 Ops</span>
+                  </div>
+                </div>
+
+                {/* Feedback status */}
+                {resetFeedbackMsg && (
+                  <div className={cn(
+                    "p-3 rounded-lg text-xs font-medium flex items-center gap-2",
+                    resetFeedbackMsg.type === 'success' 
+                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" 
+                      : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                  )}>
+                    {resetFeedbackMsg.type === 'success' ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                    )}
+                    <span>{resetFeedbackMsg.text}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="p-4 border-t border-border bg-muted/20 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  disabled={isSubmittingReset}
+                  onClick={() => setIsConfirmResetModalOpen(false)}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmittingReset}
+                  onClick={handleExecuteResetAction}
+                  className={cn(
+                    "px-5 py-2 rounded-lg text-xs font-bold text-white flex items-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-60",
+                    isFounder 
+                      ? "bg-emerald-600 hover:bg-emerald-700" 
+                      : "bg-amber-600 hover:bg-amber-700"
+                  )}
+                >
+                  {isSubmittingReset ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : isFounder ? (
+                    <>
+                      <RotateCcw className="w-4 h-4" />
+                      <span>Yes, Reset Quota to 0 Ops</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>Submit Request to Founder</span>
+                    </>
+                  )}
+                </button>
               </div>
             </motion.div>
           </motion.div>

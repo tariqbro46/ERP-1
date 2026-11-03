@@ -22,26 +22,96 @@ export interface ReleaseVersion {
   bugFixes: ReleaseNoteItem[];
 }
 
-export const LATEST_VERSION = "v1.9.9.03";
+export const LATEST_VERSION = "v1.9.9.10";
 export const LAST_SEEN_VERSION_KEY = "tallyflow_last_seen_release_version";
 
 export const RELEASE_NOTES: ReleaseVersion[] = [
+  {
+    version: "v1.9.9.10",
+    releaseDate: "November 03, 2026",
+    bnReleaseDate: "০৩ নভেম্বর, ২০২৬",
+    title: "Team Quota Live Tracking Engine, Operation Controls & Founder Approval Workflow",
+    bnTitle: "টিম কোটা লাইভ ট্র্যাকিং ইঞ্জিন, অপারেশন কন্ট্রোলস এবং ফাউন্ডার অ্যাপ্রুভাল ওয়ার্কফ্লো",
+    summary: "Comprehensive upgrade introducing real-time team member quota synchronization across multiple devices, automatic email deduplication, 10–25s low-latency database flushing, interactive confirmation modal with founder approval workflow for quota resets, and native Firebase 24h usage analytics chart with light/dark theme toggle.",
+    bnSummary: "টিম কোটা পেজে প্রতিটি সক্রিয় সদস্যের রিয়েল-টাইম ইউসেজ ট্র্যাকিং ও দ্রুত ডাটাবেজ সিঙ্ক, মাল্টিপল অ্যাকাউন্ট ডিডুপ্লিকেশন, স্পর্শকাতর অ্যাকশনের জন্য কাস্টম কনফার্ম ডায়ালগ ও ফাউন্ডার অ্যাপ্রুভাল সিস্টেম এবং লাইট/ডার্ক মোড টগলসহ ফায়ারবেস-স্টাইল ২৪-ঘণ্টার ইউসেজ চার্ট সংযোজন করা হয়েছে।",
+    isLatest: true,
+    newFeatures: [
+      {
+        id: "feat-team-quota-live-sync",
+        title: "Team Quota Live Operations Sync & Force-Refresh",
+        bnTitle: "টিম কোটা লাইভ অপারেশন্স সিঙ্ক এবং ফোর্স-রিফ্রেশ",
+        description: "Implemented real-time team member database usage synchronization. Switching to Team Quota or clicking Refresh immediately fetches fresh live metrics directly from Firestore, bypassing 30-minute stale caches.",
+        bnDescription: "টিম কোটা পেজে প্রতিটি সক্রিয় মেম্বারের ডাটাবেজ ব্যবহারের সঠিক পরিসংখ্যান রিয়েল-টাইমে প্রদর্শনের জন্য ফোর্স-রিফ্রেশ ও লাইভ সিঙ্ক ইঞ্জিন চালু করা হয়েছে।",
+        module: "Quota & Operations",
+        badge: "CORE"
+      },
+      {
+        id: "feat-operation-controls-founder-approval",
+        title: "Operation Controls & Founder Approval Workflow",
+        bnTitle: "অপারেশন কন্ট্রোলস এবং ফাউন্ডার অ্যাপ্রুভাল ওয়ার্কফ্লো",
+        description: "Standardized 'Operation Controls' with role-based restrictions. Regular users and admins must submit quota reset requests with interactive confirmation modals, requiring System Founder authorization before any counter reset executes.",
+        bnDescription: "অ্যাডমিন কন্ট্রোলসের নাম পরিবর্তন করে অপারেশন কন্ট্রোলস করা হয়েছে এবং কোটা রিসেটসহ স্পর্শকাতর অ্যাকশনগুলোতে কাস্টম কনফার্ম ডায়ালগ ও ফাউন্ডারের অ্যাপ্রুভাল ওয়ার্কফ্লো বাধ্যতামূলক করা হয়েছে।",
+        module: "Security & Governance",
+        badge: "SECURITY"
+      },
+      {
+        id: "feat-firebase-24h-usage-chart",
+        title: "Native Firebase 24-Hour Operations Progression Chart",
+        bnTitle: "নেটিভ ফায়ারবেস ২৪-ঘণ্টার অপারেশন্স প্রগ্রেস চার্ট",
+        description: "Integrated an exact Firebase-style 24-hour cumulative timeline chart featuring full-canvas crosshair mouse tracking, light/dark theme toggle (default light), zero clipping popover tooltips, and Reads/Writes/Real-time metrics.",
+        bnDescription: "ফায়ারবেস কনসোলের অনুরুপ ২৪-ঘণ্টার কিউমুলেটিভ প্রগ্রেস চার্ট যুক্ত করা হয়েছে যাতে ফুল-ক্যানভাস কার্সার ট্র্যাকিং, লাইট/ডার্ক মোড টগল এবং রিডস/রাইটস/রিয়েল-টাইম অপস নিখুঁতভাবে প্রদর্শিত হয়।",
+        module: "Analytics & Timeline",
+        badge: "INTELLIGENCE"
+      }
+    ],
+    improvements: [
+      {
+        id: "imp-low-latency-quota-flush",
+        title: "10–25s Low-Latency Database Quota Batching",
+        bnTitle: "১০–২৫ সেকেন্ড লো-লেটেন্সি ডাটাবেজ কোটা ব্যাচিং",
+        description: "Reduced client-side quota flushing intervals from 300 seconds down to 10–25 seconds, ensuring active user contributions are recorded promptly without unnecessary Firestore network writes.",
+        bnDescription: "কোটা ব্যাচিং ডিলে ৩০০ সেকেন্ড থেকে কমিয়ে মাত্র ১০-২৫ সেকেন্ডে নামিয়ে আনা হয়েছে, যার ফলে টিম মেম্বারদের কাজ দ্রুত ডাটাবেজে রেকর্ড হয়।",
+        module: "Database & Performance",
+        badge: "PERFORMANCE"
+      },
+      {
+        id: "imp-multi-account-deduplication",
+        title: "Multi-Account & Secondary Auth Email Deduplication",
+        bnTitle: "মাল্টি-অ্যাকাউন্ট এবং সেকেন্ডারি অথ ইমেইল ডিডুপ্লিকেশন",
+        description: "Automated user merging by email across Firestore documents created via admin pre-invitations and Google Auth sign-in, seamlessly consolidating operational counts.",
+        bnDescription: "একই ইউজারের একাধিক ইউজার ডকুমেন্টের ক্ষেত্রে ইমেইল অনুসারে স্বয়ংক্রিয়ভাবে রেকর্ড মার্জ করে সর্বোচ্চ ও সঠিক কোটা হিসেব নিশ্চিত করা হয়েছে।",
+        module: "Auth & Profiles",
+        badge: "ENHANCED"
+      }
+    ],
+    bugFixes: [
+      {
+        id: "fix-non-founder-quota-zero-display",
+        title: "Resolved 0 Ops Display for Active Team Members",
+        bnTitle: "সক্রিয় টিম মেম্বারদের ০ Ops প্রদর্শনের সমস্যা সমাধান",
+        description: "Fixed document-update errors in flushQuotaBuffer and profile recovery to ensure all team members' operational counters accumulate accurately.",
+        bnDescription: "টিম মেম্বারদের ইউজার ডকুমেন্টে কোটা আপডেট ব্যর্থ হওয়ার সমস্যা সমাধান করে সবার অ্যাক্টিভ ইউসেজ দৃশ্যমান করা হয়েছে।",
+        module: "Bug Fix",
+        badge: "FIX"
+      }
+    ]
+  },
   {
     version: "v1.9.9.03",
     releaseDate: "November 01, 2026",
     bnReleaseDate: "০১ নভেম্বর, ২০২৬",
     title: "Executive Database Quota Intelligence Center, Dynamic Quota Limits & 01:00 PM BST Firestore Sync",
     bnTitle: "এক্সিকিউটিভ ডাটাবেজ কোটা ইন্টেলিজেন্স সেন্টার, ডায়নামিক কোটা লিমিট এবং ০১:০০ PM BST ফায়ারস্টোর সিঙ্ক",
-    summary: "Upgraded the Database Quota dialog into a professional multi-tab Operations Intelligence Center (Overview, Module Breakdown, Team Quota, Admin Controls). Removed hardcoded 50k floor to enable 100% custom operations limits (or unlimited -1) per company and per user with live forceRefreshAt broadcast. Synchronized daily reset schedule to 01:00 PM BST matching Firestore midnight PDT, elevated modal layering to z-[99999] with full backdrop masking, and standardized interface styling into clean English.",
+    summary: "Upgraded the Database Quota dialog into a professional multi-tab Operations Intelligence Center (Overview, Module Breakdown, Team Quota, Operation Controls). Removed hardcoded 50k floor to enable 100% custom operations limits (or unlimited -1) per company and per user with live forceRefreshAt broadcast. Synchronized daily reset schedule to 01:00 PM BST matching Firestore midnight PDT, elevated modal layering to z-[99999] with full backdrop masking, and standardized interface styling into clean English.",
     bnSummary: "ডাটাবেজ কোটা ডায়লগটিকে একটি পূর্ণাঙ্গ মাল্টি-ট্যাব অপারেশন্স ইন্টেলিজেন্স সেন্টারে রূপান্তর করা হয়েছে। হার্ডকোডেড ৫০,০০০ ফ্লোর সরিয়ে কোম্পানি ও ইউজার ভিত্তিক যেকোনো কাস্টম কোটা লিমিট (বা আনলিমিটেড -১) নির্ধারণের সুবিধা নিশ্চিত করা হয়েছে। ফায়ারস্টোরের সাথে মিলিয়ে দৈনিক কোটা রিসেট ০১:০০ PM BST-তে সিঙ্ক করা হয়েছে এবং টপ বার ওভারল্যাপ প্রতিরোধে z-[99999] ফুল-স্ক্রিন ব্যাকড্রপ লেয়ারিং নিশ্চিত করা হয়েছে।",
-    isLatest: true,
+    isLatest: false,
     newFeatures: [
       {
         id: "feat-executive-quota-dashboard",
         title: "Multi-Tab Database Quota & Operations Intelligence Center",
         bnTitle: "মাল্টি-ট্যাব ডাটাবেজ কোটা ও অপারেশন্স ইন্টেলিজেন্স সেন্টার",
-        description: "Introduced an executive 4-tab intelligence dashboard: Overview (live operations meter, reads/writes/deletes breakdown, SWR cache performance), Module Breakdown (traffic distribution across vouchers, inventory, ledgers, and auth), Team Quota (member utilization and inline limit editor), and Admin Controls.",
-        bnDescription: "লাইভ মিটার, অপস ব্রেকডাউন, ইন-মেমোরি ক্যাশ পারফরম্যান্স, মডিউল বিশ্লেষণ, টিম মেম্বারদের ইউজার কোটা ম্যানেজমেন্ট এবং অ্যাডমিন প্রিসেট বাটনসহ একটি আধুনিক ৪-ট্যাব বিশিষ্ট কোটা ড্যাশবোর্ড যুক্ত করা হয়েছে।",
+        description: "Introduced an executive 4-tab intelligence dashboard: Overview (live operations meter, reads/writes/deletes breakdown, SWR cache performance), Module Breakdown (traffic distribution across vouchers, inventory, ledgers, and auth), Team Quota (member utilization and inline limit editor), and Operation Controls (Founder-only clearance).",
+        bnDescription: "লাইভ মিটার, অপস ব্রেকডাউন, ইন-মেমোরি ক্যাশ পারফরম্যান্স, মডিউল বিশ্লেষণ, টিম মেম্বারদের ইউজার কোটা ম্যানেজমেন্ট এবং শুধুমাত্র ফাউন্ডার অ্যাক্সেসযোগ্য অপারেশন কন্ট্রোলস (Operation Controls) ট্যাব যুক্ত করা হয়েছে।",
         module: "Database & Quota",
         badge: "CORE"
       },

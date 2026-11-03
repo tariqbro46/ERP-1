@@ -85,7 +85,7 @@ export function QuotaResetRequestModal({ isOpen, onClose, companyName }: QuotaRe
               </div>
               <div>
                 <span className="inline-block px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-bold tracking-wider uppercase border border-emerald-500/20 mb-1">
-                  Request Sent / রিকোয়েস্ট পাঠানো হয়েছে
+                  Request Sent
                 </span>
                 <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   Quota Reset Request Submitted
@@ -108,8 +108,8 @@ export function QuotaResetRequestModal({ isOpen, onClose, companyName }: QuotaRe
                   <Clock className="w-3.5 h-3.5 animate-spin" /> Pending Founder Approval
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed pt-1 border-t border-slate-800/80">
-                আপনার কোম্পানির কোটা রিসেটের অনুরোধ সফলভাবে সিস্টেম অ্যাডমিন / ফাউন্ডারের কাছে রেকর্ড হয়েছে। ফাউন্ডার অনুরোধটি দেখে কোটা রিসেট সম্পন্ন করবেন।
+              <p className="text-[11px] text-slate-300 leading-relaxed pt-1 border-t border-slate-800/80">
+                Your quota reset request has been successfully recorded and forwarded to the System Founder. The counter will reset to 0 Ops upon Founder approval.
               </p>
             </div>
 
@@ -119,11 +119,11 @@ export function QuotaResetRequestModal({ isOpen, onClose, companyName }: QuotaRe
               <p className="text-[11px] font-extrabold text-amber-400 uppercase tracking-widest flex items-center justify-center gap-1.5 mb-1">
                 <Sparkles className="w-3.5 h-3.5" /> Instant Support & Reset
               </p>
-              <h4 className="text-base sm:text-lg font-black text-amber-200 tracking-tight">
-                For quick service, please call now
+              <h4 className="text-base sm:text-lg font-black text-white tracking-tight">
+                For quick clearance, contact the Founder
               </h4>
               <p className="text-xs text-slate-300 mt-1">
-                জরুরি প্রয়োজনে দ্রুত সেবা পেতে সরাসরি কল করুন
+                Reach out directly via phone or email for immediate approval
               </p>
             </div>
 
@@ -155,7 +155,7 @@ export function QuotaResetRequestModal({ isOpen, onClose, companyName }: QuotaRe
                   className="w-full py-2 px-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-lg flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-all cursor-pointer"
                 >
                   <PhoneCall className="w-3.5 h-3.5" />
-                  <span>Call Directly Now (এখনই কল করুন)</span>
+                  <span>Call Directly Now</span>
                 </a>
               </div>
 
@@ -185,7 +185,7 @@ export function QuotaResetRequestModal({ isOpen, onClose, companyName }: QuotaRe
                   className="w-full py-2 px-3 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-lg flex items-center justify-center gap-2 border border-slate-600 active:scale-[0.98] transition-all cursor-pointer"
                 >
                   <Mail className="w-3.5 h-3.5" />
-                  <span>Send Email (মেইল করুন)</span>
+                  <span>Send Direct Email</span>
                 </a>
               </div>
             </div>

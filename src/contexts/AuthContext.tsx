@@ -321,23 +321,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               // PROFILE RECOVERY: If the user profile is missing, attempt to find their company.
               console.log("Profile missing, attempting recovery for UID:", fUser.uid);
               try {
-                // 1. Try to find a company where this user is the owner
-                const ownerQuery = query(collection(db, 'companies'), where('ownerId', '==', fUser.uid));
-                const ownerSnap = await getDocs(ownerQuery);
-                
                 let companyId = '';
                 let role: UserRole = 'Admin';
-                
-                if (!ownerSnap.empty) {
-                  companyId = ownerSnap.docs[0].id;
-                  console.log("Found company by ownerId:", companyId);
-                } else {
-                  // 2. Try by createdBy
-                  const creatorQuery = query(collection(db, 'companies'), where('createdBy', '==', fUser.uid));
-                  const creatorSnap = await getDocs(creatorQuery);
-                  if (!creatorSnap.empty) {
-                    companyId = creatorSnap.docs[0].id;
-                    console.log("Found company by createdBy:", companyId);
+                let quotaLimit: number | undefined = undefined;
+                let quotaUsed: number | undefined = undefined;
+
+                // 0. Try to match existing user doc by email (e.g. invited user or admin pre-creation)
+                if (fUser.email) {
+                  try {
+                    const emailQ = query(collection(db, 'users'), where('email', '==', fUser.email.toLowerCase().trim()), limit(1));
+                    const emailSnap = await getDocs(emailQ);
+                    if (!emailSnap.empty) {
+                      const matchData = emailSnap.docs[0].data() as any;
+                      if (matchData.companyId) companyId = matchData.companyId;
+                      if (matchData.role) role = matchData.role;
+                      if (matchData.quotaLimit !== undefined) quotaLimit = Number(matchData.quotaLimit);
+                      if (matchData.quotaUsed !== undefined) quotaUsed = Number(matchData.quotaUsed);
+                      console.log("Found existing user profile match by email for:", fUser.email, "companyId:", companyId);
+                    }
+                  } catch (e) {
+                    console.warn("Email match query note:", e);
+                  }
+                }
+
+                if (!companyId) {
+                  // 1. Try to find a company where this user is the owner
+                  const ownerQuery = query(collection(db, 'companies'), where('ownerId', '==', fUser.uid));
+                  const ownerSnap = await getDocs(ownerQuery);
+                  
+                  if (!ownerSnap.empty) {
+                    companyId = ownerSnap.docs[0].id;
+                    console.log("Found company by ownerId:", companyId);
+                  } else {
+                    // 2. Try by createdBy
+                    const creatorQuery = query(collection(db, 'companies'), where('createdBy', '==', fUser.uid));
+                    const creatorSnap = await getDocs(creatorQuery);
+                    if (!creatorSnap.empty) {
+                      companyId = creatorSnap.docs[0].id;
+                      console.log("Found company by createdBy:", companyId);
+                    }
                   }
                 }
 
@@ -362,9 +384,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   const newProfile: Profile = {
                     uid: fUser.uid,
                     email: fUser.email || '',
-                    displayName: fUser.displayName || (isFounderEmail ? 'Founder' : 'Admin'),
+                    displayName: fUser.displayName || (isFounderEmail ? 'Founder' : (fUser.email?.split('@')[0] || 'User')),
                     companyId: companyId,
-                    role: role
+                    role: role,
+                    ...(quotaLimit !== undefined ? { quotaLimit } : {}),
+                    ...(quotaUsed !== undefined ? { quotaUsed } : { quotaUsed: 0 })
                   };
                   
                   await setDoc(userRef, {
