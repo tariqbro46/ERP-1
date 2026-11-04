@@ -82,7 +82,8 @@ import {
   Play,
   Eye,
   GitBranch,
-  Sliders
+  Sliders,
+  ShieldAlert
 } from 'lucide-react';
 import { soundService } from '../services/soundService';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -98,6 +99,7 @@ import { SiteContentEditor } from './SiteContentEditor';
 import { AVAILABLE_FEATURES, FeatureCategory } from '../constants/features';
 import { errorService } from '../services/errorService';
 import { LATEST_VERSION } from '../data/releaseNotes';
+import { AuditTrailDetailView } from './AuditTrailDetailView';
 
 interface CompanyStats extends Company {
   userCount: number;
@@ -130,6 +132,7 @@ export default function FounderPanel() {
   const [resettingQuotaId, setResettingQuotaId] = useState<string | null>(null);
   const [menuConfig, setMenuConfig] = useState<MenuConfig | null>(null);
   const [isEditingMenu, setIsEditingMenu] = useState(false);
+  const [isAuditTrailOpen, setIsAuditTrailOpen] = useState(false);
 
   const displayMenuGroups = React.useMemo(() => {
     if (!menuConfig) return [];
@@ -1625,6 +1628,14 @@ export default function FounderPanel() {
                 />
               </div>
             )}
+            <button
+              onClick={() => setIsAuditTrailOpen(true)}
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all whitespace-nowrap"
+              title="Open System Audit Trail & Security Forensic Inspector"
+            >
+              <ShieldAlert className="w-4 h-4" />
+              <span>Audit Trail</span>
+            </button>
             <button 
               onClick={fetchData}
               className="p-2 hover:bg-foreground/5 rounded-lg transition-colors"
@@ -2113,14 +2124,28 @@ export default function FounderPanel() {
         )}>
           <div className="min-w-[700px] lg:min-w-0">
             <div className={cn(
-            "p-4 border-b border-border",
-            uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-muted/30"
-          )}>
-            <h2 className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-              <Activity className={cn("w-4 h-4", uiStyle === 'UI/UX 2' ? "text-white" : "text-primary")} />
-              Global Activity Log (Last 50 Actions)
-            </h2>
-          </div>
+              "p-4 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3",
+              uiStyle === 'UI/UX 2' ? "bg-blue-600 text-white" : "bg-muted/30"
+            )}>
+              <div className="flex items-center gap-3">
+                <ShieldAlert className={cn("w-5 h-5", uiStyle === 'UI/UX 2' ? "text-white" : "text-indigo-500")} />
+                <div>
+                  <h2 className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                    Global Activity &amp; System Audit Trail
+                  </h2>
+                  <p className={cn("text-[11px]", uiStyle === 'UI/UX 2' ? "text-blue-100" : "text-muted-foreground")}>
+                    Granular IP tracking, User-Agent forensics, and before/after database change history.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAuditTrailOpen(true)}
+                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all w-fit"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Launch Audit Trail Detail View</span>
+              </button>
+            </div>
           <div className="divide-y divide-border">
             {globalActivity && globalActivity.length > 0 ? (
               globalActivity.map((log) => {
@@ -8323,6 +8348,12 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
           </div>
         )}
       </AnimatePresence>
+
+      {/* Sovereign Founder System Audit Trail Modal */}
+      <AuditTrailDetailView
+        isOpen={isAuditTrailOpen}
+        onClose={() => setIsAuditTrailOpen(false)}
+      />
       </div>
     </div>
   );

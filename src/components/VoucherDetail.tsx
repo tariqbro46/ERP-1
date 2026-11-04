@@ -12,12 +12,14 @@ import { printUtils } from '../utils/printUtils';
 import { exportUtils } from '../utils/exportUtils';
 import { pdfExportService } from '../utils/pdfExportService';
 import { EditableHeader } from './EditableHeader';
+import { useNotification } from '../contexts/NotificationContext';
 
 export function VoucherDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { showNotification } = useNotification();
   const settings = useSettings();
   const [loading, setLoading] = useState(true);
   const [voucher, setVoucher] = useState<any>(null);
@@ -96,10 +98,11 @@ export function VoucherDetail() {
     if (!voucher || !confirm('Are you sure you want to delete this voucher? This action cannot be undone.')) return;
     try {
       await erpService.deleteVoucher(voucher.id);
+      showNotification('Voucher deleted successfully', 'success');
       navigate(-1);
     } catch (err) {
       console.error('Error deleting voucher:', err);
-      alert('Failed to delete voucher');
+      showNotification('Failed to delete voucher', 'error');
     }
   };
 

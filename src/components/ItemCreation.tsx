@@ -183,7 +183,7 @@ export function ItemCreation() {
       }
     } catch (err: any) {
       console.error('Error saving item:', err);
-      alert(err.message || 'Failed to save item. Please check your connection.');
+      showNotification(err.message || 'Failed to save item. Please check your connection.', 'error');
     } finally {
       setLoading(false);
     }
@@ -194,10 +194,11 @@ export function ItemCreation() {
     setDeleting(true);
     try {
       await erpService.deleteItem(id, user.companyId);
+      showNotification('Item deleted successfully', 'success');
       navigate('/inventory/items');
     } catch (err) {
       console.error('Error deleting item:', err);
-      alert('Failed to delete item. It might be in use.');
+      showNotification('Failed to delete item. It might be in use.', 'error');
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);

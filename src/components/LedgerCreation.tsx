@@ -252,7 +252,7 @@ export function LedgerCreation() {
       }
     } catch (err: any) {
       console.error('Error saving ledger:', err);
-      alert(err.message || 'Failed to save ledger. Please check your connection.');
+      showNotification(err.message || 'Failed to save ledger. Please check your connection.', 'error');
     } finally {
       setLoading(false);
     }
@@ -263,10 +263,11 @@ export function LedgerCreation() {
     setDeleting(true);
     try {
       await erpService.deleteLedger(id, user.companyId);
+      showNotification('Ledger deleted successfully', 'success');
       navigate('/accounts');
     } catch (err) {
       console.error('Error deleting ledger:', err);
-      alert('Failed to delete ledger. It might be in use.');
+      showNotification('Failed to delete ledger. It might be in use.', 'error');
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);

@@ -37,9 +37,11 @@ import {
   Rows3,
   Table as TableIcon,
   ArrowDown,
-  Code
+  Code,
+  Shield
 } from 'lucide-react';
 import { cn, formatCurrency, formatNumber } from '../lib/utils';
+import { AuditTrailDetailView } from './AuditTrailDetailView';
 
 interface AuditLogEntry {
   id: string;
@@ -375,11 +377,13 @@ const getLogHistoryComparison = (log: AuditLogEntry | null, allLogs: AuditLogEnt
 export const AuditTrail: React.FC = () => {
   const { user, company: authCompany } = useAuth();
   const { t, language } = useLanguage();
+  const isFounder = user?.role === 'Founder' || user?.email?.toLowerCase() === 'sapientman46@gmail.com';
 
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [company, setCompany] = useState<any>(null);
+  const [isSystemAuditModalOpen, setIsSystemAuditModalOpen] = useState(false);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -714,6 +718,17 @@ export const AuditTrail: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
+            {isFounder && (
+              <button
+                onClick={() => setIsSystemAuditModalOpen(true)}
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+                title="System Audit Trail & Hardware/IP Forensics (Founder Only)"
+              >
+                <Shield className="w-4 h-4" />
+                <span>{isBn ? 'সিস্টেম অডিট ও আইপি লগ (ফাউন্ডার)' : 'System Audit & IP Logs (Founder)'}</span>
+              </button>
+            )}
+
             <button
               onClick={() => setIsNoteModalOpen(true)}
               className="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
@@ -1849,6 +1864,12 @@ export const AuditTrail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Sovereign System Audit Trail & Forensics Modal (Founder Only) */}
+      <AuditTrailDetailView
+        isOpen={isSystemAuditModalOpen}
+        onClose={() => setIsSystemAuditModalOpen(false)}
+      />
     </div>
   );
 };

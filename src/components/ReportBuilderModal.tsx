@@ -6,6 +6,7 @@ import {
 import { ReportLayoutTemplate, ReportSectionConfig } from '../types';
 import { downloadHtmlAsPDF } from '../utils/exportUtils';
 import { executePrint } from '../utils/printUtils';
+import { useNotification } from '../contexts/NotificationContext';
 
 const DEFAULT_SECTIONS: ReportSectionConfig[] = [
   {
@@ -204,6 +205,7 @@ export function ReportBuilderModal({ isOpen, onClose, onSave, sampleData }: Repo
     return PRESET_TEMPLATES.tally_classic;
   });
 
+  const { showNotification } = useNotification();
   const [selectedSectionId, setSelectedSectionId] = useState<string>('header');
   const [activeTab, setActiveTab] = useState<'widgets' | 'style' | 'presets'>('widgets');
 
@@ -286,7 +288,7 @@ export function ReportBuilderModal({ isOpen, onClose, onSave, sampleData }: Repo
   const handleSave = () => {
     localStorage.setItem('tallyflow_custom_report_template', JSON.stringify(template));
     if (onSave) onSave(template);
-    alert('✓ Report Layout Template saved successfully!');
+    showNotification('Report Layout Template saved successfully!', 'success');
     onClose();
   };
 

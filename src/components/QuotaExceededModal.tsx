@@ -5,6 +5,7 @@ import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { erpService } from '../services/erpService';
 import { QuotaResetRequestModal } from './QuotaResetRequestModal';
+import { useNotification } from '../contexts/NotificationContext';
 
 interface QuotaExceededModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface QuotaExceededModalProps {
 
 export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaExceededModalProps) {
   const { logout, user, isFounder, isSuperAdmin, isAdmin } = useAuth();
+  const { showNotification } = useNotification();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
@@ -331,10 +333,11 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
                         setIsResetting(true);
                         try {
                           await erpService.resetQuotaNow(company.id);
+                          showNotification('Quota reset successfully!', 'success');
                           onClose();
                           window.location.reload();
                         } catch (err) {
-                          alert('Failed to reset quota. Please check network connection.');
+                          showNotification('Failed to reset quota. Please check network connection.', 'error');
                         } finally {
                           setIsResetting(false);
                         }

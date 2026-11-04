@@ -650,3 +650,64 @@ export interface ReportLayoutTemplate {
   accentColor: string;
   sections: ReportSectionConfig[];
 }
+
+export type AuditEventType = 
+  | 'LOGIN' 
+  | 'FAILED_LOGIN' 
+  | 'UNAUTHORIZED_ACCESS_ATTEMPT' 
+  | 'PERMISSION_DENIED' 
+  | 'DATA_MUTATION' 
+  | 'DATA_DELETION' 
+  | 'QUOTA_OVERRIDE' 
+  | 'ROLE_PRIVILEGE_CHANGE' 
+  | 'SENSITIVE_EXPORT' 
+  | 'SECURITY_ALERT';
+
+export type AuditSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type AuditStatus = 'allowed' | 'blocked' | 'suspicious' | 'flagged';
+
+export interface SystemAuditLog {
+  id: string;
+  timestamp: string; // ISO string or formatted
+  eventType: AuditEventType;
+  severity: AuditSeverity;
+  status: AuditStatus;
+  action: string;
+  actor: {
+    uid: string;
+    email: string;
+    displayName: string;
+    role: string;
+    companyId?: string;
+    companyName?: string;
+  };
+  network: {
+    ipAddress: string;
+    userAgent: string;
+    browser?: string;
+    os?: string;
+    device?: string;
+    location?: string;
+  };
+  databaseTarget: {
+    collectionName: string;
+    documentId: string;
+    operation: 'CREATE' | 'READ' | 'UPDATE' | 'DELETE' | 'EXECUTE';
+  };
+  changeHistory?: {
+    hasDiff: boolean;
+    previousState?: Record<string, any> | null;
+    newState?: Record<string, any> | null;
+    changedFields?: Array<{
+      field: string;
+      oldValue: any;
+      newValue: any;
+    }>;
+  };
+  threatDetails?: {
+    reason: string;
+    attackVector?: string;
+    mitigationTaken: string;
+  };
+  metadata?: Record<string, any>;
+}

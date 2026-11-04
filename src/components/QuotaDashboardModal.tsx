@@ -12,6 +12,7 @@ import { erpService } from '../services/erpService';
 import { QuotaResetRequestModal } from './QuotaResetRequestModal';
 import { FirebaseUsageChart } from './FirebaseUsageChart';
 import { UserProfile } from '../types';
+import { useNotification } from '../contexts/NotificationContext';
 
 interface QuotaDashboardModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ type TabType = 'overview' | 'modules' | 'users' | 'operations';
 
 export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaDashboardModalProps) {
   const { isFounder, isSuperAdmin, isAdmin, user } = useAuth();
+  const { showNotification } = useNotification();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [isResetting, setIsResetting] = useState(false);
@@ -278,9 +280,10 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
       const num = Number(selectedLimit);
       await erpService.updateCompanyQuotaLimit(company.id, num);
       setLimitSaveSuccess(true);
+      showNotification('Company quota limit updated successfully!', 'success');
       setTimeout(() => setLimitSaveSuccess(false), 2500);
     } catch (err) {
-      alert('Failed to update company quota limit. Please try again.');
+      showNotification('Failed to update company quota limit. Please try again.', 'error');
     } finally {
       setIsSavingLimit(false);
     }
@@ -296,9 +299,10 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
       setUserSaveSuccessId(userId);
       setUsers(prev => prev.map(u => u.uid === userId ? { ...u, quotaLimit: num } : u));
       setEditingUserId(null);
+      showNotification('User quota limit updated successfully!', 'success');
       setTimeout(() => setUserSaveSuccessId(null), 2500);
     } catch (err) {
-      alert('Failed to update user quota limit. Please try again.');
+      showNotification('Failed to update user quota limit. Please try again.', 'error');
     } finally {
       setSavingUserLimitId(null);
     }

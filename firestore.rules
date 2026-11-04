@@ -336,6 +336,12 @@ service cloud.firestore {
       allow read, delete: if isSuperAdmin();
     }
 
+    match /system_audit_logs/{id} {
+      allow read, delete: if isFounder();
+      allow create: if isAuthenticated();
+      allow update: if false; // Immutable tamper-proof audit records
+    }
+
     // Default deny ALL remaining
     match /{document=**} {
       allow read, write: if false;

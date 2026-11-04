@@ -130,7 +130,7 @@ export default function FacebookProfileMenu({ isOpen, onClose, uiStyle, onNotifi
           setProfilePic(compressedBase64);
         } catch (err) {
           console.error("Failed uploading profile picture:", err);
-          alert("Could not save profile picture. Please try another image.");
+          showNotification("Could not save profile picture. Please try another image.", "error");
         } finally {
           setIsUploading(false);
         }

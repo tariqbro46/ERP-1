@@ -7,11 +7,13 @@ import { erpService } from '../services/erpService';
 
 import { useSubscription } from '../hooks/useSubscription';
 import { APP_FEATURES } from '../constants/features';
+import { useNotification } from '../contexts/NotificationContext';
 
 export const UserManagement: React.FC = () => {
   const { isAdmin, isSuperAdmin, user, rolePermissions } = useAuth();
   const { uiStyle } = useSettings();
   const { checkLimit, isFeatureEnabled } = useSubscription();
+  const { showNotification } = useNotification();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'users' | 'permissions'>('users');
@@ -69,7 +71,7 @@ export const UserManagement: React.FC = () => {
 
   const updateRole = async (uid: string, newRole: UserRole) => {
     if (uid === user?.uid) {
-      alert("You cannot change your own role.");
+      showNotification("You cannot change your own role.", "warning");
       return;
     }
 
@@ -81,9 +83,10 @@ export const UserManagement: React.FC = () => {
     try {
       await erpService.updateUserRole(uid, newRole);
       setProfiles(profiles.map(p => p.uid === uid ? { ...p, role: newRole } : p));
+      showNotification(`User role updated to ${newRole}`, 'success');
     } catch (err) {
       console.error('Error updating role:', err);
-      alert('Failed to update role');
+      showNotification('Failed to update role', 'error');
     } finally {
       setUpdatingId(null);
     }
@@ -113,6 +116,7 @@ export const UserManagement: React.FC = () => {
       });
       setShowAddModal(false);
       setNewUser({ email: '', password: '', displayName: '', role: 'Staff', target_amount: 0, quotaLimit: 10000 });
+      showNotification('User added successfully!', 'success');
       fetchProfiles();
     } catch (err: any) {
       setAddError(err.message || 'Failed to add user');
@@ -123,7 +127,7 @@ export const UserManagement: React.FC = () => {
 
   const handleDeleteUser = async (uid: string) => {
     if (uid === user?.uid) {
-      alert("You cannot delete yourself.");
+      showNotification("You cannot delete yourself.", "warning");
       return;
     }
     
@@ -135,14 +139,14 @@ export const UserManagement: React.FC = () => {
     try {
       await erpService.adminDeleteUser(uid);
       setProfiles(prev => prev.filter(p => p.uid !== uid));
-      alert('User deleted successfully.');
+      showNotification('User deleted successfully.', 'success');
     } catch (err: any) {
       console.error('Detailed delete error:', err);
       try {
         const errInfo = JSON.parse(err.message);
-        alert(`Failed to delete user: ${errInfo.error || 'Permission Denied'}`);
+        showNotification(`Failed to delete user: ${errInfo.error || 'Permission Denied'}`, 'error');
       } catch {
-        alert(`Failed to delete user: ${err.message || 'Unknown error'}`);
+        showNotification(`Failed to delete user: ${err.message || 'Unknown error'}`, 'error');
       }
     } finally {
       setUpdatingId(null);
@@ -151,7 +155,7 @@ export const UserManagement: React.FC = () => {
 
   const handleResetPassword = async (uid: string, email: string) => {
     if (!email) {
-      alert("User email is missing. Cannot send reset link.");
+      showNotification("User email is missing. Cannot send reset link.", "warning");
       return;
     }
 
@@ -162,10 +166,10 @@ export const UserManagement: React.FC = () => {
     setResettingId(uid);
     try {
       await erpService.adminResetPassword(uid, email);
-      alert(`Password reset link has been sent to ${email}`);
+      showNotification(`Password reset link has been sent to ${email}`, 'success');
     } catch (err: any) {
       console.error('Password reset error:', err);
-      alert(`Failed to send reset email: ${err.message || 'Unknown error'}`);
+      showNotification(`Failed to send reset email: ${err.message || 'Unknown error'}`, 'error');
     } finally {
       setResettingId(null);
     }
@@ -181,10 +185,10 @@ export const UserManagement: React.FC = () => {
     setSavingPermissions(true);
     try {
       await erpService.updateRolePermissions(user.companyId, localRolePermissions);
-      alert('Permissions saved successfully');
+      showNotification('Permissions saved successfully', 'success');
     } catch (err) {
       console.error('Error saving permissions:', err);
-      alert('Failed to save permissions');
+      showNotification('Failed to save permissions', 'error');
     } finally {
       setSavingPermissions(false);
     }

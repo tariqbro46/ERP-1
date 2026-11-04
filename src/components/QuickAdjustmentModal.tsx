@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, Calculator } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
 
 interface QuickAdjustmentModalProps {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface QuickAdjustmentModalProps {
 
 export function QuickAdjustmentModal({ isOpen, onClose, onSuccess, partyLedgerId, partyName, currentBalance }: QuickAdjustmentModalProps) {
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const [loading, setLoading] = useState(false);
   const [adjustmentLedgers, setAdjustmentLedgers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -110,11 +112,12 @@ export function QuickAdjustmentModal({ isOpen, onClose, onSuccess, partyLedgerId
       };
 
       await erpService.createVoucher(user.companyId, user.uid, voucher, entries);
+      showNotification('Adjustment entry created successfully!', 'success');
       onSuccess();
       onClose();
     } catch (err) {
       console.error('Error creating adjustment:', err);
-      alert('Failed to create adjustment entry.');
+      showNotification('Failed to create adjustment entry.', 'error');
     } finally {
       setLoading(false);
     }

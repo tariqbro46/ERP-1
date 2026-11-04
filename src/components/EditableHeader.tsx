@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Edit2, Check, X } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { cn } from '../lib/utils';
 
 interface EditableHeaderProps {
@@ -13,6 +14,7 @@ interface EditableHeaderProps {
 
 export function EditableHeader({ pageId, defaultTitle, defaultSubtitle, className }: EditableHeaderProps) {
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(defaultTitle);
   const [subtitle, setSubtitle] = useState(defaultSubtitle || '');
@@ -64,10 +66,11 @@ export function EditableHeader({ pageId, defaultTitle, defaultSubtitle, classNam
       const pageHeaders = settings.pageHeaders || {};
       pageHeaders[pageId] = { title, subtitle };
       await erpService.updateSettings(user.companyId, { ...settings, pageHeaders });
+      showNotification('Header updated successfully!', 'success');
       setIsEditing(false);
     } catch (err) {
       console.error('Error saving page header:', err);
-      alert('Failed to save header text.');
+      showNotification('Failed to save header text.', 'error');
     } finally {
       setLoading(false);
     }

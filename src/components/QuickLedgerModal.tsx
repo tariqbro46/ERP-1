@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2 } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
 
 interface QuickLedgerModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface QuickLedgerModalProps {
 
 export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: QuickLedgerModalProps) {
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -84,11 +86,12 @@ export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: Q
         parent_group_id: selectedGroup?.parent_id || selectedGroup?.parent_group_id || formData.group_id
       });
       onSuccess(newLedger);
+      showNotification('Ledger created successfully!', 'success');
       onClose();
       setFormData({ name: '', group_id: '', opening_balance: 0 });
     } catch (err) {
       console.error('Error creating ledger:', err);
-      alert('Failed to create ledger.');
+      showNotification('Failed to create ledger.', 'error');
     } finally {
       setLoading(false);
     }

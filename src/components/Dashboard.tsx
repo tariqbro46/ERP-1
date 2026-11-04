@@ -11,6 +11,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { cn, formatNumber, ensureDate } from '../lib/utils';
 import { SkeletonLoader } from './SkeletonLoader';
 import { format, differenceInDays } from 'date-fns';
@@ -71,6 +72,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const { theme } = useTheme();
   const { t, language } = useLanguage();
+  const { showNotification } = useNotification();
   const { 
     companyName, 
     slogan,
@@ -2486,7 +2488,7 @@ export function Dashboard() {
             <button 
               onClick={() => {
                 if (company.subscriptionStatus === 'inactive') {
-                  alert('Your subscription has expired. Please contact support at sapientman46@gmail.com to renew your plan.');
+                  showNotification('Your subscription has expired. Please contact support at sapientman46@gmail.com to renew your plan.', 'error');
                 } else {
                   window.location.href = 'mailto:sapientman46@gmail.com?subject=Subscription Renewal Request for ' + company.name;
                 }

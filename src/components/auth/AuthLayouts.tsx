@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { AuthTemplate } from '../../types';
 import { 
   Eye, 
@@ -288,6 +289,7 @@ export function SoftrAuthLayout({
   googleLoading,
   children
 }: AuthLayoutProps) {
+  const { showNotification } = useNotification();
   const defaultQuote = "“We have a very unique way of managing projects and collaborating — we're very process- and data-driven. With Softr, we were able to unite our project management in one platform.”";
   const defaultAuthor = "Natalie Neumann";
   const defaultTitle = "COO, Designity";
@@ -337,7 +339,10 @@ export function SoftrAuthLayout({
           {/* Social Auth Buttons */}
           <div className="space-y-2.5 mb-4">
             <GoogleButton onClick={onGoogleSignIn} loading={googleLoading} text={googleButtonText} />
-            <SSOButton onClick={() => alert("SSO is available for Enterprise workspaces.")} text={ssoButtonText} />
+            <SSOButton 
+              onClick={() => showNotification("Single Sign-On (SSO) is available for Enterprise workspaces. Contact support at sapientman46@gmail.com for setup.", "info")} 
+              text={ssoButtonText} 
+            />
           </div>
 
           {/* OR Divider */}

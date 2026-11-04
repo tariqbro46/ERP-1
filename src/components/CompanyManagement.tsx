@@ -59,7 +59,7 @@ export function CompanyManagement() {
       await fetchCompanies();
     } catch (err) {
       console.error('Error creating company:', err);
-      alert('Failed to create company.');
+      showNotification('Failed to create company.', 'error');
     } finally {
       setCreating(false);
     }
@@ -75,7 +75,7 @@ export function CompanyManagement() {
       // The AuthContext listener will pick up the change and update the UI
     } catch (err) {
       console.error('Error switching company:', err);
-      alert('Failed to switch company.');
+      showNotification('Failed to switch company.', 'error');
     } finally {
       setSwitching(null);
     }
@@ -93,7 +93,7 @@ export function CompanyManagement() {
       await fetchCompanies();
     } catch (err) {
       console.error('Error updating company:', err);
-      alert('Failed to update company.');
+      showNotification('Failed to update company.', 'error');
     } finally {
       setSwitching(null);
     }
@@ -142,7 +142,7 @@ export function CompanyManagement() {
       await fetchCompanies();
     } catch (err) {
       console.error('Error deleting company:', err);
-      alert('Failed to delete company.');
+      showNotification('Failed to delete company.', 'error');
     } finally {
       setSwitching(null);
     }

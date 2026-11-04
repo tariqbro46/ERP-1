@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Loader2, Package, Plus } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
 
 interface QuickItemModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface QuickItemModalProps {
 
 export function QuickItemModal({ isOpen, onClose, onSuccess }: QuickItemModalProps) {
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const [loading, setLoading] = useState(false);
   const [units, setUnits] = useState<any[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -79,6 +81,7 @@ export function QuickItemModal({ isOpen, onClose, onSuccess }: QuickItemModalPro
 
       const newItem = await erpService.createItem(user!.companyId, payload);
       onSuccess(newItem);
+      showNotification('Item created successfully!', 'success');
       onClose();
       // Reset form
       setFormData({
@@ -92,7 +95,7 @@ export function QuickItemModal({ isOpen, onClose, onSuccess }: QuickItemModalPro
       setShowNewCategory(false);
     } catch (err) {
       console.error('Error creating quick item:', err);
-      alert('Failed to create item.');
+      showNotification('Failed to create item.', 'error');
     } finally {
       setLoading(false);
     }

@@ -605,6 +605,25 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "email", "subject", "message"]
+    },
+    "SystemAuditLog": {
+      "title": "System Audit Log",
+      "description": "Granular system-level security audit logs including IP, User-Agent, DB change diff, and unauthorized access monitoring.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "eventType": { "type": "string" },
+        "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "status": { "type": "string", "enum": ["allowed", "blocked", "suspicious", "flagged"] },
+        "action": { "type": "string" },
+        "actor": { "type": "object" },
+        "network": { "type": "object" },
+        "databaseTarget": { "type": "object" },
+        "changeHistory": { "type": "object" },
+        "threatDetails": { "type": "object" }
+      },
+      "required": ["timestamp", "eventType", "action", "status"]
     }
   },
   "firestore": {
@@ -763,6 +782,10 @@
     "/inquiries/{id}": {
       "schema": "Inquiry",
       "description": "Inquiries submitted by landing page visitors."
+    },
+    "/system_audit_logs/{id}": {
+      "schema": "SystemAuditLog",
+      "description": "System-level security audit logs and unauthorized access monitoring."
     }
   }
 }

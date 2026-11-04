@@ -2401,6 +2401,7 @@ export const erpService: any = {
     }
   },
 
+
   async getVouchersByGroup(companyId: string, groupId: string, from: string, to: string) {
     const cacheKey = `${companyId}_${groupId}_${from}_${to}`;
     const now = Date.now();

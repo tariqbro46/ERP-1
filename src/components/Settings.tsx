@@ -535,7 +535,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [gitStatus, setGitStatus] = useState<any>(null);
   const [gitLoading, setGitLoading] = useState(false);
   const [gitPushing, setGitPushing] = useState(false);
-  const [gitVersionInput, setGitVersionInput] = useState(appVersion || 'v1.9.9');
+  const [gitVersionInput, setGitVersionInput] = useState(appVersion || LATEST_VERSION);
   const [gitCommitMsg, setGitCommitMsg] = useState('Stock Calculation & Movement Truth Engine, Report Synchronization');
   const [gitBranch, setGitBranch] = useState('main');
   const [gitRemoteUrl, setGitRemoteUrl] = useState(() => localStorage.getItem('tallyflow_github_remote_url') || '');
@@ -580,7 +580,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const handlePushToGithub = async () => {
     try {
       setGitPushing(true);
-      const startLog = `[1/6] Connecting to GitHub push engine for ${gitVersionInput || appVersion || 'v1.9.9'}...\n`;
+      const startLog = `[1/6] Connecting to GitHub push engine for ${gitVersionInput || appVersion || LATEST_VERSION}...\n`;
       setGitLogs(startLog);
       soundService.play('click');
 
@@ -589,7 +589,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       }
 
       const payload = {
-        version: (gitVersionInput || appVersion || 'v1.9.9').trim(),
+        version: (gitVersionInput || appVersion || LATEST_VERSION).trim(),
         commitMessage: (gitCommitMsg || 'System updates and enhancements').trim(),
         branch: (gitBranch || 'main').trim(),
         remoteUrl: gitRemoteUrl.trim(),
@@ -2352,11 +2352,11 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                           "text-[8px] px-1.5 py-0.5 rounded font-bold uppercase",
                           gitStatus?.remoteUrl ? "bg-emerald-500 text-white" : "bg-emerald-600/20 text-emerald-500 border border-emerald-500/30"
                         )}>
-                          {appVersion || 'v1.9.9'}
+                          {appVersion || LATEST_VERSION}
                         </span>
                       </div>
                       <p className="text-[9px] text-gray-500 uppercase">
-                        {language === 'bn' ? `বর্তমান সংস্করণ ${appVersion || 'v1.9.9'} গিটহাবে পুশ ও রিলিজ নোট সিঙ্ক করুন` : `Push ${appVersion || 'v1.9.9'} to GitHub & sync version release notes.`}
+                        {language === 'bn' ? `বর্তমান সংস্করণ ${appVersion || LATEST_VERSION} গিটহাবে পুশ ও রিলিজ নোট সিঙ্ক করুন` : `Push ${appVersion || LATEST_VERSION} to GitHub & sync version release notes.`}
                       </p>
                       <button
                         onClick={() => setActiveTab('github')}
@@ -2386,7 +2386,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                             {language === 'bn' ? 'গিটহাব ও রিলিজ সংস্করণ অটোমেশন' : 'GitHub & Release Version Automation'}
                           </h2>
                           <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 rounded-full text-[10px] font-bold">
-                            {appVersion || 'v1.9.9'}
+                            {appVersion || LATEST_VERSION}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -2434,7 +2434,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         {language === 'bn' ? 'সিস্টেম সংস্করণ' : 'System Version'}
                       </div>
                       <div className="text-sm font-bold text-emerald-500 font-mono mt-0.5">
-                        {appVersion || 'v1.9.9'}
+                        {appVersion || LATEST_VERSION}
                       </div>
                     </div>
 
@@ -2494,7 +2494,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         type="text"
                         value={gitVersionInput}
                         onChange={(e) => setGitVersionInput(e.target.value)}
-                        placeholder="e.g. v1.9.9"
+                        placeholder="e.g. v1.9.9.10"
                         className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                       <p className="text-[10px] text-muted-foreground">
@@ -2567,7 +2567,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         onChange={(e) => setGitAutoTag(e.target.checked)}
                         className="rounded border-border text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
                       />
-                      <span>{language === 'bn' ? `স্বয়ংক্রিয় গিট ট্যাগ তৈরি করুন (${gitVersionInput || 'v1.9.9'})` : `Auto-create Git Tag (${gitVersionInput || 'v1.9.9'})`}</span>
+                      <span>{language === 'bn' ? `স্বয়ংক্রিয় গিট ট্যাগ তৈরি করুন (${gitVersionInput || LATEST_VERSION})` : `Auto-create Git Tag (${gitVersionInput || LATEST_VERSION})`}</span>
                     </label>
 
                     <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
@@ -2611,7 +2611,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
 
                 {/* Release Notes for Current Version Card */}
                 {(() => {
-                  const currentRel = RELEASE_NOTES.find(r => r.version === (gitVersionInput || appVersion || 'v1.9.9')) || RELEASE_NOTES[0];
+                  const currentRel = RELEASE_NOTES.find(r => r.version === (gitVersionInput || appVersion || LATEST_VERSION)) || RELEASE_NOTES[0];
                   if (!currentRel) return null;
                   return (
                     <div className="p-6 border border-border bg-card rounded-xl space-y-4">
