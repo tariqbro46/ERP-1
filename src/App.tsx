@@ -621,10 +621,10 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   const effectiveQuotaLimit = company?.quotaLimit !== undefined ? Number(company.quotaLimit) : 10000;
   const isUnlimited = effectiveQuotaLimit === -1;
   const isUserQuotaExceeded = Boolean(
-    !isSuperAdmin && !isAdmin && user?.quotaLimit !== undefined && user.quotaLimit !== -1 && (user?.quotaUsed || 0) >= user.quotaLimit
+    !isSuperAdmin && user?.quotaLimit !== undefined && user.quotaLimit !== -1 && (user?.quotaUsed || 0) >= user.quotaLimit
   );
   const isQuotaExceeded = Boolean(
-    !isSuperAdmin && !isAdmin && !isUnlimited && (
+    !isSuperAdmin && !isUnlimited && (
       (company && company.quotaUsed !== undefined && company.quotaUsed >= effectiveQuotaLimit) ||
       isUserQuotaExceeded ||
       quotaExceededFlag ||
@@ -646,12 +646,13 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
           localStorage.removeItem('company_quota_exceeded');
           setQuotaExceededFlag(false);
         }
-      } else if (!isAdmin && !isSuperAdmin) {
+      } else if (!isSuperAdmin) {
         localStorage.setItem('company_quota_exceeded', 'true');
         setQuotaExceededFlag(true);
+        setIsQuotaModalOpen(true);
       }
     }
-  }, [company?.quotaUsed, company?.quotaLimit, isAdmin, isSuperAdmin, effectiveQuotaLimit, isUnlimited]);
+  }, [company?.quotaUsed, company?.quotaLimit, isSuperAdmin, effectiveQuotaLimit, isUnlimited]);
 
   React.useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -692,7 +693,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
   React.useEffect(() => {
     const handleQuotaExceededAttempt = (e: Event) => {
-      if (isAdmin || isSuperAdmin) return;
+      if (isSuperAdmin) return;
       setQuotaExceededFlag(true);
       localStorage.setItem('company_quota_exceeded', 'true');
       setIsQuotaModalOpen(true);
@@ -701,7 +702,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     return () => {
       window.removeEventListener('erp_quota_exceeded_attempt', handleQuotaExceededAttempt);
     };
-  }, [isSuperAdmin, isAdmin]);
+  }, [isSuperAdmin]);
 
   React.useEffect(() => {
     const handleOnline = () => setIsOffline(false);

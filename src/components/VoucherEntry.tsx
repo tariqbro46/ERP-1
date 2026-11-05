@@ -564,10 +564,13 @@ export function VoucherEntry() {
         });
       }
 
+      const vInventory: any[] = Array.isArray(v.inventory) ? v.inventory : [];
+      const vEntries: any[] = Array.isArray(v.entries) ? v.entries : [];
+
       if (v.v_type === 'Sales' || v.v_type === 'Purchase' || v.v_type === 'Physical Stock') {
-        setPartyLedgerId(v.party_ledger_id || (v.entries?.length > 0 ? v.entries[0].ledger_id : ''));
-        setSalesPurchaseLedgerId(v.sales_purchase_ledger_id || (v.entries?.length > 1 ? v.entries[1].ledger_id : ''));
-        const inv = v.inventory.map((i: any) => ({
+        setPartyLedgerId(v.party_ledger_id || (vEntries.length > 0 ? vEntries[0].ledger_id : ''));
+        setSalesPurchaseLedgerId(v.sales_purchase_ledger_id || (vEntries.length > 1 ? vEntries[1].ledger_id : ''));
+        const inv = vInventory.map((i: any) => ({
           item_id: i.item_id || '',
           godown_id: i.godown_id || '',
           qty: i.physical_qty !== undefined ? i.physical_qty : (i.qty || 0),
@@ -583,11 +586,11 @@ export function VoucherEntry() {
         }));
         setInvEntries(inv.length > 0 ? inv : [{ item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: v.v_type === 'Sales' ? 'Outward' : 'Inward' }]);
       } else if (v.v_type === 'Stock Journal') {
-        const consumption = v.inventory.filter((i: any) => i.entry_type === 'Consumption').map((i: any) => ({
+        const consumption = vInventory.filter((i: any) => i.entry_type === 'Consumption').map((i: any) => ({
           ...i,
           unit: i.unit_name || 'pcs'
         }));
-        const production = v.inventory.filter((i: any) => i.entry_type === 'Production').map((i: any) => ({
+        const production = vInventory.filter((i: any) => i.entry_type === 'Production').map((i: any) => ({
           ...i,
           unit: i.unit_name || 'pcs'
         }));
@@ -595,33 +598,34 @@ export function VoucherEntry() {
         setProductionEntries(production.length > 0 ? production : [{ item_id: '', godown_id: '', qty: 0, rate: 0, amount: 0, unit: 'pcs', entry_type: 'Production' }]);
       } else if (v.v_type === 'Journal') {
         // For Journal, we might have a party tagged in the first entry if it's a specific type
-        setPartyLedgerId(v.entries[0]?.ledger_id || '');
-        setAccEntries(v.entries.map((e: any) => ({
+        setPartyLedgerId(vEntries[0]?.ledger_id || '');
+        setAccEntries(vEntries.length > 0 ? vEntries.map((e: any) => ({
           ledger_id: e.ledger_id || '',
           debit: e.debit || 0,
           credit: e.credit || 0,
           type: e.debit > 0 ? 'Dr' : 'Cr',
           amount: Math.max(e.debit || 0, e.credit || 0)
-        })));
+        })) : [{ ledger_id: '', debit: 0, credit: 0, type: 'Dr', amount: 0 }]);
       } else if (v.v_type === 'Payment' || v.v_type === 'Receipt') {
         // In our save logic: last entry is bank/cash
-        const mainEntry = v.entries[v.entries.length - 1];
+        const mainEntry = vEntries.length > 0 ? vEntries[vEntries.length - 1] : null;
         setBankCashLedgerId(mainEntry?.ledger_id || '');
-        setAccEntries(v.entries.slice(0, -1).map((e: any) => ({
+        const otherEntries = vEntries.length > 1 ? vEntries.slice(0, -1) : [];
+        setAccEntries(otherEntries.length > 0 ? otherEntries.map((e: any) => ({
           ledger_id: e.ledger_id || '',
           amount: Math.max(e.debit || 0, e.credit || 0),
           debit: e.debit || 0,
           credit: e.credit || 0,
           type: e.debit > 0 ? 'Dr' : 'Cr'
-        })));
+        })) : [{ ledger_id: '', debit: 0, credit: 0, type: v.v_type === 'Payment' ? 'Dr' : 'Cr', amount: 0 }]);
       } else {
-        setAccEntries(v.entries.map((e: any) => ({
+        setAccEntries(vEntries.length > 0 ? vEntries.map((e: any) => ({
           ledger_id: e.ledger_id || '',
           debit: e.debit || 0,
           credit: e.credit || 0,
           type: e.debit > 0 ? 'Dr' : 'Cr',
           amount: Math.max(e.debit || 0, e.credit || 0)
-        })));
+        })) : [{ ledger_id: '', debit: 0, credit: 0, type: 'Dr', amount: 0 }]);
       }
     } catch (err) {
       console.error('Error fetching voucher:', err);

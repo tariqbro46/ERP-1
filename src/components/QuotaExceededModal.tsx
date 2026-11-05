@@ -324,30 +324,28 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
             {/* Actions bar */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
               {company?.id && (
-                (isFounder || isSuperAdmin || isAdmin) ? (
+                (isFounder || isSuperAdmin) ? (
                   <button
                     type="button"
                     disabled={isResetting}
                     onClick={async () => {
-                      if (window.confirm('Reset this company daily quota usage to 0 Ops now? / আপনি কি এখনই এই কোম্পানির কোটা ০-তে রিসেট করতে চান?')) {
-                        setIsResetting(true);
-                        try {
-                          await erpService.resetQuotaNow(company.id);
-                          showNotification('Quota reset successfully!', 'success');
-                          onClose();
-                          window.location.reload();
-                        } catch (err) {
-                          showNotification('Failed to reset quota. Please check network connection.', 'error');
-                        } finally {
-                          setIsResetting(false);
-                        }
+                      setIsResetting(true);
+                      try {
+                        await erpService.resetQuotaNow(company.id);
+                        showNotification('Quota reset successfully to 0 Ops!', 'success');
+                        onClose();
+                        window.location.reload();
+                      } catch (err) {
+                        showNotification('Failed to reset quota. Please check network connection.', 'error');
+                      } finally {
+                        setIsResetting(false);
                       }
                     }}
                     className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-xs font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer text-white shadow-md disabled:opacity-50"
                     title="Founder: Reset quota usage now"
                   >
                     {isResetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
-                    <span>{isResetting ? 'Resetting...' : 'Reset Quota Now (কোটা রিসেট)'}</span>
+                    <span>{isResetting ? 'Resetting...' : 'Founder: Reset Quota Now (কোটা রিসেট)'}</span>
                   </button>
                 ) : (
                   <button
@@ -363,6 +361,7 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
                           quotaUsed,
                           quotaLimit
                         });
+                        showNotification('কোটা বৃদ্ধির অনুরোধ ফাউন্ডারকে পাঠানো হয়েছে!', 'success');
                         setShowRequestModal(true);
                       } catch (err) {
                         setShowRequestModal(true);
@@ -371,10 +370,10 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
                       }
                     }}
                     className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:scale-95 text-xs font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer text-slate-950 shadow-md disabled:opacity-50"
-                    title="Request quota reset from Founder"
+                    title="Request quota increase from Founder"
                   >
                     {isResetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
-                    <span>{isResetting ? 'Submitting...' : 'Reset Quota Now (কোটা রিসেট)'}</span>
+                    <span>{isResetting ? 'অনুরোধ পাঠানো হচ্ছে...' : 'Request Quota Increase (কোটা বৃদ্ধির অনুরোধ)'}</span>
                   </button>
                 )
               )}

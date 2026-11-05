@@ -82,7 +82,9 @@ function isExemptFromQuotaBlock(path: string): boolean {
          lower.startsWith('subscription_plans') ||
          lower.includes('/subscription_plans') ||
          lower.startsWith('notifications') ||
-         lower.includes('/notifications');
+         lower.includes('/notifications') ||
+         lower.startsWith('quota_reset_requests') ||
+         lower.includes('/quota_reset_requests');
 }
 
 async function getDoc(docRef: any) {
@@ -224,7 +226,9 @@ function isFounderBypass(): boolean {
     const cachedProfile = localStorage.getItem('cached_auth_profile');
     if (cachedProfile) {
       const profile = JSON.parse(cachedProfile);
-      if (profile?.email?.toLowerCase() === 'sapientman46@gmail.com' || profile?.role === 'Founder' || profile?.role === 'Admin') {
+      // ONLY the system founder or super admin is exempt from company quota blocks
+      // Company Admins, Managers, and Staff MUST be subject to quota restrictions
+      if (profile?.email?.toLowerCase() === 'sapientman46@gmail.com' || profile?.role === 'Founder' || profile?.isSuperAdmin) {
         return true;
       }
     }
@@ -715,7 +719,7 @@ export const erpService: any = {
   _employeesCache: {} as Record<string, { data: any[], timestamp: number }>,
   _unitsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _dashboardStatsCache: {} as Record<string, { data: any, timestamp: number }>,
-  _collectionTTL: 3600000, // 1 hour for collections (increased from 10m to dramatically save reads)
+  _collectionTTL: 7200000, // 2 hours for collections (aggressive caching with instant save-time local patching)
   _SERIALS_CACHE_TTL: 1800000, // 30 minutes for serials cache
   _ledgerGroupsCache: {} as Record<string, { data: any[], timestamp: number }>,
   _voucherTypesCache: {} as Record<string, { data: any[], timestamp: number }>,
@@ -3649,14 +3653,29 @@ export const erpService: any = {
   // Ledgers
   async getLedgers(companyId: string, forceRefresh = false): Promise<Ledger[]> {
     const now = Date.now();
-    if (!forceRefresh && this._ledgersCache[companyId] && (now - this._ledgersCache[companyId].timestamp < this._collectionTTL)) {
-      const cached = this._ledgersCache[companyId].data;
-      if (Array.isArray(cached) && cached.length > 0) {
-        const hasEnrichedGroup = cached.every((l: any) => l.ledger_groups !== undefined);
-        if (hasEnrichedGroup) {
-          return cached;
+    if (!forceRefresh) {
+      if (this._ledgersCache[companyId] && (now - this._ledgersCache[companyId].timestamp < this._collectionTTL)) {
+        const cached = this._ledgersCache[companyId].data;
+        if (Array.isArray(cached) && cached.length > 0) {
+          const hasEnrichedGroup = cached.every((l: any) => l.ledger_groups !== undefined);
+          if (hasEnrichedGroup) {
+            return cached;
+          }
         }
       }
+      try {
+        const local = localStorage.getItem(`col_cache_ledgers_${companyId}`);
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (parsed && Array.isArray(parsed.data) && parsed.data.length > 0 && (now - (parsed.timestamp || 0) < this._collectionTTL)) {
+            const hasEnrichedGroup = parsed.data.every((l: any) => l.ledger_groups !== undefined);
+            if (hasEnrichedGroup) {
+              this._ledgersCache[companyId] = { data: parsed.data, timestamp: parsed.timestamp || now };
+              return parsed.data;
+            }
+          }
+        }
+      } catch (e) {}
     }
 
     try {
@@ -3715,6 +3734,9 @@ export const erpService: any = {
       });
 
       this._ledgersCache[companyId] = { data: result, timestamp: now };
+      try {
+        localStorage.setItem(`col_cache_ledgers_${companyId}`, JSON.stringify({ data: result, timestamp: now }));
+      } catch (e) {}
       return result;
     } catch (error) {
       console.error('Error in getLedgers:', error);
@@ -4154,6 +4176,10 @@ export const erpService: any = {
       this._saveDemoData('ledgers', ledgers);
       return newLedger;
     }
+    if (this.isQuotaExceeded(companyId)) {
+      triggerQuotaEvent('ledgers');
+      throw new Error(`Database quota exceeded. Write operations are disabled until your quota resets or is increased by Founder.`);
+    }
     try {
       const isDuplicate = await this.checkDuplicate('ledgers', companyId, 'name', ledger.name);
       if (isDuplicate) throw new Error(`Ledger "${ledger.name}" already exists.`);
@@ -4366,6 +4392,10 @@ export const erpService: any = {
       items.push(newItem);
       this._saveDemoData('items', items);
       return newItem;
+    }
+    if (this.isQuotaExceeded(companyId)) {
+      triggerQuotaEvent('items');
+      throw new Error(`Database quota exceeded. Write operations are disabled until your quota resets or is increased by Founder.`);
     }
     const isDuplicate = await this.checkDuplicate('items', companyId, 'name', item.name);
     if (isDuplicate) throw new Error(`Stock Item "${item.name}" already exists.`);
@@ -8156,7 +8186,9 @@ export const erpService: any = {
       const cachedProfile = localStorage.getItem('cached_auth_profile');
       if (cachedProfile) {
         const profile = JSON.parse(cachedProfile);
-        if (profile?.email?.toLowerCase() === 'sapientman46@gmail.com' || profile?.role === 'Founder' || profile?.role === 'Admin') {
+        // ONLY the system founder / super admin is exempt from company quota lock
+        // Company Admins, Managers, and Staff MUST be constrained by their company's quota!
+        if (profile?.email?.toLowerCase() === 'sapientman46@gmail.com' || profile?.role === 'Founder' || profile?.isSuperAdmin) {
           return false;
         }
       }
@@ -8166,17 +8198,22 @@ export const erpService: any = {
       const companyCached = localStorage.getItem('cached_auth_company');
       if (companyCached) {
         const comp = JSON.parse(companyCached);
-        const limitVal = comp.quotaLimit !== undefined ? Number(comp.quotaLimit) : 10000;
-        if (limitVal === -1) {
-          localStorage.removeItem('company_quota_exceeded');
-          return false;
-        }
-        if (comp && comp.quotaUsed !== undefined) {
-          if (comp.quotaUsed < limitVal) {
+        if (!companyId || comp.id === companyId) {
+          const limitVal = comp.quotaLimit !== undefined ? Number(comp.quotaLimit) : 10000;
+          if (limitVal === -1) {
             localStorage.removeItem('company_quota_exceeded');
             return false;
           }
-          if (comp.quotaUsed >= limitVal) return true;
+          if (comp && comp.quotaUsed !== undefined) {
+            if (comp.quotaUsed < limitVal) {
+              localStorage.removeItem('company_quota_exceeded');
+              return false;
+            }
+            if (comp.quotaUsed >= limitVal) {
+              localStorage.setItem('company_quota_exceeded', 'true');
+              return true;
+            }
+          }
         }
       }
     } catch (e) {}
@@ -8252,6 +8289,139 @@ export const erpService: any = {
       window.dispatchEvent(new CustomEvent('company_quota_reset_success'));
     } catch (err) {
       console.error('Failed to reset quota now:', err);
+      throw err;
+    }
+  },
+
+  async approveQuotaIncrease(
+    requestId: string,
+    companyId: string,
+    newQuotaLimit: number,
+    resetUsage: boolean = true,
+    founderEmail: string = 'sapientman46@gmail.com'
+  ): Promise<void> {
+    if (!companyId) return;
+    try {
+      const companyRef = doc(db, 'companies', companyId);
+      const now = Date.now();
+      const numLimit = Number(newQuotaLimit);
+
+      const updateData: any = {
+        quotaLimit: numLimit,
+        quotaResetRequested: false,
+        quotaResetRequestedAt: null,
+        quotaApprovedAt: now,
+        quotaApprovedBy: founderEmail,
+      };
+
+      if (resetUsage) {
+        updateData.quotaUsed = 0;
+        updateData.quotaReads = 0;
+        updateData.quotaWrites = 0;
+        updateData.quotaDeletes = 0;
+        updateData.quotaLastReset = now;
+        updateData.quotaLastResetDateStr = new Date(now).toISOString();
+      }
+
+      await updateDoc(companyRef, updateData);
+
+      // Clean up localStorage flags for this company
+      localStorage.removeItem('company_quota_exceeded');
+      localStorage.removeItem(`unsaved_quota_${companyId}`);
+
+      try {
+        const cached = localStorage.getItem('cached_auth_company');
+        if (cached) {
+          const comp = JSON.parse(cached);
+          if (comp.id === companyId) {
+            comp.quotaLimit = numLimit;
+            comp.quotaResetRequested = false;
+            if (resetUsage) {
+              comp.quotaUsed = 0;
+              comp.quotaReads = 0;
+              comp.quotaWrites = 0;
+              comp.quotaDeletes = 0;
+            }
+            localStorage.setItem('cached_auth_company', JSON.stringify(comp));
+          }
+        }
+      } catch (e) {}
+
+      // Mark the quota reset request as approved
+      if (requestId) {
+        try {
+          const reqRef = doc(db, 'quota_reset_requests', requestId);
+          await updateDoc(reqRef, {
+            status: 'approved',
+            approvedAt: now,
+            approvedBy: founderEmail,
+            newLimit: numLimit,
+            usageReset: resetUsage
+          });
+        } catch (e) {
+          console.warn('Could not update specific request doc:', e);
+        }
+      }
+
+      // Also mark all other pending requests for this company as approved
+      try {
+        const reqQuery = query(
+          collection(db, 'quota_reset_requests'),
+          where('companyId', '==', companyId),
+          where('status', '==', 'pending')
+        );
+        const reqSnap = await getDocs(reqQuery);
+        const updatePromises = reqSnap.docs.map(d => updateDoc(d.ref, {
+          status: 'approved',
+          approvedAt: now,
+          approvedBy: founderEmail,
+          newLimit: numLimit,
+          usageReset: resetUsage
+        }));
+        await Promise.all(updatePromises);
+      } catch (err) {
+        console.warn('Could not batch complete requests:', err);
+      }
+
+      // If resetting usage, reset user documents
+      if (resetUsage) {
+        try {
+          const usersQuery = query(collection(db, 'users'), where('companyId', '==', companyId));
+          const usersSnap = await getDocs(usersQuery);
+          if (!usersSnap.empty) {
+            const b = firestoreWriteBatch(db);
+            usersSnap.docs.forEach(uDoc => {
+              b.update(uDoc.ref, { quotaUsed: 0 });
+            });
+            await b.commit();
+          }
+          const cachedProf = localStorage.getItem('cached_auth_profile');
+          if (cachedProf) {
+            const p = JSON.parse(cachedProf);
+            p.quotaUsed = 0;
+            localStorage.setItem('cached_auth_profile', JSON.stringify(p));
+          }
+        } catch (uErr) {
+          console.warn('Could not reset users quotaUsed:', uErr);
+        }
+      }
+
+      // Add positive notification for company
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          title: `Daily Quota Limit Updated / দৈনিক কোটা বৃদ্ধি (${numLimit === -1 ? 'Unlimited' : numLimit.toLocaleString() + ' Ops'})`,
+          message: `Founder has increased your company's daily database quota to ${numLimit === -1 ? 'Unlimited' : numLimit.toLocaleString() + ' Ops'}. Data operations are now fully resumed.`,
+          type: 'success',
+          companyId,
+          targetType: 'company',
+          createdAt: new Date(),
+          isRead: false
+        });
+      } catch (e) {}
+
+      window.dispatchEvent(new CustomEvent('company_quota_reset_success'));
+    } catch (err) {
+      console.error('Failed to approve quota increase:', err);
       throw err;
     }
   },

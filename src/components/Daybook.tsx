@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Printer, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft, Eye, MoreVertical } from 'lucide-react';
+import { Search, Filter, Download, Printer, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft, Eye, MoreVertical, ChevronLeft, ChevronRight, RotateCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn, formatNumber, formatQuantity, formatVoucherNo, parseEntryDate } from '../lib/utils';
 import { erpService } from '../services/erpService';
@@ -40,6 +40,8 @@ export function Daybook() {
   const { showNotification } = useNotification();
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(30);
   const [ledgers, setLedgers] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
   const [godowns, setGodowns] = useState<any[]>([]);
@@ -76,7 +78,7 @@ export function Daybook() {
     }
   }, [company?.id, company?.enableDaybookDateHighlight]);
 
-  const fetchVouchers = async () => {
+  const fetchVouchers = async (forceRefresh = false) => {
     if (!user?.companyId) return;
     setLoading(true);
     try {
@@ -84,10 +86,10 @@ export function Daybook() {
         config.format === 'Detailed'
           ? erpService.getVouchersDetailedByDateRange(user.companyId, startDate, endDate)
           : erpService.getVouchersByDateRange(user.companyId, startDate, endDate),
-        erpService.getItems(user.companyId),
-        erpService.getGodowns(user.companyId),
+        erpService.getItems(user.companyId, forceRefresh),
+        erpService.getGodowns(user.companyId, forceRefresh),
         erpService.getUsersByCompany(user.companyId),
-        erpService.getLedgers(user.companyId),
+        erpService.getLedgers(user.companyId, forceRefresh),
         erpService.getSettings(user.companyId)
       ]);
 
@@ -105,6 +107,7 @@ export function Daybook() {
       // Apply sorting
       const sorted = sortVouchers(processed);
       setVouchers(sorted);
+      setCurrentPage(1);
     } catch (err) {
       console.error('Error fetching vouchers:', err);
     } finally {
@@ -172,6 +175,9 @@ export function Daybook() {
     }
     return sorted;
   };
+
+  const totalPages = Math.max(1, Math.ceil(vouchers.length / pageSize));
+  const paginatedVouchers = vouchers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   useEffect(() => {
     fetchVouchers();
@@ -605,6 +611,18 @@ export function Daybook() {
           </div>
           <div className="flex gap-3 w-full sm:w-auto">
             <button 
+              type="button"
+              onClick={() => {
+                fetchVouchers(true);
+                showNotification('Daybook data refreshed', 'success');
+              }}
+              disabled={loading}
+              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap cursor-pointer"
+              title="Refresh Daybook (Clear cache & fetch fresh)"
+            >
+              <RotateCw className={cn("w-3 h-3", loading && "animate-spin")} /> REFRESH
+            </button>
+            <button 
               onClick={() => setIsConfigOpen(true)}
               className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap"
               title={t('daybook.configureReport')}
@@ -664,7 +682,7 @@ export function Daybook() {
               <div className="p-10 text-center text-gray-500">{t('daybook.loading')}</div>
             ) : vouchers.length === 0 ? (
               <div className="p-10 text-center text-gray-500">{t('daybook.noTransactions')}</div>
-            ) : vouchers.map((v, idx) => (
+            ) : paginatedVouchers.map((v, idx) => (
               <div 
                 key={v.id} 
                 className={cn(
@@ -764,7 +782,7 @@ export function Daybook() {
                   <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-500">{t('daybook.loading')}</td></tr>
                 ) : vouchers.length === 0 ? (
                   <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-500">{t('daybook.noTransactionsPeriod')}</td></tr>
-                ) : vouchers.map((v, idx) => (
+                ) : paginatedVouchers.map((v, idx) => (
                   <React.Fragment key={v.id}>
                     <tr 
                       className={cn(
@@ -897,6 +915,94 @@ export function Daybook() {
               </tbody>
             </table>
           </div>
+
+          {/* Smart Pagination Controls (30 records per page) */}
+          {vouchers.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-muted/30 border-t border-border mt-auto rounded-b-lg">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+                <span>
+                  Showing <strong className="text-foreground">{Math.min((currentPage - 1) * pageSize + 1, vouchers.length)}</strong> to <strong className="text-foreground">{Math.min(currentPage * pageSize, vouchers.length)}</strong> of <strong className="text-foreground">{vouchers.length}</strong> vouchers
+                </span>
+                <div className="flex items-center gap-1.5 ml-2 border-l border-border pl-3">
+                  <span className="text-[10px] uppercase font-sans">Rows:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="px-2 py-0.5 bg-background border border-border rounded text-xs font-mono text-foreground focus:outline-hidden cursor-pointer"
+                  >
+                    <option value={30}>30</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentPage(prev => Math.max(1, prev - 1));
+                    document.getElementById('daybook-report')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-xs"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                    .reduce((acc: (number | string)[], p, idx, arr) => {
+                      if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) {
+                        acc.push('...');
+                      }
+                      acc.push(p);
+                      return acc;
+                    }, [])
+                    .map((p, pIdx) => (
+                      typeof p === 'number' ? (
+                        <button
+                          key={pIdx}
+                          type="button"
+                          onClick={() => {
+                            setCurrentPage(p);
+                            document.getElementById('daybook-report')?.scrollIntoView({ behavior: 'smooth' });
+                          }}
+                          className={cn(
+                            "w-7 h-7 text-xs font-bold rounded flex items-center justify-center transition-colors cursor-pointer",
+                            currentPage === p
+                              ? "bg-foreground text-background shadow-xs"
+                              : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {p}
+                        </button>
+                      ) : (
+                        <span key={pIdx} className="px-1 text-xs text-muted-foreground">...</span>
+                      )
+                    ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentPage(prev => Math.min(totalPages, prev + 1));
+                    document.getElementById('daybook-report')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded border border-border bg-background hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-xs"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <VoucherContextMenu
