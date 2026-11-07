@@ -33,6 +33,10 @@ export interface Company {
   ownerId?: string;
   quotaLimit?: number;
   quotaUsed?: number;
+  quotaReads?: number;
+  quotaWrites?: number;
+  quotaDeletes?: number;
+  quotaHourly?: Record<string, { reads?: number; writes?: number; deletes?: number }>;
   quotaDisplayRule?: 'always' | 'exceed_50';
   quotaExceededMsg?: string;
   forceRefreshAt?: number;

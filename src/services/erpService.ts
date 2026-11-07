@@ -8319,6 +8319,7 @@ export const erpService: any = {
         updateData.quotaReads = 0;
         updateData.quotaWrites = 0;
         updateData.quotaDeletes = 0;
+        updateData.quotaHourly = {};
         updateData.quotaLastReset = now;
         updateData.quotaLastResetDateStr = new Date(now).toISOString();
       }
@@ -8341,6 +8342,7 @@ export const erpService: any = {
               comp.quotaReads = 0;
               comp.quotaWrites = 0;
               comp.quotaDeletes = 0;
+              comp.quotaHourly = {};
             }
             localStorage.setItem('cached_auth_company', JSON.stringify(comp));
           }
@@ -8640,7 +8642,31 @@ export const erpService: any = {
     }
   },
 
-  _quotaBuffer: {} as Record<string, { reads: number, writes: number, deletes: number }>,
+  getBstQuotaSlot(): { slotKey: string; slotIdx: number; label: string } {
+    try {
+      const now = new Date();
+      const bstDate = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
+      const bstHour = bstDate.getHours();
+      // Quota reset happens at 13:00 (1 PM BST)
+      const hoursSinceReset = bstHour >= 13 ? (bstHour - 13) : (bstHour + 11);
+      const slotIdx = Math.min(11, Math.max(0, Math.floor(hoursSinceReset / 2)));
+      const slotLabels = ['1 PM', '3 PM', '5 PM', '7 PM', '9 PM', '11 PM', '1 AM', '3 AM', '5 AM', '7 AM', '9 AM', '11 AM'];
+      return {
+        slotKey: `slot_${slotIdx}`,
+        slotIdx,
+        label: slotLabels[slotIdx]
+      };
+    } catch (e) {
+      return { slotKey: 'slot_0', slotIdx: 0, label: '1 PM' };
+    }
+  },
+
+  _quotaBuffer: {} as Record<string, { 
+    reads: number; 
+    writes: number; 
+    deletes: number;
+    hourly?: Record<string, { reads: number; writes: number; deletes: number }>;
+  }>,
   _quotaTimer: null as any,
 
   trackQuota: function(
@@ -8651,9 +8677,14 @@ export const erpService: any = {
   ) {
     if (!companyId || companyId === "placeholder" || companyId === "test") return;
     
+    const { slotKey } = this.getBstQuotaSlot();
+
     // Initialize buffer if not exists
     if (!this._quotaBuffer[companyId]) {
-      this._quotaBuffer[companyId] = { reads: 0, writes: 0, deletes: 0 };
+      this._quotaBuffer[companyId] = { reads: 0, writes: 0, deletes: 0, hourly: {} };
+    }
+    if (!this._quotaBuffer[companyId].hourly) {
+      this._quotaBuffer[companyId].hourly = {};
     }
     
     // Accumulate in memory
@@ -8661,19 +8692,31 @@ export const erpService: any = {
     this._quotaBuffer[companyId].writes += writes;
     this._quotaBuffer[companyId].deletes += deletes;
 
+    if (!this._quotaBuffer[companyId].hourly![slotKey]) {
+      this._quotaBuffer[companyId].hourly![slotKey] = { reads: 0, writes: 0, deletes: 0 };
+    }
+    this._quotaBuffer[companyId].hourly![slotKey].reads += reads;
+    this._quotaBuffer[companyId].hourly![slotKey].writes += writes;
+    this._quotaBuffer[companyId].hourly![slotKey].deletes += deletes;
+
     // Save backup to localStorage to prevent data loss on tab close/reload
     try {
       const storedKey = `unsaved_quota_${companyId}`;
       const existing = localStorage.getItem(storedKey);
-      let localData = { reads: 0, writes: 0, deletes: 0 };
+      let localData: any = { reads: 0, writes: 0, deletes: 0, hourly: {} };
       if (existing) {
         try {
           localData = JSON.parse(existing);
+          if (!localData.hourly) localData.hourly = {};
         } catch (e) {}
       }
       localData.reads += reads;
       localData.writes += writes;
       localData.deletes += deletes;
+      if (!localData.hourly[slotKey]) localData.hourly[slotKey] = { reads: 0, writes: 0, deletes: 0 };
+      localData.hourly[slotKey].reads += reads;
+      localData.hourly[slotKey].writes += writes;
+      localData.hourly[slotKey].deletes += deletes;
       localStorage.setItem(storedKey, JSON.stringify(localData));
     } catch (e) {
       console.warn('Error saving unsaved quota backup:', e);
@@ -8689,6 +8732,11 @@ export const erpService: any = {
           parsed.quotaReads = (parsed.quotaReads || 0) + reads;
           parsed.quotaWrites = (parsed.quotaWrites || 0) + writes;
           parsed.quotaDeletes = (parsed.quotaDeletes || 0) + deletes;
+          if (!parsed.quotaHourly) parsed.quotaHourly = {};
+          if (!parsed.quotaHourly[slotKey]) parsed.quotaHourly[slotKey] = { reads: 0, writes: 0, deletes: 0 };
+          parsed.quotaHourly[slotKey].reads = (parsed.quotaHourly[slotKey].reads || 0) + reads;
+          parsed.quotaHourly[slotKey].writes = (parsed.quotaHourly[slotKey].writes || 0) + writes;
+          parsed.quotaHourly[slotKey].deletes = (parsed.quotaHourly[slotKey].deletes || 0) + deletes;
           localStorage.setItem('cached_auth_company', JSON.stringify(parsed));
         }
       }
@@ -8749,11 +8797,13 @@ export const erpService: any = {
       const readsToSave = buffer.reads;
       const writesToSave = buffer.writes;
       const deletesToSave = buffer.deletes;
+      const hourlyToSave = buffer.hourly ? { ...buffer.hourly } : {};
       
       // Reset in-memory buffer before making async call to avoid race conditions
       buffer.reads = 0;
       buffer.writes = 0;
       buffer.deletes = 0;
+      buffer.hourly = {};
 
       try {
         const companyRef = doc(db, "companies", companyId);
@@ -8783,12 +8833,21 @@ export const erpService: any = {
 
         const addedOps = readsToSave + writesToSave + deletesToSave;
 
-        await updateDoc(companyRef, {
+        const updatePayload: Record<string, any> = {
           quotaReads: increment(readsToSave),
           quotaWrites: increment(writesToSave),
           quotaDeletes: increment(deletesToSave),
           quotaUsed: increment(addedOps),
+        };
+
+        Object.keys(hourlyToSave).forEach(slotK => {
+          const s = hourlyToSave[slotK];
+          if (s.reads > 0) updatePayload[`quotaHourly.${slotK}.reads`] = increment(s.reads);
+          if (s.writes > 0) updatePayload[`quotaHourly.${slotK}.writes`] = increment(s.writes);
+          if (s.deletes > 0) updatePayload[`quotaHourly.${slotK}.deletes`] = increment(s.deletes);
         });
+
+        await updateDoc(companyRef, updatePayload);
 
         // Keep local cache in sync with updated quota metrics
         try {

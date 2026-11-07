@@ -618,6 +618,7 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                         deletes={qDeletes}
                         quotaLimit={quotaLimit}
                         isFounder={isFounder}
+                        quotaHourly={company?.quotaHourly}
                       />
                     )}
 

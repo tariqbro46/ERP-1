@@ -8,6 +8,7 @@ interface FirebaseUsageChartProps {
   deletes: number;
   quotaLimit?: number;
   isFounder?: boolean;
+  quotaHourly?: Record<string, { reads?: number; writes?: number; deletes?: number }>;
 }
 
 export function FirebaseUsageChart({
@@ -15,7 +16,8 @@ export function FirebaseUsageChart({
   writes = 0,
   deletes = 0,
   quotaLimit = 20000,
-  isFounder = false
+  isFounder = false,
+  quotaHourly
 }: FirebaseUsageChartProps) {
   // Toggle visibility of each metric line on the chart
   const [showReads, setShowReads] = useState(true);
@@ -31,14 +33,47 @@ export function FirebaseUsageChart({
   const isDark = chartTheme === 'dark';
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
-  // Time labels for 24h timeline (2-hour increments)
-  const timeLabels = ['12 AM', '2 AM', '4 AM', '6 AM', '8 AM', '10 AM', '12 PM', '2 PM', '4 PM', '6 PM', '8 PM', '10 PM'];
+  // Time labels for 24h timeline (2-hour increments starting from 1:00 PM BST quota reset)
+  const timeLabels = ['1 PM', '3 PM', '5 PM', '7 PM', '9 PM', '11 PM', '1 AM', '3 AM', '5 AM', '7 AM', '9 AM', '11 AM'];
 
-  // Current local hour index (0 to 11 for 2-hour increments)
-  const currentHourIdx = useMemo(() => {
-    const currentHour = new Date().getHours();
-    return Math.min(11, Math.max(1, Math.floor(currentHour / 2)));
+  // Calculate BST (Asia/Dhaka, UTC+6) cycle details
+  const bstCycleInfo = useMemo(() => {
+    try {
+      const now = new Date();
+      const bstDate = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
+      const bstHour = bstDate.getHours();
+      // Quota reset is at 13:00 (1:00 PM BST)
+      const hoursSinceReset = bstHour >= 13 ? (bstHour - 13) : (bstHour + 11);
+      const currentSlotIdx = Math.min(11, Math.max(0, Math.floor(hoursSinceReset / 2)));
+
+      const startDate = new Date(bstDate);
+      if (bstHour < 13) {
+        startDate.setDate(startDate.getDate() - 1);
+      }
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 1);
+
+      const m1 = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const m2 = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const dateRangeStr = `${m1} - ${m2} (BST)`;
+
+      return {
+        currentSlotIdx,
+        startDate,
+        endDate,
+        dateRangeStr
+      };
+    } catch (e) {
+      return {
+        currentSlotIdx: 0,
+        startDate: new Date(),
+        endDate: new Date(),
+        dateRangeStr: 'Today - Tomorrow (BST)'
+      };
+    }
   }, []);
+
+  const { currentSlotIdx, startDate, endDate, dateRangeStr } = bstCycleInfo;
 
   // Format numbers to clean metric format (e.g. 28K, 1.8K, 219)
   const formatMetricVal = (num: number) => {
@@ -52,46 +87,112 @@ export function FirebaseUsageChart({
   // Time intervals for tooltips matching Firebase
   const getTimeInterval = (idx: number) => {
     const start = timeLabels[idx];
-    const end = idx === timeLabels.length - 1 ? '12 AM' : timeLabels[idx + 1];
+    const end = idx === timeLabels.length - 1 ? '1 PM' : timeLabels[idx + 1];
     return `${start} - ${end}`;
   };
 
-  // Generate realistic cumulative curve points up to the current hour
-  const pointsData = useMemo(() => {
-    const data: { label: string; interval: string; reads: number; writes: number; deletes: number; hasPassed: boolean }[] = [];
-    
-    // Growth progression curve simulating cumulative daily usage
-    for (let i = 0; i < timeLabels.length; i++) {
-      const hasPassed = i <= currentHourIdx;
-      if (!hasPassed) {
-        data.push({ 
-          label: timeLabels[i], 
-          interval: getTimeInterval(i),
-          reads, 
-          writes, 
-          deletes, 
-          hasPassed: false 
-        });
-        continue;
-      }
+  // Get specific date string for slot index idx (0-5: startDate, 6-11: endDate)
+  const getSlotDateStr = (idx: number) => {
+    const d = idx <= 5 ? startDate : endDate;
+    return d.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
 
-      // Fractional progress of the day up to currentHourIdx
-      const factor = Math.min(1, Math.pow((i + 1) / (currentHourIdx + 1), 1.6));
-      const cumReads = Math.round(reads * factor);
-      const cumWrites = Math.round(writes * factor);
-      const cumDeletes = Math.round(deletes * factor);
+  // Generate REAL cumulative progression curve with flat lines for inactive hours
+  const pointsData = useMemo(() => {
+    const data: { 
+      label: string; 
+      interval: string; 
+      slotDateStr: string;
+      reads: number; 
+      writes: number; 
+      deletes: number; 
+      intervalReads: number;
+      intervalWrites: number;
+      intervalDeletes: number;
+      hasPassed: boolean 
+    }[] = [];
+    
+    // Check if any slot has recorded data
+    let totalHourlyRecorded = 0;
+    for (let i = 0; i < timeLabels.length; i++) {
+      const slot = quotaHourly?.[`slot_${i}`];
+      if (slot) {
+        totalHourlyRecorded += Number(slot.reads || 0) + Number(slot.writes || 0) + Number(slot.deletes || 0);
+      }
+    }
+
+    const hasRecordedHourly = totalHourlyRecorded > 0;
+
+    let runningReads = 0;
+    let runningWrites = 0;
+    let runningDeletes = 0;
+
+    for (let i = 0; i < timeLabels.length; i++) {
+      const hasPassed = i <= currentSlotIdx;
+      let intervalR = 0;
+      let intervalW = 0;
+      let intervalD = 0;
+
+      if (hasPassed) {
+        if (hasRecordedHourly) {
+          const slot = quotaHourly?.[`slot_${i}`];
+          intervalR = Number(slot?.reads || 0);
+          intervalW = Number(slot?.writes || 0);
+          intervalD = Number(slot?.deletes || 0);
+
+          runningReads += intervalR;
+          runningWrites += intervalW;
+          runningDeletes += intervalD;
+
+          // If at currentSlotIdx, ensure running cumulative matches live totals
+          if (i === currentSlotIdx) {
+            if (reads > runningReads) {
+              intervalR += (reads - runningReads);
+              runningReads = reads;
+            }
+            if (writes > runningWrites) {
+              intervalW += (writes - runningWrites);
+              runningWrites = writes;
+            }
+            if (deletes > runningDeletes) {
+              intervalD += (deletes - runningDeletes);
+              runningDeletes = deletes;
+            }
+          }
+        } else {
+          // Legacy fallback: past hours stay flat at 0, stepping up at currentSlotIdx
+          if (i === currentSlotIdx) {
+            intervalR = reads;
+            intervalW = writes;
+            intervalD = deletes;
+            runningReads = reads;
+            runningWrites = writes;
+            runningDeletes = deletes;
+          }
+        }
+      }
 
       data.push({
         label: timeLabels[i],
         interval: getTimeInterval(i),
-        reads: i === currentHourIdx ? reads : cumReads,
-        writes: i === currentHourIdx ? writes : cumWrites,
-        deletes: i === currentHourIdx ? deletes : cumDeletes,
-        hasPassed: true
+        slotDateStr: getSlotDateStr(i),
+        reads: runningReads,
+        writes: runningWrites,
+        deletes: runningDeletes,
+        intervalReads: intervalR,
+        intervalWrites: intervalW,
+        intervalDeletes: intervalD,
+        hasPassed
       });
     }
+
     return data;
-  }, [reads, writes, deletes, currentHourIdx]);
+  }, [reads, writes, deletes, currentSlotIdx, quotaHourly, startDate, endDate]);
 
   // Determine Y-axis max scale ceiling
   const yMax = useMemo(() => {
@@ -145,26 +246,6 @@ export function FirebaseUsageChart({
       return idx === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
     }, '');
   };
-
-  // Full formatted Date for tooltip (e.g. "Monday, November 2, 2026")
-  const fullDateStr = useMemo(() => {
-    return new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  }, []);
-
-  // Cycle range string
-  const dateRangeStr = useMemo(() => {
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const m1 = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    const m2 = tomorrow.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    return `${m1} - ${m2} (BST)`;
-  }, []);
 
   // Smooth mouse movement tracking across the entire graph area
   const handleGraphMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -231,7 +312,7 @@ export function FirebaseUsageChart({
             "text-[11px] mt-1 max-w-xl leading-relaxed",
             isDark ? "text-slate-400" : "text-slate-500"
           )}>
-            Detailed cumulative progression of document reads, writes, and real-time operations across today's 24-hour cycle.
+            Real-time cumulative progression synchronized with Bangladesh Standard Time (01:00 PM BST quota cycle).
           </p>
         </div>
 
@@ -570,59 +651,92 @@ export function FirebaseUsageChart({
                     "text-[10px] font-medium",
                     isDark ? "text-slate-400" : "text-slate-500"
                   )}>
-                    {fullDateStr}
+                    {activePt.slotDateStr}
                   </div>
                   <div className={cn(
                     "text-xs font-bold mt-0.5",
                     isDark ? "text-white" : "text-slate-900"
                   )}>
-                    {activePt.interval}
+                    {activePt.interval} (BST)
                   </div>
                 </div>
 
-                {/* Metric breakdown items matching Firebase format */}
+                {/* Metric breakdown items matching Firebase format with flat-line & real usage indicators */}
                 <div className="space-y-2 pt-0.5">
                   {showReads && (
                     <div>
-                      <div className="flex items-center gap-1.5 text-xs text-[#4285F4] font-semibold">
-                        <span className="w-2 h-2 rounded-full bg-[#4285F4] inline-block" />
-                        <span>Reads</span>
+                      <div className="flex items-center justify-between text-xs text-[#4285F4] font-semibold gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#4285F4] inline-block" />
+                          <span>Reads</span>
+                        </div>
+                        {activePt.intervalReads > 0 ? (
+                          <span className="text-[10px] font-mono font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                            +{activePt.intervalReads} in period
+                          </span>
+                        ) : (
+                          <span className={cn("text-[10px] font-mono", isDark ? "text-slate-500" : "text-slate-400")}>
+                            Flat (0 ops)
+                          </span>
+                        )}
                       </div>
                       <div className={cn(
-                        "text-base font-bold font-mono pl-3.5",
+                        "text-base font-bold font-mono pl-3.5 mt-0.5",
                         isDark ? "text-white" : "text-slate-900"
                       )}>
-                        {activePt.reads.toLocaleString()}
+                        {activePt.reads.toLocaleString()} <span className={cn("text-[11px] font-sans font-normal", isDark ? "text-slate-400" : "text-slate-500")}>cumulative</span>
                       </div>
                     </div>
                   )}
 
                   {showWrites && (
                     <div>
-                      <div className="flex items-center gap-1.5 text-xs text-[#f59e0b] font-semibold">
-                        <span className="w-2 h-2 rounded-sm bg-[#f59e0b] inline-block" />
-                        <span>Writes</span>
+                      <div className="flex items-center justify-between text-xs text-[#f59e0b] font-semibold gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-sm bg-[#f59e0b] inline-block" />
+                          <span>Writes</span>
+                        </div>
+                        {activePt.intervalWrites > 0 ? (
+                          <span className="text-[10px] font-mono font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                            +{activePt.intervalWrites} in period
+                          </span>
+                        ) : (
+                          <span className={cn("text-[10px] font-mono", isDark ? "text-slate-500" : "text-slate-400")}>
+                            Flat (0 ops)
+                          </span>
+                        )}
                       </div>
                       <div className={cn(
-                        "text-base font-bold font-mono pl-3.5",
+                        "text-base font-bold font-mono pl-3.5 mt-0.5",
                         isDark ? "text-white" : "text-slate-900"
                       )}>
-                        {activePt.writes.toLocaleString()}
+                        {activePt.writes.toLocaleString()} <span className={cn("text-[11px] font-sans font-normal", isDark ? "text-slate-400" : "text-slate-500")}>cumulative</span>
                       </div>
                     </div>
                   )}
 
                   {showDeletes && (
                     <div>
-                      <div className="flex items-center gap-1.5 text-xs text-[#f43f5e] font-semibold">
-                        <span className="w-2 h-2 rotate-45 bg-[#f43f5e] inline-block" />
-                        <span>Real-time reads</span>
+                      <div className="flex items-center justify-between text-xs text-[#f43f5e] font-semibold gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rotate-45 bg-[#f43f5e] inline-block" />
+                          <span>Real-time reads</span>
+                        </div>
+                        {activePt.intervalDeletes > 0 ? (
+                          <span className="text-[10px] font-mono font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20">
+                            +{activePt.intervalDeletes} in period
+                          </span>
+                        ) : (
+                          <span className={cn("text-[10px] font-mono", isDark ? "text-slate-500" : "text-slate-400")}>
+                            Flat (0 ops)
+                          </span>
+                        )}
                       </div>
                       <div className={cn(
-                        "text-base font-bold font-mono pl-3.5",
+                        "text-base font-bold font-mono pl-3.5 mt-0.5",
                         isDark ? "text-white" : "text-slate-900"
                       )}>
-                        {activePt.deletes.toLocaleString()}
+                        {activePt.deletes.toLocaleString()} <span className={cn("text-[11px] font-sans font-normal", isDark ? "text-slate-400" : "text-slate-500")}>cumulative</span>
                       </div>
                     </div>
                   )}
