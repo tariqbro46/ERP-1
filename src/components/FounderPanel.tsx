@@ -1340,7 +1340,7 @@ export default function FounderPanel() {
       currentLimit,
       currentUsed,
       newLimit: initialNewLimit,
-      resetUsage: true
+      resetUsage: false
     });
   };
 
@@ -1363,7 +1363,7 @@ export default function FounderPanel() {
       currentLimit,
       currentUsed,
       newLimit: initialNewLimit,
-      resetUsage: true
+      resetUsage: false
     });
   };
 
@@ -8406,251 +8406,375 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
         )}
       </AnimatePresence>
 
-      {/* Interactive Quota Approval & Daily Limit Adjustment Modal */}
+      {/* Interactive Quota Approval & Daily Limit Adjustment Modal (Database Quota & Operations Intelligence Style) */}
       <AnimatePresence>
-        {quotaModalData && quotaModalData.isOpen && (
-          <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => !isSavingQuotaApproval && setQuotaModalData(null)}
-              className="absolute inset-0 bg-slate-950/80 backdrop-blur-md cursor-pointer"
-            />
+        {quotaModalData && quotaModalData.isOpen && (() => {
+          const isOverQuota = quotaModalData.currentLimit > 0 && quotaModalData.currentUsed >= quotaModalData.currentLimit;
+          const pctUsed = quotaModalData.currentLimit > 0
+            ? Math.round((quotaModalData.currentUsed / quotaModalData.currentLimit) * 100)
+            : 0;
+          const diffOps = quotaModalData.newLimit === -1 ? 'Unlimited' : Math.max(0, quotaModalData.newLimit - quotaModalData.currentLimit);
 
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 15 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              transition={{ type: 'spring', duration: 0.4 }}
-              className="relative bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto shadow-2xl p-6 text-slate-100 z-10 space-y-5"
-            >
-              {/* Close Button */}
-              <button
-                disabled={isSavingQuotaApproval}
-                onClick={() => setQuotaModalData(null)}
-                className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white bg-slate-950/40 hover:bg-slate-950 border border-slate-800 rounded-lg transition-all cursor-pointer z-20"
-                title="Close / বন্ধ করুন"
+          return (
+            <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+              {/* Full-screen backdrop matching QuotaDashboardModal */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => !isSavingQuotaApproval && setQuotaModalData(null)}
+                className="fixed inset-0 bg-black/75 dark:bg-black/85 backdrop-blur-md cursor-pointer"
+              />
+
+              {/* Main Modal Card matching App Theme and QuotaDashboardModal */}
+              <motion.div
+                initial={{ scale: 0.96, opacity: 0, y: 12 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.98, opacity: 0, y: 8 }}
+                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                className="relative w-full max-w-4xl lg:max-w-5xl max-h-[92vh] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden text-foreground font-sans select-none z-10 flex flex-col my-auto"
+                onClick={(e) => e.stopPropagation()}
               >
-                <X className="w-4 h-4" />
-              </button>
-
-              {/* Header */}
-              <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
-                <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
-                  <RotateCcw className="w-5 h-5 animate-pulse" />
-                </div>
-                <div>
-                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold tracking-wider uppercase border border-amber-500/30 mb-0.5">
-                    Founder Quota Console
-                  </div>
-                  <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                    কোটা অনুমোদন ও দৈনিক সীমা বৃদ্ধি (Approve & Increase Quota)
-                  </h3>
-                </div>
-              </div>
-
-              {/* Company Info Box */}
-              <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-emerald-400" />
-                    <span className="font-bold text-sm text-white">{quotaModalData.companyName}</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold uppercase border border-amber-500/30">
-                    Quota Pending
-                  </span>
-                </div>
-                <div className="text-xs text-slate-300 flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 border-t border-slate-800/80">
-                  <span>অনুরোধকারী: <strong className="text-white">{quotaModalData.requestedBy || 'Admin'}</strong></span>
-                  {quotaModalData.requestedByEmail && <span>ইমেইল: <span className="text-slate-400 font-mono text-[11px]">{quotaModalData.requestedByEmail}</span></span>}
-                  {quotaModalData.createdAtStr && <span>সময়: <span className="text-slate-400">{safeFormat(quotaModalData.createdAtStr, 'dd MMM yyyy, HH:mm')}</span></span>}
-                </div>
-              </div>
-
-              {/* Current Quota Status */}
-              <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <Database className="w-3.5 h-3.5 text-rose-400" />
-                    কোটা ব্যবহারের বর্তমান অবস্থা (Usage Status)
-                  </span>
-                  <span className={cn(
-                    "text-[11px] font-mono font-bold px-2 py-0.5 rounded border",
-                    quotaModalData.currentUsed >= quotaModalData.currentLimit
-                      ? "bg-rose-500/20 text-rose-400 border-rose-500/30"
-                      : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                  )}>
-                    {quotaModalData.currentLimit > 0
-                      ? `${Math.round((quotaModalData.currentUsed / quotaModalData.currentLimit) * 100)}% Used`
-                      : 'Unlimited'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-900/80 border border-slate-800 p-3 rounded-lg">
-                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">কোটা লিমিট কি ছিল (Allowed Limit)</p>
-                    <p className="text-base font-bold font-mono text-slate-200 mt-0.5">
-                      {quotaModalData.currentLimit === -1 ? 'Unlimited' : `${quotaModalData.currentLimit.toLocaleString()} Ops`}
-                    </p>
-                  </div>
-                  <div className="bg-slate-900/80 border border-slate-800 p-3 rounded-lg">
-                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">আজ কতটুকু ব্যবহার হয়েছে (Used Today)</p>
-                    <p className={cn(
-                      "text-base font-bold font-mono mt-0.5",
-                      quotaModalData.currentUsed >= quotaModalData.currentLimit ? "text-rose-400" : "text-emerald-400"
-                    )}>
-                      {quotaModalData.currentUsed.toLocaleString()} Ops
-                    </p>
-                  </div>
-                </div>
-
-                {/* Progress bar */}
-                <div className="w-full bg-slate-950 border border-slate-800 h-2 rounded-full overflow-hidden p-0.5">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-all duration-500",
-                      quotaModalData.currentUsed >= quotaModalData.currentLimit
-                        ? "bg-rose-500"
-                        : "bg-gradient-to-r from-emerald-500 to-teal-400"
-                    )}
-                    style={{
-                      width: quotaModalData.currentLimit > 0
-                        ? `${Math.min(100, (quotaModalData.currentUsed / quotaModalData.currentLimit) * 100)}%`
-                        : '50%'
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Set New Limit Section */}
-              <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    কতটুকু কোটা বৃদ্ধি করবেন? (Set Today's Limit)
-                  </span>
-                  <span className="text-[11px] text-slate-400">Quick Increment Presets</span>
-                </div>
-
-                {/* Quick Preset Buttons */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                  {[
-                    { label: '+5,000 Ops', add: 5000 },
-                    { label: '+10,000 Ops', add: 10000 },
-                    { label: '+20,000 Ops', add: 20000 },
-                    { label: '+50,000 Ops', add: 50000 },
-                    { label: 'Unlimited', val: -1 }
-                  ].map((preset, idx) => {
-                    const targetVal = preset.val !== undefined ? preset.val : (quotaModalData.currentLimit > 0 ? quotaModalData.currentLimit + preset.add : 30000);
-                    const isSelected = quotaModalData.newLimit === targetVal;
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          soundService.play('click');
-                          setQuotaModalData(prev => prev ? { ...prev, newLimit: targetVal } : null);
-                        }}
-                        className={cn(
-                          "py-2 px-2.5 rounded-lg text-xs font-bold transition-all border cursor-pointer text-center",
-                          isSelected
-                            ? "bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20"
-                            : "bg-slate-900/90 hover:bg-slate-850 text-slate-300 border-slate-700/80 hover:border-amber-500/40"
+                {/* Header Bar matching QuotaDashboardModal */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/90 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-500 flex items-center justify-center border border-amber-500/20 shrink-0">
+                      <Database className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-base sm:text-lg font-bold text-foreground tracking-tight">
+                          Database Quota & Operations Intelligence
+                        </h2>
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded font-mono font-semibold">
+                          Quota Approval Console
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono mt-0.5">
+                        <span className="font-semibold text-foreground">{quotaModalData.companyName}</span>
+                        <span aria-hidden="true" className="text-muted-foreground/60">·</span>
+                        <span>Requested by: {quotaModalData.requestedBy || 'Company Admin'}</span>
+                        {quotaModalData.createdAtStr && (
+                          <>
+                            <span aria-hidden="true" className="text-muted-foreground/60">·</span>
+                            <span>{safeFormat(quotaModalData.createdAtStr, 'dd MMM, HH:mm')}</span>
+                          </>
                         )}
-                      >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    disabled={isSavingQuotaApproval}
+                    onClick={() => setQuotaModalData(null)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                    title="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
 
-                {/* Custom Number Input */}
-                <div className="space-y-1.5 pt-1">
-                  <label className="text-[11px] text-slate-400 font-medium flex items-center justify-between">
-                    <span>নির্দিষ্ট কাস্টম কোটা লিমিট (Custom Daily Limit in Ops):</span>
-                    <span className="text-slate-500 font-mono text-[10px]">(-1 = আনলিমিটেড কোটা)</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={quotaModalData.newLimit}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0;
-                        setQuotaModalData(prev => prev ? { ...prev, newLimit: val } : null);
-                      }}
-                      className="w-full bg-slate-900 border border-slate-700 focus:border-amber-500 rounded-lg px-3 py-2 text-sm text-white font-mono font-bold outline-none transition-colors"
-                      placeholder="e.g. 30000"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400 pointer-events-none">
-                      Ops / দিন
+                {/* Wide Two-Column Content Area */}
+                <div className="p-6 overflow-y-auto flex-1 no-scrollbar bg-background/50">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                    
+                    {/* LEFT COLUMN: 5 Columns (Current Status & Highlight Card) */}
+                    <div className="lg:col-span-5 space-y-4">
+                      {/* Current Day Operations Highlight Card */}
+                      <div className="bg-card border border-border rounded-xl p-5 shadow-xs space-y-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            Current Day Total Operations
+                          </span>
+                          <span className={cn(
+                            "text-[10px] font-bold px-2 py-0.5 rounded border font-mono",
+                            isOverQuota
+                              ? "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20"
+                              : "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                          )}>
+                            {quotaModalData.currentLimit === -1 ? 'Unlimited' : `${pctUsed}% Exhausted`}
+                          </span>
+                        </div>
+
+                        <div>
+                          <div className="text-2xl sm:text-3xl font-bold font-mono text-foreground">
+                            {quotaModalData.currentUsed.toLocaleString()}{' '}
+                            <span className="text-sm font-normal text-muted-foreground font-sans">
+                              / {quotaModalData.currentLimit === -1 ? '∞ Unlimited' : `${quotaModalData.currentLimit.toLocaleString()} Ops`}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            {isOverQuota 
+                              ? 'কোটার সীমা শেষ হওয়ায় নতুন ডেটা রিড ও রাইট সাময়িকভাবে ব্লক রয়েছে।'
+                              : 'কোম্পানিটির দৈনিক কোটা স্বাভাবিক কার্যকর রয়েছে।'}
+                          </p>
+                        </div>
+
+                        {/* Progress Bar Track */}
+                        <div className="w-full bg-muted border border-border h-3 rounded-full overflow-hidden p-0.5 relative">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all duration-700",
+                              quotaModalData.currentLimit === -1
+                                ? "bg-gradient-to-r from-indigo-500 via-primary to-teal-400"
+                                : isOverQuota
+                                ? "bg-gradient-to-r from-orange-500 to-rose-600"
+                                : pctUsed >= 75
+                                ? "bg-gradient-to-r from-yellow-500 to-orange-500"
+                                : "bg-gradient-to-r from-emerald-500 to-teal-500"
+                            )}
+                            style={{
+                              width: quotaModalData.currentLimit === -1 ? '100%' : `${Math.min(100, pctUsed)}%`
+                            }}
+                          />
+                        </div>
+
+                        {/* Dual Balance Tiles */}
+                        <div className="grid grid-cols-2 gap-2.5 pt-1">
+                          <div className="bg-muted/40 border border-border rounded-lg p-2.5">
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">
+                              পূর্ববর্তী সীমা (Limit)
+                            </span>
+                            <span className="text-sm font-bold font-mono text-foreground mt-0.5 block">
+                              {quotaModalData.currentLimit === -1 ? 'Unlimited' : `${quotaModalData.currentLimit.toLocaleString()} Ops`}
+                            </span>
+                          </div>
+                          <div className="bg-muted/40 border border-border rounded-lg p-2.5">
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">
+                              আজকের ব্যবহার (Used)
+                            </span>
+                            <span className={cn(
+                              "text-sm font-bold font-mono mt-0.5 block",
+                              isOverQuota ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                            )}>
+                              {quotaModalData.currentUsed.toLocaleString()} Ops
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Request Audit Metadata Card */}
+                      <div className="bg-card border border-border rounded-xl p-4 shadow-xs space-y-2.5">
+                        <div className="flex items-center justify-between border-b border-border pb-2">
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5 text-primary" />
+                            কোম্পানি ও অনুরোধ বিবরণ
+                          </span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold uppercase border border-amber-500/20">
+                            Action Pending
+                          </span>
+                        </div>
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">কোম্পানি:</span>
+                            <span className="font-semibold text-foreground">{quotaModalData.companyName}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">অনুরোধকারী:</span>
+                            <span className="font-medium text-foreground">{quotaModalData.requestedBy || 'Company Admin'}</span>
+                          </div>
+                          {quotaModalData.requestedByEmail && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">ইমেইল:</span>
+                              <span className="font-mono text-[11px] text-muted-foreground">{quotaModalData.requestedByEmail}</span>
+                            </div>
+                          )}
+                          {quotaModalData.createdAtStr && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">অনুরোধের সময়:</span>
+                              <span className="font-medium text-foreground">{safeFormat(quotaModalData.createdAtStr, 'dd MMM yyyy, HH:mm')}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* RIGHT COLUMN: 7 Columns (Quota Decision, Presets & Action) */}
+                    <div className="lg:col-span-7 space-y-4">
+                      {/* Quota Increment Configuration Card */}
+                      <div className="bg-card border border-border rounded-xl p-5 shadow-xs space-y-4">
+                        <div className="flex items-center justify-between border-b border-border pb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-primary/10 text-primary rounded-lg">
+                              <Sliders className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-bold text-foreground">
+                                দৈনিক কোটা বৃদ্ধি ও সিদ্ধান্ত (Quota Increment Controls)
+                              </h3>
+                              <p className="text-[11px] text-muted-foreground">
+                                আজকের দিনের জন্য কোম্পানির সর্বোচ্চ অনুমোদিত ডেটাবেজ সীমা নির্ধারণ করুন।
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quick Presets Buttons */}
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+                            কুইক প্রিসেট বোতাম (Quick Presets)
+                          </label>
+                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                            {[
+                              { label: '+5,000 Ops', add: 5000 },
+                              { label: '+10,000 Ops', add: 10000 },
+                              { label: '+20,000 Ops', add: 20000 },
+                              { label: '+50,000 Ops', add: 50000 },
+                              { label: 'Unlimited', val: -1 }
+                            ].map((preset, idx) => {
+                              const targetVal = preset.val !== undefined 
+                                ? preset.val 
+                                : (quotaModalData.currentLimit > 0 ? quotaModalData.currentLimit + preset.add : 30000);
+                              const isSelected = quotaModalData.newLimit === targetVal;
+                              return (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => {
+                                    soundService.play('click');
+                                    setQuotaModalData(prev => prev ? { ...prev, newLimit: targetVal } : null);
+                                  }}
+                                  className={cn(
+                                    "py-2 px-2 rounded-lg text-xs font-bold transition-all border cursor-pointer text-center",
+                                    isSelected
+                                      ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                                      : "bg-card hover:bg-muted text-foreground border-border hover:border-primary/40"
+                                  )}
+                                >
+                                  {preset.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Custom Input Field */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                              নির্দিষ্ট কাস্টম দৈনিক কোটা লিমিট (Custom Daily Limit in Ops)
+                            </label>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              (-1 = Unlimited Ops)
+                            </span>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={quotaModalData.newLimit}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value) || 0;
+                                setQuotaModalData(prev => prev ? { ...prev, newLimit: val } : null);
+                              }}
+                              className="w-full bg-card border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-3.5 py-2 text-sm font-mono font-bold text-foreground outline-none transition-colors"
+                              placeholder="e.g. 30000"
+                            />
+                            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-muted-foreground pointer-events-none">
+                              Ops / দিন
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Real-time Calculation Comparison Card */}
+                        <div className="bg-muted/40 border border-border rounded-xl p-3.5 space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">পূর্ববর্তী সীমা:</span>
+                            <span className="font-mono font-semibold text-foreground">
+                              {quotaModalData.currentLimit === -1 ? 'Unlimited' : `${quotaModalData.currentLimit.toLocaleString()} Ops`}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">কোটা বৃদ্ধি (Net Added):</span>
+                            <span className="font-mono font-semibold text-primary">
+                              {diffOps === 'Unlimited' ? 'Full Unlimited Ceiling' : `+${diffOps.toLocaleString()} Ops`}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between pt-1.5 border-t border-border">
+                            <span className="font-bold text-foreground">অনুমোদনের পর নতুন লিমিট:</span>
+                            <span className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
+                              {quotaModalData.newLimit === -1 ? '∞ Unlimited Ops' : `${quotaModalData.newLimit.toLocaleString()} Ops`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Usage Reset Toggle Card (DEFAULT: UNTICKED / FALSE) */}
+                      <label className="bg-card border border-border rounded-xl p-4 shadow-xs flex items-start gap-3 cursor-pointer hover:bg-muted/30 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={quotaModalData.resetUsage}
+                          onChange={(e) => {
+                            soundService.play('click');
+                            setQuotaModalData(prev => prev ? { ...prev, resetUsage: e.target.checked } : null);
+                          }}
+                          className="mt-0.5 w-4 h-4 rounded text-primary bg-card border-border focus:ring-primary/20 cursor-pointer"
+                        />
+                        <div className="text-xs space-y-0.5">
+                          <span className="font-bold text-foreground block">
+                            আজকের ব্যবহৃত কাউন্টারও ০-তে রিসেট করুন (Reset today's used count to 0 Ops)
+                          </span>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">
+                            {quotaModalData.resetUsage ? (
+                              <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                টিক দেওয়া আছে: আজ ব্যবহৃত {quotaModalData.currentUsed.toLocaleString()} Ops মুছে দিয়ে কোম্পানিকে নতুন লিমিটের পুরো কোটা ০ থেকে শুরু করার অনুমতি দেওয়া হবে।
+                              </span>
+                            ) : (
+                              <span>
+                                টিক দেওয়া নেই (প্রস্তাবিত): আজ ইতোমধ্যে ব্যবহৃত {quotaModalData.currentUsed.toLocaleString()} Ops বহাল থাকবে এবং কোম্পানি নতুন বর্ধিত সীমা ({quotaModalData.newLimit === -1 ? 'Unlimited' : quotaModalData.newLimit.toLocaleString()} Ops) পর্যন্ত নির্বিঘ্নে ডেটা অপারেশন করতে পারবে।
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* Footer Bar matching QuotaDashboardModal */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-border bg-card/90 shrink-0">
+                  <div className="text-xs text-muted-foreground font-mono w-full sm:w-auto text-left">
+                    নতুন অনুমোদিত দৈনিক সীমা:{' '}
+                    <span className="font-bold text-foreground">
+                      {quotaModalData.newLimit === -1 ? 'Unlimited Ops' : `${quotaModalData.newLimit.toLocaleString()} Ops`}
                     </span>
                   </div>
+
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                    <button
+                      type="button"
+                      disabled={isSavingQuotaApproval}
+                      onClick={() => setQuotaModalData(null)}
+                      className="px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      বাতিল করুন (Cancel)
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isSavingQuotaApproval}
+                      onClick={handleConfirmQuotaApproval}
+                      className="px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+                    >
+                      {isSavingQuotaApproval ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>অনুমোদন হচ্ছে...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>অনুমোদন ও কোটা কার্যকর করুন (Approve & Increase)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Calculation summary callout */}
-                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center justify-between">
-                  <span>অনুমোদনের পর নতুন দৈনিক লিমিট:</span>
-                  <span className="font-mono font-black text-sm text-emerald-400">
-                    {quotaModalData.newLimit === -1 ? 'Unlimited Ops' : `${quotaModalData.newLimit.toLocaleString()} Ops`}
-                  </span>
-                </div>
-              </div>
-
-              {/* Reset Usage Counter Toggle */}
-              <label className="flex items-start gap-3 p-3 bg-slate-950/50 border border-slate-800 rounded-xl cursor-pointer hover:bg-slate-950 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={quotaModalData.resetUsage}
-                  onChange={(e) => {
-                    soundService.play('click');
-                    setQuotaModalData(prev => prev ? { ...prev, resetUsage: e.target.checked } : null);
-                  }}
-                  className="mt-0.5 w-4 h-4 rounded text-amber-500 bg-slate-900 border-slate-700 focus:ring-amber-500/20 cursor-pointer"
-                />
-                <div className="text-xs">
-                  <span className="font-bold text-slate-200">
-                    আজকের ব্যবহৃত কাউন্টারও ০-তে রিসেট করুন (Reset today's used count to 0 Ops)
-                  </span>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    চেক করা থাকলে কোম্পানিটি আজ পুরো নতুন লিমিট (<strong className="text-white">{quotaModalData.newLimit === -1 ? 'Unlimited' : quotaModalData.newLimit.toLocaleString()} Ops</strong>) নতুন করে শুরু করতে পারবে।
-                  </p>
-                </div>
-              </label>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  disabled={isSavingQuotaApproval}
-                  onClick={() => setQuotaModalData(null)}
-                  className="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-                >
-                  বাতিল করুন (Cancel)
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isSavingQuotaApproval}
-                  onClick={handleConfirmQuotaApproval}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/30 active:scale-95 disabled:opacity-50"
-                >
-                  {isSavingQuotaApproval ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>অনুমোদন হচ্ছে...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>অনুমোদন ও কোটা বৃদ্ধি করুন (Approve & Increase)</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Sovereign Founder System Audit Trail Modal */}
