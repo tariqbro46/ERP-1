@@ -224,7 +224,7 @@ interface SettingsContextType {
   maintenanceReason?: string;
   maintenanceUpdates?: string;
   landingPageEnabled?: boolean;
-  heroDesignStyle?: 'three-interactive' | 'three-matrix' | 'threeui' | 'monochrome-parallax' | 'default';
+  heroDesignStyle?: 'enterprise-saas' | 'three-interactive' | 'three-matrix' | 'threeui' | 'monochrome-parallax' | 'classic-saas' | 'default';
   heroThreeUiTheme?: 'cyber-dark' | 'glass-light' | 'aurora-navy' | 'emerald-obsidian';
   heroThreeUiGlowColor?: 'cyan' | 'emerald' | 'indigo' | 'amber';
   heroThreeUiPerspective?: 'subtle' | 'cinematic' | 'extreme';
@@ -428,7 +428,7 @@ const defaultSettings: SettingsContextType = {
   maintenanceReason: '',
   maintenanceUpdates: '',
   landingPageEnabled: true,
-  heroDesignStyle: 'three-interactive',
+  heroDesignStyle: 'enterprise-saas',
   heroThreeUiTheme: 'aurora-navy',
   heroThreeUiGlowColor: 'cyan',
   heroThreeUiPerspective: 'cinematic',
@@ -727,7 +727,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               sidebarTextColor: data.sidebarTextColor || prev.sidebarTextColor || 'default',
               globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign,
               landingPageEnabled: data.landingPageEnabled !== undefined ? !!data.landingPageEnabled : (prev.landingPageEnabled !== undefined ? prev.landingPageEnabled : true),
-              heroDesignStyle: data.heroDesignStyle || prev.heroDesignStyle || 'three-interactive',
+              heroDesignStyle: data.heroDesignStyle || prev.heroDesignStyle || 'enterprise-saas',
               heroThreeUiTheme: data.heroThreeUiTheme || prev.heroThreeUiTheme || 'aurora-navy',
               heroThreeUiGlowColor: data.heroThreeUiGlowColor || prev.heroThreeUiGlowColor || 'cyan',
               heroThreeUiPerspective: data.heroThreeUiPerspective || prev.heroThreeUiPerspective || 'cinematic',
