@@ -24,23 +24,19 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { erpService } from '../../services/erpService';
-import { EnterpriseSaaSHero } from '../../components/landing/EnterpriseSaaSHero';
 import { ThreeUiHeroDashboard } from '../../components/landing/ThreeUiHeroDashboard';
 import { MonochromeParallaxHero } from '../../components/landing/MonochromeParallaxHero';
-import { ThreeInteractiveHero } from '../../components/landing/ThreeInteractiveHero';
-import { ThreeMatrixHero } from '../../components/landing/ThreeMatrixHero';
 import { cn } from '../../lib/utils';
 import { LATEST_VERSION } from '../../data/releaseNotes';
 
 export const Home = () => {
   const { t, language } = useLanguage();
   const { user } = useAuth();
-  const settings = useSettings();
   const { 
     adaptiveLoaderEnabled = true, 
     skeletonEnabled = true, 
     skeletonDashboardOnly = true,
-    heroDesignStyle = 'enterprise-saas',
+    heroDesignStyle = 'threeui',
     heroThreeUiTheme = 'aurora-navy',
     heroThreeUiGlowColor = 'cyan',
     heroThreeUiPerspective = 'cinematic',
@@ -49,9 +45,7 @@ export const Home = () => {
     heroThreeUiShowExperienceHubDemo = true,
     heroThreeUiShowSimulateVoucher = true,
     heroThreeUiEnableTiltDefault = false
-  } = settings;
-
-  const effectiveHeroStyle = heroDesignStyle || 'enterprise-saas';
+  } = useSettings();
 
   const DEFAULT_CONTENT = {
     heroTitle: language === 'bn' ? 'বুদ্ধিমত্তার সাথে আপনার ব্যবসা পরিচালনা করুন' : 'Manage Your Business With Pure Intelligence',
@@ -337,7 +331,7 @@ export const Home = () => {
     }
   }
 
-  const isMonochrome = effectiveHeroStyle === 'monochrome-parallax' || effectiveHeroStyle === 'three-interactive' || effectiveHeroStyle === 'three-matrix';
+  const isMonochrome = heroDesignStyle === 'monochrome-parallax' || heroDesignStyle === 'three-interactive' || heroDesignStyle === 'three-matrix';
 
   return (
     <div className={cn(
@@ -389,27 +383,12 @@ export const Home = () => {
       <main className="flex-1">
         {/* Hero Section */}
         {content.showHero && (
-          effectiveHeroStyle === 'enterprise-saas' ? (
-            <EnterpriseSaaSHero
-              content={content}
-              onOpenDemoModal={() => setShowDemoModal(true)}
-            />
-          ) : effectiveHeroStyle === 'three-interactive' ? (
-            <ThreeInteractiveHero
-              content={content}
-              onOpenDemoModal={() => setShowDemoModal(true)}
-            />
-          ) : effectiveHeroStyle === 'three-matrix' ? (
-            <ThreeMatrixHero
-              content={content}
-              onOpenDemoModal={() => setShowDemoModal(true)}
-            />
-          ) : effectiveHeroStyle === 'monochrome-parallax' ? (
+          isMonochrome ? (
             <MonochromeParallaxHero
               content={content}
               onOpenDemoModal={() => setShowDemoModal(true)}
             />
-          ) : effectiveHeroStyle === 'threeui' ? (
+          ) : heroDesignStyle === 'threeui' ? (
             <ThreeUiHeroDashboard
               content={content}
               onOpenDemoModal={() => setShowDemoModal(true)}
