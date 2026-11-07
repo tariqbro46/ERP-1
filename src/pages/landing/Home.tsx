@@ -16,8 +16,7 @@ import {
   X,
   Layers,
   Cpu,
-  Activity,
-  Check
+  Activity
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useSiteContent } from '../../hooks/useSiteContent';
@@ -27,15 +26,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { erpService } from '../../services/erpService';
 import { ThreeUiHeroDashboard } from '../../components/landing/ThreeUiHeroDashboard';
 import { MonochromeParallaxHero } from '../../components/landing/MonochromeParallaxHero';
-import { ThreeInteractiveHero } from '../../components/landing/ThreeInteractiveHero';
-import { ThreeMatrixHero } from '../../components/landing/ThreeMatrixHero';
 import { cn } from '../../lib/utils';
 import { LATEST_VERSION } from '../../data/releaseNotes';
 
 export const Home = () => {
   const { t, language } = useLanguage();
   const { user } = useAuth();
-  const settings = useSettings();
   const { 
     adaptiveLoaderEnabled = true, 
     skeletonEnabled = true, 
@@ -48,60 +44,8 @@ export const Home = () => {
     heroThreeUiShowFloatingBadges = true,
     heroThreeUiShowExperienceHubDemo = true,
     heroThreeUiShowSimulateVoucher = true,
-    heroThreeUiEnableTiltDefault = false,
-    updateSettings
-  } = settings;
-
-  const [selectedHeroPreview, setSelectedHeroPreview] = React.useState<string>(() => {
-    return heroDesignStyle || 'threeui';
-  });
-  const [isSavingHero, setIsSavingHero] = React.useState(false);
-  const [saveSuccess, setSaveSuccess] = React.useState(false);
-
-  const effectiveHeroStyle = selectedHeroPreview;
-
-  const HERO_OPTIONS = [
-    { 
-      id: 'threeui', 
-      name: '3D Spatial Dashboard', 
-      bnName: '৩ডি স্পেশিয়াল ড্যাশবোর্ড', 
-      badge: 'Interactive 3D ERP',
-      icon: '🌌',
-      desc: 'লাইভ ইন্টারঅ্যাক্টিভ ৩ডি ড্যাশবোর্ড, অরোরা গ্লো, পার্টিকেলস ও ভাউচার সিমুলেশন'
-    },
-    { 
-      id: 'monochrome-parallax', 
-      name: 'Monochrome Parallax', 
-      bnName: 'মনোক্রোম ডার্ক প্যারালাক্স', 
-      badge: 'Brutalist Dark',
-      icon: '⚡',
-      desc: 'হাই-এন্ড ডার্ক এলিগ্যান্স, ফ্লুইড প্যারালাক্স ও বোল্ড টাইপোগ্রাফি'
-    },
-    { 
-      id: 'three-interactive', 
-      name: 'Three.js Multi-Station Orbit', 
-      bnName: 'থ্রি.জেএস স্পেশিয়াল অরবিট', 
-      badge: '3D Waypoints',
-      icon: '🪐',
-      desc: 'থ্রি.জেএস স্পেশিয়াল ক্যামেরা ও মাল্টি-স্টেশন ইন্টারঅ্যাক্টিভ অরবিট'
-    },
-    { 
-      id: 'three-matrix', 
-      name: 'Cyber Matrix Grid', 
-      bnName: 'সাইবার ম্যাট্রিক্স গ্রিড', 
-      badge: 'Quantum Particles',
-      icon: '🌐',
-      desc: 'সাইবারনেটিক কোয়ান্টাম গ্রিড ও ডায়নামিক পার্টিকেল ফ্লো'
-    },
-    { 
-      id: 'classic-saas', 
-      name: 'Clean Modern SaaS (White)', 
-      bnName: 'ক্লিন মডার্ন সাস (লাইট)', 
-      badge: 'Minimalist Clean',
-      icon: '🎨',
-      desc: 'হোয়াইট মিনিমালিস্ট কর্পোরেট লেআউট, সফট প্যাস্টেল গ্লো ও ফিচার ট্যাব'
-    },
-  ];
+    heroThreeUiEnableTiltDefault = false
+  } = useSettings();
 
   const DEFAULT_CONTENT = {
     heroTitle: language === 'bn' ? 'বুদ্ধিমত্তার সাথে আপনার ব্যবসা পরিচালনা করুন' : 'Manage Your Business With Pure Intelligence',
@@ -387,7 +331,7 @@ export const Home = () => {
     }
   }
 
-  const isMonochrome = effectiveHeroStyle === 'monochrome-parallax' || effectiveHeroStyle === 'three-interactive' || effectiveHeroStyle === 'three-matrix';
+  const isMonochrome = heroDesignStyle === 'monochrome-parallax' || heroDesignStyle === 'three-interactive' || heroDesignStyle === 'three-matrix';
 
   return (
     <div className={cn(
@@ -396,98 +340,6 @@ export const Home = () => {
         ? "bg-[#0c0d10] text-[#f4f4f5] selection:bg-neutral-800 selection:text-white" 
         : "bg-white text-slate-900 selection:bg-slate-200 selection:text-slate-900"
     )}>
-      {/* Interactive Hero Showcase & Visual Switcher Toolbar */}
-      <div className="sticky top-0 z-50 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-white px-3 sm:px-6 py-2 shadow-2xl transition-all">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-2.5">
-          {/* Left Title with Pulse indicator */}
-          <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-auto">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-            </span>
-            <div>
-              <span className="text-[11px] font-mono font-bold tracking-wider uppercase text-emerald-400">
-                {language === 'bn' ? 'হিরো ডিজাইন লাইভ শোকেস' : 'Hero Visual Showcase'}
-              </span>
-              <span className="hidden sm:inline text-xs text-slate-400 ml-2">
-                ({language === 'bn' ? 'ক্লিক করে যেকোনো ডিজাইন সরাসরি স্ক্রিনে পরখ করুন' : 'Click to preview any design instantly'})
-              </span>
-            </div>
-          </div>
-
-          {/* Center Style Selector Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full lg:w-auto pb-1 lg:pb-0 no-scrollbar">
-            {HERO_OPTIONS.map((opt) => {
-              const isSelected = effectiveHeroStyle === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setSelectedHeroPreview(opt.id)}
-                  title={opt.desc}
-                  className={cn(
-                    "px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer border",
-                    isSelected
-                      ? "bg-emerald-600 text-white border-emerald-400 shadow-md shadow-emerald-900/50 scale-102"
-                      : "bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 border-slate-700/60 hover:text-white"
-                  )}
-                >
-                  <span className="text-sm">{opt.icon}</span>
-                  <span>{language === 'bn' ? opt.bnName : opt.name}</span>
-                  {isSelected && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Right Action: Save as default button */}
-          <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto">
-            <button
-              type="button"
-              disabled={isSavingHero || heroDesignStyle === effectiveHeroStyle}
-              onClick={async () => {
-                setIsSavingHero(true);
-                try {
-                  await updateSettings({ heroDesignStyle: effectiveHeroStyle as any });
-                  setSaveSuccess(true);
-                  setTimeout(() => setSaveSuccess(false), 3000);
-                } catch (e) {
-                  console.error('Error saving hero design:', e);
-                } finally {
-                  setIsSavingHero(false);
-                }
-              }}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border shadow-xs",
-                heroDesignStyle === effectiveHeroStyle
-                  ? "bg-slate-800 text-slate-400 border-slate-700 cursor-default"
-                  : saveSuccess
-                  ? "bg-emerald-600 text-white border-emerald-500"
-                  : "bg-blue-600 hover:bg-blue-500 text-white border-blue-500"
-              )}
-            >
-              {saveSuccess ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-white" />
-                  <span>{language === 'bn' ? 'সংরক্ষিত!' : 'Saved!'}</span>
-                </>
-              ) : heroDesignStyle === effectiveHeroStyle ? (
-                <>
-                  <Check className="w-3 h-3 text-emerald-400" />
-                  <span>{language === 'bn' ? 'বর্তমান সক্রিয়' : 'Active Default'}</span>
-                </>
-              ) : (
-                <>
-                  <span>{isSavingHero ? '...' : (language === 'bn' ? 'ডিফল্ট হিসেবে সেভ করুন' : 'Set as Default')}</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
       {!isMonochrome && <Navbar />}
       
       {/* Floating Quick Navigation Dock on Right-Center for Telemetry, Capabilities, Architecture */}
@@ -531,22 +383,12 @@ export const Home = () => {
       <main className="flex-1">
         {/* Hero Section */}
         {content.showHero && (
-          effectiveHeroStyle === 'three-interactive' ? (
-            <ThreeInteractiveHero
-              content={content}
-              onOpenDemoModal={() => setShowDemoModal(true)}
-            />
-          ) : effectiveHeroStyle === 'three-matrix' ? (
-            <ThreeMatrixHero
-              content={content}
-              onOpenDemoModal={() => setShowDemoModal(true)}
-            />
-          ) : effectiveHeroStyle === 'monochrome-parallax' ? (
+          isMonochrome ? (
             <MonochromeParallaxHero
               content={content}
               onOpenDemoModal={() => setShowDemoModal(true)}
             />
-          ) : effectiveHeroStyle === 'threeui' ? (
+          ) : heroDesignStyle === 'threeui' ? (
             <ThreeUiHeroDashboard
               content={content}
               onOpenDemoModal={() => setShowDemoModal(true)}
