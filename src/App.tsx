@@ -637,6 +637,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       if (localStorage.getItem('company_quota_exceeded') === 'true') {
         localStorage.removeItem('company_quota_exceeded');
         setQuotaExceededFlag(false);
+        setIsQuotaModalOpen(false);
       }
       return;
     }
@@ -645,6 +646,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         if (localStorage.getItem('company_quota_exceeded') === 'true') {
           localStorage.removeItem('company_quota_exceeded');
           setQuotaExceededFlag(false);
+          setIsQuotaModalOpen(false);
         }
       } else if (!isSuperAdmin) {
         localStorage.setItem('company_quota_exceeded', 'true');

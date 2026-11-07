@@ -8,3 +8,4 @@ app.db
 dist_setup/
 .env*
 !.env.example
+.aistudio/

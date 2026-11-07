@@ -22,10 +22,89 @@ export interface ReleaseVersion {
   bugFixes: ReleaseNoteItem[];
 }
 
-export const LATEST_VERSION = "v1.9.9.10";
+export const LATEST_VERSION = "v1.9.9.20";
 export const LAST_SEEN_VERSION_KEY = "tallyflow_last_seen_release_version";
 
 export const RELEASE_NOTES: ReleaseVersion[] = [
+  {
+    version: "v1.9.9.20",
+    releaseDate: "November 06, 2026",
+    bnReleaseDate: "০৬ নভেম্বর, ২০২৬",
+    title: "Quota Intelligence Console, Strict Lockout & Real-Time Auto-Unlock Engine",
+    bnTitle: "কোটা ইন্টেলিজেন্স কনসোল, স্ট্রিক্ট কোম্পানি লকআউট এবং রিয়েল-টাইম অটো-আনলক ইঞ্জিন",
+    summary: "Major operational governance upgrade introducing the wide light-themed Founder Quota Decision Console matching the Database Quota Intelligence layout (custom limit adjustment, quick presets +5k/+10k/+20k/+50k/Unlimited, default unticked usage reset), strict zero-bypass lockout across all user roles (including Company Admins) upon quota exhaustion, real-time instant modal dismissal on founder approval, and robust defensive guards for voucher inventory parsing.",
+    bnSummary: "কোটা সিকিউরিটি ও অপারেশন্সের জন্য একটি গুরুত্বপূর্ণ রিলিজ: 'Database Quota & Operations Intelligence' আদলে ফাউন্ডার প্যানেলে প্রিমিয়াম ওয়াইড ২-কলাম কোটা অনুমোদন কনসোল যুক্ত করা হয়েছে (ডিফল্ট আন-টিকড কাউন্টার রিসেট, কুইক প্রিসেট চিপস, কাস্টম লিমিট ইনপুট এবং লাইভ ক্যালকুলেশন প্রিভিউসহ); কোম্পানি কোটা শেষ হলে কোনো রোল (এমনকি কোম্পানি অ্যাডমিনও) ডাটা রিড/রাইট/মডিফাই বাইপাস করতে পারবে না; ফাউন্ডার কোটা বৃদ্ধি করার সাথে সাথে ক্লায়েন্টদের অ্যাপ রিয়েল-টাইমে অটো-আনলক হবে; এবং ভাউচার এডিটের সময় ফাঁকা বা ত্রুটিপূর্ণ ইনভেন্টরির ক্ষেত্রে ডিফেনসিভ গার্ড যুক্ত করা হয়েছে।",
+    isLatest: true,
+    newFeatures: [
+      {
+        id: "feat-founder-quota-approval-console",
+        title: "Founder Quota Decision & Limit Expansion Console",
+        bnTitle: "ফাউন্ডার কোটা বৃদ্ধি ও অনুমোদন কনসোল",
+        description: "Redesigned the Quota Reset Approval dialog to match the Database Quota Intelligence layout: ultra-clean light theme, wide 2-column grid, quick +5,000, +10,000, +20,000, +50,000 and Unlimited presets, custom number input, live calculation summary, and default unticked usage reset.",
+        bnDescription: "ফাউন্ডার প্যানেলে কোটা অনুমোদনের পপআপটিকে ডাটাবেজ কোটা ইন্টেলিজেন্সের আদলে প্রিমিয়াম ওয়াইড ২-কলাম ডিজাইনে রূপান্তর করা হয়েছে। এতে রয়েছে কুইক প্রিসেট চিপস (+৫k, +১০k, +২০k, +৫০k, আনলিমিটেড), কাস্টম লিমিট ইনপুট, লাইভ ক্যালকুলেশন প্রিভিউ এবং ডিফল্ট আন-টিকড কাউন্টার রিসেট অপশন।",
+        module: "Founder Operations",
+        badge: "CORE"
+      },
+      {
+        id: "feat-strict-zero-bypass-quota",
+        title: "Strict Zero-Bypass Quota Lockout across All Roles",
+        bnTitle: "সকল ইউজার রোলের জন্য শতভাগ স্ট্রিক্ট কোটা লকআউট",
+        description: "Eliminated local Admin bypass checks from Firestore quota interceptors, VoucherEntry, LedgerCreation, and ItemCreation. When a company's quota is reached, creating, editing, and querying new documents is strictly blocked across all users without exception.",
+        bnDescription: "কোটা শেষ হওয়ার পর অ্যাডমিন রোলের বাইপাস সুযোগ সম্পূর্ণ বন্ধ করা হয়েছে। কোটা অতিক্রম করলে কোম্পানি অ্যাডমিনসহ সকল ব্যবহারকারীর জন্য ভাউচার, লেজার, আইটেম ও ডাটাবেজ রাইট শতভাগ স্ট্রিক্টভাবে বন্ধ থাকবে।",
+        module: "Security & Quota",
+        badge: "SECURITY"
+      },
+      {
+        id: "feat-realtime-auto-unlock",
+        title: "Real-Time Auto-Unlock on Quota Expansion",
+        bnTitle: "কোটা বাড়ানোর সাথে সাথে ইনস্ট্যান্ট রিয়েল-টাইম অটো-আনলক",
+        description: "Enabled real-time Firestore listeners on company quota configuration. As soon as the Founder approves an extension or resets the counter, locked company users are unlocked immediately without requiring a browser page refresh.",
+        bnDescription: "ফাউন্ডার কোটা সীমা বাড়ানোর সাথে সাথে ফায়ারবেস রিয়েল-টাইম স্ন্যাপশটের মাধ্যমে ব্যবহারকারীদের লকআউট স্ক্রিন স্বয়ংক্রিয়ভাবে বন্ধ হয়ে যাবে, কোনো ম্যানুয়াল রিলোড ছাড়াই তারা সাথে সাথে কাজ শুরু করতে পারবে।",
+        module: "Real-Time Sync",
+        badge: "REAL-TIME"
+      }
+    ],
+    improvements: [
+      {
+        id: "imp-quota-exceeded-modal-redesign",
+        title: "Modernized Light-Themed Quota Exceeded Modal",
+        bnTitle: "আধুনিক লাইট কার্ড ডিজাইনের কোটা এক্সিডেড মডাল",
+        description: "Upgraded the user-facing quota exhaustion screen into a wide, clean card layout with live countdown timer to next daily quota reset (01:00 PM BST) and 1-click clearance hotline.",
+        bnDescription: "কোটা শেষ হলে ব্যবহারকারীর সামনে প্রদর্শিত সতর্কবার্তা স্ক্রিনটি আধুনিক হোয়াইট কার্ড ডিজাইনে রূপান্তর করা হয়েছে, যেখানে পরবর্তী রিসেট (দুপুর ০১:০০ BST) পর্যন্ত লাইভ কাউন্টডাউন ও সাপোর্ট যোগাযোগ সুবিধা রয়েছে।",
+        module: "User Experience",
+        badge: "UI/UX"
+      },
+      {
+        id: "imp-defensive-voucher-loading",
+        title: "Defensive Voucher Inventory & Entries Parsing",
+        bnTitle: "ভাউচার এডিটে ডিফেনসিভ ইনভেন্টরি ও এন্ট্রি গার্ড",
+        description: "Added defensive array validation in VoucherEntry fetch logic, preventing TypeError exceptions when legacy or malformed voucher documents lack inventory arrays.",
+        bnDescription: "ভাউচার লোড ও এডিটের সময় ইনভেন্টরি বা এন্ট্রিজ ফিল্ড খালি থাকলেও নিরাপদ ডিফল্ট অ্যারে সরবরাহের মাধ্যমে টাইপ এরর পুরোপুরি রোধ করা হয়েছে।",
+        module: "Vouchers",
+        badge: "RELIABILITY"
+      }
+    ],
+    bugFixes: [
+      {
+        id: "fix-quota-admin-bypass",
+        title: "Resolved Company Admin Quota Enforcement Bypass",
+        bnTitle: "কোম্পানি অ্যাডমিনদের কোটা বাইপাস ত্রুটি সমাধান",
+        description: "Fixed vulnerability where local admin roles could continue writing vouchers and ledgers after company daily operations quota was depleted.",
+        bnDescription: "কোটার দৈনিক লিমিট অতিক্রম করার পরেও কোম্পানি অ্যাডমিনদের ডাটা এন্ট্রির সমস্যা দূর করে কঠোর লিমিট কার্যকর করা হয়েছে।",
+        module: "Security",
+        badge: "CRITICAL"
+      },
+      {
+        id: "fix-founder-quota-approval-action",
+        title: "Operationalized Founder Panel Quota Approval Action",
+        bnTitle: "ফাউন্ডার প্যানেল থেকে কোটা অনুমোদন ও বৃদ্ধির কার্যকর ব্যবস্থা",
+        description: "Connected the Approve & Reset Quota button in FounderPanel to an interactive approval console that applies quota increments and resolves pending requests in Firestore.",
+        bnDescription: "ফাউন্ডার প্যানেলে কোটা অনুমোদনের বোতামটি সক্রিয় করে সরাসরি ডাটাবেজে কাঙ্ক্ষিত কোটা বৃদ্ধি এবং পেন্ডিং রিকোয়েস্ট ক্লোজ করার ব্যবস্থা সম্পন্ন করা হয়েছে।",
+        module: "Founder Operations",
+        badge: "FIX"
+      }
+    ]
+  },
   {
     version: "v1.9.9.10",
     releaseDate: "November 03, 2026",
@@ -34,7 +113,7 @@ export const RELEASE_NOTES: ReleaseVersion[] = [
     bnTitle: "টিম কোটা লাইভ ট্র্যাকিং ইঞ্জিন, অপারেশন কন্ট্রোলস এবং ফাউন্ডার অ্যাপ্রুভাল ওয়ার্কফ্লো",
     summary: "Comprehensive upgrade introducing real-time team member quota synchronization across multiple devices, automatic email deduplication, 10–25s low-latency database flushing, interactive confirmation modal with founder approval workflow for quota resets, and native Firebase 24h usage analytics chart with light/dark theme toggle.",
     bnSummary: "টিম কোটা পেজে প্রতিটি সক্রিয় সদস্যের রিয়েল-টাইম ইউসেজ ট্র্যাকিং ও দ্রুত ডাটাবেজ সিঙ্ক, মাল্টিপল অ্যাকাউন্ট ডিডুপ্লিকেশন, স্পর্শকাতর অ্যাকশনের জন্য কাস্টম কনফার্ম ডায়ালগ ও ফাউন্ডার অ্যাপ্রুভাল সিস্টেম এবং লাইট/ডার্ক মোড টগলসহ ফায়ারবেস-স্টাইল ২৪-ঘণ্টার ইউসেজ চার্ট সংযোজন করা হয়েছে।",
-    isLatest: true,
+    isLatest: false,
     newFeatures: [
       {
         id: "feat-team-quota-live-sync",

@@ -183,6 +183,9 @@ export function ItemCreation() {
       }
     } catch (err: any) {
       console.error('Error saving item:', err);
+      if (erpService.isQuotaError(err) || erpService.isQuotaExceeded(user?.companyId)) {
+        window.dispatchEvent(new CustomEvent('erp_quota_exceeded_attempt', { detail: { path: 'items', error: err } }));
+      }
       showNotification(err.message || 'Failed to save item. Please check your connection.', 'error');
     } finally {
       setLoading(false);

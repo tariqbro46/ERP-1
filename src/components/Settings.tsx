@@ -2494,7 +2494,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         type="text"
                         value={gitVersionInput}
                         onChange={(e) => setGitVersionInput(e.target.value)}
-                        placeholder="e.g. v1.9.9.10"
+                        placeholder="e.g. v1.9.9.20"
                         className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                       <p className="text-[10px] text-muted-foreground">

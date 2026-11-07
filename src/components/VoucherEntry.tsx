@@ -95,7 +95,7 @@ export function VoucherEntry() {
   const effectiveQuotaLimit = company?.quotaLimit !== undefined ? Number(company.quotaLimit) : 10000;
   const isUnlimited = effectiveQuotaLimit === -1;
   const isCompanyQuotaExceeded = Boolean(
-    !isSuperAdmin && !isAdmin && !isUnlimited && (
+    !isSuperAdmin && !isUnlimited && (
       erpService.isQuotaExceeded(user?.companyId) ||
       (company && company.quotaUsed !== undefined && company.quotaUsed >= effectiveQuotaLimit) ||
       localStorage.getItem('company_quota_exceeded') === 'true'
@@ -110,11 +110,11 @@ export function VoucherEntry() {
 
   useEffect(() => {
     const handleQuotaEvent = () => {
-      if (!isSuperAdmin && !isAdmin) setQuotaLocked(true);
+      if (!isSuperAdmin) setQuotaLocked(true);
     };
     window.addEventListener('erp_quota_exceeded_attempt', handleQuotaEvent);
     return () => window.removeEventListener('erp_quota_exceeded_attempt', handleQuotaEvent);
-  }, [isSuperAdmin, isAdmin]);
+  }, [isSuperAdmin]);
   
   // Custom classes for Voucher Entry to scale down or up the entire page based on Founder select
   const fieldSize = settings.voucherFieldSize || 'medium';

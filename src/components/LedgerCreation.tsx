@@ -252,6 +252,9 @@ export function LedgerCreation() {
       }
     } catch (err: any) {
       console.error('Error saving ledger:', err);
+      if (erpService.isQuotaError(err) || erpService.isQuotaExceeded(user?.companyId)) {
+        window.dispatchEvent(new CustomEvent('erp_quota_exceeded_attempt', { detail: { path: 'ledgers', error: err } }));
+      }
       showNotification(err.message || 'Failed to save ledger. Please check your connection.', 'error');
     } finally {
       setLoading(false);
