@@ -424,8 +424,8 @@ export default function FounderPanel() {
     heroMetric3Value,
     heroMetric3Label
   } = useSettings();
-  const [localHeroDesignStyle, setLocalHeroDesignStyle] = useState<'default' | 'threeui' | 'monochrome-parallax'>(
-    heroDesignStyle === 'threeui' ? 'threeui' : (heroDesignStyle === 'default' ? 'default' : 'monochrome-parallax')
+  const [localHeroDesignStyle, setLocalHeroDesignStyle] = useState<'default' | 'enterprise-saas' | 'threeui' | 'monochrome-parallax' | 'three-interactive' | 'three-matrix' | 'classic-saas'>(
+    heroDesignStyle || 'enterprise-saas'
   );
   const [localLandingPageEnabled, setLocalLandingPageEnabled] = useState<boolean>(landingPageEnabled !== false);
   const [localHeroThreeUiTheme, setLocalHeroThreeUiTheme] = useState<'cyber-dark' | 'glass-light' | 'aurora-navy' | 'emerald-obsidian'>(heroThreeUiTheme || 'aurora-navy');
@@ -614,7 +614,7 @@ export default function FounderPanel() {
   }, [landingPageEnabled]);
 
   useEffect(() => {
-    setLocalHeroDesignStyle(heroDesignStyle === 'threeui' ? 'threeui' : (heroDesignStyle === 'default' ? 'default' : 'monochrome-parallax'));
+    setLocalHeroDesignStyle(heroDesignStyle || 'enterprise-saas');
   }, [heroDesignStyle]);
 
   useEffect(() => {
@@ -4110,7 +4110,45 @@ Analyze the codebase, identify why this error is happening, find the relevant fi
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          {/* Option 0: Enterprise SaaS (QuickBooks & Xero Style) */}
+                          <div 
+                            onClick={() => setLocalHeroDesignStyle('enterprise-saas')}
+                            className={cn(
+                              "p-4 rounded-xl border-2 cursor-pointer transition-all relative overflow-hidden flex flex-col justify-between group",
+                              localHeroDesignStyle === 'enterprise-saas'
+                                ? "border-blue-600 bg-blue-50/50 dark:bg-blue-950/20 shadow-md shadow-blue-500/10 ring-1 ring-blue-500/20"
+                                : "border-border hover:border-muted-foreground/40 bg-background"
+                            )}
+                          >
+                            <div className="absolute -top-6 -right-6 w-20 h-20 bg-blue-500/10 rounded-full blur-xl pointer-events-none" />
+                            {localHeroDesignStyle === 'enterprise-saas' && (
+                              <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-blue-600 text-white font-black flex items-center justify-center shadow-xs">
+                                <Check className="w-3 h-3 stroke-[3]" />
+                              </div>
+                            )}
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">💼</span>
+                                <h5 className="text-xs font-extrabold text-foreground flex items-center gap-1.5">
+                                  QuickBooks & Xero
+                                  <span className="text-[8px] uppercase px-1.5 py-0.5 rounded bg-blue-600 text-white font-mono font-bold">
+                                    RECOMMENDED
+                                  </span>
+                                </h5>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Elite Royal Blue & White enterprise SaaS hero with interactive MacBook Pro & tablet device mockup, financial metric cards, and live revenue stream.
+                              </p>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+                              <span>Enterprise SaaS</span>
+                              <span className={localHeroDesignStyle === 'enterprise-saas' ? "text-blue-600 font-bold" : ""}>
+                                {localHeroDesignStyle === 'enterprise-saas' ? "ACTIVE DEFAULT" : "Click to select"}
+                              </span>
+                            </div>
+                          </div>
+
                           {/* Option 1: Monochromatic Parallax 3D (New Three.js) */}
                           <div 
                             onClick={() => setLocalHeroDesignStyle('monochrome-parallax')}
