@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Printer, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft, Eye, MoreVertical, ChevronLeft, ChevronRight, RotateCw } from 'lucide-react';
+import { Search, Filter, Download, Printer, FileSpreadsheet, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft, Eye, MoreVertical, ChevronLeft, ChevronRight, RotateCw, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn, formatNumber, formatQuantity, formatVoucherNo, parseEntryDate } from '../lib/utils';
 import { erpService } from '../services/erpService';
@@ -8,8 +8,15 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { printReport, printUtils } from '../utils/printUtils';
-import { exportToCSV, exportToPDF, exportUtils, downloadHtmlAsPDF } from '../utils/exportUtils';
+import { executePrint } from '../utils/printUtils';
+import { printToPDF } from '../utils/pdfExportService';
+import { exportStructuredExcel, shareReportViaEmail } from '../utils/exportUtils';
+import {
+  DEFAULT_APP_BRANDING,
+  escapeHtml,
+  resolveCompanyLegalIdentity,
+  sanitizeAssetUrl
+} from '../constants/appIdentity';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { EditableHeader } from './EditableHeader';
@@ -55,6 +62,7 @@ export function Daybook() {
     return new Date().toLocaleDateString('en-CA');
   });
   const [highlightDates, setHighlightDates] = useState(false);
+  const [fullPageHtml, setFullPageHtml] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean;
     position: { x: number; y: number } | null;
@@ -268,10 +276,24 @@ export function Daybook() {
   };
 
   const generateDaybookReportHtml = () => {
-    const companyName = company?.name || settings?.companyName || 'Modina Enterprise';
-    const companyAddress = (company as any)?.address || settings?.companyAddress || 'Noyagola More, Chapai Nawabgonj';
-    const companyEmail = settings?.printEmail || (company as any)?.email || 'modinaenterprise29@gmail.com';
-    const companyPhone = settings?.printPhone || (company as any)?.phone || '';
+    const legal = resolveCompanyLegalIdentity(settings, company);
+    const isLayout2 = settings?.reportLayout === 'Layout 2';
+    const safeLogoUrl = sanitizeAssetUrl(legal.companyLogo || '');
+    const logoHtml = safeLogoUrl
+      ? `<div style="width: 64px; height: 64px; margin-right: 14px; flex-shrink: 0;"><img src="${escapeHtml(safeLogoUrl)}" style="width: 100%; height: 100%; object-fit: contain;" /></div>`
+      : '';
+
+    const contactParts: string[] = [];
+    if (settings?.showPrintPhone !== false && legal.printPhone) contactParts.push(`Phone: ${escapeHtml(legal.printPhone)}`);
+    if (settings?.showPrintEmail !== false && legal.printEmail) contactParts.push(`E-Mail: ${escapeHtml(legal.printEmail)}`);
+    if (settings?.showPrintWebsite !== false && legal.printWebsite) contactParts.push(`Web: ${escapeHtml(legal.printWebsite)}`);
+
+    const softwareFooter =
+      settings?.showDeveloperContact !== false
+        ? (settings?.appIdentity?.softwareFooterText ||
+          settings?.developerContactText ||
+          DEFAULT_APP_BRANDING.softwareFooterText)
+        : '';
 
     const formatDt = (dStr: string) => formatReportDate(dStr, settings.dateFormat || 'DD-MMM-YY');
     const periodText = startDate === endDate
@@ -304,26 +326,32 @@ export function Daybook() {
       let subDetailsHtml = '';
       let rowInwardsQty = 0;
       let rowOutwardsQty = 0;
+      let rowUnit = 'Pcs';
 
       if (v.inventory && v.inventory.length > 0) {
         const itemsList = v.inventory.map((inv: any) => {
           const itemObj = items.find(i => i.id === inv.item_id);
-          const name = itemObj?.name || 'Item';
+          const name = itemObj?.name || inv.item_name || 'Item';
+          const invUnit = inv.unit || itemObj?.unit || itemObj?.units?.name || 'Pcs';
+          rowUnit = invUnit;
           const qty = Number(inv.qty || 0);
           if (v.v_type === 'Purchase') rowInwardsQty += qty;
           if (v.v_type === 'Sales') rowOutwardsQty += qty;
+          if (config.format === 'Detailed') {
+            return `${inv.batch ? `${inv.batch} ` : ''}${name} (${formatQuantity(qty, invUnit)} ${invUnit} @ ${formatNumber(Number(inv.rate || 0))})`.trim();
+          }
           return `${inv.batch || ''} ${name}`.trim();
         }).join(', ');
 
         if (itemsList) {
-          subDetailsHtml += `<div style="padding-left: 12px; font-size: 10px; color: #222; font-style: italic; margin-top: 2px;">${itemsList}</div>`;
+          subDetailsHtml += `<div style="padding-left: 12px; font-size: 9.5px; color: #222; font-style: italic; margin-top: 2px;">${escapeHtml(itemsList)}</div>`;
         }
       } else if (v.item_names) {
-        subDetailsHtml += `<div style="padding-left: 12px; font-size: 10px; color: #222; font-style: italic; margin-top: 2px;">${v.item_names}</div>`;
+        subDetailsHtml += `<div style="padding-left: 12px; font-size: 9.5px; color: #222; font-style: italic; margin-top: 2px;">${escapeHtml(v.item_names)}</div>`;
       }
 
       if (config.showNarration && v.narration) {
-        subDetailsHtml += `<div style="padding-left: 12px; font-size: 10px; color: #444; font-style: italic;">(${v.narration})</div>`;
+        subDetailsHtml += `<div style="padding-left: 12px; font-size: 9.5px; color: #444; font-style: italic;">(${escapeHtml(v.narration)})</div>`;
       }
 
       totalInwardsQty += rowInwardsQty;
@@ -333,47 +361,61 @@ export function Daybook() {
 
       return `
         <tr style="border-bottom: 1px solid #E5E7EB; ${isStripe ? 'background-color: #F9FAFB;' : ''}">
-          <td style="padding: 5px 6px; vertical-align: middle; white-space: nowrap;">${formatDt(v.v_date)}</td>
+          <td style="padding: 5px 6px; vertical-align: middle; white-space: nowrap;">${escapeHtml(formatDt(v.v_date))}</td>
           <td style="padding: 5px 6px; vertical-align: middle;">
-            <div style="font-weight: bold; color: #000;">${getLedgerName(v)}</div>
+            <div style="font-weight: bold; color: #000;">${escapeHtml(getLedgerName(v))}</div>
             ${subDetailsHtml}
           </td>
-          <td style="padding: 5px 6px; vertical-align: middle; font-weight: 500;">${v.v_type}</td>
-          <td style="padding: 5px 6px; vertical-align: middle;">${formatVoucherNo(v.v_no || v.reference_no)}</td>
+          <td style="padding: 5px 6px; vertical-align: middle; font-weight: 500;">${escapeHtml(v.v_type)}</td>
+          <td style="padding: 5px 6px; vertical-align: middle;">${escapeHtml(formatVoucherNo(v.v_no || v.reference_no))}</td>
           <td style="padding: 5px 6px; vertical-align: middle; text-align: right; font-weight: bold;">
             ${debitVal > 0 ? formatNumber(debitVal) : ''}
-            ${rowInwardsQty > 0 ? `<div style="font-size: 9px; color: #555; font-weight: normal;">${formatQuantity(rowInwardsQty, 'Pcs')}</div>` : ''}
+            ${rowInwardsQty > 0 ? `<div style="font-size: 9px; color: #555; font-weight: normal;">${escapeHtml(formatQuantity(rowInwardsQty, rowUnit))}</div>` : ''}
           </td>
           <td style="padding: 5px 6px; vertical-align: middle; text-align: right; font-weight: bold;">
             ${creditVal > 0 ? formatNumber(creditVal) : ''}
-            ${rowOutwardsQty > 0 ? `<div style="font-size: 9px; color: #555; font-weight: normal;">${formatQuantity(rowOutwardsQty, 'Pcs')}</div>` : ''}
+            ${rowOutwardsQty > 0 ? `<div style="font-size: 9px; color: #555; font-weight: normal;">${escapeHtml(formatQuantity(rowOutwardsQty, rowUnit))}</div>` : ''}
           </td>
         </tr>
       `;
     }).join('');
+
+    const sigAlignment = settings?.signatureAlignment || 'spread';
+    const justifyMap: Record<string, string> = {
+      spread: 'space-between',
+      left: 'flex-start',
+      center: 'center',
+      right: 'flex-end'
+    };
 
     return `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
-          <title>Day Book - ${companyName}</title>
+          <title>${escapeHtml(legal.companyName ? `Day Book - ${legal.companyName}` : 'Day Book')}</title>
           <style>
+            * { box-sizing: border-box; }
             @page {
               size: A4 portrait;
               margin: 1.2cm 1cm;
             }
             body {
-              font-family: Arial, Helvetica, sans-serif;
+              font-family: ${isLayout2 ? 'Arial, Helvetica, sans-serif' : "'JetBrains Mono', Courier, monospace"};
               color: #000;
               margin: 0;
-              padding: 0;
-              font-size: 11px;
+              padding: 16px;
+              font-size: 10.5px;
               background: #fff;
             }
             .header-container {
-              text-align: center;
-              margin-bottom: 12px;
+              position: relative;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-bottom: 2px solid #000;
+              padding-bottom: 10px;
+              margin-bottom: 14px;
             }
             .company-title {
               font-size: 18px;
@@ -383,46 +425,39 @@ export function Daybook() {
               margin-bottom: 2px;
             }
             .company-sub {
-              font-size: 11px;
+              font-size: 10px;
               color: #222;
               margin-bottom: 2px;
-            }
-            .divider {
-              border: 0;
-              border-top: 1px solid #000;
-              margin: 8px 0;
+              white-space: pre-line;
             }
             .report-title {
-              font-size: 15px;
+              font-size: 14px;
               font-weight: bold;
+              text-transform: uppercase;
+              text-decoration: underline;
+              margin-top: 6px;
               margin-bottom: 2px;
             }
             .period-title {
-              font-size: 11px;
+              font-size: 10.5px;
               font-style: italic;
-              margin-bottom: 8px;
-            }
-            .page-header-no {
-              text-align: right;
-              font-size: 10px;
-              font-weight: bold;
-              margin-bottom: 4px;
+              margin-bottom: 2px;
             }
             table {
               width: 100%;
               border-collapse: collapse;
-              font-size: 11px;
+              font-size: 10.5px;
             }
             th, td {
-              vertical-align: middle;
+              vertical-align: middle !important;
             }
             th {
               border-top: 1px solid #000;
               border-bottom: 1px solid #000;
-              padding: 5px 6px;
+              padding: 6px;
               text-align: left;
               font-weight: bold;
-              background-color: #fff;
+              background-color: ${isLayout2 ? '#fff' : '#f3f4f6'};
             }
             th.num-col {
               text-align: right;
@@ -437,6 +472,17 @@ export function Daybook() {
               border-bottom: 3px double #000;
               font-weight: bold;
               padding: 6px;
+              background-color: ${isLayout2 ? '#fff' : '#f9fafb'};
+            }
+            .print-footer {
+              margin-top: 24px;
+              border-top: 1px solid #cbd5e1;
+              padding-top: 8px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 9px;
+              color: #4b5563;
             }
             @media print {
               .no-print { display: none !important; }
@@ -445,16 +491,17 @@ export function Daybook() {
           </style>
         </head>
         <body>
-          <div style="position: relative;">
-            <div style="position: absolute; right: 0; top: 0; font-size: 10px; font-weight: bold;">Page 1</div>
-            <div class="header-container">
-              <div class="company-title">${companyName}</div>
-              <div class="company-sub">${companyAddress}</div>
-              ${companyEmail ? `<div class="company-sub">E-Mail : ${companyEmail}</div>` : ''}
-              ${companyPhone ? `<div class="company-sub">Phone : ${companyPhone}</div>` : ''}
-              <div class="divider"></div>
+          <div class="header-container">
+            <div style="position: absolute; right: 0; top: 0; font-size: 10px; font-weight: bold; font-family: monospace;">Page 1</div>
+            ${logoHtml}
+            <div style="flex: 1; text-align: center;">
+              ${legal.companyName ? `<div class="company-title">${escapeHtml(legal.companyName)}</div>` : ''}
+              ${legal.companyAddress ? `<div class="company-sub">${escapeHtml(legal.companyAddress)}</div>` : ''}
+              ${legal.vatBinTin ? `<div class="company-sub">VAT/BIN/TIN: ${escapeHtml(legal.vatBinTin)}</div>` : ''}
+              ${contactParts.length > 0 ? `<div class="company-sub">${contactParts.join(' | ')}</div>` : ''}
+              ${settings?.showPrintHeader !== false && legal.printHeader ? `<div class="company-sub" style="font-style: italic;">${escapeHtml(legal.printHeader)}</div>` : ''}
               <div class="report-title">Day Book</div>
-              <div class="period-title">${periodText}</div>
+              <div class="period-title">${escapeHtml(periodText)}</div>
             </div>
           </div>
 
@@ -483,85 +530,129 @@ export function Daybook() {
                 <td colspan="4" style="text-align: right;">Total :</td>
                 <td style="text-align: right;">
                   ${formatNumber(totalDebit)}
-                  ${totalInwardsQty > 0 ? `<div style="font-size: 9px; font-weight: normal;">${formatQuantity(totalInwardsQty, 'Pcs')}</div>` : ''}
+                  ${totalInwardsQty > 0 ? `<div style="font-size: 9px; font-weight: normal;">${escapeHtml(formatQuantity(totalInwardsQty, 'Pcs'))}</div>` : ''}
                 </td>
                 <td style="text-align: right;">
                   ${formatNumber(totalCredit)}
-                  ${totalOutwardsQty > 0 ? `<div style="font-size: 9px; font-weight: normal;">${formatQuantity(totalOutwardsQty, 'Pcs')}</div>` : ''}
+                  ${totalOutwardsQty > 0 ? `<div style="font-size: 9px; font-weight: normal;">${escapeHtml(formatQuantity(totalOutwardsQty, 'Pcs'))}</div>` : ''}
                 </td>
               </tr>
             </tfoot>
           </table>
-          <script>
-            window.onload = function() {
-              // Auto focus for seamless printing or PDF download
-            };
-          </script>
+
+          <div style="display: flex; justify-content: ${justifyMap[sigAlignment] || 'space-between'}; gap: 24px; margin-top: 48px;">
+            ${settings?.showSignature1 !== false ? `<div style="border-top: 1px solid #000; width: 160px; text-align: center; padding-top: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;">${escapeHtml(settings?.printSignature1 || 'Prepared By')}</div>` : ''}
+            ${settings?.showSignature2 !== false ? `<div style="border-top: 1px solid #000; width: 160px; text-align: center; padding-top: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;">${escapeHtml(settings?.printSignature2 || 'Checked By')}</div>` : ''}
+            ${settings?.showSignature3 !== false ? `<div style="border-top: 1px solid #000; width: 160px; text-align: center; padding-top: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase;">${escapeHtml(settings?.printSignature3 || 'Authorised Signatory')}</div>` : ''}
+          </div>
+
+          <div class="print-footer">
+            <div>${settings?.showPrintFooter !== false ? escapeHtml(legal.printFooter || settings?.printFooter || '') : ''}</div>
+            <div>${escapeHtml(softwareFooter)}</div>
+          </div>
         </body>
       </html>
     `;
   };
 
+  const daybookPeriodSubtitle = `Period: ${formatReportDate(startDate, settings.dateFormat)} to ${formatReportDate(endDate, settings.dateFormat)}`;
+
   const handleFullPageView = () => {
-    const html = generateDaybookReportHtml();
-    const win = window.open('', '_blank');
-    if (win) {
-      win.document.write(html);
-      win.document.close();
-      win.focus();
-    }
+    setFullPageHtml(generateDaybookReportHtml());
   };
 
   const handlePrint = () => {
-    const html = generateDaybookReportHtml();
-    const win = window.open('', '_blank');
-    if (win) {
-      win.document.write(html);
-      win.document.close();
-      win.focus();
-      setTimeout(() => {
-        win.print();
-      }, 300);
-    }
+    executePrint(generateDaybookReportHtml());
   };
 
   const handleDownloadPDF = () => {
-    const html = generateDaybookReportHtml();
-    downloadHtmlAsPDF(html, `Daybook_Report_${startDate}_to_${endDate}`);
+    printToPDF({
+      title: 'Daybook',
+      subtitle: daybookPeriodSubtitle,
+      fileName: `Daybook_Report_${startDate}_to_${endDate}`,
+      htmlContent: generateDaybookReportHtml(),
+      settings,
+      company
+    });
   };
 
   const handleDownloadExcel = () => {
-    const period = `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
-    const exportData = vouchers.map(v => {
-      const rows = [{
-        'Date': v.v_date,
+    const exportData = vouchers.flatMap(v => {
+      const rows: Record<string, any>[] = [{
+        'Date': formatReportDate(v.v_date, settings.dateFormat),
         'Particulars': getLedgerName(v) + (config.format !== 'Detailed' && config.showInventoryDetails && v.item_names ? ` (${v.item_names})` : ''),
-        'Voucher Type': v.v_type,
-        'Voucher No': v.v_no,
-        'Amount': v.total_amount
+        'Vch Type': v.v_type || '',
+        'Vch No': formatVoucherNo(v.v_no || v.reference_no),
+        'Serial No': v.serial_no || v.auto_serial_no || '',
+        'Amount': Number((Number(v.total_amount) || 0).toFixed(2))
       }];
 
       if (config.showNarration && v.narration) {
-        rows.push({ 'Date': '', 'Particulars': `(${v.narration})`, 'Voucher Type': '', 'Voucher No': '', 'Amount': 0 });
+        rows.push({
+          'Date': '',
+          'Particulars': `(${v.narration})`,
+          'Vch Type': '',
+          'Vch No': '',
+          'Serial No': '',
+          'Amount': ''
+        });
       }
 
       if (config.format === 'Detailed' && v.inventory && v.inventory.length > 0) {
         v.inventory.forEach((item: any) => {
-          const itemName = items.find(i => i.id === item.item_id)?.name || 'Unknown';
+          const itemObj = items.find(i => i.id === item.item_id);
+          const itemName = itemObj?.name || item.item_name || 'Unknown';
+          const itemUnit = item.unit || itemObj?.unit || itemObj?.units?.name || 'Pcs';
           rows.push({
             'Date': '',
-            'Particulars': `  > ${itemName} (${item.qty} @ ${item.rate})`,
-            'Voucher Type': '',
-            'Voucher No': '',
-            'Amount': 0
+            'Particulars': `  > ${itemName} (${formatQuantity(item.qty || 0, itemUnit)} ${itemUnit} @ ${formatNumber(Number(item.rate || 0))})`,
+            'Vch Type': '',
+            'Vch No': '',
+            'Serial No': '',
+            'Amount': item.amount !== undefined && item.amount !== null ? Number(Number(item.amount).toFixed(2)) : ''
           });
         });
       }
       return rows;
-    }).flat();
+    });
 
-    const headers = ['Date', 'Particulars', 'Vch Type', 'Vch No', 'Amount'];
-    exportUtils.exportToCSV(`Daybook_${period.replace(/ /g, '_')}`, 'Daybook', exportData, headers, settings);
+    const totalAmount = vouchers.reduce((sum, v) => sum + (Number(v.total_amount) || 0), 0);
+    const headers = ['Date', 'Particulars', 'Vch Type', 'Vch No', 'Serial No', 'Amount'];
+    exportStructuredExcel({
+      fileName: `Daybook_${startDate}_to_${endDate}`,
+      sheetName: 'Daybook',
+      title: 'Daybook Report',
+      subtitle: daybookPeriodSubtitle,
+      headers,
+      rows: exportData,
+      footerRow: {
+        'Date': '',
+        'Particulars': 'TOTAL',
+        'Vch Type': '',
+        'Vch No': '',
+        'Serial No': '',
+        'Amount': Number(totalAmount.toFixed(2))
+      },
+      settings,
+      company
+    });
+  };
+
+  const handleEmailReport = () => {
+    const totalAmount = vouchers.reduce((sum, v) => sum + (Number(v.total_amount) || 0), 0);
+    shareReportViaEmail({
+      title: 'Daybook Report',
+      subtitle: daybookPeriodSubtitle,
+      settings,
+      company,
+      summaryLines: [
+        `Total Vouchers: ${vouchers.length}`,
+        `Total Voucher Amount: ${formatNumber(totalAmount)}`,
+        '',
+        ...vouchers.slice(0, 15).map(v => `- ${formatReportDate(v.v_date, settings.dateFormat)} | ${v.v_type} #${formatVoucherNo(v.v_no || v.reference_no)} | ${getLedgerName(v)}: ${formatNumber(v.total_amount || 0)}`),
+        ...(vouchers.length > 15 ? [`... and ${vouchers.length - 15} more vouchers`] : [])
+      ]
+    });
   };
 
   const handleShareWhatsApp = (v: any) => {
@@ -609,7 +700,7 @@ export function Daybook() {
               </div>
             </div>
           </div>
-          <div className="flex gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
             <button 
               type="button"
               onClick={() => {
@@ -624,7 +715,7 @@ export function Daybook() {
             </button>
             <button 
               onClick={() => setIsConfigOpen(true)}
-              className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap"
+              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap"
               title={t('daybook.configureReport')}
             >
               <SettingsIcon className="w-3 h-3" /> {t('common.f12Configure')}
@@ -647,18 +738,26 @@ export function Daybook() {
             <button 
               onClick={handleDownloadExcel}
               disabled={vouchers.length === 0}
-              className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
-              title={t('daybook.downloadExcel')}
+              className="px-3 py-2 border border-emerald-200 bg-emerald-50/70 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
+              title="Export Excel (.xlsx)"
             >
-              <Download className="w-3 h-3" /> {t('common.excel')}
+              <FileSpreadsheet className="w-3.5 h-3.5" /> {t('common.excel')}
             </button>
             <button 
               onClick={handleDownloadPDF}
               disabled={vouchers.length === 0}
-              className="flex-1 sm:flex-none px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
+              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
               title="Print to PDF (Save professional financial statement offline)"
             >
               <Download className="w-3 h-3" /> PRINT TO PDF
+            </button>
+            <button
+              onClick={handleEmailReport}
+              disabled={vouchers.length === 0}
+              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
+              title="Share Summary via Email"
+            >
+              <Mail className="w-3.5 h-3.5" /> EMAIL
             </button>
           </div>
         </div>
@@ -768,20 +867,20 @@ export function Daybook() {
             <table className="w-full text-left text-xs min-w-[700px] lg:min-w-0 border-separate border-spacing-0">
               <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-sm shadow-sm ring-1 ring-border">
                 <tr className="text-gray-500 uppercase text-[9px] font-bold tracking-widest">
-                  <th className="px-4 lg:px-6 py-4 font-medium border-b border-border sticky top-0">{t('common.date')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium border-b border-border sticky top-0">{t('common.particulars')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0">{t('common.vchType')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0">Ref No</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0">Serial No</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right border-b border-border sticky top-0">{t('common.amount')}</th>
-                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right border-b border-border sticky top-0">{t('common.share')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium border-b border-border sticky top-0 align-middle">{t('common.date')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium border-b border-border sticky top-0 align-middle">{t('common.particulars')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0 align-middle">{t('common.vchType')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0 align-middle">Ref No</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0 align-middle">Serial No</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right border-b border-border sticky top-0 align-middle">{t('common.amount')}</th>
+                  <th className="px-4 lg:px-6 py-4 font-medium uppercase text-right border-b border-border sticky top-0 align-middle">{t('common.share')}</th>
                 </tr>
               </thead>
               <tbody className="text-foreground/80">
                 {loading ? (
-                  <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-500">{t('daybook.loading')}</td></tr>
+                  <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-500 align-middle">{t('daybook.loading')}</td></tr>
                 ) : vouchers.length === 0 ? (
-                  <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-500">{t('daybook.noTransactionsPeriod')}</td></tr>
+                  <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-500 align-middle">{t('daybook.noTransactionsPeriod')}</td></tr>
                 ) : paginatedVouchers.map((v, idx) => (
                   <React.Fragment key={v.id}>
                     <tr 
@@ -802,8 +901,8 @@ export function Daybook() {
                         });
                       }}
                     >
-                      <td className="px-4 lg:px-6 py-4 whitespace-nowrap">{formatReportDate(v.v_date, settings.dateFormat)}</td>
-                      <td className="px-4 lg:px-6 py-4">
+                      <td className="px-4 lg:px-6 py-4 whitespace-nowrap align-middle">{formatReportDate(v.v_date, settings.dateFormat)}</td>
+                      <td className="px-4 lg:px-6 py-4 align-middle">
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2">
                             <span className="text-foreground font-bold">
@@ -824,13 +923,13 @@ export function Daybook() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 lg:px-6 py-4 uppercase text-[10px] text-gray-500">{v.v_type}</td>
-                      <td className="px-4 lg:px-6 py-4">{formatVoucherNo(v.v_no || v.reference_no)}</td>
-                      <td className="px-4 lg:px-6 py-4 font-mono text-[10px] text-emerald-600">
+                      <td className="px-4 lg:px-6 py-4 uppercase text-[10px] text-gray-500 align-middle">{v.v_type}</td>
+                      <td className="px-4 lg:px-6 py-4 align-middle">{formatVoucherNo(v.v_no || v.reference_no)}</td>
+                      <td className="px-4 lg:px-6 py-4 font-mono text-[10px] text-emerald-600 align-middle">
                         {v.serial_no || v.auto_serial_no || '-'}
                       </td>
-                      <td className="px-4 lg:px-6 py-4 text-right text-foreground font-bold">৳ {formatNumber(v.total_amount)}</td>
-                      <td className="px-4 lg:px-6 py-4 text-right">
+                      <td className="px-4 lg:px-6 py-4 text-right text-foreground font-bold align-middle">৳ {formatNumber(v.total_amount)}</td>
+                      <td className="px-4 lg:px-6 py-4 text-right align-middle">
                         <div className="flex justify-end items-center gap-1.5">
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(v); }}
@@ -869,25 +968,25 @@ export function Daybook() {
                     </tr>
                     {config.format === 'Detailed' && v.inventory && v.inventory.length > 0 && (
                       <tr className="bg-foreground/[0.02] border-b border-border/30">
-                        <td colSpan={6} className="px-4 lg:px-12 py-2">
+                        <td colSpan={7} className="px-4 lg:px-12 py-2 align-middle">
                           <table className="w-full text-[10px] text-gray-500">
                             <thead>
                               <tr className="border-b border-border/20 uppercase text-[8px]">
-                            <th className="py-1 text-left">{t('common.nameOfItem')}</th>
-                            <th className="py-1 text-left">{t('common.godown')}</th>
-                            <th className="py-1 text-right">{t('common.quantity')}</th>
-                            <th className="py-1 text-right">{t('common.free')}</th>
-                            <th className="py-1 text-right">{t('common.rate')}</th>
-                            <th className="py-1 text-center">{t('common.per')}</th>
-                            <th className="py-1 text-right">{t('common.discPercent')}</th>
-                            <th className="py-1 text-right">{t('common.taxPercent')}</th>
-                            <th className="py-1 text-right">{t('common.amount')}</th>
+                                <th className="py-1 text-left align-middle">{t('common.nameOfItem')}</th>
+                                <th className="py-1 text-left align-middle">{t('common.godown')}</th>
+                                <th className="py-1 text-right align-middle">{t('common.quantity')}</th>
+                                <th className="py-1 text-right align-middle">{t('common.free')}</th>
+                                <th className="py-1 text-right align-middle">{t('common.rate')}</th>
+                                <th className="py-1 text-center align-middle">{t('common.per')}</th>
+                                <th className="py-1 text-right align-middle">{t('common.discPercent')}</th>
+                                <th className="py-1 text-right align-middle">{t('common.taxPercent')}</th>
+                                <th className="py-1 text-right align-middle">{t('common.amount')}</th>
                               </tr>
                             </thead>
                             <tbody>
                               {v.inventory.map((item: any, iIdx: number) => (
                                 <tr key={iIdx} className="border-b border-border/10 last:border-0">
-                                  <td className="py-1">
+                                  <td className="py-1 align-middle">
                                     <div className="flex flex-col">
                                       <span>{items.find(i => i.id === item.item_id)?.name || 'Unknown Item'}</span>
                                       {config.showStockDescriptions && item.description && (
@@ -895,14 +994,14 @@ export function Daybook() {
                                       )}
                                     </div>
                                   </td>
-                                  <td className="py-1">{godowns.find(g => g.id === item.godown_id)?.name || '-'}</td>
-                                  <td className="py-1 text-right">{formatQuantity(item.qty, item.unit)}</td>
-                                  <td className="py-1 text-right">{formatQuantity(item.free_qty || 0, item.unit)}</td>
-                                  <td className="py-1 text-right">{formatNumber(item.rate)}</td>
-                                  <td className="py-1 text-center">{item.unit || 'pcs'}</td>
-                                  <td className="py-1 text-right">{item.disc_percent || 0}%</td>
-                                  <td className="py-1 text-right">{item.tax_percent || 0}%</td>
-                                  <td className="py-1 text-right font-bold text-foreground/70">{formatNumber(item.amount)}</td>
+                                  <td className="py-1 align-middle">{godowns.find(g => g.id === item.godown_id)?.name || '-'}</td>
+                                  <td className="py-1 text-right align-middle">{formatQuantity(item.qty, item.unit)}</td>
+                                  <td className="py-1 text-right align-middle">{formatQuantity(item.free_qty || 0, item.unit)}</td>
+                                  <td className="py-1 text-right align-middle">{formatNumber(item.rate)}</td>
+                                  <td className="py-1 text-center align-middle">{item.unit || 'pcs'}</td>
+                                  <td className="py-1 text-right align-middle">{item.disc_percent || 0}%</td>
+                                  <td className="py-1 text-right align-middle">{item.tax_percent || 0}%</td>
+                                  <td className="py-1 text-right font-bold text-foreground/70 align-middle">{formatNumber(item.amount)}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -1016,6 +1115,44 @@ export function Daybook() {
         onRefresh={fetchVouchers}
         onDeleted={fetchVouchers}
       />
+
+      {fullPageHtml && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 shrink-0">
+              <div className="font-bold text-sm text-gray-900">
+                Full Page Preview — Daybook ({daybookPeriodSubtitle})
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePrint}
+                  className="px-3 py-1.5 text-xs font-bold uppercase border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 rounded flex items-center gap-1.5"
+                >
+                  <Printer className="w-3.5 h-3.5" /> {t('common.print')}
+                </button>
+                <button
+                  onClick={handleDownloadPDF}
+                  className="px-3 py-1.5 text-xs font-bold uppercase bg-gray-900 text-white hover:opacity-90 rounded flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" /> PDF
+                </button>
+                <button
+                  onClick={() => setFullPageHtml(null)}
+                  className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-200 rounded"
+                  aria-label="Close preview"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <iframe
+              title="Daybook Full Page Preview"
+              srcDoc={fullPageHtml}
+              className="flex-1 w-full border-0 bg-white"
+            />
+          </div>
+        </div>
+      )}
     </div>
   </div>
 );

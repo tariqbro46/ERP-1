@@ -24,19 +24,25 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { erpService } from '../../services/erpService';
+import { EnterpriseSaaSHero } from '../../components/landing/EnterpriseSaaSHero';
+import { PrecisionEnterpriseHero } from '../../components/landing/PrecisionEnterpriseHero';
+import { ErpModuleHighlights } from '../../components/landing/ErpModuleHighlights';
 import { ThreeUiHeroDashboard } from '../../components/landing/ThreeUiHeroDashboard';
 import { MonochromeParallaxHero } from '../../components/landing/MonochromeParallaxHero';
+import { ThreeInteractiveHero } from '../../components/landing/ThreeInteractiveHero';
+import { ThreeMatrixHero } from '../../components/landing/ThreeMatrixHero';
 import { cn } from '../../lib/utils';
 import { LATEST_VERSION } from '../../data/releaseNotes';
 
 export const Home = () => {
   const { t, language } = useLanguage();
   const { user } = useAuth();
+  const settings = useSettings();
   const { 
     adaptiveLoaderEnabled = true, 
     skeletonEnabled = true, 
     skeletonDashboardOnly = true,
-    heroDesignStyle = 'threeui',
+    heroDesignStyle = 'monochrome-parallax',
     heroThreeUiTheme = 'aurora-navy',
     heroThreeUiGlowColor = 'cyan',
     heroThreeUiPerspective = 'cinematic',
@@ -44,8 +50,15 @@ export const Home = () => {
     heroThreeUiShowFloatingBadges = true,
     heroThreeUiShowExperienceHubDemo = true,
     heroThreeUiShowSimulateVoucher = true,
-    heroThreeUiEnableTiltDefault = false
-  } = useSettings();
+    heroThreeUiEnableTiltDefault = false,
+    heroShowExploreLiveDemo = true
+  } = settings;
+
+  // Normalize hero style: any legacy 'three-matrix' / 'three-interactive' or falsy strictly maps to 'monochrome-parallax'
+  const rawStyle = heroDesignStyle || 'monochrome-parallax';
+  const effectiveHeroStyle = (rawStyle === 'three-matrix' || rawStyle === 'three-interactive')
+    ? 'monochrome-parallax'
+    : rawStyle;
 
   const DEFAULT_CONTENT = {
     heroTitle: language === 'bn' ? 'বুদ্ধিমত্তার সাথে আপনার ব্যবসা পরিচালনা করুন' : 'Manage Your Business With Pure Intelligence',
@@ -62,12 +75,12 @@ export const Home = () => {
     heroCtaSecondaryText: "#ffffff",
     heroExperienceHubButtonText: language === 'bn' ? 'এক্সপেরিয়েন্স হাব (ডেমো)' : 'Experience Hub (Demo)',
     heroSimulateVoucherButtonText: language === 'bn' ? 'সিমুলেট ভাউচার ইভেন্ট' : 'Simulate Voucher Event',
-    heroDashboardCompanyName: "TallyFlow ERP",
-    heroDashboardCompanyLocation: "DHAKA, BANGLADESH",
+    heroDashboardCompanyName: settings.appIdentity?.appName || "TallyFlow ERP",
+    heroDashboardCompanyLocation: "ENTERPRISE CLOUD",
     heroDashboardTitle: "DASHBOARD",
     heroDashboardGreeting: language === 'bn' ? 'শুভ অপরাহ্ন, User_Name' : 'Good Afternoon, User_Name',
-    heroDashboardBadgeText: "TALLYFLOW ENTERPRISE HUB",
-    heroDashboardSlogan: "TALLYFLOW ERP | SMART SOLUTION",
+    heroDashboardBadgeText: `${(settings.appIdentity?.appShortName || 'ERP').toUpperCase()} ENTERPRISE HUB`,
+    heroDashboardSlogan: `${(settings.appIdentity?.appName || 'TallyFlow ERP').toUpperCase()} | ${settings.appIdentity?.appTagline || 'SMART SOLUTION'}`,
     heroDashboardNotice: "SECURE CLOUD ENTERPRISE ENVIRONMENT • ACTIVE SESSION",
     heroDashboardAvatarInitials: "UN",
     enable3dTilt: false,
@@ -331,7 +344,7 @@ export const Home = () => {
     }
   }
 
-  const isMonochrome = heroDesignStyle === 'monochrome-parallax' || heroDesignStyle === 'three-interactive' || heroDesignStyle === 'three-matrix';
+  const isMonochrome = effectiveHeroStyle === 'monochrome-parallax';
 
   return (
     <div className={cn(
@@ -383,12 +396,19 @@ export const Home = () => {
       <main className="flex-1">
         {/* Hero Section */}
         {content.showHero && (
-          isMonochrome ? (
-            <MonochromeParallaxHero
+          effectiveHeroStyle === 'enterprise-saas' ? (
+            <EnterpriseSaaSHero
               content={content}
               onOpenDemoModal={() => setShowDemoModal(true)}
+              showExploreLiveDemo={heroShowExploreLiveDemo}
             />
-          ) : heroDesignStyle === 'threeui' ? (
+          ) : effectiveHeroStyle === 'precision-enterprise' ? (
+            <PrecisionEnterpriseHero
+              content={content}
+              onOpenDemoModal={() => setShowDemoModal(true)}
+              showExploreLiveDemo={heroShowExploreLiveDemo}
+            />
+          ) : effectiveHeroStyle === 'threeui' ? (
             <ThreeUiHeroDashboard
               content={content}
               onOpenDemoModal={() => setShowDemoModal(true)}
@@ -401,7 +421,7 @@ export const Home = () => {
               showSimulateVoucher={heroThreeUiShowSimulateVoucher}
               enableTiltDefault={heroThreeUiEnableTiltDefault ?? rawContent.enable3dTilt ?? false}
             />
-          ) : (
+          ) : effectiveHeroStyle === 'default' ? (
           <section className="relative pt-28 sm:pt-36 pb-20 overflow-hidden bg-white">
             
             {/* Subtle grid pattern background matching Login page */}
@@ -499,7 +519,7 @@ export const Home = () => {
                     {/* Simulated OS Browser Tab and Action Bar */}
                     <div className="bg-[#fafafa] border-b border-slate-100 px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        {/* Softr style macOS lights */}
+                        {/* OS style window lights */}
                         <div className="flex gap-1.5">
                           <span className="w-2.5 h-2.5 rounded-full bg-rose-400 block" />
                           <span className="w-2.5 h-2.5 rounded-full bg-amber-400 block" />
@@ -512,7 +532,7 @@ export const Home = () => {
                             <div className="w-2 h-2 rounded-[1px] bg-[#3b82f6]" />
                             <div className="w-2 h-2 rounded-[1px] bg-[#eab308]" />
                           </div>
-                          <span className="text-xs font-bold text-slate-800 tracking-tight">TallyFlow ERP</span>
+                          <span className="text-xs font-bold text-slate-800 tracking-tight">{settings.appIdentity?.appName || 'TallyFlow ERP'}</span>
                           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-bold ml-1.5 flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             {LATEST_VERSION}
@@ -747,6 +767,11 @@ export const Home = () => {
               </div>
             </div>
           </section>
+          ) : (
+            <MonochromeParallaxHero
+              content={content}
+              onOpenDemoModal={() => setShowDemoModal(true)}
+            />
           )
         )}
 
@@ -780,6 +805,9 @@ export const Home = () => {
             </div>
           </section>
         )}
+
+        {/* Secondary ERP Module Highlights Section (Inventory, Accounting, Payroll) */}
+        <ErpModuleHighlights isMonochrome={isMonochrome} />
 
         {/* Trending Bento Grid Features Section */}
         {!isMonochrome && content.showFeatures && (

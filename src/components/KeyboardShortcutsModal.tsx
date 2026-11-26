@@ -9,6 +9,8 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSettings } from '../contexts/SettingsContext';
+import { DEFAULT_APP_BRANDING } from '../constants/appIdentity';
 import { cn } from '../lib/utils';
 
 export interface ShortcutItem {
@@ -395,6 +397,8 @@ export function KeyboardShortcutsModal({ isOpen: controlledIsOpen, onClose }: Ke
   const { language } = useLanguage();
   const isBn = language === 'bn';
   const navigate = useNavigate();
+  const { appIdentity } = useSettings();
+  const appDisplayName = appIdentity?.appName || DEFAULT_APP_BRANDING.appName;
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -505,7 +509,7 @@ export function KeyboardShortcutsModal({ isOpen: controlledIsOpen, onClose }: Ke
                   </span>
                   
                   <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-black bg-white text-indigo-950 shadow-xs">
-                    TallyFlow ERP Hotkeys
+                    {appDisplayName} Hotkeys
                   </span>
 
                   <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-white/80 font-medium">
@@ -515,7 +519,7 @@ export function KeyboardShortcutsModal({ isOpen: controlledIsOpen, onClose }: Ke
                 </div>
 
                 <h2 className="text-base sm:text-xl font-black tracking-tight text-white pt-1 leading-snug">
-                  {isBn ? "ট্যালিফ্লো ইআরপি-র সকল কিবোর্ড শর্টকাট ও কার্যপদ্ধতি" : "All Available Keyboard Shortcuts & Functional Analysis"}
+                  {isBn ? `${appDisplayName}-এর সকল কিবোর্ড শর্টকাট ও কার্যপদ্ধতি` : "All Available Keyboard Shortcuts & Functional Analysis"}
                 </h2>
                 <p className="text-xs text-white/90 leading-relaxed max-w-3xl lg:max-w-4xl">
                   {isBn 
@@ -703,7 +707,7 @@ export function KeyboardShortcutsModal({ isOpen: controlledIsOpen, onClose }: Ke
               <span>
                 {isBn 
                   ? "যে কোনো সময় '?' অথবা 'Alt + H' চেপে এই শর্টকাট চিটশিট খুলতে পারেন।" 
-                  : "Tip: Press '?' or 'Alt + H' anywhere across TallyFlow to reopen this cheatsheet."}
+                  : `Tip: Press '?' or 'Alt + H' anywhere across ${appDisplayName} to reopen this cheatsheet.`}
               </span>
             </div>
 

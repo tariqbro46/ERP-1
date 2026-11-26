@@ -3,6 +3,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../contexts/LanguageContext';
+import { resolveCompanyLegalIdentity } from '../constants/appIdentity';
 
 interface ReportPrintHeaderProps {
   title: string;
@@ -17,26 +18,29 @@ export function ReportPrintHeader({ title, subtitle, className }: ReportPrintHea
 
   if (!settings) return null;
 
+  const legal = resolveCompanyLegalIdentity(settings, company);
+  const headerName = settings.printHeader || legal.companyName;
+
   return (
     <div className={cn("hidden print:block mb-8 border-b-2 border-primary/20 pb-6", className)}>
       <div className="flex justify-between items-start gap-8">
         {/* Company Info */}
         <div className="flex-1 space-y-2">
-          {settings.showPrintHeader && (
+          {settings.showPrintHeader && headerName && (
             <h1 className="text-3xl font-black text-primary uppercase tracking-tighter">
-              {settings.printHeader || company?.name || 'Your Company'}
+              {headerName}
             </h1>
           )}
           
           <div className="text-xs font-semibold text-gray-600 space-y-1">
-            {settings.showPrintPhone && settings.printPhone && (
-              <p>Phone: {settings.printPhone}</p>
+            {settings.showPrintPhone && legal.printPhone && (
+              <p>Phone: {legal.printPhone}</p>
             )}
-            {settings.showPrintEmail && settings.printEmail && (
-              <p>Email: {settings.printEmail}</p>
+            {settings.showPrintEmail && legal.printEmail && (
+              <p>Email: {legal.printEmail}</p>
             )}
-            {settings.showPrintWebsite && settings.printWebsite && (
-              <p>Website: {settings.printWebsite}</p>
+            {settings.showPrintWebsite && legal.printWebsite && (
+              <p>Website: {legal.printWebsite}</p>
             )}
           </div>
         </div>

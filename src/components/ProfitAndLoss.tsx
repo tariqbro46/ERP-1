@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Printer, Download, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Loader2, Printer, Download, FileSpreadsheet, Mail, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react';
 import { SkeletonLoader } from './SkeletonLoader';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { printProfitAndLoss, printUtils } from '../utils/printUtils';
-import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
-import { pdfExportService } from '../utils/pdfExportService';
+import { executePrint } from '../utils/printUtils';
+import { exportToCSV, exportStructuredExcel, shareReportViaEmail } from '../utils/exportUtils';
+import { printToPDF } from '../utils/pdfExportService';
+import {
+  DEFAULT_APP_BRANDING,
+  escapeHtml,
+  resolveCompanyLegalIdentity,
+  sanitizeAssetUrl
+} from '../constants/appIdentity';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { formatNumber, cn, ensureDate, parseEntryDate, getMovementType } from '../lib/utils';
@@ -16,7 +22,7 @@ import { useNavigate } from 'react-router-dom';
 
 export function ProfitAndLoss() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, company } = useAuth();
   const { t } = useLanguage();
   const settings = useSettings();
   const [loading, setLoading] = useState(true);
@@ -251,28 +257,340 @@ export function ProfitAndLoss() {
   
   const netProfit = creditTotal - debitTotal;
 
+  const plPeriodSubtitle = `For the Period: ${formatReportDate(startDate, settings.dateFormat)} to ${formatReportDate(endDate, settings.dateFormat)}`;
+
+  const buildProfitAndLossHtml = () => {
+    const legal = resolveCompanyLegalIdentity(settings, company);
+    const isLayout2 = settings?.reportLayout === 'Layout 2';
+    const safeLogoUrl = sanitizeAssetUrl(legal.companyLogo || '');
+    const logoHtml = safeLogoUrl
+      ? `<div style="width: 68px; height: 68px; margin-right: 16px; flex-shrink: 0;"><img src="${escapeHtml(safeLogoUrl)}" style="width: 100%; height: 100%; object-fit: contain;" /></div>`
+      : '';
+
+    const contactItems: string[] = [];
+    if (settings?.showPrintPhone !== false && legal.printPhone) contactItems.push(`Tel: ${escapeHtml(legal.printPhone)}`);
+    if (settings?.showPrintEmail !== false && legal.printEmail) contactItems.push(`Email: ${escapeHtml(legal.printEmail)}`);
+    if (settings?.showPrintWebsite !== false && legal.printWebsite) contactItems.push(`Web: ${escapeHtml(legal.printWebsite)}`);
+
+    const softwareFooter =
+      settings?.showDeveloperContact !== false
+        ? (settings?.appIdentity?.softwareFooterText ||
+          settings?.developerContactText ||
+          DEFAULT_APP_BRANDING.softwareFooterText)
+        : '';
+
+    const sigAlignment = settings?.signatureAlignment || 'spread';
+    const justifyMap: Record<string, string> = {
+      spread: 'space-between',
+      left: 'flex-start',
+      center: 'center',
+      right: 'flex-end'
+    };
+
+    const computedFinalTotal = Math.max(
+      debitTotal + (netProfit > 0 ? netProfit : 0),
+      creditTotal + (netProfit < 0 ? Math.abs(netProfit) : 0)
+    );
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Profit & Loss Account</title>
+          <style>
+            * { box-sizing: border-box; }
+            body {
+              font-family: ${isLayout2 ? 'Arial, Helvetica, sans-serif' : "'JetBrains Mono', Courier, monospace"};
+              color: #000000;
+              background: #ffffff;
+              padding: 16px;
+              margin: 0;
+              font-size: 10px;
+              line-height: 1.4;
+            }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+            th, td {
+              border: 1px solid ${isLayout2 ? '#000' : '#111827'};
+              padding: 5px 8px;
+              font-size: 9.5px;
+              vertical-align: middle !important;
+            }
+            th {
+              background-color: ${isLayout2 ? '#ffffff' : '#f3f4f6'};
+              text-transform: uppercase;
+              font-weight: 800;
+            }
+            .total-row td {
+              font-weight: 800;
+              border-top: 2px solid #000;
+              border-bottom: 3px double #000;
+              background-color: ${isLayout2 ? '#ffffff' : '#f9fafb'};
+            }
+            @media print {
+              @page { margin: 10mm; }
+            }
+          </style>
+        </head>
+        <body>
+          <div style="position: relative; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="position: absolute; top: 0; right: 0; font-size: 10px; font-weight: 700; color: #374151; font-family: monospace;">Page 1</div>
+            <div style="display: flex; align-items: center; justify-content: center;">
+              ${logoHtml}
+              <div style="flex: 1; text-align: center;">
+                ${legal.companyName ? `<div style="font-size: 20px; font-weight: 800; text-transform: uppercase;">${escapeHtml(legal.companyName)}</div>` : ''}
+                ${legal.companyAddress ? `<div style="font-size: 10px; color: #374151; margin-top: 2px; white-space: pre-line;">${escapeHtml(legal.companyAddress)}</div>` : ''}
+                ${legal.vatBinTin ? `<div style="font-size: 9px; color: #374151; margin-top: 2px;">VAT/BIN/TIN: ${escapeHtml(legal.vatBinTin)}</div>` : ''}
+                ${contactItems.length > 0 ? `<div style="font-size: 9px; color: #4b5563; margin-top: 2px;">${contactItems.join(' | ')}</div>` : ''}
+                ${settings?.showPrintHeader !== false && legal.printHeader ? `<div style="font-size: 10px; font-style: italic; color: #4b5563; margin-top: 3px;">${escapeHtml(legal.printHeader)}</div>` : ''}
+                <div style="margin-top: 8px;">
+                  <span style="display: inline-block; font-size: 14px; font-weight: 800; text-transform: uppercase; border-bottom: 1.5px solid #000; padding-bottom: 1px;">PROFIT &amp; LOSS A/C</span>
+                </div>
+                <div style="font-size: 10px; font-weight: 600; color: #374151; margin-top: 3px;">${escapeHtml(plPeriodSubtitle)}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 12px; width: 100%;">
+            <div style="flex: 1;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="text-align: left; width: 65%;">PARTICULARS (EXPENSES)</th>
+                    <th style="text-align: right; width: 35%;">AMOUNT (৳)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Opening Stock</td>
+                    <td style="text-align: right;">${formatNumber(tradingData.openingStock || 0)}</td>
+                  </tr>
+                  ${(tradingData.purchaseGroups || []).map((g: any) => `
+                    <tr>
+                      <td>${escapeHtml(g.name)}</td>
+                      <td style="text-align: right;">${formatNumber(Math.abs(g.balance || 0))}</td>
+                    </tr>
+                  `).join('')}
+                  ${(tradingData.directExpenseGroups || []).map((g: any) => `
+                    <tr>
+                      <td>${escapeHtml(g.name)}</td>
+                      <td style="text-align: right;">${formatNumber(Math.abs(g.balance || 0))}</td>
+                    </tr>
+                  `).join('')}
+                  ${(plData.indirectExpenseGroups || []).map((g: any) => `
+                    <tr>
+                      <td>${escapeHtml(g.name)}</td>
+                      <td style="text-align: right;">${formatNumber(Math.abs(g.balance || 0))}</td>
+                    </tr>
+                  `).join('')}
+                  ${netProfit > 0 ? `
+                    <tr style="font-weight: 700; color: #15803d; background-color: #f0fdf4;">
+                      <td>Nett Profit (Transferred to Capital)</td>
+                      <td style="text-align: right;">${formatNumber(netProfit)}</td>
+                    </tr>
+                  ` : ''}
+                </tbody>
+                <tfoot>
+                  <tr class="total-row">
+                    <td>TOTAL</td>
+                    <td style="text-align: right;">৳ ${formatNumber(computedFinalTotal)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <div style="flex: 1;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="text-align: left; width: 65%;">PARTICULARS (INCOMES)</th>
+                    <th style="text-align: right; width: 35%;">AMOUNT (৳)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${(tradingData.salesGroups || []).map((g: any) => `
+                    <tr>
+                      <td>${escapeHtml(g.name)}</td>
+                      <td style="text-align: right;">${formatNumber(Math.abs(g.balance || 0))}</td>
+                    </tr>
+                  `).join('')}
+                  ${(plData.indirectIncomeGroups || []).map((g: any) => `
+                    <tr>
+                      <td>${escapeHtml(g.name)}</td>
+                      <td style="text-align: right;">${formatNumber(Math.abs(g.balance || 0))}</td>
+                    </tr>
+                  `).join('')}
+                  <tr>
+                    <td>Closing Stock</td>
+                    <td style="text-align: right;">${formatNumber(tradingData.closingStock || 0)}</td>
+                  </tr>
+                  ${netProfit < 0 ? `
+                    <tr style="font-weight: 700; color: #b91c1c; background-color: #fef2f2;">
+                      <td>Nett Loss (Transferred to Capital)</td>
+                      <td style="text-align: right;">${formatNumber(Math.abs(netProfit))}</td>
+                    </tr>
+                  ` : ''}
+                </tbody>
+                <tfoot>
+                  <tr class="total-row">
+                    <td>TOTAL</td>
+                    <td style="text-align: right;">৳ ${formatNumber(computedFinalTotal)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: ${justifyMap[sigAlignment] || 'space-between'}; gap: 24px; margin-top: 44px;">
+            ${settings?.showSignature1 !== false ? `<div style="border-top: 1px solid #000; width: 160px; text-align: center; padding-top: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;">${escapeHtml(settings?.printSignature1 || 'Prepared By')}</div>` : ''}
+            ${settings?.showSignature2 !== false ? `<div style="border-top: 1px solid #000; width: 160px; text-align: center; padding-top: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;">${escapeHtml(settings?.printSignature2 || 'Checked By')}</div>` : ''}
+            ${settings?.showSignature3 !== false ? `<div style="border-top: 1px solid #000; width: 160px; text-align: center; padding-top: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;">${escapeHtml(settings?.printSignature3 || 'Authorised Signatory')}</div>` : ''}
+          </div>
+
+          <div style="margin-top: 24px; border-top: 1px solid #cbd5e1; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 8.5px; color: #4b5563;">
+            <div>${settings?.showPrintFooter !== false ? escapeHtml(legal.printFooter || settings?.printFooter || '') : ''}</div>
+            <div>${escapeHtml(softwareFooter)}</div>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
+  const buildStructuredRows = () => {
+    const rows: Array<{ side: string; category: string; particulars: string; amount: number }> = [
+      { side: 'Debit (Expenses)', category: 'Trading', particulars: 'Opening Stock', amount: Number((tradingData.openingStock || 0).toFixed(2)) },
+      ...tradingData.purchaseGroups.map((g: any) => ({
+        side: 'Debit (Expenses)',
+        category: 'Purchase Accounts',
+        particulars: g.name,
+        amount: Number((g.balance || 0).toFixed(2))
+      })),
+      ...tradingData.directExpenseGroups.map((g: any) => ({
+        side: 'Debit (Expenses)',
+        category: 'Direct Expenses',
+        particulars: g.name,
+        amount: Number((g.balance || 0).toFixed(2))
+      })),
+      ...plData.indirectExpenseGroups.map((g: any) => ({
+        side: 'Debit (Expenses)',
+        category: 'Indirect Expenses',
+        particulars: g.name,
+        amount: Number((g.balance || 0).toFixed(2))
+      })),
+      ...tradingData.salesGroups.map((g: any) => ({
+        side: 'Credit (Incomes)',
+        category: 'Sales Accounts',
+        particulars: g.name,
+        amount: Number(Math.abs(g.balance || 0).toFixed(2))
+      })),
+      ...plData.indirectIncomeGroups.map((g: any) => ({
+        side: 'Credit (Incomes)',
+        category: 'Indirect Incomes',
+        particulars: g.name,
+        amount: Number(Math.abs(g.balance || 0).toFixed(2))
+      })),
+      { side: 'Credit (Incomes)', category: 'Trading', particulars: 'Closing Stock', amount: Number((tradingData.closingStock || 0).toFixed(2)) }
+    ];
+    return rows;
+  };
+
   const handlePrint = () => {
-    printUtils.printElement('pl-report', 'Profit & Loss Report');
+    executePrint(buildProfitAndLossHtml());
   };
 
   const handleDownloadPDF = () => {
-    pdfExportService.printProfitAndLossToPDF({
-      tradingData: activeTradingData,
-      plData: activePlData,
-      startDate,
-      endDate
-    }, settings);
+    printToPDF({
+      title: 'Profit & Loss Account',
+      subtitle: plPeriodSubtitle,
+      fileName: `Profit_And_Loss_${startDate}_to_${endDate}`,
+      htmlContent: buildProfitAndLossHtml(),
+      settings,
+      company
+    });
+  };
+
+  const handleDownloadExcel = () => {
+    const rows = buildStructuredRows();
+    const computedFinalTotal = Math.max(
+      debitTotal + (netProfit > 0 ? netProfit : 0),
+      creditTotal + (netProfit < 0 ? Math.abs(netProfit) : 0)
+    );
+
+    exportStructuredExcel({
+      fileName: `Profit_And_Loss_${startDate}_to_${endDate}`,
+      sheetName: 'Profit & Loss',
+      title: 'Profit & Loss Account',
+      subtitle: plPeriodSubtitle,
+      headers: ['Side', 'Category', 'Particulars', 'Amount'],
+      rows: rows.map(r => [r.side, r.category, r.particulars, r.amount]),
+      footerRow: [
+        netProfit >= 0 ? 'Debit (Expenses)' : 'Credit (Incomes)',
+        'Summary',
+        netProfit >= 0 ? 'Nett Profit' : 'Nett Loss',
+        Number(Math.abs(netProfit).toFixed(2))
+      ],
+      extraRows: [
+        ['Summary', 'Total', 'Statement Total (Dr = Cr)', Number(computedFinalTotal.toFixed(2))]
+      ],
+      settings,
+      company
+    });
   };
 
   const handleDownload = () => {
-    const exportData: any[] = [];
-    exportData.push({ particulars: 'Opening Stock', amount: tradingData.openingStock });
-    tradingData.purchaseGroups.forEach((g: any) => exportData.push({ particulars: g.name, amount: g.balance }));
-    tradingData.salesGroups.forEach((g: any) => exportData.push({ particulars: g.name, amount: Math.abs(g.balance) }));
-    exportData.push({ particulars: 'Closing Stock', amount: tradingData.closingStock });
-    exportData.push({ particulars: 'NET PROFIT', amount: netProfit });
+    const rows = buildStructuredRows();
+    const computedFinalTotal = Math.max(
+      debitTotal + (netProfit > 0 ? netProfit : 0),
+      creditTotal + (netProfit < 0 ? Math.abs(netProfit) : 0)
+    );
+    const exportData = [
+      ...rows.map(r => ({
+        Side: r.side,
+        Category: r.category,
+        Particulars: r.particulars,
+        Amount: r.amount
+      })),
+      {
+        Side: netProfit >= 0 ? 'Debit (Expenses)' : 'Credit (Incomes)',
+        Category: 'Summary',
+        Particulars: netProfit >= 0 ? 'Nett Profit' : 'Nett Loss',
+        Amount: Number(Math.abs(netProfit).toFixed(2))
+      },
+      {
+        Side: 'Summary',
+        Category: 'Total',
+        Particulars: 'Statement Total',
+        Amount: Number(computedFinalTotal.toFixed(2))
+      }
+    ];
 
-    exportToCSV('Profit_And_Loss', 'Profit & Loss A/c', exportData, ['Particulars', 'Amount'], settings);
+    exportToCSV(
+      `Profit_And_Loss_${startDate}_to_${endDate}`,
+      'Profit & Loss A/c',
+      exportData,
+      ['Side', 'Category', 'Particulars', 'Amount'],
+      settings,
+      company
+    );
+  };
+
+  const handleEmailReport = () => {
+    shareReportViaEmail({
+      title: 'Profit & Loss Account',
+      subtitle: plPeriodSubtitle,
+      settings,
+      company,
+      summaryLines: [
+        `Opening Stock: ${formatNumber(tradingData.openingStock || 0)}`,
+        `Total Purchases: ${formatNumber(totalPurchases)}`,
+        `Direct Expenses: ${formatNumber(totalDirectExp)}`,
+        `Indirect Expenses: ${formatNumber(totalIndirectExp)}`,
+        `Total Sales: ${formatNumber(totalSales)}`,
+        `Indirect Incomes: ${formatNumber(totalIndirectInc)}`,
+        `Closing Stock: ${formatNumber(tradingData.closingStock || 0)}`,
+        `${netProfit >= 0 ? 'Nett Profit' : 'Nett Loss'}: ${formatNumber(Math.abs(netProfit))}`
+      ]
+    });
   };
 
   const dummyTradingData = {
@@ -328,14 +646,33 @@ export function ProfitAndLoss() {
               </div>
             </div>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+            <button
+              onClick={handleDownloadExcel}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-2 text-emerald-700 bg-emerald-50/70 border border-emerald-200 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors text-xs font-bold uppercase disabled:opacity-50"
+              title="Export Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              EXCEL
+            </button>
+            <button
+              onClick={handleDownload}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-2 hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors border border-border text-xs font-bold uppercase disabled:opacity-50"
+              title="Export CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              CSV
+            </button>
             <button 
               onClick={handlePrint}
               disabled={loading}
-              className="p-2 aspect-square hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors border border-border disabled:opacity-50"
-              title="Print"
+              className="flex items-center gap-1.5 px-3 py-2 hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors border border-border text-xs font-bold uppercase disabled:opacity-50"
+              title={t('common.print')}
             >
-              <Printer className="w-5 h-5" />
+              <Printer className="w-4 h-4" />
+              {t('common.print')}
             </button>
             <button 
               onClick={handleDownloadPDF}
@@ -345,6 +682,15 @@ export function ProfitAndLoss() {
             >
               <Download className="w-4 h-4" />
               Print to PDF
+            </button>
+            <button
+              onClick={handleEmailReport}
+              disabled={loading}
+              className="flex items-center gap-1.5 px-3 py-2 hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors border border-border text-xs font-bold uppercase disabled:opacity-50"
+              title="Share Summary via Email"
+            >
+              <Mail className="w-4 h-4" />
+              Email
             </button>
           </div>
         </div>

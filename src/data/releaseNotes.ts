@@ -22,10 +22,80 @@ export interface ReleaseVersion {
   bugFixes: ReleaseNoteItem[];
 }
 
-export const LATEST_VERSION = "v1.9.9.20";
+export const LATEST_VERSION = "v1.9.9.30";
 export const LAST_SEEN_VERSION_KEY = "tallyflow_last_seen_release_version";
 
 export const RELEASE_NOTES: ReleaseVersion[] = [
+  {
+    version: "v1.9.9.30",
+    releaseDate: "November 25, 2026",
+    bnReleaseDate: "২৫ নভেম্বর, ২০২৬",
+    title: "Genuine .xlsx Export Engine, App Identity Isolation, Real-Data Insights & Full BN/EN Localization",
+    bnTitle: "জেনুইন এক্সেল (.xlsx) এক্সপোর্ট, অ্যাপ আইডেন্টিটি আইসোলেশন, রিয়েল-ডেটা বিশ্লেষণ এবং পূর্ণাঙ্গ বাংলা/ইংরেজি লোকালাইজেশন",
+    summary: "Comprehensive release introducing unified structured Excel (.xlsx), Print, PDF, and Email parity across all 10 core financial & inventory reports with XSS/formula-injection hardening, strict App Identity vs. Company Legal Identity isolation, 6-view Founder Operations Console, real-data Dashboard & Financial Insights (zero mock values), synchronized Theme/Design Packs 1–6, and complete 1-to-1 English/Bangla localization (965 keys).",
+    bnSummary: "এই রিলিজে সকল ১০টি মূল আর্থিক ও ইনভেন্টরি রিপোর্টে জেনুইন এক্সেল (.xlsx), প্রিন্ট, পিডিএফ ও ইমেইল এক্সপোর্ট প্যারিটি, XSS ও স্প্রেডশিট ফর্মুলা-ইনজেকশন সুরক্ষা, অ্যাপ আইডেন্টিটি বনাম কোম্পানির আইনি পরিচয়ের পৃথকীকরণ, ৬-ভিউ ফাউন্ডার কনসোল, সম্পূর্ণ রিয়েল-ডেটা ড্যাশবোর্ড ও ব্যাংক রিকনসিলিয়েশন (কোনো মক ডেটা ছাড়া), সিঙ্কড ডিজাইন প্যাক ১–৬ এবং ৯৬৫টি কী-এর পূর্ণাঙ্গ বাংলা ও ইংরেজি অনুবাদ যুক্ত করা হয়েছে।",
+    isLatest: true,
+    newFeatures: [
+      {
+        id: "feat-xlsx-report-parity",
+        title: "Unified .xlsx, Print, PDF & Email Report Engine",
+        bnTitle: "ইউনিফাইড এক্সেল (.xlsx), প্রিন্ট, পিডিএফ ও ইমেইল রিপোর্ট ইঞ্জিন",
+        description: "Upgraded all core financial and inventory reports (Cash Flow, Funds Flow, Negative Reports, Ledger Statement, Ratio Analysis, Daybook, Profit & Loss, Balance Sheet, Trial Balance, Stock Summary) to export genuine structured .xlsx workbooks with zero extra Firestore reads.",
+        bnDescription: "সকল মূল আর্থিক ও ইনভেন্টরি রিপোর্টে (ক্যাশ ফ্লো, ফান্ডস ফ্লো, নেগেটিভ রিপোর্ট, লেজার স্টেটমেন্ট, রেশিও অ্যানালাইসিস, ডেবুক, লাভ-ক্ষতি, ব্যালেন্স শীট, ট্রায়াল ব্যালেন্স, স্টক সামারি) অতিরিক্ত ডাটাবেস রিড ছাড়াই জেনুইন .xlsx এক্সেল, প্রিন্ট, পিডিএফ ও ইমেইল সুবিধা চালু করা হয়েছে।",
+        module: "Reports & Export",
+        badge: "CORE"
+      },
+      {
+        id: "feat-app-identity-isolation",
+        title: "App Identity vs. Company Legal Identity Isolation",
+        bnTitle: "অ্যাপ আইডেন্টিটি ও কোম্পানির আইনি পরিচয় পৃথকীকরণ",
+        description: "Enforced strict separation between system-wide App Branding (appIdentity) and tenant-specific Company Legal Identity across print headers, PDFs, Excel exports, and auth screens.",
+        bnDescription: "প্রিন্ট হেডার, পিডিএফ, এক্সেল ও অথেনটিকেশন স্ক্রিনে সিস্টেমের নিজস্ব ব্র্যান্ডিং এবং প্রতিটি কোম্পানির আলাদা আইনি তথ্য সম্পূর্ণভাবে পৃথক রাখা হয়েছে।",
+        module: "Branding & Security",
+        badge: "SECURITY"
+      },
+      {
+        id: "feat-real-data-insights-dashboard",
+        title: "100% Real-Data Dashboard & Financial Insights",
+        bnTitle: "শতভাগ রিয়েল-ডেটা ড্যাশবোর্ড ও আর্থিক অন্তর্দৃষ্টি",
+        description: "Eliminated all static placeholder KPIs, mock chart fallbacks, and hardcoded sample bank reconciliation rows across Dashboard and Financial Insights, deriving all metrics and bank matching strictly from live company vouchers.",
+        bnDescription: "ড্যাশবোর্ড এবং আর্থিক অন্তর্দৃষ্টি থেকে সব ধরনের নমুনা বা মক সংখ্যা এবং ব্যাংক রিকনসিলিয়েশনের ডামি সারি বাদ দিয়ে শতভাগ প্রকৃত ভাউচার ডেটা থেকে হিসাব ও খালি অবস্থা প্রদর্শন নিশ্চিত করা হয়েছে।",
+        module: "Analytics & Insights",
+        badge: "RELIABILITY"
+      }
+    ],
+    improvements: [
+      {
+        id: "imp-bn-en-parity-965",
+        title: "Complete 1-to-1 English & Bangla Localization (965 Keys)",
+        bnTitle: "সম্পূর্ণ ১-টু-১ বাংলা ও ইংরেজি অনুবাদ প্যারিটি (৯৬৫ কী)",
+        description: "Closed all missing Bangla translation gaps across Settings, Dashboard, Voucher Entry, Item Master, Order Management, Business Intelligence, and Financial Insights.",
+        bnDescription: "সেটিংস, ড্যাশবোর্ড, ভাউচার এন্ট্রি, আইটেম মাস্টার, অর্ডার ম্যানেজমেন্ট, বিজনেস ইন্টেলিজেন্স ও আর্থিক অন্তর্দৃষ্টির সব অনুপস্থিত বাংলা অনুবাদ সম্পূর্ণ করা হয়েছে।",
+        module: "Localization",
+        badge: "BN/EN"
+      },
+      {
+        id: "imp-design-packs-alignment",
+        title: "Synchronized Design Packs 1–6 & Table Vertical Centering",
+        bnTitle: "ডিজাইন প্যাক ১–৬ সিঙ্ক এবং টেবিল সেল উল্লম্ব সারিবদ্ধকরণ",
+        description: "Synchronized Dashboard Design 1–6 presets with Settings and enforced universal middle vertical alignment across UI tables, print views, and exported reports.",
+        bnDescription: "সেটিংসের সাথে ড্যাশবোর্ড ডিজাইন ১–৬ প্রিসেট সিঙ্ক করা হয়েছে এবং সব টেবিল ও রিপোর্টে সেলের লেখা উল্লম্বভাবে মাঝখানে রাখা হয়েছে।",
+        module: "UI/UX",
+        badge: "UI/UX"
+      }
+    ],
+    bugFixes: [
+      {
+        id: "fix-xss-formula-injection-guards",
+        title: "HTML XSS & Spreadsheet Formula Injection Hardening",
+        bnTitle: "HTML XSS এবং স্প্রেডশিট ফর্মুলা ইনজেকশন সুরক্ষা",
+        description: "Applied escapeHtml, sanitizeAssetUrl, and sanitizeSpreadsheetCell guards across report exports and print pipelines, replacing popup-blocked window.open calls with clean iframe printing.",
+        bnDescription: "রিপোর্ট প্রিন্ট ও এক্সপোর্টে escapeHtml, sanitizeAssetUrl ও sanitizeSpreadsheetCell সুরক্ষা যুক্ত করা হয়েছে এবং নিরাপদ iframe প্রিন্টিং ব্যবহার করা হয়েছে।",
+        module: "Security",
+        badge: "FIX"
+      }
+    ]
+  },
   {
     version: "v1.9.9.20",
     releaseDate: "November 06, 2026",
@@ -34,7 +104,7 @@ export const RELEASE_NOTES: ReleaseVersion[] = [
     bnTitle: "কোটা ইন্টেলিজেন্স কনসোল, স্ট্রিক্ট কোম্পানি লকআউট এবং রিয়েল-টাইম অটো-আনলক ইঞ্জিন",
     summary: "Major operational governance upgrade introducing the wide light-themed Founder Quota Decision Console matching the Database Quota Intelligence layout (custom limit adjustment, quick presets +5k/+10k/+20k/+50k/Unlimited, default unticked usage reset), strict zero-bypass lockout across all user roles (including Company Admins) upon quota exhaustion, real-time instant modal dismissal on founder approval, and robust defensive guards for voucher inventory parsing.",
     bnSummary: "কোটা সিকিউরিটি ও অপারেশন্সের জন্য একটি গুরুত্বপূর্ণ রিলিজ: 'Database Quota & Operations Intelligence' আদলে ফাউন্ডার প্যানেলে প্রিমিয়াম ওয়াইড ২-কলাম কোটা অনুমোদন কনসোল যুক্ত করা হয়েছে (ডিফল্ট আন-টিকড কাউন্টার রিসেট, কুইক প্রিসেট চিপস, কাস্টম লিমিট ইনপুট এবং লাইভ ক্যালকুলেশন প্রিভিউসহ); কোম্পানি কোটা শেষ হলে কোনো রোল (এমনকি কোম্পানি অ্যাডমিনও) ডাটা রিড/রাইট/মডিফাই বাইপাস করতে পারবে না; ফাউন্ডার কোটা বৃদ্ধি করার সাথে সাথে ক্লায়েন্টদের অ্যাপ রিয়েল-টাইমে অটো-আনলক হবে; এবং ভাউচার এডিটের সময় ফাঁকা বা ত্রুটিপূর্ণ ইনভেন্টরির ক্ষেত্রে ডিফেনসিভ গার্ড যুক্ত করা হয়েছে।",
-    isLatest: true,
+    isLatest: false,
     newFeatures: [
       {
         id: "feat-founder-quota-approval-console",

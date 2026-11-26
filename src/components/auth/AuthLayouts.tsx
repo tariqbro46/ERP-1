@@ -19,6 +19,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { DEFAULT_APP_BRANDING, sanitizeAssetUrl } from '../../constants/appIdentity';
 
 export interface AuthLayoutProps {
   template: AuthTemplate;
@@ -59,14 +60,14 @@ export interface AuthLayoutProps {
 export const AUTH_TEMPLATE_OPTIONS = [
   {
     id: 'softr' as AuthTemplate,
-    name: 'Softr Studio (Exact 1:1)',
-    description: 'Exact Softr split screen with grid canvas, geometric rings, and floating client testimonial card.',
-    badge: 'Softr Studio 1:1'
+    name: 'Studio Split (Modern Grid)',
+    description: 'Clean split screen with geometric grid canvas and floating client testimonial card.',
+    badge: 'Studio Split'
   },
   {
     id: 'softr-split' as AuthTemplate,
-    name: 'Softr Minimal Centered',
-    description: 'Pure centered Softr card on pristine light canvas with Google and SSO options.',
+    name: 'Minimal Centered Card',
+    description: 'Pure centered card on pristine light canvas with Google and SSO options.',
     badge: 'Clean Minimal'
   },
   {
@@ -290,7 +291,9 @@ export function SoftrAuthLayout({
   children
 }: AuthLayoutProps) {
   const { showNotification } = useNotification();
-  const defaultQuote = "“We have a very unique way of managing projects and collaborating — we're very process- and data-driven. With Softr, we were able to unite our project management in one platform.”";
+  const safeLogoUrl = sanitizeAssetUrl(brandLogoUrl);
+  const resolvedBrandName = brandName || DEFAULT_APP_BRANDING.appName;
+  const defaultQuote = "“We needed precision double-entry accounting and real-time inventory control across every branch. This platform unified our entire finance operation.”";
   const defaultAuthor = "Natalie Neumann";
   const defaultTitle = "COO, Designity";
   const defaultAvatar = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=160&q=80";
@@ -303,10 +306,10 @@ export function SoftrAuthLayout({
           {/* Top Left Home button */}
           <HomeButton onClick={onBackToHome} />
 
-          {/* Softr Style Brand Logo */}
+          {/* App Identity Brand Logo */}
           <div className="flex items-center gap-2.5 mb-8">
-            {brandLogoUrl ? (
-              <img src={brandLogoUrl} alt={brandName || "Logo"} className="h-7 w-auto object-contain" />
+            {safeLogoUrl ? (
+              <img src={safeLogoUrl} alt={resolvedBrandName} className="h-7 w-auto object-contain" referrerPolicy="no-referrer" />
             ) : (
               <div className="flex items-center gap-1">
                 <div className="w-3.5 h-3.5 rounded-sm bg-[#f97316]" />
@@ -316,7 +319,7 @@ export function SoftrAuthLayout({
               </div>
             )}
             <span className="text-xl font-bold tracking-tight text-slate-900">
-              {brandName || "softr"}
+              {resolvedBrandName}
             </span>
           </div>
 
@@ -326,13 +329,13 @@ export function SoftrAuthLayout({
               className="text-2xl font-bold text-slate-900 tracking-tight"
               style={titleColor ? { color: titleColor } : undefined}
             >
-              {title || (isRegister ? "Start building with Softr" : "Nice seeing you again, pal!")}
+              {title || (isRegister ? "Create your enterprise workspace" : DEFAULT_APP_BRANDING.defaultAuthHeading)}
             </h1>
             <p 
               className="text-[13px] text-slate-500 mt-1.5 leading-normal"
               style={subtitleColor ? { color: subtitleColor } : undefined}
             >
-              {subtitle || (isRegister ? "Join thousands of teams building powerful portals." : "Can't wait to see what you build today")}
+              {subtitle || (isRegister ? "Join thousands of teams running live accounting & inventory operations." : "Sign in to access your enterprise workspace")}
             </p>
           </div>
 
@@ -340,7 +343,7 @@ export function SoftrAuthLayout({
           <div className="space-y-2.5 mb-4">
             <GoogleButton onClick={onGoogleSignIn} loading={googleLoading} text={googleButtonText} />
             <SSOButton 
-              onClick={() => showNotification("Single Sign-On (SSO) is available for Enterprise workspaces. Contact support at sapientman46@gmail.com for setup.", "info")} 
+              onClick={() => showNotification(`Single Sign-On (SSO) is available for Enterprise workspaces. Contact ${DEFAULT_APP_BRANDING.supportEmail} for setup.`, "info")} 
               text={ssoButtonText} 
             />
           </div>
@@ -383,7 +386,7 @@ export function SoftrAuthLayout({
 
         {/* Footer copyright */}
         <div className="text-[11px] text-slate-400 text-center sm:text-left mt-4">
-          {footerCopyrightText || `© ${new Date().getFullYear()} Softr Studio ERP. All rights reserved.`}
+          {footerCopyrightText || DEFAULT_APP_BRANDING.copyrightText}
         </div>
       </div>
 
@@ -464,6 +467,8 @@ export function SoftrSplitAuthLayout({
   googleLoading,
   children
 }: AuthLayoutProps) {
+  const safeLogoUrl = sanitizeAssetUrl(brandLogoUrl);
+  const resolvedBrandName = brandName || DEFAULT_APP_BRANDING.appName;
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-[#f8fafc] text-slate-900 font-sans relative">
       {/* Absolute Home button */}
@@ -473,8 +478,8 @@ export function SoftrSplitAuthLayout({
 
       <div className="w-full max-w-[420px] bg-white rounded-2xl p-8 sm:p-10 shadow-[0_10px_30px_rgba(0,0,0,0.05)] border border-slate-200/80 mt-8">
         <div className="flex items-center gap-2 mb-6">
-          {brandLogoUrl ? (
-            <img src={brandLogoUrl} alt="Logo" className="h-6 w-auto object-contain" />
+          {safeLogoUrl ? (
+            <img src={safeLogoUrl} alt={resolvedBrandName} className="h-6 w-auto object-contain" referrerPolicy="no-referrer" />
           ) : (
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-sm bg-[#f97316]" />
@@ -483,7 +488,7 @@ export function SoftrSplitAuthLayout({
               <div className="w-3 h-3 rounded-sm bg-[#eab308]" />
             </div>
           )}
-          <span className="text-lg font-bold text-slate-900">{brandName || "softr"}</span>
+          <span className="text-lg font-bold text-slate-900">{resolvedBrandName}</span>
         </div>
 
         <div className="mb-6">

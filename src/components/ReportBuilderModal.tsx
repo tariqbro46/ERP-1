@@ -294,8 +294,8 @@ export function ReportBuilderModal({ isOpen, onClose, onSave, sampleData }: Repo
 
   // Generate Sample HTML for live preview / print / PDF download
   const generatePreviewHtml = () => {
-    const company = sampleData?.company || { name: 'TALLYFLOW ENTERPRISE', address: '123 Business Avenue, Suite 100', phone: '+880 1700 000000', email: 'info@tallyflow.com' };
-    const ledgerName = sampleData?.ledgerName || 'M/S Johura Enterprise';
+    const company = sampleData?.company || { name: 'Sample Organization', address: 'Company Street Address', phone: '', email: '' };
+    const ledgerName = sampleData?.ledgerName || 'Sample Ledger Account';
     const period = sampleData?.period || '01-Apr-2026 to 03-Aug-2026';
 
     let htmlSections = '';

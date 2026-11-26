@@ -12,7 +12,9 @@ import {
   Folder, 
   RefreshCw,
   SlidersHorizontal,
-  ExternalLink
+  ExternalLink,
+  FileSpreadsheet,
+  Mail
 } from 'lucide-react';
 import { SkeletonLoader } from './SkeletonLoader';
 import { erpService } from '../services/erpService';
@@ -20,9 +22,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { cn, formatNumber } from '../lib/utils';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { printUtils } from '../utils/printUtils';
-import { exportToCSV } from '../utils/exportUtils';
+import { buildReportPrintHtml, executePrint, formatPrintedAmount } from '../utils/printUtils';
+import { exportToCSV, exportStructuredExcel, shareReportViaEmail } from '../utils/exportUtils';
 import { pdfExportService } from '../utils/pdfExportService';
+import { resolveCompanyLegalIdentity } from '../constants/appIdentity';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { EditableHeader } from './EditableHeader';
@@ -82,7 +85,7 @@ const PRIMARY_GROUP_ORDER = [
 
 export function TrialBalance() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, company } = useAuth();
   const { language, t } = useLanguage();
   const isBn = language === 'bn';
   const settings = useSettings();
@@ -518,9 +521,127 @@ export function TrialBalance() {
     soundService.play('click');
   };
 
+  const buildTrialBalanceExportRows = () => {
+    const rows: Array<{
+      level: string;
+      particulars: string;
+      group: string;
+      debit: number;
+      credit: number;
+    }> = [];
+
+    trialBalanceTree.forEach(g => {
+      rows.push({
+        level: 'Primary Group',
+        particulars: g.name.toUpperCase(),
+        group: 'PRIMARY GROUP',
+        debit: g.debit > 0 ? Number(g.debit.toFixed(2)) : 0,
+        credit: g.credit > 0 ? Number(g.credit.toFixed(2)) : 0
+      });
+      if (viewFormat === 'detailed') {
+        g.subgroups.forEach(s => {
+          rows.push({
+            level: 'Subgroup',
+            particulars: `  ${s.name}`,
+            group: g.name,
+            debit: s.debit > 0 ? Number(s.debit.toFixed(2)) : 0,
+            credit: s.credit > 0 ? Number(s.credit.toFixed(2)) : 0
+          });
+          s.ledgers.forEach(l => {
+            rows.push({
+              level: 'Ledger',
+              particulars: `    ${l.name}`,
+              group: s.name,
+              debit: l.debit > 0 ? Number(l.debit.toFixed(2)) : 0,
+              credit: l.credit > 0 ? Number(l.credit.toFixed(2)) : 0
+            });
+          });
+        });
+        g.directLedgers.forEach(l => {
+          rows.push({
+            level: 'Ledger',
+            particulars: `  ${l.name}`,
+            group: g.name,
+            debit: l.debit > 0 ? Number(l.debit.toFixed(2)) : 0,
+            credit: l.credit > 0 ? Number(l.credit.toFixed(2)) : 0
+          });
+        });
+      }
+    });
+
+    if (profitAndLossRow) {
+      rows.push({
+        level: 'P&L',
+        particulars: profitAndLossRow.name,
+        group: 'Profit & Loss A/c',
+        debit: profitAndLossRow.debit > 0 ? Number(profitAndLossRow.debit.toFixed(2)) : 0,
+        credit: profitAndLossRow.credit > 0 ? Number(profitAndLossRow.credit.toFixed(2)) : 0
+      });
+    }
+
+    if (totalsAndDiff.hasDiff) {
+      rows.push({
+        level: 'Adjustment',
+        particulars: 'Difference in opening balances',
+        group: 'Opening Balance Difference',
+        debit: totalsAndDiff.diffDebit > 0 ? Number(totalsAndDiff.diffDebit.toFixed(2)) : 0,
+        credit: totalsAndDiff.diffCredit > 0 ? Number(totalsAndDiff.diffCredit.toFixed(2)) : 0
+      });
+    }
+
+    return rows;
+  };
+
   const handlePrint = () => {
     soundService.play('click');
-    printUtils.printElement('trial-balance-report', 'Trial Balance Report');
+    const periodSubtitle = `Period: ${formatReportDate(startDate, settings.dateFormat)} to ${formatReportDate(endDate, settings.dateFormat)} (${viewFormat === 'condensed' ? 'Condensed' : 'Detailed'})`;
+    const rows = buildTrialBalanceExportRows();
+    const printRows = [
+      ...rows.map(r => ({
+        cells: [
+          r.particulars,
+          r.group,
+          r.debit > 0 ? formatPrintedAmount(r.debit) : '',
+          r.credit > 0 ? formatPrintedAmount(r.credit) : ''
+        ]
+      })),
+      {
+        cells: [
+          'Grand Total',
+          'TOTAL',
+          formatPrintedAmount(totalsAndDiff.grandTotalDebit),
+          formatPrintedAmount(totalsAndDiff.grandTotalCredit)
+        ],
+        isTotal: true
+      }
+    ];
+
+    const html = buildReportPrintHtml({
+      title: `Trial Balance (${viewFormat === 'condensed' ? 'Condensed' : 'Detailed'})`,
+      subtitle: periodSubtitle,
+      settings,
+      company,
+      summaryCards: [
+        { label: 'Total Debit (৳)', value: `৳ ${formatNumber(totalsAndDiff.grandTotalDebit)}` },
+        { label: 'Total Credit (৳)', value: `৳ ${formatNumber(totalsAndDiff.grandTotalCredit)}` },
+        { label: 'Primary Groups', value: String(trialBalanceTree.length) }
+      ],
+      sections: [
+        {
+          heading: viewFormat === 'condensed' ? 'Primary Group Summary' : 'Detailed Trial Balance Hierarchy',
+          columns: [
+            { label: 'Particulars', align: 'left', width: '44%' },
+            { label: 'Group', align: 'left', width: '24%' },
+            { label: 'Debit (৳)', align: 'right', width: '16%' },
+            { label: 'Credit (৳)', align: 'right', width: '16%' }
+          ],
+          rows: printRows,
+          emptyMessage: 'No records or balances found for selected period'
+        }
+      ]
+    });
+
+    executePrint(html);
   };
 
   const handleDownloadPDF = () => {
@@ -537,73 +658,98 @@ export function TrialBalance() {
         grandTotalDebit: totalsAndDiff.grandTotalDebit,
         grandTotalCredit: totalsAndDiff.grandTotalCredit,
         startDate,
-        endDate
+        endDate,
+        company
       }
     );
   };
 
+  const handleDownloadExcel = () => {
+    soundService.play('click');
+    const periodSubtitle = `Period: ${formatReportDate(startDate, settings.dateFormat)} to ${formatReportDate(endDate, settings.dateFormat)} (${viewFormat === 'condensed' ? 'Condensed' : 'Detailed'})`;
+    const rows = buildTrialBalanceExportRows().map(r => [
+      r.level,
+      r.particulars,
+      r.group,
+      r.debit > 0 ? r.debit : '',
+      r.credit > 0 ? r.credit : ''
+    ]);
+
+    exportStructuredExcel({
+      fileName: `Trial_Balance_${viewFormat}_${startDate}_to_${endDate}`,
+      sheetName: 'Trial Balance',
+      title: `Trial Balance (${viewFormat === 'condensed' ? 'Condensed' : 'Detailed'})`,
+      subtitle: periodSubtitle,
+      headers: ['Level', 'Particulars', 'Group', 'Debit', 'Credit'],
+      rows,
+      footerRow: [
+        'Total',
+        'Grand Total',
+        '',
+        Number(totalsAndDiff.grandTotalDebit.toFixed(2)),
+        Number(totalsAndDiff.grandTotalCredit.toFixed(2))
+      ],
+      settings,
+      company
+    });
+  };
+
   const handleDownloadCSV = () => {
     soundService.play('click');
-    const exportRows: any[] = [];
-    trialBalanceTree.forEach(g => {
-      exportRows.push({
-        particulars: g.name.toUpperCase(),
-        group: 'PRIMARY GROUP',
-        debit: g.debit > 0 ? g.debit : 0,
-        credit: g.credit > 0 ? g.credit : 0
-      });
-      if (viewFormat === 'detailed') {
-        g.subgroups.forEach(s => {
-          exportRows.push({
-            particulars: `  ${s.name}`,
-            group: g.name,
-            debit: s.debit > 0 ? s.debit : 0,
-            credit: s.credit > 0 ? s.credit : 0
-          });
-        });
-        g.directLedgers.forEach(l => {
-          exportRows.push({
-            particulars: `  ${l.name}`,
-            group: g.name,
-            debit: l.debit > 0 ? l.debit : 0,
-            credit: l.credit > 0 ? l.credit : 0
-          });
-        });
-      }
-    });
-
-    if (profitAndLossRow) {
-      exportRows.push({
-        particulars: profitAndLossRow.name,
-        group: 'P&L',
-        debit: profitAndLossRow.debit > 0 ? profitAndLossRow.debit : 0,
-        credit: profitAndLossRow.credit > 0 ? profitAndLossRow.credit : 0
-      });
-    }
-
-    if (totalsAndDiff.hasDiff) {
-      exportRows.push({
-        particulars: 'Difference in opening balances',
-        group: 'Difference',
-        debit: totalsAndDiff.diffDebit > 0 ? totalsAndDiff.diffDebit : 0,
-        credit: totalsAndDiff.diffCredit > 0 ? totalsAndDiff.diffCredit : 0
-      });
-    }
+    const periodSubtitle = `Period: ${formatReportDate(startDate, settings.dateFormat)} to ${formatReportDate(endDate, settings.dateFormat)} (${viewFormat === 'condensed' ? 'Condensed' : 'Detailed'})`;
+    const exportRows = buildTrialBalanceExportRows().map(r => ({
+      'Level': r.level,
+      'Particulars': r.particulars,
+      'Group': r.group,
+      'Debit': r.debit > 0 ? formatNumber(r.debit) : '',
+      'Credit': r.credit > 0 ? formatNumber(r.credit) : ''
+    }));
 
     exportRows.push({
-      particulars: 'Grand Total',
-      group: 'TOTAL',
-      debit: totalsAndDiff.grandTotalDebit,
-      credit: totalsAndDiff.grandTotalCredit
+      'Level': 'Total',
+      'Particulars': 'Grand Total',
+      'Group': 'TOTAL',
+      'Debit': formatNumber(totalsAndDiff.grandTotalDebit),
+      'Credit': formatNumber(totalsAndDiff.grandTotalCredit)
     });
 
     exportToCSV(
-      `Trial_Balance_${viewFormat}`, 
-      `${t('reports.trialBalance')} (${viewFormat === 'condensed' ? 'Condensed' : 'Detailed'})`, 
-      exportRows, 
-      [t('common.particulars'), t('common.group'), t('reports.debit'), t('reports.credit')], 
-      settings
+      `Trial_Balance_${viewFormat}_${startDate}_to_${endDate}`,
+      `Trial Balance (${viewFormat === 'condensed' ? 'Condensed' : 'Detailed'}) — ${periodSubtitle}`,
+      exportRows,
+      ['Level', 'Particulars', 'Group', 'Debit', 'Credit'],
+      settings,
+      company
     );
+  };
+
+  const handleEmailReport = () => {
+    soundService.play('click');
+    const legal = resolveCompanyLegalIdentity(settings, company);
+    const periodSubtitle = `${formatReportDate(startDate, settings.dateFormat)} to ${formatReportDate(endDate, settings.dateFormat)} (${viewFormat === 'condensed' ? 'Condensed' : 'Detailed'})`;
+    const summaryLines = [
+      `View Format: ${viewFormat === 'condensed' ? 'Condensed' : 'Detailed'}`,
+      `Grand Total Debit: ৳ ${formatNumber(totalsAndDiff.grandTotalDebit)}`,
+      `Grand Total Credit: ৳ ${formatNumber(totalsAndDiff.grandTotalCredit)}`,
+      ...(profitAndLossRow
+        ? [`${profitAndLossRow.name}: Dr ৳ ${formatNumber(profitAndLossRow.debit)} / Cr ৳ ${formatNumber(profitAndLossRow.credit)}`]
+        : []),
+      ...(totalsAndDiff.hasDiff
+        ? [`Difference in Opening Balances: ৳ ${formatNumber(totalsAndDiff.diffAmount)}`]
+        : []),
+      '',
+      'Primary Groups:',
+      ...trialBalanceTree.map(g => `- ${g.name}: Dr ৳ ${formatNumber(g.debit)} | Cr ৳ ${formatNumber(g.credit)}`)
+    ];
+
+    shareReportViaEmail({
+      title: 'Trial Balance',
+      subtitle: periodSubtitle,
+      summaryLines,
+      settings,
+      company,
+      recipientEmail: legal.printEmail || ''
+    });
   };
 
   if (loading) {
@@ -635,12 +781,12 @@ export function TrialBalance() {
             <EditableHeader 
               pageId="trial_balance"
               defaultTitle={isBn ? 'রেওয়ামিল (Trial Balance)' : 'Trial Balance'}
-              defaultSubtitle={settings.companyName || 'Closing Balance Statement'}
+              defaultSubtitle={resolveCompanyLegalIdentity(settings, company).companyName || 'Closing Balance Statement'}
             />
           </div>
 
-          {/* Action Buttons: Print, PDF, CSV, Refresh */}
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          {/* Action Buttons: Refresh, Print, Excel, CSV, PDF, Email */}
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
             <button
               onClick={() => fetchData(true)}
               disabled={refreshing}
@@ -661,6 +807,15 @@ export function TrialBalance() {
             </button>
 
             <button 
+              onClick={handleDownloadExcel}
+              className="px-2.5 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 text-[11px] font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Export Genuine Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>EXCEL</span>
+            </button>
+
+            <button 
               onClick={handleDownloadCSV}
               className="px-2.5 py-1.5 bg-card border border-border text-foreground hover:bg-muted text-[11px] font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
               title="Download CSV"
@@ -676,6 +831,15 @@ export function TrialBalance() {
             >
               <Download className="w-3.5 h-3.5" />
               <span>PDF</span>
+            </button>
+
+            <button 
+              onClick={handleEmailReport}
+              className="px-2.5 py-1.5 bg-card border border-border text-foreground hover:bg-muted text-[11px] font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Share via Email"
+            >
+              <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="hidden sm:inline">{isBn ? 'ইমেইল' : 'Email'}</span>
             </button>
           </div>
         </div>
@@ -779,18 +943,6 @@ export function TrialBalance() {
       {/* Main Scrollable Table Area */}
       <div className="flex-1 overflow-y-auto p-4 lg:p-6 no-scrollbar">
         <div id="trial-balance-report" className="bg-card border border-border rounded-xl shadow-xs overflow-hidden">
-          
-          {/* Printable Report Header */}
-          <div className="hidden print:block p-4 border-b border-border text-center space-y-1">
-            <h1 className="text-base font-bold uppercase tracking-wider">{settings.companyName || 'SAPIENT ERP'}</h1>
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              {viewFormat === 'condensed' ? 'TRIAL BALANCE (CONDENSED)' : 'TRIAL BALANCE (DETAILED)'}
-            </h2>
-            <p className="text-[10px] text-muted-foreground">
-              Period: {formatReportDate(startDate, settings.dateFormat)} to {formatReportDate(endDate, settings.dateFormat)}
-            </p>
-          </div>
-
           <table className="w-full text-left text-xs border-collapse">
             {/* Table Sticky Header */}
             <thead className="sticky top-0 z-20 bg-muted/90 dark:bg-card/95 backdrop-blur-md shadow-xs">

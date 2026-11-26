@@ -17,6 +17,7 @@ import { soundService } from '../services/soundService';
 import { ReportBuilderModal } from './ReportBuilderModal';
 import { RELEASE_NOTES, LATEST_VERSION } from '../data/releaseNotes';
 import { ReleaseManagerModal } from './ReleaseManagerModal';
+import { DEFAULT_APP_BRANDING } from '../constants/appIdentity';
 
 export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const { user, logout } = useAuth();
@@ -27,7 +28,9 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     searchPlaceholder,
     searchHelpText,
     showSearchShortcut,
-    searchIconColor
+    searchIconColor,
+    appIdentity,
+    developerContactText
   } = useSettings();
   const [localSearchPlaceholder, setLocalSearchPlaceholder] = useState(searchPlaceholder || '');
   const [localSearchHelpText, setLocalSearchHelpText] = useState(searchHelpText || '');
@@ -72,8 +75,11 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     dateFormat,
     reportLayout,
     dashboardDesign,
+    globalDashboardDesign,
     uiStyle,
     glassBackground,
+    customControlCenterTheme,
+    splashSubDesign,
     notificationDuration,
     notificationAnimationStyle,
     notificationStyle,
@@ -167,9 +173,11 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localMobileBottomNavItems, setLocalMobileBottomNavItems] = useState<string[]>(mobileBottomNavItems || []);
   const [localReportLayout, setLocalReportLayout] = useState(reportLayout || 'Layout 2');
   const [isReportBuilderOpen, setIsReportBuilderOpen] = useState(false);
-  const [localDashboardDesign, setLocalDashboardDesign] = useState(dashboardDesign || 'Design 1');
+  const [localDashboardDesign, setLocalDashboardDesign] = useState(globalDashboardDesign || dashboardDesign || 'Design 1');
   const [localUIStyle, setLocalUIStyle] = useState(uiStyle || 'UI/UX 1');
   const [localGlassBackground, setLocalGlassBackground] = useState(glassBackground || 'default');
+  const [localCustomControlCenterTheme, setLocalCustomControlCenterTheme] = useState<'emerald' | 'indigo' | 'slate' | 'cyber'>(customControlCenterTheme || 'emerald');
+  const [localSplashSubDesign, setLocalSplashSubDesign] = useState<'grid' | 'neon' | 'editorial'>(splashSubDesign || 'grid');
   const [localNotificationAnimationStyle, setLocalNotificationAnimationStyle] = useState(notificationAnimationStyle || 'default');
   const [localNotificationStyle, setLocalNotificationStyle] = useState(notificationStyle || 'default');
   const [localNotificationPosition, setLocalNotificationPosition] = useState(notificationPosition || 'bottom-right');
@@ -291,9 +299,11 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalShowMobileNav(showMobileNav ?? false);
     setLocalMobileBottomNavItems(mobileBottomNavItems || []);
     setLocalReportLayout(reportLayout || 'Layout 2');
-    setLocalDashboardDesign(dashboardDesign || 'Design 1');
+    setLocalDashboardDesign(globalDashboardDesign || dashboardDesign || 'Design 1');
     setLocalUIStyle(uiStyle || 'UI/UX 1');
     setLocalGlassBackground(glassBackground || 'default');
+    setLocalCustomControlCenterTheme(customControlCenterTheme || 'emerald');
+    setLocalSplashSubDesign(splashSubDesign || 'grid');
     setLocalNotificationAnimationStyle(notificationAnimationStyle || 'default');
     setLocalNotificationStyle(notificationStyle || 'default');
     setLocalNotificationPosition(notificationPosition || 'bottom-right');
@@ -328,7 +338,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     printSignature3, showSignature1, showSignature2, showSignature3, 
     signatureAlignment, showDeveloperContact, financialYearStart, 
     baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
-    showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, dashboardDesign, uiStyle, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates, sidebarBgColor, sidebarTextColor,
+    showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, dashboardDesign, globalDashboardDesign, uiStyle, glassBackground, customControlCenterTheme, splashSubDesign, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates, sidebarBgColor, sidebarTextColor,
     notificationStyle, notificationPosition, notificationDuration, notificationAnimationStyle,
     soundEnabled, soundVolume, soundScheme, soundSuccess, soundError, soundWarning, soundDelete, soundClick, soundNavigation
   ]);
@@ -380,6 +390,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       uiStyle: localUIStyle,
       glassBackground: localGlassBackground,
       dashboardDesign: localDashboardDesign,
+      customControlCenterTheme: localCustomControlCenterTheme,
+      splashSubDesign: localSplashSubDesign,
       englishFont: localEnglishFont,
       banglaFont: localBanglaFont,
       layoutWidth: localLayoutWidth,
@@ -398,6 +410,9 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       sidebarDefaultExpanded: localSidebarDefaultExpanded,
       layoutWidth: localLayoutWidth,
       dashboardDesign: localDashboardDesign,
+      customControlCenterTheme: localCustomControlCenterTheme,
+      splashSubDesign: localSplashSubDesign,
+      glassBackground: localGlassBackground,
       uiStyle: localUIStyle,
       menuBarStyle: localMenuBarStyle,
       notificationStyle: localNotificationStyle,
@@ -739,8 +754,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
 
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
                         <div>
-                          <h4 className="text-xs font-bold text-foreground uppercase">Show Discount %</h4>
-                          <p className="text-[10px] text-gray-500">Enable/Disable Discount % column in vouchers.</p>
+                          <h4 className="text-xs font-bold text-foreground uppercase">{t('settings.showDiscPercent')}</h4>
+                          <p className="text-[10px] text-gray-500">{t('settings.showDiscPercentDesc')}</p>
                         </div>
                         <button 
                           onClick={() => setLocalShowDiscPercent(!localShowDiscPercent)}
@@ -758,8 +773,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
 
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
                         <div>
-                          <h4 className="text-xs font-bold text-foreground uppercase">Show Tax %</h4>
-                          <p className="text-[10px] text-gray-500">Enable/Disable Tax % column in vouchers.</p>
+                          <h4 className="text-xs font-bold text-foreground uppercase">{t('settings.showTaxPercent')}</h4>
+                          <p className="text-[10px] text-gray-500">{t('settings.showTaxPercentDesc')}</p>
                         </div>
                         <button 
                           onClick={() => setLocalShowTaxPercent(!localShowTaxPercent)}
@@ -777,8 +792,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
 
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
                         <div>
-                          <h4 className="text-xs font-bold text-foreground uppercase">Show Currency</h4>
-                          <p className="text-[10px] text-gray-500">Enable/Disable Currency selection in vouchers.</p>
+                          <h4 className="text-xs font-bold text-foreground uppercase">{t('settings.showCurrency')}</h4>
+                          <p className="text-[10px] text-gray-500">{t('settings.showCurrencyDesc')}</p>
                         </div>
                         <button 
                           onClick={() => setLocalShowCurrency(!localShowCurrency)}
@@ -796,8 +811,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
 
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
                         <div>
-                          <h4 className="text-xs font-bold text-foreground uppercase">Show Exchange Rate</h4>
-                          <p className="text-[10px] text-gray-500">Enable/Disable Exchange Rate field in vouchers.</p>
+                          <h4 className="text-xs font-bold text-foreground uppercase">{t('settings.showExRate')}</h4>
+                          <p className="text-[10px] text-gray-500">{t('settings.showExRateDesc')}</p>
                         </div>
                         <button 
                           onClick={() => setLocalShowExRate(!localShowExRate)}
@@ -956,7 +971,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase">System Date Format</label>
+                      <label className="text-[10px] text-gray-500 uppercase">{t('settings.systemDateFormat')}</label>
                       <select 
                         value={localDateFormat}
                         onChange={(e) => setLocalDateFormat(e.target.value)}
@@ -969,7 +984,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         <option value="MM/DD/YYYY">MM/DD/YYYY (e.g. 04/20/2026)</option>
                         <option value="DD.MM.YYYY">DD.MM.YYYY (e.g. 20.04.2026)</option>
                       </select>
-                      <p className="text-[9px] text-gray-500 uppercase italic">All date fields in the app will follow this format.</p>
+                      <p className="text-[9px] text-gray-500 uppercase italic">{t('settings.systemDateFormatDesc')}</p>
                     </div>
                   </div>
                 </div>
@@ -1195,40 +1210,45 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       <p className="text-[9px] text-gray-500 uppercase">{t('settings.uiStyleDesc')}</p>
                     </div>
 
-                    {localUIStyle === 'UI/UX 1' && (
+                    {localUIStyle !== 'UI/UX 4' && (
                       <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
-                        <label className="text-[10px] text-gray-500 uppercase">Color Theme</label>
+                        <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                          {language === 'bn' ? 'কালার থিম' : 'Color Theme'}
+                        </label>
                         <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                          {(['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'] as Theme[]).map((t) => (
+                          {(['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'] as Theme[]).map((themeOpt) => (
                             <button
-                              key={t}
-                              onClick={() => setTheme(t)}
+                              key={themeOpt}
+                              type="button"
+                              onClick={() => setTheme(themeOpt)}
                               className={cn(
                                 "flex flex-col items-center gap-1 p-2 border transition-all",
-                                theme === t ? "border-primary bg-primary/5" : "border-border bg-background hover:border-gray-400"
+                                theme === themeOpt ? "border-primary bg-primary/5" : "border-border bg-background hover:border-gray-400"
                               )}
                             >
                               <div className={cn(
                                 "w-6 h-6 rounded-sm",
-                                t === 'light' ? "bg-white border border-gray-200" : 
-                                t === 'dark' ? "bg-zinc-900" : 
-                                t === 'emerald' ? "bg-emerald-500" : 
-                                t === 'amber' ? "bg-amber-500" : 
-                                t === 'rose' ? "bg-rose-500" : 
-                                t === 'slate' ? "bg-slate-500" : 
+                                themeOpt === 'light' ? "bg-white border border-gray-200" : 
+                                themeOpt === 'dark' ? "bg-zinc-900" : 
+                                themeOpt === 'emerald' ? "bg-emerald-500" : 
+                                themeOpt === 'amber' ? "bg-amber-500" : 
+                                themeOpt === 'rose' ? "bg-rose-500" : 
+                                themeOpt === 'slate' ? "bg-slate-500" : 
                                 "bg-zinc-800"
                               )} />
-                              <span className="text-[8px] font-bold uppercase truncate w-full text-center">{t}</span>
+                              <span className="text-[8px] font-bold uppercase truncate w-full text-center">{themeOpt}</span>
                             </button>
                           ))}
                         </div>
-                        <p className="text-[9px] text-gray-500 uppercase">Choose a color theme for the Classic UI style.</p>
+                        <p className="text-[9px] text-gray-500 uppercase">
+                          {language === 'bn' ? 'অ্যাপের কালার থিম প্যালেট বেছে নিন।' : 'Choose a color theme palette for UI styles 1–3.'}
+                        </p>
                       </div>
                     )}
 
                     {(localUIStyle === 'UI/UX 3' || localUIStyle === 'UI/UX 4') && (
                       <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
-                        <label className="text-[10px] text-gray-500 uppercase">Background Gradient / Accent Style (UI/UX 3 & 4)</label>
+                        <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Background Gradient / Accent Style (UI/UX 3 & 4)</label>
                         <select 
                           value={localGlassBackground}
                           onChange={(e) => setLocalGlassBackground(e.target.value as any)}
@@ -1244,20 +1264,72 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       </div>
                     )}
 
-                    <div className="space-y-2">
-                      <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.dashboardDesign')}</label>
+                    <div className={cn("space-y-2", globalDashboardDesign && "opacity-75")}>
+                      <div className="flex items-center justify-between gap-2">
+                        <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">{t('settings.dashboardDesign')}</label>
+                        {globalDashboardDesign && (
+                          <span className="text-[8px] bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded font-mono font-bold uppercase">
+                            Global: {globalDashboardDesign}
+                          </span>
+                        )}
+                      </div>
                       <select 
                         value={localDashboardDesign}
+                        disabled={!!globalDashboardDesign}
                         onChange={(e) => setLocalDashboardDesign(e.target.value as any)}
-                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                        className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground disabled:opacity-70"
                       >
                         <option value="Design 1">{t('settings.dashboardDesignClassic')}</option>
                         <option value="Design 2">{t('settings.dashboardDesignModern')}</option>
-                        <option value="Design 3">Design 3 (Minimalist - High Performance)</option>
-                        <option value="Design 4">Design 4 (Executive Summary - Lowest Usage)</option>
+                        <option value="Design 3">{t('settings.dashboardDesign3')}</option>
+                        <option value="Design 4">{t('settings.dashboardDesign4')}</option>
+                        <option value="Design 5">{t('settings.dashboardDesign5')}</option>
+                        <option value="Design 6">{t('settings.dashboardDesign6')}</option>
                       </select>
                       <p className="text-[9px] text-gray-500 uppercase">{t('settings.dashboardDesignDesc')}</p>
                     </div>
+
+                    {localDashboardDesign === 'Design 5' && (
+                      <div className="space-y-2 animate-in fade-in duration-200">
+                        <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                          {language === 'bn' ? 'কমান্ড সেন্টার থিম (Design 5)' : 'Command Center Theme (Design 5)'}
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {(['emerald', 'indigo', 'slate', 'cyber'] as const).map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => setLocalCustomControlCenterTheme(preset)}
+                              className={cn(
+                                "py-2 px-3 border text-[10px] font-bold uppercase transition-all",
+                                localCustomControlCenterTheme === preset
+                                  ? "border-primary bg-primary/10 text-foreground"
+                                  : "border-border bg-background text-gray-500 hover:border-gray-400"
+                              )}
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {localDashboardDesign === 'Design 6' && (
+                      <div className="space-y-2 animate-in fade-in duration-200">
+                        <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                          {language === 'bn' ? 'এন্টারপ্রাইজ হাব লেআউট (Design 6)' : 'Enterprise Hub Layout (Design 6)'}
+                        </label>
+                        <select
+                          value={localSplashSubDesign}
+                          onChange={(e) => setLocalSplashSubDesign(e.target.value as any)}
+                          className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground"
+                        >
+                          <option value="grid">Grid Bento (Clean Light)</option>
+                          <option value="neon">Cyber Neon (Dark Glow)</option>
+                          <option value="editorial">Editorial Atelier (Warm Serif)</option>
+                        </select>
+                      </div>
+                    )}
 
                     <div className="space-y-2 md:col-span-2">
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
@@ -1283,8 +1355,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                     <div className="space-y-2 md:col-span-2">
                       <div className="flex items-center justify-between p-4 bg-foreground/5 border border-border">
                         <div>
-                          <h4 className="text-xs font-bold text-foreground uppercase">Show Quick Actions Bar</h4>
-                          <p className="text-[10px] text-gray-500">Enable/Disable the Quick Actions row on the Dashboard.</p>
+                          <h4 className="text-xs font-bold text-foreground uppercase">{t('settings.showQuickActionsBar')}</h4>
+                          <p className="text-[10px] text-gray-500">{t('settings.showQuickActionsBarDesc')}</p>
                         </div>
                         <button 
                           onClick={() => setLocalShowQuickActions(!localShowQuickActions)}
@@ -1304,7 +1376,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         <div className="p-4 bg-foreground/5 border-x border-b border-border space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                           <h4 className="text-[10px] font-bold text-foreground uppercase tracking-widest flex items-center gap-2">
                             <Zap className="w-3 h-3 text-amber-500" />
-                            Select Dashboard Quick Actions
+                            {t('settings.selectQuickActions')}
                           </h4>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {[
@@ -2142,8 +2214,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       {localShowPrintFooter && localPrintFooter}
                       {localShowDeveloperContact && (
                         <div className="absolute right-0 bottom-0 text-[6px] text-gray-400 text-right opacity-50">
-                          Software by TallyFlow<br/>
-                          +880 1234 567890
+                          {appIdentity?.softwareFooterText || developerContactText || DEFAULT_APP_BRANDING.softwareFooterText}
                         </div>
                       )}
                     </div>
@@ -2494,7 +2565,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         type="text"
                         value={gitVersionInput}
                         onChange={(e) => setGitVersionInput(e.target.value)}
-                        placeholder="e.g. v1.9.9.20"
+                        placeholder="e.g. v1.9.9.30"
                         className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                       <p className="text-[10px] text-muted-foreground">

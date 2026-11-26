@@ -1,339 +1,738 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // ===============================================================
-    // Helper Functions
+    // Identity & Role Helpers (Hardened K-11)
     // ===============================================================
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
+    function isEmailVerified() {
+      return isAuthenticated() &&
+        ('email_verified' in request.auth.token) &&
+        request.auth.token.email_verified == true;
+    }
+
+    function getUserPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function userExists() {
+      return isAuthenticated() && exists(getUserPath());
+    }
+
     function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isFounder() {
-      return isAuthenticated() && (
-        request.auth.token.email == "sapientman46@gmail.com" ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'Founder')
-      );
-    }
-
-    // Optimization: SuperAdmin check without DB reads for hardcoded users
-    function isSuperAdminBasic() {
-      return isAuthenticated() && (
-        request.auth.token.email == "sapientman46@gmail.com"
-      );
-    }
-
-    function isSuperAdmin() {
-      return isSuperAdminBasic() || (
-        isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        getUserData().get('role', '') in ['Founder', 'Admin', 'Marketing Manager', 'Marketing']
-      );
+      return get(getUserPath()).data;
     }
 
     function getCompanyId(data) {
-      return data.get('companyId', data.get('company_id', ''));
+      return data != null ? data.get('companyId', data.get('company_id', '')) : '';
     }
 
     function getUserCompanyId() {
-      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? 
-             getCompanyId(getUserData()) : '';
+      return userExists() ? getCompanyId(getUserData()) : '';
     }
 
-    function isCompanyMember(companyId) {
-      return isAuthenticated() && (companyId != null && companyId != "") && (
-        isSuperAdminBasic() || 
-        (companyId == request.auth.uid) || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('companyId', '') == companyId) ||
-        (exists(/databases/$(database)/documents/companies/$(companyId)) && (
-          get(/databases/$(database)/documents/companies/$(companyId)).data.get('ownerId', '') == request.auth.uid || 
-          get(/databases/$(database)/documents/companies/$(companyId)).data.get('createdBy', '') == request.auth.uid
-        ))
+    function isFounderEmail() {
+      return isEmailVerified() &&
+        ('email' in request.auth.token) &&
+        request.auth.token.email is string &&
+        request.auth.token.email.lower() == "sapientman46@gmail.com";
+    }
+
+    // Strict Global Founder check: verified email token + either hardcoded Founder email
+    // OR active /users/{uid} doc with role == 'Founder' (never Admin/Marketing roles).
+    function isFounder() {
+      return isFounderEmail() || (
+        isEmailVerified() &&
+        userExists() &&
+        getUserData().get('role', '') == 'Founder' &&
+        getUserData().get('status', 'active') != 'disabled'
       );
     }
-    
+
+    function isActiveMemberUser(companyId) {
+      let u = getUserData();
+      return getCompanyId(u) == companyId &&
+             u.get('status', 'active') != 'disabled';
+    }
+
+    function isActiveCompanyAdminUser(companyId) {
+      let u = getUserData();
+      return getCompanyId(u) == companyId &&
+             u.get('role', '') == 'Admin' &&
+             u.get('status', 'active') != 'disabled';
+    }
+
+    function isCompanyOwner(companyId) {
+      let c = get(/databases/$(database)/documents/companies/$(companyId)).data;
+      return c.get('ownerId', '') == request.auth.uid;
+    }
+
+    // Tenant-scoped company membership (no global Admin/Marketing bypass)
+    function isCompanyMember(companyId) {
+      return isAuthenticated() && (companyId is string && companyId != "") && (
+        (companyId == request.auth.uid) ||
+        (userExists() && isActiveMemberUser(companyId)) ||
+        (exists(/databases/$(database)/documents/companies/$(companyId)) && isCompanyOwner(companyId))
+      );
+    }
+
+    // Strictly tenant-scoped Company Admin: active Admin in same companyId or verified ownerId
     function isCompanyAdmin(companyId) {
-      return isAuthenticated() && (companyId != null && companyId != "") && (
-        isSuperAdminBasic() || 
-        (companyId == request.auth.uid) || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
-          getUserData().get('companyId', '') == companyId && 
-          getUserData().get('role', '') in ['Admin', 'Founder', 'Marketing Manager']
-        )) ||
-        (exists(/databases/$(database)/documents/companies/$(companyId)) && (
-          get(/databases/$(database)/documents/companies/$(companyId)).data.get('ownerId', '') == request.auth.uid || 
-          get(/databases/$(database)/documents/companies/$(companyId)).data.get('createdBy', '') == request.auth.uid
-        ))
+      return isAuthenticated() && (companyId is string && companyId != "") && (
+        (companyId == request.auth.uid) ||
+        (userExists() && isActiveCompanyAdminUser(companyId)) ||
+        (exists(/databases/$(database)/documents/companies/$(companyId)) && isCompanyOwner(companyId))
       );
     }
 
     function hasPermission(permission) {
-      return isAuthenticated() && (
-        isSuperAdmin() || 
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         getUserData().get('permissions', []).contains(permission))
+      return isFounder() || (
+        userExists() &&
+        getUserData().get('status', 'active') != 'disabled' &&
+        permission in getUserData().get('permissions', [])
       );
-    }
-
-    function isVerified() {
-      return isAuthenticated();
-    }
-
-    function getEffectiveCompanyId() {
-      return request.resource != null ? getCompanyId(request.resource.data) : 
-             (resource != null ? getCompanyId(resource.data) : '');
-    }
-
-    function isCompanyAdminSimple(companyId) {
-      return isCompanyAdmin(companyId);
-    }
-    
-    // ===============================================================
-    // Rules
-    // ===============================================================
-
-    match /subscription_plans/{planId} {
-      allow read: if true;
-      allow write: if isSuperAdmin();
-    }
-
-    match /system/{document=**} {
-      allow read: if true;
-      allow write: if isSuperAdmin();
-    }
-
-    match /settings/{companyId} {
-      allow read: if isAuthenticated() && isCompanyMember(companyId);
-      allow write: if isAuthenticated() && isCompanyAdmin(companyId);
-      
-      match /{configPath=**} {
-        allow read: if isAuthenticated() && isCompanyMember(companyId);
-        allow write: if isAuthenticated() && isCompanyAdmin(companyId);
-      }
-    }
-
-    match /companies/{companyId} {
-      allow get: if isAuthenticated() && (isSuperAdmin() || isCompanyMember(companyId));
-      allow list: if isAuthenticated() && (isSuperAdmin() || resource.data.get('ownerId', '') == request.auth.uid || resource.data.get('createdBy', '') == request.auth.uid);
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (
-        isSuperAdmin() || 
-        resource.data.get('ownerId', '') == request.auth.uid ||
-        (isCompanyMember(companyId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quotaReads', 'quotaWrites', 'quotaDeletes', 'quotaUsed', 'quotaLastReset', 'quotaLastResetDateStr']))
-      );
-      allow delete: if isAuthenticated() && (isSuperAdmin() || resource.data.get('ownerId', '') == request.auth.uid);
-    }
-
-    match /users/{uid} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == uid || 
-        isSuperAdmin() || 
-        (resource != null && isCompanyMember(resource.data.get('companyId', '')))
-      );
-      allow create, update: if isAuthenticated() && (request.auth.uid == uid || isSuperAdmin());
-      allow delete: if isSuperAdmin();
     }
 
     function isOwner(data) {
       return data != null && (
-        data.get('ownerId', '') == request.auth.uid || 
-        data.get('createdBy', '') == request.auth.uid || 
+        data.get('ownerId', '') == request.auth.uid ||
+        data.get('createdBy', '') == request.auth.uid ||
         data.get('userId', '') == request.auth.uid ||
         data.get('uid', '') == request.auth.uid
       );
     }
 
+    // ===============================================================
+    // Quota Validation Helpers
+    // ===============================================================
+    function isValidSlot(s, k) {
+      let r = s.get('reads', 0);
+      let w = s.get('writes', 0);
+      let d = s.get('deletes', 0);
+      return s is map &&
+        s.keys().hasOnly(k) &&
+        r is int && r >= 0 &&
+        w is int && w >= 0 &&
+        d is int && d >= 0;
+    }
+
+    function isValidQuotaHourly(h) {
+      let k = ['reads', 'writes', 'deletes'];
+      return h is map &&
+        h.keys().hasOnly([
+          'slot_0', 'slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5',
+          'slot_6', 'slot_7', 'slot_8', 'slot_9', 'slot_10', 'slot_11'
+        ]) &&
+        isValidSlot(h.get('slot_0', {}), k) &&
+        isValidSlot(h.get('slot_1', {}), k) &&
+        isValidSlot(h.get('slot_2', {}), k) &&
+        isValidSlot(h.get('slot_3', {}), k) &&
+        isValidSlot(h.get('slot_4', {}), k) &&
+        isValidSlot(h.get('slot_5', {}), k) &&
+        isValidSlot(h.get('slot_6', {}), k) &&
+        isValidSlot(h.get('slot_7', {}), k) &&
+        isValidSlot(h.get('slot_8', {}), k) &&
+        isValidSlot(h.get('slot_9', {}), k) &&
+        isValidSlot(h.get('slot_10', {}), k) &&
+        isValidSlot(h.get('slot_11', {}), k);
+    }
+
+    function isValidQuotaIncrement(newData, oldData) {
+      let nr = newData.get('quotaReads', 0);
+      let nw = newData.get('quotaWrites', 0);
+      let nd = newData.get('quotaDeletes', 0);
+      let nu = newData.get('quotaUsed', 0);
+      let dr = nr - oldData.get('quotaReads', 0);
+      let dw = nw - oldData.get('quotaWrites', 0);
+      let dd = nd - oldData.get('quotaDeletes', 0);
+      let du = nu - oldData.get('quotaUsed', 0);
+      return nr is int && nw is int && nd is int && nu is int &&
+             dr >= 0 && dr <= 1000 &&
+             dw >= 0 && dw <= 500 &&
+             dd >= 0 && dd <= 500 &&
+             du >= 0 && du <= 2000;
+    }
+
+    function isValidCompanyQuotaUpdatePayload(oldData) {
+      let newData = request.resource.data;
+      let affected = newData.diff(oldData).affectedKeys();
+      return affected.hasOnly([
+               'quotaReads', 'quotaWrites', 'quotaDeletes', 'quotaUsed', 'quotaHourly'
+             ]) &&
+             isValidQuotaIncrement(newData, oldData) &&
+             (!('quotaHourly' in affected) ||
+              ('quotaHourly' in newData && isValidQuotaHourly(newData.quotaHourly)));
+    }
+
+    function isValidCompanyDailyQuotaReset(oldData) {
+      let newData = request.resource.data;
+      let affected = newData.diff(oldData).affectedKeys();
+      let newReset = newData.get('quotaLastReset', 0);
+      let oldReset = oldData.get('quotaLastReset', 0);
+      return affected.hasOnly([
+               'quotaReads', 'quotaWrites', 'quotaDeletes', 'quotaUsed',
+               'quotaHourly', 'quotaLastReset', 'quotaLastResetDateStr'
+             ]) &&
+             newData.get('quotaUsed', -1) == 0 &&
+             newData.get('quotaReads', -1) == 0 &&
+             newData.get('quotaWrites', -1) == 0 &&
+             newData.get('quotaDeletes', -1) == 0 &&
+             (!('quotaHourly' in newData) || newData.quotaHourly == {}) &&
+             newReset is int &&
+             newReset >= oldReset + 43200000 &&
+             newReset <= request.time.toMillis() + 300000 &&
+             newData.get('quotaLastResetDateStr', '') is string;
+    }
+
+    function isValidCompanyAdminProfileUpdate(oldData) {
+      let affected = request.resource.data.diff(oldData).affectedKeys();
+      return !affected.hasAny([
+        'id', 'ownerId', 'createdBy', 'subscriptionStatus', 'planType', 'plan',
+        'quotaLimit', 'expiryDate', 'isAccessEnabled', 'customLimits',
+        'quotaApprovedAt', 'quotaApprovedBy', 'quotaReads', 'quotaWrites',
+        'quotaDeletes', 'quotaUsed', 'quotaHourly', 'quotaLastReset', 'quotaLastResetDateStr'
+      ]);
+    }
+
+    // ===============================================================
+    // Business Collection Helpers (Explicit create/update/delete)
+    // ===============================================================
+    function canReadCompanyDoc() {
+      return isAuthenticated() && (
+        isFounder() ||
+        (resource != null && (
+          (getCompanyId(resource.data) != '' && isCompanyMember(getCompanyId(resource.data))) ||
+          (getCompanyId(resource.data) == '' && isOwner(resource.data))
+        ))
+      );
+    }
+
+    function canCreateCompanyDoc() {
+      return isAuthenticated() && (
+        isFounder() ||
+        (getCompanyId(request.resource.data) != '' && isCompanyMember(getCompanyId(request.resource.data))) ||
+        (getCompanyId(request.resource.data) == '' && isOwner(request.resource.data))
+      );
+    }
+
+    function canUpdateCompanyDoc() {
+      return isAuthenticated() && resource != null && (
+        isFounder() ||
+        (getCompanyId(resource.data) != '' &&
+         getCompanyId(request.resource.data) == getCompanyId(resource.data) &&
+         isCompanyMember(getCompanyId(resource.data))) ||
+        (getCompanyId(resource.data) == '' &&
+         getCompanyId(request.resource.data) == '' &&
+         isOwner(resource.data) &&
+         isOwner(request.resource.data))
+      );
+    }
+
+    function canDeleteCompanyDoc() {
+      return isAuthenticated() && resource != null && (
+        isFounder() ||
+        (getCompanyId(resource.data) != '' && isCompanyMember(getCompanyId(resource.data))) ||
+        (getCompanyId(resource.data) == '' && isOwner(resource.data))
+      );
+    }
+
+    function canCreateCompanyAdminDoc() {
+      return isAuthenticated() && (
+        isFounder() ||
+        (getCompanyId(request.resource.data) != '' && isCompanyAdmin(getCompanyId(request.resource.data)))
+      );
+    }
+
+    function canUpdateCompanyAdminDoc() {
+      return isAuthenticated() && resource != null && (
+        isFounder() ||
+        (getCompanyId(resource.data) != '' &&
+         getCompanyId(request.resource.data) == getCompanyId(resource.data) &&
+         isCompanyAdmin(getCompanyId(resource.data)))
+      );
+    }
+
+    function canDeleteCompanyAdminDoc() {
+      return isAuthenticated() && resource != null && (
+        isFounder() ||
+        (getCompanyId(resource.data) != '' && isCompanyAdmin(getCompanyId(resource.data)))
+      );
+    }
+
+    function canAccessFeatureDoc(data, perm) {
+      let cid = getCompanyId(data);
+      return cid != '' && isCompanyMember(cid) && (hasPermission(perm) || isCompanyAdmin(cid));
+    }
+
+    // ===============================================================
+    // System, Plans, Settings, Companies, Users Rules
+    // ===============================================================
+    match /subscription_plans/{planId} {
+      allow read: if true;
+      allow create, update, delete: if isFounder();
+    }
+
+    // Restrict public pre-login /system reads strictly to explicit safe public config docs;
+    // require authentication for all other /system docs/subcollections and Founder for writes.
+    match /system/{docId} {
+      allow read: if docId in ['global', 'maintenance', 'app_identity', 'theme', 'config', 'features'] || isAuthenticated();
+      allow create, update, delete: if isFounder();
+
+      match /{subPath=**} {
+        allow read: if isAuthenticated();
+        allow create, update, delete: if isFounder();
+      }
+    }
+
+    match /settings/{companyId} {
+      allow read: if isAuthenticated() && (isFounder() || isCompanyMember(companyId));
+      allow create, update, delete: if isAuthenticated() && (isFounder() || isCompanyAdmin(companyId));
+
+      match /{configPath=**} {
+        allow read: if isAuthenticated() && (isFounder() || isCompanyMember(companyId));
+        allow create, update, delete: if isAuthenticated() && (isFounder() || isCompanyAdmin(companyId));
+      }
+    }
+
+    match /companies/{companyId} {
+      allow get: if isAuthenticated() && (isFounder() || isCompanyMember(companyId));
+      allow list: if isAuthenticated() && (
+        isFounder() ||
+        resource.data.get('ownerId', '') == request.auth.uid ||
+        resource.data.get('createdBy', '') == request.auth.uid
+      );
+      allow create: if isAuthenticated() && (
+        isFounder() ||
+        (request.resource.data.get('ownerId', '') == request.auth.uid &&
+         request.resource.data.get('createdBy', request.auth.uid) == request.auth.uid &&
+         !('quotaLimit' in request.resource.data) &&
+         !('customLimits' in request.resource.data) &&
+         request.resource.data.get('planType', 'free') == 'free' &&
+         request.resource.data.get('subscriptionStatus', 'trial') in ['trial', 'Trial'])
+      );
+      allow update: if isAuthenticated() && resource != null && (
+        isFounder() ||
+        (isCompanyAdmin(companyId) && isValidCompanyAdminProfileUpdate(resource.data)) ||
+        (isCompanyMember(companyId) && (
+          isValidCompanyQuotaUpdatePayload(resource.data) ||
+          isValidCompanyDailyQuotaReset(resource.data) ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quotaResetRequested', 'quotaResetRequestedAt', 'quotaResetRequestedBy'])
+        ))
+      );
+      allow delete: if isFounder();
+    }
+
+    function isValidNonFounderRole(role) {
+      return role in ['Admin', 'Manager', 'Marketing Manager', 'Marketing', 'Staff', 'Viewer'];
+    }
+
+    function isValidUserSelfCreate(uid) {
+      let d = request.resource.data;
+      let cid = getCompanyId(d);
+      return request.auth.uid == uid &&
+        d.get('uid', uid) == uid &&
+        d.get('role', 'Staff') != 'Founder' &&
+        d.get('isFounder', false) == false &&
+        !('permissions' in d) &&
+        !('plan' in d) &&
+        !('quotaLimit' in d) &&
+        d.get('quotaUsed', 0) == 0 &&
+        d.get('status', 'active') == 'active' &&
+        (
+          (cid == '' && d.get('role', 'Staff') == 'Staff') ||
+          (cid != '' &&
+           isValidNonFounderRole(d.get('role', 'Admin')) &&
+           exists(/databases/$(database)/documents/companies/$(cid)) &&
+           get(/databases/$(database)/documents/companies/$(cid)).data.get('ownerId', '') == request.auth.uid)
+        );
+    }
+
+    function isValidCompanyAdminUserCreate(uid) {
+      let d = request.resource.data;
+      let cid = getCompanyId(d);
+      return cid != '' &&
+        isCompanyAdmin(cid) &&
+        isValidNonFounderRole(d.get('role', 'Staff')) &&
+        d.get('isFounder', false) == false &&
+        d.get('uid', uid) == uid;
+    }
+
+    function isValidUserSelfUpdate(uid) {
+      let oldD = resource.data;
+      let newD = request.resource.data;
+      let affected = newD.diff(oldD).affectedKeys();
+      let safeProfileAndTelemetry = affected.hasOnly([
+        'displayName', 'phone', 'secondaryPhone', 'designation', 'department',
+        'city', 'state', 'country', 'address', 'bio', 'photoURL',
+        'showSystemGuide', 'updatedAt', 'quotaUsed'
+      ]) && (
+        !('quotaUsed' in affected) ||
+        (newD.quotaUsed is number &&
+         newD.quotaUsed >= oldD.get('quotaUsed', 0) &&
+         newD.quotaUsed <= oldD.get('quotaUsed', 0) + 2000)
+      );
+      let switchOwnedCompany = affected.hasOnly(['companyId']) &&
+        newD.companyId is string &&
+        newD.companyId != '' &&
+        exists(/databases/$(database)/documents/companies/$(newD.companyId)) &&
+        get(/databases/$(database)/documents/companies/$(newD.companyId)).data.get('ownerId', '') == request.auth.uid;
+      return request.auth.uid == uid &&
+        resource != null &&
+        (safeProfileAndTelemetry || switchOwnedCompany);
+    }
+
+    function isValidCompanyAdminUserUpdate(uid) {
+      let oldD = resource.data;
+      let newD = request.resource.data;
+      let cid = getCompanyId(oldD);
+      return uid != request.auth.uid &&
+        resource != null &&
+        cid != '' &&
+        isCompanyAdmin(cid) &&
+        oldD.get('role', '') != 'Founder' &&
+        getCompanyId(newD) == cid &&
+        newD.get('company_id', '') == oldD.get('company_id', '') &&
+        isValidNonFounderRole(newD.get('role', 'Staff')) &&
+        newD.get('isFounder', false) == false &&
+        newD.get('uid', uid) == oldD.get('uid', uid) &&
+        !newD.diff(oldD).affectedKeys().hasAny(['plan', 'isFounder']);
+    }
+
+    match /users/{uid} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == uid ||
+        isFounder() ||
+        (resource != null && (
+          (getCompanyId(resource.data) != '' && isCompanyMember(getCompanyId(resource.data))) ||
+          (isEmailVerified() &&
+           ('email' in request.auth.token) &&
+           request.auth.token.email is string &&
+           resource.data.get('email', '') is string &&
+           resource.data.get('email', '').lower() == request.auth.token.email.lower())
+        ))
+      );
+      allow create: if isAuthenticated() && (
+        isFounder() ||
+        isValidCompanyAdminUserCreate(uid) ||
+        isValidUserSelfCreate(uid)
+      );
+      allow update: if isAuthenticated() && resource != null && (
+        isFounder() ||
+        isValidCompanyAdminUserUpdate(uid) ||
+        isValidUserSelfUpdate(uid)
+      );
+      allow delete: if isFounder() || (
+        resource != null &&
+        uid != request.auth.uid &&
+        getCompanyId(resource.data) != '' &&
+        isCompanyAdmin(getCompanyId(resource.data)) &&
+        resource.data.get('role', '') != 'Founder'
+      );
+    }
+
+    // ===============================================================
+    // Business Collections
+    // ===============================================================
     match /ledger_groups/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /ledgers/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /items/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /vouchers/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /voucher_entries/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /inventory_entries/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /units/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /godowns/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /godown_stock/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow get: if isAuthenticated() && (
+        isFounder() ||
+        (resource != null && isCompanyMember(getCompanyId(resource.data))) ||
+        (resource == null && userExists() && getUserCompanyId() != '' && getUserData().get('status', 'active') != 'disabled')
+      );
+      allow list: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /employees/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /salary_sheets/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /advances/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /loans/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /stock_groups/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /stock_categories/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /voucher_types/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /employee_groups/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /pay_heads/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyAdmin(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyAdminDoc();
+      allow update: if canUpdateCompanyAdminDoc();
+      allow delete: if canDeleteCompanyAdminDoc();
     }
 
     match /salary_structures/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyAdmin(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyAdminDoc();
+      allow update: if canUpdateCompanyAdminDoc();
+      allow delete: if canDeleteCompanyAdminDoc();
     }
 
     match /attendance/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
-    
+
     match /orders/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data))) && (hasPermission('orders') || isCompanyAdminSimple(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || ((isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId())) && (hasPermission('orders') || isCompanyAdminSimple(getEffectiveCompanyId()))));
+      allow read: if isAuthenticated() && (isFounder() || (resource != null && canAccessFeatureDoc(resource.data, 'orders')));
+      allow create: if isAuthenticated() && (isFounder() || canAccessFeatureDoc(request.resource.data, 'orders'));
+      allow update: if isAuthenticated() && resource != null && (isFounder() || (getCompanyId(request.resource.data) == getCompanyId(resource.data) && canAccessFeatureDoc(resource.data, 'orders')));
+      allow delete: if isAuthenticated() && resource != null && (isFounder() || canAccessFeatureDoc(resource.data, 'orders'));
     }
 
     match /machines/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data))) && (hasPermission('machines') || isCompanyAdminSimple(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || ((isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId())) && (hasPermission('machines') || isCompanyAdminSimple(getEffectiveCompanyId()))));
+      allow read: if isAuthenticated() && (isFounder() || (resource != null && canAccessFeatureDoc(resource.data, 'machines')));
+      allow create: if isAuthenticated() && (isFounder() || canAccessFeatureDoc(request.resource.data, 'machines'));
+      allow update: if isAuthenticated() && resource != null && (isFounder() || (getCompanyId(request.resource.data) == getCompanyId(resource.data) && canAccessFeatureDoc(resource.data, 'machines')));
+      allow delete: if isAuthenticated() && resource != null && (isFounder() || canAccessFeatureDoc(resource.data, 'machines'));
     }
 
     match /serial_numbers/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /tax_rates/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /leads/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /interactions/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /purchase_orders/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /batches/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || resource == null || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow write: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
     }
 
     match /activity_log/{id} {
-      allow read: if isAuthenticated() && (isSuperAdmin() || isOwner(resource.data) || isCompanyMember(getCompanyId(resource.data)));
-      allow create: if isAuthenticated();
-      allow update, delete: if isSuperAdmin();
+      allow read: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update, delete: if isFounder();
     }
 
     match /counters/{id} {
-      allow read, write: if isAuthenticated() && (isSuperAdmin() || id.startsWith(request.auth.uid) || isOwner(resource.data) || isOwner(request.resource.data) || isCompanyMember(getEffectiveCompanyId()));
+      allow get: if isAuthenticated() && (
+        isFounder() ||
+        (resource != null && isCompanyMember(getCompanyId(resource.data))) ||
+        (resource == null && getUserCompanyId() != '' && id.startsWith(getUserCompanyId() + '_')) ||
+        (resource == null && id.startsWith(request.auth.uid + '_'))
+      );
+      allow list: if canReadCompanyDoc();
+      allow create: if canCreateCompanyDoc();
+      allow update: if canUpdateCompanyDoc();
+      allow delete: if canDeleteCompanyDoc();
+    }
+
+    // ===============================================================
+    // Notifications, Site Content, Logs, Orders, Inquiries
+    // ===============================================================
+    function isNotificationRecipient(data) {
+      return data != null && (
+        data.get('targetType', '') == 'all' ||
+        (data.get('targetType', '') == 'company' &&
+         getUserCompanyId() != '' &&
+         data.get('targetId', '') == getUserCompanyId()) ||
+        (data.get('targetType', '') == 'user' &&
+         data.get('targetId', '') == request.auth.uid)
+      );
     }
 
     match /notifications/{id} {
       allow read: if isAuthenticated() && (
-        isSuperAdmin() || 
-        (resource != null && (
-          resource.data.get('targetType', '') == 'all' ||
-          (resource.data.get('targetType', '') == 'company' && resource.data.get('targetId', '') == getUserCompanyId()) ||
-          (resource.data.get('targetType', '') == 'user' && resource.data.get('targetId', '') == request.auth.uid)
-        ))
+        isFounder() ||
+        (resource != null && isNotificationRecipient(resource.data))
       );
-      allow write: if isSuperAdmin();
-      allow update: if isAuthenticated() && resource != null && resource.data.targetId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']);
+      allow create, delete: if isFounder();
+      allow update: if isFounder() || (
+        isAuthenticated() &&
+        resource != null &&
+        isNotificationRecipient(resource.data) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy']) &&
+        request.resource.data.get('readBy', []) is list
+      );
     }
 
     match /site_content/{pageId} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow create, update, delete: if isFounder();
     }
 
     match /error_logs/{logId} {
       allow create: if isAuthenticated();
-      allow read, update, delete: if isSuperAdmin();
+      allow read, update, delete: if isFounder();
     }
 
     match /subscription_orders/{orderId} {
-      allow read, create, update: if isAuthenticated();
-      allow delete: if isSuperAdmin();
+      allow read: if isAuthenticated() && (
+        isFounder() ||
+        (resource != null && (
+          resource.data.get('requestedBy', '') == request.auth.uid ||
+          resource.data.get('userId', '') == request.auth.uid ||
+          (getCompanyId(resource.data) != '' && isCompanyMember(getCompanyId(resource.data)))
+        ))
+      );
+      allow create: if isAuthenticated() && (
+        isFounder() ||
+        (request.resource.data.get('status', '') == 'pending' &&
+         (request.resource.data.get('requestedBy', '') == request.auth.uid ||
+          request.resource.data.get('userId', '') == request.auth.uid) &&
+         getCompanyId(request.resource.data) != '' &&
+         isCompanyMember(getCompanyId(request.resource.data)))
+      );
+      allow update, delete: if isFounder();
     }
 
     match /quota_reset_requests/{requestId} {
-      allow read, update, delete: if isSuperAdmin();
-      allow create: if isAuthenticated();
+      allow read: if isAuthenticated() && (
+        isFounder() ||
+        (resource != null && getCompanyId(resource.data) != '' && isCompanyMember(getCompanyId(resource.data)))
+      );
+      allow create: if isAuthenticated() && (
+        isFounder() ||
+        (request.resource.data.get('status', 'pending') == 'pending' &&
+         getCompanyId(request.resource.data) != '' &&
+         isCompanyMember(getCompanyId(request.resource.data)))
+      );
+      allow update, delete: if isFounder();
     }
 
     match /inquiries/{inquiryId} {
       allow create: if true;
-      allow read, delete: if isSuperAdmin();
+      allow read, update, delete: if isFounder();
     }
 
     match /system_audit_logs/{id} {

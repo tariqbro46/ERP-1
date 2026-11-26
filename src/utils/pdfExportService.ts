@@ -2,6 +2,12 @@ import { jsPDF } from 'jspdf';
 import { formatPrintedAmount, formatPrintedQuantity, convertNumberToWords } from './printUtils';
 import { formatDate as formatReportDate } from './dateUtils';
 import { formatVoucherNo } from '../lib/utils';
+import {
+  DEFAULT_APP_BRANDING,
+  escapeHtml,
+  resolveCompanyLegalIdentity,
+  sanitizeAssetUrl
+} from '../constants/appIdentity';
 
 export interface PrintToPdfOptions {
   title: string;
@@ -11,6 +17,7 @@ export interface PrintToPdfOptions {
   elementId?: string;
   element?: HTMLElement;
   settings?: any;
+  company?: any;
   orientation?: 'portrait' | 'landscape';
   onStart?: () => void;
   onSuccess?: () => void;
@@ -75,20 +82,28 @@ function showPdfToast(initialMessage = 'Generating PDF... Please wait') {
  * - Never place duplicate "Page 1" above table headers or column headers.
  * - Formal company header with logo, uppercase name, address, contact info.
  */
-export function getPdfHeaderHtml(settings: any = {}, title: string, subtitle?: string): string {
-  const logoHtml = settings.companyLogo ? `
+export function getPdfHeaderHtml(
+  settings: any = {},
+  title: string,
+  subtitle?: string,
+  company?: any
+): string {
+  const legal = resolveCompanyLegalIdentity(settings, company);
+  const safeLogoUrl = sanitizeAssetUrl(legal.companyLogo || '');
+  const logoHtml = safeLogoUrl ? `
     <div style="width: 70px; height: 70px; margin-right: 18px; flex-shrink: 0;">
-      <img src="${settings.companyLogo}" style="width: 100%; height: 100%; object-fit: contain;" />
+      <img src="${escapeHtml(safeLogoUrl)}" style="width: 100%; height: 100%; object-fit: contain;" />
     </div>
   ` : '';
 
-  const companyName = (settings.companyName || 'SAPIENT ERP').toUpperCase();
-  const address = settings.companyAddress || '';
+  const companyName = escapeHtml((legal.companyName || '').toUpperCase());
+  const address = escapeHtml(legal.companyAddress || '');
+  const vatLine = legal.vatBinTin ? `VAT/BIN/TIN: ${escapeHtml(legal.vatBinTin)}` : '';
 
   const contactItems: string[] = [];
-  if (settings.showPrintPhone !== false && settings.printPhone) contactItems.push(`Tel: ${settings.printPhone}`);
-  if (settings.showPrintEmail !== false && settings.printEmail) contactItems.push(`Email: ${settings.printEmail}`);
-  if (settings.showPrintWebsite !== false && settings.printWebsite) contactItems.push(`Web: ${settings.printWebsite}`);
+  if (settings.showPrintPhone !== false && legal.printPhone) contactItems.push(`Tel: ${escapeHtml(legal.printPhone)}`);
+  if (settings.showPrintEmail !== false && legal.printEmail) contactItems.push(`Email: ${escapeHtml(legal.printEmail)}`);
+  if (settings.showPrintWebsite !== false && legal.printWebsite) contactItems.push(`Web: ${escapeHtml(legal.printWebsite)}`);
 
   return `
     <div style="position: relative; border-bottom: 2px solid #111827; padding-bottom: 12px; margin-bottom: 16px;">
@@ -100,19 +115,22 @@ export function getPdfHeaderHtml(settings: any = {}, title: string, subtitle?: s
       <div style="display: flex; align-items: center; justify-content: center;">
         ${logoHtml}
         <div style="flex: 1; text-align: center;">
-          <div style="font-size: 20px; font-weight: 800; letter-spacing: 0.5px; color: #000000; text-transform: uppercase;">
-            ${companyName}
-          </div>
+          ${companyName ? `
+            <div style="font-size: 20px; font-weight: 800; letter-spacing: 0.5px; color: #000000; text-transform: uppercase;">
+              ${companyName}
+            </div>
+          ` : ''}
           ${address ? `<div style="font-size: 10px; color: #374151; margin-top: 2px; white-space: pre-line;">${address}</div>` : ''}
+          ${vatLine ? `<div style="font-size: 9px; color: #374151; margin-top: 2px;">${vatLine}</div>` : ''}
           ${contactItems.length > 0 ? `<div style="font-size: 9px; color: #4b5563; margin-top: 2px;">${contactItems.join(' | ')}</div>` : ''}
-          ${settings.showPrintHeader !== false && settings.printHeader ? `<div style="font-size: 10px; font-style: italic; color: #4b5563; margin-top: 3px;">${settings.printHeader}</div>` : ''}
+          ${settings.showPrintHeader !== false && legal.printHeader ? `<div style="font-size: 10px; font-style: italic; color: #4b5563; margin-top: 3px;">${escapeHtml(legal.printHeader)}</div>` : ''}
           
           <div style="margin-top: 8px;">
             <span style="display: inline-block; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #111827; border-bottom: 1.5px solid #111827; padding-bottom: 1px;">
-              ${title.toUpperCase()}
+              ${escapeHtml(title.toUpperCase())}
             </span>
           </div>
-          ${subtitle ? `<div style="font-size: 10px; font-weight: 600; color: #4b5563; margin-top: 3px;">${subtitle}</div>` : ''}
+          ${subtitle ? `<div style="font-size: 10px; font-weight: 600; color: #4b5563; margin-top: 3px;">${escapeHtml(subtitle)}</div>` : ''}
         </div>
       </div>
     </div>
@@ -131,9 +149,9 @@ export function getPdfSignaturesHtml(settings: any = {}): string {
     right: 'flex-end'
   };
 
-  const sig1 = settings.printSignature1 || 'Prepared By';
-  const sig2 = settings.printSignature2 || 'Checked By';
-  const sig3 = settings.printSignature3 || 'Authorised Signatory';
+  const sig1 = escapeHtml(settings.printSignature1 || 'Prepared By');
+  const sig2 = escapeHtml(settings.printSignature2 || 'Checked By');
+  const sig3 = escapeHtml(settings.printSignature3 || 'Authorised Signatory');
 
   return `
     <div style="display: flex; justify-content: ${justifyMap[alignment] || 'space-between'}; gap: 24px; margin-top: 48px; padding-top: 10px; page-break-inside: avoid;">
@@ -160,8 +178,11 @@ export function getPdfSignaturesHtml(settings: any = {}): string {
  * Returns formal footer section HTML
  */
 export function getPdfFooterHtml(settings: any = {}): string {
-  const footerText = settings.showPrintFooter !== false ? (settings.printFooter || 'This is a computer generated document.') : '';
-  const devText = settings.showDeveloperContact !== false ? (settings.developerContactText || 'Powered by TallyFlow ERP') : '';
+  const footerText = settings.showPrintFooter !== false ? escapeHtml(settings.printFooter || 'This is a computer generated document.') : '';
+  const rawDevText = settings.showDeveloperContact !== false
+    ? (settings.appIdentity?.softwareFooterText || settings.developerContactText || DEFAULT_APP_BRANDING.softwareFooterText)
+    : '';
+  const devText = escapeHtml(rawDevText);
 
   return `
     <div style="margin-top: 24px; border-top: 1px solid #d1d5db; padding-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 8px; color: #6b7280; page-break-inside: avoid;">
@@ -186,6 +207,7 @@ export async function printToPDF(options: PrintToPdfOptions): Promise<void> {
     elementId,
     element,
     settings = {},
+    company,
     orientation = 'portrait',
     onStart,
     onSuccess,
@@ -237,7 +259,7 @@ export async function printToPDF(options: PrintToPdfOptions): Promise<void> {
         <html>
           <head>
             <meta charset="utf-8" />
-            <title>${title}</title>
+            <title>${escapeHtml(title)}</title>
             <style>
               * { box-sizing: border-box; }
               body {
@@ -278,7 +300,7 @@ export async function printToPDF(options: PrintToPdfOptions): Promise<void> {
             </style>
           </head>
           <body>
-            ${getPdfHeaderHtml(settings, title, subtitle)}
+            ${getPdfHeaderHtml(settings, title, subtitle, company)}
             <div class="report-body">
               ${clone.innerHTML}
             </div>
@@ -362,7 +384,8 @@ export async function printBalanceSheetToPDF(
     openingBalanceDiff?: number;
     asOnDate: string;
   },
-  settings: any = {}
+  settings: any = {},
+  company?: any
 ): Promise<void> {
   const { liabilityGroups, assetGroups, totalLiabilities, totalAssets, openingBalanceDiff = 0, asOnDate } = data;
   const absLiabilities = Math.abs(totalLiabilities) + (openingBalanceDiff < 0 ? Math.abs(openingBalanceDiff) : 0);
@@ -372,34 +395,34 @@ export async function printBalanceSheetToPDF(
     <table style="width: 100%; border-collapse: collapse;">
       <thead>
         <tr>
-          <th style="text-align: left; width: 65%; border: 1px solid #111; background-color: #f3f4f6; padding: 6px 8px;">LIABILITIES</th>
-          <th style="text-align: right; width: 35%; border: 1px solid #111; background-color: #f3f4f6; padding: 6px 8px;">AMOUNT (৳)</th>
+          <th style="text-align: left; width: 65%; border: 1px solid #111; background-color: #f3f4f6; padding: 6px 8px; vertical-align: middle;">LIABILITIES</th>
+          <th style="text-align: right; width: 35%; border: 1px solid #111; background-color: #f3f4f6; padding: 6px 8px; vertical-align: middle;">AMOUNT (৳)</th>
         </tr>
       </thead>
       <tbody>
         ${liabilityGroups.map(group => `
           <tr style="font-weight: 700;">
-            <td style="border: 1px solid #111; padding: 5px 8px; text-transform: uppercase;">${group.name}</td>
-            <td style="border: 1px solid #111; padding: 5px 8px; text-align: right;">${formatPrintedAmount(Math.abs(group.total))}</td>
+            <td style="border: 1px solid #111; padding: 5px 8px; text-transform: uppercase; vertical-align: middle;">${escapeHtml(group.name)}</td>
+            <td style="border: 1px solid #111; padding: 5px 8px; text-align: right; vertical-align: middle;">${formatPrintedAmount(Math.abs(group.total))}</td>
           </tr>
           ${(group.subItems || []).map((sub: any) => `
             <tr style="color: #374151;">
-              <td style="border: 1px solid #e5e7eb; padding: 3px 8px 3px 20px; font-size: 8.5px;">• ${sub.name}</td>
-              <td style="border: 1px solid #e5e7eb; padding: 3px 8px; text-align: right; font-size: 8.5px;">${formatPrintedAmount(Math.abs(sub.balance))}</td>
+              <td style="border: 1px solid #e5e7eb; padding: 3px 8px 3px 20px; font-size: 8.5px; vertical-align: middle;">• ${escapeHtml(sub.name)}</td>
+              <td style="border: 1px solid #e5e7eb; padding: 3px 8px; text-align: right; font-size: 8.5px; vertical-align: middle;">${formatPrintedAmount(Math.abs(sub.balance))}</td>
             </tr>
           `).join('')}
         `).join('')}
         ${openingBalanceDiff < 0 ? `
           <tr style="color: #dc2626; font-style: italic;">
-            <td style="border: 1px solid #111; padding: 5px 8px;">Difference in opening balances</td>
-            <td style="border: 1px solid #111; padding: 5px 8px; text-align: right;">${formatPrintedAmount(Math.abs(openingBalanceDiff))}</td>
+            <td style="border: 1px solid #111; padding: 5px 8px; vertical-align: middle;">Difference in opening balances</td>
+            <td style="border: 1px solid #111; padding: 5px 8px; text-align: right; vertical-align: middle;">${formatPrintedAmount(Math.abs(openingBalanceDiff))}</td>
           </tr>
         ` : ''}
       </tbody>
       <tfoot>
         <tr style="font-weight: 800; border-top: 2px solid #000; border-bottom: 3px double #000; background-color: #f9fafb;">
-          <td style="border: 1px solid #111; padding: 7px 8px; text-transform: uppercase;">TOTAL LIABILITIES</td>
-          <td style="border: 1px solid #111; padding: 7px 8px; text-align: right;">৳ ${formatPrintedAmount(finalGrandTotal)}</td>
+          <td style="border: 1px solid #111; padding: 7px 8px; text-transform: uppercase; vertical-align: middle;">TOTAL LIABILITIES</td>
+          <td style="border: 1px solid #111; padding: 7px 8px; text-align: right; vertical-align: middle;">৳ ${formatPrintedAmount(finalGrandTotal)}</td>
         </tr>
       </tfoot>
     </table>
@@ -409,34 +432,34 @@ export async function printBalanceSheetToPDF(
     <table style="width: 100%; border-collapse: collapse;">
       <thead>
         <tr>
-          <th style="text-align: left; width: 65%; border: 1px solid #111; background-color: #f3f4f6; padding: 6px 8px;">ASSETS</th>
-          <th style="text-align: right; width: 35%; border: 1px solid #111; background-color: #f3f4f6; padding: 6px 8px;">AMOUNT (৳)</th>
+          <th style="text-align: left; width: 65%; border: 1px solid #111; background-color: #f3f4f6; padding: 6px 8px; vertical-align: middle;">ASSETS</th>
+          <th style="text-align: right; width: 35%; border: 1px solid #111; background-color: #f3f4f6; padding: 6px 8px; vertical-align: middle;">AMOUNT (৳)</th>
         </tr>
       </thead>
       <tbody>
         ${assetGroups.map(group => `
           <tr style="font-weight: 700;">
-            <td style="border: 1px solid #111; padding: 5px 8px; text-transform: uppercase;">${group.name}</td>
-            <td style="border: 1px solid #111; padding: 5px 8px; text-align: right;">${formatPrintedAmount(Math.abs(group.total))}</td>
+            <td style="border: 1px solid #111; padding: 5px 8px; text-transform: uppercase; vertical-align: middle;">${escapeHtml(group.name)}</td>
+            <td style="border: 1px solid #111; padding: 5px 8px; text-align: right; vertical-align: middle;">${formatPrintedAmount(Math.abs(group.total))}</td>
           </tr>
           ${(group.subItems || []).map((sub: any) => `
             <tr style="color: #374151;">
-              <td style="border: 1px solid #e5e7eb; padding: 3px 8px 3px 20px; font-size: 8.5px;">• ${sub.name}</td>
-              <td style="border: 1px solid #e5e7eb; padding: 3px 8px; text-align: right; font-size: 8.5px;">${formatPrintedAmount(Math.abs(sub.balance))}</td>
+              <td style="border: 1px solid #e5e7eb; padding: 3px 8px 3px 20px; font-size: 8.5px; vertical-align: middle;">• ${escapeHtml(sub.name)}</td>
+              <td style="border: 1px solid #e5e7eb; padding: 3px 8px; text-align: right; font-size: 8.5px; vertical-align: middle;">${formatPrintedAmount(Math.abs(sub.balance))}</td>
             </tr>
           `).join('')}
         `).join('')}
         ${openingBalanceDiff > 0 ? `
           <tr style="color: #dc2626; font-style: italic;">
-            <td style="border: 1px solid #111; padding: 5px 8px;">Difference in opening balances</td>
-            <td style="border: 1px solid #111; padding: 5px 8px; text-align: right;">${formatPrintedAmount(Math.abs(openingBalanceDiff))}</td>
+            <td style="border: 1px solid #111; padding: 5px 8px; vertical-align: middle;">Difference in opening balances</td>
+            <td style="border: 1px solid #111; padding: 5px 8px; text-align: right; vertical-align: middle;">${formatPrintedAmount(Math.abs(openingBalanceDiff))}</td>
           </tr>
         ` : ''}
       </tbody>
       <tfoot>
         <tr style="font-weight: 800; border-top: 2px solid #000; border-bottom: 3px double #000; background-color: #f9fafb;">
-          <td style="border: 1px solid #111; padding: 7px 8px; text-transform: uppercase;">TOTAL ASSETS</td>
-          <td style="border: 1px solid #111; padding: 7px 8px; text-align: right;">৳ ${formatPrintedAmount(finalGrandTotal)}</td>
+          <td style="border: 1px solid #111; padding: 7px 8px; text-transform: uppercase; vertical-align: middle;">TOTAL ASSETS</td>
+          <td style="border: 1px solid #111; padding: 7px 8px; text-align: right; vertical-align: middle;">৳ ${formatPrintedAmount(finalGrandTotal)}</td>
         </tr>
       </tfoot>
     </table>
@@ -454,7 +477,7 @@ export async function printBalanceSheetToPDF(
         </style>
       </head>
       <body>
-        ${getPdfHeaderHtml(settings, 'BALANCE SHEET', `As on ${formatReportDate(asOnDate, settings.dateFormat)}`)}
+        ${getPdfHeaderHtml(settings, 'BALANCE SHEET', `As on ${formatReportDate(asOnDate, settings.dateFormat)}`, company)}
         
         <div style="display: flex; gap: 12px; width: 100%;">
           <div style="flex: 1;">${liabilitiesHtml}</div>
@@ -472,7 +495,8 @@ export async function printBalanceSheetToPDF(
     subtitle: `As on ${formatReportDate(asOnDate, settings.dateFormat)}`,
     fileName: `Balance_Sheet_${asOnDate}`,
     htmlContent: contentHtml,
-    settings
+    settings,
+    company
   });
 }
 
@@ -535,19 +559,19 @@ export async function printProfitAndLossToPDF(
                 </tr>
                 ${(tradingData.purchaseGroups || []).map((g: any) => `
                   <tr>
-                    <td>${g.name}</td>
+                    <td>${escapeHtml(g.name)}</td>
                     <td style="text-align: right;">${formatPrintedAmount(Math.abs(g.balance))}</td>
                   </tr>
                 `).join('')}
                 ${(tradingData.directExpenseGroups || []).map((g: any) => `
                   <tr>
-                    <td>${g.name}</td>
+                    <td>${escapeHtml(g.name)}</td>
                     <td style="text-align: right;">${formatPrintedAmount(Math.abs(g.balance))}</td>
                   </tr>
                 `).join('')}
                 ${(plData.indirectExpenseGroups || []).map((g: any) => `
                   <tr>
-                    <td>${g.name}</td>
+                    <td>${escapeHtml(g.name)}</td>
                     <td style="text-align: right;">${formatPrintedAmount(Math.abs(g.balance))}</td>
                   </tr>
                 `).join('')}
@@ -579,7 +603,7 @@ export async function printProfitAndLossToPDF(
               <tbody>
                 ${(tradingData.salesGroups || []).map((g: any) => `
                   <tr>
-                    <td>${g.name}</td>
+                    <td>${escapeHtml(g.name)}</td>
                     <td style="text-align: right;">${formatPrintedAmount(Math.abs(g.balance))}</td>
                   </tr>
                 `).join('')}
@@ -589,7 +613,7 @@ export async function printProfitAndLossToPDF(
                 </tr>
                 ${(plData.indirectIncomeGroups || []).map((g: any) => `
                   <tr>
-                    <td>${g.name}</td>
+                    <td>${escapeHtml(g.name)}</td>
                     <td style="text-align: right;">${formatPrintedAmount(Math.abs(g.balance))}</td>
                   </tr>
                 `).join('')}
@@ -669,13 +693,13 @@ export async function printDaybookToPDF(
               const pName = getLedgerNameFn ? getLedgerNameFn(v) : (v.party_ledger_name || v.ledger_name || 'General');
               return `
                 <tr>
-                  <td>${formatReportDate(v.v_date, settings.dateFormat)}</td>
+                  <td>${escapeHtml(formatReportDate(v.v_date, settings.dateFormat))}</td>
                   <td>
-                    <strong>${pName}</strong>
-                    ${v.narration ? `<div style="font-size: 8px; color: #4b5563; font-style: italic; margin-top: 1px;">(${v.narration})</div>` : ''}
+                    <strong>${escapeHtml(pName)}</strong>
+                    ${v.narration ? `<div style="font-size: 8px; color: #4b5563; font-style: italic; margin-top: 1px;">(${escapeHtml(v.narration)})</div>` : ''}
                   </td>
-                  <td style="text-transform: uppercase;">${v.v_type}</td>
-                  <td>${formatVoucherNo(v.v_no || v.reference_no)}</td>
+                  <td style="text-transform: uppercase;">${escapeHtml(v.v_type)}</td>
+                  <td>${escapeHtml(formatVoucherNo(v.v_no || v.reference_no))}</td>
                   <td style="text-align: right; font-weight: 700;">${formatPrintedAmount(v.total_amount)}</td>
                 </tr>
               `;
@@ -726,10 +750,10 @@ export async function printVoucherToPDF(voucher: any, settings: any = {}): Promi
         <tr>
           <td style="text-align: center;">${idx + 1}</td>
           <td>
-            <strong>${item.item_name}</strong>
-            ${item.godown_name ? `<div style="font-size: 8px; color: #555;">Location: ${item.godown_name}</div>` : ''}
+            <strong>${escapeHtml(item.item_name)}</strong>
+            ${item.godown_name ? `<div style="font-size: 8px; color: #555;">Location: ${escapeHtml(item.godown_name)}</div>` : ''}
           </td>
-          <td style="text-align: right;">${formatPrintedQuantity(item.qty, item.unit)} ${item.unit || ''}</td>
+          <td style="text-align: right;">${formatPrintedQuantity(item.qty, item.unit)} ${escapeHtml(item.unit || '')}</td>
           <td style="text-align: right;">${formatPrintedAmount(item.rate)}</td>
           <td style="text-align: right; font-weight: 700;">${formatPrintedAmount(item.qty * item.rate)}</td>
         </tr>
@@ -747,8 +771,8 @@ export async function printVoucherToPDF(voucher: any, settings: any = {}): Promi
       ${(voucher.entries || []).map((e: any) => `
         <tr>
           <td>
-            <strong>${e.ledger_name}</strong>
-            ${e.narration ? `<div style="font-size: 8px; color: #555; font-style: italic;">(${e.narration})</div>` : ''}
+            <strong>${escapeHtml(e.ledger_name)}</strong>
+            ${e.narration ? `<div style="font-size: 8px; color: #555; font-style: italic;">(${escapeHtml(e.narration)})</div>` : ''}
           </td>
           <td style="text-align: right;">${e.debit > 0 ? formatPrintedAmount(e.debit) : ''}</td>
           <td style="text-align: right;">${e.credit > 0 ? formatPrintedAmount(e.credit) : ''}</td>
@@ -762,7 +786,7 @@ export async function printVoucherToPDF(voucher: any, settings: any = {}): Promi
     <html>
       <head>
         <meta charset="utf-8" />
-        <title>${voucher.v_type} Voucher ${voucher.v_no}</title>
+        <title>${escapeHtml(voucher.v_type)} Voucher ${escapeHtml(voucher.v_no)}</title>
         <style>
           * { box-sizing: border-box; }
           body { font-family: 'JetBrains Mono', Courier, monospace; color: #000; padding: 16px; margin: 0; }
@@ -778,13 +802,13 @@ export async function printVoucherToPDF(voucher: any, settings: any = {}): Promi
         <div style="display: flex; justify-content: space-between; border: 1px solid #111; padding: 8px 12px; margin-bottom: 12px; background-color: #fafafa;">
           <div>
             <div style="font-size: 8px; color: #6b7280; text-transform: uppercase;">Party Details</div>
-            <div style="font-size: 12px; font-weight: 700;">${voucher.party_ledger_name || voucher.ledger_name || 'Cash in Hand'}</div>
-            ${voucher.party_address ? `<div style="font-size: 9px; color: #374151; margin-top: 2px;">${voucher.party_address}</div>` : ''}
+            <div style="font-size: 12px; font-weight: 700;">${escapeHtml(voucher.party_ledger_name || voucher.ledger_name || 'Cash in Hand')}</div>
+            ${voucher.party_address ? `<div style="font-size: 9px; color: #374151; margin-top: 2px;">${escapeHtml(voucher.party_address)}</div>` : ''}
           </div>
           <div style="text-align: right;">
-            <div style="font-size: 9px;"><strong>Voucher No:</strong> ${voucher.v_no}</div>
-            <div style="font-size: 9px;"><strong>Date:</strong> ${formatReportDate(voucher.v_date, settings.dateFormat)}</div>
-            ${voucher.ref_no ? `<div style="font-size: 9px;"><strong>Ref No:</strong> ${voucher.ref_no}</div>` : ''}
+            <div style="font-size: 9px;"><strong>Voucher No:</strong> ${escapeHtml(voucher.v_no)}</div>
+            <div style="font-size: 9px;"><strong>Date:</strong> ${escapeHtml(formatReportDate(voucher.v_date, settings.dateFormat))}</div>
+            ${voucher.ref_no ? `<div style="font-size: 9px;"><strong>Ref No:</strong> ${escapeHtml(voucher.ref_no)}</div>` : ''}
           </div>
         </div>
 
@@ -800,12 +824,12 @@ export async function printVoucherToPDF(voucher: any, settings: any = {}): Promi
 
         <!-- Amount in Words -->
         <div style="border: 1px solid #e5e7eb; padding: 6px 10px; margin-bottom: 12px; font-size: 9.5px; background-color: #f9fafb;">
-          <strong>Amount (in words):</strong> ${amountInWords}
+          <strong>Amount (in words):</strong> ${escapeHtml(amountInWords)}
         </div>
 
         ${voucher.narration ? `
           <div style="border: 1px solid #e5e7eb; padding: 6px 10px; margin-bottom: 12px; font-size: 9px; font-style: italic;">
-            <strong>Narration / Remarks:</strong> ${voucher.narration}
+            <strong>Narration / Remarks:</strong> ${escapeHtml(voucher.narration)}
           </div>
         ` : ''}
 
@@ -849,13 +873,13 @@ export async function printLedgerStatementToPDF(
 
     return `
       <tr>
-        <td>${formatReportDate(e.vouchers?.v_date, settings.dateFormat)}</td>
+        <td>${escapeHtml(formatReportDate(e.vouchers?.v_date, settings.dateFormat))}</td>
         <td>
-          <strong>${e.particulars}</strong>
-          ${e.narration ? `<div style="font-size: 8px; color: #555; font-style: italic;">(${e.narration})</div>` : ''}
+          <strong>${escapeHtml(e.particulars)}</strong>
+          ${e.narration ? `<div style="font-size: 8px; color: #555; font-style: italic;">(${escapeHtml(e.narration)})</div>` : ''}
         </td>
-        <td style="text-transform: uppercase;">${e.vouchers?.v_type || ''}</td>
-        <td>${formatVoucherNo(e.vouchers?.v_no || e.vouchers?.ref_no || e.vouchers?.reference_no)}</td>
+        <td style="text-transform: uppercase;">${escapeHtml(e.vouchers?.v_type || '')}</td>
+        <td>${escapeHtml(formatVoucherNo(e.vouchers?.v_no || e.vouchers?.ref_no || e.vouchers?.reference_no))}</td>
         <td style="text-align: right;">${dr > 0 ? formatPrintedAmount(dr) : ''}</td>
         <td style="text-align: right;">${cr > 0 ? formatPrintedAmount(cr) : ''}</td>
         <td style="text-align: right; font-weight: 700;">${formatPrintedAmount(Math.abs(runningBal))} ${runningBal >= 0 ? 'Dr' : 'Cr'}</td>
@@ -868,7 +892,7 @@ export async function printLedgerStatementToPDF(
     <html>
       <head>
         <meta charset="utf-8" />
-        <title>Ledger Statement: ${ledger?.name}</title>
+        <title>Ledger Statement: ${escapeHtml(ledger?.name || '')}</title>
         <style>
           * { box-sizing: border-box; }
           body { font-family: 'JetBrains Mono', Courier, monospace; color: #000; padding: 16px; margin: 0; }
@@ -945,6 +969,7 @@ export async function printTrialBalanceToPDF(
     grandTotalCredit?: number;
     startDate?: string;
     endDate?: string;
+    company?: any;
   }
 ): Promise<void> {
   const isHierarchical = !!(options && options.groups && options.groups.length > 0);
@@ -965,31 +990,40 @@ export async function printTrialBalanceToPDF(
       // Primary group row
       rowsHtml += `
         <tr style="background-color: #f3f4f6; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #cbd5e1;">
-          <td style="padding: 5px 8px; text-transform: uppercase; font-size: 10px;">${group.name}</td>
-          <td style="padding: 5px 8px; text-align: right; font-size: 10px;">${group.debit > 0 ? formatPrintedAmount(group.debit) : ''}</td>
-          <td style="padding: 5px 8px; text-align: right; font-size: 10px;">${group.credit > 0 ? formatPrintedAmount(group.credit) : ''}</td>
+          <td style="padding: 5px 8px; text-transform: uppercase; font-size: 10px; vertical-align: middle;">${escapeHtml(group.name)}</td>
+          <td style="padding: 5px 8px; text-align: right; font-size: 10px; vertical-align: middle;">${group.debit > 0 ? formatPrintedAmount(group.debit) : ''}</td>
+          <td style="padding: 5px 8px; text-align: right; font-size: 10px; vertical-align: middle;">${group.credit > 0 ? formatPrintedAmount(group.credit) : ''}</td>
         </tr>
       `;
 
       if (viewFormat === 'detailed') {
-        // Subgroups
+        // Subgroups & nested ledgers
         group.subgroups?.forEach((sub: any) => {
           rowsHtml += `
             <tr style="border-bottom: 1px solid #e2e8f0;">
-              <td style="padding: 4px 8px 4px 22px; font-weight: 600; font-size: 9.5px;">${sub.name}</td>
-              <td style="padding: 4px 8px; text-align: right; font-size: 9.5px;">${sub.debit > 0 ? formatPrintedAmount(sub.debit) : ''}</td>
-              <td style="padding: 4px 8px; text-align: right; font-size: 9.5px;">${sub.credit > 0 ? formatPrintedAmount(sub.credit) : ''}</td>
+              <td style="padding: 4px 8px 4px 22px; font-weight: 600; font-size: 9.5px; vertical-align: middle;">${escapeHtml(sub.name)}</td>
+              <td style="padding: 4px 8px; text-align: right; font-size: 9.5px; vertical-align: middle;">${sub.debit > 0 ? formatPrintedAmount(sub.debit) : ''}</td>
+              <td style="padding: 4px 8px; text-align: right; font-size: 9.5px; vertical-align: middle;">${sub.credit > 0 ? formatPrintedAmount(sub.credit) : ''}</td>
             </tr>
           `;
+          sub.ledgers?.forEach((subLedger: any) => {
+            rowsHtml += `
+              <tr style="border-bottom: 1px solid #f1f5f9; font-style: italic; color: #334155;">
+                <td style="padding: 3px 8px 3px 38px; font-size: 9px; vertical-align: middle;">• ${escapeHtml(subLedger.name)}</td>
+                <td style="padding: 3px 8px; text-align: right; font-size: 9px; vertical-align: middle;">${subLedger.debit > 0 ? formatPrintedAmount(subLedger.debit) : ''}</td>
+                <td style="padding: 3px 8px; text-align: right; font-size: 9px; vertical-align: middle;">${subLedger.credit > 0 ? formatPrintedAmount(subLedger.credit) : ''}</td>
+              </tr>
+            `;
+          });
         });
 
         // Direct ledgers
         group.directLedgers?.forEach((ledger: any) => {
           rowsHtml += `
             <tr style="border-bottom: 1px solid #e2e8f0; font-style: italic;">
-              <td style="padding: 4px 8px 4px 22px; font-size: 9.5px; color: #1e293b;">${ledger.name}</td>
-              <td style="padding: 4px 8px; text-align: right; font-size: 9.5px;">${ledger.debit > 0 ? formatPrintedAmount(ledger.debit) : ''}</td>
-              <td style="padding: 4px 8px; text-align: right; font-size: 9.5px;">${ledger.credit > 0 ? formatPrintedAmount(ledger.credit) : ''}</td>
+              <td style="padding: 4px 8px 4px 22px; font-size: 9.5px; color: #1e293b; vertical-align: middle;">${escapeHtml(ledger.name)}</td>
+              <td style="padding: 4px 8px; text-align: right; font-size: 9.5px; vertical-align: middle;">${ledger.debit > 0 ? formatPrintedAmount(ledger.debit) : ''}</td>
+              <td style="padding: 4px 8px; text-align: right; font-size: 9.5px; vertical-align: middle;">${ledger.credit > 0 ? formatPrintedAmount(ledger.credit) : ''}</td>
             </tr>
           `;
         });
@@ -999,7 +1033,7 @@ export async function printTrialBalanceToPDF(
     if (pnl) {
       rowsHtml += `
         <tr style="border-top: 1px solid #000; font-style: italic;">
-          <td style="padding: 5px 8px; font-size: 9.5px;">${pnl.name}</td>
+          <td style="padding: 5px 8px; font-size: 9.5px;">${escapeHtml(pnl.name)}</td>
           <td style="padding: 5px 8px; text-align: right; font-size: 9.5px;">${pnl.debit > 0 ? formatPrintedAmount(pnl.debit) : ''}</td>
           <td style="padding: 5px 8px; text-align: right; font-size: 9.5px; font-weight: 600;">${pnl.credit > 0 ? formatPrintedAmount(pnl.credit) : ''}</td>
         </tr>
@@ -1054,8 +1088,8 @@ export async function printTrialBalanceToPDF(
 
       return `
         <tr>
-          <td><strong>${l.name}</strong></td>
-          <td>${l.ledger_groups?.name || l.group_name || ''}</td>
+          <td><strong>${escapeHtml(l.name)}</strong></td>
+          <td>${escapeHtml(l.ledger_groups?.name || l.group_name || '')}</td>
           <td style="text-align: right;">${dr > 0 ? formatPrintedAmount(dr) : ''}</td>
           <td style="text-align: right;">${cr > 0 ? formatPrintedAmount(cr) : ''}</td>
         </tr>
@@ -1105,7 +1139,7 @@ export async function printTrialBalanceToPDF(
         </style>
       </head>
       <body>
-        ${getPdfHeaderHtml(settings, `TRIAL BALANCE (${viewFormat.toUpperCase()})`, periodSubtitle)}
+        ${getPdfHeaderHtml(settings, `TRIAL BALANCE (${viewFormat.toUpperCase()})`, periodSubtitle, options?.company)}
         
         ${tableHtml}
 
@@ -1120,7 +1154,8 @@ export async function printTrialBalanceToPDF(
     subtitle: periodSubtitle,
     fileName: `Trial_Balance_${viewFormat}_${options?.endDate || asOnDate || new Date().toISOString().split('T')[0]}`,
     htmlContent: contentHtml,
-    settings
+    settings,
+    company: options?.company
   });
 }
 

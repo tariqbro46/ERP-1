@@ -26,6 +26,7 @@ import { AuthTemplate } from '../types';
 import { Login, Register } from './Auth';
 import { useNotification } from '../contexts/NotificationContext';
 import { updateSiteContentMemoryCache } from '../hooks/useSiteContent';
+import { DEFAULT_APP_BRANDING } from '../constants/appIdentity';
 
 interface PageContent {
   id: string;
@@ -42,12 +43,12 @@ const PAGES: PageContent[] = [
       authTemplate: 'softr',
       primaryColor: '#3b82f6',
       accentColor: '#10b981',
-      siteName: 'TallyFlow ERP',
+      siteName: DEFAULT_APP_BRANDING.appName,
       siteNameColor: '#0f172a',
       systemLogo: '',
       navbarBgColor: 'rgba(255, 255, 255, 0.85)',
       navbarTextColor: '#475569',
-      footerText: '© 2026 TallyFlow ERP. All rights reserved.',
+      footerText: DEFAULT_APP_BRANDING.copyrightText,
       footerTextColor: '#64748b',
       footerBgColor: '#fafafa'
     }
@@ -57,7 +58,7 @@ const PAGES: PageContent[] = [
     name: 'Login & Forgot Password',
     defaultContent: {
       template: 'softr',
-      brandName: 'softr',
+      brandName: DEFAULT_APP_BRANDING.appShortName,
       brandLogoUrl: '',
       title: "Nice seeing you again, pal!",
       titleColor: "#0f172a",
@@ -74,8 +75,8 @@ const PAGES: PageContent[] = [
       signInButtonText: "Sign in",
       noAccountText: "Don't have an account?",
       signUpLinkText: "Sign up",
-      footerCopyrightText: "© 2026 Softr Studio ERP. All rights reserved.",
-      testimonialQuote: "“We have a very unique way of managing projects and collaborating — we're very process- and data-driven. With Softr, we were able to unite our project management in one platform.”",
+      footerCopyrightText: DEFAULT_APP_BRANDING.copyrightText,
+      testimonialQuote: `“We have a very unique way of managing projects and accounting — we're very process- and data-driven. With ${DEFAULT_APP_BRANDING.appShortName}, we were able to unite our entire business workflow in one platform.”`,
       testimonialAuthorName: "Natalie Neumann",
       testimonialAuthorTitle: "COO, Designity",
       testimonialAuthorAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=160&q=80",
@@ -104,9 +105,9 @@ const PAGES: PageContent[] = [
     name: 'Sign Up / Register Page',
     defaultContent: {
       template: 'softr',
-      brandName: 'softr',
+      brandName: DEFAULT_APP_BRANDING.appShortName,
       brandLogoUrl: '',
-      title: "Start building with Softr",
+      title: `Start building with ${DEFAULT_APP_BRANDING.appShortName}`,
       titleColor: "#0f172a",
       subtitle: "Join thousands of teams building powerful portals.",
       subtitleColor: "#64748b",
@@ -127,8 +128,8 @@ const PAGES: PageContent[] = [
       registerButtonText: "Create Account",
       alreadyAccountText: "Already have an account?",
       signInLinkText: "Sign in",
-      footerCopyrightText: "© 2026 Softr Studio ERP. All rights reserved.",
-      testimonialQuote: "“We have a very unique way of managing projects and collaborating — we're very process- and data-driven. With Softr, we were able to unite our project management in one platform.”",
+      footerCopyrightText: DEFAULT_APP_BRANDING.copyrightText,
+      testimonialQuote: `“We have a very unique way of managing projects and accounting — we're very process- and data-driven. With ${DEFAULT_APP_BRANDING.appShortName}, we were able to unite our entire business workflow in one platform.”`,
       testimonialAuthorName: "Natalie Neumann",
       testimonialAuthorTitle: "COO, Designity",
       testimonialAuthorAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=160&q=80",
@@ -782,7 +783,7 @@ export const SiteContentEditor: React.FC<{ showNotification?: (msg: string, type
                               <div className="flex items-center justify-between gap-2 mb-2">
                                 <span className={cn(
                                   "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
-                                  tmpl.badge === 'Softr Studio 1:1' ? "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400 font-extrabold" :
+                                  tmpl.badge === 'Studio Layout' ? "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400 font-extrabold" :
                                   tmpl.badge === 'Clean Minimal' ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400" :
                                   "bg-muted border-border text-muted-foreground"
                                 )}>

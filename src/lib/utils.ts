@@ -51,44 +51,62 @@ export function ensureDate(date: any): Date {
   
   // Handle Firestore Timestamp
   if (date && typeof date.toDate === 'function') {
-    return date.toDate();
+    const d = date.toDate();
+    if (d instanceof Date && !isNaN(d.getTime())) return d;
+    return new Date();
   }
   
   // Handle Firestore-like object { seconds, nanoseconds }
   if (date && typeof date.seconds === 'number') {
-    return new Date(date.seconds * 1000);
+    const d = new Date(date.seconds * 1000);
+    if (!isNaN(d.getTime())) return d;
+    return new Date();
   }
 
   if (date instanceof Date) {
-    return date;
+    if (!isNaN(date.getTime())) return date;
+    return new Date();
   }
 
   if (typeof date === 'number') {
-    return new Date(date);
+    const d = new Date(date);
+    if (!isNaN(d.getTime())) return d;
+    return new Date();
   }
 
   if (typeof date === 'string') {
-    // Attempt local parse first if YYYY-MM-DD to avoid UTC shift
     const trimmed = date.trim();
-    const parts = trimmed.split(/[-/.]/);
-    if (parts.length === 3) {
-      let p0 = Number(parts[0]);
-      let p1 = Number(parts[1]);
-      let p2 = Number(parts[2]);
-      
-      // Handle 2-digit years
-      const handleYear = (y: number) => {
-        if (y < 50) return 2000 + y;
-        if (y < 100) return 1900 + y;
-        return y;
-      };
+    if (!trimmed) return new Date();
 
-      if (parts[0].length === 4) return new Date(p0, p1 - 1, p2); // YYYY-MM-DD
-      if (parts[2].length === 4) return new Date(p2, p1 - 1, p0); // DD-MM-YYYY
-      if (parts[2].length === 2) return new Date(handleYear(p2), p1 - 1, p0); // DD-MM-YY
+    // 1. Strict YYYY-MM-DD (with optional delimiters - / .) to avoid UTC shift
+    const ymdMatch = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/.exec(trimmed);
+    if (ymdMatch) {
+      const year = Number(ymdMatch[1]);
+      const month = Number(ymdMatch[2]) - 1;
+      const day = Number(ymdMatch[3]);
+      const d = new Date(year, month, day);
+      if (!isNaN(d.getTime())) return d;
     }
-    const d = new Date(date);
+
+    // 2. Strict DD-MM-YYYY or DD-MM-YY
+    const dmyMatch = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/.exec(trimmed);
+    if (dmyMatch) {
+      const day = Number(dmyMatch[1]);
+      const month = Number(dmyMatch[2]) - 1;
+      let rawYear = Number(dmyMatch[3]);
+      let year = rawYear;
+      if (rawYear < 50) year = 2000 + rawYear;
+      else if (rawYear < 100) year = 1900 + rawYear;
+      const d = new Date(year, month, day);
+      if (!isNaN(d.getTime())) return d;
+    }
+
+    // 3. Full ISO timestamp (e.g. 2026-05-15T14:30:00Z) or standard date string
+    const d = new Date(trimmed);
     if (!isNaN(d.getTime())) return d;
+
+    // Fallback for invalid string
+    return new Date();
   }
   
   return new Date();
@@ -247,3 +265,46 @@ export function compareLedgerVouchers(a: any, b: any): number {
 
   return (vA.id || a?.id || '').toString().localeCompare((vB.id || b?.id || '').toString());
 }
+
+/**
+ * Calculates Bangladesh Standard Time (UTC+6) hourly quota slot (0 to 11).
+ * Daily quota reset starts at 1:00 PM BST (13:00 BST).
+ * 
+ * Boundary mappings:
+ * - 12:59 PM BST -> slot_11
+ * - 1:00 PM BST  -> slot_0
+ * - 2:59 PM BST  -> slot_0
+ * - 3:00 PM BST  -> slot_1
+ * - 12:00 AM BST -> slot_5
+ */
+export function calculateBstQuotaSlot(dateInput?: Date | number | string): {
+  slotKey: string;
+  slotIdx: number;
+  label: string;
+  bstHour: number;
+} {
+  try {
+    const d = dateInput !== undefined ? new Date(dateInput) : new Date();
+    const utcMs = d.getTime();
+    if (isNaN(utcMs)) {
+      return { slotKey: 'slot_0', slotIdx: 0, label: '1 PM', bstHour: 13 };
+    }
+    const bstMs = utcMs + 6 * 60 * 60 * 1000;
+    const bstDate = new Date(bstMs);
+    const bstHour = bstDate.getUTCHours();
+    
+    // Quota reset happens at 13:00 (1 PM BST)
+    // slot = floor(((bstHour - 13 + 24) % 24) / 2)
+    const slotIdx = Math.floor(((bstHour - 13 + 24) % 24) / 2);
+    const slotLabels = ['1 PM', '3 PM', '5 PM', '7 PM', '9 PM', '11 PM', '1 AM', '3 AM', '5 AM', '7 AM', '9 AM', '11 AM'];
+    return {
+      slotKey: `slot_${slotIdx}`,
+      slotIdx,
+      label: slotLabels[slotIdx] || `slot_${slotIdx}`,
+      bstHour
+    };
+  } catch (e) {
+    return { slotKey: 'slot_0', slotIdx: 0, label: '1 PM', bstHour: 13 };
+  }
+}
+

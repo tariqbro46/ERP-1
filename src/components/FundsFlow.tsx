@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Printer, Download, PlusCircle, MinusCircle, Wallet } from 'lucide-react';
+import { ArrowLeft, Printer, Download, FileSpreadsheet, Mail, PlusCircle, MinusCircle, Wallet } from 'lucide-react';
 import { SkeletonLoader } from './SkeletonLoader';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, formatNumber, cn, parseEntryDate } from '../lib/utils';
+import { formatDate as formatReportDate } from '../utils/dateUtils';
+import { buildReportPrintHtml, executePrint } from '../utils/printUtils';
+import { printToPDF } from '../utils/pdfExportService';
+import { exportStructuredExcel, shareReportViaEmail } from '../utils/exportUtils';
+import { DateInput } from './DateInput';
 
 export function FundsFlow() {
-  const { user } = useAuth();
+  const { user, company } = useAuth();
+  const settings = useSettings();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -21,6 +28,9 @@ export function FundsFlow() {
   const [applications, setApplications] = useState<any[]>([]);
   const [workingCapitalChange, setWorkingCapitalChange] = useState(0);
 
+  const effectiveFrom = dateRange.from <= dateRange.to ? dateRange.from : dateRange.to;
+  const effectiveTo = dateRange.from <= dateRange.to ? dateRange.to : dateRange.from;
+
   useEffect(() => {
     async function fetchFundsFlow() {
       if (!user?.companyId) return;
@@ -28,60 +38,72 @@ export function FundsFlow() {
       try {
         const [ledgers, vEntries] = await Promise.all([
           erpService.getLedgers(user.companyId),
-          erpService.getVoucherEntriesByDate(user.companyId, dateRange.to)
+          erpService.getVoucherEntriesByDate(user.companyId, effectiveTo)
         ]);
 
-        // Simplified logic for Sources and Applications
+        const fromDate = parseEntryDate(effectiveFrom, null);
+        const toDate = parseEntryDate(effectiveTo, null);
+        toDate.setHours(23, 59, 59, 999);
+
+        const ledgerMap = new Map<string, any>();
+        ledgers.forEach(l => ledgerMap.set(l.id, l));
+
+        const periodEntries = (vEntries || []).filter((entry: any) => {
+          const entryDate = parseEntryDate(entry.v_date || entry.date, entry.createdAt);
+          return entryDate >= fromDate && entryDate <= toDate;
+        });
+
         const sourceItems: any[] = [];
         const applicationItems: any[] = [];
 
         // Analyze movements in non-current accounts
-        // Non-current accounts: Fixed Assets, Investments, Capital, Loans (Long term)
         const nonCurrentGroups = ['Fixed Assets', 'Investments', 'Capital Account', 'Loans (Liability)'];
-        
-        const nonCurrentLedgers = ledgers.filter(l => 
-          nonCurrentGroups.some(g => l.group_name?.includes(g))
+        const nonCurrentIds = new Set(
+          ledgers
+            .filter(l => nonCurrentGroups.some(g => l.group_name?.includes(g)))
+            .map(l => l.id)
         );
 
-        const nonCurrentIds = new Set(nonCurrentLedgers.map(l => l.id));
+        let income = 0;
+        let expense = 0;
 
-        vEntries.forEach(entry => {
+        periodEntries.forEach((entry: any) => {
+          const ledger = ledgerMap.get(entry.ledger_id);
+          if (!ledger) return;
+          const debit = Number(entry.debit) || 0;
+          const credit = Number(entry.credit) || 0;
+
           if (nonCurrentIds.has(entry.ledger_id)) {
-            const amount = entry.credit - entry.debit; // Credit is source (increase in liability/capital or decrease in asset), Debit is application
-            if (amount === 0) return;
-
-            const ledger = ledgers.find(l => l.id === entry.ledger_id);
-            if (!ledger) return;
-
+            const amount = credit - debit; // Credit is source, Debit is application
             if (amount > 0) {
-              sourceItems.push({ name: ledger.name, amount: amount });
-            } else {
+              sourceItems.push({ name: ledger.name, amount });
+            } else if (amount < 0) {
               applicationItems.push({ name: ledger.name, amount: Math.abs(amount) });
             }
           }
+
+          if (ledger.nature === 'Income') {
+            income += credit - debit;
+          } else if (ledger.nature === 'Expense') {
+            expense += debit - credit;
+          }
         });
 
-        // Funds from operations (simplified as net profit)
-        // In a real app, we'd calculate this from P&L
-        const income = vEntries.filter(e => ledgers.find(l => l.id === e.ledger_id)?.nature === 'Income')
-          .reduce((sum, e) => sum + (e.credit - e.debit), 0);
-        const expense = vEntries.filter(e => ledgers.find(l => l.id === e.ledger_id)?.nature === 'Expense')
-          .reduce((sum, e) => sum + (e.debit - e.credit), 0);
         const fundsFromOps = income - expense;
-
         if (fundsFromOps > 0) {
           sourceItems.push({ name: 'Funds from Operations', amount: fundsFromOps });
         } else if (fundsFromOps < 0) {
           applicationItems.push({ name: 'Loss from Operations', amount: Math.abs(fundsFromOps) });
         }
 
-        // Group items
         const groupItems = (items: any[]) => {
           const grouped: Record<string, number> = {};
           items.forEach(item => {
             grouped[item.name] = (grouped[item.name] || 0) + item.amount;
           });
-          return Object.entries(grouped).map(([name, amount]) => ({ name, amount }));
+          return Object.entries(grouped)
+            .filter(([, amount]) => Math.abs(amount) >= 0.005)
+            .map(([name, amount]) => ({ name, amount }));
         };
 
         const finalSources = groupItems(sourceItems);
@@ -90,10 +112,9 @@ export function FundsFlow() {
         setSources(finalSources);
         setApplications(finalApps);
 
-        const totalSources = finalSources.reduce((sum, i) => sum + i.amount, 0);
-        const totalApps = finalApps.reduce((sum, i) => sum + i.amount, 0);
-        setWorkingCapitalChange(totalSources - totalApps);
-
+        const totalSrc = finalSources.reduce((sum, i) => sum + i.amount, 0);
+        const totalApp = finalApps.reduce((sum, i) => sum + i.amount, 0);
+        setWorkingCapitalChange(totalSrc - totalApp);
       } catch (err) {
         console.error('Error fetching funds flow:', err);
       } finally {
@@ -102,10 +123,110 @@ export function FundsFlow() {
     }
 
     fetchFundsFlow();
-  }, [user?.companyId, dateRange]);
+  }, [user?.companyId, effectiveFrom, effectiveTo]);
 
   const totalSources = sources.reduce((sum, item) => sum + item.amount, 0);
   const totalApplications = applications.reduce((sum, item) => sum + item.amount, 0);
+  const periodSubtitle = `Period: ${formatReportDate(effectiveFrom, settings.dateFormat)} to ${formatReportDate(effectiveTo, settings.dateFormat)}`;
+
+  const buildFundsFlowHtml = () => {
+    const wcLabel = workingCapitalChange >= 0
+      ? `Increase of ${formatCurrency(Math.abs(workingCapitalChange))}`
+      : `Decrease of ${formatCurrency(Math.abs(workingCapitalChange))}`;
+
+    return buildReportPrintHtml({
+      title: 'Funds Flow Statement',
+      subtitle: periodSubtitle,
+      settings,
+      company,
+      summaryCards: [
+        { label: 'Total Sources', value: formatCurrency(totalSources) },
+        { label: 'Total Applications', value: formatCurrency(totalApplications) },
+        { label: 'Net Change in Working Capital', value: wcLabel }
+      ],
+      sections: [
+        {
+          heading: 'Sources of Funds',
+          columns: [
+            { label: 'Particulars', width: '72%' },
+            { label: 'Amount', align: 'right', width: '28%' }
+          ],
+          rows: [
+            ...sources.map(item => ({ cells: [item.name, formatCurrency(item.amount)], tone: 'positive' as const })),
+            { cells: ['Total Sources', formatCurrency(totalSources)], isTotal: true, tone: 'positive' as const }
+          ],
+          emptyMessage: 'No sources found'
+        },
+        {
+          heading: 'Applications of Funds',
+          columns: [
+            { label: 'Particulars', width: '72%' },
+            { label: 'Amount', align: 'right', width: '28%' }
+          ],
+          rows: [
+            ...applications.map(item => ({ cells: [item.name, formatCurrency(item.amount)], tone: 'negative' as const })),
+            { cells: ['Total Applications', formatCurrency(totalApplications)], isTotal: true, tone: 'negative' as const }
+          ],
+          emptyMessage: 'No applications found'
+        }
+      ],
+      note: 'This represents the net change in current assets and current liabilities during the selected period.'
+    });
+  };
+
+  const handlePrint = () => {
+    executePrint(buildFundsFlowHtml());
+  };
+
+  const handleDownloadPDF = () => {
+    printToPDF({
+      title: 'Funds Flow Statement',
+      subtitle: periodSubtitle,
+      fileName: `Funds_Flow_${effectiveFrom}_to_${effectiveTo}`,
+      htmlContent: buildFundsFlowHtml(),
+      settings,
+      company
+    });
+  };
+
+  const handleDownloadExcel = () => {
+    const rows: Record<string, any>[] = [
+      ...sources.map(item => ({ category: 'Sources of Funds', particulars: item.name, amount: Number(item.amount.toFixed(2)) })),
+      { category: 'Sources of Funds', particulars: 'Total Sources', amount: Number(totalSources.toFixed(2)) },
+      ...applications.map(item => ({ category: 'Applications of Funds', particulars: item.name, amount: Number(item.amount.toFixed(2)) })),
+      { category: 'Applications of Funds', particulars: 'Total Applications', amount: Number(totalApplications.toFixed(2)) }
+    ];
+
+    exportStructuredExcel({
+      fileName: `Funds_Flow_${effectiveFrom}_to_${effectiveTo}`,
+      sheetName: 'Funds Flow',
+      title: 'Funds Flow Statement',
+      subtitle: periodSubtitle,
+      headers: ['Category', 'Particulars', 'Amount'],
+      rows,
+      footerRow: {
+        category: 'Summary',
+        particulars: workingCapitalChange >= 0 ? 'Net Increase in Working Capital' : 'Net Decrease in Working Capital',
+        amount: Number(workingCapitalChange.toFixed(2))
+      },
+      settings,
+      company
+    });
+  };
+
+  const handleEmailReport = () => {
+    shareReportViaEmail({
+      title: 'Funds Flow Statement',
+      subtitle: periodSubtitle,
+      settings,
+      company,
+      summaryLines: [
+        `Total Sources of Funds: ${formatNumber(totalSources)}`,
+        `Total Applications of Funds: ${formatNumber(totalApplications)}`,
+        `Net Change in Working Capital: ${workingCapitalChange >= 0 ? 'Increase of ' : 'Decrease of '}${formatNumber(Math.abs(workingCapitalChange))}`
+      ]
+    });
+  };
 
   if (loading) {
     return <SkeletonLoader type="table" />;
@@ -114,7 +235,7 @@ export function FundsFlow() {
   return (
     <div className="h-full flex flex-col bg-background font-mono transition-colors overflow-hidden">
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate(-1)}
@@ -127,14 +248,50 @@ export function FundsFlow() {
               <p className="text-[10px] text-gray-500 uppercase tracking-widest">Analysis of changes in financial position</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 bg-background border border-border rounded-lg hover:bg-foreground/5 transition-colors">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="w-36">
+              <DateInput
+                label="From"
+                value={dateRange.from}
+                onChange={(val) => setDateRange(prev => ({ ...prev, from: val }))}
+                compact
+              />
+            </div>
+            <div className="w-36">
+              <DateInput
+                label="To"
+                value={dateRange.to}
+                onChange={(val) => setDateRange(prev => ({ ...prev, to: val }))}
+                compact
+              />
+            </div>
+            <button
+              onClick={handleDownloadExcel}
+              className="flex items-center gap-2 px-3.5 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Excel
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 bg-background border border-border rounded-lg hover:bg-foreground/5 transition-colors"
+            >
               <Printer className="w-4 h-4" />
               {t('common.print')}
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white bg-foreground rounded-lg hover:opacity-90 transition-colors">
+            <button
+              onClick={handleDownloadPDF}
+              className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white bg-foreground rounded-lg hover:opacity-90 transition-colors"
+            >
               <Download className="w-4 h-4" />
               {t('common.downloadPdf')}
+            </button>
+            <button
+              onClick={handleEmailReport}
+              className="flex items-center gap-2 px-3.5 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 bg-background border border-border rounded-lg hover:bg-foreground/5 transition-colors"
+            >
+              <Mail className="w-4 h-4" />
+              Email
             </button>
           </div>
         </div>

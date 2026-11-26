@@ -143,7 +143,7 @@ export function ItemMaster() {
               title="Filter low stock and reorder level items"
             >
               <AlertTriangle className={cn("w-3.5 h-3.5", lowStockOnly ? "text-white" : "text-rose-500")} />
-              <span>{lowStockOnly ? 'Low Stock Filter' : 'Low Stock'}</span>
+              <span>{lowStockOnly ? t('item.lowStockFilter') : t('stock.lowStock')}</span>
               {lowStockCount > 0 && (
                 <span className={cn(
                   "px-1.5 py-0.2 rounded-full text-[9px] font-bold font-mono",
@@ -216,7 +216,7 @@ export function ItemMaster() {
                 }}
                 className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 hover:bg-rose-500/30 text-rose-800 dark:text-rose-200 px-2.5 py-1 rounded-md transition-colors"
               >
-                <span>Show All Items</span>
+                <span>{t('item.showAllItems')}</span>
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -346,7 +346,7 @@ export function ItemMaster() {
                           <button 
                             onClick={() => navigate(`/inventory/items/edit/${item.id}`)}
                             className="p-2 bg-card border border-border text-gray-600 hover:text-foreground hover:border-foreground transition-all opacity-0 group-hover:opacity-100"
-                            title="Edit Item"
+                            title={t('item.edit')}
                           >
                             <Edit2 className="w-3 h-3" />
                           </button>

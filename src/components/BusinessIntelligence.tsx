@@ -15,11 +15,13 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSettings } from '../contexts/SettingsContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { erpService } from '../services/erpService';
 import { cn, formatNumber, formatQuantity, getMovementType, parseEntryDate, formatToYMD } from '../lib/utils';
 import { SkeletonLoader } from './SkeletonLoader';
 import { executePrint } from '../utils/printUtils';
 import { printToPDF } from '../utils/pdfExportService';
+import { resolveCompanyLegalIdentity } from '../constants/appIdentity';
 import { jsPDF } from 'jspdf';
 
 type ActiveTab = 'accounting' | 'inventory' | 'banking';
@@ -64,6 +66,7 @@ export function BusinessIntelligence() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const settings = useSettings();
+  const { t } = useLanguage();
   const { baseCurrencySymbol } = settings;
   const navigate = useNavigate();
 
@@ -1305,10 +1308,11 @@ export function BusinessIntelligence() {
       const isDebtors = ledgerModalType === 'debtors';
       const reportTitle = isDebtors ? 'SUNDRY DEBTORS REPORT' : 'SUNDRY CREDITORS REPORT';
       const fileName = `${isDebtors ? 'Sundry_Debtors' : 'Sundry_Creditors'}_Report_${periodStart}_to_${periodEnd}.pdf`;
-      const companyTitle = (settings?.companyName || 'SAPIENT ERP').toUpperCase();
-      const companyAddress = settings?.companyAddress || '';
-      const companyPhone = settings?.printPhone || '';
-      const companyEmail = settings?.printEmail || '';
+      const legal = resolveCompanyLegalIdentity(settings);
+      const companyTitle = (legal.companyName || '').toUpperCase();
+      const companyAddress = legal.companyAddress || '';
+      const companyPhone = legal.printPhone || '';
+      const companyEmail = legal.printEmail || '';
 
       let totalDr = 0;
       let totalCr = 0;
@@ -1549,10 +1553,11 @@ export function BusinessIntelligence() {
       }
 
       // 2. Configure report metadata, KPIs and table data based on active modal type
-      const companyTitle = (settings?.companyName || 'SAPIENT ERP').toUpperCase();
-      const companyAddress = settings?.companyAddress || '';
-      const companyPhone = settings?.printPhone || '';
-      const companyEmail = settings?.printEmail || '';
+      const legal = resolveCompanyLegalIdentity(settings);
+      const companyTitle = (legal.companyName || '').toUpperCase();
+      const companyAddress = legal.companyAddress || '';
+      const companyPhone = legal.printPhone || '';
+      const companyEmail = legal.printEmail || '';
 
       let reportTitle = '';
       let filePrefix = '';
@@ -2000,7 +2005,7 @@ export function BusinessIntelligence() {
               )}
             >
               <Activity className="w-3.5 h-3.5" />
-              <span>Accounting</span>
+              <span>{t('bi.accounting')}</span>
             </button>
 
             <button
@@ -2013,7 +2018,7 @@ export function BusinessIntelligence() {
               )}
             >
               <Package className="w-3.5 h-3.5" />
-              <span>Inventory</span>
+              <span>{t('bi.inventory')}</span>
             </button>
 
             <button
@@ -2026,7 +2031,7 @@ export function BusinessIntelligence() {
               )}
             >
               <Landmark className="w-3.5 h-3.5" />
-              <span>Bank & Cash</span>
+              <span>{t('bi.bankAndCash')}</span>
             </button>
           </div>
 
@@ -2034,7 +2039,7 @@ export function BusinessIntelligence() {
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 bg-muted/40 border border-border px-2.5 py-1 rounded">
               <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">Period:</span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">{t('bi.period')}</span>
               <input 
                 type="date" 
                 value={periodStart} 
@@ -2070,16 +2075,16 @@ export function BusinessIntelligence() {
               ) : (
                 <ShieldCheck className="w-3.5 h-3.5 text-primary" />
               )}
-              <span>{isVerifying ? "Verifying..." : verificationStats.verifiedAt ? "Verified" : "Verify Balances"}</span>
+              <span>{isVerifying ? t('bi.verifying') : verificationStats.verifiedAt ? t('bi.verified') : t('bi.verifyBalances')}</span>
             </button>
 
             <button
               onClick={() => setRefreshKey(prev => prev + 1)}
               className="p-1.5 rounded bg-muted/50 hover:bg-muted text-foreground border border-border transition-colors cursor-pointer flex items-center gap-1.5 text-[11px] uppercase font-bold px-3"
-              title="Refresh Data"
+              title={t('common.refresh')}
             >
               <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
-              <span>Refresh</span>
+              <span>{t('common.refresh')}</span>
             </button>
           </div>
         </div>
@@ -2102,7 +2107,7 @@ export function BusinessIntelligence() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-card border border-border p-4 rounded-sm flex flex-col justify-between shadow-xs">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center justify-between">
-                    Gross Profit <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                    {t('bi.grossProfit')} <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
                   </span>
                   <p className="text-2xl font-bold text-foreground mt-2 font-mono">
                     {currencySymbol} {formatNumber(accountingAnalytics.grossProfit)}
@@ -2114,7 +2119,7 @@ export function BusinessIntelligence() {
 
                 <div className="bg-card border border-border p-4 rounded-sm flex flex-col justify-between shadow-xs">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center justify-between">
-                    Net Profit <span className="text-sm font-bold text-blue-500">{currencySymbol}</span>
+                    {t('bi.netProfit')} <span className="text-sm font-bold text-blue-500">{currencySymbol}</span>
                   </span>
                   <p className="text-2xl font-bold text-foreground mt-2 font-mono">
                     {currencySymbol} {formatNumber(accountingAnalytics.netProfit)}
@@ -2126,7 +2131,7 @@ export function BusinessIntelligence() {
 
                 <div className="bg-card border border-border p-4 rounded-sm flex flex-col justify-between shadow-xs">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center justify-between">
-                    Assets vs. Liabilities <Building2 className="w-3.5 h-3.5 text-indigo-500" />
+                    {t('bi.assetsVsLiabilities')} <Building2 className="w-3.5 h-3.5 text-indigo-500" />
                   </span>
                   <p className="text-2xl font-bold text-foreground mt-2 font-mono">
                     {currencySymbol} {formatNumber(accountingAnalytics.totalAssets)}
@@ -2138,7 +2143,7 @@ export function BusinessIntelligence() {
 
                 <div className="bg-card border border-border p-4 rounded-sm flex flex-col justify-between shadow-xs">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center justify-between">
-                    Current Ratio <Activity className="w-3.5 h-3.5 text-amber-500" />
+                    {t('bi.currentRatio')} <Activity className="w-3.5 h-3.5 text-amber-500" />
                   </span>
                   <p className="text-2xl font-bold text-foreground mt-2 font-mono">
                     {accountingAnalytics.currentRatio.toFixed(2)} : 1
@@ -2155,36 +2160,36 @@ export function BusinessIntelligence() {
                   <div className="flex items-center gap-2">
                     <BookOpen className="w-4 h-4 text-primary" />
                     <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                      Trading Details
+                      {t('bi.tradingDetails')}
                     </h3>
                   </div>
                   <span className="text-[9px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded font-mono uppercase font-bold">
-                    Trading Account
+                    {t('bi.tradingAccount')}
                   </span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs font-mono">
                   <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded">
-                    <span className="text-[9px] text-blue-600 dark:text-blue-400 uppercase font-bold block">Gross Sales</span>
+                    <span className="text-[9px] text-blue-600 dark:text-blue-400 uppercase font-bold block">{t('bi.grossSales')}</span>
                     <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(accountingAnalytics.salesTotal)}</span>
                   </div>
                   <div className="p-3 bg-amber-500/5 border border-amber-500/10 rounded">
-                    <span className="text-[9px] text-amber-600 dark:text-amber-400 uppercase font-bold block">Gross Purchases</span>
+                    <span className="text-[9px] text-amber-600 dark:text-amber-400 uppercase font-bold block">{t('bi.grossPurchases')}</span>
                     <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(accountingAnalytics.purchaseTotal)}</span>
                   </div>
                   <div className="p-3 bg-rose-500/5 border border-rose-500/10 rounded">
-                    <span className="text-[9px] text-rose-600 dark:text-rose-400 uppercase font-bold block">Direct Expenses</span>
+                    <span className="text-[9px] text-rose-600 dark:text-rose-400 uppercase font-bold block">{t('bi.directExpenses')}</span>
                     <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(accountingAnalytics.directExpense)}</span>
                   </div>
                   <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded">
-                    <span className="text-[9px] text-emerald-600 dark:text-emerald-400 uppercase font-bold block">Direct Incomes</span>
+                    <span className="text-[9px] text-emerald-600 dark:text-emerald-400 uppercase font-bold block">{t('bi.directIncomes')}</span>
                     <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(accountingAnalytics.directIncome)}</span>
                   </div>
                   <div className="p-3 bg-indigo-500/5 border border-indigo-500/10 rounded">
-                    <span className="text-[9px] text-indigo-600 dark:text-indigo-400 uppercase font-bold block">Opening Stock</span>
+                    <span className="text-[9px] text-indigo-600 dark:text-indigo-400 uppercase font-bold block">{t('bi.openingStock')}</span>
                     <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(accountingAnalytics.openingStock)}</span>
                   </div>
                   <div className="p-3 bg-teal-500/5 border border-teal-500/10 rounded">
-                    <span className="text-[9px] text-teal-600 dark:text-teal-400 uppercase font-bold block">Closing Stock</span>
+                    <span className="text-[9px] text-teal-600 dark:text-teal-400 uppercase font-bold block">{t('bi.closingStock')}</span>
                     <span className="text-base font-bold text-foreground">{currencySymbol} {formatNumber(accountingAnalytics.closingStock)}</span>
                   </div>
                 </div>
@@ -2406,12 +2411,12 @@ export function BusinessIntelligence() {
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-emerald-500" />
                       <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                        Top Ledgers (Sundry Debtors)
+                        {t('bi.topDebtors')}
                       </h4>
                       {verificationStats.verifiedAt && (
                         <span className="text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-bold flex items-center gap-1" title="Targeted verified from raw source voucher entries">
                           <CheckCircle2 className="w-2.5 h-2.5" />
-                          <span>Verified</span>
+                          <span>{t('bi.verified')}</span>
                         </span>
                       )}
                     </div>
@@ -2423,7 +2428,7 @@ export function BusinessIntelligence() {
                       className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all cursor-pointer flex items-center gap-1 shadow-xs"
                       title="View all debtors in detailed configurable modal"
                     >
-                      <span>View More</span>
+                      <span>{t('bi.viewMore')}</span>
                       <span className="text-xs">&rarr;</span>
                     </button>
                   </div>
@@ -2431,9 +2436,9 @@ export function BusinessIntelligence() {
                     <table className="w-full text-left text-xs font-mono">
                       <thead className="sticky top-0 bg-card text-[10px] uppercase text-muted-foreground border-b border-border shadow-xs z-10">
                         <tr>
-                          <th className="p-2.5 align-middle">Customer / Debtor</th>
-                          <th className="p-2.5 align-middle">Group</th>
-                          <th className="p-2.5 text-right align-middle">Closing Balance</th>
+                          <th className="p-2.5 align-middle">{t('bi.customerDebtor')}</th>
+                          <th className="p-2.5 align-middle">{t('common.group')}</th>
+                          <th className="p-2.5 text-right align-middle">{t('reports.closingBalance')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/40">
@@ -2482,12 +2487,12 @@ export function BusinessIntelligence() {
                     <div className="flex items-center gap-2">
                       <Truck className="w-4 h-4 text-rose-500" />
                       <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                        Top Ledgers (Sundry Creditors)
+                        {t('bi.topCreditors')}
                       </h4>
                       {verificationStats.verifiedAt && (
                         <span className="text-[9px] bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-1.5 py-0.5 rounded font-bold flex items-center gap-1" title="Targeted verified from raw source voucher entries">
                           <CheckCircle2 className="w-2.5 h-2.5" />
-                          <span>Verified</span>
+                          <span>{t('bi.verified')}</span>
                         </span>
                       )}
                     </div>
@@ -2499,7 +2504,7 @@ export function BusinessIntelligence() {
                       className="text-[10px] text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all cursor-pointer flex items-center gap-1 shadow-xs"
                       title="View all creditors in detailed configurable modal"
                     >
-                      <span>View More</span>
+                      <span>{t('bi.viewMore')}</span>
                       <span className="text-xs">&rarr;</span>
                     </button>
                   </div>
@@ -2507,9 +2512,9 @@ export function BusinessIntelligence() {
                     <table className="w-full text-left text-xs font-mono">
                       <thead className="sticky top-0 bg-card text-[10px] uppercase text-muted-foreground border-b border-border shadow-xs z-10">
                         <tr>
-                          <th className="p-2.5 align-middle">Supplier / Creditor</th>
-                          <th className="p-2.5 align-middle">Group</th>
-                          <th className="p-2.5 text-right align-middle">Closing Balance</th>
+                          <th className="p-2.5 align-middle">{t('bi.supplierCreditor')}</th>
+                          <th className="p-2.5 align-middle">{t('common.group')}</th>
+                          <th className="p-2.5 text-right align-middle">{t('reports.closingBalance')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/40">
@@ -2569,7 +2574,7 @@ export function BusinessIntelligence() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-card border border-border p-4 rounded-sm flex flex-col justify-between shadow-xs">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center justify-between">
-                    Total Stock Value <Package className="w-3.5 h-3.5 text-amber-500" />
+                    {t('bi.totalStockValue')} <Package className="w-3.5 h-3.5 text-amber-500" />
                   </span>
                   <p className="text-2xl font-bold text-foreground mt-2 font-mono">
                     {currencySymbol} {formatNumber(inventoryAnalytics.totalStockValue)}
@@ -2581,7 +2586,7 @@ export function BusinessIntelligence() {
 
                 <div className="bg-card border border-border p-4 rounded-sm flex flex-col justify-between shadow-xs">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center justify-between">
-                    Total Registered Items <Boxes className="w-3.5 h-3.5 text-blue-500" />
+                    {t('bi.totalRegisteredItems')} <Boxes className="w-3.5 h-3.5 text-blue-500" />
                   </span>
                   <p className="text-2xl font-bold text-foreground mt-2 font-mono">
                     {inventoryAnalytics.totalItemsCount}
@@ -2593,7 +2598,7 @@ export function BusinessIntelligence() {
 
                 <div className="bg-card border border-border p-4 rounded-sm flex flex-col justify-between shadow-xs">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center justify-between">
-                    Low Stock Reorder <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                    {t('bi.lowStockReorder')} <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
                   </span>
                   <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-2 font-mono">
                     {inventoryAnalytics.lowStockCount}
@@ -2605,7 +2610,7 @@ export function BusinessIntelligence() {
 
                 <div className="bg-card border border-border p-4 rounded-sm flex flex-col justify-between shadow-xs">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center justify-between">
-                    Out of Stock Items <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                    {t('bi.outOfStockItems')} <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
                   </span>
                   <p className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-2 font-mono">
                     {inventoryAnalytics.outOfStockCount}
@@ -2816,7 +2821,7 @@ export function BusinessIntelligence() {
                     <div className="flex items-center gap-2">
                       <Boxes className="w-4 h-4 text-primary" />
                       <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                        Top 5 Stock Items
+                        {t('bi.top5StockItems')}
                       </h4>
                     </div>
 
@@ -2831,7 +2836,7 @@ export function BusinessIntelligence() {
                             : "text-muted-foreground hover:text-foreground"
                         )}
                       >
-                        Quantity
+                        {t('common.quantity')}
                       </button>
                       <button
                         onClick={() => setStockSortBy('valuation')}
@@ -2842,7 +2847,7 @@ export function BusinessIntelligence() {
                             : "text-muted-foreground hover:text-foreground"
                         )}
                       >
-                        Valuation
+                        {t('bi.valuation')}
                       </button>
                     </div>
                   </div>
@@ -2851,9 +2856,9 @@ export function BusinessIntelligence() {
                     <table className="w-full text-left text-xs font-mono">
                       <thead className="sticky top-0 bg-card text-[10px] uppercase text-muted-foreground border-b border-border shadow-xs z-10">
                         <tr>
-                          <th className="p-2.5 align-middle">Item Name</th>
-                          <th className={cn("p-2.5 text-right align-middle", stockSortBy === 'quantity' && "text-primary font-bold")}>In-Stock Qty</th>
-                          <th className={cn("p-2.5 text-right align-middle", stockSortBy === 'valuation' && "text-amber-500 font-bold")}>Valuation</th>
+                          <th className="p-2.5 align-middle">{t('common.itemName')}</th>
+                          <th className={cn("p-2.5 text-right align-middle", stockSortBy === 'quantity' && "text-primary font-bold")}>{t('bi.inStockQty')}</th>
+                          <th className={cn("p-2.5 text-right align-middle", stockSortBy === 'valuation' && "text-amber-500 font-bold")}>{t('bi.valuation')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/40">
@@ -2908,7 +2913,7 @@ export function BusinessIntelligence() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-card border border-border p-4 rounded-sm flex flex-col justify-between shadow-xs">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center justify-between">
-                    Total Liquid Funds <Wallet className="w-3.5 h-3.5 text-emerald-500" />
+                    {t('bi.totalLiquidFunds')} <Wallet className="w-3.5 h-3.5 text-emerald-500" />
                   </span>
                   <p className="text-2xl font-bold text-foreground mt-2 font-mono">
                     {currencySymbol} {formatNumber(bankingAnalytics.totalLiquidity)}
@@ -2920,7 +2925,7 @@ export function BusinessIntelligence() {
 
                 <div className="bg-card border border-border p-4 rounded-sm flex flex-col justify-between shadow-xs">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center justify-between">
-                    Cash in Hand <span className="text-sm font-bold text-emerald-600">{currencySymbol}</span>
+                    {t('bi.cashInHand')} <span className="text-sm font-bold text-emerald-600">{currencySymbol}</span>
                   </span>
                   <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-2 font-mono">
                     {currencySymbol} {formatNumber(bankingAnalytics.totalCash)}
@@ -2932,7 +2937,7 @@ export function BusinessIntelligence() {
 
                 <div className="bg-card border border-border p-4 rounded-sm flex flex-col justify-between shadow-xs">
                   <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center justify-between">
-                    Bank Accounts <Landmark className="w-3.5 h-3.5 text-blue-500" />
+                    {t('bi.bankAccounts')} <Landmark className="w-3.5 h-3.5 text-blue-500" />
                   </span>
                   <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-2 font-mono">
                     {currencySymbol} {formatNumber(bankingAnalytics.totalBank)}
@@ -2956,7 +2961,7 @@ export function BusinessIntelligence() {
                   <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
                     <div>
                       <h3 className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                        Liquidity Composition
+                        {t('bi.liquidityComposition')}
                         <Maximize2 className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
                       </h3>
                       <p className="text-[9px] text-muted-foreground font-mono">Liquid funds breakdown by storage medium</p>
@@ -3012,7 +3017,7 @@ export function BusinessIntelligence() {
                   <div className="flex items-center justify-between border-b border-border/50 pb-3 mb-4">
                     <div>
                       <h3 className="text-xs font-bold uppercase tracking-wider text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                        Cash Flow Dynamics
+                        {t('bi.cashFlowDynamics')}
                         <Maximize2 className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors" />
                       </h3>
                       <p className="text-[9px] text-muted-foreground font-mono">Collective cash inflows vs. cash outflows</p>
@@ -3022,7 +3027,7 @@ export function BusinessIntelligence() {
                         Flow Dynamics
                       </span>
                       <span className="text-[9px] text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded font-bold">
-                        Enlarge ↗
+                        {t('bi.enlarge')} ↗
                       </span>
                     </div>
                   </div>
@@ -3059,7 +3064,7 @@ export function BusinessIntelligence() {
                 <div className="bg-card border border-border rounded-sm overflow-hidden shadow-xs">
                   <div className="p-3.5 border-b border-border flex justify-between items-center bg-muted/20">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                      Cash Heads & Petty Cash
+                      {t('bi.cashHeadsPettyCash')}
                     </h4>
                     <span className="text-[10px] font-bold text-emerald-500">
                       {currencySymbol} {formatNumber(bankingAnalytics.totalCash)}
@@ -3089,7 +3094,7 @@ export function BusinessIntelligence() {
                 <div className="bg-card border border-border rounded-sm overflow-hidden shadow-xs">
                   <div className="p-3.5 border-b border-border flex justify-between items-center bg-muted/20">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                      Bank Accounts & Online Wallets
+                      {t('bi.bankAccountsWallets')}
                     </h4>
                     <span className="text-[10px] font-bold text-blue-500">
                       {currencySymbol} {formatNumber(bankingAnalytics.totalBank)}

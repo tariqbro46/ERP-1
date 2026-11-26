@@ -18,15 +18,6 @@ import { format, differenceInDays } from 'date-fns';
 import { EditableHeader } from './EditableHeader';
 import { EmptyState } from './EmptyState';
 
-const mockChartData = [
-  { name: 'Jan', value: 4000 },
-  { name: 'Feb', value: 3000 },
-  { name: 'Mar', value: 2000 },
-  { name: 'Apr', value: 2780 },
-  { name: 'May', value: 1890 },
-  { name: 'Jun', value: 2390 },
-];
-
 const StatCard = ({ title, value, change, icon: Icon, trend, loading, color, uiStyle, index = 0 }: any) => (
   <motion.div 
     initial={{ opacity: 0, y: 12 }}
@@ -172,70 +163,6 @@ export function Dashboard() {
   useEffect(() => {
     async function fetchData() {
       if (!user?.companyId) return;
-      if (dashboardDesign === 'Design 5' || dashboardDesign === 'Design 6') {
-        setStats({
-          revenue: 1250000,
-          profit: 340000,
-          sales: 850000,
-          purchase: 510000,
-          payment: 220000,
-          receipt: 310000,
-          activeLedgers: 45,
-          stockValue: 620000,
-          chartData: []
-        });
-        setRecentVouchers([
-          { id: '1', v_date: '2026-05-23', v_type: 'Sales', particulars: 'Walking Customer', total_amount: 12500, v_no: 'SL-001' },
-          { id: '2', v_date: '2026-05-22', v_type: 'Receipt', particulars: 'Cash In Hand', total_amount: 50000, v_no: 'RC-001' },
-          { id: '3', v_date: '2026-05-21', v_type: 'Purchase', particulars: 'Main Supplier Ltd.', total_amount: 45000, v_no: 'PR-001' },
-          { id: '4', v_date: '2026-05-20', v_type: 'Payment', particulars: 'Office Rent Expense', total_amount: 15000, v_no: 'PY-001' },
-          { id: '5', v_date: '2026-05-19', v_type: 'Contra', particulars: 'Bank to Cash', total_amount: 10000, v_no: 'CN-001' }
-        ]);
-        setOrders([]);
-        setLoading(false);
-
-        // Also fetch lowStockCount and dueSummary for alert banners in Minimalist Splash
-        erpService.getItems(user.companyId).then(items => {
-          if (items && Array.isArray(items)) {
-            const count = items.filter((item: any) => {
-              const thresh = Number(item.low_stock_threshold ?? item.reorder_level ?? 0);
-              const stock = Number(item.current_stock || 0);
-              return thresh > 0 ? stock <= thresh : stock <= 0;
-            }).length;
-            setLowStockCount(count);
-          }
-        }).catch(() => {});
-
-        erpService.getLedgers(user.companyId).then(ledgers => {
-          if (ledgers && Array.isArray(ledgers)) {
-            let dueSum = 0;
-            let dueCusts = 0;
-            ledgers.forEach((l: any) => {
-              const bal = Number(l.current_balance ?? l.opening_balance ?? 0);
-              const gName = (l.group_name || l.ledger_groups?.name || '').toLowerCase();
-              const isDebtor = gName.includes('debtor') || gName.includes('customer') || gName.includes('client') || (l.nature === 'Asset' && bal > 0);
-              if (isDebtor && bal > 0) {
-                dueSum += bal;
-                dueCusts++;
-              }
-            });
-            setDueSummary({ totalDue: dueSum, customerCount: dueCusts });
-          }
-        }).catch(() => {});
-
-        setCashBankData([
-          { name: 'Cash in Hand', value: 185000, color: '#10b981' },
-          { name: 'Bank Accounts', value: 435000, color: '#3b82f6' }
-        ]);
-        setTopExpensesData([
-          { name: 'Office Rent Expense', amount: 45000 },
-          { name: 'Staff Salaries', amount: 38000 },
-          { name: 'Electricity & Utilities', amount: 14500 },
-          { name: 'Transportation & Logistics', amount: 12000 },
-          { name: 'Internet & Cloud Hosting', amount: 6500 }
-        ]);
-        return;
-      }
 
       // Check cache to immediately display cached data without a loading flash
       const cachedStats = erpService.getCachedData('dashboard_stats', user.companyId);
@@ -423,21 +350,12 @@ export function Dashboard() {
               { name: 'Bank Accounts', value: Math.max(0, totalBank), color: '#3b82f6' }
             ]);
 
-            // Set Top 5 Expenses sorted descending with real amounts
+            // Set Top 5 Expenses sorted descending with real amounts only
             const realExpensesList = Object.entries(expenseMap)
               .map(([name, amount]) => ({ name, amount: Math.round(amount) }))
               .filter(e => e.amount > 0)
               .sort((a, b) => b.amount - a.amount);
 
-            if (realExpensesList.length === 0) {
-              realExpensesList.push(
-                { name: language === 'bn' ? 'অফিস ভাড়া' : 'Office Rent', amount: 0 },
-                { name: language === 'bn' ? 'বিদ্যুৎ ও ইউটিলিটি' : 'Electricity & Utility', amount: 0 },
-                { name: language === 'bn' ? 'কর্মীদের বেতন' : 'Staff Salaries', amount: 0 },
-                { name: language === 'bn' ? 'যাতায়াত ও পরিবহন' : 'Transport & Freight', amount: 0 },
-                { name: language === 'bn' ? 'মার্কেটিং ও বিজ্ঞাপন' : 'Marketing & Promo', amount: 0 }
-              );
-            }
             setTopExpensesData(realExpensesList.slice(0, 5));
           }
         } catch {
@@ -450,7 +368,20 @@ export function Dashboard() {
       }
     }
     fetchData();
-  }, [periodStart, periodEnd, user?.companyId, refreshKey, dashboardDesign]);
+  }, [periodStart, periodEnd, user?.companyId, refreshKey]);
+
+  const profitMarginPct = stats.revenue > 0
+    ? Math.min(100, Math.max(0, Math.round((stats.profit / stats.revenue) * 100)))
+    : 0;
+  const revenueRatioPct = (stats.revenue > 0 || stats.sales > 0)
+    ? Math.min(100, Math.max(0, Math.round((stats.sales / Math.max(stats.revenue, stats.sales, 1)) * 100)))
+    : 0;
+  const stockTurnoverPct = (stats.stockValue > 0 && stats.sales > 0)
+    ? Math.min(100, Math.max(0, Math.round((stats.sales / (stats.stockValue + stats.sales)) * 100)))
+    : 0;
+  const collectionEfficiencyPct = (stats.sales > 0 || stats.receipt > 0)
+    ? Math.min(100, Math.max(0, Math.round((stats.receipt / Math.max(stats.sales + dueSummary.totalDue, stats.receipt, 1)) * 100)))
+    : 0;
 
   const formatFY = (start: string, end: string) => {
     const s = new Date(start).getFullYear().toString().slice(-2);
@@ -626,7 +557,7 @@ export function Dashboard() {
                 </div>
                 <div className="space-y-0.5">
                   <p className="text-xs font-black uppercase tracking-tight text-amber-600">
-                    Due Payment Reminder: {dueSummary.customerCount} Customer{dueSummary.customerCount > 1 ? 's' : ''} with Overdue Receivables ({dueSummary.totalDue.toLocaleString()} BDT)
+                    {t('dash.duePaymentReminder')}: {dueSummary.customerCount} ({dueSummary.totalDue.toLocaleString()} BDT)
                   </p>
                   <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
                     Customer payment dues are pending. Send automated payment reminders via WhatsApp, Phone SMS, and Email with formal demand notices.
@@ -637,7 +568,7 @@ export function Dashboard() {
                 onClick={() => navigate('/reports/due-payments')}
                 className="px-4 py-2 bg-amber-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-amber-700 transition-colors flex items-center gap-1.5 shrink-0 shadow-xs"
               >
-                <span>Send Due Reminders</span>
+                <span>{t('dash.sendDueReminders')}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -650,7 +581,7 @@ export function Dashboard() {
                 <ShieldCheck className="w-5 h-5 animate-pulse" />
               </div>
               <div className="space-y-0.5">
-                <p className="text-xs font-black uppercase tracking-tight text-foreground">Interactive Control Dashboard</p>
+                <p className="text-xs font-black uppercase tracking-tight text-foreground">{t('dash.interactiveControl')}</p>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                   Welcome back! Pin key reports to your local pinboard, calculate dynamic margins, and quickly manage core accounting transaction modules.
                 </p>
@@ -671,7 +602,7 @@ export function Dashboard() {
             {/* Left Col: Core Modules Shortcuts (2 cols wide) */}
             <div className="lg:col-span-2 space-y-6">
               <div className="space-y-2">
-                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/90 pl-1">Professional Portals Workspace</h3>
+                <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground/90 pl-1">{t('dash.workspaces')}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   
                   {/* Ledger & Accounts */}
@@ -681,9 +612,9 @@ export function Dashboard() {
                         <div className={cn("p-2.5 rounded-xl bg-blue-500/10 text-blue-500")}>
                           <BookOpen className="w-5 h-5" />
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">Accounting</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">{t('nav.accounting')}</span>
                       </div>
-                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground">Accounts Control</h4>
+                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground">{t('dash.accountsControl')}</h4>
                       <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                         Establish general ledgers, monitor chart of accounts, adjust matching credits, and set opening balances.
                       </p>
@@ -692,7 +623,7 @@ export function Dashboard() {
                       onClick={() => navigate('/accounts')} 
                       className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
                     >
-                      Enter Accounts
+                      {t('dash.enterAccounts')}
                       <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   </div>
@@ -704,9 +635,9 @@ export function Dashboard() {
                         <div className={cn("p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500")}>
                           <FileText className="w-5 h-5" />
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">Transactions</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">{t('nav.transactions')}</span>
                       </div>
-                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground font-sans">Double Entry Vouchers</h4>
+                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground font-sans">{t('dash.doubleEntryVouchers')}</h4>
                       <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                         Log cash sales, purchase receipts, payments, general receipts, contra transfers, and general journal vouchers.
                       </p>
@@ -715,7 +646,7 @@ export function Dashboard() {
                       onClick={() => navigate('/vouchers/new')} 
                       className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
                     >
-                      Post Vouchers
+                      {t('dash.postVouchers')}
                       <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   </div>
@@ -755,7 +686,7 @@ export function Dashboard() {
                     <button onClick={() => navigate('/reports/daybook')} className="text-[9px] font-bold uppercase tracking-wider text-primary hover:underline">Full Daybook &rarr;</button>
                   </div>
                   <div className="divide-y divide-border/60">
-                    {recentVouchers.map((v, idx) => (
+                    {recentVouchers.length > 0 ? recentVouchers.map((v, idx) => (
                       <div key={v.id || idx} className="p-4 flex items-center justify-between hover:bg-muted/10 transition-colors">
                         <div className="flex items-center gap-3">
                           <span className={cn("w-2 h-2 rounded-full", v.v_type === 'Sales' ? "bg-emerald-500" : v.v_type === 'Receipt' ? "bg-blue-500" : "bg-amber-500")} />
@@ -769,7 +700,11 @@ export function Dashboard() {
                           <span className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">{v.v_type}</span>
                         </div>
                       </div>
-                    ))}
+                    )) : (
+                      <div className="p-8 text-center text-muted-foreground text-xs font-mono">
+                        {t('dash.noRecentTransactions') || (language === 'bn' ? 'নির্বাচিত সময়কালে কোনো লেনদেন নেই' : 'No transactions in period')}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1368,7 +1303,7 @@ export function Dashboard() {
 
     // Default 'grid' style
     return (
-      <div className="flex flex-col min-h-[calc(100vh-120px)] bg-slate-50/50 text-slate-800 p-6 sm:p-8 md:p-12 font-sans transition-all">
+      <div className="flex flex-col min-h-[calc(100vh-120px)] bg-background text-foreground p-6 sm:p-8 md:p-12 font-sans transition-all">
         <div className="max-w-5xl mx-auto w-full flex-grow flex flex-col justify-center space-y-10">
           
           {/* Header section with top badge */}
@@ -1456,48 +1391,39 @@ export function Dashboard() {
                     </span>
                   </div>
                   <div className="h-[180px] w-full flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={
-                            cashBankData.some(d => d.value > 0)
-                              ? cashBankData
-                              : [
-                                  { name: 'Cash in Hand', value: 1, color: '#10b981' },
-                                  { name: 'Bank Accounts', value: 1, color: '#3b82f6' }
-                                ]
-                          }
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={45}
-                          outerRadius={70}
-                          paddingAngle={4}
-                          dataKey="value"
-                        >
-                          {(cashBankData.some(d => d.value > 0)
-                            ? cashBankData
-                            : [
-                                { name: 'Cash in Hand', value: 1, color: '#10b981' },
-                                { name: 'Bank Accounts', value: 1, color: '#3b82f6' }
-                              ]
-                          ).map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px', fontFamily: 'monospace' }}
-                          formatter={(val: any, name: any) => {
-                            const realVal = cashBankData.find(d => d.name === name)?.value || 0;
-                            return [`৳ ${formatNumber(realVal)}`, 'Balance'];
-                          }}
-                        />
-                        <Legend 
-                          verticalAlign="bottom" 
-                          iconType="circle"
-                          formatter={(val: string) => <span className="text-[10px] font-mono text-slate-500">{val}</span>}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    {cashBankData.length > 0 && cashBankData.some(d => d.value > 0) ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={cashBankData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={45}
+                            outerRadius={70}
+                            paddingAngle={4}
+                            dataKey="value"
+                          >
+                            {cashBankData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px', fontFamily: 'monospace' }}
+                            formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Balance']}
+                          />
+                          <Legend 
+                            verticalAlign="bottom" 
+                            iconType="circle"
+                            formatter={(val: string) => <span className="text-[10px] font-mono text-slate-500">{val}</span>}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="text-center text-slate-400 font-mono p-4">
+                        <Wallet className="w-7 h-7 mx-auto mb-1 opacity-40" />
+                        <p className="text-[10px]">{language === 'bn' ? '৳০ নগদ ও ব্যাংক ব্যালেন্স' : '৳0 cash & bank balance'}</p>
+                      </div>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs font-mono mt-1">
                     <div className="p-2 bg-emerald-50/60 rounded-lg border border-emerald-100">
@@ -1533,20 +1459,27 @@ export function Dashboard() {
                     </span>
                   </div>
                   <div className="h-[180px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topExpensesData} layout="vertical" margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                        <XAxis type="number" tickFormatter={v => `৳${formatNumber(v)}`} fontSize={8} stroke="#94a3b8" axisLine={false} tickLine={false} />
-                        <YAxis dataKey="name" type="category" width={100} fontSize={9} stroke="#64748b" axisLine={false} tickLine={false} tickFormatter={v => v.length > 13 ? `${v.slice(0, 13)}...` : v} />
-                        <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px', fontFamily: 'monospace' }} formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Expense']} />
-                        <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={14}>
-                          {topExpensesData.map((_, index) => {
-                            const colors = ['#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#fecdd3'];
-                            return <Cell key={`bar-${index}`} fill={colors[index % colors.length]} />;
-                          })}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    {topExpensesData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={topExpensesData} layout="vertical" margin={{ top: 5, right: 15, left: 5, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                          <XAxis type="number" tickFormatter={v => `৳${formatNumber(v)}`} fontSize={8} stroke="#94a3b8" axisLine={false} tickLine={false} />
+                          <YAxis dataKey="name" type="category" width={100} fontSize={9} stroke="#64748b" axisLine={false} tickLine={false} tickFormatter={v => v.length > 13 ? `${v.slice(0, 13)}...` : v} />
+                          <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px', fontFamily: 'monospace' }} formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Expense']} />
+                          <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={14}>
+                            {topExpensesData.map((_, index) => {
+                              const colors = ['#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#fecdd3'];
+                              return <Cell key={`bar-${index}`} fill={colors[index % colors.length]} />;
+                            })}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 font-mono p-4">
+                        <CreditCard className="w-7 h-7 opacity-40 mb-1" />
+                        <p className="text-[10px]">{language === 'bn' ? 'কোনো ব্যয়ের খাত পাওয়া যায়নি' : 'No expense heads recorded'}</p>
+                      </div>
+                    )}
                   </div>
                   <div className="flex justify-between items-center text-[10px] font-mono pt-2 border-t border-slate-100 text-slate-500 mt-1">
                     <span>Top 5 Total:</span>
@@ -1658,7 +1591,6 @@ export function Dashboard() {
                       <div className={cn("p-2 rounded-xl bg-opacity-10", card.color.replace('bg-', 'bg-opacity-10 text-'))}>
                          <card.icon className="w-5 h-5" />
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full">+12%</span>
                    </div>
                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{card.title}</h3>
                    <p className="text-2xl font-bold text-gray-900 font-mono">
@@ -1676,7 +1608,7 @@ export function Dashboard() {
                   <button onClick={() => navigate('/reports/daybook')} className="text-[9px] font-bold text-blue-600 uppercase hover:underline">{t('dash.fullDaybook')}</button>
                </div>
                <div className="divide-y divide-gray-50">
-                  {recentVouchers.map((v) => (
+                  {recentVouchers.length > 0 ? recentVouchers.map((v) => (
                     <div key={v.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-all">
                        <div className="flex items-center gap-3">
                           <div className={cn(
@@ -1697,7 +1629,11 @@ export function Dashboard() {
                           <p className={`text-[8px] font-bold uppercase ${v.v_type === 'Sales' ? 'text-emerald-500' : 'text-gray-400'}`}>{v.v_type}</p>
                        </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="p-8 text-center text-gray-400 text-xs font-medium">
+                      {t('dash.noRecentTransactions') || (language === 'bn' ? 'নির্বাচিত সময়কালে কোনো লেনদেন নেই' : 'No transactions in period')}
+                    </div>
+                  )}
                </div>
             </div>
 
@@ -1711,11 +1647,13 @@ export function Dashboard() {
                             <TrendingUp className="w-4 h-4" />
                          </div>
                          <div>
-                            <p className="text-[10px] font-bold text-emerald-800 uppercase">Profit Margin</p>
-                            <p className="text-xs text-emerald-600">Improving steadily</p>
+                            <p className="text-[10px] font-bold text-emerald-800 uppercase">{t('dash.profitMargin') || 'Profit Margin'}</p>
+                            <p className="text-xs text-emerald-600">
+                              {stats.revenue > 0 ? `${t('dash.revenue') || 'Revenue'}: ৳${formatNumber(stats.revenue)}` : (language === 'bn' ? 'নির্বাচিত সময়কালে কোনো আয় নেই' : 'No transactions in period')}
+                            </p>
                          </div>
                       </div>
-                      <span className="text-xl font-bold text-emerald-700">68%</span>
+                      <span className="text-xl font-bold text-emerald-700">{profitMarginPct}%</span>
                    </div>
 
                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between">
@@ -1724,11 +1662,15 @@ export function Dashboard() {
                             <Users className="w-4 h-4" />
                          </div>
                          <div>
-                            <p className="text-[10px] font-bold text-blue-800 uppercase">Customer Growth</p>
-                            <p className="text-xs text-blue-600">Active engagement</p>
+                            <p className="text-[10px] font-bold text-blue-800 uppercase">{t('dash.activeLedgers') || 'Active Ledgers'}</p>
+                            <p className="text-xs text-blue-600">
+                              {dueSummary.customerCount > 0
+                                ? `${dueSummary.customerCount} ${language === 'bn' ? 'বকেয়া হিসাব' : 'receivable accounts'}`
+                                : (language === 'bn' ? 'নিবন্ধিত হিসাব সংখ্যা' : 'Registered ledger accounts')}
+                            </p>
                          </div>
                       </div>
-                      <span className="text-xl font-bold text-blue-700">24+</span>
+                      <span className="text-xl font-bold text-blue-700">{stats.activeLedgers}</span>
                    </div>
                 </div>
             </div>
@@ -1856,16 +1798,16 @@ export function Dashboard() {
 
   if (dashboardDesign === 'Design 4') {
     return (
-      <div className="flex flex-col min-h-full bg-slate-900 text-slate-100 transition-colors font-sans overflow-y-auto">
-        <div className="p-6 lg:p-8 space-y-8">
+      <div className="flex flex-col min-h-full bg-slate-900 text-slate-100 transition-colors font-sans">
+        <div className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800 px-6 lg:px-8 py-5">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
              <div>
-                <h1 className="text-3xl font-black tracking-tighter uppercase mb-1">Executive Summary</h1>
+                <h1 className="text-3xl font-black tracking-tighter uppercase mb-1">{t('dash.executiveSummary')}</h1>
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">Real-time analysis • {companyName}</p>
              </div>
              <div className="flex items-center gap-4">
                 <div className="text-right hidden sm:block">
-                   <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Last Synced</p>
+                   <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{t('dash.lastSynced')}</p>
                    <p className="text-xs font-mono">{formatTimestamp(lastUpdated)}</p>
                 </div>
                 <button 
@@ -1876,6 +1818,8 @@ export function Dashboard() {
                 </button>
              </div>
           </div>
+        </div>
+        <div className="p-6 lg:p-8 space-y-8 overflow-y-auto flex-1">
 
           {/* Minimal KPI Strip */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1898,35 +1842,49 @@ export function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
              <div className="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-[2rem] p-8 space-y-6">
                 <div className="flex justify-between items-center">
-                   <h3 className="text-sm font-bold uppercase tracking-widest">Recent Activity</h3>
-                   <span className="text-[9px] font-bold text-slate-500 uppercase px-3 py-1 border border-slate-700 rounded-full">Top 5 Records</span>
+                   <h3 className="text-sm font-bold uppercase tracking-widest">{t('dash.recentActivity')}</h3>
+                   <span className="text-[9px] font-bold text-slate-500 uppercase px-3 py-1 border border-slate-700 rounded-full">{t('dash.top5Records')}</span>
                 </div>
                 <div className="space-y-4">
-                   {recentVouchers.map((v) => (
+                   {recentVouchers.length > 0 ? recentVouchers.map((v) => (
                      <div key={v.id} className="flex items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-slate-700/50 hover:border-slate-600 transition-all">
                         <div className="flex items-center gap-4">
                            <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                           <span className="text-xs font-bold w-16">{v.v_date.split('-').slice(1).join('/')}</span>
+                           <span className="text-xs font-bold w-16">{v.v_date ? v.v_date.split('-').slice(1).join('/') : '—'}</span>
                            <span className="text-xs text-slate-300 font-medium truncate max-w-[150px]">{v.particulars}</span>
                         </div>
                         <span className="text-xs font-mono font-bold">৳{formatNumber(v.total_amount)}</span>
                      </div>
-                   ))}
+                   )) : (
+                     <div className="p-8 text-center text-slate-400 text-xs font-mono border border-dashed border-slate-700/60 rounded-2xl">
+                       {t('dash.noRecentTransactions') || (language === 'bn' ? 'নির্বাচিত সময়কালে কোনো লেনদেন নেই' : 'No transactions in period')}
+                     </div>
+                   )}
                 </div>
              </div>
 
              <div className="bg-slate-800 border border-slate-700 rounded-[2rem] p-8 flex flex-col justify-between">
                 <div className="space-y-6">
-                   <h3 className="text-sm font-bold uppercase tracking-widest">System Health</h3>
+                   <h3 className="text-sm font-bold uppercase tracking-widest">{t('dash.financialSnapshot')}</h3>
                    <div className="space-y-4">
-                      <div className="flex justify-between items-end">
-                         <span className="text-[10px] text-slate-500 uppercase font-bold">Free Reads</span>
-                         <span className="text-xs font-mono text-emerald-400">Stable</span>
+                      <div className="flex justify-between items-center">
+                         <span className="text-[10px] text-slate-400 uppercase font-bold">{t('dash.activeLedgers') || 'Active Ledgers'}</span>
+                         <span className="text-xs font-mono text-emerald-400 font-bold">{stats.activeLedgers}</span>
                       </div>
-                      <div className="h-1 bg-slate-900 rounded-full">
-                         <div className="h-full bg-emerald-500 w-[15%]" />
+                      <div className="flex justify-between items-center">
+                         <span className="text-[10px] text-slate-400 uppercase font-bold">{t('dash.stockValue') || 'Stock Value'}</span>
+                         <span className="text-xs font-mono text-slate-200 font-bold">৳{formatNumber(stats.stockValue)}</span>
                       </div>
-                      <p className="text-[9px] text-slate-500 uppercase leading-relaxed">System is running in optimized mode. Read requests are cached for 30 minutes to ensure reliability and quota safety.</p>
+                      <div className="flex justify-between items-center">
+                         <span className="text-[10px] text-slate-400 uppercase font-bold">{t('dash.collectionEfficiency') || 'Collection Rate'}</span>
+                         <span className="text-xs font-mono text-blue-400 font-bold">{collectionEfficiencyPct}%</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden">
+                         <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${collectionEfficiencyPct}%` }} />
+                      </div>
+                      <p className="text-[10px] text-slate-400 uppercase leading-relaxed">
+                        {language === 'bn' ? `বকেয়া প্রাপ্য: ৳${formatNumber(dueSummary.totalDue)}` : `Receivables due: ৳${formatNumber(dueSummary.totalDue)}`}
+                      </p>
                    </div>
                 </div>
                 
@@ -1935,7 +1893,7 @@ export function Dashboard() {
                      onClick={() => navigate('/settings')}
                      className="w-full py-4 border border-slate-700 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-700 transition-all"
                    >
-                      System Preferences
+                      {t('dash.systemPreferences')}
                    </button>
                 </div>
              </div>
@@ -2121,24 +2079,31 @@ export function Dashboard() {
           {/* Sales Trend */}
           <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-100 lg:col-span-2">
             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">{t('dash.monthlySalesTrend')}</h3>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4285f4" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#4285f4" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
-                  <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
-                  <YAxis fontSize={10} axisLine={false} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '4px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Area type="monotone" dataKey="value" stroke="#4285f4" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="h-[300px] w-full flex items-center justify-center">
+              {chartData && chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#4285f4" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#4285f4" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f1f1" />
+                    <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
+                    <YAxis fontSize={10} axisLine={false} tickLine={false} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '4px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="#4285f4" strokeWidth={2} fillOpacity={1} fill="url(#colorValue)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center text-gray-400 font-sans p-6">
+                  <Activity className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-xs font-medium">{language === 'bn' ? 'নির্বাচিত সময়কালে কোনো লেনদেন নেই' : 'No transactions in period'}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -2147,10 +2112,10 @@ export function Dashboard() {
             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-6">{t('dash.performanceMetrics')}</h3>
             <div className="space-y-6">
               {[
-                { label: t('dash.revenueTarget'), value: 75, color: '#4285f4' },
-                { label: t('dash.profitMargin'), value: 45, color: '#673ab7' },
-                { label: t('dash.stockTurnover'), value: 60, color: '#00bcd4' },
-                { label: t('dash.collectionEfficiency'), value: 90, color: '#34a853' },
+                { label: t('dash.revenueTarget'), value: revenueRatioPct, color: '#4285f4' },
+                { label: t('dash.profitMargin'), value: profitMarginPct, color: '#673ab7' },
+                { label: t('dash.stockTurnover'), value: stockTurnoverPct, color: '#00bcd4' },
+                { label: t('dash.collectionEfficiency'), value: collectionEfficiencyPct, color: '#34a853' },
               ].map((item) => (
                 <div key={item.label} className="space-y-2">
                   <div className="flex justify-between text-[10px] font-bold text-gray-500 uppercase">
@@ -2293,27 +2258,27 @@ export function Dashboard() {
             </button>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left font-sans text-xs">
+            <table className="w-full text-left font-sans text-xs min-w-[640px]">
               <thead>
                 <tr className="bg-gray-50 text-gray-500 uppercase font-bold border-b border-gray-100">
-                  <th className="px-6 py-3">{t('common.date')}</th>
-                  <th className="px-6 py-3">{t('common.voucherNo')}</th>
-                  <th className="px-6 py-3">{t('common.particulars')}</th>
-                  <th className="px-6 py-3">{t('common.type')}</th>
-                  <th className="px-6 py-3 text-right">{t('common.amount')}</th>
+                  <th className="px-6 py-3 align-middle">{t('common.date')}</th>
+                  <th className="px-6 py-3 align-middle">{t('common.voucherNo')}</th>
+                  <th className="px-6 py-3 align-middle">{t('common.particulars')}</th>
+                  <th className="px-6 py-3 align-middle">{t('common.type')}</th>
+                  <th className="px-6 py-3 text-right align-middle">{t('common.amount')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {recentVouchers.map((v, i) => (
                   <tr key={i} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-gray-600">{v.v_date}</td>
-                    <td className="px-6 py-4 text-blue-600 font-medium hover:underline cursor-pointer" onClick={() => navigate(`/vouchers/edit/${v.id}`)}>
+                    <td className="px-6 py-4 text-gray-600 align-middle whitespace-nowrap">{v.v_date}</td>
+                    <td className="px-6 py-4 text-blue-600 font-medium hover:underline cursor-pointer align-middle whitespace-nowrap" onClick={() => navigate(`/vouchers/edit/${v.id}`)}>
                       {v.v_no}
                     </td>
-                    <td className="px-6 py-4 text-gray-600 truncate max-w-[200px]">{v.particulars}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-gray-600 truncate max-w-[200px] align-middle">{v.particulars}</td>
+                    <td className="px-6 py-4 align-middle">
                       <span className={cn(
-                        "px-2 py-1 rounded-full text-[10px] font-bold uppercase",
+                        "inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase",
                         v.v_type === 'Sales' ? "bg-green-100 text-green-700" :
                         v.v_type === 'Payment' ? "bg-red-100 text-red-700" :
                         "bg-blue-100 text-blue-700"
@@ -2321,7 +2286,7 @@ export function Dashboard() {
                         {v.v_type}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">৳ {formatNumber(v.total_amount)}</td>
+                    <td className="px-6 py-4 text-right font-medium text-gray-900 align-middle whitespace-nowrap">৳ {formatNumber(v.total_amount)}</td>
                   </tr>
                 ))}
                 {recentVouchers.length === 0 && (
@@ -2637,53 +2602,44 @@ export function Dashboard() {
               </div>
 
               <div className="h-[210px] w-full flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={
-                        cashBankData.some(d => d.value > 0)
-                          ? cashBankData
-                          : [
-                              { name: 'Cash in Hand', value: 1, color: '#10b981' },
-                              { name: 'Bank Accounts', value: 1, color: '#3b82f6' }
-                            ]
-                      }
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={80}
-                      paddingAngle={4}
-                      dataKey="value"
-                    >
-                      {(cashBankData.some(d => d.value > 0)
-                        ? cashBankData
-                        : [
-                            { name: 'Cash in Hand', value: 1, color: '#10b981' },
-                            { name: 'Bank Accounts', value: 1, color: '#3b82f6' }
-                          ]
-                      ).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: theme === 'dark' ? '#141414' : '#ffffff',
-                        border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`,
-                        fontSize: '11px',
-                        fontFamily: 'monospace'
-                      }}
-                      formatter={(val: any, name: any) => {
-                        const realBal = cashBankData.find(d => d.name === name)?.value || 0;
-                        return [`৳ ${formatNumber(realBal)}`, 'Balance'];
-                      }}
-                    />
-                    <Legend 
-                      verticalAlign="bottom" 
-                      iconType="circle"
-                      formatter={(val: string) => <span className="text-[10px] font-mono text-gray-400">{val}</span>}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                {cashBankData.length > 0 && cashBankData.some(d => d.value > 0) ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={cashBankData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={80}
+                        paddingAngle={4}
+                        dataKey="value"
+                      >
+                        {cashBankData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: theme === 'dark' ? '#141414' : '#ffffff',
+                          border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`,
+                          fontSize: '11px',
+                          fontFamily: 'monospace'
+                        }}
+                        formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Balance']}
+                      />
+                      <Legend 
+                        verticalAlign="bottom" 
+                        iconType="circle"
+                        formatter={(val: string) => <span className="text-[10px] font-mono text-gray-400">{val}</span>}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center text-gray-500 font-mono p-4">
+                    <Wallet className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                    <p className="text-[10px]">{language === 'bn' ? '৳০ নগদ ও ব্যাংক ব্যালেন্স' : '৳0 cash & bank balance'}</p>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border/40 mt-2">
@@ -2729,49 +2685,56 @@ export function Dashboard() {
                 </span>
               </div>
 
-              <div className="h-[210px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={topExpensesData}
-                    layout="vertical"
-                    margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
-                    <XAxis 
-                      type="number" 
-                      tickFormatter={(val) => `৳${formatNumber(val)}`}
-                      fontSize={8} 
-                      stroke="#666" 
-                      axisLine={false} 
-                      tickLine={false} 
-                    />
-                    <YAxis 
-                      dataKey="name" 
-                      type="category" 
-                      width={120}
-                      fontSize={9} 
-                      stroke="#888" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tickFormatter={(val: string) => val.length > 15 ? `${val.slice(0, 15)}...` : val}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: theme === 'dark' ? '#141414' : '#ffffff',
-                        border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`,
-                        fontSize: '11px',
-                        fontFamily: 'monospace'
-                      }}
-                      formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Total Expense']}
-                    />
-                    <Bar dataKey="amount" fill="#f43f5e" radius={[0, 4, 4, 0]} barSize={16}>
-                      {topExpensesData.map((_, index) => {
-                        const colors = ['#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#fecdd3'];
-                        return <Cell key={`bar-${index}`} fill={colors[index % colors.length]} />;
-                      })}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="h-[210px] w-full flex items-center justify-center">
+                {topExpensesData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={topExpensesData}
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={theme === 'dark' ? '#222' : '#f0f0f0'} />
+                      <XAxis 
+                        type="number" 
+                        tickFormatter={(val) => `৳${formatNumber(val)}`}
+                        fontSize={8} 
+                        stroke="#666" 
+                        axisLine={false} 
+                        tickLine={false} 
+                      />
+                      <YAxis 
+                        dataKey="name" 
+                        type="category" 
+                        width={120}
+                        fontSize={9} 
+                        stroke="#888" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        tickFormatter={(val: string) => val.length > 15 ? `${val.slice(0, 15)}...` : val}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: theme === 'dark' ? '#141414' : '#ffffff',
+                          border: `1px solid ${theme === 'dark' ? '#333' : '#e5e5e5'}`,
+                          fontSize: '11px',
+                          fontFamily: 'monospace'
+                        }}
+                        formatter={(val: any) => [`৳ ${formatNumber(val)}`, 'Total Expense']}
+                      />
+                      <Bar dataKey="amount" fill="#f43f5e" radius={[0, 4, 4, 0]} barSize={16}>
+                        {topExpensesData.map((_, index) => {
+                          const colors = ['#e11d48', '#f43f5e', '#fb7185', '#fda4af', '#fecdd3'];
+                          return <Cell key={`bar-${index}`} fill={colors[index % colors.length]} />;
+                        })}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-center text-gray-500 font-mono p-4">
+                    <CreditCard className="w-8 h-8 mx-auto mb-1 opacity-40" />
+                    <p className="text-[10px]">{language === 'bn' ? 'কোনো ব্যয়ের খাত পাওয়া যায়নি' : 'No expense heads recorded'}</p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between text-[10px] font-mono pt-3 border-t border-border/40 mt-2 text-gray-500">
@@ -2794,32 +2757,38 @@ export function Dashboard() {
             "text-[10px] font-mono uppercase mb-2 tracking-widest px-1 text-center border-b border-border/10 pb-1",
             uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
           )}>{t('dash.revenueTrajectory')}</h3>
-          <div className="h-[150px] lg:h-[180px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
-                    border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
-                    fontSize: '10px', 
-                    fontFamily: 'monospace',
-                    color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
-                  }}
-                  itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#2563eb' : theme === 'dark' ? '#fff' : '#000' }}
-                  formatter={(value: any) => [formatNumber(value), t('dash.revenue')]}
-                />
-                <Area type="monotone" dataKey="value" stroke={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#fff' : '#000'} fillOpacity={1} fill="url(#colorValue)" />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-[150px] lg:h-[180px] w-full flex items-center justify-center">
+            {stats.chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={stats.chartData} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0.2}/>
+                      <stop offset="95%" stopColor={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
+                  <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
+                  <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
+                      border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
+                      fontSize: '10px', 
+                      fontFamily: 'monospace',
+                      color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
+                    }}
+                    itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#2563eb' : theme === 'dark' ? '#fff' : '#000' }}
+                    formatter={(value: any) => [formatNumber(value), t('dash.revenue')]}
+                  />
+                  <Area type="monotone" dataKey="value" stroke={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#fff' : '#000'} fillOpacity={1} fill="url(#colorValue)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className={cn("text-[10px] font-mono text-center px-3", uiStyle === 'UI/UX 2' ? "text-white/75" : "text-gray-500")}>
+                {language === 'bn' ? 'নির্বাচিত সময়কালে কোনো লেনদেন নেই' : 'No transactions in period'}
+              </p>
+            )}
           </div>
         </div>
 
@@ -2831,26 +2800,32 @@ export function Dashboard() {
             "text-[10px] font-mono uppercase mb-2 tracking-widest px-1 text-center border-b border-border/10 pb-1",
             uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
           )}>{t('dash.expenseDistribution')}</h3>
-          <div className="h-[150px] lg:h-[180px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
-                    border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
-                    fontSize: '10px', 
-                    fontFamily: 'monospace',
-                    color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
-                  }}
-                  itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#059669' : theme === 'dark' ? '#fff' : '#000' }}
-                  formatter={(value: any) => [formatNumber(value), t('dash.purchase')]}
-                />
-                <Bar dataKey={stats.chartData.length > 0 ? "expense" : "value"} fill={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} radius={[2, 2, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="h-[150px] lg:h-[180px] w-full flex items-center justify-center">
+            {stats.chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.chartData} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
+                  <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
+                  <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
+                      border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
+                      fontSize: '10px', 
+                      fontFamily: 'monospace',
+                      color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
+                    }}
+                    itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#059669' : theme === 'dark' ? '#fff' : '#000' }}
+                    formatter={(value: any) => [formatNumber(value), t('dash.purchase')]}
+                  />
+                  <Bar dataKey="expense" fill={uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#ffffff' : '#000000'} radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className={cn("text-[10px] font-mono text-center px-3", uiStyle === 'UI/UX 2' ? "text-white/75" : "text-gray-500")}>
+                {language === 'bn' ? 'নির্বাচিত সময়কালে কোনো লেনদেন নেই' : 'No transactions in period'}
+              </p>
+            )}
           </div>
         </div>
 
@@ -2862,26 +2837,32 @@ export function Dashboard() {
             "text-[10px] font-mono uppercase mb-2 tracking-widest px-1 text-center border-b border-border/10 pb-1",
             uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
           )}>{t('dash.netProfitMargin')}</h3>
-          <div className="h-[150px] lg:h-[180px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData.map(d => ({ ...d, profit: d.value * 0.15 }))} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
-                    border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
-                    fontSize: '10px', 
-                    fontFamily: 'monospace',
-                    color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
-                  }}
-                  itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#d97706' : theme === 'dark' ? '#fff' : '#000' }}
-                  formatter={(value: any) => [formatNumber(value), t('dash.profit')]}
-                />
-                <Line type="monotone" dataKey="profit" stroke={uiStyle === 'UI/UX 2' ? '#fff' : "#10b981"} strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+          <div className="h-[150px] lg:h-[180px] w-full flex items-center justify-center">
+            {stats.chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stats.chartData} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
+                  <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
+                  <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
+                      border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
+                      fontSize: '10px', 
+                      fontFamily: 'monospace',
+                      color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
+                    }}
+                    itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#d97706' : theme === 'dark' ? '#fff' : '#000' }}
+                    formatter={(value: any) => [formatNumber(value), t('dash.profit')]}
+                  />
+                  <Line type="monotone" dataKey="profit" stroke={uiStyle === 'UI/UX 2' ? '#fff' : "#10b981"} strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className={cn("text-[10px] font-mono text-center px-3", uiStyle === 'UI/UX 2' ? "text-white/75" : "text-gray-500")}>
+                {language === 'bn' ? 'নির্বাচিত সময়কালে কোনো লেনদেন নেই' : 'No transactions in period'}
+              </p>
+            )}
           </div>
         </div>
 
@@ -2893,26 +2874,32 @@ export function Dashboard() {
             "text-[10px] font-mono uppercase mb-2 tracking-widest px-1 text-center border-b border-border/10 pb-1",
             uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-500"
           )}>{t('dash.cashFlowProjection')}</h3>
-          <div className="h-[150px] lg:h-[180px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.chartData.length > 0 ? stats.chartData : mockChartData.map(d => ({ ...d, value: d.value * 1.2 }))} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
-                <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
-                <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
-                    border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
-                    fontSize: '10px', 
-                    fontFamily: 'monospace',
-                    color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
-                  }}
-                  itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#e11d48' : theme === 'dark' ? '#fff' : '#000' }}
-                  formatter={(value: any) => [formatNumber(value), 'Projection']}
-                />
-                <Area type="monotone" dataKey="value" stroke={uiStyle === 'UI/UX 2' ? '#fff' : "#3b82f6"} fill={uiStyle === 'UI/UX 2' ? '#fff' : "#3b82f6"} fillOpacity={0.1} />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="h-[150px] lg:h-[180px] w-full flex items-center justify-center">
+            {stats.chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={stats.chartData} margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.1)' : theme === 'dark' ? '#222' : '#e5e5e5'} vertical={false} />
+                  <XAxis dataKey="name" stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} />
+                  <YAxis stroke={uiStyle === 'UI/UX 2' ? 'rgba(255,255,255,0.6)' : "#666"} fontSize={8} tickLine={false} axisLine={false} tickFormatter={(value) => formatNumber(value)} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#141414' : '#ffffff', 
+                      border: `1px solid ${uiStyle === 'UI/UX 2' ? '#fff' : theme === 'dark' ? '#333' : '#e5e5e5'}`, 
+                      fontSize: '10px', 
+                      fontFamily: 'monospace',
+                      color: uiStyle === 'UI/UX 2' ? '#1e293b' : 'inherit'
+                    }}
+                    itemStyle={{ color: uiStyle === 'UI/UX 2' ? '#e11d48' : theme === 'dark' ? '#fff' : '#000' }}
+                    formatter={(value: any) => [formatNumber(value), 'Cash Flow']}
+                  />
+                  <Area type="monotone" dataKey="value" stroke={uiStyle === 'UI/UX 2' ? '#fff' : "#3b82f6"} fill={uiStyle === 'UI/UX 2' ? '#fff' : "#3b82f6"} fillOpacity={0.1} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className={cn("text-[10px] font-mono text-center px-3", uiStyle === 'UI/UX 2' ? "text-white/75" : "text-gray-500")}>
+                {language === 'bn' ? 'নির্বাচিত সময়কালে কোনো লেনদেন নেই' : 'No transactions in period'}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -2968,10 +2955,10 @@ export function Dashboard() {
           <table className="w-full text-left font-mono text-xs min-w-[600px] sm:min-w-0">
             <thead>
               <tr className="border-b border-border text-gray-500 uppercase">
-                <th className="px-4 py-3 font-medium">{t('common.date')}</th>
-                <th className="px-4 py-3 font-medium">{t('common.particulars')}</th>
-                <th className="px-4 py-3 font-medium">{t('common.type')}</th>
-                <th className="px-4 py-3 font-medium text-right">{t('common.amount')}</th>
+                <th className="px-4 py-3 font-medium align-middle">{t('common.date')}</th>
+                <th className="px-4 py-3 font-medium align-middle">{t('common.particulars')}</th>
+                <th className="px-4 py-3 font-medium align-middle">{t('common.type')}</th>
+                <th className="px-4 py-3 font-medium text-right align-middle">{t('common.amount')}</th>
               </tr>
             </thead>
             <tbody className="text-foreground/80">
@@ -2981,9 +2968,9 @@ export function Dashboard() {
                   className="border-b border-border/50 hover:bg-foreground/5 transition-colors cursor-pointer"
                   onClick={() => navigate(`/reports/daybook`)}
                 >
-                  <td className="px-4 py-3">{formatDate(v.v_date)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col">
+                  <td className="px-4 py-3 align-middle whitespace-nowrap">{formatDate(v.v_date)}</td>
+                  <td className="px-4 py-3 align-middle">
+                    <div className="flex flex-col justify-center">
                       <span className="text-foreground font-bold">
                         {v.party_ledger_name || v.ledger_name || v.ledgers || (['Sales', 'Purchase'].includes(v.particulars) ? '' : v.particulars) || v.v_type}
                       </span>
@@ -2992,8 +2979,8 @@ export function Dashboard() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3">{v.v_type}</td>
-                  <td className="px-4 py-3 text-right">৳ {formatNumber(v.total_amount)}</td>
+                  <td className="px-4 py-3 align-middle whitespace-nowrap">{v.v_type}</td>
+                  <td className="px-4 py-3 text-right align-middle whitespace-nowrap">৳ {formatNumber(v.total_amount)}</td>
                 </tr>
               ))}
               {recentVouchers.length === 0 && !loading && (

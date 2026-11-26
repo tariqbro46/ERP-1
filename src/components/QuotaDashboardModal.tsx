@@ -13,6 +13,8 @@ import { QuotaResetRequestModal } from './QuotaResetRequestModal';
 import { FirebaseUsageChart } from './FirebaseUsageChart';
 import { UserProfile } from '../types';
 import { useNotification } from '../contexts/NotificationContext';
+import { useSettings } from '../contexts/SettingsContext';
+import { DEFAULT_APP_BRANDING } from '../constants/appIdentity';
 
 interface QuotaDashboardModalProps {
   isOpen: boolean;
@@ -25,6 +27,8 @@ type TabType = 'overview' | 'modules' | 'users' | 'operations';
 export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaDashboardModalProps) {
   const { isFounder, isSuperAdmin, isAdmin, user } = useAuth();
   const { showNotification } = useNotification();
+  const { appIdentity } = useSettings();
+  const appDisplayName = appIdentity?.appName || DEFAULT_APP_BRANDING.appName;
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [isResetting, setIsResetting] = useState(false);
@@ -729,7 +733,7 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                       </div>
 
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        SAPIENT ERP automatically buffers queries with an intelligent 30-minute stale-while-revalidate client cache. Repeated visits to daybooks, ledger summaries, and reports do not trigger costly cloud database reads.
+                        {appDisplayName} automatically buffers queries with an intelligent 30-minute stale-while-revalidate client cache. Repeated visits to daybooks, ledger summaries, and reports do not trigger costly cloud database reads.
                       </p>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-border">

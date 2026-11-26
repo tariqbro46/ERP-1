@@ -214,7 +214,7 @@ export function OrderManagement() {
 
       <div className="flex-1 p-4 lg:p-8">
         {/* Machine Status Bar */}
-      <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-4 mb-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
         {machines.map(machine => (
           <div key={machine.id} className="bg-card border border-border p-4 relative overflow-hidden group">
             <div className={cn(
@@ -292,150 +292,158 @@ export function OrderManagement() {
         </div>
       ) : viewMode === 'list' ? (
         <div className="border border-border bg-card overflow-x-auto no-scrollbar">
-          <div className="min-w-[800px] lg:min-w-full">
-            <div className="grid grid-cols-12 gap-2 p-3 border-b border-border bg-muted/95 backdrop-blur-sm text-[9px] font-bold uppercase tracking-widest text-muted-foreground sticky top-[108px] sm:top-[124px] lg:top-[112px] z-20">
-              <div className="col-span-4">Client / Item / Design</div>
-                <div className="col-span-1 text-center">Qty</div>
-                <div className="col-span-2 text-center">Print Type</div>
-                <div className="col-span-2 text-center">Delivery</div>
-                <div className="col-span-1 text-center">Status</div>
-                <div className="col-span-2 text-right">Actions</div>
-              </div>
-              <div className="divide-y divide-border">
-                {filteredOrders.map(order => {
-                  const orderItems = order.items || [];
-                  const totalQty = orderItems.reduce((sum, item) => sum + item.quantity, 0) || order.quantity || 0;
-                  
-                  return (
-                    <div 
-                      key={order.id} 
-                      onClick={() => handleEditOrder(order)}
-                      className="grid grid-cols-12 gap-2 p-3 items-center hover:bg-muted/20 transition-colors group cursor-pointer"
-                    >
-                      <div className="col-span-4">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={cn(
-                            "text-[8px] font-bold uppercase px-1.5 py-0.5 border rounded",
-                            order.orderType === 'Sales' ? "text-emerald-500 border-emerald-500/20 bg-emerald-500/5" : "text-blue-500 border-blue-500/20 bg-blue-500/5"
-                          )}>
-                            {order.orderType || 'Production'}
-                          </span>
-                          <p className="text-sm font-bold text-foreground uppercase tracking-tight truncate">{order.clientName}</p>
-                        </div>
-                        
-                        {orderItems.length > 0 ? (
-                          <div className="space-y-1">
-                            {orderItems.slice(0, 2).map((item, i) => (
-                              <div key={i} className="flex flex-col">
-                                <p className="text-[11px] text-muted-foreground uppercase tracking-tighter font-medium truncate">
-                                  {item.itemName}
-                                </p>
-                                {item.printDesign && (
-                                  <p className="text-[9px] text-primary uppercase font-bold italic truncate">
-                                    Design: {item.printDesign}
-                                  </p>
-                                )}
-                              </div>
-                            ))}
-                            {orderItems.length > 2 && (
-                              <p className="text-[9px] text-muted-foreground italic">+{orderItems.length - 2} more items</p>
-                            )}
-                          </div>
-                        ) : (
-                          <>
-                            <p className="text-[11px] text-muted-foreground uppercase tracking-tighter font-medium truncate">{order.itemName}</p>
-                            {order.printDesign && (
-                              <p className="text-[10px] text-primary uppercase font-bold mt-0.5 italic truncate">
-                                Design: {order.printDesign}
+          <table className="w-full min-w-[820px] text-left border-collapse">
+            <thead className="bg-muted/95 backdrop-blur-sm border-b border-border text-[9px] font-bold uppercase tracking-widest text-muted-foreground sticky top-0 z-20">
+              <tr>
+                <th className="p-3 align-middle w-[34%]">{t('production.clientItemDesign')}</th>
+                <th className="p-3 text-center align-middle w-[10%]">{t('production.qty')}</th>
+                <th className="p-3 text-center align-middle w-[14%]">{t('production.printType')}</th>
+                <th className="p-3 text-center align-middle w-[14%]">{t('production.delivery')}</th>
+                <th className="p-3 text-center align-middle w-[12%]">{t('common.status')}</th>
+                <th className="p-3 text-right align-middle w-[16%]">{t('common.actions')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filteredOrders.map(order => {
+                const orderItems = order.items || [];
+                const totalQty = orderItems.reduce((sum, item) => sum + item.quantity, 0) || order.quantity || 0;
+                const parsedDelivery = order.deliveryDate ? new Date(order.deliveryDate) : null;
+                const formattedDelivery = parsedDelivery && !isNaN(parsedDelivery.getTime()) ? format(parsedDelivery, 'dd MMM yy') : 'N/A';
+
+                return (
+                  <tr
+                    key={order.id}
+                    onClick={() => handleEditOrder(order)}
+                    className="hover:bg-muted/20 transition-colors group cursor-pointer"
+                  >
+                    <td className="p-3 align-middle">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={cn(
+                          "text-[8px] font-bold uppercase px-1.5 py-0.5 border rounded shrink-0",
+                          order.orderType === 'Sales' ? "text-emerald-500 border-emerald-500/20 bg-emerald-500/5" : "text-blue-500 border-blue-500/20 bg-blue-500/5"
+                        )}>
+                          {order.orderType || 'Production'}
+                        </span>
+                        <p className="text-sm font-bold text-foreground uppercase tracking-tight truncate">{order.clientName}</p>
+                      </div>
+
+                      {orderItems.length > 0 ? (
+                        <div className="space-y-1">
+                          {orderItems.slice(0, 2).map((item, i) => (
+                            <div key={i} className="flex flex-col">
+                              <p className="text-[11px] text-muted-foreground uppercase tracking-tighter font-medium truncate">
+                                {item.itemName}
                               </p>
-                            )}
-                          </>
-                        )}
-                      </div>
-                      <div className="col-span-1 text-center text-xs font-bold text-foreground">
-                        {totalQty.toLocaleString()}
-                      </div>
-                      <div className="col-span-2 text-center">
-                        {order.orderType === 'Sales' ? (
-                          <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 border text-muted-foreground border-border bg-muted">
-                            N/A
-                          </span>
-                        ) : (
-                          <span className={cn(
-                            "text-[8px] font-bold uppercase px-1.5 py-0.5 border",
-                            (orderItems[0]?.printType || order.printType) === 'Digital' ? "text-purple-500 border-purple-500/20 bg-purple-500/5" : "text-gray-500 border-border bg-muted"
-                          )}>
-                            {orderItems[0]?.printType || order.printType} {(orderItems[0]?.isDoubleSided || order.isDoubleSided) ? '2S' : '1S'}
-                          </span>
-                        )}
-                      </div>
-                      <div className="col-span-2 text-center">
-                        <p className="text-[9px] font-bold">{format(new Date(order.deliveryDate), 'dd MMM yy')}</p>
-                        <p className="text-[8px] text-muted-foreground uppercase">{order.deliveryTime || '12:00'}</p>
-                      </div>
-                      <div className="col-span-1 text-center" onClick={(e) => e.stopPropagation()}>
-                        <select 
-                          value={order.status}
-                          onChange={(e) => handleStatusChange(order, e.target.value as OrderStatus)}
-                          className={cn(
-                            "text-[8px] font-bold uppercase px-1 py-0.5 rounded-full border outline-none cursor-pointer w-full",
-                            getStatusColor(order.status)
+                              {item.printDesign && (
+                                <p className="text-[9px] text-primary uppercase font-bold italic truncate">
+                                  Design: {item.printDesign}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                          {orderItems.length > 2 && (
+                            <p className="text-[9px] text-muted-foreground italic">+{orderItems.length - 2} more items</p>
                           )}
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Printing">Printing</option>
-                          <option value="Completed">Completed</option>
-                          <option value="Delivered">Delivered</option>
-                          <option value="Cancelled">Cancelled</option>
-                        </select>
-                      </div>
-                      <div className="col-span-2 text-right flex flex-col items-end gap-1" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-[11px] text-muted-foreground uppercase tracking-tighter font-medium truncate">{order.itemName}</p>
+                          {order.printDesign && (
+                            <p className="text-[10px] text-primary uppercase font-bold mt-0.5 italic truncate">
+                              Design: {order.printDesign}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </td>
+                    <td className="p-3 text-center text-xs font-bold text-foreground align-middle whitespace-nowrap">
+                      {Math.round(totalQty).toLocaleString()}
+                    </td>
+                    <td className="p-3 text-center align-middle whitespace-nowrap">
+                      {order.orderType === 'Sales' ? (
+                        <span className="inline-flex items-center text-[8px] font-bold uppercase px-1.5 py-0.5 border text-muted-foreground border-border bg-muted">
+                          N/A
+                        </span>
+                      ) : (
+                        <span className={cn(
+                          "inline-flex items-center text-[8px] font-bold uppercase px-1.5 py-0.5 border",
+                          (orderItems[0]?.printType || order.printType) === 'Digital' ? "text-purple-500 border-purple-500/20 bg-purple-500/5" : "text-gray-500 border-border bg-muted"
+                        )}>
+                          {orderItems[0]?.printType || order.printType} {(orderItems[0]?.isDoubleSided || order.isDoubleSided) ? '2S' : '1S'}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-3 text-center align-middle whitespace-nowrap">
+                      <p className="text-[9px] font-bold">{formattedDelivery}</p>
+                      <p className="text-[8px] text-muted-foreground uppercase">{order.deliveryTime || '12:00'}</p>
+                    </td>
+                    <td className="p-3 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={order.status}
+                        onChange={(e) => handleStatusChange(order, e.target.value as OrderStatus)}
+                        className={cn(
+                          "text-[8px] font-bold uppercase px-2 py-1 rounded-full border outline-none cursor-pointer w-full min-w-[90px]",
+                          getStatusColor(order.status)
+                        )}
+                      >
+                        <option value="Pending">{t('production.status.Pending')}</option>
+                        <option value="Printing">{t('production.status.Printing')}</option>
+                        <option value="Completed">{t('production.status.Completed')}</option>
+                        <option value="Delivered">{t('production.status.Delivered')}</option>
+                        <option value="Cancelled">{t('production.status.Cancelled')}</option>
+                      </select>
+                    </td>
+                    <td className="p-3 text-right align-middle" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex flex-col items-end justify-center gap-1.5">
+                        <div className="flex items-center gap-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                          <button
                             onClick={() => handleEditOrder(order)}
-                            className="px-4 py-2 text-[10px] font-bold uppercase bg-green-600 text-white hover:bg-green-700 transition-colors rounded shadow-sm min-w-[80px]"
+                            className="px-3 py-1.5 text-[10px] font-bold uppercase bg-green-600 text-white hover:bg-green-700 transition-colors rounded shadow-sm"
                           >
-                            Edit
+                            {t('common.edit')}
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDelete(order.id)}
-                            className="px-4 py-2 text-[10px] font-bold uppercase bg-red-600 text-white hover:bg-red-700 transition-colors rounded shadow-sm min-w-[80px]"
+                            className="px-3 py-1.5 text-[10px] font-bold uppercase bg-red-600 text-white hover:bg-red-700 transition-colors rounded shadow-sm"
                           >
-                            Delete
+                            {t('common.delete')}
                           </button>
                         </div>
-                        
-                        <div className="flex flex-col gap-1 w-full">
+
+                        <div className="flex flex-wrap justify-end gap-1 w-full">
                           {order.orderType === 'Production' && order.status === 'Completed' && !order.isConvertedToFinishGoods && (
                             <button
                               onClick={() => handleConvertToFinishGoods(order.id)}
                               disabled={converting === order.id}
-                              className="text-[9px] font-bold uppercase px-3 py-1.5 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors disabled:opacity-50 shadow-sm"
+                              className="text-[9px] font-bold uppercase px-2.5 py-1 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition-colors disabled:opacity-50 shadow-sm whitespace-nowrap"
                             >
-                              {converting === order.id ? '...' : 'Finish Goods'}
+                              {converting === order.id ? '...' : t('production.finishGoods')}
                             </button>
                           )}
-                          
+
                           {(order.orderType === 'Sales' || (order.orderType === 'Production' && order.status === 'Completed')) && !order.isConvertedToSalesVoucher && (
                             <button
                               onClick={() => handleConvertToSalesVoucher(order)}
-                              className="text-[9px] font-bold uppercase px-3 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors shadow-sm"
+                              className="text-[9px] font-bold uppercase px-2.5 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors shadow-sm whitespace-nowrap"
                             >
-                              Sales Voucher
+                              {t('production.salesVoucher')}
                             </button>
                           )}
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    </td>
+                  </tr>
+                );
+              })}
               {filteredOrders.length === 0 && (
-                <div className="p-12 text-center text-[10px] uppercase tracking-widest text-muted-foreground italic">
-                  No orders found matching your criteria.
-                </div>
+                <tr>
+                  <td colSpan={6} className="p-12 text-center text-[10px] uppercase tracking-widest text-muted-foreground italic align-middle">
+                    {t('production.noOrdersFound')}
+                  </td>
+                </tr>
               )}
-            </div>
-          </div>
+            </tbody>
+          </table>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -464,11 +472,11 @@ export function OrderManagement() {
 
               <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border">
                 <div className="space-y-0.5">
-                  <p className="text-[8px] text-muted-foreground uppercase font-bold">Quantity</p>
+                  <p className="text-[8px] text-muted-foreground uppercase font-bold">{t('common.quantity')}</p>
                   <p className="text-xs font-bold">{order.quantity} Pcs</p>
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-[8px] text-muted-foreground uppercase font-bold">Print Type</p>
+                  <p className="text-[8px] text-muted-foreground uppercase font-bold">{t('production.printType')}</p>
                   <p className="text-xs font-bold">{order.printType}</p>
                 </div>
               </div>

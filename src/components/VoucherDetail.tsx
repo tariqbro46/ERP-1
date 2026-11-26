@@ -13,14 +13,17 @@ import { exportUtils } from '../utils/exportUtils';
 import { pdfExportService } from '../utils/pdfExportService';
 import { EditableHeader } from './EditableHeader';
 import { useNotification } from '../contexts/NotificationContext';
+import { DEFAULT_APP_BRANDING, resolveCompanyLegalIdentity } from '../constants/appIdentity';
 
 export function VoucherDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, company } = useAuth();
   const { t } = useLanguage();
   const { showNotification } = useNotification();
   const settings = useSettings();
+  const legal = resolveCompanyLegalIdentity(settings, company);
+  const appDisplayName = settings.appIdentity?.appName || DEFAULT_APP_BRANDING.appName;
   const [loading, setLoading] = useState(true);
   const [voucher, setVoucher] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -172,11 +175,13 @@ export function VoucherDetail() {
           <div className="p-8 border-b border-border bg-foreground/[0.02]">
             <div className="flex justify-between items-start">
               <div className="space-y-1">
-                <h1 className="text-2xl font-bold uppercase text-foreground">{settings.companyName || 'SAPIENT ERP'}</h1>
-                <p className="text-xs text-gray-500 whitespace-pre-line">{settings.companyAddress}</p>
+                {legal.companyName && (
+                  <h1 className="text-2xl font-bold uppercase text-foreground">{legal.companyName}</h1>
+                )}
+                <p className="text-xs text-gray-500 whitespace-pre-line">{legal.companyAddress}</p>
                 <div className="text-[10px] text-gray-400 space-x-4">
-                  {settings.printPhone && <span>Phone: {settings.printPhone}</span>}
-                  {settings.printEmail && <span>Email: {settings.printEmail}</span>}
+                  {legal.printPhone && <span>Phone: {legal.printPhone}</span>}
+                  {legal.printEmail && <span>Email: {legal.printEmail}</span>}
                 </div>
               </div>
               <div className="text-right space-y-1">
@@ -320,8 +325,8 @@ export function VoucherDetail() {
           <div className="p-4 bg-muted/50 border-t border-border flex justify-between items-center opacity-50">
             <span className="text-[8px] uppercase tracking-widest text-gray-500">Software Generated Receipt</span>
             <div className="flex items-center gap-1">
-               <div className="w-3 h-3 bg-foreground rounded-sm flex items-center justify-center text-[6px] text-background font-bold">E</div>
-               <span className="text-[8px] font-bold uppercase tracking-tight text-foreground">SAPIENT ERP</span>
+               <div className="w-3 h-3 bg-foreground rounded-sm flex items-center justify-center text-[6px] text-background font-bold">{(appDisplayName || 'E').charAt(0).toUpperCase()}</div>
+               <span className="text-[8px] font-bold uppercase tracking-tight text-foreground">{appDisplayName}</span>
             </div>
           </div>
         </div>

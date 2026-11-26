@@ -6,6 +6,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useSettings, NotificationStyle, NotificationPosition } from './SettingsContext';
+import { DEFAULT_APP_BRANDING } from '../constants/appIdentity';
 import { soundService } from '../services/soundService';
 
 interface Notification {
@@ -29,8 +30,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     notificationDuration = 5000, 
     notificationAnimationStyle = 'default',
     notificationStyle = 'default',
-    notificationPosition = 'bottom-right'
+    notificationPosition = 'bottom-right',
+    appIdentity
   } = useSettings();
+
+  const appDisplayName = appIdentity?.appName || DEFAULT_APP_BRANDING.appName;
+  const appShortLabel = appIdentity?.appShortName || DEFAULT_APP_BRANDING.appShortName;
+  const appMonogram = (appShortLabel || appDisplayName || 'E').trim().slice(0, 2).toUpperCase();
 
   const showNotification = (message: React.ReactNode, type: 'success' | 'error' | 'info' | 'warning' = 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -194,7 +200,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             {/* Meta Avatar / Badge with Reaction Dot */}
             <div className="relative shrink-0 mt-0.5">
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#1877F2] to-[#3b82f6] flex items-center justify-center text-white shadow-md font-bold text-sm">
-                TF
+                {appMonogram}
               </div>
               <div className={cn(
                 "absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] shadow border-2 border-white dark:border-[#242526]",
@@ -208,7 +214,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
             <div className="flex-1 min-w-0 pr-4">
               <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="font-bold text-xs text-slate-900 dark:text-white">TallyFlow ERP</span>
+                <span className="font-bold text-xs text-slate-900 dark:text-white">{appDisplayName}</span>
                 <span className="text-[10px] text-slate-500 dark:text-slate-400">• Just now</span>
               </div>
               <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-normal">
@@ -406,7 +412,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
               <div className="flex-1 min-w-0">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#635bff] dark:text-[#a594fd] block mb-0.5">
-                  TallyFlow Event
+                  {appShortLabel} Event
                 </span>
                 <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
                   {n.message}
@@ -445,9 +451,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             <div className="flex items-center justify-between pb-1 border-b border-slate-200/50 dark:border-white/5">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-sm bg-gradient-to-tr from-blue-600 to-cyan-500 flex items-center justify-center text-white text-[8px] font-bold">
-                  TF
+                  {appMonogram}
                 </div>
-                <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">TallyFlow ERP</span>
+                <span className="text-[11px] font-semibold text-slate-800 dark:text-slate-200">{appDisplayName}</span>
                 <span className="text-[10px] text-slate-400">• now</span>
               </div>
               <button

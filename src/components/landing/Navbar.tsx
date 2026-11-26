@@ -4,19 +4,28 @@ import { Menu, X, LayoutDashboard } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { useSiteContent } from '../../hooks/useSiteContent';
+import { isLegacyAppBrandString, sanitizeAssetUrl } from '../../constants/appIdentity';
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const { user } = useAuth();
   const { language, setLanguage, t } = useLanguage();
+  const { appIdentity } = useSettings();
   const { content: globalSettings } = useSiteContent('global', { 
-    siteName: 'TallyFlow ERP',
+    siteName: appIdentity.appName,
     siteNameColor: '#0f172a',
     navbarBgColor: 'rgba(255, 255, 255, 0.85)',
     navbarTextColor: '#475569',
     registrationEnabled: true
   });
+
+  const displayAppName =
+    globalSettings.siteName && !isLegacyAppBrandString(globalSettings.siteName)
+      ? globalSettings.siteName
+      : appIdentity.appName;
+  const safeAppLogo = sanitizeAssetUrl(appIdentity.appLogoUrl || globalSettings.systemLogo);
 
   const navLinks = [
     { name: t('nav.home') || (language === 'bn' ? 'হোম' : 'Home'), href: '/' },
@@ -33,16 +42,20 @@ export const Navbar = () => {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          {/* Colorful TallyFlow ERP Logo matching Login Page */}
+          {/* App Identity Logo */}
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="flex items-center gap-1 p-1 rounded bg-slate-50 border border-slate-100 group-hover:border-slate-200 transition-all">
-              <div className="w-2.5 h-2.5 rounded-[2px] bg-[#f97316]" />
-              <div className="w-2.5 h-2.5 rounded-[2px] bg-[#e11d48]" />
-              <div className="w-2.5 h-2.5 rounded-[2px] bg-[#3b82f6]" />
-              <div className="w-2.5 h-2.5 rounded-[2px] bg-[#eab308]" />
-            </div>
+            {safeAppLogo ? (
+              <img src={safeAppLogo} alt={displayAppName} className="h-7 w-auto object-contain" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="flex items-center gap-1 p-1 rounded bg-slate-50 border border-slate-100 group-hover:border-slate-200 transition-all">
+                <div className="w-2.5 h-2.5 rounded-[2px] bg-[#f97316]" />
+                <div className="w-2.5 h-2.5 rounded-[2px] bg-[#e11d48]" />
+                <div className="w-2.5 h-2.5 rounded-[2px] bg-[#3b82f6]" />
+                <div className="w-2.5 h-2.5 rounded-[2px] bg-[#eab308]" />
+              </div>
+            )}
             <span className="text-base sm:text-lg font-bold tracking-tight text-slate-900">
-              {globalSettings.siteName || "TallyFlow ERP"}
+              {displayAppName}
             </span>
           </Link>
 

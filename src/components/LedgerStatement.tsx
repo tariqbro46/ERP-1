@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Printer, Download, ArrowLeft, Calculator, FileText, Settings as SettingsIcon, Loader2, Layout, MoreVertical } from 'lucide-react';
+import { Search, Printer, Download, FileSpreadsheet, Mail, FileText, Settings as SettingsIcon, Calculator, Layout, MoreVertical, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { cn, formatCurrency, formatNumber, formatQuantity, formatVoucherNo, compareLedgerVouchers } from '../lib/utils';
+import { cn, formatNumber, formatQuantity, formatVoucherNo, compareLedgerVouchers } from '../lib/utils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { printReport, printUtils, executePrint } from '../utils/printUtils';
-import { exportToCSV, exportToPDF, exportUtils, downloadHtmlAsPDF } from '../utils/exportUtils';
+import { executePrint } from '../utils/printUtils';
+import { exportToCSV, exportStructuredExcel, shareReportViaEmail } from '../utils/exportUtils';
 import { printToPDF } from '../utils/pdfExportService';
 import { generateLedgerStatementHtml } from '../utils/reports/ledgerStatementReport';
+import { resolveCompanyLegalIdentity, DEFAULT_APP_BRANDING } from '../constants/appIdentity';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { EditableHeader } from './EditableHeader';
@@ -35,11 +36,12 @@ const DEFAULT_CONFIG: ReportConfig = {
 };
 
 export function LedgerStatement() {
-  const { user } = useAuth();
+  const { user, company } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { t } = useLanguage();
   const settings = useSettings();
+  const companyIdentity = resolveCompanyLegalIdentity(settings, company);
   const [ledgers, setLedgers] = useState<any[]>([]);
   const [isReportBuilderOpen, setIsReportBuilderOpen] = useState(false);
   const [selectedLedger, setSelectedLedger] = useState<string>(() => {
@@ -95,6 +97,7 @@ export function LedgerStatement() {
   const [config, setConfig] = useState<ReportConfig>(DEFAULT_CONFIG);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [openingBalance, setOpeningBalance] = useState(0);
+  const [fullPageHtml, setFullPageHtml] = useState<string | null>(null);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -260,10 +263,18 @@ export function LedgerStatement() {
   const generateLedgerReportHtml = () => {
     if (!selectedLedger) return '';
     return generateLedgerStatementHtml({
-      companyName: settings?.companyName || 'MODINA ENTERPRISE',
-      companyAddress: settings?.companyAddress || '',
-      companyEmail: settings?.printEmail || '',
-      companyPhone: settings?.printPhone || '',
+      companyName: companyIdentity.companyName,
+      companyAddress: companyIdentity.companyAddress,
+      companyEmail: companyIdentity.printEmail || '',
+      companyPhone: companyIdentity.printPhone || '',
+      companyWebsite: companyIdentity.printWebsite || '',
+      companyLogo: companyIdentity.companyLogo,
+      vatBinTin: companyIdentity.vatBinTin || '',
+      printHeader: settings.showPrintHeader !== false ? companyIdentity.printHeader : '',
+      printFooter: settings.showPrintFooter !== false ? settings.printFooter : '',
+      softwareFooterText: settings.appIdentity?.softwareFooterText || settings.developerContactText || DEFAULT_APP_BRANDING.softwareFooterText,
+      showDeveloperContact: settings.showDeveloperContact !== false,
+      reportLayout: settings.reportLayout,
       ledgerName: currentLedger?.name || 'Ledger Account',
       ledgerAddress: currentLedger?.address || '',
       startDate,
@@ -277,9 +288,126 @@ export function LedgerStatement() {
         showNarration: config.showNarration,
         showEnteredBy: config.showEnteredBy,
         showRunningBalance: config.showRunningBalance,
-        enableStripeView: config.enableStripeView
+        enableStripeView: config.enableStripeView,
+        showStockDescriptions: config.showStockDescriptions
       }
     });
+  };
+
+  const buildLedgerSpreadsheetPayload = () => {
+    const ledgerName = currentLedger?.name || 'Ledger Account';
+    const headers = [
+      'Date',
+      'Particulars',
+      'Vch Type',
+      'Ref No',
+      'Serial No',
+      'Debit',
+      'Credit',
+      ...(config.showRunningBalance ? ['Running Balance'] : [])
+    ];
+
+    const rows: Record<string, any>[] = [];
+    rows.push({
+      date: formatReportDate(startDate, settings.dateFormat),
+      particulars: 'Opening Balance',
+      vch_type: '',
+      ref_no: '',
+      serial_no: '',
+      debit: openingBalance > 0 ? Number(openingBalance.toFixed(2)) : '',
+      credit: openingBalance < 0 ? Number(Math.abs(openingBalance).toFixed(2)) : '',
+      ...(config.showRunningBalance
+        ? {
+            running_balance: `${formatNumber(Math.abs(openingBalance))} ${openingBalance >= 0 ? 'Dr' : 'Cr'}`
+          }
+        : {})
+    });
+
+    let bal = openingBalanceVal;
+    entries.forEach((e) => {
+      const dr = Number(e.debit || 0);
+      const cr = Number(e.credit || 0);
+      bal += dr - cr;
+      rows.push({
+        date: formatReportDate(e.vouchers?.v_date, settings.dateFormat),
+        particulars: e.particulars || '',
+        vch_type: e.vouchers?.v_type || '',
+        ref_no: formatVoucherNo(e.vouchers?.v_no || e.vouchers?.ref_no || e.vouchers?.reference_no),
+        serial_no: e.vouchers?.serial_no || e.vouchers?.auto_serial_no || '',
+        debit: dr > 0 ? Number(dr.toFixed(2)) : '',
+        credit: cr > 0 ? Number(cr.toFixed(2)) : '',
+        ...(config.showRunningBalance
+          ? { running_balance: `${formatNumber(Math.abs(bal))} ${bal >= 0 ? 'Dr' : 'Cr'}` }
+          : {})
+      });
+
+      if (config.format === 'Detailed' && e.vouchers?.inventory?.length) {
+        e.vouchers.inventory.forEach((inv: any) => {
+          const itemName = items.find(i => i.id === inv.item_id)?.name || inv.item_name || 'Item';
+          const unitLabel = inv.unit || 'Pcs';
+          const qtyDisplay = `${formatQuantity(inv.qty, unitLabel)} ${unitLabel}`;
+          rows.push({
+            date: '',
+            particulars: `  • ${itemName} (${qtyDisplay} @ ${formatNumber(inv.rate)})`,
+            vch_type: 'Item',
+            ref_no: '',
+            serial_no: '',
+            debit: '',
+            credit: Number((inv.amount ?? (Number(inv.qty || 0) * Number(inv.rate || 0))).toFixed(2)),
+            ...(config.showRunningBalance ? { running_balance: '' } : {})
+          });
+        });
+      }
+
+      if (config.showNarration && e.vouchers?.narration) {
+        rows.push({
+          date: '',
+          particulars: `  Narration: ${e.vouchers.narration}`,
+          vch_type: '',
+          ref_no: '',
+          serial_no: '',
+          debit: '',
+          credit: '',
+          ...(config.showRunningBalance ? { running_balance: '' } : {})
+        });
+      }
+
+      if (config.showEnteredBy) {
+        const creator = users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System';
+        rows.push({
+          date: '',
+          particulars: `  By: ${creator}`,
+          vch_type: '',
+          ref_no: '',
+          serial_no: '',
+          debit: '',
+          credit: '',
+          ...(config.showRunningBalance ? { running_balance: '' } : {})
+        });
+      }
+    });
+
+    const closingLabel = `${formatNumber(Math.abs(bal))} ${bal >= 0 ? 'Dr' : 'Cr'}`;
+    const footerRow: Record<string, any> = {
+      date: '',
+      particulars: 'Grand Total (incl. Opening)',
+      vch_type: '',
+      ref_no: '',
+      serial_no: '',
+      debit: Number(displayTotalDebit.toFixed(2)),
+      credit: Number(displayTotalCredit.toFixed(2)),
+      ...(config.showRunningBalance ? { running_balance: `Closing: ${closingLabel}` } : {})
+    };
+
+    const safeLedgerSlug = ledgerName.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'Ledger';
+    return {
+      ledgerName,
+      safeLedgerSlug,
+      headers,
+      rows,
+      footerRow,
+      closingLabel
+    };
   };
 
   const handlePrint = () => {
@@ -289,8 +417,33 @@ export function LedgerStatement() {
     executePrint(html);
   };
 
-  const handleDownload = () => {
-    exportUtils.exportToPDF('ledger-report', `Ledger_Statement_${currentLedger?.name || 'Report'}`);
+  const handleDownloadExcel = () => {
+    if (!selectedLedger) return;
+    const payload = buildLedgerSpreadsheetPayload();
+    exportStructuredExcel({
+      fileName: `Ledger_Statement_${payload.safeLedgerSlug}_${startDate}_to_${endDate}`,
+      sheetName: 'Ledger Statement',
+      title: `Ledger Statement - ${payload.ledgerName}`,
+      subtitle: `Period: ${formatReportDate(startDate, settings.dateFormat)} to ${formatReportDate(endDate, settings.dateFormat)}${currentLedger?.address ? ` | Address: ${currentLedger.address}` : ''}`,
+      headers: payload.headers,
+      rows: payload.rows,
+      footerRow: payload.footerRow,
+      settings,
+      company
+    });
+  };
+
+  const handleDownloadCSV = () => {
+    if (!selectedLedger) return;
+    const payload = buildLedgerSpreadsheetPayload();
+    exportToCSV(
+      `Ledger_Statement_${payload.safeLedgerSlug}_${startDate}_to_${endDate}`,
+      `Ledger Statement: ${payload.ledgerName} (${formatReportDate(startDate, settings.dateFormat)} to ${formatReportDate(endDate, settings.dateFormat)})`,
+      [...payload.rows, payload.footerRow],
+      payload.headers,
+      settings,
+      company
+    );
   };
 
   const handleDownloadPDF = () => {
@@ -303,18 +456,34 @@ export function LedgerStatement() {
       subtitle: `Period: ${startDate} to ${endDate}`,
       fileName: `Ledger_Statement_${ledgerName}_${startDate}_to_${endDate}`,
       htmlContent: html,
-      settings
+      settings,
+      company
     });
   };
-    
+
+  const handleEmailReport = () => {
+    if (!selectedLedger) return;
+    const payload = buildLedgerSpreadsheetPayload();
+    shareReportViaEmail({
+      title: `Ledger Statement - ${payload.ledgerName}`,
+      subtitle: `Period: ${formatReportDate(startDate, settings.dateFormat)} to ${formatReportDate(endDate, settings.dateFormat)}`,
+      settings,
+      company,
+      summaryLines: [
+        `Ledger Account: ${payload.ledgerName}`,
+        `Opening Balance: ${formatNumber(Math.abs(openingBalance))} ${openingBalance >= 0 ? 'Dr' : 'Cr'}`,
+        `Period Debit Total: ${formatNumber(totalDebit)}`,
+        `Period Credit Total: ${formatNumber(totalCredit)}`,
+        `Closing Balance: ${payload.closingLabel}`,
+        `Transactions Count: ${entries.length}`
+      ]
+    });
+  };
+
   const handleFullPageView = () => {
     const html = generateLedgerReportHtml();
     if (!html) return;
-    const win = window.open('', '_blank');
-    if (win) {
-      win.document.write(html);
-      win.document.close();
-    }
+    setFullPageHtml(html);
   };
 
   return (
@@ -454,12 +623,22 @@ export function LedgerStatement() {
             {t('common.print')}
           </button>
 
-          {/* CSV/Excel Button */}
+          {/* Excel (.xlsx Primary) Button */}
+          <button
+            onClick={handleDownloadExcel}
+            disabled={!selectedLedger}
+            className="px-3 py-2 border border-border text-emerald-700 bg-emerald-50/70 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+            title="Export Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" /> EXCEL
+          </button>
+
+          {/* CSV Button */}
           <button 
-            onClick={handleDownload}
-            disabled={!selectedLedger || entries.length === 0}
+            onClick={handleDownloadCSV}
+            disabled={!selectedLedger}
             className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
-            title={t('common.downloadPdf')}
+            title="Export CSV"
           >
             <Download className="w-3 h-3" /> CSV
           </button>
@@ -467,11 +646,21 @@ export function LedgerStatement() {
           {/* PDF Button */}
           <button 
             onClick={handleDownloadPDF}
-            disabled={!selectedLedger || entries.length === 0}
+            disabled={!selectedLedger}
             className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
             title="Print to PDF (Save professional financial statement offline)"
           >
             <Download className="w-3 h-3" /> PRINT TO PDF
+          </button>
+
+          {/* Email Button */}
+          <button
+            onClick={handleEmailReport}
+            disabled={!selectedLedger}
+            className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+            title="Share Summary via Email"
+          >
+            <Mail className="w-3.5 h-3.5" /> EMAIL
           </button>
 
           {/* Full Page View Button */}
@@ -501,20 +690,29 @@ export function LedgerStatement() {
             settings.reportLayout === 'Layout 2' && "bg-white text-black p-8 min-h-[800px] pb-32"
           )}>
           {settings.reportLayout === 'Layout 2' && (
-            <>
-              <div className="text-center mb-6 border-b-2 border-black pb-4">
-                <h2 className="text-xl font-bold uppercase text-black">{settings.companyName}</h2>
-                <p className="text-xs text-black">{settings.companyAddress}</p>
-                <p className="text-[10px] text-black">E-Mail : {settings.printEmail}</p>
-                
-                <div className="mt-4">
-                  <h3 className="text-lg font-bold text-black">{currentLedger?.name}</h3>
-                  <p className="text-xs text-black">{currentLedger?.address}</p>
-                  <p className="text-xs font-bold text-black border-t border-black/10 mt-1 pt-1">{formatReportDate(startDate, settings.dateFormat)} to {formatReportDate(endDate, settings.dateFormat)}</p>
-                </div>
+            <div className="relative text-center mb-6 border-b-2 border-black pb-4">
+              <div className="absolute top-0 right-0 text-[10px] font-bold text-black">Page 1</div>
+              {companyIdentity.companyName && (
+                <h2 className="text-xl font-bold uppercase text-black">{companyIdentity.companyName}</h2>
+              )}
+              {companyIdentity.companyAddress && (
+                <p className="text-xs text-black whitespace-pre-line">{companyIdentity.companyAddress}</p>
+              )}
+              {companyIdentity.vatBinTin && (
+                <p className="text-[10px] text-black">VAT/BIN/TIN: {companyIdentity.vatBinTin}</p>
+              )}
+              {(companyIdentity.printPhone || companyIdentity.printEmail) && (
+                <p className="text-[10px] text-black">
+                  {[companyIdentity.printPhone ? `Phone: ${companyIdentity.printPhone}` : '', companyIdentity.printEmail ? `E-Mail : ${companyIdentity.printEmail}` : ''].filter(Boolean).join(' | ')}
+                </p>
+              )}
+
+              <div className="mt-4">
+                <h3 className="text-lg font-bold text-black">{currentLedger?.name}</h3>
+                {currentLedger?.address && <p className="text-xs text-black">{currentLedger.address}</p>}
+                <p className="text-xs font-bold text-black border-t border-black/10 mt-1 pt-1">{formatReportDate(startDate, settings.dateFormat)} to {formatReportDate(endDate, settings.dateFormat)}</p>
               </div>
-              <div className="absolute top-8 right-8 border border-black px-2 py-1 text-[10px] text-black">Page 1</div>
-            </>
+            </div>
           )}
           <div className="flex-1 min-h-0">
             <table className={cn(
@@ -526,15 +724,15 @@ export function LedgerStatement() {
                 "border-b border-border text-gray-500 uppercase bg-gray-50/50",
                 settings.reportLayout === 'Layout 2' && "border-y-2 border-black text-black font-bold bg-white"
               )}>
-                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[12%] border-black" : "w-[120px]")}>{t('common.date')}</th>
-                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[28%] border-black" : "")}>{t('ledger.particulars')}</th>
-                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('ledger.vchType')}</th>
-                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>Ref No</th>
-                <th className={cn("px-6 py-4 font-medium border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[6%] border-black" : "")}>Serial No</th>
-                <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('reports.debit')}</th>
-                <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('reports.credit')}</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border align-middle", settings.reportLayout === 'Layout 2' ? "w-[12%] border-black" : "w-[120px]")}>{t('common.date')}</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border align-middle", settings.reportLayout === 'Layout 2' ? "w-[28%] border-black" : "")}>{t('ledger.particulars')}</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border align-middle", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('ledger.vchType')}</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border align-middle", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>Ref No</th>
+                <th className={cn("px-6 py-4 font-medium border-b border-border align-middle", settings.reportLayout === 'Layout 2' ? "w-[6%] border-black" : "")}>Serial No</th>
+                <th className={cn("px-6 py-4 font-medium text-right border-b border-border align-middle", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('reports.debit')}</th>
+                <th className={cn("px-6 py-4 font-medium text-right border-b border-border align-middle", settings.reportLayout === 'Layout 2' ? "w-[10%] border-black" : "")}>{t('reports.credit')}</th>
                 {config.showRunningBalance && (
-                  <th className={cn("px-6 py-4 font-medium text-right border-b border-border", settings.reportLayout === 'Layout 2' ? "w-[14%] border-black" : "")}>{t('ledger.runningBalance')}</th>
+                  <th className={cn("px-6 py-4 font-medium text-right border-b border-border align-middle", settings.reportLayout === 'Layout 2' ? "w-[14%] border-black" : "")}>{t('ledger.runningBalance')}</th>
                 )}
               </tr>
             </thead>
@@ -543,9 +741,9 @@ export function LedgerStatement() {
               settings.reportLayout === 'Layout 2' && "text-black"
             )}>
               {!selectedLedger ? (
-                <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-600">{t('ledger.selectToView')}</td></tr>
+                <tr><td colSpan={config.showRunningBalance ? 8 : 7} className="px-6 py-10 text-center text-gray-600 align-middle">{t('ledger.selectToView')}</td></tr>
               ) : loading ? (
-                <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-600">{t('ledger.loadingEntries')}</td></tr>
+                <tr><td colSpan={config.showRunningBalance ? 8 : 7} className="px-6 py-10 text-center text-gray-600 align-middle">{t('ledger.loadingEntries')}</td></tr>
               ) : (
                 <>
                   {/* Opening Balance Row */}
@@ -561,19 +759,19 @@ export function LedgerStatement() {
                           settings.reportLayout === 'Layout 2' && "bg-white border-black text-black border",
                           settings.reportLayout === 'Layout 2' && openingBalanceRowIsStripe && "bg-[#F3F4F6]"
                         )}>
-                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{formatReportDate(startDate, settings.dateFormat)}</td>
-                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{t('ledger.openingBalance')}</td>
-                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
-                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
-                          <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
-                          <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                          <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>{formatReportDate(startDate, settings.dateFormat)}</td>
+                          <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>{t('ledger.openingBalance')}</td>
+                          <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                          <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                          <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                          <td className={cn("px-6 py-4 text-right align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
                             {openingBalance > 0 ? formatNumber(openingBalance) : ''}
                           </td>
-                          <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                          <td className={cn("px-6 py-4 text-right align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
                             {openingBalance < 0 ? formatNumber(Math.abs(openingBalance)) : ''}
                           </td>
                           {config.showRunningBalance && (
-                            <td className={cn("px-6 py-4 text-right text-foreground", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                            <td className={cn("px-6 py-4 text-right text-foreground align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
                             </td>
                           )}
                         </tr>
@@ -609,11 +807,11 @@ export function LedgerStatement() {
                                   });
                                 }}
                               >
-                                <td className="px-6 py-4 whitespace-nowrap text-black">{formatReportDate(e.vouchers?.v_date, settings.dateFormat)}</td>
-                                <td className="px-6 py-4">
+                                <td className="px-6 py-4 whitespace-nowrap text-black align-middle">{formatReportDate(e.vouchers?.v_date, settings.dateFormat)}</td>
+                                <td className="px-6 py-4 align-middle">
                                   <div className="flex items-center justify-between gap-2">
                                     <span className="text-black font-bold">
-                                      {settings.reportLayout === 'Layout 2' ? 'Dr ' : ''}{e.particulars}
+                                      {settings.reportLayout === 'Layout 2' ? `${e.debit > 0 ? 'Dr' : 'Cr'} ` : ''}{e.particulars}
                                     </span>
                                     <button
                                       type="button"
@@ -636,17 +834,17 @@ export function LedgerStatement() {
                                     </button>
                                   </div>
                                 </td>
-                                <td className="px-6 py-4 uppercase text-[10px] text-black">{e.vouchers?.v_type}</td>
-                                <td className="px-6 py-4 text-[10px] text-black">
+                                <td className="px-6 py-4 uppercase text-[10px] text-black align-middle">{e.vouchers?.v_type}</td>
+                                <td className="px-6 py-4 text-[10px] text-black align-middle">
                                   {formatVoucherNo(e.vouchers?.v_no || e.vouchers?.ref_no || e.vouchers?.reference_no)}
                                 </td>
-                                <td className="px-6 py-4 text-black font-mono text-[10px]">
+                                <td className="px-6 py-4 text-black font-mono text-[10px] align-middle">
                                   {e.vouchers?.serial_no || e.vouchers?.auto_serial_no || '-'}
                                 </td>
-                                <td className="px-6 py-4 text-right text-black">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                                <td className="px-6 py-4 text-right text-black">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                <td className="px-6 py-4 text-right text-black align-middle">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                <td className="px-6 py-4 text-right text-black align-middle">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
                                 {config.showRunningBalance && (
-                                  <td className="px-6 py-4 text-right text-black font-bold">
+                                  <td className="px-6 py-4 text-right text-black font-bold align-middle">
                                     {Math.abs(currentBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currentBalance >= 0 ? 'Dr' : 'Cr'}
                                   </td>
                                 )}
@@ -654,34 +852,35 @@ export function LedgerStatement() {
                               {config.format === 'Detailed' && e.vouchers?.inventory && e.vouchers.inventory.map((item: any, iIdx: number) => {
                                 const invRowIsStripe = config.enableStripeView && rowCounter % 2 !== 0;
                                 rowCounter++;
+                                const unitLabel = item.unit || 'Pcs';
                                 return (
                                   <tr key={`inv-${idx}-${iIdx}`} className={cn(
                                     "border-b border-border/50",
                                     settings.reportLayout === 'Layout 2' && "bg-white text-black",
                                     settings.reportLayout === 'Layout 2' && invRowIsStripe && "bg-[#F3F4F6]"
                                   )}>
-                                    <td></td>
-                                    <td className="px-6 py-1 pl-10">
+                                    <td className="align-middle"></td>
+                                    <td className="px-6 py-1 pl-10 align-middle">
                                       <div className="flex flex-col">
-                                        <div className="flex justify-between items-start gap-4">
-                                          <span className="text-[11px] font-medium">{items.find(i => i.id === item.item_id)?.name}</span>
-                                          <span className="text-[10px] text-gray-600 whitespace-nowrap">{item.qty.toLocaleString()} {item.unit || 'pcs'}</span>
+                                        <div className="flex justify-between items-center gap-4">
+                                          <span className="text-[11px] font-medium">{items.find(i => i.id === item.item_id)?.name || item.item_name}</span>
+                                          <span className="text-[10px] text-gray-600 whitespace-nowrap">{formatQuantity(item.qty, unitLabel)} {unitLabel}</span>
                                         </div>
                                         {config.showStockDescriptions && item.description && (
                                           <span className="text-[9px] italic text-gray-400">{item.description}</span>
                                         )}
                                       </div>
                                     </td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td className="px-6 py-1 text-right text-[11px] font-mono text-gray-400 italic">
-                                      {item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    <td className="align-middle"></td>
+                                    <td className="align-middle"></td>
+                                    <td className="align-middle"></td>
+                                    <td className="px-6 py-1 text-right text-[11px] font-mono text-gray-400 italic align-middle">
+                                      {formatNumber(item.rate)}
                                     </td>
-                                    <td className="px-6 py-1 text-right text-[11px] font-mono">
-                                      {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    <td className="px-6 py-1 text-right text-[11px] font-mono align-middle">
+                                      {formatNumber(item.amount ?? (Number(item.qty || 0) * Number(item.rate || 0)))}
                                     </td>
-                                    {config.showRunningBalance && <td></td>}
+                                    {config.showRunningBalance && <td className="align-middle"></td>}
                                   </tr>
                                 );
                               })}
@@ -694,8 +893,8 @@ export function LedgerStatement() {
                                     settings.reportLayout === 'Layout 2' && "bg-white text-black",
                                     settings.reportLayout === 'Layout 2' && narrationRowIsStripe && "bg-[#F3F4F6]"
                                   )}>
-                                    <td></td>
-                                    <td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-1 pl-10 italic text-[10px] text-black">
+                                    <td className="align-middle"></td>
+                                    <td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-1 pl-10 italic text-[10px] text-black align-middle">
                                       {e.vouchers.narration}
                                     </td>
                                   </tr>
@@ -710,8 +909,8 @@ export function LedgerStatement() {
                                     settings.reportLayout === 'Layout 2' && "bg-white text-black",
                                     settings.reportLayout === 'Layout 2' && enteredByRowIsStripe && "bg-[#F3F4F6]"
                                   )}>
-                                    <td></td>
-                                    <td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-1 pl-16 uppercase text-[8px] text-gray-400">
+                                    <td className="align-middle"></td>
+                                    <td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-1 pl-16 uppercase text-[8px] text-gray-400 align-middle">
                                       By: {users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System'}
                                     </td>
                                   </tr>
@@ -725,19 +924,19 @@ export function LedgerStatement() {
                     "border-t border-black/50 font-bold",
                     settings.reportLayout === 'Layout 2' ? "bg-white text-black border border-black shadow-[0_-2px_10px_-3px_rgba(0,0,0,0.1)]" : "bg-foreground/5 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]"
                   )}>
-                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
-                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}>{t('common.grandTotal')}</td>
-                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
-                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
-                    <td className={cn("px-6 py-4", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
-                    <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                    <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                    <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>{t('common.grandTotal')}</td>
+                    <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                    <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                    <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
+                    <td className={cn("px-6 py-4 text-right align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
                       {displayTotalDebit > 0 ? formatNumber(displayTotalDebit) : ''}
                     </td>
-                    <td className={cn("px-6 py-4 text-right", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                    <td className={cn("px-6 py-4 text-right align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
                       {displayTotalCredit > 0 ? formatNumber(displayTotalCredit) : ''}
                     </td>
                     {config.showRunningBalance && (
-                      <td className={cn("px-6 py-4 text-right text-foreground font-bold bg-muted/10", settings.reportLayout === 'Layout 2' && "border border-black bg-white")}>
+                      <td className={cn("px-6 py-4 text-right text-foreground font-bold bg-muted/10 align-middle", settings.reportLayout === 'Layout 2' && "border border-black bg-white")}>
                       </td>
                     )}
                   </tr>
@@ -760,7 +959,7 @@ export function LedgerStatement() {
                     settings.developerContactAlignment === 'left' ? "text-left" : settings.developerContactAlignment === 'right' ? "text-right" : "text-center"
                   )}
                 >
-                  {settings.developerContactText || 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000'}
+                  {settings.appIdentity?.softwareFooterText || settings.developerContactText || DEFAULT_APP_BRANDING.softwareFooterText}
                 </p>
               )}
             </div>
@@ -793,12 +992,12 @@ export function LedgerStatement() {
         onClose={() => setIsReportBuilderOpen(false)}
         sampleData={{
           company: {
-            name: settings?.companyName || 'MODINA ENTERPRISE',
-            address: settings?.companyAddress || '',
-            email: settings?.printEmail || '',
-            phone: settings?.printPhone || ''
+            name: companyIdentity.companyName,
+            address: companyIdentity.companyAddress,
+            email: companyIdentity.printEmail || '',
+            phone: companyIdentity.printPhone || ''
           },
-          ledgerName: currentLedger?.name || 'M/S Johura Enterprise',
+          ledgerName: currentLedger?.name || 'Ledger Account',
           period: `${startDate} to ${endDate}`
         }}
       />
@@ -814,6 +1013,44 @@ export function LedgerStatement() {
         onRefresh={fetchEntries}
         onDeleted={fetchEntries}
       />
+
+      {fullPageHtml && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 shrink-0">
+              <div className="font-bold text-sm text-gray-900">
+                Full Page Preview — {currentLedger?.name || 'Ledger Statement'}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePrint}
+                  className="px-3 py-1.5 text-xs font-bold uppercase border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 rounded flex items-center gap-1.5"
+                >
+                  <Printer className="w-3.5 h-3.5" /> {t('common.print')}
+                </button>
+                <button
+                  onClick={handleDownloadPDF}
+                  className="px-3 py-1.5 text-xs font-bold uppercase bg-gray-900 text-white hover:opacity-90 rounded flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" /> PDF
+                </button>
+                <button
+                  onClick={() => setFullPageHtml(null)}
+                  className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-200 rounded"
+                  aria-label="Close preview"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <iframe
+              title="Ledger Statement Full Page Preview"
+              srcDoc={fullPageHtml}
+              className="flex-1 w-full border-0 bg-white"
+            />
+          </div>
+        </div>
+      )}
     </div>
   </div>
 </div>

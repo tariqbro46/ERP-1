@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Printer, Download, ChevronDown, ChevronRight, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Loader2, Printer, Download, ChevronDown, ChevronRight, ArrowLeft, AlertCircle, FileSpreadsheet, Mail } from 'lucide-react';
 import { SkeletonLoader } from './SkeletonLoader';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { cn, formatNumber, parseEntryDate, getMovementType } from '../lib/utils';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { printBalanceSheet, printUtils } from '../utils/printUtils';
-import { exportToCSV, exportToPDF, exportUtils } from '../utils/exportUtils';
-import { pdfExportService } from '../utils/pdfExportService';
+import { executePrint, formatPrintedAmount } from '../utils/printUtils';
+import { exportToCSV, exportStructuredExcel, shareReportViaEmail } from '../utils/exportUtils';
+import { getPdfHeaderHtml, getPdfSignaturesHtml, getPdfFooterHtml, printToPDF } from '../utils/pdfExportService';
+import { escapeHtml, resolveCompanyLegalIdentity } from '../constants/appIdentity';
 import { DateInput } from './DateInput';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { EditableHeader } from './EditableHeader';
@@ -16,7 +17,7 @@ import { useNavigate } from 'react-router-dom';
 
 export function BalanceSheet() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, company } = useAuth();
   const { t } = useLanguage();
   const settings = useSettings();
   const [loading, setLoading] = useState(true);
@@ -252,41 +253,288 @@ export function BalanceSheet() {
   
   const finalBalanceValue = Math.max(absTotalAssets, absTotalLiabilities);
 
+  const formatSignedBalanceHtml = (balance: number) => {
+    const absText = formatPrintedAmount(Math.abs(balance));
+    return balance < 0 ? `(-)${absText}` : absText;
+  };
+
+  const buildBalanceSheetHtml = () => {
+    const formattedAsOn = formatReportDate(asOnDate, settings.dateFormat);
+    const isLayout2 = settings?.reportLayout === 'Layout 2';
+
+    const liabilitiesRowsHtml = liabilityGroups.map((group: any) => `
+      <tr style="font-weight: 700; background-color: ${isLayout2 ? '#ffffff' : '#f9fafb'};">
+        <td style="border: 1px solid #111827; padding: 5px 8px; text-transform: uppercase; vertical-align: middle;">${escapeHtml(group.name)}</td>
+        <td style="border: 1px solid #111827; padding: 5px 8px; text-align: right; vertical-align: middle;">${formatPrintedAmount(Math.abs(group.total))}</td>
+      </tr>
+      ${(group.subItems || []).map((sub: any) => `
+        <tr style="color: #374151;">
+          <td style="border: 1px solid #e5e7eb; padding: 3px 8px 3px 20px; font-size: 8.5px; font-style: italic; vertical-align: middle;">• ${escapeHtml(sub.name)}</td>
+          <td style="border: 1px solid #e5e7eb; padding: 3px 8px; text-align: right; font-size: 8.5px; font-style: italic; vertical-align: middle;">${formatSignedBalanceHtml(Number(sub.balance || 0))}</td>
+        </tr>
+      `).join('')}
+    `).join('');
+
+    const assetsRowsHtml = assetGroups.map((group: any) => `
+      <tr style="font-weight: 700; background-color: ${isLayout2 ? '#ffffff' : '#f9fafb'};">
+        <td style="border: 1px solid #111827; padding: 5px 8px; text-transform: uppercase; vertical-align: middle;">${escapeHtml(group.name)}</td>
+        <td style="border: 1px solid #111827; padding: 5px 8px; text-align: right; vertical-align: middle;">${formatPrintedAmount(Math.abs(group.total))}</td>
+      </tr>
+      ${(group.subItems || []).map((sub: any) => `
+        <tr style="color: #374151;">
+          <td style="border: 1px solid #e5e7eb; padding: 3px 8px 3px 20px; font-size: 8.5px; font-style: italic; vertical-align: middle;">• ${escapeHtml(sub.name)}</td>
+          <td style="border: 1px solid #e5e7eb; padding: 3px 8px; text-align: right; font-size: 8.5px; font-style: italic; vertical-align: middle;">${formatSignedBalanceHtml(Number(sub.balance || 0))}</td>
+        </tr>
+      `).join('')}
+    `).join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Balance Sheet - ${escapeHtml(formattedAsOn)}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body {
+              font-family: ${isLayout2 ? 'Arial, Helvetica, sans-serif' : "'JetBrains Mono', Courier, monospace"};
+              color: #000000;
+              background: #ffffff;
+              padding: 16px;
+              margin: 0;
+              font-size: 10px;
+            }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { vertical-align: middle !important; }
+            @media print {
+              @page { margin: 10mm; }
+            }
+          </style>
+        </head>
+        <body>
+          ${getPdfHeaderHtml(settings, 'BALANCE SHEET', `As on ${formattedAsOn}`, company)}
+          <div style="display: flex; gap: 12px; width: 100%; align-items: stretch;">
+            <div style="flex: 1; display: flex; flex-direction: column;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="text-align: left; width: 65%; border: 1px solid #111827; background-color: ${isLayout2 ? '#ffffff' : '#f3f4f6'}; padding: 6px 8px; font-size: 10px; text-transform: uppercase;">LIABILITIES</th>
+                    <th style="text-align: right; width: 35%; border: 1px solid #111827; background-color: ${isLayout2 ? '#ffffff' : '#f3f4f6'}; padding: 6px 8px; font-size: 10px; text-transform: uppercase;">AMOUNT (৳)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${liabilitiesRowsHtml}
+                  ${openingBalanceDiff > 0 ? `
+                    <tr style="color: #dc2626; font-style: italic;">
+                      <td style="border: 1px solid #111827; padding: 5px 8px; vertical-align: middle;">Difference in opening balances</td>
+                      <td style="border: 1px solid #111827; padding: 5px 8px; text-align: right; vertical-align: middle;">${formatPrintedAmount(Math.abs(openingBalanceDiff))}</td>
+                    </tr>
+                  ` : ''}
+                </tbody>
+                <tfoot>
+                  <tr style="font-weight: 800; border-top: 2px solid #000; border-bottom: 3px double #000; background-color: ${isLayout2 ? '#ffffff' : '#f9fafb'};">
+                    <td style="border: 1px solid #111827; padding: 7px 8px; text-transform: uppercase; vertical-align: middle;">TOTAL LIABILITIES</td>
+                    <td style="border: 1px solid #111827; padding: 7px 8px; text-align: right; vertical-align: middle;">৳ ${formatPrintedAmount(finalBalanceValue)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column;">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="text-align: left; width: 65%; border: 1px solid #111827; background-color: ${isLayout2 ? '#ffffff' : '#f3f4f6'}; padding: 6px 8px; font-size: 10px; text-transform: uppercase;">ASSETS</th>
+                    <th style="text-align: right; width: 35%; border: 1px solid #111827; background-color: ${isLayout2 ? '#ffffff' : '#f3f4f6'}; padding: 6px 8px; font-size: 10px; text-transform: uppercase;">AMOUNT (৳)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${assetsRowsHtml}
+                  ${openingBalanceDiff < 0 ? `
+                    <tr style="color: #dc2626; font-style: italic;">
+                      <td style="border: 1px solid #111827; padding: 5px 8px; vertical-align: middle;">Difference in opening balances</td>
+                      <td style="border: 1px solid #111827; padding: 5px 8px; text-align: right; vertical-align: middle;">${formatPrintedAmount(Math.abs(openingBalanceDiff))}</td>
+                    </tr>
+                  ` : ''}
+                </tbody>
+                <tfoot>
+                  <tr style="font-weight: 800; border-top: 2px solid #000; border-bottom: 3px double #000; background-color: ${isLayout2 ? '#ffffff' : '#f9fafb'};">
+                    <td style="border: 1px solid #111827; padding: 7px 8px; text-transform: uppercase; vertical-align: middle;">TOTAL ASSETS</td>
+                    <td style="border: 1px solid #111827; padding: 7px 8px; text-align: right; vertical-align: middle;">৳ ${formatPrintedAmount(finalBalanceValue)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+          ${getPdfSignaturesHtml(settings)}
+          ${getPdfFooterHtml(settings)}
+        </body>
+      </html>
+    `;
+  };
+
+  const buildBalanceSheetExportRows = () => {
+    const rows: Array<{
+      side: string;
+      levelGroup: string;
+      particulars: string;
+      amount: number | '';
+    }> = [];
+
+    liabilityGroups.forEach((g: any) => {
+      rows.push({
+        side: 'Liabilities',
+        levelGroup: 'Primary Group',
+        particulars: g.name,
+        amount: Number(Math.abs(g.total).toFixed(2))
+      });
+      (g.subItems || []).forEach((item: any) => {
+        rows.push({
+          side: 'Liabilities',
+          levelGroup: g.name,
+          particulars: `  ${item.name}`,
+          amount: Number(Number(item.balance || 0).toFixed(2))
+        });
+      });
+    });
+
+    if (openingBalanceDiff > 0) {
+      rows.push({
+        side: 'Liabilities',
+        levelGroup: 'Adjustment',
+        particulars: 'Difference in opening balances',
+        amount: Number(Math.abs(openingBalanceDiff).toFixed(2))
+      });
+    }
+
+    assetGroups.forEach((g: any) => {
+      rows.push({
+        side: 'Assets',
+        levelGroup: 'Primary Group',
+        particulars: g.name,
+        amount: Number(Math.abs(g.total).toFixed(2))
+      });
+      (g.subItems || []).forEach((item: any) => {
+        rows.push({
+          side: 'Assets',
+          levelGroup: g.name,
+          particulars: `  ${item.name}`,
+          amount: Number(Number(item.balance || 0).toFixed(2))
+        });
+      });
+    });
+
+    if (openingBalanceDiff < 0) {
+      rows.push({
+        side: 'Assets',
+        levelGroup: 'Adjustment',
+        particulars: 'Difference in opening balances',
+        amount: Number(Math.abs(openingBalanceDiff).toFixed(2))
+      });
+    }
+
+    return rows;
+  };
+
   const handlePrint = () => {
-    printUtils.printElement('balance-sheet-report', 'Balance Sheet Report');
+    executePrint(buildBalanceSheetHtml());
   };
 
   const handleDownloadPDF = () => {
-    pdfExportService.printBalanceSheetToPDF({
-      liabilityGroups,
-      assetGroups,
-      totalLiabilities: totalLiabilitiesCombined,
-      totalAssets,
-      openingBalanceDiff,
-      asOnDate
-    }, settings);
+    printToPDF({
+      title: 'Balance Sheet',
+      subtitle: `As on ${formatReportDate(asOnDate, settings.dateFormat)}`,
+      fileName: `Balance_Sheet_${asOnDate}`,
+      htmlContent: buildBalanceSheetHtml(),
+      settings,
+      company
+    });
+  };
+
+  const handleDownloadExcel = () => {
+    const rows = buildBalanceSheetExportRows().map(r => [
+      r.side,
+      r.levelGroup,
+      r.particulars,
+      r.amount
+    ]);
+    exportStructuredExcel({
+      fileName: `Balance_Sheet_${asOnDate}`,
+      sheetName: 'Balance Sheet',
+      title: 'Balance Sheet',
+      subtitle: `As on ${formatReportDate(asOnDate, settings.dateFormat)}`,
+      headers: ['Side', 'Level / Group', 'Particulars', 'Amount'],
+      rows,
+      footerRow: ['Summary', 'Total', 'Balanced Statement Total', Number(finalBalanceValue.toFixed(2))],
+      extraRows: [
+        ['Summary', 'Total', 'Total Liabilities', Number(absTotalLiabilities.toFixed(2))],
+        ['Summary', 'Total', 'Total Assets', Number(absTotalAssets.toFixed(2))]
+      ],
+      settings,
+      company
+    });
   };
 
   const handleDownload = () => {
-    const exportData: any[] = [];
-    
-    // Add Liabilities
-    exportData.push({ particulars: 'LIABILITIES', amount: '' });
-    liabilityGroups.forEach(g => {
-      exportData.push({ particulars: g.name, amount: Math.abs(g.balance) });
+    const rows = buildBalanceSheetExportRows().map(r => ({
+      'Side': r.side,
+      'Level / Group': r.levelGroup,
+      'Particulars': r.particulars,
+      'Amount': r.amount === '' ? '' : formatNumber(r.amount)
+    }));
+    rows.push({
+      'Side': 'Summary',
+      'Level / Group': 'Total',
+      'Particulars': 'Total Liabilities',
+      'Amount': formatNumber(absTotalLiabilities)
     });
-    exportData.push({ particulars: 'TOTAL LIABILITIES', amount: absTotalLiabilities });
-    
-    exportData.push({ particulars: '', amount: '' }); // Spacer
-    
-    // Add Assets
-    exportData.push({ particulars: 'ASSETS', amount: '' });
-    assetGroups.forEach(g => {
-      exportData.push({ particulars: g.name, amount: Math.abs(g.balance) });
+    rows.push({
+      'Side': 'Summary',
+      'Level / Group': 'Total',
+      'Particulars': 'Total Assets',
+      'Amount': formatNumber(absTotalAssets)
     });
-    exportData.push({ particulars: 'TOTAL ASSETS', amount: totalAssets });
+    rows.push({
+      'Side': 'Summary',
+      'Level / Group': 'Total',
+      'Particulars': 'Balanced Statement Total',
+      'Amount': formatNumber(finalBalanceValue)
+    });
 
-    exportToCSV('Balance_Sheet', 'Balance Sheet', exportData, ['Particulars', 'Amount'], settings);
+    exportToCSV(
+      `Balance_Sheet_${asOnDate}`,
+      `Balance Sheet (As on ${formatReportDate(asOnDate, settings.dateFormat)})`,
+      rows,
+      ['Side', 'Level / Group', 'Particulars', 'Amount'],
+      settings,
+      company
+    );
+  };
+
+  const handleEmailReport = () => {
+    const legal = resolveCompanyLegalIdentity(settings, company);
+    const summaryLines = [
+      `Total Liabilities: ৳ ${formatNumber(absTotalLiabilities)}`,
+      `Total Assets: ৳ ${formatNumber(absTotalAssets)}`,
+      `Balanced Statement Total: ৳ ${formatNumber(finalBalanceValue)}`,
+      ...(openingBalanceDiff !== 0
+        ? [`Difference in Opening Balances: ৳ ${formatNumber(Math.abs(openingBalanceDiff))}`]
+        : []),
+      '',
+      'Liabilities Breakdown:',
+      ...liabilityGroups.map((g: any) => `- ${g.name}: ৳ ${formatNumber(Math.abs(g.total))}`),
+      '',
+      'Assets Breakdown:',
+      ...assetGroups.map((g: any) => `- ${g.name}: ৳ ${formatNumber(Math.abs(g.total))}`)
+    ];
+
+    shareReportViaEmail({
+      title: 'Balance Sheet',
+      subtitle: `As on ${formatReportDate(asOnDate, settings.dateFormat)}`,
+      summaryLines,
+      settings,
+      company,
+      recipientEmail: legal.printEmail || ''
+    });
   };
 
   const dummyLiabilityGroups = [
@@ -382,19 +630,29 @@ export function BalanceSheet() {
               </div>
             </div>
           </div>
-          <div className="flex gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
             <button 
               onClick={handlePrint}
               disabled={loading}
-              className="flex-1 sm:flex-none p-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center disabled:opacity-50"
+              className="p-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center items-center disabled:opacity-50"
+              title="Print Balance Sheet"
               id="print-btn"
             >
               <Printer className="w-4 h-4" />
             </button>
             <button 
+              onClick={handleDownloadExcel}
+              disabled={loading}
+              className="px-3 py-2 bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              title="Export Genuine Excel (.xlsx)"
+              id="excel-btn"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" /> EXCEL
+            </button>
+            <button 
               onClick={handleDownload}
               disabled={loading}
-              className="flex-1 sm:flex-none px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase disabled:opacity-50"
+              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase disabled:opacity-50"
               title={t('common.downloadCsv')}
               id="csv-btn"
             >
@@ -403,11 +661,20 @@ export function BalanceSheet() {
             <button 
               onClick={handleDownloadPDF}
               disabled={loading}
-              className="flex-1 sm:flex-none px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase disabled:opacity-50"
+              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase disabled:opacity-50"
               title="Print to PDF (Save professional financial statement offline)"
               id="pdf-btn"
             >
               <Download className="w-3 h-3" /> PRINT TO PDF
+            </button>
+            <button 
+              onClick={handleEmailReport}
+              disabled={loading}
+              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              title="Share Balance Sheet Summary via Email"
+              id="email-btn"
+            >
+              <Mail className="w-3.5 h-3.5" /> EMAIL
             </button>
           </div>
         </div>

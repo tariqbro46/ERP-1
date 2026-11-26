@@ -13,6 +13,8 @@ import { Loader2, AlertCircle, Eye, EyeOff, Mail, Lock, Building, MapPin, Globe,
 import { useNavigate } from 'react-router-dom';
 import { useSiteContent } from '../hooks/useSiteContent';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSettings } from '../contexts/SettingsContext';
+import { DEFAULT_APP_BRANDING, isLegacyAppBrandString, sanitizeAssetUrl } from '../constants/appIdentity';
 import { 
   AuthTemplate 
 } from '../types';
@@ -25,13 +27,19 @@ import {
   EnterpriseAuthLayout
 } from './auth/AuthLayouts';
 
+const resolveAuthCopy = (cmsVal: string | undefined, fallbackVal: string): string => {
+  if (!cmsVal || !cmsVal.trim()) return fallbackVal;
+  if (/\bsoftr\b/i.test(cmsVal) || isLegacyAppBrandString(cmsVal)) return fallbackVal;
+  return cmsVal;
+};
+
 export const LOGIN_DEFAULT = {
   template: 'softr' as AuthTemplate,
-  brandName: 'softr',
+  brandName: DEFAULT_APP_BRANDING.appName,
   brandLogoUrl: '',
-  title: "Nice seeing you again, pal!",
+  title: DEFAULT_APP_BRANDING.defaultAuthHeading,
   titleColor: "",
-  subtitle: "Can't wait to see what you build today",
+  subtitle: "Sign in to access your enterprise workspace",
   subtitleColor: "",
   googleButtonText: "Continue with Google",
   ssoButtonText: "Continue with SSO",
@@ -44,8 +52,8 @@ export const LOGIN_DEFAULT = {
   signInButtonText: "Sign in",
   noAccountText: "Don't have an account?",
   signUpLinkText: "Sign up",
-  footerCopyrightText: "© 2026 Softr Studio ERP. All rights reserved.",
-  testimonialQuote: "“We have a very unique way of managing projects and collaborating — we're very process- and data-driven. With Softr, we were able to unite our project management in one platform.”",
+  footerCopyrightText: DEFAULT_APP_BRANDING.copyrightText,
+  testimonialQuote: "“We needed precision double-entry accounting and real-time inventory control across every branch. This platform unified our entire finance operation.”",
   testimonialAuthorName: "Natalie Neumann",
   testimonialAuthorTitle: "COO, Designity",
   testimonialAuthorAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=160&q=80",
@@ -71,11 +79,11 @@ export const LOGIN_DEFAULT = {
 
 export const REGISTER_DEFAULT = {
   template: 'softr' as AuthTemplate,
-  brandName: 'softr',
+  brandName: DEFAULT_APP_BRANDING.appName,
   brandLogoUrl: '',
-  title: "Start building with Softr",
+  title: "Create your enterprise workspace",
   titleColor: "",
-  subtitle: "Join thousands of teams building powerful portals.",
+  subtitle: "Join thousands of teams running live accounting & inventory operations.",
   subtitleColor: "",
   googleButtonText: "Continue with Google",
   ssoButtonText: "Continue with SSO",
@@ -94,8 +102,8 @@ export const REGISTER_DEFAULT = {
   registerButtonText: "Create Account",
   alreadyAccountText: "Already have an account?",
   signInLinkText: "Sign in",
-  footerCopyrightText: "© 2026 Softr Studio ERP. All rights reserved.",
-  testimonialQuote: "“We have a very unique way of managing projects and collaborating — we're very process- and data-driven. With Softr, we were able to unite our project management in one platform.”",
+  footerCopyrightText: DEFAULT_APP_BRANDING.copyrightText,
+  testimonialQuote: "“We needed precision double-entry accounting and real-time inventory control across every branch. This platform unified our entire finance operation.”",
   testimonialAuthorName: "Natalie Neumann",
   testimonialAuthorTitle: "COO, Designity",
   testimonialAuthorAvatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=160&q=80",
@@ -111,6 +119,7 @@ export const REGISTER_DEFAULT = {
 export const Login: React.FC<{ onToggle: () => void; overrideTemplate?: AuthTemplate }> = ({ onToggle, overrideTemplate }) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { appIdentity } = useSettings();
   const { content } = useSiteContent('login', LOGIN_DEFAULT);
   const { content: globalSettings } = useSiteContent('global', { registrationEnabled: true, systemLogo: '', authTemplate: 'softr' });
   
@@ -303,8 +312,8 @@ export const Login: React.FC<{ onToggle: () => void; overrideTemplate?: AuthTemp
   if (showReset) {
     const layoutProps: AuthLayoutProps = {
       template: activeTemplate,
-      brandName: content.brandName,
-      brandLogoUrl: content.brandLogoUrl,
+      brandName: resolveAuthCopy(content.brandName, appIdentity.appName),
+      brandLogoUrl: sanitizeAssetUrl(content.brandLogoUrl || appIdentity.appLogoUrl || globalSettings.systemLogo),
       title: content.forgotTitle || "Forgot password?",
       subtitle: content.forgotSubtitle || "Enter your email and we'll send you a link to reset your password.",
       titleColor: content.forgotTitleColor,
@@ -317,16 +326,16 @@ export const Login: React.FC<{ onToggle: () => void; overrideTemplate?: AuthTemp
       imageSubtitle: content.resetImageSubtitle || content.imageSubtitle,
       imageTitleColor: content.resetImageTitleColor || content.imageTitleColor,
       imageSubtitleColor: content.resetImageSubtitleColor || content.imageSubtitleColor,
-      testimonialQuote: content.testimonialQuote,
+      testimonialQuote: resolveAuthCopy(content.testimonialQuote, LOGIN_DEFAULT.testimonialQuote),
       testimonialAuthorName: content.testimonialAuthorName,
       testimonialAuthorTitle: content.testimonialAuthorTitle,
       testimonialAuthorAvatar: content.testimonialAuthorAvatar,
       clientLogosText: content.clientLogosText,
       showChatSupport: content.showChatSupport,
-      footerCopyrightText: content.footerCopyrightText,
+      footerCopyrightText: resolveAuthCopy(content.footerCopyrightText, appIdentity.copyrightText),
       onGoogleSignIn: handleGoogleSignIn,
       googleLoading,
-      systemLogo: globalSettings.systemLogo,
+      systemLogo: sanitizeAssetUrl(appIdentity.appLogoUrl || globalSettings.systemLogo),
     };
 
     const resetBody = (
@@ -512,10 +521,10 @@ export const Login: React.FC<{ onToggle: () => void; overrideTemplate?: AuthTemp
 
   const sharedLayoutProps: AuthLayoutProps = {
     template: activeTemplate,
-    brandName: content.brandName,
-    brandLogoUrl: content.brandLogoUrl,
-    title: content.title !== undefined ? content.title : "Nice seeing you again, pal!",
-    subtitle: content.subtitle !== undefined ? content.subtitle : "Can't wait to see what you build today",
+    brandName: resolveAuthCopy(content.brandName, appIdentity.appName),
+    brandLogoUrl: sanitizeAssetUrl(content.brandLogoUrl || appIdentity.appLogoUrl || globalSettings.systemLogo),
+    title: resolveAuthCopy(content.title, appIdentity.defaultAuthHeading),
+    subtitle: resolveAuthCopy(content.subtitle, LOGIN_DEFAULT.subtitle),
     titleColor: content.titleColor,
     subtitleColor: content.subtitleColor,
     googleButtonText: content.googleButtonText,
@@ -523,8 +532,8 @@ export const Login: React.FC<{ onToggle: () => void; overrideTemplate?: AuthTemp
     dividerText: content.dividerText,
     switchPromptText: content.noAccountText,
     switchLinkText: content.signUpLinkText,
-    footerCopyrightText: content.footerCopyrightText,
-    testimonialQuote: content.testimonialQuote,
+    footerCopyrightText: resolveAuthCopy(content.footerCopyrightText, appIdentity.copyrightText),
+    testimonialQuote: resolveAuthCopy(content.testimonialQuote, LOGIN_DEFAULT.testimonialQuote),
     testimonialAuthorName: content.testimonialAuthorName,
     testimonialAuthorTitle: content.testimonialAuthorTitle,
     testimonialAuthorAvatar: content.testimonialAuthorAvatar,
@@ -540,7 +549,7 @@ export const Login: React.FC<{ onToggle: () => void; overrideTemplate?: AuthTemp
     imageSubtitleColor: content.imageSubtitleColor,
     onGoogleSignIn: handleGoogleSignIn,
     googleLoading,
-    systemLogo: globalSettings.systemLogo,
+    systemLogo: sanitizeAssetUrl(appIdentity.appLogoUrl || globalSettings.systemLogo),
     children: loginFormBody
   };
 
@@ -562,6 +571,7 @@ export const Login: React.FC<{ onToggle: () => void; overrideTemplate?: AuthTemp
 export const Register: React.FC<{ onToggle: () => void; overrideTemplate?: AuthTemplate }> = ({ onToggle, overrideTemplate }) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const { appIdentity } = useSettings();
   const { content } = useSiteContent('register', REGISTER_DEFAULT);
   const { content: globalSettings } = useSiteContent('global', { registrationEnabled: true, systemLogo: '', authTemplate: 'softr' });
 
@@ -1007,10 +1017,10 @@ export const Register: React.FC<{ onToggle: () => void; overrideTemplate?: AuthT
 
   const sharedLayoutProps: AuthLayoutProps = {
     template: activeTemplate,
-    brandName: content.brandName,
-    brandLogoUrl: content.brandLogoUrl,
-    title: content.title !== undefined ? content.title : "Start building with Softr",
-    subtitle: content.subtitle !== undefined ? content.subtitle : "Join thousands of teams building powerful portals.",
+    brandName: resolveAuthCopy(content.brandName, appIdentity.appName),
+    brandLogoUrl: sanitizeAssetUrl(content.brandLogoUrl || appIdentity.appLogoUrl || globalSettings.systemLogo),
+    title: resolveAuthCopy(content.title, REGISTER_DEFAULT.title),
+    subtitle: resolveAuthCopy(content.subtitle, REGISTER_DEFAULT.subtitle),
     titleColor: content.titleColor,
     subtitleColor: content.subtitleColor,
     googleButtonText: content.googleButtonText,
@@ -1018,8 +1028,8 @@ export const Register: React.FC<{ onToggle: () => void; overrideTemplate?: AuthT
     dividerText: content.dividerText,
     switchPromptText: content.alreadyAccountText,
     switchLinkText: content.signInLinkText,
-    footerCopyrightText: content.footerCopyrightText,
-    testimonialQuote: content.testimonialQuote,
+    footerCopyrightText: resolveAuthCopy(content.footerCopyrightText, appIdentity.copyrightText),
+    testimonialQuote: resolveAuthCopy(content.testimonialQuote, REGISTER_DEFAULT.testimonialQuote),
     testimonialAuthorName: content.testimonialAuthorName,
     testimonialAuthorTitle: content.testimonialAuthorTitle,
     testimonialAuthorAvatar: content.testimonialAuthorAvatar,
@@ -1037,7 +1047,7 @@ export const Register: React.FC<{ onToggle: () => void; overrideTemplate?: AuthT
     imageSubtitleColor: content.imageSubtitleColor,
     onGoogleSignIn: handleGoogleSignUp,
     googleLoading,
-    systemLogo: globalSettings.systemLogo,
+    systemLogo: sanitizeAssetUrl(appIdentity.appLogoUrl || globalSettings.systemLogo),
     children: registerFormBody
   };
 

@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Printer, Download, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { ArrowLeft, Printer, Download, FileSpreadsheet, Mail, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { SkeletonLoader } from './SkeletonLoader';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
+import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, formatNumber, cn, parseEntryDate } from '../lib/utils';
+import { formatDate as formatReportDate } from '../utils/dateUtils';
+import { buildReportPrintHtml, executePrint } from '../utils/printUtils';
+import { printToPDF } from '../utils/pdfExportService';
+import { exportStructuredExcel, shareReportViaEmail } from '../utils/exportUtils';
+import { DateInput } from './DateInput';
 
 export function CashFlow() {
-  const { user } = useAuth();
+  const { user, company } = useAuth();
+  const settings = useSettings();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -28,82 +35,164 @@ export function CashFlow() {
       if (!user?.companyId) return;
       setLoading(true);
       try {
+        const effectiveFrom = dateRange.from <= dateRange.to ? dateRange.from : dateRange.to;
+        const effectiveTo = dateRange.from <= dateRange.to ? dateRange.to : dateRange.from;
+
         const [ledgers, vEntries] = await Promise.all([
           erpService.getLedgers(user.companyId),
-          erpService.getVoucherEntriesByDate(user.companyId, dateRange.to)
+          erpService.getVoucherEntriesByDate(user.companyId, effectiveTo)
         ]);
 
-        // Filter for Cash/Bank ledgers
-        const cashBankLedgers = ledgers.filter(l => 
-          l.group_name?.includes('Cash') || 
-          l.group_name?.includes('Bank') || 
-          l.nature === 'Asset' && (l.name.toLowerCase().includes('cash') || l.name.toLowerCase().includes('bank'))
-        );
+        const isCashOrBankLedger = (l: any): boolean => {
+          const gName = (l.group_name || '').toLowerCase().trim();
+          if (gName.includes('bank od') || gName.includes('overdraft') || gName.includes('loan')) {
+            return false;
+          }
+          if (gName.includes('cash') || gName.includes('bank')) {
+            return true;
+          }
+          const lName = (l.name || '').toLowerCase();
+          return l.nature === 'Asset' && (lName.includes('cash') || lName.includes('bank'));
+        };
 
+        const classifyActivity = (ledger: any): 'operating' | 'investing' | 'financing' => {
+          const gName = (ledger?.group_name || '').toLowerCase().trim();
+          if (gName.includes('fixed asset') || gName.includes('investment')) {
+            return 'investing';
+          }
+          if (
+            gName.includes('capital') ||
+            gName.includes('reserve') ||
+            gName.includes('loans (liability)') ||
+            gName.includes('secured loan') ||
+            gName.includes('unsecured loan') ||
+            gName.includes('bank od') ||
+            gName.includes('overdraft')
+          ) {
+            return 'financing';
+          }
+          return 'operating';
+        };
+
+        const ledgerMap = new Map<string, any>();
+        ledgers.forEach(l => ledgerMap.set(l.id, l));
+
+        const cashBankLedgers = ledgers.filter(isCashOrBankLedger);
         const cashBankIds = new Set(cashBankLedgers.map(l => l.id));
 
-        // Calculate Opening Balance (before dateRange.from)
-        // For simplicity in this mock, we'll use a fixed opening balance or calculate from entries
-        const opening = cashBankLedgers.reduce((sum, l) => sum + (l.opening_balance || 0), 0);
-        setOpeningBalance(opening);
+        const fromDate = parseEntryDate(effectiveFrom, null);
+        const toDate = parseEntryDate(effectiveTo, null);
+        toDate.setHours(23, 59, 59, 999);
 
-        // Analyze movements
-        const operating: any[] = [];
-        const investing: any[] = [];
-        const financing: any[] = [];
+        // 1. Opening Balance = Ledger opening_balance + all cash/bank movements strictly prior to dateRange.from
+        let prePeriodCashMovement = 0;
+        const periodVouchersMap = new Map<string, any[]>();
 
-        // This is a simplified logic:
-        // We look at all vouchers where one side is Cash/Bank and the other is NOT
-        vEntries.forEach(entry => {
-          // Find the counterpart in the same voucher
-          const voucherEntries = vEntries.filter(e => e.voucher_id === entry.voucher_id);
-          const isCashEntry = cashBankIds.has(entry.ledger_id);
-          
-          if (isCashEntry) {
-            const amount = entry.debit - entry.credit; // Positive is inflow, negative is outflow
-            if (amount === 0) return;
-
-            // Find what this cash was for
-            const counterpart = voucherEntries.find(e => !cashBankIds.has(e.ledger_id));
-            if (!counterpart) return;
-
-            const ledger = ledgers.find(l => l.id === counterpart.ledger_id);
-            if (!ledger) return;
-
-            const item = {
-              name: ledger.name,
-              amount: amount,
-              date: entry.date
-            };
-
-            if (ledger.nature === 'Income' || ledger.nature === 'Expense' || ledger.group_name?.includes('Current')) {
-              operating.push(item);
-            } else if (ledger.group_name?.includes('Fixed Assets') || ledger.group_name?.includes('Investment')) {
-              investing.push(item);
-            } else if (ledger.group_name?.includes('Capital') || ledger.group_name?.includes('Loans')) {
-              financing.push(item);
+        (vEntries || []).forEach((entry: any) => {
+          const entryDate = parseEntryDate(entry.v_date || entry.date, entry.createdAt);
+          if (entryDate < fromDate) {
+            if (cashBankIds.has(entry.ledger_id)) {
+              prePeriodCashMovement += (Number(entry.debit) || 0) - (Number(entry.credit) || 0);
+            }
+          } else if (entryDate <= toDate) {
+            const vId = entry.voucher_id || entry.id;
+            if (!vId) return;
+            const existing = periodVouchersMap.get(vId);
+            if (existing) {
+              existing.push(entry);
             } else {
-              operating.push(item);
+              periodVouchersMap.set(vId, [entry]);
             }
           }
         });
 
-        // Group by ledger name for display
-        const groupItems = (items: any[]) => {
+        const baseOpening = cashBankLedgers.reduce((sum, l) => sum + (Number(l.opening_balance) || 0), 0);
+        const computedOpening = baseOpening + prePeriodCashMovement;
+        setOpeningBalance(computedOpening);
+
+        // 2. Analyze in-period vouchers grouped by voucher_id (O(N))
+        // Pure Cash <-> Bank Contra vouchers net to cashNet === 0 and are excluded from activity flows.
+        // Compound vouchers with multiple non-cash counterparts allocate cashNet proportionally without double counting.
+        const operating: Array<{ name: string; amount: number }> = [];
+        const investing: Array<{ name: string; amount: number }> = [];
+        const financing: Array<{ name: string; amount: number }> = [];
+
+        const pushToBucket = (bucket: 'operating' | 'investing' | 'financing', name: string, amount: number) => {
+          if (Math.abs(amount) < 0.0001) return;
+          if (bucket === 'investing') investing.push({ name, amount });
+          else if (bucket === 'financing') financing.push({ name, amount });
+          else operating.push({ name, amount });
+        };
+
+        periodVouchersMap.forEach((voucherLines) => {
+          let cashNet = 0;
+          const nonCashLines: Array<{ ledger: any; cashEffect: number }> = [];
+
+          voucherLines.forEach((line: any) => {
+            const delta = (Number(line.debit) || 0) - (Number(line.credit) || 0);
+            if (cashBankIds.has(line.ledger_id)) {
+              cashNet += delta;
+            } else {
+              // From cash's perspective, a credit on a non-cash ledger corresponds to cash inflow (+),
+              // and a debit on a non-cash ledger corresponds to cash outflow (-).
+              const cashEffect = -delta;
+              if (Math.abs(cashEffect) >= 0.0001) {
+                nonCashLines.push({
+                  ledger: ledgerMap.get(line.ledger_id) || null,
+                  cashEffect
+                });
+              }
+            }
+          });
+
+          // Skip non-cash vouchers and pure Cash <-> Bank Contra transfers
+          if (Math.abs(cashNet) < 0.001) return;
+
+          if (nonCashLines.length === 0) {
+            pushToBucket('operating', 'Unmapped Cash Adjustment', cashNet);
+            return;
+          }
+
+          // Prefer lines moving in the same cash direction (all lines in standard split payments/receipts)
+          const sameDirectionLines = nonCashLines.filter(item =>
+            cashNet > 0 ? item.cashEffect > 0 : item.cashEffect < 0
+          );
+          const sameDirectionTotal = sameDirectionLines.reduce((s, item) => s + Math.abs(item.cashEffect), 0);
+
+          if (sameDirectionLines.length > 0 && sameDirectionTotal > 0) {
+            sameDirectionLines.forEach(item => {
+              const allocatedAmount = cashNet * (Math.abs(item.cashEffect) / sameDirectionTotal);
+              const bucket = item.ledger ? classifyActivity(item.ledger) : 'operating';
+              pushToBucket(bucket, item.ledger?.name || 'Other Account', allocatedAmount);
+            });
+          } else {
+            nonCashLines.forEach(item => {
+              const bucket = item.ledger ? classifyActivity(item.ledger) : 'operating';
+              pushToBucket(bucket, item.ledger?.name || 'Other Account', item.cashEffect);
+            });
+          }
+        });
+
+        const groupItems = (items: Array<{ name: string; amount: number }>) => {
           const grouped: Record<string, number> = {};
           items.forEach(item => {
             grouped[item.name] = (grouped[item.name] || 0) + item.amount;
           });
-          return Object.entries(grouped).map(([name, amount]) => ({ name, amount }));
+          return Object.entries(grouped)
+            .filter(([, amount]) => Math.abs(amount) >= 0.005)
+            .map(([name, amount]) => ({ name, amount }));
         };
 
-        setOperatingActivities(groupItems(operating));
-        setInvestingActivities(groupItems(investing));
-        setFinancingActivities(groupItems(financing));
+        const groupedOp = groupItems(operating);
+        const groupedInv = groupItems(investing);
+        const groupedFin = groupItems(financing);
 
-        const totalChange = [...operating, ...investing, ...financing].reduce((sum, item) => sum + item.amount, 0);
-        setClosingBalance(opening + totalChange);
+        setOperatingActivities(groupedOp);
+        setInvestingActivities(groupedInv);
+        setFinancingActivities(groupedFin);
 
+        const totalChange = [...groupedOp, ...groupedInv, ...groupedFin].reduce((sum, item) => sum + item.amount, 0);
+        setClosingBalance(computedOpening + totalChange);
       } catch (err) {
         console.error('Error fetching cash flow:', err);
       } finally {
@@ -112,12 +201,145 @@ export function CashFlow() {
     }
 
     fetchCashFlow();
-  }, [user?.companyId, dateRange]);
+  }, [user?.companyId, dateRange.from, dateRange.to]);
 
   const totalOperating = operatingActivities.reduce((sum, item) => sum + item.amount, 0);
   const totalInvesting = investingActivities.reduce((sum, item) => sum + item.amount, 0);
   const totalFinancing = financingActivities.reduce((sum, item) => sum + item.amount, 0);
   const netCashFlow = totalOperating + totalInvesting + totalFinancing;
+
+  const effectiveFrom = dateRange.from <= dateRange.to ? dateRange.from : dateRange.to;
+  const effectiveTo = dateRange.from <= dateRange.to ? dateRange.to : dateRange.from;
+  const periodSubtitle = `Period: ${formatReportDate(effectiveFrom, settings.dateFormat)} to ${formatReportDate(effectiveTo, settings.dateFormat)}`;
+
+  const buildCashFlowPrintHtml = () => {
+    const mapSectionRows = (items: any[], totalLabel: string, totalVal: number) => {
+      const rows = items.map(item => ({
+        cells: [item.name, formatCurrency(item.amount)],
+        tone: (item.amount >= 0 ? 'positive' : 'negative') as 'positive' | 'negative'
+      }));
+      rows.push({
+        cells: [totalLabel, formatCurrency(totalVal)],
+        isTotal: true,
+        tone: (totalVal >= 0 ? 'positive' : 'negative') as 'positive' | 'negative'
+      } as any);
+      return rows;
+    };
+
+    return buildReportPrintHtml({
+      title: 'Cash Flow Statement',
+      subtitle: periodSubtitle,
+      settings,
+      company,
+      summaryCards: [
+        { label: 'Opening Balance', value: formatCurrency(openingBalance) },
+        { label: 'Net Cash Flow', value: formatCurrency(netCashFlow) },
+        { label: 'Closing Balance', value: formatCurrency(closingBalance) }
+      ],
+      sections: [
+        {
+          heading: 'Cash Flow from Operating Activities',
+          columns: [
+            { label: 'Particulars', width: '72%' },
+            { label: 'Amount', align: 'right', width: '28%' }
+          ],
+          rows: mapSectionRows(operatingActivities, 'Net Cash from Operating Activities', totalOperating),
+          emptyMessage: 'No operating activities found'
+        },
+        {
+          heading: 'Cash Flow from Investing Activities',
+          columns: [
+            { label: 'Particulars', width: '72%' },
+            { label: 'Amount', align: 'right', width: '28%' }
+          ],
+          rows: mapSectionRows(investingActivities, 'Net Cash from Investing Activities', totalInvesting),
+          emptyMessage: 'No investing activities found'
+        },
+        {
+          heading: 'Cash Flow from Financing Activities',
+          columns: [
+            { label: 'Particulars', width: '72%' },
+            { label: 'Amount', align: 'right', width: '28%' }
+          ],
+          rows: mapSectionRows(financingActivities, 'Net Cash from Financing Activities', totalFinancing),
+          emptyMessage: 'No financing activities found'
+        }
+      ]
+    });
+  };
+
+  const handlePrint = () => {
+    executePrint(buildCashFlowPrintHtml());
+  };
+
+  const handleDownloadPDF = () => {
+    printToPDF({
+      title: 'Cash Flow Statement',
+      subtitle: periodSubtitle,
+      fileName: `Cash_Flow_${effectiveFrom}_to_${effectiveTo}`,
+      htmlContent: buildCashFlowPrintHtml(),
+      settings,
+      company
+    });
+  };
+
+  const handleDownloadExcel = () => {
+    const rows: Record<string, any>[] = [
+      { section: 'Summary', particulars: 'Opening Cash & Bank Balance', amount: Number(openingBalance.toFixed(2)) },
+      ...operatingActivities.map(item => ({
+        section: 'Operating Activities',
+        particulars: item.name,
+        amount: Number(item.amount.toFixed(2))
+      })),
+      { section: 'Operating Activities', particulars: 'Net Cash from Operating Activities', amount: Number(totalOperating.toFixed(2)) },
+      ...investingActivities.map(item => ({
+        section: 'Investing Activities',
+        particulars: item.name,
+        amount: Number(item.amount.toFixed(2))
+      })),
+      { section: 'Investing Activities', particulars: 'Net Cash from Investing Activities', amount: Number(totalInvesting.toFixed(2)) },
+      ...financingActivities.map(item => ({
+        section: 'Financing Activities',
+        particulars: item.name,
+        amount: Number(item.amount.toFixed(2))
+      })),
+      { section: 'Financing Activities', particulars: 'Net Cash from Financing Activities', amount: Number(totalFinancing.toFixed(2)) },
+      { section: 'Summary', particulars: 'Net Cash Flow', amount: Number(netCashFlow.toFixed(2)) }
+    ];
+
+    exportStructuredExcel({
+      fileName: `Cash_Flow_${effectiveFrom}_to_${effectiveTo}`,
+      sheetName: 'Cash Flow',
+      title: 'Cash Flow Statement',
+      subtitle: periodSubtitle,
+      headers: ['Section', 'Particulars', 'Amount'],
+      rows,
+      footerRow: {
+        section: 'Summary',
+        particulars: 'Closing Cash & Bank Balance',
+        amount: Number(closingBalance.toFixed(2))
+      },
+      settings,
+      company
+    });
+  };
+
+  const handleEmailReport = () => {
+    shareReportViaEmail({
+      title: 'Cash Flow Statement',
+      subtitle: periodSubtitle,
+      settings,
+      company,
+      summaryLines: [
+        `Opening Balance: ${formatNumber(openingBalance)}`,
+        `Operating Activities Net: ${formatNumber(totalOperating)}`,
+        `Investing Activities Net: ${formatNumber(totalInvesting)}`,
+        `Financing Activities Net: ${formatNumber(totalFinancing)}`,
+        `Net Cash Flow: ${formatNumber(netCashFlow)}`,
+        `Closing Balance: ${formatNumber(closingBalance)}`
+      ]
+    });
+  };
 
   if (loading) {
     return <SkeletonLoader type="table" />;
@@ -126,9 +348,9 @@ export function CashFlow() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="p-6 pb-4 shrink-0">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => navigate(-1)}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             >
@@ -139,14 +361,52 @@ export function CashFlow() {
               <p className="text-gray-500">Summary of cash inflows and outflows</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="w-40">
+              <DateInput
+                label="From"
+                value={dateRange.from}
+                onChange={(val) => setDateRange(prev => ({ ...prev, from: val }))}
+                compact
+              />
+            </div>
+            <div className="w-40">
+              <DateInput
+                label="To"
+                value={dateRange.to}
+                onChange={(val) => setDateRange(prev => ({ ...prev, to: val }))}
+                compact
+              />
+            </div>
+            <button
+              onClick={handleDownloadExcel}
+              className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors"
+              title="Export Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Excel
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <Printer className="w-4 h-4" />
               {t('common.print')}
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors">
+            <button
+              onClick={handleDownloadPDF}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+            >
               <Download className="w-4 h-4" />
               {t('common.downloadPdf')}
+            </button>
+            <button
+              onClick={handleEmailReport}
+              className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              title="Share via Email"
+            >
+              <Mail className="w-4 h-4" />
+              Email
             </button>
           </div>
         </div>

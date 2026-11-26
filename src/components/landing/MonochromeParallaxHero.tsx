@@ -27,6 +27,7 @@ import {
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
+import { DEFAULT_APP_BRANDING } from '../../constants/appIdentity';
 import { cn } from '../../lib/utils';
 import { LATEST_VERSION } from '../../data/releaseNotes';
 
@@ -53,6 +54,7 @@ export const MonochromeParallaxHero: React.FC<MonochromeParallaxHeroProps> = ({
   const navigate = useNavigate();
 
   const { 
+    appIdentity,
     appVersion,
     companyName: settingsCompanyName,
     companyLogo: settingsCompanyLogo,
@@ -1149,7 +1151,7 @@ export const MonochromeParallaxHero: React.FC<MonochromeParallaxHeroProps> = ({
             </h2>
             <p className="text-sm text-neutral-400 max-w-xl mx-auto leading-relaxed">
               {language === 'bn'
-                ? 'SAPIENT ERP-তে কোনো কাল্পনিক হিসাব, সিনথেটিক সাইন কার্ভ বা ভুয়া মাল্টিপ্লায়ার নেই। প্রতিটি ডাটা সরাসরি গ্রাহকের প্রকৃত ভাউচার ও ট্রানজ্যাকশন থেকে তৈরি।'
+                ? `${appIdentity?.appName || DEFAULT_APP_BRANDING.appName}-তে কোনো কাল্পনিক হিসাব, সিনথেটিক সাইন কার্ভ বা ভুয়া মাল্টিপ্লায়ার নেই। প্রতিটি ডাটা সরাসরি গ্রাহকের প্রকৃত ভাউচার ও ট্রানজ্যাকশন থেকে তৈরি।`
                 : 'Every report, ledger balance, and stock ledger entry is grounded strictly in authentic voucher records. Never simulated. Never mocked.'}
             </p>
           </div>

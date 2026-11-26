@@ -2,6 +2,28 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { convertNumberToWords } from './printUtils';
 import { pdfExportService, printToPDF } from './pdfExportService';
+import {
+  exportStructuredExcel,
+  exportService,
+  sanitizeSpreadsheetCell,
+  shareReportViaEmail,
+  type EmailReportOptions,
+  type StructuredExcelOptions
+} from '../services/exportService';
+import {
+  DEFAULT_APP_BRANDING,
+  resolveCompanyLegalIdentity,
+  sanitizeAssetUrl
+} from '../constants/appIdentity';
+
+export const exportToExcel = exportService.exportToExcel;
+export {
+  exportStructuredExcel,
+  sanitizeSpreadsheetCell,
+  shareReportViaEmail,
+  type EmailReportOptions,
+  type StructuredExcelOptions
+};
 
 export async function downloadHtmlAsPDF(htmlContent: string, fileName: string) {
   const cleanFileName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
@@ -115,67 +137,97 @@ export async function downloadHtmlAsPDF(htmlContent: string, fileName: string) {
   }
 }
 
-export function exportToCSV(filename: string, title: string, data: any[], headers: string[], settings: any = {}) {
-  const csvRows = [];
-  
+export function exportToCSV(
+  filename: string,
+  title: string,
+  data: any[],
+  headers: string[],
+  settings: any = {},
+  company?: any
+) {
+  const csvRows: string[] = [];
+  const legal = resolveCompanyLegalIdentity(settings, company);
+  const escapeCsvText = (val: unknown) => `"${String(sanitizeSpreadsheetCell(val)).replace(/"/g, '""')}"`;
+
   // Header section
-  csvRows.push(`"${(settings.companyName || 'SAPIENT ERP').replace(/"/g, '""')}"`);
-  if (settings.companyAddress) {
-    const addressLines = settings.companyAddress.split('\n');
+  if (legal.companyName) {
+    csvRows.push(escapeCsvText(legal.companyName));
+  }
+  if (legal.companyAddress) {
+    const addressLines = String(legal.companyAddress).split('\n');
     addressLines.forEach((line: string) => {
-      csvRows.push(`"${line.replace(/"/g, '""')}"`);
+      if (line.trim()) csvRows.push(escapeCsvText(line));
     });
   }
-  
-  const contactInfo = [];
-  if (settings.printPhone) contactInfo.push(`Phone: ${settings.printPhone}`);
-  if (settings.printEmail) contactInfo.push(`Email: ${settings.printEmail}`);
-  if (settings.printWebsite) contactInfo.push(`Web: ${settings.printWebsite}`);
-  if (contactInfo.length > 0) csvRows.push(`"${contactInfo.join(' | ').replace(/"/g, '""')}"`);
-  
-  if (settings.printHeader) csvRows.push(`"${settings.printHeader.replace(/"/g, '""')}"`);
-  
+  if (legal.vatBinTin) {
+    csvRows.push(escapeCsvText(`VAT/BIN/TIN: ${legal.vatBinTin}`));
+  }
+
+  const contactInfo: string[] = [];
+  if (settings?.showPrintPhone !== false && legal.printPhone) contactInfo.push(`Phone: ${legal.printPhone}`);
+  if (settings?.showPrintEmail !== false && legal.printEmail) contactInfo.push(`Email: ${legal.printEmail}`);
+  if (settings?.showPrintWebsite !== false && legal.printWebsite) contactInfo.push(`Web: ${legal.printWebsite}`);
+  if (contactInfo.length > 0) csvRows.push(escapeCsvText(contactInfo.join(' | ')));
+
+  if (settings?.showPrintHeader !== false && legal.printHeader) {
+    csvRows.push(escapeCsvText(legal.printHeader));
+  }
+
   csvRows.push('');
-  csvRows.push(`"${title.toUpperCase()}"`);
-  csvRows.push(`"Date: ${new Date().toLocaleDateString()}"`);
-  csvRows.push(''); // Spacer
-  
+  csvRows.push(escapeCsvText(title.toUpperCase()));
+  csvRows.push(escapeCsvText(`Date: ${new Date().toLocaleDateString()}`));
+  csvRows.push('');
+
   // Table headers
-  csvRows.push(headers.join(','));
-  
+  csvRows.push(headers.map(h => escapeCsvText(h)).join(','));
+
   // Data rows
-  for (const row of data) {
+  for (const row of data || []) {
     const values = headers.map(header => {
-      const key = header.toLowerCase().replace(/ /g, '_');
-      const val = row[key] !== undefined ? row[key] : '';
-      // Escape commas and wrap in quotes if necessary
-      const escaped = ('' + val).replace(/"/g, '""');
-      return `"${escaped}"`;
+      const normalizedKey = header.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      const simpleKey = header.toLowerCase().replace(/ /g, '_');
+      const val =
+        row?.[header] !== undefined
+          ? row[header]
+          : row?.[simpleKey] !== undefined
+            ? row[simpleKey]
+            : row?.[normalizedKey] !== undefined
+              ? row[normalizedKey]
+              : '';
+      return escapeCsvText(val);
     });
     csvRows.push(values.join(','));
   }
 
   // Footer section
-  if (settings.printFooter) {
+  if (settings?.showPrintFooter !== false && settings?.printFooter) {
     csvRows.push('');
-    csvRows.push(`"${settings.printFooter.replace(/"/g, '""')}"`);
+    csvRows.push(escapeCsvText(settings.printFooter));
   }
-  
-  const csvContent = csvRows.join('\n');
+
+  const csvContent = `\uFEFF${csvRows.join('\n')}`;
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `${filename}.csv`);
+  link.setAttribute('download', `${filename.replace(/\.csv$/i, '')}.csv`);
   link.style.visibility = 'hidden';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function exportToPDF(filename: string, title: string, data?: any[], headers?: string[], settings: any = {}) {
+export function exportToPDF(
+  filename: string,
+  title: string,
+  data?: any[],
+  headers?: string[],
+  settings: any = {},
+  company?: any
+) {
   if (!data || !headers) {
-    return exportElementToPDF(filename, title);
+    return exportElementToPDF(filename, title, settings, company);
   }
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
@@ -183,15 +235,18 @@ export function exportToPDF(filename: string, title: string, data?: any[], heade
   // Set Courier font for the whole document to match the classic accounting look
   doc.setFont('courier');
   
+  const legal = resolveCompanyLegalIdentity(settings, company);
+  const safeLogo = sanitizeAssetUrl(legal.companyLogo || '');
+
   // Header
   let y = 26;
   
   // Add Logo if available
-  if (settings.companyLogo) {
+  if (safeLogo) {
     try {
       // We assume the logo is either a Base64 string or a valid URL
       // For PDF, Base64 is safer if it's already loaded
-      doc.addImage(settings.companyLogo, 'PNG', 14, 10, 20, 20, undefined, 'FAST');
+      doc.addImage(safeLogo, 'PNG', 14, 10, 20, 20, undefined, 'FAST');
     } catch (e) {
       console.error('Error adding logo to PDF:', e);
     }
@@ -200,20 +255,22 @@ export function exportToPDF(filename: string, title: string, data?: any[], heade
   if (settings.reportLayout === 'Layout 2') {
     doc.setFontSize(18);
     doc.setFont('courier', 'bold');
-    const companyName = settings.companyName || 'COMPANY NAME';
-    const nameWidth = doc.getTextWidth(companyName);
-    doc.text(companyName, (pageWidth - nameWidth) / 2, 20);
+    const companyName = legal.companyName;
+    if (companyName) {
+      const nameWidth = doc.getTextWidth(companyName);
+      doc.text(companyName, (pageWidth - nameWidth) / 2, 20);
+    }
     
     doc.setFontSize(9);
     doc.setFont('courier', 'normal');
     let yPos = 26;
-    if (settings.companyAddress) {
-      const addrWidth = doc.getTextWidth(settings.companyAddress);
-      doc.text(settings.companyAddress, (pageWidth - addrWidth) / 2, yPos);
+    if (legal.companyAddress) {
+      const addrWidth = doc.getTextWidth(legal.companyAddress);
+      doc.text(legal.companyAddress, (pageWidth - addrWidth) / 2, yPos);
       yPos += 4;
     }
-    if (settings.printEmail) {
-      const emailText = `E-Mail : ${settings.printEmail}`;
+    if (legal.printEmail) {
+      const emailText = `E-Mail : ${legal.printEmail}`;
       const emailWidth = doc.getTextWidth(emailText);
       doc.text(emailText, (pageWidth - emailWidth) / 2, yPos);
       doc.line((pageWidth - emailWidth) / 2, yPos + 0.5, (pageWidth + emailWidth) / 2, yPos + 0.5);
@@ -245,16 +302,18 @@ export function exportToPDF(filename: string, title: string, data?: any[], heade
     doc.setFontSize(20);
     doc.setTextColor(0);
     doc.setFont('courier', 'bold');
-    const companyName = settings.companyName || 'SAPIENT ERP';
-    const nameWidth = doc.getTextWidth(companyName);
-    doc.text(companyName, (pageWidth - nameWidth) / 2, 20);
+    const companyName = legal.companyName;
+    if (companyName) {
+      const nameWidth = doc.getTextWidth(companyName);
+      doc.text(companyName, (pageWidth - nameWidth) / 2, 20);
+    }
     
     doc.setFontSize(9);
     doc.setFont('courier', 'normal');
     y = 26;
     
-    if (settings.companyAddress) {
-      const lines = doc.splitTextToSize(settings.companyAddress, 180);
+    if (legal.companyAddress) {
+      const lines = doc.splitTextToSize(legal.companyAddress, 180);
       lines.forEach((line: string) => {
         const lineWidth = doc.getTextWidth(line);
         doc.text(line, (pageWidth - lineWidth) / 2, y);
@@ -263,9 +322,9 @@ export function exportToPDF(filename: string, title: string, data?: any[], heade
     }
     
     const contactInfo = [];
-    if (settings.printPhone) contactInfo.push(`Phone: ${settings.printPhone}`);
-    if (settings.printEmail) contactInfo.push(`Email: ${settings.printEmail}`);
-    if (settings.printWebsite) contactInfo.push(`Web: ${settings.printWebsite}`);
+    if (legal.printPhone) contactInfo.push(`Phone: ${legal.printPhone}`);
+    if (legal.printEmail) contactInfo.push(`Email: ${legal.printEmail}`);
+    if (legal.printWebsite) contactInfo.push(`Web: ${legal.printWebsite}`);
     
     if (contactInfo.length > 0) {
       const infoText = contactInfo.join(' | ');
@@ -274,11 +333,11 @@ export function exportToPDF(filename: string, title: string, data?: any[], heade
       y += 6;
     }
 
-    if (settings.printHeader) {
+    if (legal.printHeader) {
       doc.setFontSize(10);
       doc.setFont('courier', 'bold');
-      const headerWidth = doc.getTextWidth(settings.printHeader);
-      doc.text(settings.printHeader, (pageWidth - headerWidth) / 2, y);
+      const headerWidth = doc.getTextWidth(legal.printHeader);
+      doc.text(legal.printHeader, (pageWidth - headerWidth) / 2, y);
       y += 6;
     }
     
@@ -381,7 +440,12 @@ export function exportToPDF(filename: string, title: string, data?: any[], heade
   doc.save(`${filename}.pdf`);
 }
 
-export function exportElementToPDF(elementId: string, filename: string, settings: any = {}) {
+export function exportElementToPDF(
+  elementId: string,
+  filename: string,
+  settings: any = {},
+  company?: any
+) {
   const element = document.getElementById(elementId);
   if (!element) return;
 
@@ -390,11 +454,12 @@ export function exportElementToPDF(elementId: string, filename: string, settings
     element,
     title,
     fileName: filename,
-    settings
+    settings,
+    company
   });
 }
 
-export function exportVoucherToPDF(voucher: any, settings: any = {}) {
+export function exportVoucherToPDF(voucher: any, settings: any = {}, company?: any) {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.width; // A4 width: 210mm
   const pageHeight = doc.internal.pageSize.height; // A4 height: 297mm
@@ -402,12 +467,14 @@ export function exportVoucherToPDF(voucher: any, settings: any = {}) {
   // Font courier matches accounting style
   doc.setFont('courier');
   
+  const legal = resolveCompanyLegalIdentity(settings, company);
+  const safeLogo = sanitizeAssetUrl(legal.companyLogo || '');
   let currentY = 15;
   
   // 1. Draw Company Logo on left independently (doesn't affect center alignment of text)
-  if (settings.companyLogo) {
+  if (safeLogo) {
     try {
-      doc.addImage(settings.companyLogo, 'PNG', 15, 12, 18, 18, undefined, 'FAST');
+      doc.addImage(safeLogo, 'PNG', 15, 12, 18, 18, undefined, 'FAST');
     } catch (e) {
       console.error('Error adding logo to PDF:', e);
     }
@@ -416,16 +483,18 @@ export function exportVoucherToPDF(voucher: any, settings: any = {}) {
   // 2. Draw Center Aligned Company Header Text
   doc.setFont('courier', 'bold');
   doc.setFontSize(18);
-  const compName = (settings.companyName || 'SAPIENT ERP').toUpperCase();
+  const compName = (legal.companyName || '').toUpperCase();
   // Center is (pageWidth / 2)
-  doc.text(compName, pageWidth / 2, currentY + 4, { align: 'center' });
-  currentY += 9;
+  if (compName) {
+    doc.text(compName, pageWidth / 2, currentY + 4, { align: 'center' });
+    currentY += 9;
+  }
   
   doc.setFont('courier', 'normal');
   doc.setFontSize(9);
   
-  if (settings.companyAddress) {
-    const addressLines = doc.splitTextToSize(settings.companyAddress, 140);
+  if (legal.companyAddress) {
+    const addressLines = doc.splitTextToSize(legal.companyAddress, 140);
     addressLines.forEach((line: string) => {
       doc.text(line, pageWidth / 2, currentY, { align: 'center' });
       currentY += 4;
@@ -433,9 +502,9 @@ export function exportVoucherToPDF(voucher: any, settings: any = {}) {
   }
   
   const contactParts = [];
-  if (settings.printPhone) contactParts.push(`Phone: ${settings.printPhone}`);
-  if (settings.printEmail) contactParts.push(`Email: ${settings.printEmail}`);
-  if (settings.printWebsite) contactParts.push(`Web: ${settings.printWebsite}`);
+  if (legal.printPhone) contactParts.push(`Phone: ${legal.printPhone}`);
+  if (legal.printEmail) contactParts.push(`Email: ${legal.printEmail}`);
+  if (legal.printWebsite) contactParts.push(`Web: ${legal.printWebsite}`);
   
   if (contactParts.length > 0) {
     const contactStr = contactParts.join(' | ');
@@ -443,9 +512,9 @@ export function exportVoucherToPDF(voucher: any, settings: any = {}) {
     currentY += 5;
   }
   
-  if (settings.printHeader) {
+  if (legal.printHeader) {
     doc.setFont('courier', 'italic');
-    doc.text(settings.printHeader, pageWidth / 2, currentY, { align: 'center' });
+    doc.text(legal.printHeader, pageWidth / 2, currentY, { align: 'center' });
     currentY += 5;
   }
   
@@ -737,8 +806,10 @@ export function exportVoucherToPDF(voucher: any, settings: any = {}) {
   }
   
   if (settings.showDeveloperContact !== false) {
-    const devText = settings.developerContactText || 'TallyFlow ERP | +880 1742 058246';
-    doc.text(devText, pageWidth - 15, footY + 4, { align: 'right' });
+    const devText = settings.appIdentity?.softwareFooterText || settings.developerContactText || DEFAULT_APP_BRANDING.softwareFooterText;
+    if (devText) {
+      doc.text(devText, pageWidth - 15, footY + 4, { align: 'right' });
+    }
   }
   
   doc.save(`Voucher_${voucher.v_no}.pdf`);
@@ -746,10 +817,13 @@ export function exportVoucherToPDF(voucher: any, settings: any = {}) {
 
 export const exportUtils = {
   exportToCSV,
+  exportToExcel,
+  exportStructuredExcel,
   exportToPDF,
   exportElementToPDF,
   exportVoucherToPDF,
   downloadHtmlAsPDF,
   printToPDF,
+  shareReportViaEmail,
   pdfExportService
 };

@@ -1,0 +1,1789 @@
+# MADINA ENTERPRISE ERP TRANSFORMATION PLAN v4.2.1
+## FINAL MASTER SPECIFICATION — DOCUMENT REVISION ONLY
+
+**Document Version:** 4.2.1  
+**Base Document:** Madina Enterprise ERP Transformation Plan v4.2  
+**Target Application:** Current ERP project, historically identified as TallyFlow ERP / SAPIENT ERP v1.9.9.20  
+**Current Deployment:** Existing GitHub-connected and Vercel-hosted production application  
+**Document Status:** REVISION ONLY — NO IMPLEMENTATION AUTHORIZED  
+**Decision Authority:** Founder  
+**Primary Objective:** Produce the final consolidated transformation specification, including all previous safety requirements, configurable application branding, and a Founder-controlled AI Change Studio.
+
+---
+
+# 0. CRITICAL INSTRUCTIONS — READ FIRST
+
+You are acting as a Senior Software Architect, ERP Security Architect, Database Reliability Engineer, QA Architect, and Technical Documentation Specialist.
+
+Your task is to revise the existing v4.2 plan into a complete, internally consistent v4.2.1 specification.
+
+## 0.1 Absolute execution restrictions
+
+THIS IS A DOCUMENT REVISION TASK ONLY.
+
+You are NOT authorized to:
+
+- Modify any application source code.
+- Create, edit, delete, or install project files or dependencies.
+- Execute terminal commands, scripts, migrations, or build processes.
+- Access or modify Firebase or Firestore data.
+- Change Firestore Security Rules.
+- Change Firebase Authentication settings or Custom Claims.
+- Access or modify GitHub repositories, branches, commits, or pull requests.
+- Access or modify Vercel projects, environment variables, or deployments.
+- Access Production, Staging, or customer data.
+- Create API keys, connect AI providers, or configure external services.
+- Perform any database write, deletion, migration, or restoration.
+- Start Phase 0A, Phase 0B, or any implementation phase.
+
+Do not interpret this prompt as authorization to implement anything.
+
+You must produce the revised specification and stop.
+
+## 0.2 Source verification boundary
+
+The current production application is actively used.
+
+Unless actual source inspection has separately been authorized and completed, do not claim that you have inspected:
+
+- Repository files or source-code lines.
+- Firebase configuration or database collections.
+- Firestore Security Rules.
+- GitHub branch protections.
+- Vercel hosting configuration.
+- Environment variables or secrets.
+- Production database records.
+- Existing accounting calculations or FIFO implementation.
+
+All unverified source details must remain explicitly marked:
+
+`[C: UNVERIFIED — SOURCE AUDIT REQUIRED]`
+
+Do not invent filenames, line numbers, collection names, implementation status, test results, or security guarantees.
+
+The v4.2.1 document must preserve the distinction between a planned architecture and a verified existing implementation.
+
+## 0.3 Authority and approval hierarchy
+
+The Founder is the final authority.
+
+Every stage must have a separate approval gate:
+
+1. Document acceptance.
+2. Read-only source audit — Phase 0A.
+3. Phase 0B authorization.
+4. Development authorization.
+5. Staging authorization.
+6. Production deployment authorization.
+7. Live Pilot authorization.
+8. Global Publish authorization.
+
+Approval of one stage does not authorize the next stage.
+
+**BLOCKED is never PASS.**
+
+A failed or inconclusive gate must stop progression.
+
+---
+
+# 1. EXECUTIVE SUMMARY AND READINESS VERDICT
+
+Produce a complete executive summary explaining:
+
+- Current application context.
+- Transformation objectives.
+- Existing production risks.
+- Preservation requirements.
+- Proposed architecture.
+- Security boundaries.
+- AI Change Studio architecture.
+- Dynamic App Identity and Branding.
+- Phase-based implementation roadmap.
+- Founder approval requirements.
+
+The readiness verdict must be:
+
+**READY FOR PHASE 0A APPROVAL — SUBJECT TO FOUNDER ACCEPTANCE OF v4.2.1.**
+
+It must NOT state that the system is ready for:
+
+- Phase 0B.
+- Phase 1 implementation.
+- Production deployment.
+- Live Pilot.
+- Global Publish.
+
+Document acceptance does not authorize source-code modifications.
+
+---
+
+# 2. CORE ARCHITECTURE AND NON-NEGOTIABLE SAFETY PRINCIPLES
+
+## 2.1 Core preservation requirements
+
+Preserve all existing ERP accounting and business logic unless the Founder explicitly approves a separately documented change.
+
+Critical protected areas:
+
+- Double-entry accounting.
+- Debit/Credit balancing.
+- Ledger calculations.
+- Voucher posting and numbering.
+- Receipt and Payment.
+- Sales and Purchase.
+- Stock calculations.
+- FIFO inventory valuation.
+- Stock movements.
+- Opening and closing balances.
+- Profit & Loss.
+- Balance Sheet.
+- Trial Balance.
+- Existing company settings.
+- User permissions and roles.
+- Existing business records.
+
+Never redesign, simplify, replace, or rewrite accounting logic merely to accommodate UI redesign.
+
+Any proposed accounting-related change requires:
+
+1. Impact analysis.
+2. Existing behavior documentation.
+3. Independent expected-result calculations.
+4. Regression tests.
+5. Founder approval.
+6. Separate implementation and deployment approvals.
+
+## 2.2 Architectural principles
+
+Preserve these principles:
+
+- Server-only security boundaries.
+- Least privilege.
+- Tenant/company isolation.
+- Idempotent operations.
+- Transaction-safe writes.
+- Explicit operation states.
+- Recoverable failures.
+- Auditability.
+- Observable billing.
+- Bounded queries.
+- Controlled migrations.
+- Reversible code deployments.
+- Explicit data-recovery procedures.
+
+## 2.3 Existing design preservation
+
+Preserve the existing design system and all previously specified design options.
+
+Four flagship design packs:
+
+1. Precision Ledger.
+2. Editorial Executive.
+3. Modern Tally Pro.
+4. Minimal Nordic ERP.
+
+Four legacy modes:
+
+- legacy-ui-1
+- legacy-ui-2
+- legacy-ui-3
+- legacy-ui-4
+
+Preserve the following configurable design dimensions:
+
+| Design area | Existing options to preserve |
+|---|---|
+| MenuBarStyle | 6 |
+| DashboardDesign | 6 + splashSubDesign |
+| HeroDesignStyle | 4 |
+| Hero features | ThreeUI, heroShowExploreLiveDemo |
+| AuthTemplate | 5 |
+| ThemeContext | 7 |
+| Sidebar | 7 + 7 |
+| Notification | 10 |
+
+Do not silently remove or merge these options.
+
+All previously locked AGENTS.md PDF/Print specifications must remain unchanged:
+
+- 24px row height.
+- Vertical alignment: middle.
+- Existing page margins.
+- 34/38 rows per page as previously specified.
+
+Any conflicting implementation detail must be identified and marked for Founder review.
+
+## 2.4 Hosting architecture and security dependencies
+
+Hosting Architecture Decision #1 remains mandatory before Phase 1.
+
+Do not assume that the current hosting architecture can safely support long-running AI jobs, background processing, build execution, or deployment automation.
+
+Verify hosting limits, execution duration, server-side environment boundaries, storage, background jobs, and deployment constraints before choosing an implementation.
+
+---
+
+# 3. OPERATION, EPOCH, IDEMPOTENCY, TOMBSTONE AND DISASTER RECOVERY ARCHITECTURE
+
+Preserve the v4.2 operation/epoch/idempotency/tombstone architecture.
+
+The revised document must explicitly define:
+
+- Operation identity.
+- Epoch/version tracking.
+- Idempotency keys.
+- Duplicate request handling.
+- Operation state transitions.
+- Retry behavior.
+- Tombstone creation.
+- Tombstone immutability.
+- Recovery and reconciliation.
+- In-flight operation protection.
+
+## 3.1 Tombstone protection
+
+Maintain three-layer tombstone protection.
+
+A tombstone must not be removed or bypassed by:
+
+- Client-side updates.
+- Client-side deletes.
+- Retry operations.
+- Rollback operations.
+- Offline synchronization.
+- Reconnection.
+- Parent/child collection writes.
+- Unintended wildcard Security Rules.
+
+Tombstone archival must not mean permanent deletion of the protection record.
+
+Any archival strategy must preserve disaster-recovery and audit requirements.
+
+## 3.2 Disaster recovery reconciliation
+
+Preserve the eight-step DR tombstone reconciliation process from v4.2.
+
+If any exact implementation detail is not verified, retain the original requirement and mark the operational details:
+
+`[UNRESOLVED — FOUNDER / SOURCE AUDIT REQUIRED]`
+
+Do not invent a replacement procedure.
+
+---
+
+# 4. ROLLBACK, RETRY AND MANUAL INTERVENTION STATE MACHINE
+
+Preserve T1–T9.
+
+The specification must define:
+
+- Valid states.
+- Allowed transitions.
+- Retry conditions.
+- Retry limits.
+- Idempotency behavior.
+- Timeout behavior.
+- Manual intervention.
+- Failure recovery.
+- Audit records.
+- In-flight operation handling.
+
+Clearly separate:
+
+**Code Rollback:** Reverting source code, application builds, or deployment artifacts.
+
+**Data/State Recovery:** Restoring or reconciling database records, business transactions, epochs, tombstones, and in-flight operations.
+
+A code rollback must never be assumed to reverse database mutations.
+
+A database restore must never be assumed to restore a compatible application version.
+
+Before any rollback, define compatibility and recovery checks.
+
+---
+
+# 5. SINGLE PILOT RESERVATION, ENROLLMENT AND ABORT PROTOCOL
+
+Preserve the single-pilot reservation/enrollment/abort architecture A1–A6.
+
+The revised document must define:
+
+- Pilot eligibility.
+- Reservation ownership.
+- Enrollment.
+- Pilot lock.
+- Scope boundaries.
+- Abort conditions.
+- Abort state.
+- Recovery.
+- Re-enrollment restrictions.
+- Audit evidence.
+
+Only one authorized pilot may be active under the defined pilot reservation policy.
+
+No global rollout may occur from an unverified pilot.
+
+Pilot activity must not expose unrelated companies or customer data.
+
+---
+
+# 6. FOUNDER AUTHENTICATION AND SECURITY MODEL
+
+Preserve continuous Founder authorization.
+
+The specification must define:
+
+- Founder identity.
+- Authentication.
+- Authorization.
+- Session validity.
+- Re-authentication for high-risk actions.
+- Role boundaries.
+- Audit trail.
+- Revocation.
+- Recovery.
+- Emergency lockout.
+
+Founder access must not be inferred merely from a frontend role, local storage value, UI state, or client-provided flag.
+
+Server-side authorization must be authoritative.
+
+Maintain the distinction between:
+
+- isFounder
+- isSuperAdmin
+
+Do not assume these identities are interchangeable.
+
+Any change to Founder authorization requires a separate security review.
+
+---
+
+# 7. LOCKING, CHUNKING, TRANSACTION MANIFESTS AND SEALING PROTOCOL
+
+Preserve the v4.2 locking/chunking/manifest/sealing architecture.
+
+The revised specification must document:
+
+- Lock ownership.
+- Lock expiration.
+- Lock renewal.
+- Concurrent operation prevention.
+- Chunk boundaries.
+- Transaction manifests.
+- Manifest validation.
+- Sealing conditions.
+- Partial completion handling.
+- Crash recovery.
+- Retry behavior.
+- Audit evidence.
+
+Hosting Decision #1 must remain a mandatory dependency.
+
+Do not allow an incomplete operation to be treated as successfully sealed.
+
+Preserve all existing Seal-Crash and Seal-Race test requirements.
+
+---
+
+# 8. DESIGN MODES, FLAGSHIP SPECIFICATIONS AND LEGACY PRESERVATION
+
+Preserve the complete design inventory in Section 2.3.
+
+Any UI transformation must:
+
+- Preserve business functionality.
+- Preserve keyboard navigation and shortcuts.
+- Preserve accessibility.
+- Preserve responsive behavior.
+- Preserve form validation.
+- Preserve existing PDF/Print output rules.
+- Avoid accidental changes to accounting calculations.
+- Avoid changing company-specific settings.
+- Maintain all legacy modes until separately approved for retirement.
+
+## 8.1 Dynamic App Identity and Rebranding System
+
+NEW REQUIREMENT — P0 DESIGN REQUIREMENT.
+
+The application must support changing its displayed application name without editing source code manually.
+
+The Founder must be able to change the application identity among examples such as:
+
+- Madina Enterprise ERP
+- Sapient ERP
+- TallyFlow ERP
+- Any custom application name entered by the Founder.
+
+These are examples, not a fixed list.
+
+### A. Founder Panel → App Identity & Branding
+
+Design a centralized branding configuration containing:
+
+1. Application Display Name.
+2. Application Short Name.
+3. Application Logo.
+4. Favicon.
+5. Brand identity/color configuration, where supported.
+6. Browser title.
+7. Login screen branding.
+8. Dashboard branding.
+9. Sidebar branding.
+10. Application loading/splash branding.
+11. PDF/Print application branding, where applicable.
+12. Export branding, where applicable.
+
+### B. Centralized configuration
+
+Do not scatter hardcoded application names throughout the application.
+
+Create a single authoritative application identity configuration.
+
+All application-level UI components must consume this configuration.
+
+The exact configuration storage and source-code location must be determined during the source audit.
+
+Do not invent existing file paths.
+
+### C. Founder-only control
+
+Only an authorized Founder may:
+
+- Change the application display name.
+- Upload or replace the application logo.
+- Change favicon.
+- Change global application identity.
+- Preview changes.
+- Save or cancel changes.
+- Restore default branding.
+
+Use server-side authorization.
+
+Record each branding change in an audit log.
+
+### D. Preview and validation
+
+Provide:
+
+- Live preview.
+- Save.
+- Cancel.
+- Restore default.
+- Input validation.
+- Logo format and size validation.
+- Error handling.
+- Confirmation before global publication.
+
+An incomplete or invalid branding configuration must not break the application.
+
+### E. Critical separation: Application Identity vs Company Identity
+
+This separation is mandatory.
+
+**Application Display Name** identifies the ERP software.
+
+**Company Legal Name / Trade Name** identifies the business issuing an invoice, voucher, statement, or report.
+
+Changing the application name must NEVER automatically change:
+
+- Company legal name.
+- Company trade name.
+- Invoice issuer identity.
+- Tax/VAT identity.
+- Company address.
+- Company logo.
+- Ledger.
+- Voucher.
+- Stock.
+- Inventory.
+- Financial reports.
+- Business records.
+- Company settings.
+- User roles.
+- Database schema.
+
+For multi-company support, application branding and company-specific document branding must remain separate.
+
+The document must specify which branding belongs to the application and which belongs to the selected company.
+
+### F. Migration and compatibility
+
+Phase 0A must inventory existing hardcoded branding references.
+
+Do not perform a blind global text replacement.
+
+Any migration must preserve existing functionality and be separately approved.
+
+### G. Acceptance criteria
+
+- Founder can change the application display name.
+- The name updates consistently in supported application surfaces.
+- Existing company identity remains unchanged.
+- PDF/Print company information remains correct.
+- Unauthorized users cannot change global branding.
+- Branding changes are audited.
+- Restoring default branding works.
+- No accounting or stock data changes occur.
+
+---
+
+# 9. SHARED UI PRIMITIVES AND PROPOSAL-FIRST AI FIX
+
+Preserve the following shared components:
+
+- ErpPageFrame
+- ErpDataTable
+- ErpStatStrip
+- ErpSectionCard
+- ErpFormField
+- ErpFormSection
+- ErpModal
+- ConfirmDialogProvider
+- ErpStateView
+- ErpExportBar
+- EmptyState
+- SkeletonLoader
+
+Preserve the unmount-safe ConfirmDialogProvider requirement.
+
+## 9.1 Proposal-First 1-CLICK AI FIX
+
+Preserve the existing six-step Proposal-First AI Fix process.
+
+AI must not autonomously modify code.
+
+The workflow must include:
+
+1. Identify the issue.
+2. Analyze relevant context.
+3. Generate a proposed fix.
+4. Explain impact and risk.
+5. Request Founder approval.
+6. Apply the approved change through the authorized workflow, then test and report.
+
+The AI Fix mechanism must be integrated with the broader AI Change Studio described in Section 10.
+
+It must not become an alternative path that bypasses approval, testing, audit, or rollback.
+
+---
+
+# 10. COMPLETE COMPONENT INVENTORY, PHASE MAPPING AND FOUNDER AI CHANGE STUDIO
+
+## 10.1 Component inventory
+
+Preserve the complete intended component inventory from v4.2, including:
+
+- FounderPanel and its six-view modularization.
+- Dashboard.
+- Accounting and Vouchers.
+- Inventory.
+- Payroll.
+- Orders.
+- Financial Reports.
+- Stock Reports.
+- BI Reports.
+- Settings.
+- Extended Settings.
+- Internationalization.
+- Public Landing.
+- Hero sections.
+- Authentication.
+- K-01 through K-17 security and bug inventory.
+
+The phrase “100% component inventory” means the intended preservation inventory, not a claim that 100% of source code has been verified.
+
+Until Phase 0A inspection, all unverified source references remain:
+
+`[C: UNVERIFIED — SOURCE AUDIT REQUIRED]`
+
+## 10.2 Founder AI Change Studio — New Core Feature
+
+NEW REQUIREMENT — HIGH PRIORITY.
+
+The Founder must be able to request ERP changes directly from inside the ERP application using natural language in Bangla or English.
+
+The long-term objective is to avoid repeatedly copying large prompts into an external AI coding interface for routine changes.
+
+However, the AI Change Studio must be built as a secure, approval-controlled development workflow — not merely an AI chat box.
+
+### A. User experience
+
+Add a Founder-only interface:
+
+**Founder Panel → AI Change Studio**
+
+The Founder can submit requests such as:
+
+- “Dashboard-এর এই অংশটি পরিবর্তন করো।”
+- “Sales Voucher-এ একটি নতুন field যোগ করতে চাই।”
+- “এই report-এর filter উন্নত করো।”
+- “এই error-এর কারণ খুঁজে সমাধানের proposal দাও।”
+- “Application name পরিবর্তন করো।”
+
+The interface must support:
+
+- Bangla and English requests.
+- Request history.
+- Proposal status.
+- Risk indicators.
+- Approval status.
+- Test results.
+- Implementation status.
+- Deployment status.
+- Error reports.
+- Rollback history.
+
+### B. Two distinct change categories
+
+The system must distinguish between:
+
+**Category 1 — Runtime Configuration Changes**
+
+Examples:
+
+- Application name.
+- Logo.
+- Favicon.
+- Approved theme settings.
+- Supported UI preferences.
+- Other explicitly whitelisted safe settings.
+
+These may be handled through authorized application settings without changing source code.
+
+**Category 2 — Source-Code / Structural Changes**
+
+Examples:
+
+- New features.
+- New ERP modules.
+- Backend logic.
+- Database architecture.
+- API integrations.
+- Accounting changes.
+- Inventory/FIFO changes.
+- Security changes.
+- New reports.
+- Component restructuring.
+
+These require the secure source-code workflow and explicit Founder approval.
+
+Never disguise a structural source-code change as a simple settings update.
+
+### C. AI Change Proposal
+
+Before any code modification, AI must generate a structured proposal containing:
+
+1. Request ID.
+2. Original Founder request.
+3. Intended outcome.
+4. Current behavior.
+5. Proposed behavior.
+6. Affected ERP modules.
+7. Affected files and functions, once verified.
+8. Database impact.
+9. Firestore collection impact.
+10. Security Rules impact.
+11. Authentication/authorization impact.
+12. Accounting impact.
+13. FIFO/stock impact.
+14. UI/UX impact.
+15. Performance impact.
+16. Read/write billing impact.
+17. API/provider cost impact.
+18. Risks and severity.
+19. Dependencies.
+20. Test plan.
+21. Expected results.
+22. Rollback plan.
+23. Deployment plan.
+24. Required Founder decisions.
+
+Unverified file names or implementation details must be marked UNVERIFIED.
+
+### D. Mandatory risk classification
+
+Use at least these levels:
+
+- LOW
+- MEDIUM
+- HIGH
+- CRITICAL
+- BLOCKED
+
+Examples:
+
+| Change type | Minimum review |
+|---|---|
+| Application branding | Safe settings validation |
+| UI-only change | UI regression tests |
+| New report | Query and billing review |
+| Database structure | Migration and recovery review |
+| Security Rules | Security audit and Emulator tests |
+| Accounting | Independent accounting validation |
+| FIFO/stock | Inventory regression and valuation tests |
+| Authentication | Security review |
+| Production deployment | Separate Founder approval |
+
+Risk must be based on actual impact, not on the AI's confidence score.
+
+### E. Explicit approval before source-code modification
+
+This is a non-negotiable rule.
+
+The AI must NEVER modify source code merely because the Founder submitted a request.
+
+The sequence is:
+
+1. Founder submits request.
+2. AI analyzes the request.
+3. AI creates proposal.
+4. Founder reviews proposal.
+5. Founder explicitly approves the specific proposal.
+6. Authorized isolated development begins.
+7. AI produces a change set.
+8. Tests run.
+9. Founder reviews diff and test evidence.
+10. Staging approval is requested separately.
+11. Staging deployment/testing occurs only after approval.
+12. Production deployment approval is requested separately.
+13. Production deployment occurs only after explicit approval.
+
+Approval must be tied to a specific proposal version or immutable request identifier.
+
+If the proposal changes materially, previous approval becomes invalid and fresh approval is required.
+
+Silence, timeout, ambiguous messages, or a general request must never count as approval.
+
+### F. Secure source-code integration architecture
+
+The specification must design a secure integration with:
+
+- GitHub repository.
+- Isolated development branch or workspace.
+- Secure build/test environment.
+- Preview environment.
+- Staging environment.
+- Deployment pipeline.
+- Audit system.
+- Rollback system.
+
+The exact implementation must be determined only after source and hosting audits.
+
+Never allow the AI model to directly edit live Production files.
+
+Never allow browser-side JavaScript to receive repository write credentials.
+
+Never expose a GitHub personal access token or deployment credential to the frontend.
+
+Use narrowly scoped, revocable credentials and server-side authorization.
+
+### G. Production isolation
+
+The existing live ERP is actively used.
+
+Therefore:
+
+- No AI code change may directly affect the active Production deployment.
+- Development must happen in an isolated branch/workspace.
+- Testing must use isolated data.
+- Staging must be separate from Production.
+- Production configuration must not be copied into an AI-accessible environment.
+- Existing production users must remain unaffected during development.
+- No unapproved automatic merge.
+- No unapproved automatic deployment.
+
+### H. AI provider integration
+
+Design a provider-independent AI service architecture where practical.
+
+The actual AI provider and model must be configurable through a secure server-side integration.
+
+The specification must address:
+
+- API key storage.
+- Secret rotation.
+- Usage limits.
+- Cost controls.
+- Request logging.
+- Rate limiting.
+- Provider failure.
+- Retry behavior.
+- Model/version tracking.
+- Human fallback.
+- Data minimization.
+
+Do not expose API keys or service-account credentials in client code.
+
+Do not send customer PII, financial records, passwords, `.env` files, Firebase service-account keys, or production database contents to the model.
+
+The model should receive only the minimum sanitized source context necessary for the task.
+
+Do not give the AI unrestricted Firebase Admin SDK access or unrestricted repository access.
+
+### I. AI Change Studio audit trail
+
+Every request and action must be auditable.
+
+Record, as appropriate:
+
+- Request ID.
+- Founder identity.
+- Request timestamp.
+- Original request.
+- Proposal version.
+- Risk classification.
+- Approval identity and timestamp.
+- Branch/workspace reference.
+- Files changed.
+- Before/after diff reference.
+- Test results.
+- Build reference.
+- Staging reference.
+- Deployment reference.
+- Rollback reference.
+- Errors and manual interventions.
+
+Protect audit records against unauthorized modification or deletion.
+
+### J. Testing and rollback
+
+Every source-code change must have:
+
+- Defined acceptance criteria.
+- Relevant unit tests.
+- Integration tests.
+- Security tests.
+- Regression tests.
+- Accounting tests when applicable.
+- FIFO tests when applicable.
+- Performance and billing checks when applicable.
+
+A failed test must stop progression.
+
+Rollback must distinguish code rollback from data/state recovery.
+
+The AI must never claim a change was successfully deployed unless the deployment system confirms it.
+
+### K. AI Change Studio permission boundaries
+
+The AI must not be able to:
+
+- Approve its own proposal.
+- Approve Production deployment.
+- Change Founder authorization.
+- Disable audit logging.
+- Bypass security checks.
+- Modify protected accounting logic without explicit high-risk approval.
+- Access unrestricted production data.
+- Read or disclose secrets.
+- Delete audit records.
+- Bypass GitHub branch protection.
+- Automatically publish globally.
+
+The Founder remains the final decision-maker.
+
+### L. Availability and operational fallback
+
+The ERP must remain usable if the AI provider is unavailable.
+
+AI Change Studio failure must not disable normal ERP operations.
+
+Provide clear statuses:
+
+- Draft
+- Analyzing
+- Proposal Ready
+- Awaiting Founder Approval
+- Approved
+- Rejected
+- Development Running
+- Testing
+- Tests Failed
+- Ready for Review
+- Awaiting Staging Approval
+- Staging
+- Awaiting Production Approval
+- Deployed
+- Rolled Back
+- Blocked
+- Cancelled
+
+### M. Acceptance criteria
+
+The feature is not complete unless:
+
+- Founder can submit a request inside the ERP.
+- AI can generate a structured proposal.
+- AI cannot modify code without explicit approval.
+- Each approval is tied to a specific proposal version.
+- Development is isolated from Production.
+- Secrets are protected.
+- Changes can be reviewed through diffs.
+- Required tests run before promotion.
+- Staging and Production approvals are separate.
+- Every action is auditable.
+- Rollback procedures are defined and tested.
+- Existing ERP operations remain available if AI services fail.
+
+### N. Important feasibility statement
+
+Do not promise that the AI Change Studio will eliminate all future maintenance, API costs, or technical limitations.
+
+It should eliminate the routine need for manually copying large coding prompts where supported, but the system still depends on secure AI provider access, source-code integration, execution infrastructure, testing, and deployment services.
+
+Document these dependencies honestly.
+
+---
+
+# 11. K-01 THROUGH K-17 SECURITY AND BUG INVENTORY
+
+Preserve all K-01 through K-17 items and their existing phase assignments.
+
+Do not omit or silently reclassify any item.
+
+## 11.1 K-10
+
+Preserve the four-layer audit and approval-gated Phase 10B AI proxy/key-rotation work.
+
+Do not expose provider credentials.
+
+## 11.2 K-11 — Firestore Rules and authorization
+
+Preserve:
+
+- Overlapping Security Rules audit.
+- `system/{document=**}` analysis.
+- `isFounder` vs `isSuperAdmin` authorization analysis.
+- `system_audit_logs` delete protection.
+- Staging Emulator tests.
+- Separate Founder-approved Production deployment.
+
+## 11.3 K-01 through K-09
+
+Preserve Phase 10A assignments.
+
+K-02 restoration must remain strictly Emulator/Demo ONLY unless a separate approved recovery process authorizes otherwise.
+
+## 11.4 K-12
+
+Preserve read-only Phase 0A audit.
+
+Classify the urgent post-0B vs Phase 10B timing decision as a Founder decision.
+
+Preserve `accountingMath.test.ts` as a required accounting validation reference, subject to source verification.
+
+## 11.5 K-13 and K-14
+
+Preserve existing iFrame/dialog investigation, including the approximately 18 affected files as a source-audit target, not a verified count.
+
+## 11.6 K-15
+
+Preserve approval-gated bounded report queries in Phase 10B.
+
+## 11.7 K-16 and K-17
+
+Preserve approval-gated Custom Claims, authVersion, and revokeRefreshTokens work.
+
+Do not silently implement any security changes.
+
+---
+
+# 12. COMPLETE TESTING FRAMEWORK
+
+Preserve the v4.2 testing framework.
+
+## 12.1 Test status
+
+Only these statuses are valid:
+
+- PASS
+- FAIL
+- BLOCKED
+- N/A
+
+BLOCKED must never be interpreted as PASS.
+
+N/A requires a documented reason and reviewer approval.
+
+## 12.2 Test categories
+
+Preserve all nine original test categories and all individual test identifiers from v4.2.
+
+At minimum, retain the following named test groups:
+
+- Tomb-Neg-1 through Tomb-Neg-5.
+- Seal-Crash-1.
+- Seal-Race-1 through Seal-Race-8.
+- R0-SM-1 through R0-SM-10.
+- R0-Inv-1 through R0-Inv-6.
+- Abort-SM-1 through Abort-SM-6.
+- Auth-Tx-1 through Auth-Tx-6.
+- Lock-Auth-1 through Lock-Auth-6.
+- List-Bill-1 through List-Bill-6.
+- Billing-Cal-1 through Billing-Cal-3.
+- ReadBudget-0A through ReadBudget-10B.
+- All existing Epoch/Offline tests.
+
+Do not invent missing test definitions.
+
+If the original v4.2 test description is not available for an identifier, retain its identifier and mark its detailed test case:
+
+`[UNRESOLVED — ORIGINAL TEST DEFINITION REQUIRED]`
+
+## 12.3 New Rules overlap test group
+
+Add Rules-Overlap-1 through Rules-Overlap-8:
+
+1. Direct client writes to pilot metadata must be denied.
+2. Tombstones must deny all unauthorized client mutations.
+3. Pilot and rollback locks must deny unauthorized client writes.
+4. Audit logs must deny client writes and deletes.
+5. Parent wildcard overlap must be tested.
+6. Recursive wildcard overlap must be tested.
+7. Cross-company access must be denied.
+8. Authorized read-only access must work only where explicitly specified.
+
+Test both positive and negative paths.
+
+## 12.4 Evidence requirements
+
+Every test must report:
+
+- Test ID.
+- Environment.
+- Preconditions.
+- Execution method.
+- Expected result.
+- Actual result.
+- PASS/FAIL/BLOCKED/N/A.
+- Evidence reference.
+- Reviewer.
+- Timestamp.
+- Related phase.
+- Defects and remediation.
+
+Never invent evidence.
+
+---
+
+# 13. FIRESTORE READ BUDGET, LISTENER BILLING AND BILLING RECONCILIATION
+
+Preserve the v4.2 read-budget targets.
+
+## 13.1 Environment separation
+
+Keep three evidence environments separate:
+
+1. Application telemetry.
+2. Firestore Emulator.
+3. Isolated Staging GCP Billing.
+
+These are not interchangeable.
+
+Emulator results do not prove actual GCP billing.
+
+Application telemetry does not prove actual billed reads.
+
+## 13.2 Billing-Cal-1
+
+Application telemetry vs Emulator.
+
+The <=5% variance is only an instrumentation accuracy target.
+
+It is NOT proof of GCP billing accuracy.
+
+## 13.3 Billing-Cal-2
+
+Firestore Rules get/exists diagnostics.
+
+Explicitly note that denied requests may still have billing implications.
+
+Verify the behavior using authoritative evidence.
+
+## 13.4 Billing-Cal-3
+
+Use isolated Staging Cloud Monitoring and BigQuery Billing Export reconciliation.
+
+If the required Staging billing evidence is unavailable, mark the test BLOCKED.
+
+Never substitute Emulator measurements for GCP billing evidence.
+
+## 13.5 Listener reconnect
+
+Record:
+
+- Persistence ON/OFF.
+- Actual disconnect duration.
+- Whether disconnect was below or above 30 minutes.
+- SDK listener state.
+- Reconnect timestamp.
+- Query changes.
+- Application telemetry.
+- Available Staging billing evidence.
+
+## 13.6 Preserve read-budget thresholds
+
+| Scenario | Existing target |
+|---|---|
+| Phase 1–3B Cold Design | <=4 non-pilot / <=5 active pilot |
+| Warm Navigation | 0 new reads |
+| Sandbox | 0 writes |
+| Public | <=1 read |
+| Operational Mean/P95 | <=1.10x |
+
+Do not silently change these thresholds.
+
+---
+
+# 14. COMPLETE PHASE 0A–10B IMPLEMENTATION ROADMAP
+
+## 14.1 Mandatory 11-field phase template
+
+EVERY phase and every sub-phase must use exactly these 11 fields:
+
+1. Objective
+2. Prerequisites & Approval
+3. Allowed Scope
+4. Forbidden Scope
+5. File Allowlist
+6. Data & Security Guard
+7. Tests & Evidence
+8. Acceptance Criteria
+9. Rollback & Recovery
+10. Checkpoint Report
+11. Next Gate
+
+No phase may omit a field.
+
+For unknown values, write:
+
+`UNRESOLVED — SOURCE AUDIT / FOUNDER DECISION REQUIRED`
+
+Do not use compressed descriptions as a substitute for the full 11-field template.
+
+## 14.2 Phase 0A — Read-only source audit
+
+Purpose: inspect and document the current application without modifying it.
+
+Mandatory scope:
+
+- P0-10 zero-write isolation.
+- P0-11 Firestore Rules overlap.
+- P0-12 billing evidence separation.
+- P0-13 tombstone/rollback/in-flight operation audit.
+- K-10 secret/API audit.
+- K-11 Rules and permission audit.
+- K-12 accounting math audit.
+- Hosting-01 read-only hosting inspection.
+- ReadBudget-0A baseline.
+- Baseline-UI captures.
+
+Baseline measurements:
+
+- Cold: N >= 5.
+- Warm: N >= 10.
+
+### Phase 0A zero-write contract
+
+Zero-write verification must cover more than the local workspace.
+
+Explicitly account for:
+
+- Workspace writes.
+- Repository writes.
+- Remote API writes.
+- Cloud service writes.
+- Database writes.
+- Tool-side cache writes.
+- Tool-side logs or telemetry writes.
+- Generated artifacts.
+- Temporary files.
+- Any external service that could mutate state.
+
+If an external tool or service has an unverified write path, the relevant verification must be marked:
+
+BLOCKED or INCONCLUSIVE — NOT PASS.
+
+Do not claim absolute zero-write if tool-side behavior cannot be verified.
+
+The Phase 0A report must state:
+
+- Files inspected.
+- Files inaccessible.
+- Commands executed: must be none under this document-only authorization.
+- External access attempted: must be none under this document-only authorization.
+- Verification limitations.
+- Zero-write evidence.
+- Uncertainties.
+- Reviewer signoff.
+- Evidence references.
+
+Phase 0A completion authorizes ZERO implementation.
+
+A separate Phase 0B approval is required.
+
+### Phase 0A — 11-field plan
+
+Write all eleven fields in full.
+
+No code changes, package installation, database writes, Rules changes, GitHub changes, or deployment.
+
+## 14.3 Phase 0B — audit resolution and implementation readiness
+
+Create a full 11-field plan.
+
+Must include:
+
+- Review of Phase 0A evidence.
+- Resolution of critical findings.
+- Founder decisions.
+- Hosting architecture findings.
+- Security findings.
+- Data isolation.
+- Staging readiness.
+- Implementation boundaries.
+
+Phase 0A approval does not automatically approve Phase 0B.
+
+## 14.4 Phase 1 — architecture foundation and hosting decision
+
+Create a complete 11-field plan.
+
+Hosting Decision #1 is a mandatory prerequisite and must contain the complete 12-item decision record from v4.2.
+
+Do not omit any of its original 12 items.
+
+If the original detailed item wording is unavailable, preserve the requirement as:
+
+`[UNRESOLVED — ORIGINAL HOSTING DECISION #1 RECORD REQUIRED]`
+
+### Phase 1 environment boundary
+
+Explicitly distinguish:
+
+**Local/Test Environment**
+- Isolated development.
+- Test data.
+- No Production credentials.
+
+**Staging Environment**
+- Separate project/configuration.
+- Separate approval.
+- Controlled test data.
+- Security and billing validation.
+
+**Production Environment**
+- Existing live ERP.
+- No access or modifications without separate explicit Founder approval.
+- No Production secrets or configuration may be introduced into development or Staging by default.
+
+Phase 1 development must not imply Production authorization.
+
+### Critical Firestore Security Rules correction
+
+The following assumption is forbidden:
+
+`allow write: if false` on a particular collection is sufficient by itself to guarantee server-only writes.
+
+Firestore Security Rules matching `allow` statements are OR-combined.
+
+A separate broader or overlapping rule can unintentionally grant access.
+
+Therefore:
+
+1. Identify every matching collection, parent, child, recursive wildcard, and overlapping rule.
+2. Audit every applicable `allow` statement.
+3. Verify that no unintended matching permission grants client write access.
+4. Run positive and negative tests in the Firestore Emulator.
+5. Document all matching paths and their effective permissions.
+6. Mark ambiguous or unverified paths BLOCKED.
+7. Do not implement server-only collection writes until the complete authorization path is verified.
+
+Also remember:
+
+Firebase Admin SDK and privileged server-side access bypass Firestore Security Rules.
+
+Therefore server-side authorization, IAM, service identity, least privilege, and audit controls must be independently specified and tested.
+
+### Phase 1 implementation boundary
+
+No Production configuration, Production secrets, or Production database operations may be introduced merely because the architecture foundation is approved.
+
+## 14.5 Phase 2 — Shared UI Primitives
+
+Create a full 11-field plan.
+
+Preserve all shared primitives and their original functional behavior.
+
+Do not rewrite accounting or business logic as part of UI primitive work.
+
+## 14.6 Phase 3A and Phase 3B — Root Sandbox Mount, Shells and Code Splitting
+
+Create separate complete 11-field plans for:
+
+- Phase 3A.
+- Phase 3B.
+
+Preserve root sandbox mount, shell architecture, and code-splitting requirements.
+
+Include performance, routing, error-boundary, and rollback tests as applicable.
+
+## 14.7 Mandatory Pre-Pilot Security & Emulator Gate
+
+This gate must be completed before any Pilot authorization.
+
+Replace the ambiguous phrase “zero overlapping wildcard permissions” with the precise requirement:
+
+- All matching Security Rules paths and wildcard statements must be identified.
+- No unintended permission-granting overlap may remain.
+- All critical authorization paths must pass positive and negative tests.
+- Parent and recursive wildcard behavior must be tested.
+- Cross-company access must be denied.
+- Server-only paths must be proven inaccessible to unauthorized clients.
+- Any ambiguous or unverified rule path must be BLOCKED.
+
+Do not demand that every overlap be removed if it is intentional and safe. Demand proof that no unintended effective permission is granted.
+
+## 14.8 Phase 4A and Phase 4B — Founder Panel
+
+Create separate complete 11-field plans for:
+
+- Phase 4A.
+- Phase 4B.
+
+Preserve the six-view FounderPanel modularization.
+
+Include the new App Identity & Branding and AI Change Studio only within explicitly authorized scope.
+
+Do not implement them during document revision.
+
+## 14.9 Phases 5–9 — complete sub-phase plans
+
+This section is mandatory.
+
+Do not summarize phases using short bullets.
+
+For every original Phase 5–9 sub-phase, create a separate complete 11-field plan.
+
+Preserve all original phase names, order, dependencies, and scope from v4.2.
+
+At minimum, provide individual 11-field entries for every sub-phase identified in the original plan, such as:
+
+- Phase 5A, 5B, and any additional original 5-series sub-phases.
+- Phase 6A, 6B, and any additional original 6-series sub-phases.
+- Phase 7A, 7B, and any additional original 7-series sub-phases.
+- Phase 8A, 8B, and any additional original 8-series sub-phases.
+- Phase 9A, 9B, and any additional original 9-series sub-phases.
+
+The list above is a formatting instruction, not permission to invent sub-phases.
+
+If the original v4.2 has a different number or naming convention, preserve the original exactly.
+
+If exact phase scope or file paths are unknown, use UNRESOLVED.
+
+## 14.10 Phase 10A and Phase 10B — security remediation
+
+Create separate complete 11-field plans.
+
+Preserve K-01 through K-17 assignments.
+
+Phase 10A must preserve the original K-01–K-09 remediation scope.
+
+Phase 10B must preserve the original approval-gated scope, including:
+
+- AI proxy and key rotation.
+- Bounded report queries.
+- Custom Claims.
+- authVersion.
+- revokeRefreshTokens.
+- Relevant security and audit controls.
+
+No Phase 10 work may begin without the required approvals.
+
+## 14.11 Additional implementation plans
+
+The revised roadmap must place the following new requirements in explicit phases and sub-phases:
+
+- Dynamic App Identity & Branding.
+- Founder AI Change Studio.
+- Secure GitHub integration.
+- Isolated AI development workspace.
+- Build/test runner.
+- Preview and Staging workflow.
+- AI provider integration.
+- Audit and approval workflow.
+- Deployment approval.
+- Rollback and recovery.
+
+Do not invent source paths or claim these features already exist.
+
+Assign phases only after considering dependencies and security impact.
+
+## 14.12 Strict scope and change control
+
+Preserve Section 14.4 scope/change-control rules.
+
+Any request outside the approved phase scope requires:
+
+1. Change request.
+2. Impact analysis.
+3. Risk classification.
+4. Updated phase plan.
+5. Founder approval.
+
+No scope expansion by AI assumption.
+
+---
+
+# 15. QUOTA AND CHECKPOINT EXECUTION PROTOCOL
+
+Preserve the original quota and checkpoint execution protocol.
+
+Include:
+
+- Cold N >= 5.
+- Warm N >= 10.
+- Mean.
+- P95.
+- All nine original strict checks.
+- Billing-Cal evidence distinction.
+- 11-field phase reports.
+- Bangla reporting.
+- Separate approval gates.
+
+Every checkpoint report must distinguish:
+
+- Verified facts.
+- Observed evidence.
+- Assumptions.
+- Inferences.
+- Unresolved questions.
+- Blocked items.
+
+Never report an unexecuted test as PASS.
+
+---
+
+# 16. FOUNDER DECISION REQUIRED REGISTRY
+
+Preserve the original Founder Decision Registry.
+
+At minimum, retain:
+
+## Decision 1 — Hosting Architecture
+
+The complete 12-item Hosting Architecture Decision #1 record is mandatory.
+
+## Decision 2 — K-12 timing
+
+Founder must decide the urgent post-0B vs Phase 10B timing.
+
+## Decision 3 — Phase 0B checkpoint commit and maintenance windows
+
+Preserve the original approval requirements.
+
+## Decision 4 — Archival policy
+
+Permanent tombstones must be excluded from ordinary archival deletion.
+
+Optional GCP audit/IAM scope remains a separate Founder decision.
+
+## Decision 5 — Isolated Staging Firebase project
+
+Preserve the requirement for a separate isolated Staging Firebase project.
+
+## Additional Founder decisions
+
+Add any new decisions required for:
+
+- AI provider selection.
+- AI provider cost limits.
+- GitHub permissions.
+- Build/test infrastructure.
+- AI source-code access boundaries.
+- AI Change Studio rollout.
+- Dynamic branding defaults.
+- Branding permissions.
+- Production deployment policy.
+
+Do not assume these decisions have already been made.
+
+The Founder has approved the architectural direction that AI may modify source code only with explicit Founder approval. The implementation details and infrastructure choices remain subject to review.
+
+---
+
+# 17. ASSUMPTIONS AND VERIFICATION BOUNDARIES
+
+Preserve ASM-1 through ASM-6 from v4.2.
+
+Do not delete or silently rewrite the original assumptions.
+
+Preserve these important boundaries:
+
+- Admin SDK bypasses Firestore Security Rules.
+- TypeScript, ESLint, and repository controls alone are insufficient security guarantees.
+- GCP controls and disaster recovery are required.
+- Hosting limitations must be verified.
+- Emulator tests do not prove actual production billing.
+- Application telemetry does not prove GCP billing.
+- Source paths must be verified.
+- Existing Production architecture must not be assumed.
+
+Add explicit AI Change Studio assumptions:
+
+- AI-generated code may be incorrect.
+- AI-generated tests may be incomplete.
+- AI confidence is not proof of correctness.
+- AI must not be its own approver.
+- AI must not receive unrestricted credentials.
+- AI provider outages must not disable ERP operations.
+- Source-code access must be limited.
+- Human review remains mandatory.
+- Production deployment is a separate Founder decision.
+
+---
+
+# 18. CROSS-SECTION CONSISTENCY MATRIX
+
+Preserve the complete v4.2 consistency matrix:
+
+- P0-1 through P0-10.
+- P0-11.
+- P0-12.
+- P0-13.
+- P1-01.
+- P1-02.
+
+Add consistency checks for:
+
+- Dynamic App Identity.
+- Application vs Company identity.
+- Founder-only branding control.
+- AI Change Studio.
+- Proposal-first workflow.
+- Approval version binding.
+- Isolated development.
+- Source-code access.
+- Secret protection.
+- Staging approval.
+- Production approval.
+- AI audit trail.
+- AI failure fallback.
+- Accounting/FIFO protection.
+
+For every requirement, identify:
+
+- Source section.
+- Dependent sections.
+- Required tests.
+- Phase.
+- Approval gate.
+- Evidence.
+
+Flag every contradiction.
+
+Do not silently resolve conflicts by weakening safety requirements.
+
+---
+
+# 19. OFFICIAL DOCUMENTATION REFERENCES
+
+Preserve all official documentation references from v4.2.
+
+Repair malformed Markdown links.
+
+Verify each URL's formatting and ensure that the link text matches its destination.
+
+The existing reference categories include:
+
+- Firestore Security Rules.
+- Firestore pricing and listener billing.
+- Firestore transactions.
+- Firebase Authentication session management.
+- Vercel execution and hosting limitations.
+- Cloud Run execution limits.
+- Cloud Functions execution limits.
+
+Add relevant official documentation references for AI provider security, GitHub permissions, secure deployment, and audit architecture only when their exact official URLs are known.
+
+Do not invent URLs.
+
+Do not imply that a document link proves the current application implementation is secure.
+
+---
+
+# 20. FINAL PRODUCTION SAFETY CHECKLIST AND v4.2.1 DECLARATION
+
+Produce a final checklist that includes:
+
+## 20.1 Document revision checklist
+
+- All 20 original sections preserved.
+- All original requirements carried forward.
+- All original phase names and order preserved.
+- All original tests retained.
+- All original K-01–K-17 items retained.
+- All original Founder decisions retained.
+- All 11-field templates complete.
+- All Phase 5–9 sub-phases individually documented.
+- All unresolved details explicitly identified.
+- No invented source paths.
+- No false verification claims.
+- No malformed documentation links.
+
+## 20.2 v4.2 review corrections checklist
+
+Confirm that v4.2.1 addresses:
+
+1. P0: Firestore Rules overlapping `allow` statements and server-only write ambiguity.
+2. P1: Every Phase 5–9 sub-phase uses the exact 11-field template.
+3. P1: Phase 0A zero-write verification includes external tool/cache/log write paths.
+4. P1: Pre-Pilot wildcard overlap criteria are precise and testable.
+5. P1: Phase 1 separates local/test, Staging, and Production.
+6. P2: Official documentation links are corrected.
+
+Also preserve these additional review notes:
+
+- The 100% inventory is an intended preservation inventory, not verified source inventory.
+- All nine test categories and evidence formats must remain centralized.
+- Billing-Cal-3 is BLOCKED when Staging GCP Billing Export evidence is unavailable.
+- Phase 0A must include evidence locations and reviewer signoff.
+- The Zero-Mutation statement is a document declaration, not independent proof.
+
+## 20.3 New requirements checklist
+
+Confirm inclusion of:
+
+- Configurable application name.
+- Madina Enterprise ERP.
+- Sapient ERP.
+- TallyFlow ERP.
+- Arbitrary custom application name.
+- Centralized branding configuration.
+- Founder-only branding changes.
+- Logo and favicon.
+- Login, Dashboard, Sidebar, browser title, PDF/Print branding.
+- Application identity separated from Company legal identity.
+- No business-data changes from rebranding.
+- Founder AI Change Studio.
+- Bangla/English natural-language requests.
+- Structured AI proposals.
+- Explicit approval before source-code changes.
+- Isolated development.
+- GitHub integration.
+- Build/test environment.
+- Diff review.
+- Staging approval.
+- Separate Production approval.
+- Secret protection.
+- AI provider cost controls.
+- Audit trail.
+- Rollback and recovery.
+- Existing Proposal-First AI Fix preserved.
+- ERP remains operational if AI services fail.
+
+## 20.4 Approval status
+
+The final v4.2.1 verdict must be:
+
+**READY FOR PHASE 0A APPROVAL — SUBJECT TO FOUNDER ACCEPTANCE OF THE REVISED DOCUMENT.**
+
+It must explicitly state:
+
+- NOT approved for Phase 0B.
+- NOT approved for Phase 1 implementation.
+- NOT approved for source-code modification.
+- NOT approved for database mutation.
+- NOT approved for Security Rules modification.
+- NOT approved for GitHub changes.
+- NOT approved for Vercel deployment.
+- NOT approved for Production access.
+- NOT approved for Live Pilot.
+- NOT approved for Global Publish.
+
+---
+
+# 21. REQUIRED OUTPUT FORMAT
+
+Your final response must contain the complete revised document:
+
+**Madina Enterprise ERP Transformation Plan v4.2.1 — Final Hardened Specification**
+
+The output must:
+
+1. Include all 21 sections above.
+2. Preserve every v4.2 requirement.
+3. Integrate every v4.2.1 correction.
+4. Integrate Dynamic App Identity & Branding.
+5. Integrate Founder AI Change Studio.
+6. Preserve all phase approval boundaries.
+7. Use the exact 11-field template for every phase and sub-phase.
+8. Keep unresolved source details visibly unresolved.
+9. Include a clear changelog from v4.2 to v4.2.1.
+10. Include a final Founder Decision Registry.
+11. Include the final safety declaration.
+
+Do not replace the full document with a summary.
+
+Do not omit long sections because of output length.
+
+If the response cannot fit in one message, divide it into clearly numbered consecutive parts and continue until the complete document is delivered. Do not silently truncate.
+
+# 22. FINAL STOP INSTRUCTION
+
+After producing the complete v4.2.1 specification:
+
+STOP.
+
+Do not execute commands.
+
+Do not inspect or modify the repository.
+
+Do not access Firebase, Firestore, GitHub, Vercel, or Production.
+
+Do not implement any feature.
+
+Do not start Phase 0A.
+
+Wait for the Founder to review and explicitly accept the revised document.
+
+Even after document acceptance, wait for a separate explicit authorization for Phase 0A.
+
+**The existence of this prompt is not implementation authorization.**
+
+---
+
+# CHANGELOG — v4.2 TO v4.2.1
+
+The revised document must include a clear changelog covering:
+
+### Safety and architecture corrections
+- Firestore Rules overlap clarification.
+- External write-path verification in Phase 0A.
+- More precise wildcard overlap acceptance criteria.
+- Explicit Local/Test, Staging, and Production boundaries.
+- Complete 11-field plans for every Phase 5–9 sub-phase.
+- Corrected official documentation links.
+
+### New product capabilities
+- Dynamic App Identity & Branding.
+- Application identity separated from Company legal identity.
+- Founder AI Change Studio.
+- Proposal-first source-code modification.
+- Explicit Founder approval before code changes.
+- Isolated development and Staging.
+- Separate Production deployment approval.
+- AI security, cost controls, audit, testing, and rollback.
+
+### Preserved requirements
+- Existing accounting and FIFO protection.
+- Existing component inventory.
+- Existing design modes.
+- Existing K-01–K-17 inventory.
+- Existing test identifiers.
+- Existing read-budget thresholds.
+- Existing approval gates.
+- Existing Production safety restrictions.
+
+**FINAL STATUS: DOCUMENT REVISION ONLY. WAIT FOR FOUNDER ACCEPTANCE AND SEPARATE PHASE 0A AUTHORIZATION.**

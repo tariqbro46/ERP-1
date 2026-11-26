@@ -1,5 +1,5 @@
 import { db, auth } from '../firebase';
-import { ensureDate, formatToYMD, parseEntryDate, getMovementType, compareLedgerVouchers, getVoucherTypeSortPriority, compareInventorySequence } from '../lib/utils';
+import { ensureDate, formatToYMD, parseEntryDate, getMovementType, compareLedgerVouchers, getVoucherTypeSortPriority, compareInventorySequence, calculateBstQuotaSlot } from '../lib/utils';
 import { errorService } from './errorService';
 import { LATEST_VERSION } from '../data/releaseNotes';
 import { 
@@ -8302,52 +8302,43 @@ export const erpService: any = {
   ): Promise<void> {
     if (!companyId) return;
     try {
-      const companyRef = doc(db, 'companies', companyId);
       const now = Date.now();
       const numLimit = Number(newQuotaLimit);
 
-      const updateData: any = {
-        quotaLimit: numLimit,
-        quotaResetRequested: false,
-        quotaResetRequestedAt: null,
-        quotaApprovedAt: now,
-        quotaApprovedBy: founderEmail,
-      };
-
       if (resetUsage) {
-        updateData.quotaUsed = 0;
-        updateData.quotaReads = 0;
-        updateData.quotaWrites = 0;
-        updateData.quotaDeletes = 0;
-        updateData.quotaHourly = {};
-        updateData.quotaLastReset = now;
-        updateData.quotaLastResetDateStr = new Date(now).toISOString();
-      }
-
-      await updateDoc(companyRef, updateData);
-
-      // Clean up localStorage flags for this company
-      localStorage.removeItem('company_quota_exceeded');
-      localStorage.removeItem(`unsaved_quota_${companyId}`);
-
-      try {
-        const cached = localStorage.getItem('cached_auth_company');
-        if (cached) {
-          const comp = JSON.parse(cached);
-          if (comp.id === companyId) {
-            comp.quotaLimit = numLimit;
-            comp.quotaResetRequested = false;
-            if (resetUsage) {
-              comp.quotaUsed = 0;
-              comp.quotaReads = 0;
-              comp.quotaWrites = 0;
-              comp.quotaDeletes = 0;
-              comp.quotaHourly = {};
-            }
-            localStorage.setItem('cached_auth_company', JSON.stringify(comp));
-          }
+        const extraFields: any = {
+          quotaLimit: numLimit,
+          quotaResetRequested: false,
+          quotaResetRequestedAt: null,
+          quotaApprovedAt: now,
+          quotaApprovedBy: founderEmail,
+        };
+        const resetSuccess = await this.executeSafeQuotaReset(companyId, now, extraFields);
+        if (!resetSuccess) {
+          console.warn(`[QUOTA] executeSafeQuotaReset returned false during approveQuotaIncrease for ${companyId}`);
         }
-      } catch (e) {}
+      } else {
+        const companyRef = doc(db, 'companies', companyId);
+        await updateDoc(companyRef, {
+          quotaLimit: numLimit,
+          quotaResetRequested: false,
+          quotaResetRequestedAt: null,
+          quotaApprovedAt: now,
+          quotaApprovedBy: founderEmail,
+        });
+        localStorage.removeItem('company_quota_exceeded');
+        try {
+          const cached = localStorage.getItem('cached_auth_company');
+          if (cached) {
+            const comp = JSON.parse(cached);
+            if (comp.id === companyId) {
+              comp.quotaLimit = numLimit;
+              comp.quotaResetRequested = false;
+              localStorage.setItem('cached_auth_company', JSON.stringify(comp));
+            }
+          }
+        } catch (e) {}
+      }
 
       // Mark the quota reset request as approved
       if (requestId) {
@@ -8366,51 +8357,11 @@ export const erpService: any = {
       }
 
       // Also mark all other pending requests for this company as approved
-      try {
-        const reqQuery = query(
-          collection(db, 'quota_reset_requests'),
-          where('companyId', '==', companyId),
-          where('status', '==', 'pending')
-        );
-        const reqSnap = await getDocs(reqQuery);
-        const updatePromises = reqSnap.docs.map(d => updateDoc(d.ref, {
-          status: 'approved',
-          approvedAt: now,
-          approvedBy: founderEmail,
-          newLimit: numLimit,
-          usageReset: resetUsage
-        }));
-        await Promise.all(updatePromises);
-      } catch (err) {
-        console.warn('Could not batch complete requests:', err);
-      }
-
-      // If resetting usage, reset user documents
-      if (resetUsage) {
-        try {
-          const usersQuery = query(collection(db, 'users'), where('companyId', '==', companyId));
-          const usersSnap = await getDocs(usersQuery);
-          if (!usersSnap.empty) {
-            const b = firestoreWriteBatch(db);
-            usersSnap.docs.forEach(uDoc => {
-              b.update(uDoc.ref, { quotaUsed: 0 });
-            });
-            await b.commit();
-          }
-          const cachedProf = localStorage.getItem('cached_auth_profile');
-          if (cachedProf) {
-            const p = JSON.parse(cachedProf);
-            p.quotaUsed = 0;
-            localStorage.setItem('cached_auth_profile', JSON.stringify(p));
-          }
-        } catch (uErr) {
-          console.warn('Could not reset users quotaUsed:', uErr);
-        }
-      }
+      await this._approvePendingResetRequests(companyId, now, numLimit, resetUsage, founderEmail);
 
       // Add positive notification for company
       try {
-        await addDoc(collection(db, 'notifications'), {
+        await this._addNotification({
           title: `Daily Quota Limit Updated / দৈনিক কোটা বৃদ্ধি (${numLimit === -1 ? 'Unlimited' : numLimit.toLocaleString() + ' Ops'})`,
           message: `Founder has increased your company's daily database quota to ${numLimit === -1 ? 'Unlimited' : numLimit.toLocaleString() + ' Ops'}. Data operations are now fully resumed.`,
           type: 'success',
@@ -8421,11 +8372,23 @@ export const erpService: any = {
         });
       } catch (e) {}
 
-      window.dispatchEvent(new CustomEvent('company_quota_reset_success'));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('company_quota_reset_success'));
+      }
     } catch (err) {
       console.error('Failed to approve quota increase:', err);
       throw err;
     }
+  },
+
+  async updateCompanyQuotaAndReset(
+    companyId: string,
+    newQuotaLimit: number,
+    requestId?: string,
+    resetUsage: boolean = true,
+    founderEmail: string = 'sapientman46@gmail.com'
+  ): Promise<void> {
+    return this.approveQuotaIncrease(requestId || '', companyId, newQuotaLimit, resetUsage, founderEmail);
   },
 
   async requestQuotaReset(companyId: string, companyName: string, requestedBy: { name?: string; email?: string; userId?: string; quotaUsed?: number; quotaLimit?: number }): Promise<string> {
@@ -8563,39 +8526,181 @@ export const erpService: any = {
     }
   },
 
-  async resetCompanyQuota(companyId: string, resetTimestamp: number) {
-    if (!companyId || companyId === "placeholder" || companyId === "test") return;
+  async _approvePendingResetRequests(
+    companyId: string,
+    now: number,
+    numLimit: number,
+    resetUsage: boolean,
+    founderEmail: string
+  ) {
+    try {
+      const reqQuery = query(
+        collection(db, 'quota_reset_requests'),
+        where('companyId', '==', companyId),
+        where('status', '==', 'pending')
+      );
+      const reqSnap = await getDocs(reqQuery);
+      const updatePromises = reqSnap.docs.map(d => updateDoc(d.ref, {
+        status: 'approved',
+        approvedAt: now,
+        approvedBy: founderEmail,
+        newLimit: numLimit,
+        usageReset: resetUsage
+      }));
+      await Promise.all(updatePromises);
+    } catch (err) {
+      console.warn('Could not batch complete requests:', err);
+    }
+  },
+
+  async _addNotification(data: any) {
+    return addDoc(collection(db, 'notifications'), data);
+  },
+
+  async _performDocUpdate(docRef: any, data: any) {
+    return updateDoc(docRef, data);
+  },
+
+  async _performUsersReset(companyId: string) {
+    try {
+      const usersQuery = query(collection(db, 'users'), where('companyId', '==', companyId));
+      const usersSnap = await getDocs(usersQuery);
+      if (!usersSnap.empty) {
+        const b = firestoreWriteBatch(db);
+        usersSnap.docs.forEach(uDoc => {
+          b.update(uDoc.ref, { quotaUsed: 0 });
+        });
+        await b.commit();
+      }
+      const cachedProf = localStorage.getItem('cached_auth_profile');
+      if (cachedProf) {
+        const p = JSON.parse(cachedProf);
+        p.quotaUsed = 0;
+        localStorage.setItem('cached_auth_profile', JSON.stringify(p));
+      }
+    } catch (uErr) {
+      console.warn("[QUOTA] Error resetting users in executeSafeQuotaReset:", uErr);
+    }
+  },
+
+  async executeSafeQuotaReset(
+    companyId: string,
+    resetTimestamp: number,
+    extraCompanyFields?: Record<string, any>
+  ): Promise<boolean> {
+    if (!companyId || companyId === "placeholder" || companyId === "test") return false;
+
+    // 1. Wait for in-flight flush for this company to complete
+    if (this._flushingCompanies && this._flushingCompanies[companyId]) {
+      try {
+        await this._flushingCompanies[companyId];
+      } catch (e) {
+        console.warn(`[QUOTA] In-flight flush await warning before reset on ${companyId}:`, e);
+      }
+    }
+
+    // 2. Pre-reset flush drain: ensure any pending unpersisted buffer is committed before reset
+    let drainAttempts = 0;
+    while (this._hasPendingQuotaBuffer(companyId) && drainAttempts < 10) {
+      drainAttempts++;
+      const drained = await this._executeCompanyFlush(companyId);
+      if (!drained) {
+        console.warn(`[QUOTA] Pre-reset flush failed for company ${companyId}. Aborting reset to prevent data loss.`);
+        return false;
+      }
+    }
+
+    if (this._hasPendingQuotaBuffer(companyId)) {
+      console.warn(`[QUOTA] Buffer could not be completely drained for company ${companyId}. Aborting reset.`);
+      return false;
+    }
+
+    // 3. Lock company during reset write
+    this._resettingCompanies[companyId] = true;
+
     try {
       const companyRef = doc(db, "companies", companyId);
-      await updateDoc(companyRef, {
+      const resetPayload: Record<string, any> = {
         quotaUsed: 0,
         quotaReads: 0,
         quotaWrites: 0,
         quotaDeletes: 0,
+        quotaHourly: {},
         quotaLastReset: resetTimestamp,
         quotaLastResetDateStr: new Date(resetTimestamp).toISOString(),
-      });
-      // Also reset team members' quotaUsed for this company
+        ...(extraCompanyFields || {})
+      };
+
+      await this._performDocUpdate(companyRef, resetPayload);
+
+      // Clean up localStorage flags without wiping telemetry tracked during updateDoc
       try {
-        const usersQuery = query(collection(db, 'users'), where('companyId', '==', companyId));
-        const usersSnap = await getDocs(usersQuery);
-        if (!usersSnap.empty) {
-          const b = firestoreWriteBatch(db);
-          usersSnap.docs.forEach(uDoc => {
-            b.update(uDoc.ref, { quotaUsed: 0 });
-          });
-          await b.commit();
+        localStorage.removeItem('company_quota_exceeded');
+        const storedKey = `unsaved_quota_${companyId}`;
+        const existing = localStorage.getItem(storedKey);
+        if (existing) {
+          try {
+            const parsed = JSON.parse(existing);
+            if (!parsed.reads && !parsed.writes && !parsed.deletes) {
+              localStorage.removeItem(storedKey);
+            }
+          } catch (e) {
+            localStorage.removeItem(storedKey);
+          }
         }
-        const cachedProf = localStorage.getItem('cached_auth_profile');
-        if (cachedProf) {
-          const p = JSON.parse(cachedProf);
-          p.quotaUsed = 0;
-          localStorage.setItem('cached_auth_profile', JSON.stringify(p));
+      } catch (e) {}
+
+      // Keep cached_auth_company in sync with new cycle (retaining any ops arrived during reset write)
+      try {
+        const cached = localStorage.getItem('cached_auth_company');
+        if (cached) {
+          const comp = JSON.parse(cached);
+          if (comp.id === companyId || comp.companyId === companyId) {
+            const newBuf = this._quotaBuffer[companyId];
+            comp.quotaUsed = newBuf ? (newBuf.reads + newBuf.writes + newBuf.deletes) : 0;
+            comp.quotaReads = newBuf ? newBuf.reads : 0;
+            comp.quotaWrites = newBuf ? newBuf.writes : 0;
+            comp.quotaDeletes = newBuf ? newBuf.deletes : 0;
+            comp.quotaHourly = newBuf?.hourly ? JSON.parse(JSON.stringify(newBuf.hourly)) : {};
+            comp.quotaLastReset = resetTimestamp;
+            comp.quotaLastResetDateStr = new Date(resetTimestamp).toISOString();
+            if (extraCompanyFields && extraCompanyFields.quotaLimit !== undefined) {
+              comp.quotaLimit = extraCompanyFields.quotaLimit;
+            }
+            if (extraCompanyFields && extraCompanyFields.quotaResetRequested !== undefined) {
+              comp.quotaResetRequested = extraCompanyFields.quotaResetRequested;
+            }
+            localStorage.setItem('cached_auth_company', JSON.stringify(comp));
+          }
         }
-      } catch (uErr) {
-        console.warn("[QUOTA] Error resetting users in resetCompanyQuota:", uErr);
+      } catch (e) {}
+
+      // Also reset team members' quotaUsed for this company
+      await this._performUsersReset(companyId);
+
+      console.log(`[QUOTA] Successfully executed safe quota reset in Firestore for company ${companyId}.`);
+      return true;
+    } catch (err) {
+      console.warn(`[QUOTA] Error in executeSafeQuotaReset for company ${companyId}:`, err);
+      return false;
+    } finally {
+      this._resettingCompanies[companyId] = false;
+      // If new telemetry arrived in buffer during reset write, schedule flush for new cycle
+      if (this._hasPendingQuotaBuffer(companyId)) {
+        setTimeout(() => {
+          this.flushCompanyQuota(companyId).catch(e => console.warn('[QUOTA] Chained post-reset flush error:', e));
+        }, 500);
       }
-      console.log(`[QUOTA] Successfully reset daily quota in Firestore for company ${companyId}.`);
+    }
+  },
+
+  async resetCompanyQuota(companyId: string, resetTimestamp: number) {
+    if (!companyId || companyId === "placeholder" || companyId === "test") return;
+    try {
+      const ok = await this.executeSafeQuotaReset(companyId, resetTimestamp);
+      if (!ok) {
+        console.warn(`[QUOTA] executeSafeQuotaReset returned false in resetCompanyQuota for ${companyId}`);
+      }
     } catch (err) {
       console.warn("[QUOTA] Error in resetCompanyQuota:", err);
     }
@@ -8642,23 +8747,8 @@ export const erpService: any = {
     }
   },
 
-  getBstQuotaSlot(): { slotKey: string; slotIdx: number; label: string } {
-    try {
-      const now = new Date();
-      const bstDate = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
-      const bstHour = bstDate.getHours();
-      // Quota reset happens at 13:00 (1 PM BST)
-      const hoursSinceReset = bstHour >= 13 ? (bstHour - 13) : (bstHour + 11);
-      const slotIdx = Math.min(11, Math.max(0, Math.floor(hoursSinceReset / 2)));
-      const slotLabels = ['1 PM', '3 PM', '5 PM', '7 PM', '9 PM', '11 PM', '1 AM', '3 AM', '5 AM', '7 AM', '9 AM', '11 AM'];
-      return {
-        slotKey: `slot_${slotIdx}`,
-        slotIdx,
-        label: slotLabels[slotIdx]
-      };
-    } catch (e) {
-      return { slotKey: 'slot_0', slotIdx: 0, label: '1 PM' };
-    }
+  getBstQuotaSlot(dateInput?: Date | number | string): { slotKey: string; slotIdx: number; label: string; bstHour: number } {
+    return calculateBstQuotaSlot(dateInput);
   },
 
   _quotaBuffer: {} as Record<string, { 
@@ -8668,6 +8758,14 @@ export const erpService: any = {
     hourly?: Record<string, { reads: number; writes: number; deletes: number }>;
   }>,
   _quotaTimer: null as any,
+  _flushingCompanies: {} as Record<string, Promise<boolean> | null>,
+  _pendingFlushCompanies: {} as Record<string, boolean>,
+  _resettingCompanies: {} as Record<string, boolean>,
+
+  _hasPendingQuotaBuffer(companyId: string): boolean {
+    const buf = this._quotaBuffer && this._quotaBuffer[companyId];
+    return !!(buf && (buf.reads > 0 || buf.writes > 0 || buf.deletes > 0));
+  },
 
   trackQuota: function(
     companyId: string | undefined,
@@ -8785,174 +8883,294 @@ export const erpService: any = {
     }
   },
 
-  async flushQuotaBuffer() {
-    this._quotaTimer = null;
+  async _executeCompanyFlush(companyId: string): Promise<boolean> {
+    if (!companyId || companyId === 'placeholder' || companyId === 'test') return false;
+    if (this._resettingCompanies && this._resettingCompanies[companyId]) return false;
+
+    const buffer = this._quotaBuffer[companyId];
+    if (!buffer || (buffer.reads === 0 && buffer.writes === 0 && buffer.deletes === 0)) return true;
+
+    const MAX_FLUSH_READS = 1000;
+    const MAX_FLUSH_WRITES = 500;
+    const MAX_FLUSH_DELETES = 500;
+    const MAX_FLUSH_USED = 2000;
+
+    // 1. Calculate clamped chunk for this flush
+    let readsToSave = Math.min(Math.max(0, buffer.reads), MAX_FLUSH_READS);
+    let writesToSave = Math.min(Math.max(0, buffer.writes), MAX_FLUSH_WRITES);
+    let deletesToSave = Math.min(Math.max(0, buffer.deletes), MAX_FLUSH_DELETES);
+
+    let addedOps = readsToSave + writesToSave + deletesToSave;
+    if (addedOps > MAX_FLUSH_USED) {
+      const excess = addedOps - MAX_FLUSH_USED;
+      if (readsToSave >= excess) {
+        readsToSave -= excess;
+      } else {
+        const rem = excess - readsToSave;
+        readsToSave = 0;
+        if (writesToSave >= rem) {
+          writesToSave -= rem;
+        } else {
+          deletesToSave = Math.max(0, deletesToSave - (rem - writesToSave));
+          writesToSave = 0;
+        }
+      }
+      addedOps = readsToSave + writesToSave + deletesToSave;
+    }
+
+    if (addedOps === 0) return true;
+
+    // 2. Extract matching hourly allocation for this chunk
+    const hourlyToSave: Record<string, { reads: number; writes: number; deletes: number }> = {};
+    let remainingHourlyReads = readsToSave;
+    let remainingHourlyWrites = writesToSave;
+    let remainingHourlyDeletes = deletesToSave;
+
+    if (buffer.hourly) {
+      for (const slotK of Object.keys(buffer.hourly)) {
+        const s = buffer.hourly[slotK];
+        if (!s) continue;
+        const rChunk = Math.min(Math.max(0, s.reads || 0), remainingHourlyReads);
+        const wChunk = Math.min(Math.max(0, s.writes || 0), remainingHourlyWrites);
+        const dChunk = Math.min(Math.max(0, s.deletes || 0), remainingHourlyDeletes);
+
+        if (rChunk > 0 || wChunk > 0 || dChunk > 0) {
+          hourlyToSave[slotK] = { reads: rChunk, writes: wChunk, deletes: dChunk };
+          remainingHourlyReads -= rChunk;
+          remainingHourlyWrites -= wChunk;
+          remainingHourlyDeletes -= dChunk;
+
+          // Deduct allocated chunk from buffer.hourly
+          s.reads = Math.max(0, (s.reads || 0) - rChunk);
+          s.writes = Math.max(0, (s.writes || 0) - wChunk);
+          s.deletes = Math.max(0, (s.deletes || 0) - dChunk);
+        }
+      }
+    }
+
+    // Deduct this chunk from in-memory buffer
+    buffer.reads = Math.max(0, buffer.reads - readsToSave);
+    buffer.writes = Math.max(0, buffer.writes - writesToSave);
+    buffer.deletes = Math.max(0, buffer.deletes - deletesToSave);
+
+    const hasRemainingOversized = (buffer.reads > 0 || buffer.writes > 0 || buffer.deletes > 0);
+
+    try {
+      if (this._resettingCompanies && this._resettingCompanies[companyId]) {
+        throw new Error(`[QUOTA] Company ${companyId} started reset; postponing flush chunk.`);
+      }
+
+      const companyRef = doc(db, "companies", companyId);
+
+      let limitVal = 10000;
+      let isUnlimited = false;
+      let currentUsed = 0;
+      try {
+        const cachedComp = localStorage.getItem('cached_auth_company');
+        if (cachedComp) {
+          const parsed = JSON.parse(cachedComp);
+          if (parsed.id === companyId || parsed.companyId === companyId) {
+            limitVal = parsed.quotaLimit !== undefined ? Number(parsed.quotaLimit) : 10000;
+            isUnlimited = limitVal === -1;
+            currentUsed = parsed.quotaUsed || 0;
+          }
+        }
+      } catch (e) {}
+
+      if (!isUnlimited && currentUsed >= limitVal) {
+        const storedKey = `unsaved_quota_${companyId}`;
+        localStorage.removeItem(storedKey);
+        return true;
+      }
+
+      const updatePayload: Record<string, any> = {
+        quotaReads: increment(readsToSave),
+        quotaWrites: increment(writesToSave),
+        quotaDeletes: increment(deletesToSave),
+        quotaUsed: increment(addedOps),
+      };
+
+      Object.keys(hourlyToSave).forEach(slotK => {
+        const s = hourlyToSave[slotK];
+        if (s.reads > 0) updatePayload[`quotaHourly.${slotK}.reads`] = increment(s.reads);
+        if (s.writes > 0) updatePayload[`quotaHourly.${slotK}.writes`] = increment(s.writes);
+        if (s.deletes > 0) updatePayload[`quotaHourly.${slotK}.deletes`] = increment(s.deletes);
+      });
+
+      await this._performDocUpdate(companyRef, updatePayload);
+
+      // Keep local cache in sync with updated quota metrics
+      try {
+        const cachedComp = localStorage.getItem('cached_auth_company');
+        if (cachedComp) {
+          const parsed = JSON.parse(cachedComp);
+          if (parsed.id === companyId || parsed.companyId === companyId) {
+            parsed.quotaUsed = (parsed.quotaUsed || 0) + addedOps;
+            parsed.quotaReads = (parsed.quotaReads || 0) + readsToSave;
+            parsed.quotaWrites = (parsed.quotaWrites || 0) + writesToSave;
+            parsed.quotaDeletes = (parsed.quotaDeletes || 0) + deletesToSave;
+            localStorage.setItem('cached_auth_company', JSON.stringify(parsed));
+          }
+        }
+      } catch (e) {}
+
+      // Keep active user's Firestore usage in sync reliably
+      try {
+        let targetUid = '';
+        let targetEmail = '';
+
+        if (auth.currentUser) {
+          targetUid = auth.currentUser.uid;
+          targetEmail = auth.currentUser.email?.toLowerCase().trim() || '';
+        }
+
+        const cachedProf = localStorage.getItem('cached_auth_profile');
+        if (cachedProf) {
+          try {
+            const p = JSON.parse(cachedProf);
+            if (!targetUid) targetUid = p.uid || p.id;
+            if (!targetEmail && p.email) targetEmail = p.email.toLowerCase().trim();
+          } catch (e) {}
+        }
+
+        if (addedOps > 0) {
+          if (targetUid) {
+            await setDoc(doc(db, 'users', targetUid), {
+              quotaUsed: increment(addedOps)
+            }, { merge: true });
+          }
+
+          if (targetEmail) {
+            try {
+              const emailQuery = query(collection(db, 'users'), where('email', '==', targetEmail), limit(5));
+              const emailSnap = await getDocs(emailQuery);
+              for (const uDoc of emailSnap.docs) {
+                if (uDoc.id !== targetUid) {
+                  await setDoc(uDoc.ref, {
+                    quotaUsed: increment(addedOps)
+                  }, { merge: true });
+                }
+              }
+            } catch (emErr) {
+              console.warn('[QUOTA] Email sync fallback note:', emErr);
+            }
+          }
+
+          if (this._usersCache && this._usersCache[companyId]?.data) {
+            this._usersCache[companyId].data.forEach(u => {
+              const uEmail = (u.email || '').toLowerCase().trim();
+              if ((targetUid && u.uid === targetUid) || (targetEmail && uEmail === targetEmail)) {
+                u.quotaUsed = (u.quotaUsed || 0) + addedOps;
+              }
+            });
+          }
+        }
+      } catch (uErr) {
+        console.warn('[QUOTA] Failed to update user quotaUsed:', uErr);
+      }
+
+      // Success! Clean up successfully persisted chunk from localStorage backup
+      const storedKey = `unsaved_quota_${companyId}`;
+      const existing = localStorage.getItem(storedKey);
+      if (existing) {
+        try {
+          const localData = JSON.parse(existing);
+          localData.reads = Math.max(0, (localData.reads || 0) - readsToSave);
+          localData.writes = Math.max(0, (localData.writes || 0) - writesToSave);
+          localData.deletes = Math.max(0, (localData.deletes || 0) - deletesToSave);
+          if (localData.hourly) {
+            Object.keys(hourlyToSave).forEach(slotK => {
+              if (localData.hourly[slotK]) {
+                localData.hourly[slotK].reads = Math.max(0, (localData.hourly[slotK].reads || 0) - hourlyToSave[slotK].reads);
+                localData.hourly[slotK].writes = Math.max(0, (localData.hourly[slotK].writes || 0) - hourlyToSave[slotK].writes);
+                localData.hourly[slotK].deletes = Math.max(0, (localData.hourly[slotK].deletes || 0) - hourlyToSave[slotK].deletes);
+              }
+            });
+          }
+          if (localData.reads === 0 && localData.writes === 0 && localData.deletes === 0) {
+            localStorage.removeItem(storedKey);
+          } else {
+            localStorage.setItem(storedKey, JSON.stringify(localData));
+          }
+        } catch (e) {
+          localStorage.removeItem(storedKey);
+        }
+      }
+
+      // If oversized buffer has remaining ops and not resetting, schedule next chunk
+      if (hasRemainingOversized && !this._resettingCompanies[companyId]) {
+        setTimeout(() => this.flushCompanyQuota(companyId), 500);
+      }
+
+      return true;
+    } catch (e) {
+      console.warn(`[QUOTA] Failed to flush quota buffer for ${companyId}:`, e);
+      // Put back in buffer on failure to retry next time
+      if (!this._quotaBuffer[companyId]) {
+        this._quotaBuffer[companyId] = { reads: 0, writes: 0, deletes: 0, hourly: {} };
+      }
+      this._quotaBuffer[companyId].reads += readsToSave;
+      this._quotaBuffer[companyId].writes += writesToSave;
+      this._quotaBuffer[companyId].deletes += deletesToSave;
+      if (!this._quotaBuffer[companyId].hourly) this._quotaBuffer[companyId].hourly = {};
+      Object.keys(hourlyToSave).forEach(slotK => {
+        if (!this._quotaBuffer[companyId].hourly![slotK]) {
+          this._quotaBuffer[companyId].hourly![slotK] = { reads: 0, writes: 0, deletes: 0 };
+        }
+        this._quotaBuffer[companyId].hourly![slotK].reads += hourlyToSave[slotK].reads;
+        this._quotaBuffer[companyId].hourly![slotK].writes += hourlyToSave[slotK].writes;
+        this._quotaBuffer[companyId].hourly![slotK].deletes += hourlyToSave[slotK].deletes;
+      });
+      return false;
+    }
+  },
+
+  async flushCompanyQuota(companyId: string): Promise<boolean> {
+    if (!companyId || companyId === 'placeholder' || companyId === 'test') return false;
+
+    // Yield to ongoing reset so reset has complete exclusivity
+    if (this._resettingCompanies && this._resettingCompanies[companyId]) {
+      return false;
+    }
+
+    // If another flush is already in flight for this company, wait for it and then run pending if needed
+    if (this._flushingCompanies && this._flushingCompanies[companyId]) {
+      this._pendingFlushCompanies[companyId] = true;
+      await this._flushingCompanies[companyId];
+      if (this._pendingFlushCompanies[companyId] && !this._resettingCompanies[companyId]) {
+        this._pendingFlushCompanies[companyId] = false;
+        return await this.flushCompanyQuota(companyId);
+      }
+      return true;
+    }
+
+    const flushPromise = (async () => {
+      try {
+        return await this._executeCompanyFlush(companyId);
+      } finally {
+        this._flushingCompanies[companyId] = null;
+      }
+    })();
+
+    this._flushingCompanies[companyId] = flushPromise;
+    return await flushPromise;
+  },
+
+  async flushQuotaBuffer(targetCompanyId?: string): Promise<void> {
+    if (this._quotaTimer) {
+      clearTimeout(this._quotaTimer);
+      this._quotaTimer = null;
+    }
+
+    if (targetCompanyId) {
+      await this.flushCompanyQuota(targetCompanyId);
+      return;
+    }
+
     const companies = Object.keys(this._quotaBuffer);
     if (companies.length === 0) return;
 
-    for (const companyId of companies) {
-      const buffer = this._quotaBuffer[companyId];
-      if (buffer.reads === 0 && buffer.writes === 0 && buffer.deletes === 0) continue;
-
-      const readsToSave = buffer.reads;
-      const writesToSave = buffer.writes;
-      const deletesToSave = buffer.deletes;
-      const hourlyToSave = buffer.hourly ? { ...buffer.hourly } : {};
-      
-      // Reset in-memory buffer before making async call to avoid race conditions
-      buffer.reads = 0;
-      buffer.writes = 0;
-      buffer.deletes = 0;
-      buffer.hourly = {};
-
-      try {
-        const companyRef = doc(db, "companies", companyId);
-        
-        // Optimize: use cached company metadata instead of executing a getDoc read every flush cycle
-        let limitVal = 10000;
-        let isUnlimited = false;
-        let currentUsed = 0;
-        try {
-          const cachedComp = localStorage.getItem('cached_auth_company');
-          if (cachedComp) {
-            const parsed = JSON.parse(cachedComp);
-            if (parsed.id === companyId || parsed.companyId === companyId) {
-              limitVal = parsed.quotaLimit !== undefined ? Number(parsed.quotaLimit) : 10000;
-              isUnlimited = limitVal === -1;
-              currentUsed = parsed.quotaUsed || 0;
-            }
-          }
-        } catch (e) {}
-
-        // If company has already reached 100%, do not increment beyond the limit
-        if (!isUnlimited && currentUsed >= limitVal) {
-          const storedKey = `unsaved_quota_${companyId}`;
-          localStorage.removeItem(storedKey);
-          continue;
-        }
-
-        const addedOps = readsToSave + writesToSave + deletesToSave;
-
-        const updatePayload: Record<string, any> = {
-          quotaReads: increment(readsToSave),
-          quotaWrites: increment(writesToSave),
-          quotaDeletes: increment(deletesToSave),
-          quotaUsed: increment(addedOps),
-        };
-
-        Object.keys(hourlyToSave).forEach(slotK => {
-          const s = hourlyToSave[slotK];
-          if (s.reads > 0) updatePayload[`quotaHourly.${slotK}.reads`] = increment(s.reads);
-          if (s.writes > 0) updatePayload[`quotaHourly.${slotK}.writes`] = increment(s.writes);
-          if (s.deletes > 0) updatePayload[`quotaHourly.${slotK}.deletes`] = increment(s.deletes);
-        });
-
-        await updateDoc(companyRef, updatePayload);
-
-        // Keep local cache in sync with updated quota metrics
-        try {
-          const cachedComp = localStorage.getItem('cached_auth_company');
-          if (cachedComp) {
-            const parsed = JSON.parse(cachedComp);
-            if (parsed.id === companyId || parsed.companyId === companyId) {
-              parsed.quotaUsed = (parsed.quotaUsed || 0) + addedOps;
-              parsed.quotaReads = (parsed.quotaReads || 0) + readsToSave;
-              parsed.quotaWrites = (parsed.quotaWrites || 0) + writesToSave;
-              parsed.quotaDeletes = (parsed.quotaDeletes || 0) + deletesToSave;
-              localStorage.setItem('cached_auth_company', JSON.stringify(parsed));
-            }
-          }
-        } catch (e) {}
-
-        // Keep active user's Firestore usage in sync reliably
-        try {
-          let targetUid = '';
-          let targetEmail = '';
-
-          // 1. Check current authenticated user
-          if (auth.currentUser) {
-            targetUid = auth.currentUser.uid;
-            targetEmail = auth.currentUser.email?.toLowerCase().trim() || '';
-          }
-
-          // 2. Check cached profile fallback
-          const cachedProf = localStorage.getItem('cached_auth_profile');
-          if (cachedProf) {
-            try {
-              const p = JSON.parse(cachedProf);
-              if (!targetUid) targetUid = p.uid || p.id;
-              if (!targetEmail && p.email) targetEmail = p.email.toLowerCase().trim();
-            } catch (e) {}
-          }
-
-          if (addedOps > 0) {
-            // Update document by UID with merge: true so it creates or updates safely without failing
-            if (targetUid) {
-              await setDoc(doc(db, 'users', targetUid), {
-                quotaUsed: increment(addedOps)
-              }, { merge: true });
-            }
-
-            // Also update any matching document by email (in case an admin invited user or UID mismatch occurred)
-            if (targetEmail) {
-              try {
-                const emailQuery = query(collection(db, 'users'), where('email', '==', targetEmail), limit(5));
-                const emailSnap = await getDocs(emailQuery);
-                for (const uDoc of emailSnap.docs) {
-                  if (uDoc.id !== targetUid) {
-                    await setDoc(uDoc.ref, {
-                      quotaUsed: increment(addedOps)
-                    }, { merge: true });
-                  }
-                }
-              } catch (emErr) {
-                console.warn('[QUOTA] Email sync fallback note:', emErr);
-              }
-            }
-
-            // Update in-memory user cache on this machine
-            if (this._usersCache && this._usersCache[companyId]?.data) {
-              this._usersCache[companyId].data.forEach(u => {
-                const uEmail = (u.email || '').toLowerCase().trim();
-                if ((targetUid && u.uid === targetUid) || (targetEmail && uEmail === targetEmail)) {
-                  u.quotaUsed = (u.quotaUsed || 0) + addedOps;
-                }
-              });
-            }
-          }
-        } catch (uErr) {
-          console.warn('[QUOTA] Failed to update user quotaUsed:', uErr);
-        }
-
-        // Success! Clean up localStorage backup
-        const storedKey = `unsaved_quota_${companyId}`;
-        const existing = localStorage.getItem(storedKey);
-        if (existing) {
-          try {
-            const localData = JSON.parse(existing);
-            localData.reads = Math.max(0, localData.reads - readsToSave);
-            localData.writes = Math.max(0, localData.writes - writesToSave);
-            localData.deletes = Math.max(0, localData.deletes - deletesToSave);
-            if (localData.reads === 0 && localData.writes === 0 && localData.deletes === 0) {
-              localStorage.removeItem(storedKey);
-            } else {
-              localStorage.setItem(storedKey, JSON.stringify(localData));
-            }
-          } catch (e) {
-            localStorage.removeItem(storedKey);
-          }
-        }
-      } catch (e) {
-        console.warn(`[QUOTA] Failed to flush quota buffer for ${companyId}:`, e);
-        // Put back in buffer on failure to retry next time
-        if (!this._quotaBuffer[companyId]) {
-          this._quotaBuffer[companyId] = { reads: 0, writes: 0, deletes: 0 };
-        }
-        this._quotaBuffer[companyId].reads += readsToSave;
-        this._quotaBuffer[companyId].writes += writesToSave;
-        this._quotaBuffer[companyId].deletes += deletesToSave;
-      }
-    }
+    await Promise.all(companies.map(cid => this.flushCompanyQuota(cid)));
   },
 
   initQuotaTracking() {
@@ -8982,11 +9200,22 @@ export const erpService: any = {
                 const data = JSON.parse(raw);
                 if (data && (data.reads > 0 || data.writes > 0 || data.deletes > 0)) {
                   if (!this._quotaBuffer[companyId]) {
-                    this._quotaBuffer[companyId] = { reads: 0, writes: 0, deletes: 0 };
+                    this._quotaBuffer[companyId] = { reads: 0, writes: 0, deletes: 0, hourly: {} };
                   }
-                  this._quotaBuffer[companyId].reads += data.reads;
-                  this._quotaBuffer[companyId].writes += data.writes;
-                  this._quotaBuffer[companyId].deletes += data.deletes;
+                  this._quotaBuffer[companyId].reads += data.reads || 0;
+                  this._quotaBuffer[companyId].writes += data.writes || 0;
+                  this._quotaBuffer[companyId].deletes += data.deletes || 0;
+                  if (data.hourly) {
+                    if (!this._quotaBuffer[companyId].hourly) this._quotaBuffer[companyId].hourly = {};
+                    Object.keys(data.hourly).forEach(sK => {
+                      if (!this._quotaBuffer[companyId].hourly![sK]) {
+                        this._quotaBuffer[companyId].hourly![sK] = { reads: 0, writes: 0, deletes: 0 };
+                      }
+                      this._quotaBuffer[companyId].hourly![sK].reads += data.hourly[sK].reads || 0;
+                      this._quotaBuffer[companyId].hourly![sK].writes += data.hourly[sK].writes || 0;
+                      this._quotaBuffer[companyId].hourly![sK].deletes += data.hourly[sK].deletes || 0;
+                    });
+                  }
                 }
               } catch (e) {}
             }
@@ -9030,6 +9259,14 @@ export const erpService: any = {
     this._voucherEntriesByDateRangeCache = {};
     this._groupSummaryCache = {};
     this._notificationsCache = {};
+    this._flushingCompanies = {};
+    this._pendingFlushCompanies = {};
+    this._resettingCompanies = {};
+    this._quotaBuffer = {};
+    if (this._quotaTimer) {
+      clearTimeout(this._quotaTimer);
+      this._quotaTimer = null;
+    }
 
     // 2. Clear relevant localStorage caches without logging out
     const preserveKeys = ['theme', 'app_language', 'erp_is_demo_mode', 'erp_demo_visitor', 'erp_demo_db', 'erp_demo_db_initialized'];

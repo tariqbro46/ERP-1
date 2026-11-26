@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { Package, Search, Printer, Download, ChevronDown, ChevronRight, Loader2, Filter, MapPin, Activity, AlertTriangle, X, Calendar } from 'lucide-react';
-import { exportToCSV, exportToPDF } from '../utils/exportUtils';
+import { Package, Search, Printer, Download, ChevronDown, ChevronRight, Loader2, Filter, MapPin, Activity, AlertTriangle, X, Calendar, FileSpreadsheet, Mail } from 'lucide-react';
+import { exportToCSV, exportStructuredExcel, shareReportViaEmail } from '../utils/exportUtils';
 import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,14 +11,16 @@ import { QuickItemModal } from './QuickItemModal';
 import { useNotification } from '../contexts/NotificationContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { ReportPrintHeader, ReportPrintFooter } from './ReportPrintHeader';
 import { DateInput } from './DateInput';
-import * as printUtils from '../utils/printUtils';
+import { buildReportPrintHtml, executePrint } from '../utils/printUtils';
+import { printToPDF } from '../utils/pdfExportService';
+import { resolveCompanyLegalIdentity, sanitizeAssetUrl } from '../constants/appIdentity';
 
 export function StockSummary() {
-  const { user } = useAuth();
+  const { user, company } = useAuth();
   const { t } = useLanguage();
   const settings = useSettings();
+  const legal = resolveCompanyLegalIdentity(settings, company);
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -303,30 +305,223 @@ export function StockSummary() {
     ? 'Uncategorized' 
     : stockCategories.find(c => c.id === selectedCategory)?.name;
 
-  const handleDownload = () => {
-    const exportData = finalFilteredItems.map(item => ({
-      particulars: item.name,
-      category: item.category || 'General',
-      quantity: item.displayStock,
-      unit: item.units?.name,
-      rate: item.avg_cost || item.opening_rate || 0,
-      value: item.displayStock * (item.avg_cost || item.opening_rate || 0)
-    }));
+  const getItemUnit = (item: any) => String(item.unit || item.units?.name || 'Pcs');
+  const isWholeNumberUnit = (unit: string) => ['pcs', 'pc', 'nos'].includes(unit.toLowerCase().trim());
+  const toExcelQty = (qty: number, unit: string) =>
+    isWholeNumberUnit(unit) ? Math.round(qty) : Number(qty.toFixed(2));
+  const aggregateUnitForItems = (list: any[]) => {
+    if (!list || list.length === 0) return '';
+    const units = Array.from(new Set(list.map(i => getItemUnit(i))));
+    if (units.length === 1) return units[0];
+    return units.every(u => isWholeNumberUnit(u)) ? 'Pcs' : '';
+  };
 
-    exportToCSV('Stock_Summary', 'Stock Summary', exportData, ['Particulars', 'Category', 'Quantity', 'Unit', 'Rate', 'Value'], settings);
+  const stockScopeSubtitle = [
+    selectedGodown ? `Location: ${godowns.find(g => g.id === selectedGodown)?.name || ''}` : 'All Locations',
+    selectedCategory ? `Category: ${activeCategoryName || ''}` : '',
+    `Period: ${formatReportDate(startDate, settings.dateFormat)} to ${formatReportDate(endDate, settings.dateFormat)}`
+  ].filter(Boolean).join(' | ');
+
+  const grandOpening = finalFilteredItems.reduce((sum, i) => sum + (i.opening || 0), 0);
+  const grandInward = finalFilteredItems.reduce((sum, i) => sum + (i.inward || 0), 0);
+  const grandOutward = finalFilteredItems.reduce((sum, i) => sum + (i.outward || 0), 0);
+  const grandClosing = finalFilteredItems.reduce((sum, i) => sum + (i.displayStock || 0), 0);
+  const grandAggregateUnit = aggregateUnitForItems(finalFilteredItems);
+
+  const buildStockSummaryPrintHtml = () => {
+    const printRows = [
+      ...finalFilteredItems.map(item => {
+        const unit = getItemUnit(item);
+        const rate = Number(item.avg_cost || item.opening_rate || 0);
+        const val = Number(item.displayStock || 0) * rate;
+        return {
+          cells: [
+            item.name,
+            item.category || 'General Items',
+            formatQuantity(item.opening, unit),
+            formatQuantity(item.inward, unit),
+            formatQuantity(item.outward, unit),
+            `${formatQuantity(item.displayStock, unit)} ${unit}`,
+            formatNumber(rate),
+            formatNumber(val)
+          ]
+        };
+      }),
+      {
+        cells: [
+          'Grand Total',
+          `${finalFilteredItems.length} Items`,
+          formatQuantity(grandOpening, grandAggregateUnit || undefined),
+          formatQuantity(grandInward, grandAggregateUnit || undefined),
+          formatQuantity(grandOutward, grandAggregateUnit || undefined),
+          formatQuantity(grandClosing, grandAggregateUnit || undefined),
+          '-',
+          `৳ ${formatNumber(totalStockValue)}`
+        ],
+        isTotal: true
+      }
+    ];
+
+    return buildReportPrintHtml({
+      title: 'Stock Summary',
+      subtitle: stockScopeSubtitle,
+      settings,
+      company,
+      summaryCards: [
+        { label: 'Total Stock Items', value: String(finalFilteredItems.length) },
+        { label: 'Total Closing Qty', value: formatQuantity(grandClosing, grandAggregateUnit || undefined) },
+        { label: 'Total Stock Value', value: `৳ ${formatNumber(totalStockValue)}` },
+        {
+          label: 'Scope',
+          value: selectedGodown ? (godowns.find(g => g.id === selectedGodown)?.name || 'Location') : 'All Locations'
+        }
+      ],
+      sections: [
+        {
+          heading: 'Inventory Movement & Valuation',
+          columns: [
+            { label: 'Particulars', align: 'left', width: '25%' },
+            { label: 'Category', align: 'left', width: '15%' },
+            { label: 'Opening', align: 'right', width: '9%' },
+            { label: 'Inward', align: 'right', width: '9%' },
+            { label: 'Outward', align: 'right', width: '9%' },
+            { label: 'Closing Qty', align: 'right', width: '11%' },
+            { label: 'Rate (Avg)', align: 'right', width: '10%' },
+            { label: 'Value (৳)', align: 'right', width: '12%' }
+          ],
+          rows: printRows,
+          emptyMessage: 'No stock items recorded for the selected filters'
+        }
+      ],
+      note: 'Stock quantities use integer formatting for Pcs/Pc/Nos and weighted average FIFO valuation.'
+    });
+  };
+
+  const handlePrint = () => {
+    executePrint(buildStockSummaryPrintHtml());
   };
 
   const handleDownloadPDF = () => {
-    const exportData = finalFilteredItems.map(item => ({
-      particulars: item.name,
-      category: item.category || 'General',
-      quantity: item.displayStock,
-      unit: item.units?.name,
-      rate: item.avg_cost || item.opening_rate || 0,
-      value: item.displayStock * (item.avg_cost || item.opening_rate || 0)
-    }));
+    printToPDF({
+      title: 'Stock Summary',
+      subtitle: stockScopeSubtitle,
+      fileName: `Stock_Summary_${startDate}_to_${endDate}`,
+      htmlContent: buildStockSummaryPrintHtml(),
+      settings,
+      company,
+      orientation: 'landscape'
+    });
+  };
 
-    exportToPDF('Stock_Summary', 'Stock Summary', exportData, ['Particulars', 'Category', 'Quantity', 'Unit', 'Rate', 'Value'], settings);
+  const handleDownloadExcel = () => {
+    const rows = finalFilteredItems.map(item => {
+      const unit = getItemUnit(item);
+      const rate = Number(item.avg_cost || item.opening_rate || 0);
+      const value = Number(item.displayStock || 0) * rate;
+      return [
+        item.name,
+        item.category || 'General Items',
+        toExcelQty(Number(item.opening || 0), unit),
+        toExcelQty(Number(item.inward || 0), unit),
+        toExcelQty(Number(item.outward || 0), unit),
+        toExcelQty(Number(item.displayStock || 0), unit),
+        unit,
+        Number(rate.toFixed(2)),
+        Number(value.toFixed(2))
+      ];
+    });
+
+    exportStructuredExcel({
+      fileName: `Stock_Summary_${startDate}_to_${endDate}`,
+      sheetName: 'Stock Summary',
+      title: 'Stock Summary',
+      subtitle: stockScopeSubtitle,
+      headers: ['Particulars', 'Category', 'Opening', 'Inward', 'Outward', 'Closing Qty', 'Unit', 'Rate (Avg)', 'Value'],
+      rows,
+      footerRow: [
+        'Grand Total',
+        `${finalFilteredItems.length} Items`,
+        grandAggregateUnit ? toExcelQty(grandOpening, grandAggregateUnit) : Number(grandOpening.toFixed(2)),
+        grandAggregateUnit ? toExcelQty(grandInward, grandAggregateUnit) : Number(grandInward.toFixed(2)),
+        grandAggregateUnit ? toExcelQty(grandOutward, grandAggregateUnit) : Number(grandOutward.toFixed(2)),
+        grandAggregateUnit ? toExcelQty(grandClosing, grandAggregateUnit) : Number(grandClosing.toFixed(2)),
+        grandAggregateUnit || '-',
+        '',
+        Number(totalStockValue.toFixed(2))
+      ],
+      settings,
+      company
+    });
+  };
+
+  const handleDownload = () => {
+    const exportData = finalFilteredItems.map(item => {
+      const unit = getItemUnit(item);
+      const rate = Number(item.avg_cost || item.opening_rate || 0);
+      const value = Number(item.displayStock || 0) * rate;
+      return {
+        'Particulars': item.name,
+        'Category': item.category || 'General Items',
+        'Opening': formatQuantity(item.opening, unit),
+        'Inward': formatQuantity(item.inward, unit),
+        'Outward': formatQuantity(item.outward, unit),
+        'Closing Qty': formatQuantity(item.displayStock, unit),
+        'Unit': unit,
+        'Rate (Avg)': formatNumber(rate),
+        'Value': formatNumber(value)
+      };
+    });
+
+    exportData.push({
+      'Particulars': 'Grand Total',
+      'Category': `${finalFilteredItems.length} Items`,
+      'Opening': formatQuantity(grandOpening, grandAggregateUnit || undefined),
+      'Inward': formatQuantity(grandInward, grandAggregateUnit || undefined),
+      'Outward': formatQuantity(grandOutward, grandAggregateUnit || undefined),
+      'Closing Qty': formatQuantity(grandClosing, grandAggregateUnit || undefined),
+      'Unit': grandAggregateUnit || '-',
+      'Rate (Avg)': '-',
+      'Value': formatNumber(totalStockValue)
+    });
+
+    exportToCSV(
+      `Stock_Summary_${startDate}_to_${endDate}`,
+      `Stock Summary — ${stockScopeSubtitle}`,
+      exportData,
+      ['Particulars', 'Category', 'Opening', 'Inward', 'Outward', 'Closing Qty', 'Unit', 'Rate (Avg)', 'Value'],
+      settings,
+      company
+    );
+  };
+
+  const handleEmailReport = () => {
+    const topItems = [...finalFilteredItems]
+      .sort((a, b) => (b.displayStock * (b.avg_cost || b.opening_rate || 0)) - (a.displayStock * (a.avg_cost || a.opening_rate || 0)))
+      .slice(0, 8);
+
+    const summaryLines = [
+      `Total Stock Items: ${finalFilteredItems.length}`,
+      `Total Closing Quantity: ${formatQuantity(grandClosing, grandAggregateUnit || undefined)}`,
+      `Total Stock Valuation: ৳ ${formatNumber(totalStockValue)}`,
+      ...(topItems.length > 0 ? [
+        '',
+        'Top Stock Items by Value:',
+        ...topItems.map(item => {
+          const unit = getItemUnit(item);
+          const val = (item.displayStock || 0) * (item.avg_cost || item.opening_rate || 0);
+          return `- ${item.name} (${formatQuantity(item.displayStock, unit)} ${unit}): ৳ ${formatNumber(val)}`;
+        })
+      ] : [])
+    ];
+
+    shareReportViaEmail({
+      title: 'Stock Summary',
+      subtitle: stockScopeSubtitle,
+      summaryLines,
+      settings,
+      company,
+      recipientEmail: legal.printEmail || ''
+    });
   };
 
   const dummyStockGroups = ['Raw Materials', 'Finished Goods', 'Packaging Materials'];
@@ -372,10 +567,10 @@ export function StockSummary() {
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-4 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
           <div className="flex items-center gap-4">
-            {(settings.companyLogo || settings.systemLogo) && (
+            {sanitizeAssetUrl(legal.companyLogo || '') && (
               <div className="w-10 h-10 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
                 <img 
-                  src={settings.companyLogo || settings.systemLogo} 
+                  src={sanitizeAssetUrl(legal.companyLogo || '')} 
                   alt="Logo" 
                   className="w-full h-full object-contain"
                   referrerPolicy="no-referrer"
@@ -384,7 +579,7 @@ export function StockSummary() {
             )}
             <div className="flex flex-col">
               <h1 className="text-xl text-foreground uppercase tracking-tighter">{t('stock.title')}</h1>
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest">{settings.companyName || 'ERP System'} • {t('reports.asOnDate')} {asOnDate}</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest">{legal.companyName || 'ERP System'} • {t('reports.asOnDate')} {asOnDate}</p>
             </div>
           </div>
           <div className="flex-1 max-w-sm">
@@ -418,12 +613,20 @@ export function StockSummary() {
             </div>
             <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
               <button 
-                onClick={() => printUtils.printElement('stock-summary-report', `Stock Summary`, settings)}
+                onClick={handlePrint}
                 disabled={loading}
                 className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase rounded-sm shadow-sm disabled:opacity-50"
               >
                 <Printer className="w-3.5 h-3.5" />
                 {t('common.print')}
+              </button>
+              <button 
+                onClick={handleDownloadExcel}
+                disabled={loading || finalFilteredItems.length === 0}
+                className="px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1.5 disabled:opacity-50 text-[10px] font-bold uppercase rounded-sm shadow-sm"
+                title="Export Genuine Excel (.xlsx)"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" /> EXCEL
               </button>
               <button 
                 onClick={handleDownload}
@@ -440,6 +643,14 @@ export function StockSummary() {
                 title={t('common.pdf')}
               >
                 <Download className="w-3 h-3" /> {t('common.pdf')}
+              </button>
+              <button 
+                onClick={handleEmailReport}
+                disabled={loading || finalFilteredItems.length === 0}
+                className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50 text-[10px] font-bold uppercase rounded-sm shadow-sm"
+                title="Share Stock Summary via Email"
+              >
+                <Mail className="w-3.5 h-3.5" /> EMAIL
               </button>
               <button 
                 onClick={() => setIsQuickItemOpen(true)}
@@ -519,15 +730,6 @@ export function StockSummary() {
       <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
         <div id="stock-summary-report" className="min-h-full flex flex-col bg-white">
           <div className="p-4 lg:p-6 flex-1 flex flex-col">
-          <ReportPrintHeader 
-            title="Stock Summary" 
-            subtitle={cn(
-              selectedGodown ? `Location: ${godowns.find(g => g.id === selectedGodown)?.name}` : 'All Locations',
-              selectedCategory ? ` | Category: ${activeCategoryName}` : '',
-              ` | Period: ${formatReportDate(startDate)} to ${formatReportDate(endDate)}`
-            )} 
-          />
-          
           {/* Mobile View: Cards */}
           <div className="block lg:hidden divide-y divide-border/50">
             {groupsToRender.map(groupName => {
@@ -560,7 +762,9 @@ export function StockSummary() {
                       )}
                     </div>
                   </div>
-                  {isExpanded && groupItems.map(item => (
+                  {isExpanded && groupItems.map(item => {
+                    const itemUnit = getItemUnit(item);
+                    return (
                     <div 
                       key={item.id} 
                       onClick={() => {
@@ -576,7 +780,7 @@ export function StockSummary() {
                         {item.isLoading ? (
                           <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded" />
                         ) : (
-                          <span className="text-xs font-bold text-foreground font-mono">{formatQuantity(item.displayStock, item.units?.name)}</span>
+                          <span className="text-xs font-bold text-foreground font-mono">{formatQuantity(item.displayStock, itemUnit)}</span>
                         )}
                       </div>
                       <div className="grid grid-cols-2 gap-2 mt-1">
@@ -584,21 +788,21 @@ export function StockSummary() {
                           Op: {item.isLoading ? (
                             <span className="inline-block h-3 w-8 bg-muted-foreground/20 animate-pulse rounded align-middle" />
                           ) : (
-                            <span className="text-foreground font-bold">{formatQuantity(item.opening)}</span>
+                            <span className="text-foreground font-bold">{formatQuantity(item.opening, itemUnit)}</span>
                           )}
                         </div>
                         <div className="text-[9px] text-gray-500 uppercase text-right">
                           In: {item.isLoading ? (
                             <span className="inline-block h-3 w-8 bg-muted-foreground/20 animate-pulse rounded align-middle" />
                           ) : (
-                            <span className="text-foreground font-bold">{formatQuantity(item.inward)}</span>
+                            <span className="text-foreground font-bold">{formatQuantity(item.inward, itemUnit)}</span>
                           )}
                         </div>
                         <div className="text-[9px] text-gray-500 uppercase">
                           Out: {item.isLoading ? (
                             <span className="inline-block h-3 w-8 bg-muted-foreground/20 animate-pulse rounded align-middle" />
                           ) : (
-                            <span className="text-foreground font-bold">{formatQuantity(item.outward)}</span>
+                            <span className="text-foreground font-bold">{formatQuantity(item.outward, itemUnit)}</span>
                           )}
                         </div>
                         <div className="text-[9px] text-gray-500 uppercase text-right font-bold text-foreground">
@@ -610,7 +814,8 @@ export function StockSummary() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               );
             })}
@@ -635,13 +840,13 @@ export function StockSummary() {
             <table className="w-full text-left text-[11px] min-w-[800px] border-separate border-spacing-0 h-full">
               <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-sm shadow-sm ring-1 ring-border">
                 <tr className="text-gray-500 uppercase text-[9px] font-bold tracking-widest">
-                  <th className="px-4 py-3 font-medium border-b border-border sticky top-0 bg-inherit">{t('common.particulars')}</th>
-                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 bg-inherit border-l">Opening</th>
-                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 bg-inherit border-l">Inward</th>
-                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 bg-inherit border-l">Outward</th>
-                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l bg-amber-600 text-white z-10 shadow-sm">{t('common.quantity')}</th>
-                  <th className="px-4 py-3 font-medium text-right w-28 border-b border-border sticky top-0 bg-inherit border-l">Rate (Avg)</th>
-                  <th className="px-4 py-3 font-medium text-right w-32 border-b border-border sticky top-0 bg-inherit border-l">{t('common.value')} (৳)</th>
+                  <th className="px-4 py-3 font-medium border-b border-border sticky top-0 bg-inherit align-middle">{t('common.particulars')}</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 bg-inherit border-l align-middle">Opening</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 bg-inherit border-l align-middle">Inward</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 bg-inherit border-l align-middle">Outward</th>
+                  <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 border-l bg-amber-600 text-white z-10 shadow-sm align-middle">{t('common.quantity')}</th>
+                  <th className="px-4 py-3 font-medium text-right w-28 border-b border-border sticky top-0 bg-inherit border-l align-middle">Rate (Avg)</th>
+                  <th className="px-4 py-3 font-medium text-right w-32 border-b border-border sticky top-0 bg-inherit border-l align-middle">{t('common.value')} (৳)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50 bg-white">
@@ -652,6 +857,7 @@ export function StockSummary() {
                   const groupOutward = groupItems.reduce((sum, i) => sum + (i.outward || 0), 0);
                   const groupQty = groupItems.reduce((sum, i) => sum + (i.displayStock || 0), 0);
                   const groupValue = groupItems.reduce((sum, i) => sum + ((i.displayStock || 0) * (i.avg_cost || i.opening_rate || 0)), 0);
+                  const groupAggregateUnit = aggregateUnitForItems(groupItems);
                   const isExpanded = expandedGroups.has(groupName) || search.length > 0;
 
                   return (
@@ -660,7 +866,7 @@ export function StockSummary() {
                         onClick={() => toggleGroup(groupName)}
                         className="hover:bg-muted/80 transition-colors cursor-pointer group border-l-4 border-transparent hover:border-primary"
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 align-middle">
                           <div className="flex items-center gap-2">
                             {isExpanded ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
                             <span className="text-foreground font-bold uppercase tracking-tight">
@@ -668,38 +874,38 @@ export function StockSummary() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
+                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10 align-middle">
                           {loading ? (
                             <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                           ) : (
-                            formatQuantity(groupOpening)
+                            formatQuantity(groupOpening, groupAggregateUnit || undefined)
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
+                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10 align-middle">
                           {loading ? (
                             <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                           ) : (
-                            formatQuantity(groupInward)
+                            formatQuantity(groupInward, groupAggregateUnit || undefined)
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
+                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10 align-middle">
                           {loading ? (
                             <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                           ) : (
-                            formatQuantity(groupOutward)
+                            formatQuantity(groupOutward, groupAggregateUnit || undefined)
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right text-amber-700 font-mono font-bold border-l border-amber-500/10 bg-amber-500/5">
+                        <td className="px-4 py-3 text-right text-amber-700 font-mono font-bold border-l border-amber-500/10 bg-amber-500/5 align-middle">
                           {loading ? (
                             <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                           ) : (
-                            formatQuantity(groupQty)
+                            formatQuantity(groupQty, groupAggregateUnit || undefined)
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-600 border-l border-border/10">
+                        <td className="px-4 py-3 text-right text-gray-600 border-l border-border/10 align-middle">
                           -
                         </td>
-                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10">
+                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10 align-middle">
                           {loading ? (
                             <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                           ) : (
@@ -707,7 +913,9 @@ export function StockSummary() {
                           )}
                         </td>
                       </tr>
-                      {isExpanded && groupItems.map(item => (
+                      {isExpanded && groupItems.map(item => {
+                        const itemUnit = getItemUnit(item);
+                        return (
                         <tr 
                           key={item.id} 
                           onClick={() => {
@@ -716,51 +924,53 @@ export function StockSummary() {
                           }}
                           className={cn("bg-muted/5 hover:bg-muted/60 transition-colors group/item cursor-pointer border-l-4 border-transparent hover:border-primary/40", item.isLowStock && "bg-rose-500/5")}
                         >
-                        <td className="px-10 py-2.5 text-foreground/60 italic flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-border group-hover:bg-primary transition-colors" />
-                          {highlightText(item.name, search)}
-                          {item.isLowStock && (
-                            <span className="px-1.5 py-0.5 bg-rose-500 text-white text-[8px] font-bold uppercase rounded flex items-center gap-1">
-                              <AlertTriangle className="w-2 h-2" /> Low
-                            </span>
-                          )}
+                        <td className="px-10 py-2.5 text-foreground/60 italic align-middle">
+                          <div className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-border group-hover:bg-primary transition-colors" />
+                            {highlightText(item.name, search)}
+                            {item.isLowStock && (
+                              <span className="px-1.5 py-0.5 bg-rose-500 text-white text-[8px] font-bold uppercase rounded flex items-center gap-1">
+                                <AlertTriangle className="w-2 h-2" /> Low
+                              </span>
+                            )}
+                          </div>
                         </td>
-                         <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
+                         <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5 align-middle">
                            {item.isLoading ? (
                              <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                            ) : (
-                             formatQuantity(item.opening, item.units?.name)
+                             formatQuantity(item.opening, itemUnit)
                            )}
                          </td>
-                         <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
+                         <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5 align-middle">
                            {item.isLoading ? (
                              <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                            ) : (
-                             formatQuantity(item.inward, item.units?.name)
+                             formatQuantity(item.inward, itemUnit)
                            )}
                          </td>
-                         <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5">
+                         <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5 align-middle">
                            {item.isLoading ? (
                              <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                            ) : (
-                             formatQuantity(item.outward, item.units?.name)
+                             formatQuantity(item.outward, itemUnit)
                            )}
                          </td>
-                         <td className="px-4 py-2.5 text-right text-amber-700 font-bold font-mono border-l border-amber-500/20 bg-amber-500/10">
+                         <td className="px-4 py-2.5 text-right text-amber-700 font-bold font-mono border-l border-amber-500/20 bg-amber-500/10 align-middle">
                            {item.isLoading ? (
                              <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                            ) : (
-                             formatQuantity(item.displayStock, item.units?.name)
+                             formatQuantity(item.displayStock, itemUnit)
                            )}
                          </td>
-                           <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5">
+                           <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5 align-middle">
                              {item.isLoading ? (
                                <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                              ) : (
                                formatNumber(item.avg_cost || item.opening_rate || 0)
                              )}
                            </td>
-                           <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5">
+                           <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5 align-middle">
                              {item.isLoading ? (
                                <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                              ) : (
@@ -768,51 +978,52 @@ export function StockSummary() {
                              )}
                            </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </React.Fragment>
                   );
                 })}
                 {!loading && filteredGroups.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-10 text-center text-gray-500 uppercase tracking-widest">{t('stock.noItems')}</td>
+                    <td colSpan={7} className="px-6 py-10 text-center text-gray-500 uppercase tracking-widest align-middle">{t('stock.noItems')}</td>
                   </tr>
                 )}
               </tbody>
               <tfoot className="bg-background border-t-2 border-border sticky bottom-0 text-[10px] z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
                 <tr className="font-bold text-foreground bg-background">
-                  <td className="px-4 py-3 uppercase text-[9px] text-gray-500 tracking-widest bg-background">{t('common.grandTotal')}</td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
+                  <td className="px-4 py-3 uppercase text-[9px] text-gray-500 tracking-widest bg-background align-middle">{t('common.grandTotal')}</td>
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background align-middle">
                     {loading ? (
                       <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                     ) : (
-                      formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.opening, 0))
+                      formatQuantity(grandOpening, grandAggregateUnit || undefined)
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background align-middle">
                     {loading ? (
                       <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                     ) : (
-                      formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.inward, 0))
+                      formatQuantity(grandInward, grandAggregateUnit || undefined)
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background align-middle">
                     {loading ? (
                       <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                     ) : (
-                      formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.outward, 0))
+                      formatQuantity(grandOutward, grandAggregateUnit || undefined)
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-amber-600 bg-amber-600 text-white">
+                  <td className="px-4 py-3 text-right font-mono border-l border-amber-600 bg-amber-600 text-white align-middle">
                     {loading ? (
                       <div className="h-4 w-16 bg-white/30 animate-pulse rounded ml-auto" />
                     ) : (
-                      formatQuantity(finalFilteredItems.reduce((sum, i) => sum + i.displayStock, 0))
+                      formatQuantity(grandClosing, grandAggregateUnit || undefined)
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background align-middle">
                     -
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background">
+                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background align-middle">
                     {loading ? (
                       <div className="h-4 w-24 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
                     ) : (
@@ -823,7 +1034,6 @@ export function StockSummary() {
               </tfoot>
             </table>
           </div>
-          <ReportPrintFooter />
         </div>
 
         {/* Stock Valuation Method Note */}

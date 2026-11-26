@@ -126,6 +126,7 @@ import { WhatsNewModal } from './components/WhatsNewModal';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { ReleaseNotes } from './components/ReleaseNotes';
 import { cn } from './lib/utils';
+import { resolveCompanyLegalIdentity, DEFAULT_APP_BRANDING } from './constants/appIdentity';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { Login, Register } from './components/Auth';
@@ -388,9 +389,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   const { 
     companyName, 
     companyLogo,
-    systemLogo,
     logoBgColor,
-    systemLogoBgColor,
     slogan, 
     features = [], 
     menuBarStyle = 'classic', 
@@ -413,9 +412,17 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     subscriptionPlans = [],
     sidebarBgColor = 'default',
     sidebarTextColor = 'default',
+    appIdentity,
     updateSettings
   } = useSettings();
 
+  const companyIdentity = resolveCompanyLegalIdentity(
+    { companyName, companyLogo, companyAddress: (company as any)?.address },
+    company
+  );
+  const safeCompanyName = companyIdentity.companyName || '';
+  const safeCompanyLogo = companyIdentity.companyLogo || '';
+  const companyMonogram = (safeCompanyName || 'C').charAt(0).toUpperCase();
   const activePlan = subscriptionPlans.find(p => p.id === company?.planId);
 
   const navigate = useNavigate();
@@ -963,11 +970,11 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         )}>
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="w-8 h-8 rounded-sm flex-shrink-0 flex items-center justify-center overflow-hidden">
-              {companyLogo || systemLogo ? (
-                <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+              {safeCompanyLogo ? (
+                <img src={safeCompanyLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
               ) : (
                 <div className={cn("w-full h-full flex items-center justify-center", customBgOpt ? "bg-white/10" : isColorful ? "bg-indigo-600" : "bg-foreground")}>
-                  <span className={cn("font-bold text-base", customBgOpt ? "text-inherit" : isColorful ? "text-white" : "text-background")}>{companyName.charAt(0)}</span>
+                  <span className={cn("font-bold text-base", customBgOpt ? "text-inherit" : isColorful ? "text-white" : "text-background")}>{companyMonogram}</span>
                 </div>
               )}
             </div>
@@ -975,7 +982,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
               <h1 className={cn(
                 "text-xs sm:text-[13px] font-bold tracking-tight truncate max-w-[130px] leading-tight", 
                 customBgOpt ? (customBgOpt.isDark ? "text-slate-100" : "text-stone-900") : isColorful ? "text-slate-100" : "text-foreground"
-              )}>{companyName}</h1>
+              )}>{safeCompanyName || 'Organization'}</h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <p className={cn(
                   "text-[10px] uppercase tracking-wider truncate max-w-[110px] leading-tight", 
@@ -1189,7 +1196,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
   const renderFirebaseConsoleSidebar = () => {
     const isDarkTheme = theme === 'dark';
-    const activeLogoBg = logoBgColor || systemLogoBgColor || 'transparent';
+    const activeLogoBg = logoBgColor || 'transparent';
 
     return (
       <aside
@@ -1220,11 +1227,11 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
               style={{
                 backgroundColor: activeLogoBg !== 'transparent' ? activeLogoBg : undefined
               }}
-              title={isSidebarCollapsed ? (company?.name || companyName || 'Switch Company') : undefined}
+              title={isSidebarCollapsed ? (safeCompanyName || 'Switch Company') : undefined}
             >
-              {companyLogo || systemLogo ? (
+              {safeCompanyLogo ? (
                 <img
-                  src={companyLogo || systemLogo}
+                  src={safeCompanyLogo}
                   alt="Logo"
                   className="w-full h-full object-contain p-1 rounded-lg"
                   referrerPolicy="no-referrer"
@@ -1259,7 +1266,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                         "text-xs sm:text-[13px] font-bold tracking-tight truncate leading-tight transition-colors",
                         isDarkTheme ? "text-white group-hover/sw:text-indigo-300" : "text-slate-900 group-hover/sw:text-blue-700"
                       )}>
-                        {company?.name || companyName || 'TallyFlow ERP'}
+                        {safeCompanyName || appIdentity?.appName || DEFAULT_APP_BRANDING.appName}
                       </h1>
                       {activePlan && (
                         <span className={cn(
@@ -1366,7 +1373,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                 })
               ) : (
                 <div className={cn("p-3 text-center text-xs", isDarkTheme ? "text-slate-400" : "text-slate-500")}>
-                  {company?.name || companyName} (Active)
+                  {safeCompanyName || 'Organization'} (Active)
                 </div>
               )}
             </div>
@@ -1901,15 +1908,15 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         )}
         <div className="flex items-center gap-2 mr-4">
           <div className="w-5 h-5 rounded-full flex items-center justify-center overflow-hidden">
-            {companyLogo || systemLogo ? (
-              <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+            {safeCompanyLogo ? (
+              <img src={safeCompanyLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
             ) : (
               <div className="w-full h-full bg-foreground flex items-center justify-center">
-                <span className="text-background font-bold text-[10px]">{companyName.charAt(0)}</span>
+                <span className="text-background font-bold text-[10px]">{companyMonogram}</span>
               </div>
             )}
           </div>
-          <span className="text-xs font-bold">{companyName}</span>
+          <span className="text-xs font-bold">{safeCompanyName || 'Organization'}</span>
         </div>
         
         <div className="flex items-center gap-2">
@@ -2288,20 +2295,20 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                     "w-8 h-8 rounded-sm flex items-center justify-center overflow-hidden",
                     uiStyle === 'UI/UX 2' ? "bg-white" : "bg-foreground"
                   )}>
-                    {companyLogo || systemLogo ? (
-                      <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                    {safeCompanyLogo ? (
+                      <img src={safeCompanyLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                     ) : (
                       <span className={cn(
                         "font-bold text-lg",
                         uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-background"
-                      )}>{companyName.charAt(0)}</span>
+                      )}>{companyMonogram}</span>
                     )}
                   </div>
                   <h1 className={cn(
                     "text-sm font-bold tracking-tighter truncate",
                     uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground"
                   )}>
-                    {companyName}
+                    {safeCompanyName || 'Organization'}
                   </h1>
                   {activePlan && (
                     <div className={cn(
@@ -2342,8 +2349,8 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                         isAdmin && "active:scale-90"
                       )}
                     >
-                      {companyLogo || systemLogo ? (
-                        <img src={companyLogo || systemLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                      {safeCompanyLogo ? (
+                        <img src={safeCompanyLogo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                       ) : (
                         <div className={cn(
                           "w-full h-full flex items-center justify-center",
@@ -2352,7 +2359,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                           <span className={cn(
                             "font-bold text-xs",
                             uiStyle === 'UI/UX 2' ? "text-blue-600" : "text-background"
-                          )}>{companyName.charAt(0)}</span>
+                          )}>{companyMonogram}</span>
                         </div>
                       )}
                     </Link>

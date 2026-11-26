@@ -5,14 +5,16 @@ import { Mail, Phone, MapPin, Send, HelpCircle, CheckCircle2 } from 'lucide-reac
 import { motion, AnimatePresence } from 'motion/react';
 import { useSiteContent } from '../../hooks/useSiteContent';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { cn } from '../../lib/utils';
 import { db } from '../../firebase';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 
 export const Contact = () => {
   const { t } = useLanguage();
+  const { appIdentity } = useSettings();
   const DEFAULT_CONTENT = {
-    title: t('contact.title') || "Get in Touch with TallyFlow",
+    title: t('contact.title') || `Get in Touch with ${appIdentity.appShortName}`,
     titleColor: "#0f172a",
     subtitle: t('contact.subtitle') || "Have questions? We're here to help. Send us a message and our team will get back to you within 24 hours.",
     subtitleColor: "#64748b",
@@ -25,8 +27,8 @@ export const Contact = () => {
     buttonBgColor: "#1e293b",
     buttonTextColor: "#ffffff",
     emailLabel: t('contact.emailLabel') || "Email Us",
-    email1: "support@tallyflow-erp.com",
-    email2: "sales@tallyflow-erp.com",
+    email1: appIdentity.supportEmail,
+    email2: "sales@enterprise-erp.com",
     phoneLabel: t('contact.phoneLabel') || "Call Us",
     phone1: "+880 1712 345678",
     phone2: t('contact.phone2') || "Mon-Fri, 9am-6pm BST",
@@ -185,7 +187,7 @@ export const Contact = () => {
                         </div>
                         <h3 className="text-xl font-bold text-slate-900">{t('contact.successTitle') || 'Message Sent!'}</h3>
                         <p className="text-slate-600 text-xs leading-relaxed font-normal">
-                          We have recorded your inquiry. The TallyFlow team will respond to your email within 24 hours.
+                          We have recorded your inquiry. The {appIdentity.appShortName} team will respond to your email within 24 hours.
                         </p>
                         <button 
                           onClick={() => setIsSubmitted(false)}

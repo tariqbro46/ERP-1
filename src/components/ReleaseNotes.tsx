@@ -20,6 +20,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { RELEASE_NOTES, LATEST_VERSION, ReleaseVersion } from '../data/releaseNotes';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSettings } from '../contexts/SettingsContext';
+import { DEFAULT_APP_BRANDING, escapeHtml } from '../constants/appIdentity';
 import { EditableHeader } from './EditableHeader';
 import { cn } from '../lib/utils';
 import { executePrint } from '../utils/printUtils';
@@ -29,6 +31,8 @@ export function ReleaseNotes() {
   const { language } = useLanguage();
   const isBn = language === 'bn';
   const navigate = useNavigate();
+  const { appIdentity } = useSettings();
+  const appDisplayName = appIdentity?.appName || DEFAULT_APP_BRANDING.appName;
 
   const [selectedVersion, setSelectedVersion] = useState<string>(LATEST_VERSION);
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,11 +79,13 @@ export function ReleaseNotes() {
   }, [activeRelease, searchTerm, activeCategory]);
 
   const handlePrint = () => {
+    const safeAppName = escapeHtml(appDisplayName);
+    const safeVersion = escapeHtml(activeRelease.version);
     executePrint(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Release Notes ${activeRelease.version} - TallyFlow ERP</title>
+          <title>Release Notes ${safeVersion} - ${safeAppName}</title>
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 32px; color: #0f172a; line-height: 1.5; }
             h1 { color: #1e3a8a; margin-bottom: 4px; font-size: 24px; }
@@ -95,19 +101,19 @@ export function ReleaseNotes() {
           </style>
         </head>
         <body>
-          <h1>TallyFlow ERP - Release Notes (${activeRelease.version})</h1>
-          <div class="meta">Release Date: ${activeRelease.releaseDate} (${activeRelease.bnReleaseDate})</div>
+          <h1>${safeAppName} - Release Notes (${safeVersion})</h1>
+          <div class="meta">Release Date: ${escapeHtml(activeRelease.releaseDate)} (${escapeHtml(activeRelease.bnReleaseDate)})</div>
           <div class="summary">
-            <strong>${activeRelease.title}</strong><br/>
-            <span>${activeRelease.summary}</span>
+            <strong>${escapeHtml(activeRelease.title)}</strong><br/>
+            <span>${escapeHtml(activeRelease.summary)}</span>
           </div>
 
           <h3 class="new-h3">🚀 New Features (${activeRelease.newFeatures.length})</h3>
           <ul>
             ${activeRelease.newFeatures.map(f => `
               <li>
-                <strong>${f.title}</strong> (${f.module || 'Core'})<br/>
-                <div class="desc">${f.description}</div>
+                <strong>${escapeHtml(f.title)}</strong> (${escapeHtml(f.module || 'Core')})<br/>
+                <div class="desc">${escapeHtml(f.description)}</div>
               </li>
             `).join('')}
           </ul>
@@ -116,8 +122,8 @@ export function ReleaseNotes() {
           <ul>
             ${activeRelease.improvements.map(imp => `
               <li>
-                <strong>${imp.title}</strong><br/>
-                <div class="desc">${imp.description}</div>
+                <strong>${escapeHtml(imp.title)}</strong><br/>
+                <div class="desc">${escapeHtml(imp.description)}</div>
               </li>
             `).join('')}
           </ul>
@@ -126,8 +132,8 @@ export function ReleaseNotes() {
           <ul>
             ${activeRelease.bugFixes.map(fix => `
               <li>
-                <strong>${fix.title}</strong><br/>
-                <div class="desc">${fix.description}</div>
+                <strong>${escapeHtml(fix.title)}</strong><br/>
+                <div class="desc">${escapeHtml(fix.description)}</div>
               </li>
             `).join('')}
           </ul>

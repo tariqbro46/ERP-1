@@ -1647,11 +1647,11 @@ export function VoucherEntry() {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-foreground/5 text-gray-500 uppercase text-[8px]">
                     <tr>
-                      <th className={cn("border-b border-border tracking-wider text-left min-w-[15ch]", tableHeaderPaddingClass)}>Item Name</th>
-                      <th className={cn("border-b border-border tracking-wider text-left w-[25ch]", tableHeaderPaddingClass)}>Godown</th>
-                      <th className={cn("border-b border-border tracking-wider text-right w-16", tableHeaderPaddingClass)}>Qty</th>
-                      <th className={cn("border-b border-border tracking-wider text-right w-20", tableHeaderPaddingClass)}>Rate</th>
-                      <th className={cn("border-b border-border tracking-wider text-right w-20", tableHeaderPaddingClass)}>Amount</th>
+                      <th className={cn("border-b border-border tracking-wider text-left min-w-[15ch]", tableHeaderPaddingClass)}>{t('common.itemName')}</th>
+                      <th className={cn("border-b border-border tracking-wider text-left w-[25ch]", tableHeaderPaddingClass)}>{t('common.godown')}</th>
+                      <th className={cn("border-b border-border tracking-wider text-right w-16", tableHeaderPaddingClass)}>{t('production.qty')}</th>
+                      <th className={cn("border-b border-border tracking-wider text-right w-20", tableHeaderPaddingClass)}>{t('common.rate')}</th>
+                      <th className={cn("border-b border-border tracking-wider text-right w-20", tableHeaderPaddingClass)}>{t('common.amount')}</th>
                       <th className={cn("border-b border-border w-8", tableHeaderPaddingClass)}></th>
                     </tr>
                   </thead>
@@ -1823,10 +1823,10 @@ export function VoucherEntry() {
           ) : isInventory ? (
             <div className="min-w-full">
               {/* Desktop Table Header */}
-              <table className="w-full text-left text-xs border-collapse hidden lg:table">
+              <table className="w-full text-left text-xs border-collapse hidden lg:table min-w-[920px]">
                 <thead className={cn("bg-foreground/5 text-gray-500 uppercase sticky top-0 z-10 backdrop-blur-sm", isLayout2 ? "text-[8px]" : "text-[9px]")}>
                   <tr>
-                    <th className={cn("border-b border-border min-w-[16ch]", tableHeaderPaddingClass)}>
+                    <th className={cn("border-b border-border min-w-[16ch] align-middle", tableHeaderPaddingClass)}>
                       <div className="flex justify-between items-center">
                         <span>{t('common.itemName')}</span>
                         <button 
@@ -1841,31 +1841,31 @@ export function VoucherEntry() {
                         </button>
                       </div>
                     </th>
-                    <th className={cn("border-b border-border w-[40ch]", tableHeaderPaddingClass)}>{t('common.godown')}</th>
+                    <th className={cn("border-b border-border w-[40ch] align-middle", tableHeaderPaddingClass)}>{t('common.godown')}</th>
                     {isBatchEnabled && !isPhysicalStock && (
-                      <th className={cn("border-b border-border text-left w-32", tableHeaderPaddingClass)}>{t('common.batch')}</th>
+                      <th className={cn("border-b border-border text-left w-32 align-middle", tableHeaderPaddingClass)}>{t('common.batch')}</th>
                     )}
                     {isExpiryEnabled && !isPhysicalStock && (
-                      <th className={cn("border-b border-border text-left w-32", tableHeaderPaddingClass)}>{t('common.expiry')}</th>
+                      <th className={cn("border-b border-border text-left w-32 align-middle", tableHeaderPaddingClass)}>{t('common.expiry')}</th>
                     )}
-                    <th className={cn("border-b border-border text-right w-32", tableHeaderPaddingClass)}>{t('common.quantity')}</th>
+                    <th className={cn("border-b border-border text-right w-32 align-middle", tableHeaderPaddingClass)}>{t('common.quantity')}</th>
                     {showFreeQty && !isPhysicalStock && (
-                      <th className={cn("border-b border-border text-right w-32", tableHeaderPaddingClass)}>{t('common.free')}</th>
+                      <th className={cn("border-b border-border text-right w-32 align-middle", tableHeaderPaddingClass)}>{t('common.free')}</th>
                     )}
                     {!isPhysicalStock && (
                       <>
-                        <th className={cn("border-b border-border text-right w-40", tableHeaderPaddingClass)}>{t('common.rate')}</th>
-                        <th className={cn("border-b border-border text-center w-24", tableHeaderPaddingClass)}>{t('common.per')}</th>
+                        <th className={cn("border-b border-border text-right w-40 align-middle", tableHeaderPaddingClass)}>{t('common.rate')}</th>
+                        <th className={cn("border-b border-border text-center w-24 align-middle", tableHeaderPaddingClass)}>{t('common.per')}</th>
                         {showDiscPercent && (
-                          <th className={cn("border-b border-border text-right w-32", tableHeaderPaddingClass)}>{t('common.discPercent')}</th>
+                          <th className={cn("border-b border-border text-right w-32 align-middle", tableHeaderPaddingClass)}>{t('common.discPercent')}</th>
                         )}
                         {isTaxEnabled && showTaxPercent && (
-                          <th className={cn("border-b border-border text-right w-32", tableHeaderPaddingClass)}>{t('common.taxPercent')}</th>
+                          <th className={cn("border-b border-border text-right w-32 align-middle", tableHeaderPaddingClass)}>{t('common.taxPercent')}</th>
                         )}
-                        <th className={cn("border-b border-border text-right w-32", tableHeaderPaddingClass)}>{t('common.amount')}</th>
+                        <th className={cn("border-b border-border text-right w-32 align-middle", tableHeaderPaddingClass)}>{t('common.amount')}</th>
                       </>
                     )}
-                    <th className={cn("border-b border-border w-10", tableHeaderPaddingClass)}></th>
+                    <th className={cn("border-b border-border w-10 align-middle", tableHeaderPaddingClass)}></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -2103,7 +2103,7 @@ export function VoucherEntry() {
                           </td>
                         </>
                       )}
-                      <td className={tablePaddingClass}><button onClick={() => setInvEntries(invEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
+                      <td className={cn("text-center align-middle", tablePaddingClass)}><button onClick={() => setInvEntries(invEntries.filter((_, i) => i !== idx))} className="inline-flex items-center justify-center"><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
                     </tr>
                   ))}
                   {/* ADD ITEM Button Row */}
@@ -2454,7 +2454,7 @@ export function VoucherEntry() {
                         }}
                       />
                     </td>
-                    <td className={cn("w-10", tablePaddingClass)}><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
+                    <td className={cn("w-10 text-center align-middle", tablePaddingClass)}><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))} className="inline-flex items-center justify-center"><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
                   </tr>
                 ))}
                 {/* ADD ITEM Button Row */}
@@ -2526,7 +2526,7 @@ export function VoucherEntry() {
                             next[idx].ledger_id = val;
                             setAccEntries(next);
                           }}
-                          placeholder="Select Particulars..."
+                          placeholder={t('voucher.selectParticulars')}
                           onQuickCreate={() => openQuickLedger('', 'particulars', idx)}
                           tabIndex={101 + idx * 10}
                           compact={isFieldCompact || voucherTableCompact}
@@ -2630,7 +2630,7 @@ export function VoucherEntry() {
                           getVoucherHoverBgColor(vType)
                         )}
                       >
-                        <PlusCircle className="w-3 h-3" /> ADD ITEM
+                        <PlusCircle className="w-3 h-3" /> {t('common.addItem')}
                       </button>
                     </div>
                   </td>

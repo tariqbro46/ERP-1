@@ -8,7 +8,7 @@ import db from "./db.ts";
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import fs from "fs";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 
 const firebaseConfig = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), "firebase-applet-config.json"), "utf8"));
 
@@ -72,25 +72,176 @@ async function startServer() {
     }
   };
 
+  interface VerifiedActor {
+    uid: string;
+    email: string;
+    emailVerified: boolean;
+    role: string;
+    companyId: string;
+    status: string;
+    isFounder: boolean;
+    isCompanyAdmin: boolean;
+  }
+
+  class HttpError extends Error {
+    statusCode: number;
+    constructor(statusCode: number, message: string) {
+      super(message);
+      this.statusCode = statusCode;
+    }
+  }
+
+  const resolveVerifiedActor = async (req: any): Promise<VerifiedActor> => {
+    const uid = typeof req.user?.uid === "string" ? req.user.uid : "";
+    if (!uid) {
+      throw new HttpError(401, "Unauthorized");
+    }
+
+    const tokenEmail = typeof req.user?.email === "string" ? req.user.email.trim().toLowerCase() : "";
+    const emailVerified = req.user?.email_verified === true;
+    const configuredFounderEmail = (process.env.FOUNDER_EMAIL || "").trim().toLowerCase();
+    const hasFounderClaim = req.user?.role === "Founder";
+    const matchesConfiguredFounder = emailVerified && Boolean(configuredFounderEmail) && tokenEmail === configuredFounderEmail;
+
+    let userData: Record<string, any> | null = null;
+    let firestoreError = false;
+
+    try {
+      const userSnap = await getFirestoreInstance().collection("users").doc(uid).get();
+      if (userSnap.exists) {
+        userData = userSnap.data() || null;
+      }
+    } catch (err) {
+      firestoreError = true;
+      console.error("Failed to lookup caller user profile in Firestore:", err);
+    }
+
+    if (userData && String(userData.status || "active").toLowerCase() === "disabled") {
+      throw new HttpError(403, "Forbidden: account is disabled");
+    }
+
+    if (firestoreError && !hasFounderClaim && !matchesConfiguredFounder) {
+      throw new HttpError(403, "Forbidden: unable to verify user role");
+    }
+
+    const role = userData ? String(userData.role || "") : "";
+    const companyId = userData ? String(userData.companyId || userData.company_id || "").trim() : "";
+    const status = userData ? String(userData.status || "active").toLowerCase() : "active";
+
+    const isFounder = hasFounderClaim || role === "Founder" || matchesConfiguredFounder;
+    const isCompanyAdmin = !isFounder && status !== "disabled" && role === "Admin" && Boolean(companyId);
+
+    return {
+      uid,
+      email: tokenEmail,
+      emailVerified,
+      role: isFounder ? "Founder" : role,
+      companyId,
+      status,
+      isFounder,
+      isCompanyAdmin,
+    };
+  };
+
+  const requireFounder = async (req: any, res: any, next: any) => {
+    try {
+      const actor = await resolveVerifiedActor(req);
+      if (!actor.isFounder) {
+        return res.status(403).json({ error: "Forbidden: Founder role required" });
+      }
+      req.actor = actor;
+      next();
+    } catch (err: any) {
+      const status = err instanceof HttpError ? err.statusCode : 403;
+      return res.status(status).json({ error: err.message || "Forbidden" });
+    }
+  };
+
+  const requireFounderOrCompanyAdmin = async (req: any, res: any, next: any) => {
+    try {
+      const actor = await resolveVerifiedActor(req);
+      if (!actor.isFounder && !actor.isCompanyAdmin) {
+        return res.status(403).json({ error: "Forbidden: Founder or Company Admin role required" });
+      }
+      req.actor = actor;
+      next();
+    } catch (err: any) {
+      const status = err instanceof HttpError ? err.statusCode : 403;
+      return res.status(status).json({ error: err.message || "Forbidden" });
+    }
+  };
+
+  const ALLOWED_USER_ROLES = new Set([
+    "Founder",
+    "Admin",
+    "Marketing Manager",
+    "Manager",
+    "Accountant",
+    "Sales",
+    "Staff",
+    "Viewer",
+    "staff",
+    "user",
+  ]);
+
+  const isValidDocId = (value: unknown): value is string =>
+    typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value.trim());
+
   // API: Firebase User Management - Add User
-  app.post("/api/admin/users", authenticateFirebase, async (req: any, res) => {
-    const { email, password, displayName, role, companyId } = req.body;
+  app.post("/api/admin/users", authenticateFirebase, requireFounderOrCompanyAdmin, async (req: any, res) => {
+    const actor: VerifiedActor = req.actor;
+    const { email, password, displayName, role, companyId } = req.body || {};
+
+    const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const cleanDisplayName = typeof displayName === "string" ? displayName.trim() : "";
+    const requestedRole = typeof role === "string" && role.trim() ? role.trim() : "staff";
+    const requestedCompanyId = typeof companyId === "string" ? companyId.trim() : "";
+
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ error: "Valid email is required" });
+    }
+    if (typeof password !== "string" || password.length < 6 || password.length > 128) {
+      return res.status(400).json({ error: "Password must be between 6 and 128 characters" });
+    }
+    if (!cleanDisplayName || cleanDisplayName.length > 120) {
+      return res.status(400).json({ error: "Valid displayName is required" });
+    }
+    if (!ALLOWED_USER_ROLES.has(requestedRole)) {
+      return res.status(400).json({ error: "Invalid user role" });
+    }
+    if (requestedRole === "Founder" && !actor.isFounder) {
+      return res.status(403).json({ error: "Forbidden: Only a Founder can assign the Founder role" });
+    }
+
+    const effectiveCompanyId = actor.isFounder ? requestedCompanyId : actor.companyId;
+    if (!actor.isFounder) {
+      if (!actor.companyId) {
+        return res.status(403).json({ error: "Forbidden: Caller has no company scope" });
+      }
+      if (requestedCompanyId && requestedCompanyId !== actor.companyId) {
+        return res.status(403).json({ error: "Forbidden: Cannot create users for another company" });
+      }
+    } else if (!effectiveCompanyId && requestedRole !== "Founder") {
+      return res.status(400).json({ error: "companyId is required" });
+    }
 
     try {
       // 1. Create User in Firebase Auth
       const userRecord = await admin.auth().createUser({
-        email,
+        email: cleanEmail,
         password,
-        displayName,
+        displayName: cleanDisplayName,
       });
 
       // 2. Create User Profile in Firestore
       await getFirestoreInstance().collection('users').doc(userRecord.uid).set({
         uid: userRecord.uid,
-        email,
-        displayName,
-        role: role || 'staff',
-        companyId,
+        email: cleanEmail,
+        displayName: cleanDisplayName,
+        role: requestedRole,
+        companyId: effectiveCompanyId,
+        status: 'active',
+        createdBy: actor.uid,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
@@ -102,15 +253,45 @@ async function startServer() {
   });
 
   // API: Firebase User Management - Delete User
-  app.delete("/api/admin/users/:uid", authenticateFirebase, async (req: any, res) => {
-    const { uid } = req.params;
+  app.delete("/api/admin/users/:uid", authenticateFirebase, requireFounderOrCompanyAdmin, async (req: any, res) => {
+    const actor: VerifiedActor = req.actor;
+    const uid = typeof req.params?.uid === "string" ? req.params.uid.trim() : "";
+
+    if (!isValidDocId(uid)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+    if (uid === actor.uid) {
+      return res.status(403).json({ error: "Forbidden: Cannot delete your own account" });
+    }
 
     try {
+      const targetRef = getFirestoreInstance().collection('users').doc(uid);
+      const targetSnap = await targetRef.get();
+      const targetData = targetSnap.exists ? (targetSnap.data() || {}) : null;
+
+      if (!targetData) {
+        if (!actor.isFounder) {
+          return res.status(403).json({ error: "Forbidden: Target user outside company scope" });
+        }
+        const authUser = await admin.auth().getUser(uid).catch(() => null);
+        if (authUser?.customClaims?.role === "Founder") {
+          return res.status(403).json({ error: "Forbidden: Founder accounts cannot be deleted here" });
+        }
+      } else {
+        if (String(targetData.role || "") === "Founder") {
+          return res.status(403).json({ error: "Forbidden: Founder accounts cannot be deleted here" });
+        }
+        const targetCompanyId = String(targetData.companyId || targetData.company_id || "").trim();
+        if (!actor.isFounder && (!targetCompanyId || targetCompanyId !== actor.companyId)) {
+          return res.status(403).json({ error: "Forbidden: Cannot delete users from another company" });
+        }
+      }
+
       // 1. Delete from Firebase Auth
       await admin.auth().deleteUser(uid);
 
       // 2. Delete from Firestore
-      await getFirestoreInstance().collection('users').doc(uid).delete();
+      await targetRef.delete();
 
       res.json({ message: "User deleted successfully" });
     } catch (error: any) {
@@ -120,11 +301,36 @@ async function startServer() {
   });
 
   // API: Firebase User Management - Reset Password
-  app.post("/api/admin/users/:uid/reset-password", authenticateFirebase, async (req: any, res) => {
-    const { uid } = req.params;
-    const { newPassword } = req.body;
+  app.post("/api/admin/users/:uid/reset-password", authenticateFirebase, requireFounderOrCompanyAdmin, async (req: any, res) => {
+    const actor: VerifiedActor = req.actor;
+    const uid = typeof req.params?.uid === "string" ? req.params.uid.trim() : "";
+    const { newPassword } = req.body || {};
+
+    if (!isValidDocId(uid)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
+    if (typeof newPassword !== "string" || newPassword.length < 6 || newPassword.length > 128) {
+      return res.status(400).json({ error: "newPassword must be between 6 and 128 characters" });
+    }
 
     try {
+      const targetSnap = await getFirestoreInstance().collection('users').doc(uid).get();
+      const targetData = targetSnap.exists ? (targetSnap.data() || {}) : null;
+
+      if (!targetData) {
+        if (!actor.isFounder) {
+          return res.status(403).json({ error: "Forbidden: Target user outside company scope" });
+        }
+      } else {
+        if (String(targetData.role || "") === "Founder" && !actor.isFounder) {
+          return res.status(403).json({ error: "Forbidden: Cannot reset Founder account password" });
+        }
+        const targetCompanyId = String(targetData.companyId || targetData.company_id || "").trim();
+        if (!actor.isFounder && (!targetCompanyId || targetCompanyId !== actor.companyId)) {
+          return res.status(403).json({ error: "Forbidden: Cannot reset password for another company user" });
+        }
+      }
+
       await admin.auth().updateUser(uid, {
         password: newPassword,
       });
@@ -260,10 +466,14 @@ async function startServer() {
     doc.end();
   });
 
-  // Helper to run shell commands safely
-  const runGitCmd = (cmd: string): { success: boolean; output: string } => {
+  // Helper to run git commands safely without spawning a shell
+  const runGitArgs = (args: string[]): { success: boolean; output: string } => {
     try {
-      const output = execSync(cmd, { cwd: process.cwd(), encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
+      const output = execFileSync("git", args, {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
+      });
       return { success: true, output: (output || "").trim() };
     } catch (err: any) {
       const stderr = err.stderr ? err.stderr.toString() : "";
@@ -272,8 +482,65 @@ async function startServer() {
     }
   };
 
-  // API: Get Git & Version Status
-  app.get("/api/github/status", (req, res) => {
+  const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const validateSemverTag = (version: unknown): string => {
+    if (typeof version !== "string") {
+      throw new HttpError(400, "Invalid version format");
+    }
+    const trimmed = version.trim();
+    if (!/^v?\d+\.\d+\.\d+(?:\.\d+)?$/.test(trimmed)) {
+      throw new HttpError(400, "Invalid semantic version format");
+    }
+    return trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
+  };
+
+  const validateBranchName = (branch: unknown): string => {
+    if (typeof branch !== "string") {
+      throw new HttpError(400, "Invalid branch name");
+    }
+    const trimmed = branch.trim();
+    if (
+      !trimmed ||
+      trimmed.startsWith("-") ||
+      trimmed.includes("..") ||
+      trimmed.endsWith(".lock") ||
+      !/^[a-zA-Z0-9._/-]{1,64}$/.test(trimmed)
+    ) {
+      throw new HttpError(400, "Invalid git branch name");
+    }
+    return trimmed;
+  };
+
+  const validateGitRemoteUrl = (remoteUrl: unknown): string => {
+    if (remoteUrl === undefined || remoteUrl === null || remoteUrl === "") {
+      return "";
+    }
+    if (typeof remoteUrl !== "string") {
+      throw new HttpError(400, "Invalid remoteUrl");
+    }
+    const trimmed = remoteUrl.trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("-")) {
+      throw new HttpError(400, "Invalid remoteUrl");
+    }
+    const isHttpsGithub = /^https:\/\/github\.com\/[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+(?:\.git)?$/.test(trimmed);
+    const isSshGithub = /^git@github\.com:[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+(?:\.git)?$/.test(trimmed);
+    if (!isHttpsGithub && !isSshGithub) {
+      throw new HttpError(400, "remoteUrl must be a valid GitHub HTTPS or SSH URL");
+    }
+    return trimmed;
+  };
+
+  const sanitizeGitText = (value: unknown, fallback: string, maxLen = 200): string => {
+    const raw = typeof value === "string" ? value : "";
+    const cleaned = raw.replace(/[\x00-\x1f\x7f]/g, " ").replace(/\s+/g, " ").trim();
+    const bounded = (cleaned || fallback).slice(0, maxLen).trim();
+    return bounded.startsWith("-") ? `Update ${bounded.replace(/^-+/, "").trim()}` : bounded;
+  };
+
+  // API: Get Git & Version Status (Founder Only)
+  app.get("/api/github/status", authenticateFirebase, requireFounder, (req, res) => {
     try {
       const isGitRepo = fs.existsSync(path.resolve(process.cwd(), ".git"));
       const pkgPath = path.resolve(process.cwd(), "package.json");
@@ -287,22 +554,22 @@ async function startServer() {
       let statusLog = "";
 
       if (isGitRepo) {
-        const branchRes = runGitCmd("git rev-parse --abbrev-ref HEAD");
+        const branchRes = runGitArgs(["rev-parse", "--abbrev-ref", "HEAD"]);
         if (branchRes.success) currentBranch = branchRes.output || "main";
 
-        const remoteRes = runGitCmd("git config --get remote.origin.url");
+        const remoteRes = runGitArgs(["config", "--get", "remote.origin.url"]);
         if (remoteRes.success) remoteUrl = remoteRes.output;
 
-        const statusRes = runGitCmd("git status --porcelain");
+        const statusRes = runGitArgs(["status", "--porcelain"]);
         if (statusRes.success) {
           hasChanges = statusRes.output.length > 0;
           statusLog = statusRes.output;
         }
 
-        const logRes = runGitCmd('git log -1 --format="%h - %s (%cr)"');
+        const logRes = runGitArgs(["log", "-1", "--format=%h - %s (%cr)"]);
         if (logRes.success) lastCommit = logRes.output;
 
-        const tagRes = runGitCmd("git tag -l");
+        const tagRes = runGitArgs(["tag", "-l"]);
         if (tagRes.success && tagRes.output) {
           gitTags = tagRes.output.split("\n").filter(Boolean);
         }
@@ -350,8 +617,10 @@ async function startServer() {
     commitMessage = ""
   }: any) => {
     const logs: string[] = [];
-    const normalizedTag = version.startsWith("v") ? version : `v${version}`;
+    const normalizedTag = validateSemverTag(version);
     const semVer = normalizedTag.replace(/^v/, "");
+    const safeTitle = sanitizeGitText(title, "", 160);
+    const safeCommitMsg = sanitizeGitText(commitMessage, "", 200);
 
     // 1. Synchronize package.json version
     logs.push(`Synchronizing package.json version to ${semVer}...`);
@@ -441,7 +710,7 @@ async function startServer() {
       const serializedEntry = "  " + JSON.stringify(newReleaseObj, null, 2).replace(/\n/g, "\n  ") + ",\n";
 
       // If version entry already exists in release notes, replace it; otherwise prepend
-      const versionRegex = new RegExp(`\\{\\s*version:\\s*["']${normalizedTag}["'][\\s\\S]*?\\n\\s*\\},?`, 'm');
+      const versionRegex = new RegExp(`\\{\\s*version:\\s*["']${escapeRegExp(normalizedTag)}["'][\\s\\S]*?\\n\\s*\\},?`, 'm');
       if (versionRegex.test(rnContent)) {
         rnContent = rnContent.replace(versionRegex, serializedEntry.trimEnd());
       } else {
@@ -456,12 +725,12 @@ async function startServer() {
 
     // 3. Git Stage & Commit locally
     logs.push(`Staging local changes and creating release commit for ${normalizedTag}...`);
-    runGitCmd("git add -A");
-    const finalCommitMsg = `Release ${normalizedTag}: ${commitMessage.trim() || title.trim() || 'System updates and release notes'}`;
-    const commitRes = runGitCmd(`git commit -m "${finalCommitMsg}" --allow-empty`);
-    runGitCmd(`git tag -fa "${normalizedTag}" -m "Release ${normalizedTag}"`);
+    runGitArgs(["add", "-A"]);
+    const finalCommitMsg = `Release ${normalizedTag}: ${safeCommitMsg || safeTitle || 'System updates and release notes'}`;
+    runGitArgs(["commit", "-m", finalCommitMsg, "--allow-empty"]);
+    runGitArgs(["tag", "-fa", normalizedTag, "-m", `Release ${normalizedTag}`]);
 
-    const hashRes = runGitCmd('git log -1 --format="%h"');
+    const hashRes = runGitArgs(["log", "-1", "--format=%h"]);
 
     return {
       success: true,
@@ -472,10 +741,10 @@ async function startServer() {
     };
   };
 
-  // API: Save and Publish Release Notes & Version Locally
-  app.post("/api/github/release", (req, res) => {
+  // API: Save and Publish Release Notes & Version Locally (Founder Only)
+  app.post("/api/github/release", authenticateFirebase, requireFounder, (req, res) => {
     try {
-      const result = applyReleaseUpdate(req.body);
+      const result = applyReleaseUpdate(req.body || {});
       res.json({
         success: true,
         version: result.normalizedTag,
@@ -484,21 +753,21 @@ async function startServer() {
         logs: result.logs.join("\n")
       });
     } catch (err: any) {
-      res.status(500).json({
+      const status = err instanceof HttpError ? err.statusCode : 500;
+      res.status(status).json({
         success: false,
         error: err.message
       });
     }
   });
 
-  // API: Push Changes to GitHub
-  app.post("/api/github/push", (req, res) => {
+  // API: Push Changes to GitHub (Founder Only)
+  app.post("/api/github/push", authenticateFirebase, requireFounder, (req, res) => {
     const { 
       version = "v1.9.9", 
       commitMessage = "Release update", 
       branch = "main", 
       remoteUrl = "",
-      autoTag = true,
       releaseNoteTitle = "",
       releaseNoteSummary = "",
       bnTitle = "",
@@ -506,28 +775,32 @@ async function startServer() {
       newFeatures = [],
       improvements = [],
       bugFixes = []
-    } = req.body;
+    } = req.body || {};
 
     const logs: string[] = [];
-    const normalizedTag = version.startsWith("v") ? version : `v${version}`;
 
     try {
+      const normalizedTag = validateSemverTag(version);
+      const validBranch = validateBranchName(branch);
+      const validRemote = validateGitRemoteUrl(remoteUrl);
+      const gitAuthorName = (process.env.GIT_AUTHOR_NAME || "ERP Release Bot").trim();
+      const gitAuthorEmail = (process.env.GIT_AUTHOR_EMAIL || "release-bot@localhost").trim();
+
       logs.push(`[1/5] Initializing Git & Environment for ${normalizedTag}...`);
       const isGitRepo = fs.existsSync(path.resolve(process.cwd(), ".git"));
       if (!isGitRepo) {
-        const initRes = runGitCmd("git init");
+        const initRes = runGitArgs(["init"]);
         logs.push(`git init: ${initRes.output}`);
       }
 
-      runGitCmd('git config user.name "TallyFlow ERP"');
-      runGitCmd('git config user.email "bot@tallyflow.erp"');
-      runGitCmd(`git branch -M ${branch}`);
+      runGitArgs(["config", "user.name", gitAuthorName]);
+      runGitArgs(["config", "user.email", gitAuthorEmail]);
+      runGitArgs(["branch", "-M", validBranch]);
 
-      if (remoteUrl && remoteUrl.trim()) {
-        const cleanRemote = remoteUrl.trim();
-        runGitCmd("git remote remove origin");
-        const addRemoteRes = runGitCmd(`git remote add origin ${cleanRemote}`);
-        logs.push(`Configured remote origin: ${cleanRemote} (${addRemoteRes.success ? "OK" : addRemoteRes.output})`);
+      if (validRemote) {
+        runGitArgs(["remote", "remove", "origin"]);
+        const addRemoteRes = runGitArgs(["remote", "add", "origin", validRemote]);
+        logs.push(`Configured remote origin: ${validRemote} (${addRemoteRes.success ? "OK" : addRemoteRes.output})`);
       }
 
       // 2. Synchronize release notes, package.json, and commit
@@ -546,13 +819,13 @@ async function startServer() {
       logs.push(...updateResult.logs);
 
       // 3. Push to remote
-      logs.push(`[3/5] Pushing to GitHub (${branch})...`);
-      const remoteCheck = runGitCmd("git config --get remote.origin.url");
+      logs.push(`[3/5] Pushing to GitHub (${validBranch})...`);
+      const remoteCheck = runGitArgs(["config", "--get", "remote.origin.url"]);
       let pushSuccess = false;
       let pushMessage = "";
 
       if (remoteCheck.success && remoteCheck.output) {
-        const pushRes = runGitCmd(`git push origin ${branch} --tags`);
+        const pushRes = runGitArgs(["push", "origin", validBranch, "--tags"]);
         logs.push(`git push: ${pushRes.output}`);
         if (pushRes.success) {
           pushSuccess = true;
@@ -565,7 +838,7 @@ async function startServer() {
         logs.push("No remote origin configured. Changes and release notes are committed and tagged locally.");
       }
 
-      const hashRes = runGitCmd('git log -1 --format="%h"');
+      const hashRes = runGitArgs(["log", "-1", "--format=%h"]);
 
       res.json({
         success: true,
@@ -576,8 +849,9 @@ async function startServer() {
         logs: logs.join("\n")
       });
     } catch (err: any) {
+      const status = err instanceof HttpError ? err.statusCode : 500;
       logs.push(`Error: ${err.message}`);
-      res.status(500).json({
+      res.status(status).json({
         success: false,
         error: err.message,
         logs: logs.join("\n")

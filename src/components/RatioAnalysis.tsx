@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, TrendingUp, Scale, Package, Loader2, Download, Printer, ArrowLeft, Info, BarChart2, Calendar } from 'lucide-react';
+import { Activity, TrendingUp, Scale, Package, Loader2, Download, Printer, FileSpreadsheet, Mail, ArrowLeft, Info, BarChart2, Calendar } from 'lucide-react';
 import { SkeletonLoader } from './SkeletonLoader';
 import { useNavigate } from 'react-router-dom';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { cn, formatNumber } from '../lib/utils';
-import { printUtils } from '../utils/printUtils';
-import { exportToCSV } from '../utils/exportUtils';
+import { cn, formatNumber, formatToYMD, parseEntryDate, getMovementType, compareInventorySequence } from '../lib/utils';
+import { buildReportPrintHtml, executePrint } from '../utils/printUtils';
+import { printToPDF } from '../utils/pdfExportService';
+import { exportToCSV, exportStructuredExcel, shareReportViaEmail } from '../utils/exportUtils';
+import { formatDate as formatReportDate } from '../utils/dateUtils';
 import { DateInput } from './DateInput';
 import { EditableHeader } from './EditableHeader';
 
 export function RatioAnalysis() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, company } = useAuth();
   const { t } = useLanguage();
   const settings = useSettings();
   const [loading, setLoading] = useState(true);
@@ -31,62 +33,216 @@ export function RatioAnalysis() {
       if (!user?.companyId) return;
       setLoading(true);
       try {
-        const [ledgers, vEntries, items, invEntries] = await Promise.all([
+        const [ledgers, vEntries, items, invEntries, vouchers] = await Promise.all([
           erpService.getLedgers(user.companyId),
           erpService.getVoucherEntriesByDate(user.companyId, asOnDate),
           erpService.getItems(user.companyId),
-          erpService.getInventoryEntriesByDate(user.companyId, '1900-01-01', asOnDate)
+          erpService.getInventoryEntriesByDate(user.companyId, '1900-01-01', asOnDate),
+          erpService.getVouchersByDateRange(user.companyId, '1900-01-01', asOnDate)
         ]);
 
-        // 1. Calculate Ledger Balances
+        // Determine active financial year start (falls back to inception if unset or > asOnDate)
+        const rawFyStart = settings.financialYearStart ? formatToYMD(settings.financialYearStart) : '';
+        const hasValidFyStart = Boolean(rawFyStart && rawFyStart <= asOnDate);
+        const fyStartDate = hasValidFyStart ? parseEntryDate(rawFyStart, null) : null;
+        const asOnEndDate = parseEntryDate(asOnDate, null);
+        asOnEndDate.setHours(23, 59, 59, 999);
+
+        // 1. Calculate Cumulative Balance Sheet Balances (as of asOnDate)
+        //    and Period-Consistent P&L Balances (FY-to-date when FY start <= asOnDate, else inception-to-date)
         const ledgerBalances: Record<string, number> = {};
+        const fyMovementBalances: Record<string, number> = {};
+
         ledgers.forEach(l => {
-          const entries = vEntries?.filter(e => e.ledger_id === l.id) || [];
-          const movement = entries.reduce((s, e) => s + (Number(e.debit) || 0) - (Number(e.credit) || 0), 0);
-          ledgerBalances[l.id] = (Number(l.opening_balance) || 0) + movement;
+          ledgerBalances[l.id] = Number(l.opening_balance) || 0;
+          // Include opening_balance in FY movement only if no FY start scoping is splitting prior periods
+          fyMovementBalances[l.id] = hasValidFyStart ? 0 : (Number(l.opening_balance) || 0);
         });
 
-        // 2. Calculate Closing Stock
-        const itemStocks: Record<string, number> = {};
-        invEntries.forEach(entry => {
-          const qty = (Number(entry.qty) || 0) + (Number(entry.free_qty) || 0);
-          const type = (entry.movement_type || entry.m_type || '').toLowerCase();
-          itemStocks[entry.item_id] = (itemStocks[entry.item_id] || 0) + (type === 'inward' ? qty : -qty);
-        });
-        const closingStockValue = Object.entries(itemStocks).reduce((sum, [id, qty]) => {
-          const item = items.find(i => i.id === id);
-          const cost = item?.avg_cost || item?.opening_rate || 0;
-          return sum + (qty * (cost || 0));
-        }, 0);
+        (vEntries || []).forEach((e: any) => {
+          const delta = (Number(e.debit) || 0) - (Number(e.credit) || 0);
+          const lId = e.ledger_id;
+          if (!lId) return;
+          if (ledgerBalances[lId] === undefined) ledgerBalances[lId] = 0;
+          ledgerBalances[lId] += delta;
 
-        // 3. Group and Calculate Totals
-        const getGroupTotal = (groupMatches: string[]) => {
-          return ledgers
-            .filter(l => groupMatches.some(m => l.group_name?.toLowerCase().includes(m.toLowerCase())))
-            .reduce((sum, l) => sum + (ledgerBalances[l.id] || 0), 0);
+          if (!hasValidFyStart) {
+            if (fyMovementBalances[lId] === undefined) fyMovementBalances[lId] = 0;
+            fyMovementBalances[lId] += delta;
+          } else if (fyStartDate) {
+            const eDate = parseEntryDate(e.v_date || e.date, e.createdAt);
+            if (eDate >= fyStartDate && eDate <= asOnEndDate) {
+              if (fyMovementBalances[lId] === undefined) fyMovementBalances[lId] = 0;
+              fyMovementBalances[lId] += delta;
+            }
+          }
+        });
+
+        // If FY start is active, preserve ledger opening_balance when there are no pre-FY entries on P&L ledgers
+        const hasPreFyEntries = hasValidFyStart && fyStartDate
+          ? (vEntries || []).some((e: any) => parseEntryDate(e.v_date || e.date, e.createdAt) < fyStartDate)
+          : false;
+        const plBalances = hasPreFyEntries ? fyMovementBalances : ledgerBalances;
+
+        // 2. Chronological Stock Valuation (aligned with StockSummary & ProfitAndLoss)
+        const voucherMap: Record<string, any> = {};
+        (vouchers || []).forEach((v: any) => {
+          if (v?.id) voucherMap[v.id] = v;
+        });
+
+        const enrichedInv = (invEntries || []).map((e: any) => {
+          const v = voucherMap[e.voucher_id] || {};
+          const vType = (e.v_type || v.v_type || '').toString();
+          const mType = e.m_type || e.movement_type || e.entry_type || v.m_type || v.movement_type || '';
+          return {
+            ...e,
+            v_type: vType,
+            v_no: e.v_no || v.v_no || '',
+            v_serial_no: e.v_serial_no || v.serial_no || 0,
+            v_createdAt: e.created_at || v.createdAt,
+            date: e.date || v.v_date || '',
+            m_type: getMovementType({ ...e, v_type: vType, m_type: mType })
+          };
+        }).sort((a: any, b: any) => compareInventorySequence(a, b));
+
+        const calculateStockValue = (targetEndDate: Date | null): number => {
+          const itemStates: Record<string, { total: number; godowns: Record<string, number> }> = {};
+          (items || []).forEach((item: any) => {
+            const godownBalances: Record<string, number> = {};
+            (item.opening_godowns || []).forEach((ag: any) => {
+              if (ag.godown_id) godownBalances[ag.godown_id] = Number(ag.qty) || 0;
+            });
+            itemStates[item.id] = {
+              total: Number(item.opening_qty) || 0,
+              godowns: godownBalances
+            };
+          });
+
+          if (targetEndDate) {
+            enrichedInv.forEach((entry: any) => {
+              const entryDate = parseEntryDate(entry.date, entry.v_createdAt);
+              if (entryDate > targetEndDate) return;
+
+              const state = itemStates[entry.item_id];
+              if (!state) return;
+
+              const qty = (Number(entry.qty) || 0) + (Number(entry.free_qty) || 0);
+              const mType = entry.m_type || getMovementType(entry);
+              const isPhysical = (entry.v_type || '').toLowerCase() === 'physical stock' || !!entry.is_physical_snapshot;
+              const gId = entry.godown_id;
+
+              let adjustment = 0;
+              if (isPhysical) {
+                if (gId) {
+                  const oldVal = state.godowns[gId] || 0;
+                  adjustment = qty - oldVal;
+                  state.godowns[gId] = qty;
+                } else {
+                  adjustment = qty - state.total;
+                  state.total = qty;
+                  Object.keys(state.godowns).forEach(k => {
+                    state.godowns[k] = 0;
+                  });
+                }
+              } else {
+                adjustment = mType === 'inward' ? qty : -qty;
+                if (gId) state.godowns[gId] = (state.godowns[gId] || 0) + adjustment;
+              }
+
+              if (!isPhysical || gId) {
+                state.total += adjustment;
+              }
+            });
+          }
+
+          return (items || []).reduce((sum: number, item: any) => {
+            const state = itemStates[item.id];
+            const qty = state ? Math.max(0, state.total) : 0;
+            const rate = Number(item?.avg_cost) || Number(item?.opening_rate) || 0;
+            return sum + (qty * rate);
+          }, 0);
         };
 
-        const currentAssetsVal = getGroupTotal(['current assets', 'bank accounts', 'cash-in-hand', 'sundry debtors', 'loans & advances (asset)', 'deposits (asset)']) + closingStockValue;
-        const currentLiabilitiesVal = Math.abs(getGroupTotal(['current liabilities', 'sundry creditors', 'duties & taxes', 'provisions']));
-        const workingCapital = currentAssetsVal - currentLiabilitiesVal;
-        
-        const cashInHand = getGroupTotal(['cash-in-hand']);
-        const bankAccounts = getGroupTotal(['bank accounts']);
-        const bankOD = Math.abs(getGroupTotal(['bank od a/c']));
-        const debtors = getGroupTotal(['sundry debtors']);
-        const creditors = Math.abs(getGroupTotal(['sundry creditors']));
-        const salesVal = Math.abs(getGroupTotal(['sales accounts', 'direct income']));
-        const purchaseVal = getGroupTotal(['purchase accounts', 'direct expense']);
+        let dayBeforeFyEnd: Date | null = null;
+        if (hasPreFyEntries && fyStartDate) {
+          dayBeforeFyEnd = new Date(fyStartDate.getTime() - 1);
+        }
 
-        // Profit Logic
-        const incomeL = ledgers.filter(l => l.nature === 'Income');
-        const expenseL = ledgers.filter(l => l.nature === 'Expense');
-        const totalIncome = incomeL.reduce((sum, l) => sum + Math.abs(ledgerBalances[l.id]), 0);
-        const totalExpense = expenseL.reduce((sum, l) => sum + ledgerBalances[l.id], 0);
-        const netProfit = (totalIncome + closingStockValue) - totalExpense;
-        
-        const capitalAcc = Math.abs(getGroupTotal(['capital account', 'reserves']));
-        const loansLiability = Math.abs(getGroupTotal(['loans (liability)']));
+        const openingStockValue = calculateStockValue(dayBeforeFyEnd);
+        const closingStockValue = calculateStockValue(asOnEndDate);
+
+        // 3. Safe Ledger Group Matching (prevents 'indirect expense' matching 'direct expense')
+        const matchesGroup = (groupName: string | undefined, includesAny: string[], excludesAny: string[] = []): boolean => {
+          const g = (groupName || '').toLowerCase().trim();
+          if (!g) return false;
+          if (excludesAny.some(ex => g.includes(ex))) return false;
+          return includesAny.some(inc => g.includes(inc));
+        };
+
+        const sumGroup = (balances: Record<string, number>, includesAny: string[], excludesAny: string[] = []): number => {
+          return ledgers
+            .filter(l => matchesGroup(l.group_name, includesAny, excludesAny))
+            .reduce((sum, l) => sum + (balances[l.id] || 0), 0);
+        };
+
+        const currentAssetsVal =
+          sumGroup(ledgerBalances, ['current asset', 'bank account', 'cash-in-hand', 'cash in hand', 'sundry debtor', 'loans & advances (asset)', 'deposits (asset)']) +
+          closingStockValue;
+        const currentLiabilitiesVal = Math.max(
+          0,
+          -sumGroup(ledgerBalances, ['current liabilit', 'sundry creditor', 'duties & taxes', 'provision', 'bank od'])
+        );
+        const workingCapital = currentAssetsVal - currentLiabilitiesVal;
+
+        const cashInHand = sumGroup(ledgerBalances, ['cash-in-hand', 'cash in hand']);
+        const bankAccounts = sumGroup(ledgerBalances, ['bank account']);
+        const bankOD = Math.max(0, -sumGroup(ledgerBalances, ['bank od']));
+        const debtors = sumGroup(ledgerBalances, ['sundry debtor']);
+        const creditors = Math.max(0, -sumGroup(ledgerBalances, ['sundry creditor']));
+
+        // 4. Trading & P&L Math (Preserving Dr/Cr Signs: Credit Income is negative in Dr-Cr, Debit Expense is positive)
+        let salesVal = 0;
+        let directIncomeVal = 0;
+        let purchaseVal = 0;
+        let directExpenseVal = 0;
+        let indirectIncomeVal = 0;
+        let indirectExpenseVal = 0;
+
+        let cumTotalIncome = 0;
+        let cumTotalExpense = 0;
+
+        ledgers.forEach(l => {
+          const bal = plBalances[l.id] || 0;
+          const cumBal = ledgerBalances[l.id] || 0;
+
+          if (l.nature === 'Income') cumTotalIncome += -cumBal;
+          if (l.nature === 'Expense') cumTotalExpense += cumBal;
+
+          if (matchesGroup(l.group_name, ['sales account', 'sales'])) {
+            salesVal += -bal;
+          } else if (matchesGroup(l.group_name, ['direct income'], ['indirect'])) {
+            directIncomeVal += -bal;
+          } else if (matchesGroup(l.group_name, ['purchase account', 'purchase'])) {
+            purchaseVal += bal;
+          } else if (matchesGroup(l.group_name, ['direct expense'], ['indirect'])) {
+            directExpenseVal += bal;
+          } else if (l.nature === 'Income') {
+            indirectIncomeVal += -bal;
+          } else if (l.nature === 'Expense') {
+            indirectExpenseVal += bal;
+          }
+        });
+
+        const cogs = openingStockValue + purchaseVal + directExpenseVal - closingStockValue;
+        const grossProfit = (salesVal + directIncomeVal + closingStockValue) - (openingStockValue + purchaseVal + directExpenseVal);
+        const netProfit = grossProfit + indirectIncomeVal - indirectExpenseVal;
+
+        const initialOpeningStock = calculateStockValue(null);
+        const cumNetProfit = (cumTotalIncome + closingStockValue) - (cumTotalExpense + initialOpeningStock);
+
+        const capitalAcc = -sumGroup(ledgerBalances, ['capital account', 'reserve']);
+        const loansLiability = Math.max(0, -sumGroup(ledgerBalances, ['loans (liability)', 'secured loan', 'unsecured loan']));
+        const equityBase = capitalAcc + cumNetProfit;
 
         setData({
           groups: [
@@ -100,19 +256,74 @@ export function RatioAnalysis() {
             { name: 'Purchase Accounts', value: purchaseVal },
             { name: 'Stock-in-Hand', value: closingStockValue },
             { name: 'Nett Profit', value: -netProfit },
-            { name: 'Wkg. Capital Turnover', value: workingCapital !== 0 ? Math.abs(salesVal / workingCapital) : 0, formula: '(Sales Accounts / Working Capital)', isRatio: true },
-            { name: 'Inventory Turnover', value: closingStockValue !== 0 ? Math.abs(salesVal / closingStockValue) : 0, formula: '(Sales Accounts / Closing Stock)', isRatio: true },
+            {
+              name: 'Wkg. Capital Turnover',
+              value: workingCapital !== 0 && salesVal > 0 ? Math.abs(salesVal / workingCapital) : 0,
+              formula: '(Sales Accounts / Working Capital)',
+              isRatio: true
+            },
+            {
+              name: 'Inventory Turnover',
+              value: closingStockValue > 0 && salesVal > 0 ? (salesVal / closingStockValue) : 0,
+              formula: '(Sales Accounts / Closing Stock)',
+              isRatio: true
+            },
           ],
           ratios: [
-            { name: 'Current Ratio', value: currentLiabilitiesVal !== 0 ? (currentAssetsVal / currentLiabilitiesVal) : 0, formula: '(Current Assets : Current Liabilities)', type: 'ratio' },
-            { name: 'Quick Ratio', value: currentLiabilitiesVal !== 0 ? ((currentAssetsVal - closingStockValue) / currentLiabilitiesVal) : 0, formula: '(Current Assets-Stock-in-Hand : Current Liabilities)', type: 'ratio' },
-            { name: 'Debt/Equity Ratio', value: (capitalAcc + netProfit) !== 0 ? (loansLiability / (capitalAcc + netProfit)) : 0, formula: '(Loans (Liability) : Capital Account + Nett Profit)', type: 'ratio' },
-            { name: 'Gross Profit %', value: salesVal !== 0 ? ((netProfit / salesVal) * 100) : 0, type: 'percent' }, 
-            { name: 'Nett Profit %', value: salesVal !== 0 ? ((netProfit / salesVal) * 100) : 0, type: 'percent' },
-            { name: 'Operating Cost %', value: salesVal !== 0 ? ((totalExpense / salesVal) * 100) : 0, formula: '(as percentage of Sales Accounts)', type: 'percent' },
-            { name: 'Recv. Turnover in days', value: (salesVal !== 0 && debtors !== 0) ? (debtors / (salesVal / 365)) : 0, formula: '(payment performance of Debtors)', type: 'days' },
-            { name: 'Return on Investment %', value: (capitalAcc + netProfit) !== 0 ? (netProfit / (capitalAcc + netProfit) * 100) : 0, formula: '(Nett Profit / Capital Account + Nett Profit )', type: 'percent' },
-            { name: 'Return on Wkg. Capital %', value: workingCapital !== 0 ? (netProfit / workingCapital * 100) : 0, formula: '(Nett Profit / Working Capital) %', type: 'percent' },
+            {
+              name: 'Current Ratio',
+              value: currentLiabilitiesVal > 0 ? (currentAssetsVal / currentLiabilitiesVal) : 0,
+              formula: '(Current Assets : Current Liabilities)',
+              type: 'ratio'
+            },
+            {
+              name: 'Quick Ratio',
+              value: currentLiabilitiesVal > 0 ? ((currentAssetsVal - closingStockValue) / currentLiabilitiesVal) : 0,
+              formula: '(Current Assets-Stock-in-Hand : Current Liabilities)',
+              type: 'ratio'
+            },
+            {
+              name: 'Debt/Equity Ratio',
+              value: equityBase > 0 ? (loansLiability / equityBase) : 0,
+              formula: '(Loans (Liability) : Capital Account + Nett Profit)',
+              type: 'ratio'
+            },
+            {
+              name: 'Gross Profit %',
+              value: salesVal > 0 ? ((grossProfit / salesVal) * 100) : 0,
+              formula: '(Gross Profit / Sales Accounts) %',
+              type: 'percent'
+            },
+            {
+              name: 'Nett Profit %',
+              value: salesVal > 0 ? ((netProfit / salesVal) * 100) : 0,
+              formula: '(Nett Profit / Sales Accounts) %',
+              type: 'percent'
+            },
+            {
+              name: 'Operating Cost %',
+              value: salesVal > 0 ? (((cogs + indirectExpenseVal) / salesVal) * 100) : 0,
+              formula: '((COGS + Indirect Expenses) / Sales Accounts) %',
+              type: 'percent'
+            },
+            {
+              name: 'Recv. Turnover in days',
+              value: (salesVal > 0 && debtors > 0) ? (debtors / (salesVal / 365)) : 0,
+              formula: '(payment performance of Debtors)',
+              type: 'days'
+            },
+            {
+              name: 'Return on Investment %',
+              value: equityBase > 0 ? ((netProfit / equityBase) * 100) : 0,
+              formula: '(Nett Profit / Capital Account + Nett Profit) %',
+              type: 'percent'
+            },
+            {
+              name: 'Return on Wkg. Capital %',
+              value: workingCapital > 0 ? ((netProfit / workingCapital) * 100) : 0,
+              formula: '(Nett Profit / Working Capital) %',
+              type: 'percent'
+            },
           ]
         });
       } catch (err) {
@@ -122,19 +333,160 @@ export function RatioAnalysis() {
       }
     }
     fetchAnalysisData();
-  }, [user?.companyId, asOnDate]);
+  }, [user?.companyId, asOnDate, settings.financialYearStart]);
+
+  const asOnSubtitle = `As on ${formatReportDate(asOnDate, settings.dateFormat)}`;
+
+  const formatGroupDisplay = (group: any) =>
+    group.isRatio
+      ? Number(group.value || 0).toFixed(2)
+      : `${formatNumber(Math.abs(group.value || 0))} ${group.value >= 0 ? 'Dr' : 'Cr'}`;
+
+  const formatRatioDisplay = (ratio: any) =>
+    ratio.type === 'ratio'
+      ? `${Number(ratio.value || 0).toFixed(2)} : 1`
+      : ratio.type === 'percent'
+        ? `${Number(ratio.value || 0).toFixed(2)} %`
+        : `${Number(ratio.value || 0).toFixed(2)} days`;
+
+  const buildRatioAnalysisPrintHtml = () => {
+    const groups = data?.groups || [];
+    const ratios = data?.ratios || [];
+
+    const workingCap = groups.find((g: any) => g.name === 'Working Capital');
+    const netProfitGroup = groups.find((g: any) => g.name === 'Nett Profit');
+    const currentRatio = ratios.find((r: any) => r.name === 'Current Ratio');
+    const gpRatio = ratios.find((r: any) => r.name === 'Gross Profit %');
+
+    return buildReportPrintHtml({
+      title: 'Ratio Analysis Report',
+      subtitle: asOnSubtitle,
+      settings,
+      company,
+      summaryCards: [
+        { label: 'Working Capital', value: workingCap ? formatGroupDisplay(workingCap) : '0.00' },
+        { label: 'Nett Profit', value: netProfitGroup ? formatGroupDisplay(netProfitGroup) : '0.00' },
+        { label: 'Current Ratio', value: currentRatio ? formatRatioDisplay(currentRatio) : '0.00 : 1' },
+        { label: 'Gross Profit %', value: gpRatio ? formatRatioDisplay(gpRatio) : '0.00 %' }
+      ],
+      sections: [
+        {
+          heading: 'Principal Groups',
+          columns: [
+            { label: 'Particulars', width: '44%' },
+            { label: 'Formula / Basis', width: '34%' },
+            { label: 'Value', align: 'right', width: '22%' }
+          ],
+          rows: groups.map((g: any) => ({
+            cells: [g.name, showExplanation && g.formula ? g.formula : '—', formatGroupDisplay(g)],
+            tone: g.isRatio ? 'neutral' : (g.value >= 0 ? 'positive' : 'negative')
+          })),
+          emptyMessage: 'No group data available'
+        },
+        {
+          heading: 'Principal Ratios',
+          columns: [
+            { label: 'Particulars', width: '44%' },
+            { label: 'Formula / Basis', width: '34%' },
+            { label: 'Value', align: 'right', width: '22%' }
+          ],
+          rows: ratios.map((r: any) => ({
+            cells: [r.name, showExplanation && r.formula ? r.formula : '—', formatRatioDisplay(r)],
+            tone: r.value >= 0 ? 'positive' : 'negative'
+          })),
+          emptyMessage: 'No ratio data available'
+        }
+      ]
+    });
+  };
 
   const handlePrint = () => {
-    printUtils.printElement('ratio-analysis-report', 'Ratio Analysis Report');
+    if (!data) return;
+    executePrint(buildRatioAnalysisPrintHtml());
+  };
+
+  const handleDownloadPDF = () => {
+    if (!data) return;
+    printToPDF({
+      title: 'Ratio Analysis Report',
+      subtitle: asOnSubtitle,
+      fileName: `Ratio_Analysis_${asOnDate}`,
+      htmlContent: buildRatioAnalysisPrintHtml(),
+      settings,
+      company
+    });
+  };
+
+  const handleDownloadExcel = () => {
+    if (!data) return;
+    const rows: Record<string, any>[] = [
+      ...data.groups.map((g: any) => ({
+        section: 'Principal Groups',
+        particulars: g.name,
+        formula: g.formula || '',
+        value: Number(Math.abs(g.value || 0).toFixed(2)),
+        unit_sign: g.isRatio ? 'Ratio' : (g.value >= 0 ? 'Dr' : 'Cr')
+      })),
+      ...data.ratios.map((r: any) => ({
+        section: 'Principal Ratios',
+        particulars: r.name,
+        formula: r.formula || '',
+        value: Number((r.value || 0).toFixed(2)),
+        unit_sign: r.type === 'ratio' ? ': 1' : r.type === 'percent' ? '%' : 'days'
+      }))
+    ];
+
+    exportStructuredExcel({
+      fileName: `Ratio_Analysis_${asOnDate}`,
+      sheetName: 'Ratio Analysis',
+      title: 'Ratio Analysis Report',
+      subtitle: asOnSubtitle,
+      headers: ['Section', 'Particulars', 'Formula', 'Value', 'Unit / Sign'],
+      rows: rows.map(r => [r.section, r.particulars, r.formula, r.value, r.unit_sign]),
+      settings,
+      company
+    });
   };
 
   const handleDownloadCSV = () => {
+    if (!data) return;
     const exportData: any[] = [];
-    exportData.push({ type: 'GROUP', name: 'PRINCIPAL GROUPS', value: '' });
-    data?.groups.forEach((g: any) => exportData.push({ type: 'GROUP', name: g.name, value: g.value }));
-    exportData.push({ type: 'RATIO', name: 'PRINCIPAL RATIOS', value: '' });
-    data?.ratios.forEach((r: any) => exportData.push({ type: 'RATIO', name: r.name, value: r.value }));
-    exportToCSV('Ratio_Analysis', 'Ratio Analysis', exportData, ['Type', 'Particulars', 'Value'], settings);
+    exportData.push({ Type: 'GROUP', Particulars: 'PRINCIPAL GROUPS', Formula: '', Value: '' });
+    data.groups.forEach((g: any) =>
+      exportData.push({
+        Type: 'GROUP',
+        Particulars: g.name,
+        Formula: g.formula || '',
+        Value: formatGroupDisplay(g)
+      })
+    );
+    exportData.push({ Type: 'RATIO', Particulars: 'PRINCIPAL RATIOS', Formula: '', Value: '' });
+    data.ratios.forEach((r: any) =>
+      exportData.push({
+        Type: 'RATIO',
+        Particulars: r.name,
+        Formula: r.formula || '',
+        Value: formatRatioDisplay(r)
+      })
+    );
+    exportToCSV(`Ratio_Analysis_${asOnDate}`, 'Ratio Analysis', exportData, ['Type', 'Particulars', 'Formula', 'Value'], settings, company);
+  };
+
+  const handleEmailReport = () => {
+    if (!data) return;
+    shareReportViaEmail({
+      title: 'Ratio Analysis Report',
+      subtitle: asOnSubtitle,
+      settings,
+      company,
+      summaryLines: [
+        'PRINCIPAL GROUPS:',
+        ...data.groups.map((g: any) => `- ${g.name}: ${formatGroupDisplay(g)}`),
+        '',
+        'PRINCIPAL RATIOS:',
+        ...data.ratios.map((r: any) => `- ${r.name}: ${formatRatioDisplay(r)}`)
+      ]
+    });
   };
 
   const dummyGroups = [
@@ -156,11 +508,11 @@ export function RatioAnalysis() {
     { name: 'Current Ratio', value: 0, formula: '(Current Assets : Current Liabilities)', type: 'ratio' },
     { name: 'Quick Ratio', value: 0, formula: '(Current Assets-Stock-in-Hand : Current Liabilities)', type: 'ratio' },
     { name: 'Debt/Equity Ratio', value: 0, formula: '(Loans (Liability) : Capital Account + Nett Profit)', type: 'ratio' },
-    { name: 'Gross Profit %', value: 0, type: 'percent' }, 
-    { name: 'Nett Profit %', value: 0, type: 'percent' },
-    { name: 'Operating Cost %', value: 0, formula: '(as percentage of Sales Accounts)', type: 'percent' },
+    { name: 'Gross Profit %', value: 0, formula: '(Gross Profit / Sales Accounts) %', type: 'percent' },
+    { name: 'Nett Profit %', value: 0, formula: '(Nett Profit / Sales Accounts) %', type: 'percent' },
+    { name: 'Operating Cost %', value: 0, formula: '((COGS + Indirect Expenses) / Sales Accounts) %', type: 'percent' },
     { name: 'Recv. Turnover in days', value: 0, formula: '(payment performance of Debtors)', type: 'days' },
-    { name: 'Return on Investment %', value: 0, formula: '(Nett Profit / Capital Account + Nett Profit )', type: 'percent' },
+    { name: 'Return on Investment %', value: 0, formula: '(Nett Profit / Capital Account + Nett Profit) %', type: 'percent' },
     { name: 'Return on Wkg. Capital %', value: 0, formula: '(Nett Profit / Working Capital) %', type: 'percent' },
   ];
 
@@ -256,7 +608,7 @@ export function RatioAnalysis() {
               </div>
             </div>
           </div>
-          <div className="flex gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
             <button 
               onClick={() => setShowExplanation(!showExplanation)}
               className={cn("px-3 py-2 border flex items-center gap-2 text-[10px] font-bold uppercase transition-colors", showExplanation ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-gray-500 hover:text-foreground")}
@@ -269,17 +621,45 @@ export function RatioAnalysis() {
             >
               <BarChart2 className="w-3 h-3" /> {viewVertical ? 'Standard View' : 'Vertical Analysis'}
             </button>
-            <button 
-              onClick={handlePrint}
-              className="p-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center"
+            <button
+              onClick={handleDownloadExcel}
+              disabled={loading || !data}
+              className="px-3 py-2 bg-emerald-50/70 border border-emerald-200 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              title="Export Excel (.xlsx)"
             >
-              <Printer className="w-4 h-4" />
+              <FileSpreadsheet className="w-3.5 h-3.5" /> EXCEL
             </button>
-             <button 
+            <button
               onClick={handleDownloadCSV}
-              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
+              disabled={loading || !data}
+              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              title="Export CSV"
             >
               <Download className="w-3 h-3" /> CSV
+            </button>
+            <button 
+              onClick={handlePrint}
+              disabled={loading || !data}
+              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              title={t('common.print')}
+            >
+              <Printer className="w-3.5 h-3.5" /> {t('common.print')}
+            </button>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={loading || !data}
+              className="px-3 py-2 bg-primary text-primary-foreground border border-primary hover:opacity-90 transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              title="Print to PDF"
+            >
+              <Download className="w-3.5 h-3.5" /> PDF
+            </button>
+            <button
+              onClick={handleEmailReport}
+              disabled={loading || !data}
+              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              title="Share Summary via Email"
+            >
+              <Mail className="w-3.5 h-3.5" /> EMAIL
             </button>
           </div>
         </div>

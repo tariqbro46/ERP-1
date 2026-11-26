@@ -1,3 +1,9 @@
+import {
+  DEFAULT_APP_BRANDING,
+  escapeHtml,
+  resolveCompanyLegalIdentity,
+  sanitizeAssetUrl
+} from '../constants/appIdentity';
 
 const getSignatureHtml = (settings: any) => {
   const alignment = settings.signatureAlignment || 'spread';
@@ -12,9 +18,9 @@ const getSignatureHtml = (settings: any) => {
   
   return `
     <div class="footer-signatures" style="display: flex; justify-content: ${justifyMap[alignment]}; gap: ${gap}; margin-top: 60px;">
-      ${settings.showSignature1 !== false ? `<div class="signature">${settings.printSignature1}</div>` : ''}
-      ${settings.showSignature2 !== false ? `<div class="signature">${settings.printSignature2}</div>` : ''}
-      ${settings.showSignature3 !== false ? `<div class="signature">${settings.printSignature3}</div>` : ''}
+      ${settings.showSignature1 !== false ? `<div class="signature">${escapeHtml(settings.printSignature1 || '')}</div>` : ''}
+      ${settings.showSignature2 !== false ? `<div class="signature">${escapeHtml(settings.printSignature2 || '')}</div>` : ''}
+      ${settings.showSignature3 !== false ? `<div class="signature">${escapeHtml(settings.printSignature3 || '')}</div>` : ''}
     </div>
   `;
 };
@@ -69,27 +75,32 @@ export const executePrint = (html: string) => {
   }
 };
 
-const getHeaderHtml = (settings: any, title: string, subtitle?: string) => {
-  const logoHtml = settings.companyLogo ? `
-    <div class="logo-container" style="width: 80px; height: 80px; margin-right: 20px; flex-shrink: 0;">
-      <img src="${settings.companyLogo}" style="width: 100%; height: 100%; object-fit: contain;" referrerPolicy="no-referrer" />
+const getHeaderHtml = (settings: any, title: string, subtitle?: string, company?: any) => {
+  const legal = resolveCompanyLegalIdentity(settings, company);
+  const safeLogoUrl = sanitizeAssetUrl(legal.companyLogo || '');
+  const logoHtml = safeLogoUrl ? `
+    <div class="logo-container" style="width: 72px; height: 72px; margin-right: 18px; flex-shrink: 0;">
+      <img src="${escapeHtml(safeLogoUrl)}" style="width: 100%; height: 100%; object-fit: contain;" referrerPolicy="no-referrer" />
     </div>
   ` : '';
 
+  const contactParts: string[] = [];
+  if (settings?.showPrintPhone !== false && legal.printPhone) contactParts.push(`Phone: ${escapeHtml(legal.printPhone)}`);
+  if (settings?.showPrintEmail !== false && legal.printEmail) contactParts.push(`Email: ${escapeHtml(legal.printEmail)}`);
+  if (settings?.showPrintWebsite !== false && legal.printWebsite) contactParts.push(`Web: ${escapeHtml(legal.printWebsite)}`);
+
   return `
-    <div class="header" style="display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; text-align: left;">
+    <div class="header" style="position: relative; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 16px; text-align: left;">
+      <div style="position: absolute; top: 0; right: 0; font-size: 10px; font-weight: 700; color: #374151; font-family: monospace;">Page 1</div>
       ${logoHtml}
       <div style="flex: 1; text-align: center;">
-        <div class="company-name">${settings.companyName || 'SAPIENT ERP'}</div>
-        <div class="company-info" style="white-space: pre-line;">${settings.companyAddress || ''}</div>
-        <div class="company-info">
-          ${settings.showPrintPhone !== false && settings.printPhone ? `Phone: ${settings.printPhone}` : ''}
-          ${settings.showPrintEmail !== false && settings.printEmail ? ` | Email: ${settings.printEmail}` : ''}
-          ${settings.showPrintWebsite !== false && settings.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
-        </div>
-        ${settings.showPrintHeader !== false ? `<div class="print-header">${settings.printHeader || ''}</div>` : ''}
-        <div class="report-title">${title.toUpperCase()}</div>
-        ${subtitle ? `<div>${subtitle}</div>` : ''}
+        ${legal.companyName ? `<div class="company-name">${escapeHtml(legal.companyName)}</div>` : ''}
+        ${legal.companyAddress ? `<div class="company-info" style="white-space: pre-line;">${escapeHtml(legal.companyAddress)}</div>` : ''}
+        ${legal.vatBinTin ? `<div class="company-info">VAT/BIN/TIN: ${escapeHtml(legal.vatBinTin)}</div>` : ''}
+        ${contactParts.length > 0 ? `<div class="company-info">${contactParts.join(' | ')}</div>` : ''}
+        ${settings?.showPrintHeader !== false && legal.printHeader ? `<div class="print-header">${escapeHtml(legal.printHeader)}</div>` : ''}
+        <div class="report-title">${escapeHtml(title.toUpperCase())}</div>
+        ${subtitle ? `<div style="font-size: 11px; margin-top: 4px; font-weight: 600;">${escapeHtml(subtitle)}</div>` : ''}
       </div>
     </div>
   `;
@@ -171,8 +182,9 @@ export function formatPrintedAmount(amt: number): string {
 
 // Separate print layout storage as requested by user for easy future editing
 export function getVoucherMetaHtml(voucher: any, partyLabel: string = 'Party Name:') {
-  const partyNameStr = voucher.party_ledger_name || voucher.ledger_name || '';
-  const partyAddressStr = voucher.party_address || '';
+  const partyNameStr = escapeHtml(voucher.party_ledger_name || voucher.ledger_name || '');
+  const partyAddressStr = escapeHtml(voucher.party_address || '');
+  const serialVal = escapeHtml(voucher.serial_no || voucher.auto_serial_no || '');
   
   return `
     <div class="meta-table" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; font-size: 11px; width: 100%; box-sizing: border-box; font-family: 'Courier New', Courier, monospace;">
@@ -180,7 +192,7 @@ export function getVoucherMetaHtml(voucher: any, partyLabel: string = 'Party Nam
       <div style="text-align: left; max-width: 60%; line-height: 1.4;">
         ${partyNameStr ? `
           <div style="font-size: 15px; font-weight: bold; color: #000; margin-bottom: 4px;">
-            ${partyLabel} ${partyNameStr}
+            ${escapeHtml(partyLabel)} ${partyNameStr}
           </div>
         ` : ''}
         <div style="font-size: 12px; color: #000; margin-top: 2px;">
@@ -190,10 +202,10 @@ export function getVoucherMetaHtml(voucher: any, partyLabel: string = 'Party Nam
       
       <!-- Right side: Date, Serial, Voucher No, Ref No -->
       <div style="text-align: right; line-height: 1.4; font-size: 11px;">
-        <div><strong>Date:</strong> ${new Date(voucher.v_date).toLocaleDateString()}</div>
-        ${voucher.serial_no || voucher.auto_serial_no ? `<div style="margin-top: 3px;"><strong>Serial No:</strong> ${voucher.serial_no || voucher.auto_serial_no}</div>` : ''}
-        <div style="margin-top: 3px;"><strong>Voucher No:</strong> ${voucher.v_no}</div>
-        ${voucher.reference_no ? `<div style="margin-top: 3px;"><strong>Ref No:</strong> ${voucher.reference_no}</div>` : ''}
+        <div><strong>Date:</strong> ${escapeHtml(new Date(voucher.v_date).toLocaleDateString())}</div>
+        ${serialVal ? `<div style="margin-top: 3px;"><strong>Serial No:</strong> ${serialVal}</div>` : ''}
+        <div style="margin-top: 3px;"><strong>Voucher No:</strong> ${escapeHtml(voucher.v_no)}</div>
+        ${voucher.reference_no ? `<div style="margin-top: 3px;"><strong>Ref No:</strong> ${escapeHtml(voucher.reference_no)}</div>` : ''}
       </div>
     </div>
   `;
@@ -216,9 +228,9 @@ export function getSalesVoucherHtml(voucher: any, settings: any) {
         ${(voucher.inventory || []).map((item: any) => `
           <tr>
             <td>
-              <strong>${item.item_name}</strong>
+              <strong>${escapeHtml(item.item_name)}</strong>
             </td>
-            <td class="text-right">${formatPrintedQuantity(item.qty, item.unit)} ${item.unit || ''}</td>
+            <td class="text-right">${formatPrintedQuantity(item.qty, item.unit)} ${escapeHtml(item.unit || '')}</td>
             <td class="text-right">${formatPrintedAmount(item.rate)}</td>
             <td class="text-right">${formatPrintedAmount(item.qty * item.rate)}</td>
           </tr>
@@ -251,9 +263,9 @@ export function getPurchaseVoucherHtml(voucher: any, settings: any) {
         ${(voucher.inventory || []).map((item: any) => `
           <tr>
             <td>
-              <strong>${item.item_name}</strong>
+              <strong>${escapeHtml(item.item_name)}</strong>
             </td>
-            <td class="text-right">${formatPrintedQuantity(item.qty, item.unit)} ${item.unit || ''}</td>
+            <td class="text-right">${formatPrintedQuantity(item.qty, item.unit)} ${escapeHtml(item.unit || '')}</td>
             <td class="text-right">${formatPrintedAmount(item.rate)}</td>
             <td class="text-right">${formatPrintedAmount(item.qty * item.rate)}</td>
           </tr>
@@ -285,8 +297,8 @@ export function getPaymentVoucherHtml(voucher: any, settings: any) {
         ${(voucher.entries || []).map((entry: any) => `
           <tr>
             <td>
-              <strong>${entry.ledger_name}</strong>
-              ${entry.narration ? `<div style="font-size: 9px; color: #555; margin-top: 2px; font-style: italic;">(${entry.narration})</div>` : ''}
+              <strong>${escapeHtml(entry.ledger_name)}</strong>
+              ${entry.narration ? `<div style="font-size: 9px; color: #555; margin-top: 2px; font-style: italic;">(${escapeHtml(entry.narration)})</div>` : ''}
             </td>
             <td class="text-right">${entry.debit > 0 ? formatPrintedAmount(entry.debit) : ''}</td>
             <td class="text-right">${entry.credit > 0 ? formatPrintedAmount(entry.credit) : ''}</td>
@@ -320,8 +332,8 @@ export function getReceiptVoucherHtml(voucher: any, settings: any) {
         ${(voucher.entries || []).map((entry: any) => `
           <tr>
             <td>
-              <strong>${entry.ledger_name}</strong>
-              ${entry.narration ? `<div style="font-size: 9px; color: #555; margin-top: 2px; font-style: italic;">(${entry.narration})</div>` : ''}
+              <strong>${escapeHtml(entry.ledger_name)}</strong>
+              ${entry.narration ? `<div style="font-size: 9px; color: #555; margin-top: 2px; font-style: italic;">(${escapeHtml(entry.narration)})</div>` : ''}
             </td>
             <td class="text-right">${entry.debit > 0 ? formatPrintedAmount(entry.debit) : ''}</td>
             <td class="text-right">${entry.credit > 0 ? formatPrintedAmount(entry.credit) : ''}</td>
@@ -355,8 +367,8 @@ export function getJournalVoucherHtml(voucher: any, settings: any) {
         ${(voucher.entries || []).map((entry: any) => `
           <tr>
             <td>
-              <strong>${entry.ledger_name}</strong>
-              ${entry.narration ? `<div style="font-size: 9px; color: #555; margin-top: 2px; font-style: italic;">(${entry.narration})</div>` : ''}
+              <strong>${escapeHtml(entry.ledger_name)}</strong>
+              ${entry.narration ? `<div style="font-size: 9px; color: #555; margin-top: 2px; font-style: italic;">(${escapeHtml(entry.narration)})</div>` : ''}
             </td>
             <td class="text-right">${entry.debit > 0 ? formatPrintedAmount(entry.debit) : ''}</td>
             <td class="text-right">${entry.credit > 0 ? formatPrintedAmount(entry.credit) : ''}</td>
@@ -402,10 +414,10 @@ export function getStockJournalVoucherHtml(voucher: any, settings: any) {
               consumption.map((item: any) => `
                 <tr>
                   <td>
-                    <strong>${item.item_name}</strong>
-                    ${item.godown_name ? `<div style="font-size: 8px; color: #555; margin-top: 1px;">Loc: ${item.godown_name}</div>` : ''}
+                    <strong>${escapeHtml(item.item_name)}</strong>
+                    ${item.godown_name ? `<div style="font-size: 8px; color: #555; margin-top: 1px;">Loc: ${escapeHtml(item.godown_name)}</div>` : ''}
                   </td>
-                  <td class="text-right">${formatPrintedQuantity(item.qty, item.unit)} ${item.unit || ''}</td>
+                  <td class="text-right">${formatPrintedQuantity(item.qty, item.unit)} ${escapeHtml(item.unit || '')}</td>
                   <td class="text-right">
                     ${formatPrintedAmount(item.rate)}<br/>
                     <span style="font-size: 10px; font-weight: bold;">${formatPrintedAmount(item.qty * item.rate)}</span>
@@ -441,10 +453,10 @@ export function getStockJournalVoucherHtml(voucher: any, settings: any) {
               production.map((item: any) => `
                 <tr>
                   <td>
-                    <strong>${item.item_name}</strong>
-                    ${item.godown_name ? `<div style="font-size: 8px; color: #555; margin-top: 1px;">Loc: ${item.godown_name}</div>` : ''}
+                    <strong>${escapeHtml(item.item_name)}</strong>
+                    ${item.godown_name ? `<div style="font-size: 8px; color: #555; margin-top: 1px;">Loc: ${escapeHtml(item.godown_name)}</div>` : ''}
                   </td>
-                  <td class="text-right">${formatPrintedQuantity(item.qty, item.unit)} ${item.unit || ''}</td>
+                  <td class="text-right">${formatPrintedQuantity(item.qty, item.unit)} ${escapeHtml(item.unit || '')}</td>
                   <td class="text-right">
                     ${formatPrintedAmount(item.rate)}<br/>
                     <span style="font-size: 10px; font-weight: bold;">${formatPrintedAmount(item.qty * item.rate)}</span>
@@ -488,16 +500,23 @@ export function printVoucher(voucher: any, settings: any = {}) {
     voucherDetailsHtml = getJournalVoucherHtml(voucher, settings);
   }
 
-  const logoHtml = settings.companyLogo ? `
+  const legal = resolveCompanyLegalIdentity(settings);
+  const safeLogoUrl = sanitizeAssetUrl(legal.companyLogo || '');
+  const logoHtml = safeLogoUrl ? `
     <div class="logo-absolute">
-      <img src="${settings.companyLogo}" referrerPolicy="no-referrer" />
+      <img src="${escapeHtml(safeLogoUrl)}" referrerPolicy="no-referrer" />
     </div>
   ` : '';
+  const voucherContactParts: string[] = [];
+  if (settings.showPrintPhone !== false && legal.printPhone) voucherContactParts.push(`Phone: ${escapeHtml(legal.printPhone)}`);
+  if (settings.showPrintEmail !== false && legal.printEmail) voucherContactParts.push(`Email: ${escapeHtml(legal.printEmail)}`);
+  if (settings.showPrintWebsite !== false && legal.printWebsite) voucherContactParts.push(`Web: ${escapeHtml(legal.printWebsite)}`);
+  const softwareFooter = escapeHtml(settings.appIdentity?.softwareFooterText || settings.developerContactText || DEFAULT_APP_BRANDING.softwareFooterText);
 
   const html = `
     <html>
       <head>
-        <title>Print Voucher - ${voucher.v_no}</title>
+        <title>Print Voucher - ${escapeHtml(voucher.v_no)}</title>
         <style>
           @page {
             size: A4;
@@ -666,20 +685,18 @@ export function printVoucher(voucher: any, settings: any = {}) {
             <div class="header-container">
               ${logoHtml}
               <div class="header-text">
-                <h1 class="company-name">${settings.companyName || 'SAPIENT ERP'}</h1>
-                <div class="company-info" style="white-space: pre-line;">${settings.companyAddress || ''}</div>
+                ${legal.companyName ? `<h1 class="company-name">${escapeHtml(legal.companyName)}</h1>` : ''}
+                <div class="company-info" style="white-space: pre-line;">${escapeHtml(legal.companyAddress || '')}</div>
                 <div class="company-info">
-                  ${settings.showPrintPhone !== false && settings.printPhone ? `Phone: ${settings.printPhone}` : ''}
-                  ${settings.showPrintEmail !== false && settings.printEmail ? ` | Email: ${settings.printEmail}` : ''}
-                  ${settings.showPrintWebsite !== false && settings.printWebsite ? ` | Web: ${settings.printWebsite}` : ''}
+                  ${voucherContactParts.join(' | ')}
                 </div>
-                ${settings.showPrintHeader !== false && settings.printHeader ? `<div class="print-header" style="font-style: italic; font-size: 11px; margin-top: 3px;">${settings.printHeader}</div>` : ''}
+                ${settings.showPrintHeader !== false && legal.printHeader ? `<div class="print-header" style="font-style: italic; font-size: 11px; margin-top: 3px;">${escapeHtml(legal.printHeader)}</div>` : ''}
               </div>
             </div>
 
             <!-- Bold and padded Voucher Title centered and placed slightly below the header -->
             <div class="voucher-title-container">
-              <span class="voucher-title">${voucher.v_type.toUpperCase()} VOUCHER</span>
+              <span class="voucher-title">${escapeHtml(voucher.v_type.toUpperCase())} VOUCHER</span>
             </div>
 
             <!-- Main voucher details layout for that specific type -->
@@ -687,12 +704,12 @@ export function printVoucher(voucher: any, settings: any = {}) {
 
             <!-- Amount in words (above narration) -->
             <div class="amount-words-section">
-              <strong>Amount in words:</strong> <span style="font-style: italic; text-transform: capitalize;">${convertNumberToWords(voucher.total_amount)}</span>
+              <strong>Amount in words:</strong> <span style="font-style: italic; text-transform: capitalize;">${escapeHtml(convertNumberToWords(voucher.total_amount))}</span>
             </div>
 
             <!-- Narration section (below amount in words with some spacing) -->
             <div class="narration-section">
-              <strong>Narration:</strong> <span style="font-style: italic;">${voucher.narration || 'N/A'}</span>
+              <strong>Narration:</strong> <span style="font-style: italic;">${escapeHtml(voucher.narration || 'N/A')}</span>
             </div>
           </div>
 
@@ -717,11 +734,11 @@ export function printVoucher(voucher: any, settings: any = {}) {
             <!-- Footers -->
             <div class="print-footer">
               <div style="text-align: left; margin: 0; padding: 0;">
-                ${settings.showPrintFooter !== false ? (settings.printFooter || '') : ''}
+                ${settings.showPrintFooter !== false ? escapeHtml(legal.printFooter || '') : ''}
               </div>
-              ${settings.showDeveloperContact !== false ? `
+              ${settings.showDeveloperContact !== false && softwareFooter ? `
                 <div style="text-align: right; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace;">
-                  ${settings.developerContactText || 'TallyFlow ERP | +880 1742 058246'}
+                  ${softwareFooter}
                 </div>
               ` : ''}
             </div>
@@ -742,6 +759,7 @@ export function printVoucher(voucher: any, settings: any = {}) {
 }
 
 export function printProfitAndLoss(data: any, settings: any = {}) {
+  const softwareFooter = escapeHtml(settings.appIdentity?.softwareFooterText || settings.developerContactText || DEFAULT_APP_BRANDING.softwareFooterText);
   const html = `
     <html>
       <head>
@@ -780,27 +798,27 @@ export function printProfitAndLoss(data: any, settings: any = {}) {
           <div class="side">
             <div class="side-header"><span>Particulars</span><span>Amount</span></div>
             <div class="row"><span>Opening Stock</span><span>${data.trading.openingStock.toFixed(2)}</span></div>
-            ${data.trading.purchaseGroups.map((g: any) => `<div class="row"><span>${g.name}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
-            ${data.trading.directExpenseGroups.map((g: any) => `<div class="row"><span>${g.name}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
+            ${data.trading.purchaseGroups.map((g: any) => `<div class="row"><span>${escapeHtml(g.name)}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
+            ${data.trading.directExpenseGroups.map((g: any) => `<div class="row"><span>${escapeHtml(g.name)}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
             ${data.grossProfit > 0 ? `<div class="row profit"><span>Gross Profit c/o</span><span>${data.grossProfit.toFixed(2)}</span></div>` : ''}
             
             <div style="height: 20px;"></div>
             <div class="side-header"><span>Indirect Expenses</span><span></span></div>
-            ${data.pl.indirectExpenseGroups.map((g: any) => `<div class="row"><span>${g.name}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
+            ${data.pl.indirectExpenseGroups.map((g: any) => `<div class="row"><span>${escapeHtml(g.name)}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
             ${data.netProfit > 0 ? `<div class="row profit"><span>Net Profit</span><span>${data.netProfit.toFixed(2)}</span></div>` : ''}
           </div>
           
           <div class="side">
             <div class="side-header"><span>Particulars</span><span>Amount</span></div>
-            ${data.trading.salesGroups.map((g: any) => `<div class="row"><span>${g.name}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
-            ${data.trading.directIncomeGroups.map((g: any) => `<div class="row"><span>${g.name}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
+            ${data.trading.salesGroups.map((g: any) => `<div class="row"><span>${escapeHtml(g.name)}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
+            ${data.trading.directIncomeGroups.map((g: any) => `<div class="row"><span>${escapeHtml(g.name)}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
             <div class="row"><span>Closing Stock</span><span>${data.trading.closingStock.toFixed(2)}</span></div>
             ${data.grossProfit < 0 ? `<div class="row loss"><span>Gross Loss c/o</span><span>${Math.abs(data.grossProfit).toFixed(2)}</span></div>` : ''}
  
             <div style="height: 20px;"></div>
             <div class="side-header"><span>Indirect Incomes</span><span></span></div>
             <div class="row"><span>Gross Profit b/f</span><span>${data.grossProfit > 0 ? data.grossProfit.toFixed(2) : '0.00'}</span></div>
-            ${data.pl.indirectIncomeGroups.map((g: any) => `<div class="row"><span>${g.name}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
+            ${data.pl.indirectIncomeGroups.map((g: any) => `<div class="row"><span>${escapeHtml(g.name)}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
             ${data.netProfit < 0 ? `<div class="row loss"><span>Net Loss</span><span>${Math.abs(data.netProfit).toFixed(2)}</span></div>` : ''}
           </div>
         </div>
@@ -808,11 +826,10 @@ export function printProfitAndLoss(data: any, settings: any = {}) {
         ${getSignatureHtml(settings)}
  
         <div class="print-footer">
-          ${settings.showPrintFooter !== false ? (settings.printFooter || '') : ''}
-          ${settings.showDeveloperContact ? `
+          ${settings.showPrintFooter !== false ? escapeHtml(settings.printFooter || '') : ''}
+          ${settings.showDeveloperContact && softwareFooter ? `
             <div class="dev-contact">
-              Software by TallyFlow<br/>
-              +880 1234 567890
+              ${softwareFooter}
             </div>
           ` : ''}
         </div>
@@ -824,6 +841,7 @@ export function printProfitAndLoss(data: any, settings: any = {}) {
 }
 
 export function printBalanceSheet(data: any, settings: any = {}) {
+  const softwareFooter = escapeHtml(settings.appIdentity?.softwareFooterText || settings.developerContactText || DEFAULT_APP_BRANDING.softwareFooterText);
   const html = `
     <html>
       <head>
@@ -861,14 +879,14 @@ export function printBalanceSheet(data: any, settings: any = {}) {
         <div class="container">
           <div class="side">
             <div class="side-header"><span>Liabilities</span><span>Amount</span></div>
-            ${data.liabilities.map((g: any) => `<div class="row"><span>${g.name}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
+            ${data.liabilities.map((g: any) => `<div class="row"><span>${escapeHtml(g.name)}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
             ${data.netProfit > 0 ? `<div class="row"><span>Profit & Loss A/c (Net Profit)</span><span>${data.netProfit.toFixed(2)}</span></div>` : ''}
             <div class="total-row"><span>Total</span><span>${data.totalLiabilities.toFixed(2)}</span></div>
           </div>
           
           <div class="side">
             <div class="side-header"><span>Assets</span><span>Amount</span></div>
-            ${data.assets.map((g: any) => `<div class="row"><span>${g.name}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
+            ${data.assets.map((g: any) => `<div class="row"><span>${escapeHtml(g.name)}</span><span>${Math.abs(g.balance).toFixed(2)}</span></div>`).join('')}
             <div class="row"><span>Closing Stock</span><span>${data.closingStock.toFixed(2)}</span></div>
             ${data.netProfit < 0 ? `<div class="row"><span>Profit & Loss A/c (Net Loss)</span><span>${Math.abs(data.netProfit).toFixed(2)}</span></div>` : ''}
             <div class="total-row"><span>Total</span><span>${data.totalAssets.toFixed(2)}</span></div>
@@ -878,10 +896,10 @@ export function printBalanceSheet(data: any, settings: any = {}) {
         ${getSignatureHtml(settings)}
  
         <div class="print-footer">
-          ${settings.showPrintFooter !== false ? (settings.printFooter || '') : ''}
-          ${settings.showDeveloperContact ? `
+          ${settings.showPrintFooter !== false ? escapeHtml(settings.printFooter || '') : ''}
+          ${settings.showDeveloperContact && softwareFooter ? `
             <div class="dev-contact">
-              ${settings.developerContactText || 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000'}
+              ${softwareFooter}
             </div>
           ` : ''}
         </div>
@@ -893,10 +911,11 @@ export function printBalanceSheet(data: any, settings: any = {}) {
 }
 
 export function printReport(title: string, data: any[], columns: string[], settings: any = {}) {
+  const softwareFooter = escapeHtml(settings.appIdentity?.softwareFooterText || settings.developerContactText || DEFAULT_APP_BRANDING.softwareFooterText);
   const html = `
     <html>
       <head>
-        <title>${title}</title>
+        <title>${escapeHtml(title)}</title>
         <style>
           body { font-family: 'Courier New', Courier, monospace; padding: 20px; color: #000; }
           .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
@@ -923,12 +942,12 @@ export function printReport(title: string, data: any[], columns: string[], setti
         </style>
       </head>
       <body>
-        ${getHeaderHtml(settings, title, `<div style="text-align: right; font-size: 10px; margin-top: 5px;">Date of Print: ${new Date().toLocaleDateString()}</div>`)}
+        ${getHeaderHtml(settings, title, `Date of Print: ${new Date().toLocaleDateString()}`)}
         
         <table>
           <thead>
             <tr>
-              ${columns.map(col => `<th>${col}</th>`).join('')}
+              ${columns.map(col => `<th>${escapeHtml(col)}</th>`).join('')}
             </tr>
           </thead>
           <tbody>
@@ -938,7 +957,7 @@ export function printReport(title: string, data: any[], columns: string[], setti
                   const key = col.toLowerCase().replace(/ /g, '_');
                   const val = row[key];
                   const isNum = typeof val === 'number';
-                  return `<td class="${isNum ? 'amount' : ''}">${isNum ? val.toLocaleString(undefined, { minimumFractionDigits: 2 }) : (val || '')}</td>`;
+                  return `<td class="${isNum ? 'amount' : ''}">${isNum ? val.toLocaleString(undefined, { minimumFractionDigits: 2 }) : escapeHtml(val ?? '')}</td>`;
                 }).join('')}
               </tr>
             `).join('')}
@@ -948,10 +967,10 @@ export function printReport(title: string, data: any[], columns: string[], setti
         ${getSignatureHtml(settings)}
 
         <div class="print-footer">
-          ${settings.showPrintFooter !== false ? (settings.printFooter || '') : ''}
-          ${settings.showDeveloperContact ? `
+          ${settings.showPrintFooter !== false ? escapeHtml(settings.printFooter || '') : ''}
+          ${settings.showDeveloperContact && softwareFooter ? `
             <div class="dev-contact">
-              ${settings.developerContactText || 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000'}
+              ${softwareFooter}
             </div>
           ` : ''}
         </div>
@@ -962,19 +981,219 @@ export function printReport(title: string, data: any[], columns: string[], setti
   executePrint(html);
 }
 
-export function printElement(elementId: string, title: string, settings: any = {}) {
+export interface ReportPrintSummaryCard {
+  label: string;
+  value: string;
+}
+
+export interface ReportPrintColumn {
+  label: string;
+  align?: 'left' | 'right' | 'center';
+  width?: string;
+}
+
+export interface ReportPrintRow {
+  cells: string[];
+  isTotal?: boolean;
+  tone?: 'positive' | 'negative' | 'neutral';
+}
+
+export interface ReportPrintSection {
+  heading?: string;
+  columns: ReportPrintColumn[];
+  rows: ReportPrintRow[];
+  emptyMessage?: string;
+}
+
+export interface BuildReportPrintHtmlOptions {
+  title: string;
+  subtitle?: string;
+  settings?: any;
+  company?: any;
+  summaryCards?: ReportPrintSummaryCard[];
+  sections: ReportPrintSection[];
+  note?: string;
+}
+
+export function buildReportPrintHtml(options: BuildReportPrintHtmlOptions): string {
+  const {
+    title,
+    subtitle,
+    settings = {},
+    company,
+    summaryCards = [],
+    sections,
+    note
+  } = options;
+
+  const isLayout2 = settings?.reportLayout === 'Layout 2';
+  const softwareFooter = escapeHtml(
+    settings?.appIdentity?.softwareFooterText ||
+    settings?.developerContactText ||
+    DEFAULT_APP_BRANDING.softwareFooterText
+  );
+
+  const summaryHtml = summaryCards.length > 0 ? `
+    <div class="summary-grid" style="display: grid; grid-template-columns: repeat(${Math.min(summaryCards.length, 4)}, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px;">
+      ${summaryCards.map(card => `
+        <div style="border: 1px solid ${isLayout2 ? '#000' : '#cbd5e1'}; padding: 8px 10px; background: ${isLayout2 ? '#fff' : '#f8fafc'};">
+          <div style="font-size: 9px; text-transform: uppercase; color: ${isLayout2 ? '#333' : '#64748b'}; font-weight: 700;">${escapeHtml(card.label)}</div>
+          <div style="font-size: 13px; font-weight: 800; color: #000; margin-top: 3px;">${escapeHtml(card.value)}</div>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+
+  const sectionsHtml = sections.map(sec => {
+    const colCount = sec.columns.length;
+    const rowsHtml = sec.rows.length > 0
+      ? sec.rows.map(row => {
+          const toneColor =
+            row.tone === 'positive' ? '#15803d' :
+            row.tone === 'negative' ? '#b91c1c' :
+            '#000000';
+          return `
+            <tr class="${row.isTotal ? 'total-row' : ''}">
+              ${row.cells.map((cell, idx) => {
+                const align = sec.columns[idx]?.align || 'left';
+                const colorStyle = row.tone && idx === row.cells.length - 1 ? `color: ${toneColor};` : '';
+                return `<td style="text-align: ${align}; vertical-align: middle; ${colorStyle}">${escapeHtml(cell)}</td>`;
+              }).join('')}
+            </tr>
+          `;
+        }).join('')
+      : `<tr><td colspan="${colCount}" style="text-align: center; vertical-align: middle; color: #64748b; padding: 14px;">${escapeHtml(sec.emptyMessage || 'No records found')}</td></tr>`;
+
+    return `
+      <div class="section-block" style="margin-bottom: 16px; page-break-inside: avoid;">
+        ${sec.heading ? `<div class="section-heading">${escapeHtml(sec.heading)}</div>` : ''}
+        <table>
+          <thead>
+            <tr>
+              ${sec.columns.map(col => `
+                <th style="text-align: ${col.align || 'left'}; vertical-align: middle; ${col.width ? `width: ${col.width};` : ''}">${escapeHtml(col.label)}</th>
+              `).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(title)}</title>
+        <style>
+          * { box-sizing: border-box; }
+          body {
+            font-family: ${isLayout2 ? 'Arial, Helvetica, sans-serif' : "'JetBrains Mono', Courier, monospace"};
+            padding: 18px;
+            margin: 0;
+            color: #000000;
+            background: #ffffff;
+            font-size: 10px;
+            line-height: 1.4;
+          }
+          .company-name { font-size: 20px; font-weight: 800; text-transform: uppercase; color: #000; }
+          .company-info { font-size: 10px; margin-top: 2px; color: #1f2937; }
+          .report-title { font-size: 15px; margin-top: 8px; text-decoration: underline; font-weight: 800; color: #000; }
+          .print-header { font-size: 10px; margin-top: 4px; font-style: italic; }
+          .section-heading {
+            font-size: 10.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 5px;
+            color: #000;
+          }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+          th, td {
+            border: 1px solid ${isLayout2 ? '#000' : '#1f2937'};
+            padding: 5px 8px;
+            font-size: 9.5px;
+            vertical-align: middle !important;
+          }
+          th {
+            background-color: ${isLayout2 ? '#ffffff' : '#f3f4f6'};
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #000;
+          }
+          .total-row td {
+            font-weight: 800;
+            border-top: 2px solid #000;
+            border-bottom: 3px double #000;
+            background-color: ${isLayout2 ? '#ffffff' : '#f9fafb'};
+          }
+          .signature {
+            border-top: 1px solid #000;
+            width: 170px;
+            text-align: center;
+            padding-top: 5px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+          }
+          .print-footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 9px;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 8px;
+            color: #4b5563;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          @media print {
+            .no-print { display: none; }
+            @page { margin: 10mm; }
+          }
+        </style>
+      </head>
+      <body>
+        ${getHeaderHtml(settings, title, subtitle, company)}
+        ${summaryHtml}
+        ${sectionsHtml}
+        ${note ? `<div style="font-size: 9.5px; font-style: italic; color: #374151; margin-top: 8px;">${escapeHtml(note)}</div>` : ''}
+        ${getSignatureHtml(settings)}
+        <div class="print-footer">
+          <div>${settings?.showPrintFooter !== false ? escapeHtml(settings?.printFooter || '') : ''}</div>
+          <div>${settings?.showDeveloperContact !== false && softwareFooter ? softwareFooter : ''}</div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+export function printElement(elementId: string, title: string, settings: any = {}, company?: any) {
   const element = document.getElementById(elementId);
   if (!element) return;
+
+  const softwareFooter = escapeHtml(
+    settings?.appIdentity?.softwareFooterText ||
+    settings?.developerContactText ||
+    DEFAULT_APP_BRANDING.softwareFooterText
+  );
 
   const html = `
     <html>
       <head>
-        <title>${title}</title>
+        <title>${escapeHtml(title)}</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
           body { font-family: 'JetBrains Mono', Courier, monospace; padding: 20px; color: #000; }
+          .company-name { font-size: 20px; font-weight: bold; text-transform: uppercase; }
+          .company-info { font-size: 11px; margin-top: 3px; }
+          .report-title { font-size: 16px; margin-top: 8px; text-decoration: underline; font-weight: bold; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-          th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; font-size: 10px; vertical-align: middle; }
+          th, td { border: 1px solid #000; padding: 6px 8px; text-align: left; font-size: 10px; vertical-align: middle !important; }
           th { background-color: #f2f2f2; font-size: 11px; font-weight: bold; text-transform: uppercase; }
           .text-right { text-align: right; }
           .font-bold { font-weight: bold; }
@@ -982,6 +1201,7 @@ export function printElement(elementId: string, title: string, settings: any = {
           .tracking-widest { letter-spacing: 0.1em; }
           .bg-gray-50 { background-color: #f9fafb; }
           .text-primary { color: #000; }
+          .signature { border-top: 1px solid #000; width: 180px; text-align: center; padding-top: 5px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
           .no-scrollbar::-webkit-scrollbar { display: none; }
           .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
           @media print {
@@ -991,9 +1211,13 @@ export function printElement(elementId: string, title: string, settings: any = {
         </style>
       </head>
       <body>
-        ${getHeaderHtml(settings, title)}
+        ${getHeaderHtml(settings, title, undefined, company)}
         ${element.innerHTML}
         ${getSignatureHtml(settings)}
+        <div style="margin-top: 20px; border-top: 1px solid #ccc; padding-top: 8px; display: flex; justify-content: space-between; font-size: 9px; color: #666;">
+          <div>${settings?.showPrintFooter !== false ? escapeHtml(settings?.printFooter || '') : ''}</div>
+          <div>${settings?.showDeveloperContact !== false && softwareFooter ? softwareFooter : ''}</div>
+        </div>
       </body>
     </html>
   `;
@@ -1006,5 +1230,6 @@ export const printUtils = {
   printProfitAndLoss,
   printBalanceSheet,
   printReport,
-  printElement
+  printElement,
+  buildReportPrintHtml
 };

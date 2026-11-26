@@ -1,12 +1,22 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { erpService } from '../services/erpService';
-import { doc, onSnapshot, collection, getDoc, getDocs, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, onSnapshot, collection, getDoc, getDocs, updateDoc, setDoc, deleteField, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { SubscriptionPlan } from '../types';
 import { FeatureCategory, APP_FEATURES } from '../constants/features';
 import { soundService } from '../services/soundService';
 import { LATEST_VERSION } from '../data/releaseNotes';
+import {
+  AppBrandingConfig,
+  DEFAULT_APP_BRANDING,
+  APP_IDENTITY_STORAGE_KEY,
+  resolveAppBranding,
+  stripProtectedAppIdentityFields,
+  isLegacyAppBrandString,
+  sanitizeAssetUrl,
+  sanitizeCssColor,
+} from '../constants/appIdentity';
 
 interface NotificationSettings {
   voucherSaved: string;
@@ -78,7 +88,11 @@ interface WhatsAppTemplates {
 }
 
 interface SettingsContextType {
+  appIdentity: AppBrandingConfig;
   companyName: string;
+  legalName?: string;
+  tradeName?: string;
+  vatBinTin?: string;
   companyLogo?: string;
   systemLogo?: string;
   logoBgColor?: string;
@@ -224,7 +238,7 @@ interface SettingsContextType {
   maintenanceReason?: string;
   maintenanceUpdates?: string;
   landingPageEnabled?: boolean;
-  heroDesignStyle?: 'three-interactive' | 'three-matrix' | 'threeui' | 'monochrome-parallax' | 'default';
+  heroDesignStyle?: 'enterprise-saas' | 'precision-enterprise' | 'three-interactive' | 'three-matrix' | 'threeui' | 'monochrome-parallax' | 'classic-saas' | 'default';
   heroThreeUiTheme?: 'cyber-dark' | 'glass-light' | 'aurora-navy' | 'emerald-obsidian';
   heroThreeUiGlowColor?: 'cyan' | 'emerald' | 'indigo' | 'amber';
   heroThreeUiPerspective?: 'subtle' | 'cinematic' | 'extreme';
@@ -234,6 +248,7 @@ interface SettingsContextType {
   heroThreeUiShowSimulateVoucher?: boolean;
   heroThreeUiEnableTiltDefault?: boolean;
   heroShowExperienceHubDemo?: boolean;
+  heroShowExploreLiveDemo?: boolean;
   heroEyebrowText?: string;
   heroTitleText?: string;
   heroSubtitleText?: string;
@@ -263,26 +278,31 @@ interface SettingsContextType {
   soundNavigation?: string;
   updateSettings: (newSettings: Partial<SettingsContextType>) => void;
   updateSystemSettings: (newSettings: any) => Promise<void>;
+  updateAppIdentity: (newBranding: Partial<AppBrandingConfig>) => Promise<void>;
   updateFeaturesSettings: (newFeatures: FeatureCategory[]) => Promise<void>;
   updateUserSettings: (newSettings: any) => Promise<void>;
 }
 
 const defaultSettings: SettingsContextType = {
-  companyName: 'TallyFlow ERP',
+  appIdentity: DEFAULT_APP_BRANDING,
+  companyName: '',
+  legalName: '',
+  tradeName: '',
+  vatBinTin: '',
   companyLogo: '',
   systemLogo: '',
   logoBgColor: 'transparent',
   systemLogoBgColor: 'transparent',
   systemFavicon: '',
-  companyAddress: 'Dhaka, Bangladesh',
-  slogan: 'Enterprise ERP Solution',
+  companyAddress: '',
+  slogan: '',
   financialYearStart: '2024-04-01',
   financialYearEnd: '2025-03-31',
   printHeader: 'Official Document',
   printFooter: 'Thank you for your business.',
-  printPhone: '+880 1234 567890',
-  printEmail: 'info@tallyflow.erp',
-  printWebsite: 'www.tallyflow.erp',
+  printPhone: '',
+  printEmail: '',
+  printWebsite: '',
   showPrintHeader: true,
   soundEnabled: true,
   soundVolume: 0.5,
@@ -305,8 +325,8 @@ const defaultSettings: SettingsContextType = {
   showSignature3: true,
   signatureAlignment: 'spread',
   showDeveloperContact: true,
-  developerContactText: 'Powered by TallyFlow ERP | Developer Contact: +880 1700 000000',
-  developerContactAlignment: 'center',
+  developerContactText: DEFAULT_APP_BRANDING.softwareFooterText,
+  developerContactAlignment: DEFAULT_APP_BRANDING.softwareFooterAlignment,
   baseCurrencySymbol: '৳',
   timezone: 'UTC+06:00 (Dhaka)',
   refNoFormat: 'SAL/{YEAR}/{NO}',
@@ -389,10 +409,10 @@ const defaultSettings: SettingsContextType = {
   dashboardQuickActions: ['voucher', 'item', 'ledger', 'godown', 'users'],
   dashboardCards: ['revenue', 'profit', 'ledgers', 'stock'],
   whatsappTemplates: {
-    Sales: "*{{companyName}}*\nSales Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
-    Purchase: "*{{companyName}}*\nPurchase Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
-    Payment: "*{{companyName}}*\nPayment Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP",
-    Receipt: "*{{companyName}}*\nReceipt Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}\n\nShared via TallyFlow ERP"
+    Sales: "*{{companyName}}*\nSales Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}",
+    Purchase: "*{{companyName}}*\nPurchase Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}",
+    Payment: "*{{companyName}}*\nPayment Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}",
+    Receipt: "*{{companyName}}*\nReceipt Voucher No: {{voucherNo}}\nDate: {{date}}\nAmount: {{currency}} {{totalAmount}}"
   },
   notifications: {
     voucherSaved: 'Voucher has been saved successfully!',
@@ -428,7 +448,7 @@ const defaultSettings: SettingsContextType = {
   maintenanceReason: '',
   maintenanceUpdates: '',
   landingPageEnabled: true,
-  heroDesignStyle: 'three-interactive',
+  heroDesignStyle: 'monochrome-parallax',
   heroThreeUiTheme: 'aurora-navy',
   heroThreeUiGlowColor: 'cyan',
   heroThreeUiPerspective: 'cinematic',
@@ -438,6 +458,7 @@ const defaultSettings: SettingsContextType = {
   heroThreeUiShowSimulateVoucher: true,
   heroThreeUiEnableTiltDefault: false,
   heroShowExperienceHubDemo: false,
+  heroShowExploreLiveDemo: true,
   heroEyebrowText: 'ERP ARCHITECTURE // SOVEREIGN FINANCIAL KERNEL',
   heroTitleText: 'Absolute Truth in Commercial Ledgering.',
   heroSubtitleText: 'Atomic double-entry balance computation, multi-location godown stock velocity, and board-level liquidity reporting on zero-overhead in-memory persistence. Pure accounting truth.',
@@ -457,6 +478,7 @@ const defaultSettings: SettingsContextType = {
   loading: true,
   updateSettings: () => {},
   updateSystemSettings: async () => {},
+  updateAppIdentity: async () => {},
   updateFeaturesSettings: async () => {},
   updateUserSettings: async () => {}
 };
@@ -473,15 +495,58 @@ const compareSemVer = (a: string, b: string): number => {
   return 0;
 };
 
+const sanitizeCompanySettingsPayload = (raw: Record<string, any> | null | undefined): Record<string, any> => {
+  if (!raw || typeof raw !== 'object') return {};
+  const cleaned = stripProtectedAppIdentityFields(raw) as Record<string, any>;
+  delete cleaned.heroDesignStyle;
+  delete cleaned.heroEyebrowText;
+  delete cleaned.heroTitleText;
+  delete cleaned.heroSubtitleText;
+  delete cleaned.heroCtaPrimaryText;
+  delete cleaned.heroCtaDemoText;
+  delete cleaned.heroNavActionText;
+  delete cleaned.heroMetric1Value;
+  delete cleaned.heroMetric1Label;
+  delete cleaned.heroMetric2Value;
+  delete cleaned.heroMetric2Label;
+  delete cleaned.heroMetric3Value;
+  delete cleaned.heroMetric3Label;
+  delete cleaned.landingPageEnabled;
+  if (typeof cleaned.companyName === 'string' && isLegacyAppBrandString(cleaned.companyName)) {
+    delete cleaned.companyName;
+  }
+  if (typeof cleaned.printEmail === 'string' && cleaned.printEmail.trim().toLowerCase() === 'info@tallyflow.erp') {
+    delete cleaned.printEmail;
+  }
+  if (typeof cleaned.printWebsite === 'string' && cleaned.printWebsite.trim().toLowerCase() === 'www.tallyflow.erp') {
+    delete cleaned.printWebsite;
+  }
+  if (typeof cleaned.companyLogo === 'string') {
+    cleaned.companyLogo = sanitizeAssetUrl(cleaned.companyLogo);
+  }
+  return cleaned;
+};
+
 const SettingsContext = createContext<SettingsContextType>(defaultSettings);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
+  const prevManifestBlobUrlRef = React.useRef<string | null>(null);
+  const systemConfigCacheRef = React.useRef<Record<string, any>>({});
+  const appIdentityDocCacheRef = React.useRef<Partial<AppBrandingConfig>>({});
   const [settings, setSettings] = useState<SettingsContextType>(() => {
     try {
       const explicitAppVersion = localStorage.getItem('tallyflow_active_version') || localStorage.getItem('swr_app_version');
       const systemPersisted = localStorage.getItem('swr_system_config');
       const cachedSystem = systemPersisted ? JSON.parse(systemPersisted) : {};
+      const appIdentityPersisted = localStorage.getItem(APP_IDENTITY_STORAGE_KEY);
+      const cachedAppIdentity = appIdentityPersisted ? JSON.parse(appIdentityPersisted) : {};
+      const resolvedIdentity = resolveAppBranding(cachedAppIdentity, cachedSystem);
+
+      // Normalize legacy hero styles to 'monochrome-parallax'
+      if (cachedSystem.heroDesignStyle === 'three-matrix' || cachedSystem.heroDesignStyle === 'three-interactive') {
+        cachedSystem.heroDesignStyle = 'monochrome-parallax';
+      }
 
       let resolvedAppVersion = explicitAppVersion || cachedSystem.appVersion || defaultSettings.appVersion;
       // Never allow an older cached string to downgrade the application below the compiled LATEST_VERSION
@@ -498,18 +563,22 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if (companyKey) {
         const cachedCompany = localStorage.getItem(companyKey);
         if (cachedCompany) {
-          const cachedData = JSON.parse(cachedCompany);
-          // appVersion is a system-wide setting, never let company cache override it
-          delete cachedData.appVersion;
+          const cachedData = sanitizeCompanySettingsPayload(JSON.parse(cachedCompany));
           return {
             ...defaultSettings,
             ...cachedSystem,
             ...cachedData,
+            appIdentity: resolvedIdentity,
+            systemLogo: resolvedIdentity.appLogoUrl,
+            systemFavicon: resolvedIdentity.faviconUrl,
+            systemLogoBgColor: resolvedIdentity.appLogoBgColor,
+            developerContactText: resolvedIdentity.softwareFooterText,
+            developerContactAlignment: resolvedIdentity.softwareFooterAlignment,
             appVersion: resolvedAppVersion,
             loading: false,
-            // Keep actual handlers as they are initialized/replaced on render
             updateSettings: defaultSettings.updateSettings,
             updateSystemSettings: defaultSettings.updateSystemSettings,
+            updateAppIdentity: defaultSettings.updateAppIdentity,
             updateFeaturesSettings: defaultSettings.updateFeaturesSettings,
             appFeatures: defaultSettings.appFeatures,
             subscriptionPlans: defaultSettings.subscriptionPlans
@@ -517,10 +586,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      if (systemPersisted) {
+      if (systemPersisted || appIdentityPersisted) {
         return {
           ...defaultSettings,
           ...cachedSystem,
+          appIdentity: resolvedIdentity,
+          systemLogo: resolvedIdentity.appLogoUrl,
+          systemFavicon: resolvedIdentity.faviconUrl,
+          systemLogoBgColor: resolvedIdentity.appLogoBgColor,
+          developerContactText: resolvedIdentity.softwareFooterText,
+          developerContactAlignment: resolvedIdentity.softwareFooterAlignment,
           appVersion: resolvedAppVersion,
           loading: false
         };
@@ -592,49 +667,109 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [user?.uid]);    // Cache for global settings to avoid redundant fetches across tabs/sessions
     const globalConfigLoaded = React.useRef(false);
     let unsubSystem: (() => void) | null = null;
+    let unsubAppIdentity: (() => void) | null = null;
 
     useEffect(() => {
       if (localStorage.getItem('erp_is_demo_mode') === 'true') {
         const companyId = user?.companyId || 'demo_company_id';
-        let companySettings = { ...defaultSettings };
+        let companySettings: Record<string, any> = { ...defaultSettings };
         try {
           const persisted = localStorage.getItem(`swr_settings_${companyId}`);
           if (persisted) {
-            companySettings = { ...companySettings, ...JSON.parse(persisted) };
+            companySettings = { ...companySettings, ...sanitizeCompanySettingsPayload(JSON.parse(persisted)) };
+          }
+        } catch (e) {}
+        let demoIdentity = DEFAULT_APP_BRANDING;
+        try {
+          const persistedIdentity = localStorage.getItem(APP_IDENTITY_STORAGE_KEY);
+          if (persistedIdentity) {
+            demoIdentity = resolveAppBranding(JSON.parse(persistedIdentity));
           }
         } catch (e) {}
 
         setSettings(prev => ({
           ...prev,
           ...companySettings,
+          appIdentity: demoIdentity,
+          systemLogo: demoIdentity.appLogoUrl,
+          systemFavicon: demoIdentity.faviconUrl,
+          systemLogoBgColor: demoIdentity.appLogoBgColor,
+          developerContactText: demoIdentity.softwareFooterText,
+          developerContactAlignment: demoIdentity.softwareFooterAlignment,
           appFeatures: APP_FEATURES,
           subscriptionPlans: [],
           loading: false,
           updateSettings: prev.updateSettings,
           updateSystemSettings: prev.updateSystemSettings,
+          updateAppIdentity: prev.updateAppIdentity,
           updateFeaturesSettings: prev.updateFeaturesSettings,
         }));
         return;
       }
 
-    // Fetch global system config - Live subscription to reflect maintenance changes immediately
+    // Fetch global system config & app identity - Live subscription to reflect updates immediately
     const fetchSystemConfig = () => {
       try {
         const persisted = localStorage.getItem('swr_system_config');
-        if (persisted) {
-          const cachedSystem = JSON.parse(persisted);
+        const persistedAppIdentity = localStorage.getItem(APP_IDENTITY_STORAGE_KEY);
+        const cachedSystem = persisted ? JSON.parse(persisted) : {};
+        const cachedIdentity = persistedAppIdentity ? JSON.parse(persistedAppIdentity) : {};
+        systemConfigCacheRef.current = cachedSystem;
+        appIdentityDocCacheRef.current = cachedIdentity;
+
+        if (persisted || persistedAppIdentity) {
+          if (cachedSystem.heroDesignStyle === 'three-matrix' || cachedSystem.heroDesignStyle === 'three-interactive') {
+            cachedSystem.heroDesignStyle = 'monochrome-parallax';
+          }
+          const resolvedIdentity = resolveAppBranding(cachedIdentity, cachedSystem);
           setSettings(prev => ({
             ...prev,
-            ...cachedSystem
+            ...cachedSystem,
+            appIdentity: resolvedIdentity,
+            systemLogo: resolvedIdentity.appLogoUrl,
+            systemFavicon: resolvedIdentity.faviconUrl,
+            systemLogoBgColor: resolvedIdentity.appLogoBgColor,
+            developerContactText: resolvedIdentity.softwareFooterText,
+            developerContactAlignment: resolvedIdentity.softwareFooterAlignment,
+            heroDesignStyle: cachedSystem.heroDesignStyle || prev.heroDesignStyle || 'monochrome-parallax'
           }));
         }
       } catch (e) {}
+
+      try {
+        const appIdentityRef = doc(db, 'system', 'app_identity');
+        unsubAppIdentity = onSnapshot(appIdentityRef, (snap) => {
+          if (snap.exists()) {
+            const identityData = snap.data() as Partial<AppBrandingConfig>;
+            appIdentityDocCacheRef.current = identityData;
+            try {
+              localStorage.setItem(APP_IDENTITY_STORAGE_KEY, JSON.stringify(identityData));
+            } catch (e) {}
+            const resolvedIdentity = resolveAppBranding(identityData, systemConfigCacheRef.current);
+            setSettings(prev => ({
+              ...prev,
+              appIdentity: resolvedIdentity,
+              systemLogo: resolvedIdentity.appLogoUrl,
+              systemFavicon: resolvedIdentity.faviconUrl,
+              systemLogoBgColor: resolvedIdentity.appLogoBgColor,
+              developerContactText: resolvedIdentity.softwareFooterText,
+              developerContactAlignment: resolvedIdentity.softwareFooterAlignment,
+            }));
+          }
+        }, (error) => {
+          if (!error.message?.includes('Quota exceeded') && !error.message?.includes('offline') && !error.message?.includes('backend')) {
+            console.warn("App identity fetch notice:", error);
+          }
+        });
+      } catch (error) {}
 
       try {
         const systemRef = doc(db, 'system', 'config');
         unsubSystem = onSnapshot(systemRef, (snap) => {
           if (snap.exists()) {
             const data = snap.data();
+            systemConfigCacheRef.current = data;
+            const resolvedIdentity = resolveAppBranding(appIdentityDocCacheRef.current, data);
             const incomingVer = data.appVersion;
             const effectiveVer = incomingVer && compareSemVer(incomingVer, LATEST_VERSION) > 0 ? incomingVer : LATEST_VERSION;
             try {
@@ -644,6 +779,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             } catch (e) {}
             setSettings(prev => ({
               ...prev,
+              appIdentity: resolvedIdentity,
               statusOnlineText: data.statusOnlineText || prev.statusOnlineText,
               statusOfflineText: data.statusOfflineText || prev.statusOfflineText,
               statusErrorText: data.statusErrorText || prev.statusErrorText,
@@ -651,15 +787,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               showTopbarSearch: data.showTopbarSearch !== undefined ? data.showTopbarSearch : true,
               showTopbarNotifications: data.showTopbarNotifications !== undefined ? data.showTopbarNotifications : true,
               showTopbarInstructions: data.showTopbarInstructions !== undefined ? data.showTopbarInstructions : true,
-              developerContactText: data.developerContactText || prev.developerContactText,
-              developerContactAlignment: data.developerContactAlignment || prev.developerContactAlignment,
+              developerContactText: resolvedIdentity.softwareFooterText,
+              developerContactAlignment: resolvedIdentity.softwareFooterAlignment,
               appVersion: effectiveVer,
               englishFont: data.englishFont || prev.englishFont,
               banglaFont: data.banglaFont || prev.banglaFont,
-              systemLogo: data.systemLogo || prev.systemLogo,
-              systemLogoBgColor: data.systemLogoBgColor || data.logoBgColor || prev.systemLogoBgColor,
-              logoBgColor: data.logoBgColor || data.systemLogoBgColor || prev.logoBgColor,
-              systemFavicon: data.systemFavicon || prev.systemFavicon,
+              systemLogo: resolvedIdentity.appLogoUrl,
+              systemLogoBgColor: resolvedIdentity.appLogoBgColor,
+              logoBgColor: data.logoBgColor || resolvedIdentity.appLogoBgColor,
+              systemFavicon: resolvedIdentity.faviconUrl,
               glassBackground: data.glassBackground || prev.glassBackground,
               notificationDuration: data.notificationDuration || prev.notificationDuration,
               notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle,
@@ -727,7 +863,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               sidebarTextColor: data.sidebarTextColor || prev.sidebarTextColor || 'default',
               globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign,
               landingPageEnabled: data.landingPageEnabled !== undefined ? !!data.landingPageEnabled : (prev.landingPageEnabled !== undefined ? prev.landingPageEnabled : true),
-              heroDesignStyle: data.heroDesignStyle || prev.heroDesignStyle || 'three-interactive',
+              heroDesignStyle: (data.heroDesignStyle === 'three-matrix' || data.heroDesignStyle === 'three-interactive')
+                ? 'monochrome-parallax'
+                : (data.heroDesignStyle || prev.heroDesignStyle || 'monochrome-parallax'),
               heroThreeUiTheme: data.heroThreeUiTheme || prev.heroThreeUiTheme || 'aurora-navy',
               heroThreeUiGlowColor: data.heroThreeUiGlowColor || prev.heroThreeUiGlowColor || 'cyan',
               heroThreeUiPerspective: data.heroThreeUiPerspective || prev.heroThreeUiPerspective || 'cinematic',
@@ -736,6 +874,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               heroThreeUiShowExperienceHubDemo: data.heroThreeUiShowExperienceHubDemo !== undefined ? !!data.heroThreeUiShowExperienceHubDemo : (prev.heroThreeUiShowExperienceHubDemo !== undefined ? prev.heroThreeUiShowExperienceHubDemo : true),
               heroThreeUiShowSimulateVoucher: data.heroThreeUiShowSimulateVoucher !== undefined ? !!data.heroThreeUiShowSimulateVoucher : (prev.heroThreeUiShowSimulateVoucher !== undefined ? prev.heroThreeUiShowSimulateVoucher : true),
               heroThreeUiEnableTiltDefault: data.heroThreeUiEnableTiltDefault !== undefined ? !!data.heroThreeUiEnableTiltDefault : (prev.heroThreeUiEnableTiltDefault !== undefined ? prev.heroThreeUiEnableTiltDefault : false),
+              heroShowExperienceHubDemo: data.heroShowExperienceHubDemo !== undefined ? !!data.heroShowExperienceHubDemo : (prev.heroShowExperienceHubDemo !== undefined ? prev.heroShowExperienceHubDemo : false),
+              heroShowExploreLiveDemo: data.heroShowExploreLiveDemo !== undefined ? !!data.heroShowExploreLiveDemo : (prev.heroShowExploreLiveDemo !== undefined ? prev.heroShowExploreLiveDemo : true),
               maintenanceEnabled: data.maintenanceEnabled !== undefined ? !!data.maintenanceEnabled : false,
               maintenanceEndTime: data.maintenanceEndTime || '',
               maintenanceReason: data.maintenanceReason || '',
@@ -794,6 +934,53 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       // Keep system settings but reset company settings
       setSettings(prev => ({ 
         ...defaultSettings, 
+        systemUiStyle: prev.systemUiStyle,
+        systemMenuBarStyle: prev.systemMenuBarStyle,
+        alterPageUiStyle: prev.alterPageUiStyle,
+        reportsPageUiStyle: prev.reportsPageUiStyle,
+        searchPageUiStyle: prev.searchPageUiStyle,
+        reportsColumnsPerRow: prev.reportsColumnsPerRow,
+        alterColumnsPerRow: prev.alterColumnsPerRow,
+        enableUserSortViewPref: prev.enableUserSortViewPref,
+        sidebarBgColor: prev.sidebarBgColor,
+        sidebarTextColor: prev.sidebarTextColor,
+        globalDashboardDesign: prev.globalDashboardDesign,
+        landingPageEnabled: prev.landingPageEnabled,
+        heroDesignStyle: prev.heroDesignStyle || 'monochrome-parallax',
+        heroThreeUiTheme: prev.heroThreeUiTheme,
+        heroThreeUiGlowColor: prev.heroThreeUiGlowColor,
+        heroThreeUiPerspective: prev.heroThreeUiPerspective,
+        heroThreeUiShowParticles: prev.heroThreeUiShowParticles,
+        heroThreeUiShowFloatingBadges: prev.heroThreeUiShowFloatingBadges,
+        heroThreeUiShowExperienceHubDemo: prev.heroThreeUiShowExperienceHubDemo,
+        heroThreeUiShowSimulateVoucher: prev.heroThreeUiShowSimulateVoucher,
+        heroThreeUiEnableTiltDefault: prev.heroThreeUiEnableTiltDefault,
+        heroShowExperienceHubDemo: prev.heroShowExperienceHubDemo,
+        heroShowExploreLiveDemo: prev.heroShowExploreLiveDemo,
+        heroEyebrowText: prev.heroEyebrowText,
+        heroTitleText: prev.heroTitleText,
+        heroSubtitleText: prev.heroSubtitleText,
+        heroCtaPrimaryText: prev.heroCtaPrimaryText,
+        heroCtaDemoText: prev.heroCtaDemoText,
+        heroNavActionText: prev.heroNavActionText,
+        heroMetric1Value: prev.heroMetric1Value,
+        heroMetric1Label: prev.heroMetric1Label,
+        heroMetric2Value: prev.heroMetric2Value,
+        heroMetric2Label: prev.heroMetric2Label,
+        heroMetric3Value: prev.heroMetric3Value,
+        heroMetric3Label: prev.heroMetric3Label,
+        maintenanceEnabled: prev.maintenanceEnabled,
+        maintenanceEndTime: prev.maintenanceEndTime,
+        maintenanceReason: prev.maintenanceReason,
+        maintenanceUpdates: prev.maintenanceUpdates,
+        systemLogo: prev.systemLogo,
+        systemLogoBgColor: prev.systemLogoBgColor,
+        logoBgColor: prev.logoBgColor,
+        systemFavicon: prev.systemFavicon,
+        appIdentity: prev.appIdentity,
+        developerContactText: prev.developerContactText,
+        developerContactAlignment: prev.developerContactAlignment,
+        glassBackground: prev.glassBackground,
         statusOnlineText: prev.statusOnlineText,
         statusOfflineText: prev.statusOfflineText,
         statusErrorText: prev.statusErrorText,
@@ -801,6 +988,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         loading: false,
         updateSettings: prev.updateSettings,
         updateSystemSettings: prev.updateSystemSettings,
+        updateAppIdentity: prev.updateAppIdentity,
         updateFeaturesSettings: prev.updateFeaturesSettings,
         appFeatures: prev.appFeatures,
         subscriptionPlans: prev.subscriptionPlans
@@ -814,15 +1002,21 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     try {
       const persisted = localStorage.getItem(`swr_settings_${user.companyId}`);
       if (persisted) {
-        const cachedData = JSON.parse(persisted);
-        delete cachedData.appVersion; // Ensure stale company cache does not override appVersion
+        const cachedData = sanitizeCompanySettingsPayload(JSON.parse(persisted));
         setSettings(prev => ({
           ...prev,
           ...cachedData,
+          appIdentity: prev.appIdentity,
+          systemLogo: prev.systemLogo,
+          systemLogoBgColor: prev.systemLogoBgColor,
+          systemFavicon: prev.systemFavicon,
+          developerContactText: prev.developerContactText,
+          developerContactAlignment: prev.developerContactAlignment,
           appVersion: prev.appVersion,
           loading: false,
           updateSettings: prev.updateSettings,
           updateSystemSettings: prev.updateSystemSettings,
+          updateAppIdentity: prev.updateAppIdentity,
           updateFeaturesSettings: prev.updateFeaturesSettings,
           appFeatures: prev.appFeatures,
           subscriptionPlans: prev.subscriptionPlans
@@ -832,24 +1026,32 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     const unsubscribe = onSnapshot(ref, (snap) => {
       if (snap.exists()) {
-        const snapData = snap.data();
+        const rawSnapData = snap.data();
         // If company document contained legacy appVersion, clean it up
-        if (snapData.appVersion !== undefined) {
-          delete snapData.appVersion;
+        if (rawSnapData.appVersion !== undefined) {
+          delete rawSnapData.appVersion;
           try {
             updateDoc(ref, { appVersion: deleteField() }).catch(() => {});
           } catch (e) {}
         }
+        const snapData = sanitizeCompanySettingsPayload(rawSnapData);
         try {
           localStorage.setItem(`swr_settings_${user.companyId}`, JSON.stringify(snapData));
         } catch (e) {}
         setSettings(prev => ({ 
           ...prev, 
           ...snapData, 
+          appIdentity: prev.appIdentity,
+          systemLogo: prev.systemLogo,
+          systemLogoBgColor: prev.systemLogoBgColor,
+          systemFavicon: prev.systemFavicon,
+          developerContactText: prev.developerContactText,
+          developerContactAlignment: prev.developerContactAlignment,
           appVersion: prev.appVersion, // strictly keep the system appVersion
           loading: false,
           updateSettings: prev.updateSettings,
           updateSystemSettings: prev.updateSystemSettings,
+          updateAppIdentity: prev.updateAppIdentity,
           updateFeaturesSettings: prev.updateFeaturesSettings,
           appFeatures: prev.appFeatures,
           subscriptionPlans: prev.subscriptionPlans
@@ -858,6 +1060,53 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         // If no settings exist for this company, use defaults (but keep system settings)
         setSettings(prev => ({ 
           ...defaultSettings, 
+          systemUiStyle: prev.systemUiStyle,
+          systemMenuBarStyle: prev.systemMenuBarStyle,
+          alterPageUiStyle: prev.alterPageUiStyle,
+          reportsPageUiStyle: prev.reportsPageUiStyle,
+          searchPageUiStyle: prev.searchPageUiStyle,
+          reportsColumnsPerRow: prev.reportsColumnsPerRow,
+          alterColumnsPerRow: prev.alterColumnsPerRow,
+          enableUserSortViewPref: prev.enableUserSortViewPref,
+          sidebarBgColor: prev.sidebarBgColor,
+          sidebarTextColor: prev.sidebarTextColor,
+          globalDashboardDesign: prev.globalDashboardDesign,
+          landingPageEnabled: prev.landingPageEnabled,
+          heroDesignStyle: prev.heroDesignStyle || 'monochrome-parallax',
+          heroThreeUiTheme: prev.heroThreeUiTheme,
+          heroThreeUiGlowColor: prev.heroThreeUiGlowColor,
+          heroThreeUiPerspective: prev.heroThreeUiPerspective,
+          heroThreeUiShowParticles: prev.heroThreeUiShowParticles,
+          heroThreeUiShowFloatingBadges: prev.heroThreeUiShowFloatingBadges,
+          heroThreeUiShowExperienceHubDemo: prev.heroThreeUiShowExperienceHubDemo,
+          heroThreeUiShowSimulateVoucher: prev.heroThreeUiShowSimulateVoucher,
+          heroThreeUiEnableTiltDefault: prev.heroThreeUiEnableTiltDefault,
+          heroShowExperienceHubDemo: prev.heroShowExperienceHubDemo,
+          heroShowExploreLiveDemo: prev.heroShowExploreLiveDemo,
+          heroEyebrowText: prev.heroEyebrowText,
+          heroTitleText: prev.heroTitleText,
+          heroSubtitleText: prev.heroSubtitleText,
+          heroCtaPrimaryText: prev.heroCtaPrimaryText,
+          heroCtaDemoText: prev.heroCtaDemoText,
+          heroNavActionText: prev.heroNavActionText,
+          heroMetric1Value: prev.heroMetric1Value,
+          heroMetric1Label: prev.heroMetric1Label,
+          heroMetric2Value: prev.heroMetric2Value,
+          heroMetric2Label: prev.heroMetric2Label,
+          heroMetric3Value: prev.heroMetric3Value,
+          heroMetric3Label: prev.heroMetric3Label,
+          maintenanceEnabled: prev.maintenanceEnabled,
+          maintenanceEndTime: prev.maintenanceEndTime,
+          maintenanceReason: prev.maintenanceReason,
+          maintenanceUpdates: prev.maintenanceUpdates,
+          appIdentity: prev.appIdentity,
+          systemLogo: prev.systemLogo,
+          systemLogoBgColor: prev.systemLogoBgColor,
+          logoBgColor: prev.logoBgColor,
+          systemFavicon: prev.systemFavicon,
+          developerContactText: prev.developerContactText,
+          developerContactAlignment: prev.developerContactAlignment,
+          glassBackground: prev.glassBackground,
           statusOnlineText: prev.statusOnlineText,
           statusOfflineText: prev.statusOfflineText,
           statusErrorText: prev.statusErrorText,
@@ -865,6 +1114,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           loading: false,
           updateSettings: prev.updateSettings,
           updateSystemSettings: prev.updateSystemSettings,
+          updateAppIdentity: prev.updateAppIdentity,
           updateFeaturesSettings: prev.updateFeaturesSettings,
           appFeatures: prev.appFeatures,
           subscriptionPlans: prev.subscriptionPlans
@@ -878,53 +1128,71 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (unsubscribe) unsubscribe();
       if (unsubSystem) unsubSystem();
+      if (unsubAppIdentity) unsubAppIdentity();
     };
   }, [user?.companyId, authLoading]);
 
+  // Synchronize browser title, OG metadata, favicon, and PWA Manifest strictly with App Identity (never tenant companyName)
   useEffect(() => {
-    if (settings.systemFavicon) {
-      const iconUrl = settings.systemFavicon;
-      
-      // Update favicon
+    const identity = settings.appIdentity || DEFAULT_APP_BRANDING;
+    const safeFavicon = sanitizeAssetUrl(identity.faviconUrl || settings.systemFavicon);
+
+    if (identity.appName) {
+      document.title = identity.appName;
+      const ogTitle = document.querySelector("meta[property='og:title']") as HTMLMetaElement | null;
+      if (ogTitle) ogTitle.content = identity.appName;
+    }
+    if (identity.appTagline) {
+      const metaDesc = document.querySelector("meta[name='description']") as HTMLMetaElement | null;
+      if (metaDesc) metaDesc.content = identity.appTagline;
+      const ogDesc = document.querySelector("meta[property='og:description']") as HTMLMetaElement | null;
+      if (ogDesc) ogDesc.content = identity.appTagline;
+    }
+
+    if (safeFavicon) {
       let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
       if (!link) {
         link = document.createElement('link');
         link.rel = 'icon';
         document.getElementsByTagName('head')[0].appendChild(link);
       }
-      link.href = iconUrl;
+      link.href = safeFavicon;
 
-      // Update apple-touch-icon
       let appleIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement;
       if (!appleIcon) {
         appleIcon = document.createElement('link');
         appleIcon.rel = 'apple-touch-icon';
         document.getElementsByTagName('head')[0].appendChild(appleIcon);
       }
-      appleIcon.href = iconUrl;
+      appleIcon.href = safeFavicon;
 
-      // Update Manifest dynamically for 'Add to home screen' support with custom icon
+      // Update Manifest dynamically for 'Add to home screen' support strictly using App Identity
       try {
         const myManifest = {
-          "name": settings.companyName || "TallyFlow ERP",
-          "short_name": settings.companyName || "TallyFlow",
-          "description": settings.slogan || "Enterprise ERP Solution",
+          "name": identity.appName || DEFAULT_APP_BRANDING.appName,
+          "short_name": identity.appShortName || DEFAULT_APP_BRANDING.appShortName,
+          "description": identity.appTagline || DEFAULT_APP_BRANDING.appTagline,
           "start_url": window.location.origin,
           "scope": window.location.origin,
           "display": "standalone",
-          "theme_color": "#3b82f6",
+          "theme_color": sanitizeCssColor(identity.brandAccentColor, DEFAULT_APP_BRANDING.brandAccentColor),
           "background_color": "#ffffff",
           "icons": [
-            { "src": iconUrl, "sizes": "192x192", "type": "image/png", "purpose": "any" },
-            { "src": iconUrl, "sizes": "512x512", "type": "image/png", "purpose": "any" },
-            { "src": iconUrl, "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-            { "src": iconUrl, "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+            { "src": safeFavicon, "sizes": "192x192", "type": "image/png", "purpose": "any" },
+            { "src": safeFavicon, "sizes": "512x512", "type": "image/png", "purpose": "any" },
+            { "src": safeFavicon, "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+            { "src": safeFavicon, "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
           ]
         };
         const stringManifest = JSON.stringify(myManifest);
-        const blob = new Blob([stringManifest], {type: 'application/json'});
+        const blob = new Blob([stringManifest], { type: 'application/json' });
         const manifestURL = URL.createObjectURL(blob);
-        
+
+        if (prevManifestBlobUrlRef.current) {
+          URL.revokeObjectURL(prevManifestBlobUrlRef.current);
+        }
+        prevManifestBlobUrlRef.current = manifestURL;
+
         const manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
         if (manifestLink) {
           manifestLink.href = manifestURL;
@@ -938,13 +1206,28 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         console.error('Error updating dynamic manifest:', err);
       }
     }
-  }, [settings.systemFavicon, settings.companyName, settings.slogan]);
+
+    return () => {
+      if (prevManifestBlobUrlRef.current) {
+        URL.revokeObjectURL(prevManifestBlobUrlRef.current);
+        prevManifestBlobUrlRef.current = null;
+      }
+    };
+  }, [settings.appIdentity, settings.systemFavicon]);
 
   const updateSettings = async (newSettings: Partial<SettingsContextType>) => {
     if (!user?.companyId) return;
     
-    // Always strip system-level properties like appVersion so company settings never pollute them
-    const { updateSettings: _, updateSystemSettings: __, appVersion: ___, ...dataToSave } = newSettings as any;
+    // Always strip system/app-identity properties so tenant settings never pollute global App Identity
+    const {
+      updateSettings: _,
+      updateSystemSettings: __,
+      updateAppIdentity: ___,
+      updateFeaturesSettings: ____,
+      updateUserSettings: _____,
+      ...rawPayload
+    } = newSettings as any;
+    const dataToSave = sanitizeCompanySettingsPayload(rawPayload);
 
     if (localStorage.getItem('erp_is_demo_mode') === 'true') {
       setSettings(prev => {
@@ -964,6 +1247,58 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateAppIdentity = async (newBranding: Partial<AppBrandingConfig>) => {
+    const mergedRaw = {
+      ...appIdentityDocCacheRef.current,
+      ...settings.appIdentity,
+      ...newBranding,
+    };
+    const sanitizedBranding = resolveAppBranding(mergedRaw, systemConfigCacheRef.current);
+    appIdentityDocCacheRef.current = sanitizedBranding;
+
+    try {
+      localStorage.setItem(APP_IDENTITY_STORAGE_KEY, JSON.stringify(sanitizedBranding));
+    } catch (e) {}
+
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      setSettings(prev => ({
+        ...prev,
+        appIdentity: sanitizedBranding,
+        systemLogo: sanitizedBranding.appLogoUrl,
+        systemFavicon: sanitizedBranding.faviconUrl,
+        systemLogoBgColor: sanitizedBranding.appLogoBgColor,
+        developerContactText: sanitizedBranding.softwareFooterText,
+        developerContactAlignment: sanitizedBranding.softwareFooterAlignment,
+      }));
+      return;
+    }
+
+    await setDoc(doc(db, 'system', 'app_identity'), {
+      ...sanitizedBranding,
+      updatedAt: serverTimestamp(),
+      updatedBy: user?.email || user?.uid || 'founder',
+    }, { merge: true });
+
+    // Keep legacy system/config branding keys synchronized cleanly
+    await erpService.updateSystemConfig({
+      systemLogo: sanitizedBranding.appLogoUrl,
+      systemFavicon: sanitizedBranding.faviconUrl,
+      systemLogoBgColor: sanitizedBranding.appLogoBgColor,
+      developerContactText: sanitizedBranding.softwareFooterText,
+      developerContactAlignment: sanitizedBranding.softwareFooterAlignment,
+    });
+
+    setSettings(prev => ({
+      ...prev,
+      appIdentity: sanitizedBranding,
+      systemLogo: sanitizedBranding.appLogoUrl,
+      systemFavicon: sanitizedBranding.faviconUrl,
+      systemLogoBgColor: sanitizedBranding.appLogoBgColor,
+      developerContactText: sanitizedBranding.softwareFooterText,
+      developerContactAlignment: sanitizedBranding.softwareFooterAlignment,
+    }));
+  };
+
   const updateSystemSettings = async (newSettings: any) => {
     if (newSettings.appVersion) {
       try {
@@ -972,22 +1307,62 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {}
     }
 
+    const legacyBrandingPatch: Partial<AppBrandingConfig> = {};
+    if (newSettings.systemLogo !== undefined) legacyBrandingPatch.appLogoUrl = sanitizeAssetUrl(newSettings.systemLogo);
+    if (newSettings.systemFavicon !== undefined) legacyBrandingPatch.faviconUrl = sanitizeAssetUrl(newSettings.systemFavicon);
+    if (newSettings.systemLogoBgColor !== undefined || newSettings.logoBgColor !== undefined) {
+      legacyBrandingPatch.appLogoBgColor = sanitizeCssColor(newSettings.systemLogoBgColor ?? newSettings.logoBgColor);
+    }
+    if (newSettings.developerContactText !== undefined) legacyBrandingPatch.softwareFooterText = newSettings.developerContactText;
+    if (newSettings.developerContactAlignment !== undefined) legacyBrandingPatch.softwareFooterAlignment = newSettings.developerContactAlignment;
+
+    const hasLegacyBrandingPatch = Object.keys(legacyBrandingPatch).length > 0;
+    const nextIdentity = hasLegacyBrandingPatch
+      ? resolveAppBranding({ ...appIdentityDocCacheRef.current, ...settings.appIdentity, ...legacyBrandingPatch }, { ...systemConfigCacheRef.current, ...newSettings })
+      : settings.appIdentity;
+
+    if (hasLegacyBrandingPatch) {
+      appIdentityDocCacheRef.current = nextIdentity;
+      try {
+        localStorage.setItem(APP_IDENTITY_STORAGE_KEY, JSON.stringify(nextIdentity));
+      } catch (e) {}
+    }
+
     if (localStorage.getItem('erp_is_demo_mode') === 'true') {
       setSettings(prev => ({
         ...prev,
         ...newSettings,
+        appIdentity: nextIdentity,
         systemUiStyle: newSettings.uiStyle !== undefined ? newSettings.uiStyle : prev.systemUiStyle,
         systemMenuBarStyle: newSettings.menuBarStyle !== undefined ? newSettings.menuBarStyle : prev.systemMenuBarStyle,
         globalDashboardDesign: newSettings.dashboardDesign || prev.globalDashboardDesign
       }));
       return;
     }
+    if (newSettings.heroDesignStyle === 'three-matrix' || newSettings.heroDesignStyle === 'three-interactive') {
+      newSettings.heroDesignStyle = 'monochrome-parallax';
+    }
+
+    try {
+      const persisted = localStorage.getItem('swr_system_config');
+      const cur = persisted ? JSON.parse(persisted) : {};
+      localStorage.setItem('swr_system_config', JSON.stringify({ ...cur, ...newSettings }));
+    } catch (e) {}
+
     try {
       await erpService.updateSystemConfig(newSettings);
+      if (hasLegacyBrandingPatch) {
+        await setDoc(doc(db, 'system', 'app_identity'), {
+          ...nextIdentity,
+          updatedAt: serverTimestamp(),
+          updatedBy: user?.email || user?.uid || 'founder',
+        }, { merge: true });
+      }
       // Update local state to reflect changes immediately
       setSettings(prev => ({
         ...prev,
         ...newSettings,
+        appIdentity: nextIdentity,
         systemUiStyle: newSettings.uiStyle !== undefined ? newSettings.uiStyle : prev.systemUiStyle,
         systemMenuBarStyle: newSettings.menuBarStyle !== undefined ? newSettings.menuBarStyle : prev.systemMenuBarStyle,
         // Map dashboardDesign back to globalDashboardDesign if it's in the payload
@@ -1061,7 +1436,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       soundNavigation: userSettings.soundNavigation || settings.soundNavigation || '',
       userSettings,
       updateSettings, 
-      updateSystemSettings, 
+      updateSystemSettings,
+      updateAppIdentity,
+      updateFeaturesSettings,
       updateUserSettings 
     }}>
       {children}
