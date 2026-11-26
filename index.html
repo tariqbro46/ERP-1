@@ -10,6 +10,69 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#3b82f6" />
     <link rel="apple-touch-icon" href="https://api.dicebear.com/7.x/pixel-art/svg?seed=erp-icon&size=192" />
+    <script>
+      (function () {
+        try {
+          var root = document.documentElement;
+          var theme = localStorage.getItem('theme') || 'classic';
+          var validThemes = ['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'];
+          if (validThemes.indexOf(theme) === -1) theme = 'classic';
+          root.classList.add(theme);
+
+          var lang = localStorage.getItem('app_language') || 'en';
+          var sysRaw = localStorage.getItem('swr_system_config');
+          var sysCfg = sysRaw ? JSON.parse(sysRaw) : {};
+
+          var profRaw = localStorage.getItem('cached_auth_profile');
+          var prof = profRaw ? JSON.parse(profRaw) : {};
+          var compCfg = {};
+          if (prof && prof.companyId) {
+            var compRaw = localStorage.getItem('swr_settings_' + prof.companyId);
+            if (compRaw) compCfg = JSON.parse(compRaw);
+          }
+          var userCfg = {};
+          if (prof && prof.uid) {
+            var uRaw = localStorage.getItem('swr_usersettings_' + prof.uid);
+            if (uRaw) userCfg = JSON.parse(uRaw);
+          }
+
+          var uiStyle = sysCfg.uiStyle || userCfg.uiStyle || compCfg.uiStyle || 'UI/UX 1';
+          var glassBg = sysCfg.glassBackground || userCfg.glassBackground || compCfg.glassBackground || 'default';
+          root.setAttribute('data-ui-style', uiStyle);
+          root.setAttribute('data-glass-bg', glassBg);
+
+          var font = lang === 'bn'
+            ? (userCfg.banglaFont || compCfg.banglaFont || sysCfg.banglaFont || 'Hind Siliguri')
+            : (userCfg.englishFont || compCfg.englishFont || sysCfg.englishFont || 'Inter');
+          root.style.setProperty('--app-font', '"' + font + '", sans-serif');
+
+          var bgMap = {
+            dark: '#0a0a0a',
+            classic: '#f1f5f9',
+            light: '#ffffff',
+            slate: '#f8fafc',
+            emerald: '#f0fdf4',
+            amber: '#fffbeb',
+            rose: '#fff1f2'
+          };
+          var fgMap = {
+            dark: '#f8fafc',
+            classic: '#1e293b',
+            light: '#0a0a0a',
+            slate: '#0f172a',
+            emerald: '#064e3b',
+            amber: '#78350f',
+            rose: '#881337'
+          };
+          var isUi4 = uiStyle === 'UI/UX 4';
+          root.style.backgroundColor = isUi4 ? '#070b14' : (bgMap[theme] || '#f1f5f9');
+          root.style.color = isUi4 ? '#f1f5f9' : (fgMap[theme] || '#1e293b');
+          if (isUi4 || theme === 'dark') {
+            root.style.colorScheme = 'dark';
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

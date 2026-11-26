@@ -753,19 +753,19 @@ export function TrialBalance() {
   };
 
   if (loading) {
-    return <SkeletonLoader type="table" />;
+    return <SkeletonLoader type="table" pageKey="reports" />;
   }
 
   return (
     <div className={cn(
-      "flex flex-col h-full bg-background font-mono transition-colors text-[11px] overflow-hidden select-none",
-      settings.reportsPageUiStyle === 'modern' ? "bg-slate-50/50" : "bg-background"
+      "flex flex-col h-full bg-background transition-colors text-[11px] overflow-hidden select-none",
+      settings.reportsPageUiStyle === 'modern' ? "bg-muted/30" : "bg-background"
     )}>
       {/* Permanent Fixed Header */}
       <div className={cn(
         "flex-none border-b shadow-sm px-4 lg:px-6 py-3.5 space-y-3 z-[40]",
         settings.reportsPageUiStyle === 'modern'
-          ? "bg-white/95 dark:bg-card/95 backdrop-blur-md border-slate-200/60 dark:border-border"
+          ? "bg-card/95 backdrop-blur-md border-border"
           : "bg-background/95 backdrop-blur-md border-border"
       )}>
         {/* Top Title & Navigation */}
@@ -925,7 +925,7 @@ export function TrialBalance() {
                 placeholder={isBn ? 'হিসাব বা গ্রুপ খুঁজুন...' : 'Search accounts or groups...'}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-card border border-border text-foreground pl-8 pr-6 py-1 text-[11px] outline-none focus:border-primary transition-colors rounded-lg font-mono placeholder:text-muted-foreground"
+                className="w-full bg-card border border-border text-foreground pl-8 pr-6 py-1 text-[11px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-colors rounded-lg placeholder:text-muted-foreground"
               />
               {search && (
                 <button
@@ -979,7 +979,7 @@ export function TrialBalance() {
             </thead>
 
             {/* Table Body */}
-            <tbody className="divide-y divide-border/40 font-mono">
+            <tbody className="divide-y divide-border/40">
               {trialBalanceTree.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="px-6 py-16 text-center text-muted-foreground uppercase tracking-widest text-[11px]" style={{ verticalAlign: 'middle' }}>
@@ -1019,12 +1019,12 @@ export function TrialBalance() {
                         </td>
 
                         {/* Debit Total */}
-                        <td className="px-4 py-2.5 text-right font-bold text-foreground border-r border-border" style={{ verticalAlign: 'middle' }}>
+                        <td className="px-4 py-2.5 text-right font-bold text-foreground tabular-nums border-r border-border" style={{ verticalAlign: 'middle' }}>
                           {group.debit > 0 ? formatNumber(group.debit) : ''}
                         </td>
 
                         {/* Credit Total */}
-                        <td className="px-4 py-2.5 text-right font-bold text-foreground" style={{ verticalAlign: 'middle' }}>
+                        <td className="px-4 py-2.5 text-right font-bold text-foreground tabular-nums" style={{ verticalAlign: 'middle' }}>
                           {group.credit > 0 ? formatNumber(group.credit) : ''}
                         </td>
                       </tr>
@@ -1063,12 +1063,12 @@ export function TrialBalance() {
                                   </td>
 
                                   {/* Subgroup Debit */}
-                                  <td className="px-4 py-2 text-right font-semibold text-foreground border-r border-border" style={{ verticalAlign: 'middle' }}>
+                                  <td className="px-4 py-2 text-right font-semibold text-foreground tabular-nums border-r border-border" style={{ verticalAlign: 'middle' }}>
                                     {sub.debit > 0 ? formatNumber(sub.debit) : ''}
                                   </td>
 
                                   {/* Subgroup Credit */}
-                                  <td className="px-4 py-2 text-right font-semibold text-foreground" style={{ verticalAlign: 'middle' }}>
+                                  <td className="px-4 py-2 text-right font-semibold text-foreground tabular-nums" style={{ verticalAlign: 'middle' }}>
                                     {sub.credit > 0 ? formatNumber(sub.credit) : ''}
                                   </td>
                                 </tr>
@@ -1093,11 +1093,11 @@ export function TrialBalance() {
                                       </div>
                                     </td>
 
-                                    <td className="px-4 py-1.5 text-right font-normal text-muted-foreground group-hover:text-foreground border-r border-border" style={{ verticalAlign: 'middle' }}>
+                                    <td className="px-4 py-1.5 text-right font-normal text-muted-foreground group-hover:text-foreground tabular-nums border-r border-border" style={{ verticalAlign: 'middle' }}>
                                       {ledger.debit > 0 ? formatNumber(ledger.debit) : ''}
                                     </td>
 
-                                    <td className="px-4 py-1.5 text-right font-normal text-muted-foreground group-hover:text-foreground" style={{ verticalAlign: 'middle' }}>
+                                    <td className="px-4 py-1.5 text-right font-normal text-muted-foreground group-hover:text-foreground tabular-nums" style={{ verticalAlign: 'middle' }}>
                                       {ledger.credit > 0 ? formatNumber(ledger.credit) : ''}
                                     </td>
                                   </tr>
@@ -1126,11 +1126,11 @@ export function TrialBalance() {
                                 </div>
                               </td>
 
-                              <td className="px-4 py-2 text-right font-normal text-foreground border-r border-border" style={{ verticalAlign: 'middle' }}>
+                              <td className="px-4 py-2 text-right font-normal text-foreground tabular-nums border-r border-border" style={{ verticalAlign: 'middle' }}>
                                 {ledger.debit > 0 ? formatNumber(ledger.debit) : ''}
                               </td>
 
-                              <td className="px-4 py-2 text-right font-normal text-foreground" style={{ verticalAlign: 'middle' }}>
+                              <td className="px-4 py-2 text-right font-normal text-foreground tabular-nums" style={{ verticalAlign: 'middle' }}>
                                 {ledger.credit > 0 ? formatNumber(ledger.credit) : ''}
                               </td>
                             </tr>
@@ -1151,10 +1151,10 @@ export function TrialBalance() {
                       <span>{profitAndLossRow.name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-2.5 text-right border-r border-border" style={{ verticalAlign: 'middle' }}>
+                  <td className="px-4 py-2.5 text-right tabular-nums border-r border-border" style={{ verticalAlign: 'middle' }}>
                     {profitAndLossRow.debit > 0 ? formatNumber(profitAndLossRow.debit) : ''}
                   </td>
-                  <td className="px-4 py-2.5 text-right font-semibold text-foreground" style={{ verticalAlign: 'middle' }}>
+                  <td className="px-4 py-2.5 text-right font-semibold text-foreground tabular-nums" style={{ verticalAlign: 'middle' }}>
                     {profitAndLossRow.credit > 0 ? formatNumber(profitAndLossRow.credit) : ''}
                   </td>
                 </tr>
@@ -1171,10 +1171,10 @@ export function TrialBalance() {
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-2.5 text-right text-foreground font-semibold border-r border-border" style={{ verticalAlign: 'middle' }}>
+                  <td className="px-4 py-2.5 text-right text-foreground font-semibold tabular-nums border-r border-border" style={{ verticalAlign: 'middle' }}>
                     {totalsAndDiff.diffDebit > 0 ? formatNumber(totalsAndDiff.diffDebit) : ''}
                   </td>
-                  <td className="px-4 py-2.5 text-right text-foreground font-semibold" style={{ verticalAlign: 'middle' }}>
+                  <td className="px-4 py-2.5 text-right text-foreground font-semibold tabular-nums" style={{ verticalAlign: 'middle' }}>
                     {totalsAndDiff.diffCredit > 0 ? formatNumber(totalsAndDiff.diffCredit) : ''}
                   </td>
                 </tr>
@@ -1189,10 +1189,10 @@ export function TrialBalance() {
                     {isBn ? 'সর্বমোট (Grand Total)' : 'G r a n d   T o t a l'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right text-foreground font-extrabold text-xs border-r border-border" style={{ verticalAlign: 'middle' }}>
+                <td className="px-4 py-3 text-right text-foreground font-extrabold text-xs tabular-nums border-r border-border" style={{ verticalAlign: 'middle' }}>
                   {formatNumber(totalsAndDiff.grandTotalDebit)}
                 </td>
-                <td className="px-4 py-3 text-right text-foreground font-extrabold text-xs" style={{ verticalAlign: 'middle' }}>
+                <td className="px-4 py-3 text-right text-foreground font-extrabold text-xs tabular-nums" style={{ verticalAlign: 'middle' }}>
                   {formatNumber(totalsAndDiff.grandTotalCredit)}
                 </td>
               </tr>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Download, Printer, FileSpreadsheet, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft, Eye, MoreVertical, ChevronLeft, ChevronRight, RotateCw, X } from 'lucide-react';
+import { Search, Filter, Download, Printer, FileSpreadsheet, ArrowRight, MessageCircle, Mail, Settings as SettingsIcon, ArrowLeft, Eye, MoreVertical, ChevronLeft, ChevronRight, RotateCw } from 'lucide-react';
+import { SkeletonLoader } from './SkeletonLoader';
+import { EnterpriseModal } from './ui/EnterpriseModal';
 import { useNavigate } from 'react-router-dom';
 import { cn, formatNumber, formatQuantity, formatVoucherNo, parseEntryDate } from '../lib/utils';
 import { erpService } from '../services/erpService';
@@ -668,13 +670,13 @@ export function Daybook() {
   return (
     <div className={cn(
       "flex flex-col h-screen transition-colors overflow-hidden",
-      settings.reportsPageUiStyle === 'modern' ? "bg-slate-50/50" : "bg-background"
+      settings.reportsPageUiStyle === 'modern' ? "bg-muted/30" : "bg-background"
     )}>
       {/* Fixed Header Section */}
       <div className={cn(
         "flex-none border-b shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-30",
         settings.reportsPageUiStyle === 'modern'
-          ? "bg-white/95 backdrop-blur-md border-slate-200/60"
+          ? "bg-card/95 backdrop-blur-md border-border"
           : "bg-background border-border"
       )}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
@@ -708,14 +710,14 @@ export function Daybook() {
                 showNotification('Daybook data refreshed', 'success');
               }}
               disabled={loading}
-              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap cursor-pointer"
+              className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap cursor-pointer"
               title="Refresh Daybook (Clear cache & fetch fresh)"
             >
               <RotateCw className={cn("w-3 h-3", loading && "animate-spin")} /> REFRESH
             </button>
             <button 
               onClick={() => setIsConfigOpen(true)}
-              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap"
+              className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap"
               title={t('daybook.configureReport')}
             >
               <SettingsIcon className="w-3 h-3" /> {t('common.f12Configure')}
@@ -723,7 +725,7 @@ export function Daybook() {
             <button 
               onClick={handleFullPageView}
               disabled={vouchers.length === 0}
-              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap disabled:opacity-50"
+              className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex justify-center items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap disabled:opacity-50"
               title="Full Page Print Layout Preview"
             >
               <Eye className="w-3 h-3" /> FULL PAGE VIEW
@@ -731,14 +733,14 @@ export function Daybook() {
             <button 
               onClick={handlePrint}
               disabled={vouchers.length === 0}
-              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap disabled:opacity-50"
+              className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex justify-center items-center gap-2 text-[10px] font-bold uppercase whitespace-nowrap disabled:opacity-50"
             >
               <Printer className="w-3 h-3" /> PRINT
             </button>
             <button 
               onClick={handleDownloadExcel}
               disabled={vouchers.length === 0}
-              className="px-3 py-2 border border-emerald-200 bg-emerald-50/70 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
+              className="px-3 py-2 border border-emerald-200 rounded-lg bg-emerald-50/70 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
               title="Export Excel (.xlsx)"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" /> {t('common.excel')}
@@ -746,7 +748,7 @@ export function Daybook() {
             <button 
               onClick={handleDownloadPDF}
               disabled={vouchers.length === 0}
-              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
+              className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
               title="Print to PDF (Save professional financial statement offline)"
             >
               <Download className="w-3 h-3" /> PRINT TO PDF
@@ -754,7 +756,7 @@ export function Daybook() {
             <button
               onClick={handleEmailReport}
               disabled={vouchers.length === 0}
-              className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
+              className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase whitespace-nowrap"
               title="Share Summary via Email"
             >
               <Mail className="w-3.5 h-3.5" /> EMAIL
@@ -773,14 +775,16 @@ export function Daybook() {
 
       {/* Report Content Section */}
       <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
-        <div id="daybook-report" className="min-h-full flex flex-col bg-white">
+        <div id="daybook-report" className="min-h-full flex flex-col bg-background">
           <div className="p-4 lg:p-6 flex-1 flex flex-col">
+          {loading ? (
+            <SkeletonLoader type="table" pageKey="daybook" isFullPage={false} />
+          ) : (
+          <>
           {/* Mobile View: Cards */}
-          <div className="block lg:hidden divide-y divide-border/50 flex-none">
-            {loading ? (
-              <div className="p-10 text-center text-gray-500">{t('daybook.loading')}</div>
-            ) : vouchers.length === 0 ? (
-              <div className="p-10 text-center text-gray-500">{t('daybook.noTransactions')}</div>
+          <div className="block lg:hidden divide-y divide-border/50 flex-none bg-card border border-border rounded-xl overflow-hidden">
+            {vouchers.length === 0 ? (
+              <div className="p-10 text-center text-muted-foreground">{t('daybook.noTransactions')}</div>
             ) : paginatedVouchers.map((v, idx) => (
               <div 
                 key={v.id} 
@@ -840,20 +844,20 @@ export function Daybook() {
                     {config.showEnteredBy && (
                       <span className="text-[8px] text-gray-400 uppercase">{t('common.providedBy')}: {users.find(u => u.uid === v.createdBy)?.displayName || 'System'}</span>
                     )}
-                    <span className="text-[10px] text-gray-500">{formatVoucherNo(v.v_no || v.reference_no)}{(v.serial_no || v.auto_serial_no) ? ` / SN:${v.serial_no || v.auto_serial_no}` : ''}</span>
+                    <span className="text-[10px] text-muted-foreground tabular-nums">{formatVoucherNo(v.v_no || v.reference_no)}{(v.serial_no || v.auto_serial_no) ? ` / SN:${v.serial_no || v.auto_serial_no}` : ''}</span>
                   </div>
-                  <span className="text-sm font-bold text-foreground">৳ {formatNumber(v.total_amount)}</span>
+                  <span className="text-sm font-bold text-foreground tabular-nums">৳ {formatNumber(v.total_amount)}</span>
                 </div>
                 <div className="flex gap-2 pt-2 border-t border-border/20">
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(v); }}
-                    className="flex-1 py-1.5 bg-emerald-500/10 text-emerald-500 text-[9px] font-bold uppercase rounded flex items-center justify-center gap-1"
+                    className="flex-1 py-1.5 bg-emerald-500/10 text-emerald-500 text-[9px] font-bold uppercase rounded-lg flex items-center justify-center gap-1"
                   >
                     <MessageCircle className="w-3 h-3" /> {t('common.whatsapp')}
                   </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); handleShareEmail(v); }}
-                    className="flex-1 py-1.5 bg-blue-500/10 text-blue-500 text-[9px] font-bold uppercase rounded flex items-center justify-center gap-1"
+                    className="flex-1 py-1.5 bg-blue-500/10 text-blue-500 text-[9px] font-bold uppercase rounded-lg flex items-center justify-center gap-1"
                   >
                     <Mail className="w-3 h-3" /> {t('common.email')}
                   </button>
@@ -863,10 +867,10 @@ export function Daybook() {
           </div>
 
           {/* Desktop View: Table */}
-          <div className="hidden lg:block relative flex-1">
+          <div className="hidden lg:block relative flex-1 bg-card border border-border rounded-xl overflow-hidden shadow-xs">
             <table className="w-full text-left text-xs min-w-[700px] lg:min-w-0 border-separate border-spacing-0">
               <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-sm shadow-sm ring-1 ring-border">
-                <tr className="text-gray-500 uppercase text-[9px] font-bold tracking-widest">
+                <tr className="text-muted-foreground uppercase text-[9px] font-bold tracking-widest">
                   <th className="px-4 lg:px-6 py-4 font-medium border-b border-border sticky top-0 align-middle">{t('common.date')}</th>
                   <th className="px-4 lg:px-6 py-4 font-medium border-b border-border sticky top-0 align-middle">{t('common.particulars')}</th>
                   <th className="px-4 lg:px-6 py-4 font-medium uppercase border-b border-border sticky top-0 align-middle">{t('common.vchType')}</th>
@@ -877,10 +881,8 @@ export function Daybook() {
                 </tr>
               </thead>
               <tbody className="text-foreground/80">
-                {loading ? (
-                  <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-500 align-middle">{t('daybook.loading')}</td></tr>
-                ) : vouchers.length === 0 ? (
-                  <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-500 align-middle">{t('daybook.noTransactionsPeriod')}</td></tr>
+                {vouchers.length === 0 ? (
+                  <tr><td colSpan={7} className="px-6 py-10 text-center text-muted-foreground align-middle">{t('daybook.noTransactionsPeriod')}</td></tr>
                 ) : paginatedVouchers.map((v, idx) => (
                   <React.Fragment key={v.id}>
                     <tr 
@@ -923,12 +925,12 @@ export function Daybook() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 lg:px-6 py-4 uppercase text-[10px] text-gray-500 align-middle">{v.v_type}</td>
-                      <td className="px-4 lg:px-6 py-4 align-middle">{formatVoucherNo(v.v_no || v.reference_no)}</td>
-                      <td className="px-4 lg:px-6 py-4 font-mono text-[10px] text-emerald-600 align-middle">
+                      <td className="px-4 lg:px-6 py-4 uppercase text-[10px] text-muted-foreground align-middle">{v.v_type}</td>
+                      <td className="px-4 lg:px-6 py-4 tabular-nums align-middle">{formatVoucherNo(v.v_no || v.reference_no)}</td>
+                      <td className="px-4 lg:px-6 py-4 tabular-nums text-[10px] text-emerald-600 align-middle">
                         {v.serial_no || v.auto_serial_no || '-'}
                       </td>
-                      <td className="px-4 lg:px-6 py-4 text-right text-foreground font-bold align-middle">৳ {formatNumber(v.total_amount)}</td>
+                      <td className="px-4 lg:px-6 py-4 text-right text-foreground font-bold tabular-nums align-middle">৳ {formatNumber(v.total_amount)}</td>
                       <td className="px-4 lg:px-6 py-4 text-right align-middle">
                         <div className="flex justify-end items-center gap-1.5">
                           <button 
@@ -995,13 +997,13 @@ export function Daybook() {
                                     </div>
                                   </td>
                                   <td className="py-1 align-middle">{godowns.find(g => g.id === item.godown_id)?.name || '-'}</td>
-                                  <td className="py-1 text-right align-middle">{formatQuantity(item.qty, item.unit)}</td>
-                                  <td className="py-1 text-right align-middle">{formatQuantity(item.free_qty || 0, item.unit)}</td>
-                                  <td className="py-1 text-right align-middle">{formatNumber(item.rate)}</td>
+                                  <td className="py-1 text-right tabular-nums align-middle">{formatQuantity(item.qty, item.unit)}</td>
+                                  <td className="py-1 text-right tabular-nums align-middle">{formatQuantity(item.free_qty || 0, item.unit)}</td>
+                                  <td className="py-1 text-right tabular-nums align-middle">{formatNumber(item.rate)}</td>
                                   <td className="py-1 text-center align-middle">{item.unit || 'pcs'}</td>
-                                  <td className="py-1 text-right align-middle">{item.disc_percent || 0}%</td>
-                                  <td className="py-1 text-right align-middle">{item.tax_percent || 0}%</td>
-                                  <td className="py-1 text-right font-bold text-foreground/70 align-middle">{formatNumber(item.amount)}</td>
+                                  <td className="py-1 text-right tabular-nums align-middle">{item.disc_percent || 0}%</td>
+                                  <td className="py-1 text-right tabular-nums align-middle">{item.tax_percent || 0}%</td>
+                                  <td className="py-1 text-right font-bold text-foreground/70 tabular-nums align-middle">{formatNumber(item.amount)}</td>
                                 </tr>
                               ))}
                             </tbody>
@@ -1017,8 +1019,8 @@ export function Daybook() {
 
           {/* Smart Pagination Controls (30 records per page) */}
           {vouchers.length > 0 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-muted/30 border-t border-border mt-auto rounded-b-lg">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-muted/30 border-t border-border mt-4 rounded-xl">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
                 <span>
                   Showing <strong className="text-foreground">{Math.min((currentPage - 1) * pageSize + 1, vouchers.length)}</strong> to <strong className="text-foreground">{Math.min(currentPage * pageSize, vouchers.length)}</strong> of <strong className="text-foreground">{vouchers.length}</strong> vouchers
                 </span>
@@ -1030,7 +1032,7 @@ export function Daybook() {
                       setPageSize(Number(e.target.value));
                       setCurrentPage(1);
                     }}
-                    className="px-2 py-0.5 bg-background border border-border rounded text-xs font-mono text-foreground focus:outline-hidden cursor-pointer"
+                    className="px-2 py-0.5 bg-background border border-border rounded-lg text-xs tabular-nums text-foreground focus:outline-hidden cursor-pointer"
                   >
                     <option value={30}>30</option>
                     <option value={50}>50</option>
@@ -1102,6 +1104,8 @@ export function Daybook() {
               </div>
             </div>
           )}
+          </>
+          )}
         </div>
       </div>
       <VoucherContextMenu
@@ -1116,43 +1120,40 @@ export function Daybook() {
         onDeleted={fetchVouchers}
       />
 
-      {fullPageHtml && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 shrink-0">
-              <div className="font-bold text-sm text-gray-900">
-                Full Page Preview — Daybook ({daybookPeriodSubtitle})
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handlePrint}
-                  className="px-3 py-1.5 text-xs font-bold uppercase border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 rounded flex items-center gap-1.5"
-                >
-                  <Printer className="w-3.5 h-3.5" /> {t('common.print')}
-                </button>
-                <button
-                  onClick={handleDownloadPDF}
-                  className="px-3 py-1.5 text-xs font-bold uppercase bg-gray-900 text-white hover:opacity-90 rounded flex items-center gap-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" /> PDF
-                </button>
-                <button
-                  onClick={() => setFullPageHtml(null)}
-                  className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-200 rounded"
-                  aria-label="Close preview"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            <iframe
-              title="Daybook Full Page Preview"
-              srcDoc={fullPageHtml}
-              className="flex-1 w-full border-0 bg-white"
-            />
+      <EnterpriseModal
+        isOpen={!!fullPageHtml}
+        onClose={() => setFullPageHtml(null)}
+        title={`Full Page Preview — Daybook (${daybookPeriodSubtitle})`}
+        size="full"
+        className="h-[90vh]"
+        bodyClassName="p-0 overflow-hidden bg-white"
+        headerExtra={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="px-3 py-1.5 text-xs font-bold uppercase border border-border bg-card text-foreground hover:bg-muted rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" /> {t('common.print')}
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadPDF}
+              className="px-3 py-1.5 text-xs font-bold uppercase bg-primary text-primary-foreground hover:opacity-90 rounded-lg flex items-center gap-1.5 transition-opacity cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" /> PDF
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        {fullPageHtml && (
+          <iframe
+            title="Daybook Full Page Preview"
+            srcDoc={fullPageHtml}
+            className="w-full h-full border-0 bg-white"
+          />
+        )}
+      </EnterpriseModal>
     </div>
   </div>
 );

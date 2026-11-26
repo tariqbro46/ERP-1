@@ -22,10 +22,71 @@ export interface ReleaseVersion {
   bugFixes: ReleaseNoteItem[];
 }
 
-export const LATEST_VERSION = "v1.9.9.30";
+export const LATEST_VERSION = "v1.9.9.31";
 export const LAST_SEEN_VERSION_KEY = "tallyflow_last_seen_release_version";
 
 export const RELEASE_NOTES: ReleaseVersion[] = [
+  {
+    version: "v1.9.9.31",
+    releaseDate: "November 25, 2026",
+    bnReleaseDate: "২৫ নভেম্বর, ২০২৬",
+    title: "Enterprise UI/UX Overhaul, Unified Wide Modals, Flash-Free Boot & Accounting Report Precision",
+    bnTitle: "এন্টারপ্রাইজ UI/UX আপগ্রেড, প্রশস্ত মডাল ও ফুল ব্লার, ফ্ল্যাশ-মুক্ত ওপেনিং এবং রিপোর্ট প্রিসিশন",
+    summary: "Complete enterprise UI/UX transformation across the application shell, navigation, Dashboard, Voucher Entry, operational masters, and all 10 core accounting reports—featuring unified wide EnterpriseModal dialogs with crisp topbar/sidebar backdrop blur, global and per-page SkeletonLoader ON/OFF controls, flash-free default landing resolution, tabular-nums alignment, and top-aligned Voucher Entry inventory rows.",
+    bnSummary: "পুরো অ্যাপের শেল, নেভিগেশন, ড্যাশবোর্ড, ভাউচার এন্ট্রি, অপারেশনাল স্ক্রিন এবং ১০টি মূল অ্যাকাউন্টিং রিপোর্টে সম্পূর্ণ এন্টারপ্রাইজ UI/UX আপগ্রেড সম্পন্ন করা হয়েছে। এতে রয়েছে প্রশস্ত EnterpriseModal পপআপ ও টপবার/সাইডবার ব্লার, গ্লোবাল ও পেজ-ভিত্তিক SkeletonLoader অন/অফ নিয়ন্ত্রণ, ফ্ল্যাশ-মুক্ত ডিফল্ট পেজ ওপেনিং, tabular-nums সারিবদ্ধকরণ এবং ভাউচার এন্ট্রির আইটেম সারির নির্ভুল টপ-অ্যালাইনমেন্ট।",
+    isLatest: true,
+    newFeatures: [
+      {
+        id: "feat-enterprise-ui-overhaul",
+        title: "Enterprise Design System, Semantic Tokens & Tabular Numerals",
+        bnTitle: "এন্টারপ্রাইজ ডিজাইন সিস্টেম, থিম টোকেন ও Tabular Numerals",
+        description: "Standardized typography, theme-safe semantic surfaces (bg-card, text-foreground, border-border), tabular-nums financial columns, and crisp rounded-lg/rounded-xl controls across Shell, VoucherEntry, operational masters, and all 10 core accounting reports.",
+        bnDescription: "অ্যাপের শেল, ভাউচার এন্ট্রি, মাস্টার স্ক্রিন এবং সব ১০টি মূল অ্যাকাউন্টিং রিপোর্টে ডার্ক/লাইট-মোড উপযোগী থিম টোকেন, tabular-nums আর্থিক কলাম এবং পরিপাটি rounded-lg/rounded-xl কন্ট্রোল যুক্ত করা হয়েছে।",
+        module: "UI/UX System",
+        badge: "DESIGN"
+      },
+      {
+        id: "feat-wide-modals-skeleton-controls",
+        title: "Unified Wide Modals, Topbar/Sidebar Blur & SkeletonLoader ON/OFF",
+        bnTitle: "প্রশস্ত EnterpriseModal, টপবার/সাইডবার ব্লার ও SkeletonLoader অন/অফ",
+        description: "Introduced wide EnterpriseModal architecture (including Full Page Report Previews in Ledger Statement and Daybook) with full shell backdrop blur, plus page-aware SkeletonLoader controls and flash-free default page boot.",
+        bnDescription: "Ledger Statement ও Daybook-এর ফুল-পেজ প্রিভিউসহ পপআপগুলোকে প্রশস্ত EnterpriseModal-এ রূপান্তর করা হয়েছে, এবং পেজ-ভিত্তিক SkeletonLoader অন/অফ ও ফ্ল্যাশ-মুক্ত ডিফল্ট ওপেনিং নিশ্চিত করা হয়েছে।",
+        module: "Shell & Modals",
+        badge: "UX"
+      }
+    ],
+    improvements: [
+      {
+        id: "imp-reports-ten-core-polish",
+        title: "10 Core Accounting Reports Semantic Theme & Print/Export Parity",
+        bnTitle: "১০টি মূল অ্যাকাউন্টিং রিপোর্টে থিম ও প্রিন্ট/এক্সপোর্ট মানোন্নয়ন",
+        description: "Upgraded Cash Flow, Funds Flow, Negative Reports, Ratio Analysis, Profit & Loss, Balance Sheet, Trial Balance, Ledger Statement, Daybook, and Stock Summary while preserving double-entry math, FIFO stock valuation, .xlsx exports, and zero extra Firestore reads.",
+        bnDescription: "Cash Flow, Funds Flow, Negative Reports, Ratio Analysis, Profit & Loss, Balance Sheet, Trial Balance, Ledger Statement, Daybook ও Stock Summary-তে ডাবল-এন্ট্রি, FIFO এবং .xlsx প্রবাহ অক্ষুণ্ণ রেখে পরিচ্ছন্ন ডিজাইন আপগ্রেড করা হয়েছে।",
+        module: "Reports",
+        badge: "REPORTS"
+      }
+    ],
+    bugFixes: [
+      {
+        id: "fix-modal-self-blur-quota",
+        title: "Fixed Modal Self-Blur on Usage Today & Dialog Overlays",
+        bnTitle: "Usage Today সহ সব মডালের সেল্ফ-ব্লার ত্রুটি সমাধান",
+        description: "Portaled QuotaDashboardModal, QuotaExceededModal, GoToSearch, and GlobalSearch cleanly to document.body above the backdrop blur layer so the active dialog remains sharp while only the background shell blurs.",
+        bnDescription: "QuotaDashboardModal, QuotaExceededModal, GoToSearch ও GlobalSearch পপআপগুলোকে পোর্টাল ও সঠিক z-index-এ স্থানান্তর করায় পেছনের স্ক্রিন ব্লার থাকলেও সক্রিয় মডাল সম্পূর্ণ স্পষ্ট ও ঝকঝকে থাকে।",
+        module: "Modals & Portal",
+        badge: "FIX"
+      },
+      {
+        id: "fix-voucher-item-row-top-align",
+        title: "Fixed Voucher Entry Inventory Row & Stock Warning Alignment",
+        bnTitle: "ভাউচার এন্ট্রির আইটেম সারি ও স্টক সতর্কবার্তা সারিবদ্ধকরণ",
+        description: "Aligned ITEM NAME, GODOWN, QUANTITY, RATE, PER, AMOUNT, and delete controls to a straight horizontal top baseline so CURRENT STOCK and Exceeds stock notices below ITEM NAME never shift adjacent inputs vertically.",
+        bnDescription: "ITEM NAME-এর নিচে CURRENT STOCK বা Exceeds stock লেখা এলেও যেন GODOWN, QUANTITY, RATE, PER ও AMOUNT ইনপুট নিচে সরে না যায়, সেজন্য সব ফিল্ড সমান উচ্চতায় টপ-অ্যালাইন করা হয়েছে।",
+        module: "Voucher Entry",
+        badge: "FIX"
+      }
+    ]
+  },
   {
     version: "v1.9.9.30",
     releaseDate: "November 25, 2026",
@@ -34,7 +95,7 @@ export const RELEASE_NOTES: ReleaseVersion[] = [
     bnTitle: "জেনুইন এক্সেল (.xlsx) এক্সপোর্ট, অ্যাপ আইডেন্টিটি আইসোলেশন, রিয়েল-ডেটা বিশ্লেষণ এবং পূর্ণাঙ্গ বাংলা/ইংরেজি লোকালাইজেশন",
     summary: "Comprehensive release introducing unified structured Excel (.xlsx), Print, PDF, and Email parity across all 10 core financial & inventory reports with XSS/formula-injection hardening, strict App Identity vs. Company Legal Identity isolation, 6-view Founder Operations Console, real-data Dashboard & Financial Insights (zero mock values), synchronized Theme/Design Packs 1–6, and complete 1-to-1 English/Bangla localization (965 keys).",
     bnSummary: "এই রিলিজে সকল ১০টি মূল আর্থিক ও ইনভেন্টরি রিপোর্টে জেনুইন এক্সেল (.xlsx), প্রিন্ট, পিডিএফ ও ইমেইল এক্সপোর্ট প্যারিটি, XSS ও স্প্রেডশিট ফর্মুলা-ইনজেকশন সুরক্ষা, অ্যাপ আইডেন্টিটি বনাম কোম্পানির আইনি পরিচয়ের পৃথকীকরণ, ৬-ভিউ ফাউন্ডার কনসোল, সম্পূর্ণ রিয়েল-ডেটা ড্যাশবোর্ড ও ব্যাংক রিকনসিলিয়েশন (কোনো মক ডেটা ছাড়া), সিঙ্কড ডিজাইন প্যাক ১–৬ এবং ৯৬৫টি কী-এর পূর্ণাঙ্গ বাংলা ও ইংরেজি অনুবাদ যুক্ত করা হয়েছে।",
-    isLatest: true,
+    isLatest: false,
     newFeatures: [
       {
         id: "feat-xlsx-report-parity",

@@ -23,6 +23,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { formatNumber, cn } from '../lib/utils';
 import { soundService } from '../services/soundService';
+import { SkeletonLoader } from './SkeletonLoader';
 
 const STANDARD_SYSTEM_GROUPS = [
   { id: 'g_debtors', name: 'Sundry Debtors', nature: 'Asset' },
@@ -508,12 +509,7 @@ export function ChartOfAccounts() {
       <div className="flex-1 overflow-y-auto p-4 lg:p-6 no-scrollbar">
         <div className="bg-card border border-border rounded-xl p-4 lg:p-6 shadow-xs">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-24 gap-4">
-              <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              <div className="text-xs text-muted-foreground uppercase tracking-widest">
-                {t('accounts.loadingHierarchy')}
-              </div>
-            </div>
+            <SkeletonLoader type="table" pageKey="ledgers" isFullPage={false} />
           ) : search.trim() ? (
             /* Flat search results view */
             <div className="space-y-2">

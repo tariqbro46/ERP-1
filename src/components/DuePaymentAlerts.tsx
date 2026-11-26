@@ -22,7 +22,6 @@ import {
   Send,
   UserCheck,
   X,
-  Sparkles,
   ChevronRight,
   TrendingUp,
   AlertTriangle
@@ -33,6 +32,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { erpService } from '../services/erpService';
 import { EditableHeader } from './EditableHeader';
 import { SkeletonLoader } from './SkeletonLoader';
+import { EnterpriseModal } from './ui/EnterpriseModal';
 import { formatCurrency, cn, ensureDate } from '../lib/utils';
 import { printUtils } from '../utils/printUtils';
 import { exportToCSV } from '../utils/exportUtils';
@@ -674,203 +674,104 @@ export function DuePaymentAlerts() {
         )}
       </div>
 
-      {/* 
-        ========================================================================
-        SMS PROTOCOL & COPY DIALOG MODAL (Ensures 100% desktop/mobile SMS support)
-        ========================================================================
-      */}
-      {isSmsDialogCustomer && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="p-4 border-b border-border flex items-center justify-between bg-muted/40">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-blue-600 text-white">
-                  <Phone className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">Phone SMS Payment Reminder</h3>
-                  <p className="text-[11px] text-muted-foreground">{isSmsDialogCustomer.name}</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsSmsDialogCustomer(null)}
-                className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
+      {/* SMS PROTOCOL & COPY DIALOG MODAL */}
+      <EnterpriseModal
+        isOpen={Boolean(isSmsDialogCustomer)}
+        onClose={() => setIsSmsDialogCustomer(null)}
+        title="Phone SMS Payment Reminder"
+        subtitle={isSmsDialogCustomer?.name}
+        icon={<Phone className="w-4 h-4" />}
+        size="md"
+        footer={
+          isSmsDialogCustomer ? (
+            <div className="flex items-center gap-2 w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(compileMessage(templates.sms, isSmsDialogCustomer));
+                  setSmsCopied(true);
+                  setTimeout(() => setSmsCopied(false), 2000);
+                }}
+                className="flex-1 py-2 px-3 rounded-lg border border-border bg-background hover:bg-muted font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                {smsCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{smsCopied ? 'Copied to Clipboard' : 'Copy SMS Text'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => launchNativeSms(isSmsDialogCustomer)}
+                className="flex-1 py-2 px-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Launch SMS App</span>
               </button>
             </div>
-
-            <div className="p-5 space-y-4 text-xs">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase">Recipient Mobile Number</label>
-                <div className="font-mono text-sm font-bold text-foreground p-2 rounded-lg bg-muted/40 border border-border">
-                  {isSmsDialogCustomer.phone || 'No phone number provided'}
-                </div>
+          ) : undefined
+        }
+      >
+        {isSmsDialogCustomer && (
+          <div className="space-y-4 text-xs">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase">Recipient Mobile Number</label>
+              <div className="font-mono text-sm font-bold text-foreground p-2.5 rounded-lg bg-muted/40 border border-border tabular-nums">
+                {isSmsDialogCustomer.phone || 'No phone number provided'}
               </div>
+            </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase">SMS Message Content</label>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border text-xs leading-relaxed font-mono whitespace-pre-wrap">
-                  {compileMessage(templates.sms, isSmsDialogCustomer)}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(compileMessage(templates.sms, isSmsDialogCustomer));
-                    setSmsCopied(true);
-                    setTimeout(() => setSmsCopied(false), 2000);
-                  }}
-                  className="flex-1 py-2 px-3 rounded-lg border border-border bg-background hover:bg-muted font-bold flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  {smsCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{smsCopied ? 'Copied to Clipboard' : 'Copy SMS Text'}</span>
-                </button>
-
-                <button
-                  onClick={() => launchNativeSms(isSmsDialogCustomer)}
-                  className="flex-1 py-2 px-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Launch SMS App</span>
-                </button>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase">SMS Message Content</label>
+              <div className="p-3 rounded-lg bg-muted/30 border border-border text-xs leading-relaxed whitespace-pre-wrap">
+                {compileMessage(templates.sms, isSmsDialogCustomer)}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </EnterpriseModal>
 
-      {/* 
-        ========================================================================
-        FORMAL DUE DEMAND NOTICE & STATEMENT MODAL
-        ========================================================================
-      */}
-      {activeNoticeCustomer && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-2xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
-            {/* Modal Header */}
-            <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30 shrink-0">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                <div>
-                  <h3 className="text-sm font-black text-foreground">Formal Due Demand Notice (তাগাদাপত্র)</h3>
-                  <p className="text-[11px] text-muted-foreground">{activeNoticeCustomer.name}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
+      {/* FORMAL DUE DEMAND NOTICE & STATEMENT MODAL */}
+      <EnterpriseModal
+        isOpen={Boolean(activeNoticeCustomer)}
+        onClose={() => setActiveNoticeCustomer(null)}
+        title="Formal Due Demand Notice (তাগাদাপত্র)"
+        subtitle={activeNoticeCustomer?.name}
+        icon={<FileText className="w-4 h-4" />}
+        size="xl"
+        headerExtra={
+          <button
+            type="button"
+            onClick={() => printUtils.printElement('formal-demand-notice-printable', 'Payment Demand Notice', settings)}
+            className="px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold flex items-center gap-1.5 hover:bg-primary/90 cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print Notice</span>
+          </button>
+        }
+        footer={
+          activeNoticeCustomer ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
-                  onClick={() => printUtils.printElement('formal-demand-notice-printable', 'Payment Demand Notice', settings)}
-                  className="px-3 py-1.5 rounded-lg bg-foreground text-background text-xs font-bold flex items-center gap-1.5 hover:opacity-90"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print Notice</span>
-                </button>
-                <button
-                  onClick={() => setActiveNoticeCustomer(null)}
-                  className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Printable Area Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 text-foreground" id="formal-demand-notice-printable">
-              {/* Formal Letterhead */}
-              <div className="border-b border-border pb-4 flex justify-between items-start">
-                <div>
-                  <h2 className="text-lg font-black text-foreground uppercase tracking-tight">
-                    {settings.companyName || 'TallyFlow ERP'}
-                  </h2>
-                  <p className="text-xs text-muted-foreground">{settings.companyAddress || 'Corporate Office'}</p>
-                  <p className="text-xs text-muted-foreground">Phone: {(settings as any).companyPhone || 'N/A'}</p>
-                </div>
-                <div className="text-right">
-                  <span className="px-2.5 py-1 rounded bg-rose-500/10 text-rose-600 font-bold text-xs border border-rose-500/20">
-                    PAYMENT DEMAND NOTICE
-                  </span>
-                  <p className="text-[11px] text-muted-foreground mt-1">Date: {todayDateStr}</p>
-                </div>
-              </div>
-
-              {/* Customer Box */}
-              <div className="p-4 rounded-xl bg-muted/30 border border-border space-y-1">
-                <p className="text-[10px] uppercase font-bold text-muted-foreground">To:</p>
-                <p className="text-sm font-bold text-foreground">{activeNoticeCustomer.name}</p>
-                {activeNoticeCustomer.address && <p className="text-xs text-muted-foreground">{activeNoticeCustomer.address}</p>}
-                {activeNoticeCustomer.phone && <p className="text-xs text-muted-foreground">Mobile: {activeNoticeCustomer.phone}</p>}
-                {activeNoticeCustomer.email && <p className="text-xs text-muted-foreground">Email: {activeNoticeCustomer.email}</p>}
-              </div>
-
-              {/* Subject & Letter Body */}
-              <div className="space-y-3 text-xs leading-relaxed">
-                <p className="font-bold text-sm text-foreground">
-                  বিষয়: বকেয়া পাওনা ৳{activeNoticeCustomer.due_amount.toLocaleString()} টাকা পরিশোধ প্রসঙ্গে তাগাদাপত্র।
-                </p>
-                <p>
-                  জনাব / মহোদয়,<br />
-                  সালাম ও শুভেচ্ছা রইল। আপনার সদয় অবগতির জন্য জানানো যাচ্ছে যে, আমাদের হিসাব বিবরণী অনুযায়ী আপনার হিসাবের বিপরীতে সর্বমোট বকেয়া পাওনা রয়েছে <strong>৳{activeNoticeCustomer.due_amount.toLocaleString()}</strong> টাকা, যা বিগত {activeNoticeCustomer.days_overdue} দিন যাবত অপরিশোধিত রয়েছে।
-                </p>
-                <p>
-                  উক্ত বকেয়া অর্থ অবিলম্বে আমাদের ক্যাশ শাখায় অথবা ব্যাংক অ্যাকাউন্টে জমা দিয়ে মানি রিসিট গ্রহণ করার জন্য বিনীত অনুরোধ জানানো যাচ্ছে।
-                </p>
-              </div>
-
-              {/* Due Summary Table */}
-              <div className="border border-border rounded-lg overflow-hidden">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-muted text-muted-foreground uppercase text-[10px]">
-                    <tr>
-                      <th className="p-2.5">Account Head</th>
-                      <th className="p-2.5 text-center">Overdue Days</th>
-                      <th className="p-2.5 text-right">Total Outstanding</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t border-border font-bold">
-                      <td className="p-2.5">{activeNoticeCustomer.name} ({activeNoticeCustomer.group_name})</td>
-                      <td className="p-2.5 text-center font-mono">{activeNoticeCustomer.days_overdue} Days</td>
-                      <td className="p-2.5 text-right font-mono text-rose-600 text-sm">
-                        {formatCurrency(activeNoticeCustomer.due_amount)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Formal Signatures */}
-              <div className="pt-10 flex justify-between items-end text-xs text-muted-foreground">
-                <div className="border-t border-border pt-1 w-36 text-center">
-                  Prepared By
-                </div>
-                <div className="border-t border-border pt-1 w-36 text-center font-bold text-foreground">
-                  Authorized Signature
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer actions */}
-            <div className="p-4 border-t border-border bg-muted/40 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <button
+                  type="button"
                   onClick={() => sendWhatsApp(activeNoticeCustomer)}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-700"
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-700 cursor-pointer"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
                   <span>Send WhatsApp</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => openSmsDialog(activeNoticeCustomer)}
-                  className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-blue-700"
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-blue-700 cursor-pointer"
                 >
                   <Phone className="w-3.5 h-3.5" />
                   <span>Send SMS</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => sendEmail(activeNoticeCustomer)}
                   disabled={!activeNoticeCustomer.email}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-indigo-700 disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-indigo-700 disabled:opacity-50 cursor-pointer"
                 >
                   <Mail className="w-3.5 h-3.5" />
                   <span>Send Email</span>
@@ -878,21 +779,94 @@ export function DuePaymentAlerts() {
               </div>
 
               <button
+                type="button"
                 onClick={() => setActiveNoticeCustomer(null)}
-                className="px-4 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-bold"
+                className="px-4 py-1.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-bold cursor-pointer"
               >
                 Close
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          ) : undefined
+        }
+      >
+        {activeNoticeCustomer && (
+          <div className="space-y-6 text-foreground" id="formal-demand-notice-printable">
+            {/* Formal Letterhead */}
+            <div className="border-b border-border pb-4 flex justify-between items-start">
+              <div>
+                <h2 className="text-lg font-black text-foreground uppercase tracking-tight">
+                  {settings.companyName || 'TallyFlow ERP'}
+                </h2>
+                <p className="text-xs text-muted-foreground">{settings.companyAddress || 'Corporate Office'}</p>
+                <p className="text-xs text-muted-foreground">Phone: {(settings as any).companyPhone || 'N/A'}</p>
+              </div>
+              <div className="text-right">
+                <span className="px-2.5 py-1 rounded bg-rose-500/10 text-rose-600 font-bold text-xs border border-rose-500/20">
+                  PAYMENT DEMAND NOTICE
+                </span>
+                <p className="text-[11px] text-muted-foreground mt-1 tabular-nums">Date: {todayDateStr}</p>
+              </div>
+            </div>
 
-      {/* 
-        ========================================================================
-        MESSAGE TEMPLATES CONFIGURATION MODAL
-        ========================================================================
-      */}
+            {/* Customer Box */}
+            <div className="p-4 rounded-xl bg-muted/30 border border-border space-y-1">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground">To:</p>
+              <p className="text-sm font-bold text-foreground">{activeNoticeCustomer.name}</p>
+              {activeNoticeCustomer.address && <p className="text-xs text-muted-foreground">{activeNoticeCustomer.address}</p>}
+              {activeNoticeCustomer.phone && <p className="text-xs text-muted-foreground">Mobile: {activeNoticeCustomer.phone}</p>}
+              {activeNoticeCustomer.email && <p className="text-xs text-muted-foreground">Email: {activeNoticeCustomer.email}</p>}
+            </div>
+
+            {/* Subject & Letter Body */}
+            <div className="space-y-3 text-xs leading-relaxed">
+              <p className="font-bold text-sm text-foreground">
+                বিষয়: বকেয়া পাওনা ৳{activeNoticeCustomer.due_amount.toLocaleString()} টাকা পরিশোধ প্রসঙ্গে তাগাদাপত্র।
+              </p>
+              <p>
+                জনাব / মহোদয়,<br />
+                সালাম ও শুভেচ্ছা রইল। আপনার সদয় অবগতির জন্য জানানো যাচ্ছে যে, আমাদের হিসাব বিবরণী অনুযায়ী আপনার হিসাবের বিপরীতে সর্বমোট বকেয়া পাওনা রয়েছে <strong>৳{activeNoticeCustomer.due_amount.toLocaleString()}</strong> টাকা, যা বিগত {activeNoticeCustomer.days_overdue} দিন যাবত অপরিশোধিত রয়েছে।
+              </p>
+              <p>
+                উক্ত বকেয়া অর্থ অবিলম্বে আমাদের ক্যাশ শাখায় অথবা ব্যাংক অ্যাকাউন্টে জমা দিয়ে মানি রিসিট গ্রহণ করার জন্য বিনীত অনুরোধ জানানো যাচ্ছে।
+              </p>
+            </div>
+
+            {/* Due Summary Table */}
+            <div className="border border-border rounded-lg overflow-hidden">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-muted text-muted-foreground uppercase text-[10px]">
+                  <tr>
+                    <th className="p-2.5 align-middle">Account Head</th>
+                    <th className="p-2.5 text-center align-middle">Overdue Days</th>
+                    <th className="p-2.5 text-right align-middle">Total Outstanding</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-border font-bold">
+                    <td className="p-2.5 align-middle">{activeNoticeCustomer.name} ({activeNoticeCustomer.group_name})</td>
+                    <td className="p-2.5 text-center tabular-nums align-middle">{activeNoticeCustomer.days_overdue} Days</td>
+                    <td className="p-2.5 text-right tabular-nums text-rose-600 text-sm align-middle">
+                      {formatCurrency(activeNoticeCustomer.due_amount)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Formal Signatures */}
+            <div className="pt-10 flex justify-between items-end text-xs text-muted-foreground">
+              <div className="border-t border-border pt-1 w-36 text-center">
+                Prepared By
+              </div>
+              <div className="border-t border-border pt-1 w-36 text-center font-bold text-foreground">
+                Authorized Signature
+              </div>
+            </div>
+          </div>
+        )}
+      </EnterpriseModal>
+
+      {/* MESSAGE TEMPLATES CONFIGURATION MODAL */}
       {isTemplateModalOpen && (
         <TemplateConfigModal
           initialTemplates={templates}
@@ -918,23 +892,44 @@ function TemplateConfigModal({
   const [activeTab, setActiveTab] = useState<'whatsapp' | 'sms' | 'email'>('whatsapp');
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-card border border-border rounded-2xl w-full max-w-xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
-        <div className="p-4 border-b border-border flex items-center justify-between bg-muted/40 shrink-0">
-          <div className="flex items-center gap-2">
-            <Settings2 className="w-5 h-5 text-primary" />
-            <div>
-              <h3 className="text-sm font-bold text-foreground">Customize Reminder Templates</h3>
-              <p className="text-[11px] text-muted-foreground">Modify SMS, WhatsApp, and Email reminder wording</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-muted-foreground hover:text-foreground">
-            <X className="w-4 h-4" />
+    <EnterpriseModal
+      isOpen={true}
+      onClose={onClose}
+      title="Customize Reminder Templates"
+      subtitle="Modify SMS, WhatsApp, and Email reminder wording"
+      icon={<Settings2 className="w-4 h-4" />}
+      size="lg"
+      footer={
+        <div className="flex justify-between items-center w-full">
+          <button
+            type="button"
+            onClick={() => setForm(DEFAULT_TEMPLATES)}
+            className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer"
+          >
+            Reset to Defaults
           </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-border bg-background hover:bg-muted text-xs font-bold cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave(form)}
+              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 shadow-xs cursor-pointer"
+            >
+              Save Templates
+            </button>
+          </div>
         </div>
-
+      }
+    >
+      <div className="space-y-4">
         {/* Dynamic Tags Guide */}
-        <div className="px-5 py-2.5 bg-muted/20 border-b border-border text-[11px] text-muted-foreground flex flex-wrap gap-2 items-center">
+        <div className="px-4 py-2.5 bg-muted/30 rounded-xl border border-border text-[11px] text-muted-foreground flex flex-wrap gap-2 items-center">
           <span className="font-bold">Tags:</span>
           <span className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">&#123;&#123;customerName&#125;&#125;</span>
           <span className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">&#123;&#123;dueAmount&#125;&#125;</span>
@@ -944,29 +939,32 @@ function TemplateConfigModal({
         </div>
 
         {/* Tab Selection */}
-        <div className="flex border-b border-border bg-muted/30 px-5 pt-2 gap-2 shrink-0">
+        <div className="flex border-b border-border gap-2">
           <button
+            type="button"
             onClick={() => setActiveTab('whatsapp')}
             className={cn(
-              "px-3 py-1.5 text-xs font-bold border-b-2 transition-colors",
+              "px-3 py-1.5 text-xs font-bold border-b-2 transition-colors cursor-pointer",
               activeTab === 'whatsapp' ? "border-emerald-600 text-emerald-600" : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
             WhatsApp Template
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('sms')}
             className={cn(
-              "px-3 py-1.5 text-xs font-bold border-b-2 transition-colors",
+              "px-3 py-1.5 text-xs font-bold border-b-2 transition-colors cursor-pointer",
               activeTab === 'sms' ? "border-blue-600 text-blue-600" : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
             SMS Template
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('email')}
             className={cn(
-              "px-3 py-1.5 text-xs font-bold border-b-2 transition-colors",
+              "px-3 py-1.5 text-xs font-bold border-b-2 transition-colors cursor-pointer",
               activeTab === 'email' ? "border-indigo-600 text-indigo-600" : "border-transparent text-muted-foreground hover:text-foreground"
             )}
           >
@@ -975,7 +973,7 @@ function TemplateConfigModal({
         </div>
 
         {/* Form Body */}
-        <div className="p-5 flex-1 overflow-y-auto space-y-4 text-xs">
+        <div className="space-y-4 text-xs">
           {activeTab === 'whatsapp' && (
             <div className="space-y-2">
               <label className="text-[11px] font-bold text-foreground">WhatsApp Message Body</label>
@@ -983,7 +981,7 @@ function TemplateConfigModal({
                 value={form.whatsapp}
                 onChange={e => setForm({ ...form, whatsapp: e.target.value })}
                 rows={8}
-                className="w-full p-3 bg-background border border-border rounded-lg text-xs leading-relaxed font-mono focus:outline-hidden focus:ring-1 focus:ring-primary"
+                className="w-full p-3 bg-background border border-border rounded-lg text-xs leading-relaxed focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
             </div>
           )}
@@ -995,7 +993,7 @@ function TemplateConfigModal({
                 value={form.sms}
                 onChange={e => setForm({ ...form, sms: e.target.value })}
                 rows={5}
-                className="w-full p-3 bg-background border border-border rounded-lg text-xs leading-relaxed font-mono focus:outline-hidden focus:ring-1 focus:ring-primary"
+                className="w-full p-3 bg-background border border-border rounded-lg text-xs leading-relaxed focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
               <p className="text-[10px] text-muted-foreground">Keep short for standard 160-character mobile carriers.</p>
             </div>
@@ -1018,37 +1016,13 @@ function TemplateConfigModal({
                   value={form.emailBody}
                   onChange={e => setForm({ ...form, emailBody: e.target.value })}
                   rows={8}
-                  className="w-full p-3 bg-background border border-border rounded-lg text-xs leading-relaxed font-mono focus:outline-hidden focus:ring-1 focus:ring-primary"
+                  className="w-full p-3 bg-background border border-border rounded-lg text-xs leading-relaxed focus:outline-hidden focus:ring-1 focus:ring-primary"
                 />
               </div>
             </div>
           )}
         </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 border-t border-border bg-muted/30 flex justify-between items-center shrink-0">
-          <button
-            onClick={() => setForm(DEFAULT_TEMPLATES)}
-            className="text-xs text-muted-foreground hover:text-foreground underline"
-          >
-            Reset to Defaults
-          </button>
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-border bg-background hover:bg-muted text-xs font-bold"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => onSave(form)}
-              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 shadow-xs"
-            >
-              Save Templates
-            </button>
-          </div>
-        </div>
       </div>
-    </div>
+    </EnterpriseModal>
   );
 }

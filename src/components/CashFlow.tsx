@@ -342,26 +342,27 @@ export function CashFlow() {
   };
 
   if (loading) {
-    return <SkeletonLoader type="table" />;
+    return <SkeletonLoader type="table" pageKey="reports" />;
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      <div className="p-6 pb-4 shrink-0">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4">
+    <div className="h-full flex flex-col overflow-hidden bg-background">
+      <div className="p-6 pb-4 shrink-0 border-b border-border bg-card/80 backdrop-blur-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3.5">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+              title={t('common.back')}
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Cash Flow Statement</h1>
-              <p className="text-gray-500">Summary of cash inflows and outflows</p>
+              <h1 className="text-2xl font-bold text-foreground tracking-tight">Cash Flow Statement</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">Summary of cash inflows and outflows</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-wrap items-end gap-2.5">
             <div className="w-40">
               <DateInput
                 label="From"
@@ -380,7 +381,7 @@ export function CashFlow() {
             </div>
             <button
               onClick={handleDownloadExcel}
-              className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors"
               title="Export Excel (.xlsx)"
             >
               <FileSpreadsheet className="w-4 h-4" />
@@ -388,77 +389,77 @@ export function CashFlow() {
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-foreground bg-card border border-border rounded-lg hover:bg-muted transition-colors"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-4 h-4 text-muted-foreground" />
               {t('common.print')}
             </button>
             <button
               onClick={handleDownloadPDF}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors shadow-xs"
             >
               <Download className="w-4 h-4" />
               {t('common.downloadPdf')}
             </button>
             <button
               onClick={handleEmailReport}
-              className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-foreground bg-card border border-border rounded-lg hover:bg-muted transition-colors"
               title="Share via Email"
             >
-              <Mail className="w-4 h-4" />
+              <Mail className="w-4 h-4 text-muted-foreground" />
               Email
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-500">Opening Balance</span>
-              <DollarSign className="w-5 h-5 text-gray-400" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-card p-5 rounded-xl border border-border shadow-[var(--shadow-surface)]">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Opening Balance</span>
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
             </div>
-            <div className="text-2xl font-bold text-gray-900">{formatCurrency(openingBalance)}</div>
+            <div className="text-2xl font-bold text-foreground tabular-nums">{formatCurrency(openingBalance)}</div>
           </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-500">Net Cash Flow</span>
-              {netCashFlow >= 0 ? <TrendingUp className="w-5 h-5 text-green-500" /> : <TrendingDown className="w-5 h-5 text-red-500" />}
+          <div className="bg-card p-5 rounded-xl border border-border shadow-[var(--shadow-surface)]">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Net Cash Flow</span>
+              {netCashFlow >= 0 ? <TrendingUp className="w-4 h-4 text-emerald-500" /> : <TrendingDown className="w-4 h-4 text-rose-500" />}
             </div>
-            <div className={cn("text-2xl font-bold", netCashFlow >= 0 ? "text-green-600" : "text-red-600")}>
+            <div className={cn("text-2xl font-bold tabular-nums", netCashFlow >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
               {formatCurrency(netCashFlow)}
             </div>
           </div>
-          <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-500">Closing Balance</span>
-              <DollarSign className="w-5 h-5 text-primary" />
+          <div className="bg-card p-5 rounded-xl border border-border shadow-[var(--shadow-surface)]">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-medium text-muted-foreground">Closing Balance</span>
+              <DollarSign className="w-4 h-4 text-primary" />
             </div>
-            <div className="text-2xl font-bold text-gray-900">{formatCurrency(closingBalance)}</div>
+            <div className="text-2xl font-bold text-foreground tabular-nums">{formatCurrency(closingBalance)}</div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 pt-0">
-        <div className="space-y-6">
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="space-y-5">
           {/* Operating Activities */}
-          <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-border bg-background sticky top-0 z-10 shadow-sm">
-              <h3 className="font-semibold text-foreground uppercase tracking-widest text-[10px]">Cash Flow from Operating Activities</h3>
+          <div className="bg-card rounded-xl border border-border overflow-hidden shadow-[var(--shadow-surface)]">
+            <div className="px-6 py-3.5 border-b border-border bg-muted/40 sticky top-0 z-10">
+              <h3 className="font-semibold text-foreground uppercase tracking-wider text-xs">Cash Flow from Operating Activities</h3>
             </div>
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border/60">
               {operatingActivities.length > 0 ? operatingActivities.map((item, idx) => (
-                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-gray-50 transition-colors">
-                  <span className="text-gray-700">{item.name}</span>
-                  <span className={cn("font-medium", item.amount >= 0 ? "text-green-600" : "text-red-600")}>
+                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-muted/40 transition-colors">
+                  <span className="text-sm text-foreground/85">{item.name}</span>
+                  <span className={cn("text-sm font-semibold tabular-nums", item.amount >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                     {formatCurrency(item.amount)}
                   </span>
                 </div>
               )) : (
-                <div className="px-6 py-8 text-center text-gray-500">No operating activities found</div>
+                <div className="px-6 py-8 text-center text-sm text-muted-foreground">No operating activities found</div>
               )}
-              <div className="px-6 py-4 bg-background flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-border shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
-                <span>Net Cash from Operating Activities</span>
-                <span className={totalOperating >= 0 ? "text-emerald-600" : "text-rose-600"}>
+              <div className="px-6 py-3.5 bg-muted/30 flex justify-between items-center text-sm font-bold sticky bottom-0 z-10 border-t border-border">
+                <span className="text-foreground">Net Cash from Operating Activities</span>
+                <span className={cn("tabular-nums", totalOperating >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                   {formatCurrency(totalOperating)}
                 </span>
               </div>
@@ -466,24 +467,24 @@ export function CashFlow() {
           </div>
 
           {/* Investing Activities */}
-          <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-border bg-background sticky top-0 z-10 shadow-sm">
-              <h3 className="font-semibold text-foreground uppercase tracking-widest text-[10px]">Cash Flow from Investing Activities</h3>
+          <div className="bg-card rounded-xl border border-border overflow-hidden shadow-[var(--shadow-surface)]">
+            <div className="px-6 py-3.5 border-b border-border bg-muted/40 sticky top-0 z-10">
+              <h3 className="font-semibold text-foreground uppercase tracking-wider text-xs">Cash Flow from Investing Activities</h3>
             </div>
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border/60">
               {investingActivities.length > 0 ? investingActivities.map((item, idx) => (
-                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-foreground/5 transition-colors">
-                  <span className="text-foreground/80">{item.name}</span>
-                  <span className={cn("font-medium", item.amount >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-muted/40 transition-colors">
+                  <span className="text-sm text-foreground/85">{item.name}</span>
+                  <span className={cn("text-sm font-semibold tabular-nums", item.amount >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                     {formatCurrency(item.amount)}
                   </span>
                 </div>
               )) : (
-                <div className="px-6 py-8 text-center text-gray-500">No investing activities found</div>
+                <div className="px-6 py-8 text-center text-sm text-muted-foreground">No investing activities found</div>
               )}
-              <div className="px-6 py-4 bg-background flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-border shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
-                <span>Net Cash from Investing Activities</span>
-                <span className={totalInvesting >= 0 ? "text-emerald-600" : "text-rose-600"}>
+              <div className="px-6 py-3.5 bg-muted/30 flex justify-between items-center text-sm font-bold sticky bottom-0 z-10 border-t border-border">
+                <span className="text-foreground">Net Cash from Investing Activities</span>
+                <span className={cn("tabular-nums", totalInvesting >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                   {formatCurrency(totalInvesting)}
                 </span>
               </div>
@@ -491,24 +492,24 @@ export function CashFlow() {
           </div>
 
           {/* Financing Activities */}
-          <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-border bg-background sticky top-0 z-10 shadow-sm">
-              <h3 className="font-semibold text-foreground uppercase tracking-widest text-[10px]">Cash Flow from Financing Activities</h3>
+          <div className="bg-card rounded-xl border border-border overflow-hidden shadow-[var(--shadow-surface)]">
+            <div className="px-6 py-3.5 border-b border-border bg-muted/40 sticky top-0 z-10">
+              <h3 className="font-semibold text-foreground uppercase tracking-wider text-xs">Cash Flow from Financing Activities</h3>
             </div>
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border/60">
               {financingActivities.length > 0 ? financingActivities.map((item, idx) => (
-                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-foreground/5 transition-colors">
-                  <span className="text-foreground/80">{item.name}</span>
-                  <span className={cn("font-medium", item.amount >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                <div key={idx} className="px-6 py-3 flex justify-between items-center hover:bg-muted/40 transition-colors">
+                  <span className="text-sm text-foreground/85">{item.name}</span>
+                  <span className={cn("text-sm font-semibold tabular-nums", item.amount >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                     {formatCurrency(item.amount)}
                   </span>
                 </div>
               )) : (
-                <div className="px-6 py-8 text-center text-gray-500">No financing activities found</div>
+                <div className="px-6 py-8 text-center text-sm text-muted-foreground">No financing activities found</div>
               )}
-              <div className="px-6 py-4 bg-background flex justify-between items-center font-bold sticky bottom-0 z-10 border-t border-border shadow-[0_-1px_2px_rgba(0,0,0,0.05)]">
-                <span>Net Cash from Financing Activities</span>
-                <span className={totalFinancing >= 0 ? "text-emerald-600" : "text-rose-600"}>
+              <div className="px-6 py-3.5 bg-muted/30 flex justify-between items-center text-sm font-bold sticky bottom-0 z-10 border-t border-border">
+                <span className="text-foreground">Net Cash from Financing Activities</span>
+                <span className={cn("tabular-nums", totalFinancing >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
                   {formatCurrency(totalFinancing)}
                 </span>
               </div>

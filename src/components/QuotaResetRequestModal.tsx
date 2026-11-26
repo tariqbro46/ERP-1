@@ -59,6 +59,9 @@ export function QuotaResetRequestModal({ isOpen, onClose, companyName }: QuotaRe
   return createPortal(
     <AnimatePresence>
       <div 
+        data-enterprise-modal="true"
+        role="dialog"
+        aria-modal="true"
         className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
@@ -69,7 +72,7 @@ export function QuotaResetRequestModal({ isOpen, onClose, companyName }: QuotaRe
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ duration: 0.2 }}
-          className="w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-slate-100"
+          className="relative z-10 w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-slate-100"
         >
           {/* Header */}
           <div className="relative px-6 pt-6 pb-5 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950/40 border-b border-slate-800">

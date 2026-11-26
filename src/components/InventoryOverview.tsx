@@ -268,7 +268,7 @@ export function InventoryOverview() {
         {showLowStockOnly && (
           <div className="flex items-center justify-between gap-3 p-3 bg-rose-500/10 border border-rose-500/30 rounded-sm text-rose-700 dark:text-rose-300">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 animate-bounce" />
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
               <span className="text-xs font-bold">
                 Low Stock Filter Active: Displaying {filteredItems.length} item(s) at or below their reorder threshold.
               </span>

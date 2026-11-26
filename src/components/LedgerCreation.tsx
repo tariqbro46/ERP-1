@@ -10,6 +10,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useLanguage } from '../contexts/LanguageContext';
 
 import { useSubscription } from '../hooks/useSubscription';
+import { EnterpriseModal } from './ui/EnterpriseModal';
 
 export function LedgerCreation() {
   const navigate = useNavigate();
@@ -714,56 +715,49 @@ export function LedgerCreation() {
       </div>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-card border border-border w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="p-6 space-y-6">
-              <div className="flex items-center gap-4 text-rose-500">
-                <div className="p-3 bg-rose-500/10 rounded-full">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest">{t('common.confirmDeletion')}</h3>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{t('common.cannotUndone')}</p>
-                </div>
-              </div>
-
-              {hasTransactions ? (
-                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded space-y-2">
-                  <p className="text-[11px] text-rose-500 leading-relaxed">
-                    <span className="font-bold uppercase">{t('common.warning')}:</span> {t('ledger.deleteWarning')}
-                  </p>
-                  <p className="text-[10px] text-rose-500 uppercase tracking-widest font-bold">
-                    {t('ledger.recommendKeep')}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-[11px] text-gray-400 leading-relaxed">
-                  {t('ledger.deleteConfirmText', { name: formData.name })}
-                </p>
-              )}
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2 text-[10px] text-gray-500 hover:text-foreground uppercase tracking-widest transition-colors"
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="flex items-center gap-2 px-6 py-2 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500 transition-all disabled:opacity-50"
-                >
-                  {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                  {t('common.confirmDelete')}
-                </button>
-              </div>
-            </div>
+      <EnterpriseModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title={t('common.confirmDeletion')}
+        subtitle={t('common.cannotUndone')}
+        icon={<AlertTriangle className="w-4 h-4 text-rose-500" />}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-3 w-full">
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(false)}
+              className="px-4 py-2 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center gap-2 px-6 py-2 rounded-lg bg-rose-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-rose-500 transition-all disabled:opacity-50 cursor-pointer"
+            >
+              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              {t('common.confirmDelete')}
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        {hasTransactions ? (
+          <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-2">
+            <p className="text-xs text-rose-500 leading-relaxed">
+              <span className="font-bold uppercase">{t('common.warning')}:</span> {t('ledger.deleteWarning')}
+            </p>
+            <p className="text-xs text-rose-500 uppercase tracking-wider font-bold">
+              {t('ledger.recommendKeep')}
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {t('ledger.deleteConfirmText', { name: formData.name })}
+          </p>
+        )}
+      </EnterpriseModal>
 
       {/* Keyboard Shortcuts Help */}
       <div className="mt-6 hidden sm:flex gap-6 text-[9px] text-gray-600 uppercase font-mono">

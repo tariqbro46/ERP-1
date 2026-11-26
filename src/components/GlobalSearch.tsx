@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, X, Receipt, Users, Package, ChevronRight, Hash, Calendar, ArrowRight } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
@@ -111,23 +112,31 @@ export const GlobalSearch: React.FC<{ isOpen: boolean; onClose: () => void }> = 
     }
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] px-4">
+        <div
+          data-enterprise-modal="true"
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[99990] flex items-start justify-center pt-[12vh] px-4"
+        >
           <motion.div
+            data-modal-ignore="true"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 z-0 bg-slate-950/60 backdrop-blur-md"
             onClick={onClose}
           />
           
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -20 }}
+            initial={{ opacity: 0, scale: 0.96, y: -12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            className="relative w-full max-w-2xl bg-card border border-border shadow-2xl rounded-xl overflow-hidden"
+            exit={{ opacity: 0, scale: 0.96, y: -12 }}
+            className="relative z-10 w-full max-w-3xl bg-card border border-border shadow-[var(--shadow-modal)] rounded-2xl overflow-hidden"
             onKeyDown={handleKeyDown}
           >
             <div className="flex items-center px-4 py-4 border-b border-border bg-card/50">
@@ -231,6 +240,7 @@ export const GlobalSearch: React.FC<{ isOpen: boolean; onClose: () => void }> = 
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

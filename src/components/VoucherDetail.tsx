@@ -110,7 +110,7 @@ export function VoucherDetail() {
   };
 
   if (loading) {
-    return <SkeletonLoader type="form" />;
+    return <SkeletonLoader type="form" pageKey="vouchers" />;
   }
 
   if (error || !voucher) {

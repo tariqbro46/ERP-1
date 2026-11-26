@@ -15,21 +15,24 @@ import { printVoucher } from '../utils/printUtils';
 import { pdfService } from '../services/pdfService';
 import { errorService } from '../services/errorService';
 import { BankDetails, VoucherType, UserRole, Company, Ledger, Voucher, UserProfile, VoucherEntry as VoucherEntryType, InventoryEntry, Item } from '../types';
+import { EnterpriseModal } from './ui/EnterpriseModal';
+import { SkeletonLoader } from './SkeletonLoader';
 
 function Toggle({ enabled, onChange, label }: { enabled: boolean, onChange: () => void, label: string }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-border last:border-0">
-      <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500">{label}</span>
+    <div className="flex items-center justify-between py-2.5 border-b border-border/70 last:border-0">
+      <span className="text-xs font-medium text-foreground">{label}</span>
       <button
+        type="button"
         onClick={onChange}
         className={cn(
-          "w-10 h-5 rounded-full transition-all relative",
-          enabled ? "bg-foreground" : "bg-foreground/10"
+          "w-10 h-5 rounded-full transition-all relative cursor-pointer",
+          enabled ? "bg-primary" : "bg-muted-foreground/25"
         )}
       >
         <div className={cn(
-          "absolute top-1 w-3 h-3 rounded-full transition-all",
-          enabled ? "right-1 bg-background" : "left-1 bg-foreground/50"
+          "absolute top-1 w-3 h-3 rounded-full transition-all bg-white shadow-xs",
+          enabled ? "right-1" : "left-1"
         )} />
       </button>
     </div>
@@ -121,59 +124,74 @@ export function VoucherEntry() {
   const isFieldCompact = fieldSize === 'small' || fieldSize === 'semi-compact';
   
   const textLabelClass = cn(
-    "text-gray-500 uppercase font-bold tracking-widest block select-none leading-none",
-    fieldSize === 'small' ? "text-[8px] tracking-wider" : 
-    fieldSize === 'semi-compact' ? "text-[8.5px] tracking-wider" :
-    fieldSize === 'large' ? "text-[10px] tracking-widest" : 
-    "text-[9px] tracking-widest"
+    "text-muted-foreground uppercase font-semibold tracking-wider block select-none leading-none",
+    fieldSize === 'small' ? "text-[9px]" : 
+    fieldSize === 'semi-compact' ? "text-[9.5px]" :
+    fieldSize === 'large' ? "text-[11px]" : 
+    "text-[10px]"
   );
   
   const inputPaddingClass = cn(
-    "w-full bg-background border border-border text-foreground transition-all duration-150 outline-none focus:border-foreground font-medium",
-    fieldSize === 'small' ? "p-1 text-[11px] h-7" : 
-    fieldSize === 'semi-compact' ? "p-1 lg:p-1.5 text-[11.5px] h-8 md:h-8.5" : 
-    fieldSize === 'large' ? "p-2 lg:p-2.5 text-sm h-11" : 
-    "p-1.5 lg:p-2 text-xs lg:text-sm h-9 md:h-10"
+    "w-full bg-background border border-border rounded-lg text-foreground transition-all duration-150 outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 font-medium",
+    fieldSize === 'small' ? "px-2 py-1 text-[11px] h-7" : 
+    fieldSize === 'semi-compact' ? "px-2.5 py-1 text-xs h-8 md:h-8.5" : 
+    fieldSize === 'large' ? "px-3 py-2 text-sm h-11" : 
+    "px-2.5 py-1.5 text-xs lg:text-sm h-9 md:h-10"
   );
   
   const tablePaddingClass = cn(
-    "transition-all duration-150",
-    fieldSize === 'small' ? "px-1.5 py-0.5" : 
-    fieldSize === 'semi-compact' ? "px-2 py-0.75" : 
-    fieldSize === 'large' ? "px-4 lg:px-6 py-2.5" : 
-    (settings.voucherTableCompact ? "px-2 py-1" : "px-3.5 py-1.5")
+    "transition-all duration-150 align-middle",
+    fieldSize === 'small' ? "px-2 py-1" : 
+    fieldSize === 'semi-compact' ? "px-2.5 py-1.5" : 
+    fieldSize === 'large' ? "px-4 lg:px-5 py-2.5" : 
+    (settings.voucherTableCompact ? "px-2.5 py-1.5" : "px-3.5 py-2")
+  );
+
+  const tableTopPaddingClass = cn(
+    "transition-all duration-150 align-top",
+    fieldSize === 'small' ? "px-2 py-1" : 
+    fieldSize === 'semi-compact' ? "px-2.5 py-1.5" : 
+    fieldSize === 'large' ? "px-4 lg:px-5 py-2.5" : 
+    (settings.voucherTableCompact ? "px-2.5 py-1.5" : "px-3.5 py-2")
+  );
+
+  const tableControlHeightClass = cn(
+    fieldSize === 'small' ? "h-7" : 
+    fieldSize === 'semi-compact' ? "h-8" : 
+    fieldSize === 'large' ? "h-11" : 
+    (isFieldCompact || settings.voucherTableCompact) ? "h-7" : "h-10"
   );
   
   const tableHeaderPaddingClass = cn(
-    "transition-all duration-150 font-bold uppercase",
-    fieldSize === 'small' ? "px-1.5 py-1 text-[8px]" : 
-    fieldSize === 'semi-compact' ? "px-2 py-1 lg:py-1.5 text-[8.5px]" : 
-    fieldSize === 'large' ? "px-4 lg:px-6 py-3.5 text-[10px]" : 
-    (settings.voucherTableCompact ? "px-2 py-1.5 text-[9px]" : "px-3.5 py-2.5 text-[9px]")
+    "transition-all duration-150 font-semibold uppercase tracking-wider align-middle",
+    fieldSize === 'small' ? "px-2 py-1.5 text-[9px]" : 
+    fieldSize === 'semi-compact' ? "px-2.5 py-1.5 text-[9.5px]" : 
+    fieldSize === 'large' ? "px-4 lg:px-5 py-3 text-[11px]" : 
+    (settings.voucherTableCompact ? "px-2.5 py-2 text-[10px]" : "px-3.5 py-2.5 text-[10px]")
   );
  
   const tableInputPaddingClass = cn(
-    "bg-background border border-border text-foreground transition-all duration-150 outline-none focus:border-foreground",
-    fieldSize === 'small' ? "p-0.5 text-[11px]" : 
-    fieldSize === 'semi-compact' ? "p-0.75 text-[11.5px]" : 
-    fieldSize === 'large' ? "p-1.5 text-xs lg:text-sm" : 
-    "p-1 text-xs"
+    "w-full bg-background border border-border/80 rounded-md text-foreground transition-all duration-150 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 tabular-nums",
+    fieldSize === 'small' ? "px-1.5 py-0.5 text-[11px]" : 
+    fieldSize === 'semi-compact' ? "px-2 py-1 text-xs" : 
+    fieldSize === 'large' ? "px-2.5 py-1.5 text-xs lg:text-sm" : 
+    "px-2 py-1 text-xs"
   );
  
   const tableTextClass = cn(
-    "transition-all duration-150",
+    "transition-all duration-150 tabular-nums",
     fieldSize === 'small' ? "text-[11px]" : 
-    fieldSize === 'semi-compact' ? "text-[11.5px]" : 
+    fieldSize === 'semi-compact' ? "text-xs" : 
     fieldSize === 'large' ? "text-sm" : 
     "text-xs"
   );
  
   const tableSubTextClass = cn(
-    "transition-all duration-150",
-    fieldSize === 'small' ? "text-[8px]" : 
-    fieldSize === 'semi-compact' ? "text-[8.5px]" : 
+    "transition-all duration-150 tabular-nums",
+    fieldSize === 'small' ? "text-[9px]" : 
+    fieldSize === 'semi-compact' ? "text-[9.5px]" : 
     fieldSize === 'large' ? "text-xs" : 
-    "text-[9px]"
+    "text-[10px]"
   );
 
   const { 
@@ -305,6 +323,7 @@ export function VoucherEntry() {
     fetchStats();
   }, [focusedItemId, user?.companyId, items]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(isEdit);
   const refNoInputRef = useRef<HTMLInputElement>(null);
   const bankTxTypeRef = useRef<HTMLSelectElement>(null);
   const bankInstNoRef = useRef<HTMLInputElement>(null);
@@ -632,6 +651,7 @@ export function VoucherEntry() {
       showNotification('Failed to load voucher data');
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
   }
 
@@ -1313,22 +1333,26 @@ export function VoucherEntry() {
     setShowShareMenu(false);
   };
 
+  if (initialLoading) {
+    return <SkeletonLoader type="form" pageKey="vouchers" />;
+  }
+
   return (
     <div className={cn(
-      "bg-background flex flex-col font-mono transition-colors",
+      "bg-background flex flex-col transition-colors",
       isLayout2 ? "h-[calc(100vh-6.5rem)] lg:h-[calc(100vh-4.5rem)] overflow-hidden" : "min-h-full"
     )}>
       <div className="bg-card flex flex-col flex-1 min-h-0">
         {/* Voucher Header Section */}
         <div className={cn(
-          "border-b border-border bg-background shrink-0 sticky top-0 z-40 shadow-sm",
+          "border-b border-border bg-card/95 backdrop-blur-md shrink-0 sticky top-0 z-40 shadow-[var(--shadow-surface)]",
           isLayout2 
-            ? "p-1.5 lg:p-2.5 space-y-1.5"
-            : (voucherHeaderCompact ? "p-2 lg:p-3 space-y-3" : "p-2 lg:p-6 space-y-3 lg:space-y-6")
+            ? "p-2 lg:p-3 space-y-2"
+            : (voucherHeaderCompact ? "p-2.5 lg:p-3.5 space-y-3" : "p-3 lg:p-5 space-y-3.5 lg:space-y-4")
         )}>
           {/* Quota Exceeded Inline Alert Banner */}
           {quotaLocked && (
-            <div className="bg-rose-500/15 border border-rose-500/40 px-3 py-2 rounded-lg flex items-center justify-between gap-3 text-rose-600 dark:text-rose-300 text-xs font-semibold animate-pulse">
+            <div className="bg-rose-500/10 border border-rose-500/35 px-3.5 py-2.5 rounded-xl flex items-center justify-between gap-3 text-rose-600 dark:text-rose-300 text-xs font-semibold">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
                 <span>
@@ -1340,7 +1364,7 @@ export function VoucherEntry() {
               <button 
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent('erp_quota_exceeded_attempt', { detail: { path: 'vouchers' } }))}
-                className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white transition-colors cursor-pointer shrink-0 shadow-sm"
+                className="text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition-colors cursor-pointer shrink-0 shadow-xs"
               >
                 {language === 'bn' ? 'বিস্তারিত' : 'Details'}
               </button>
@@ -1351,10 +1375,11 @@ export function VoucherEntry() {
           <div className="lg:hidden grid grid-cols-1 gap-2">
             <div className="space-y-1 col-span-1">
               <div className="flex justify-between items-center">
-                <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.voucherType')}</label>
+                <label className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">{t('common.voucherType')}</label>
                 <button 
+                  type="button"
                   onClick={() => setIsVoucherSettingsOpen(true)}
-                  className="text-[9px] text-blue-500 hover:underline font-bold uppercase"
+                  className="text-[10px] text-primary hover:underline font-semibold uppercase"
                 >
                   {t('nav.settings')}
                 </button>
@@ -1364,7 +1389,7 @@ export function VoucherEntry() {
                 onChange={e => setVType(e.target.value)}
                 tabIndex={10}
                 className={cn(
-                  "w-full bg-background border border-border p-1.5 text-xs outline-none focus:border-foreground font-bold uppercase",
+                  "w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 font-bold uppercase",
                   getVoucherColor(vType)
                 )}
               >
@@ -1508,9 +1533,9 @@ export function VoucherEntry() {
                       <button 
                         type="button" 
                         onClick={() => openQuickLedger('Sundry', 'party')}
-                        className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1 leading-none"
+                        className="text-[10px] text-muted-foreground hover:text-primary flex items-center gap-1 leading-none cursor-pointer"
                       >
-                        <PlusCircle className="w-2 h-2" /> {t('common.quick')}
+                        <PlusCircle className="w-2.5 h-2.5" /> {t('common.quick')}
                       </button>
                     </div>
                     <SearchableSelect
@@ -1524,7 +1549,7 @@ export function VoucherEntry() {
                       fieldSize={fieldSize}
                     />
                     {partyLedgerId && balances[partyLedgerId] !== undefined && (
-                      <p className="text-[9px] text-gray-500 uppercase mt-0.5 whitespace-nowrap">
+                      <p className="text-[10px] text-muted-foreground uppercase mt-1 whitespace-nowrap tabular-nums">
                         {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[partyLedgerId])}</span>
                       </p>
                     )}
@@ -1536,9 +1561,9 @@ export function VoucherEntry() {
                       <button 
                         type="button" 
                         onClick={() => openQuickLedger('Bank', 'account')}
-                        className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1 leading-none"
+                        className="text-[10px] text-muted-foreground hover:text-primary flex items-center gap-1 leading-none cursor-pointer"
                       >
-                        <PlusCircle className="w-2 h-2" /> {t('common.quick')}
+                        <PlusCircle className="w-2.5 h-2.5" /> {t('common.quick')}
                       </button>
                     </div>
                     <SearchableSelect
@@ -1552,7 +1577,7 @@ export function VoucherEntry() {
                       fieldSize={fieldSize}
                     />
                     {bankCashLedgerId && balances[bankCashLedgerId] !== undefined && (
-                      <p className="text-[9px] text-gray-500 uppercase mt-0.5 whitespace-nowrap">
+                      <p className="text-[10px] text-muted-foreground uppercase mt-1 whitespace-nowrap tabular-nums">
                         {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[bankCashLedgerId])}</span>
                       </p>
                     )}
@@ -1571,9 +1596,9 @@ export function VoucherEntry() {
                       <button 
                         type="button" 
                         onClick={() => openQuickLedger(vType, 'sales')}
-                        className="text-[8px] text-gray-500 hover:text-foreground flex items-center gap-1 leading-none"
+                        className="text-[10px] text-muted-foreground hover:text-primary flex items-center gap-1 leading-none cursor-pointer"
                       >
-                        <PlusCircle className="w-2 h-2" /> {t('common.quick')}
+                        <PlusCircle className="w-2.5 h-2.5" /> {t('common.quick')}
                       </button>
                     </div>
                     <SearchableSelect
@@ -1593,7 +1618,7 @@ export function VoucherEntry() {
                       fieldSize={fieldSize}
                     />
                     {salesPurchaseLedgerId && balances[salesPurchaseLedgerId] !== undefined && (
-                      <p className="text-[9px] text-gray-500 uppercase mt-0.5 whitespace-nowrap">
+                      <p className="text-[10px] text-muted-foreground uppercase mt-1 whitespace-nowrap tabular-nums">
                         {t('common.currentBalance')}: <span className="font-bold text-foreground">{formatBalance(balances[salesPurchaseLedgerId])}</span>
                       </p>
                     )}
@@ -1824,7 +1849,7 @@ export function VoucherEntry() {
             <div className="min-w-full">
               {/* Desktop Table Header */}
               <table className="w-full text-left text-xs border-collapse hidden lg:table min-w-[920px]">
-                <thead className={cn("bg-foreground/5 text-gray-500 uppercase sticky top-0 z-10 backdrop-blur-sm", isLayout2 ? "text-[8px]" : "text-[9px]")}>
+                <thead className={cn("bg-muted/60 text-muted-foreground uppercase sticky top-0 z-10 backdrop-blur-sm", isLayout2 ? "text-[9px]" : "text-[10px]")}>
                   <tr>
                     <th className={cn("border-b border-border min-w-[16ch] align-middle", tableHeaderPaddingClass)}>
                       <div className="flex justify-between items-center">
@@ -1835,9 +1860,9 @@ export function VoucherEntry() {
                             setPendingRowIdx(invEntries.length - 1);
                             setIsQuickItemOpen(true);
                           }}
-                          className="text-[8px] text-amber-600 hover:text-amber-500 font-bold uppercase flex items-center gap-1"
+                          className="text-[10px] text-amber-600 dark:text-amber-400 hover:underline font-semibold uppercase flex items-center gap-1 cursor-pointer"
                         >
-                          <PlusCircle className="w-2 h-2" /> {t('common.quick')}
+                          <PlusCircle className="w-2.5 h-2.5" /> {t('common.quick')}
                         </button>
                       </div>
                     </th>
@@ -1868,11 +1893,11 @@ export function VoucherEntry() {
                     <th className={cn("border-b border-border w-10 align-middle", tableHeaderPaddingClass)}></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y divide-border/70">
                   {invEntries.map((entry, idx) => (
-                    <tr key={idx} className="group hover:bg-muted/80 transition-colors">
-                      <td className={cn("min-w-[16ch]", tablePaddingClass)}>
-                        <div className="flex flex-col gap-0.5">
+                    <tr key={idx} data-valign="top" className="group hover:bg-muted/40 focus-within:bg-primary/[0.03] transition-colors align-top">
+                      <td data-valign="top" className={cn("min-w-[16ch]", tableTopPaddingClass)}>
+                        <div className="flex flex-col gap-1 items-start w-full">
                           <SearchableSelect
                             options={items}
                             value={entry.item_id}
@@ -1897,9 +1922,9 @@ export function VoucherEntry() {
                             fieldSize={fieldSize}
                           />
                           {entry.item_id && itemStocks[`${entry.item_id}-${entry.godown_id}`] !== undefined && (
-                            <div className="mt-1 space-y-0.5">
-                              <p className={cn("text-gray-400 uppercase leading-none", tableSubTextClass)}>
-                                {t('item.currentStock')}: <span className="font-bold text-foreground">{formatQuantity(itemStocks[`${entry.item_id}-${entry.godown_id}`], entry.unit)} {entry.unit}</span>
+                            <div className="pt-0.5 space-y-0.5 w-full">
+                              <p className={cn("text-muted-foreground uppercase leading-tight tabular-nums", tableSubTextClass)}>
+                                {t('item.currentStock')}: <span className="font-bold text-foreground tabular-nums">{formatQuantity(itemStocks[`${entry.item_id}-${entry.godown_id}`], entry.unit)} {entry.unit}</span>
                               </p>
                               {(() => {
                                 const stock = Number(itemStocks[`${entry.item_id}-${entry.godown_id}`] || 0);
@@ -1911,7 +1936,7 @@ export function VoucherEntry() {
 
                                 if (isExceeding) {
                                   return (
-                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-500/10 px-1.5 py-0.5 rounded">
+                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-500/10 px-1.5 py-0.5 rounded tabular-nums">
                                       <AlertTriangle className="w-2.5 h-2.5 shrink-0" /> Exceeds stock ({formatQuantity(stock, entry.unit)} avail)
                                     </span>
                                   );
@@ -1925,7 +1950,7 @@ export function VoucherEntry() {
                                 }
                                 if (isLow) {
                                   return (
-                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded tabular-nums">
                                       <AlertTriangle className="w-2.5 h-2.5 shrink-0" /> Low Stock Warning (Min: {formatQuantity(threshold, entry.unit)})
                                     </span>
                                   );
@@ -1936,7 +1961,7 @@ export function VoucherEntry() {
                           )}
                         </div>
                       </td>
-                      <td className={cn("w-[30ch] lg:w-[40ch]", tablePaddingClass)}>
+                      <td data-valign="top" className={cn("w-[30ch] lg:w-[40ch]", tableTopPaddingClass)}>
                         <SearchableSelect
                           options={godowns}
                           value={entry.godown_id}
@@ -1952,10 +1977,10 @@ export function VoucherEntry() {
                         />
                       </td>
                       {isBatchEnabled && !isPhysicalStock && (
-                        <td className={cn("w-32", tablePaddingClass)}>
+                        <td data-valign="top" className={cn("w-32", tableTopPaddingClass)}>
                           <input 
                             type="text" 
-                            className={tableInputPaddingClass}
+                            className={cn(tableInputPaddingClass, tableControlHeightClass)}
                             placeholder={t('common.batch')}
                             value={entry.batch_no || ''} 
                             onChange={e => {
@@ -1967,7 +1992,7 @@ export function VoucherEntry() {
                         </td>
                       )}
                       {isExpiryEnabled && !isPhysicalStock && (
-                        <td className={cn("w-32", tablePaddingClass)}>
+                        <td data-valign="top" className={cn("w-32", tableTopPaddingClass)}>
                           <DateInput 
                             value={entry.expiry_date || ''} 
                             onChange={val => {
@@ -1976,99 +2001,109 @@ export function VoucherEntry() {
                               setInvEntries(next);
                             }} 
                             className="w-full"
-                            compact={isFieldCompact}
+                            compact={isFieldCompact || voucherTableCompact}
                             fieldSize={fieldSize}
                           />
                         </td>
                       )}
-                      <td className={cn("w-32", tablePaddingClass)}>
-                        <input 
-                          type="number" 
-                          tabIndex={11 + idx * 10}
-                          className={cn("bg-transparent border-none text-foreground outline-none w-full text-right", tableTextClass)} 
-                          value={entry.qty ?? ''} 
-                          onFocus={e => e.target.value === '0' && e.target.select()}
-                          onChange={e => {
-                            const next = [...invEntries];
-                            const val = Number(e.target.value);
-                            next[idx].qty = val;
-                            
-                            // Auto-calculate free quantity based on scheme
-                            const item = items.find(i => i.id === entry.item_id);
-                            if (item && item.scheme_qty && item.scheme_free_qty && val >= item.scheme_qty) {
-                              const multiplier = Math.floor(val / item.scheme_qty);
-                              next[idx].free_qty = multiplier * item.scheme_free_qty;
-                            }
-
-                            next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
-                            setInvEntries(next);
-                          }} 
-                        />
-                      </td>
-                      {showFreeQty && !isPhysicalStock && (
-                        <td className={cn("w-32", tablePaddingClass)}>
+                      <td data-valign="top" className={cn("w-32", tableTopPaddingClass)}>
+                        <div className={cn("flex items-center justify-end", tableControlHeightClass)}>
                           <input 
                             type="number" 
-                            tabIndex={12 + idx * 10}
-                            className={cn("bg-transparent border-none text-foreground outline-none w-full text-right text-emerald-500 font-bold", tableTextClass)} 
-                            value={entry.free_qty ?? ''} 
+                            tabIndex={11 + idx * 10}
+                            className={cn("bg-transparent border-none text-foreground outline-none w-full h-full text-right tabular-nums", tableTextClass)} 
+                            value={entry.qty ?? ''} 
                             onFocus={e => e.target.value === '0' && e.target.select()}
                             onChange={e => {
                               const next = [...invEntries];
-                              next[idx].free_qty = Number(e.target.value);
+                              const val = Number(e.target.value);
+                              next[idx].qty = val;
+                              
+                              // Auto-calculate free quantity based on scheme
+                              const item = items.find(i => i.id === entry.item_id);
+                              if (item && item.scheme_qty && item.scheme_free_qty && val >= item.scheme_qty) {
+                                const multiplier = Math.floor(val / item.scheme_qty);
+                                next[idx].free_qty = multiplier * item.scheme_free_qty;
+                              }
+
+                              next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
                               setInvEntries(next);
                             }} 
                           />
+                        </div>
+                      </td>
+                      {showFreeQty && !isPhysicalStock && (
+                        <td data-valign="top" className={cn("w-32", tableTopPaddingClass)}>
+                          <div className={cn("flex items-center justify-end", tableControlHeightClass)}>
+                            <input 
+                              type="number" 
+                              tabIndex={12 + idx * 10}
+                              className={cn("bg-transparent border-none text-foreground outline-none w-full h-full text-right text-emerald-500 font-bold tabular-nums", tableTextClass)} 
+                              value={entry.free_qty ?? ''} 
+                              onFocus={e => e.target.value === '0' && e.target.select()}
+                              onChange={e => {
+                                const next = [...invEntries];
+                                next[idx].free_qty = Number(e.target.value);
+                                setInvEntries(next);
+                              }} 
+                            />
+                          </div>
                         </td>
                       )}
                       {!isPhysicalStock && (
                         <>
-                          <td className={cn("w-40", tablePaddingClass)}>
-                            <input 
-                              type="number" 
-                              tabIndex={13 + idx * 10}
-                              className={cn("bg-transparent border-none text-foreground outline-none w-full text-right", tableTextClass)} 
-                              value={entry.rate ?? ''} 
-                              onFocus={e => e.target.value === '0' && e.target.select()}
-                              onChange={e => {
-                                const next = [...invEntries];
-                                next[idx].rate = Number(e.target.value);
-                                next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
-                                setInvEntries(next);
-                              }} 
-                            />
-                          </td>
-                          <td className={cn("text-center text-gray-500 uppercase w-24", tablePaddingClass)}>
-                            <span 
-                              tabIndex={14 + idx * 10}
-                              className={cn("outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded", tableTextClass)}
-                            >
-                              {entry.unit}
-                            </span>
-                          </td>
-                          {showDiscPercent && (
-                            <td className={cn("w-32", tablePaddingClass)}>
+                          <td data-valign="top" className={cn("w-40", tableTopPaddingClass)}>
+                            <div className={cn("flex items-center justify-end", tableControlHeightClass)}>
                               <input 
                                 type="number" 
-                                tabIndex={15 + idx * 10}
-                                className={cn("bg-transparent border-none text-foreground outline-none w-full text-right", tableTextClass)} 
-                                value={entry.disc_percent ?? ''} 
+                                tabIndex={13 + idx * 10}
+                                className={cn("bg-transparent border-none text-foreground outline-none w-full h-full text-right tabular-nums", tableTextClass)} 
+                                value={entry.rate ?? ''} 
                                 onFocus={e => e.target.value === '0' && e.target.select()}
                                 onChange={e => {
                                   const next = [...invEntries];
-                                  next[idx].disc_percent = Number(e.target.value);
+                                  next[idx].rate = Number(e.target.value);
                                   next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
                                   setInvEntries(next);
                                 }} 
                               />
+                            </div>
+                          </td>
+                          <td data-valign="top" className={cn("text-center text-muted-foreground uppercase w-24", tableTopPaddingClass)}>
+                            <div className={cn("flex items-center justify-center", tableControlHeightClass)}>
+                              <span 
+                                tabIndex={14 + idx * 10}
+                                className={cn("outline-none focus:ring-1 focus:ring-foreground/20 px-1 rounded", tableTextClass)}
+                              >
+                                {entry.unit}
+                              </span>
+                            </div>
+                          </td>
+                          {showDiscPercent && (
+                            <td data-valign="top" className={cn("w-32", tableTopPaddingClass)}>
+                              <div className={cn("flex items-center justify-end", tableControlHeightClass)}>
+                                <input 
+                                  type="number" 
+                                  tabIndex={15 + idx * 10}
+                                  className={cn("bg-transparent border-none text-foreground outline-none w-full h-full text-right tabular-nums", tableTextClass)} 
+                                  value={entry.disc_percent ?? ''} 
+                                  onFocus={e => e.target.value === '0' && e.target.select()}
+                                  onChange={e => {
+                                    const next = [...invEntries];
+                                    next[idx].disc_percent = Number(e.target.value);
+                                    next[idx].amount = calculateRowAmount(next[idx].qty, next[idx].rate, next[idx].disc_percent, next[idx].tax_percent);
+                                    setInvEntries(next);
+                                  }} 
+                                />
+                              </div>
                             </td>
                           )}
                           {isTaxEnabled && showTaxPercent && (
-                            <td className={cn("w-32", tablePaddingClass)}>
+                            <td data-valign="top" className={cn("w-32", tableTopPaddingClass)}>
                               <input 
                                 type="number" 
                                 tabIndex={16 + idx * 10}
-                                className={cn(tableInputPaddingClass, "text-right")} 
+                                className={cn(tableInputPaddingClass, tableControlHeightClass, "text-right tabular-nums")} 
                                 value={entry.tax_percent ?? ''} 
                                 onFocus={e => e.target.value === '0' && e.target.select()}
                                 onChange={e => {
@@ -2080,30 +2115,43 @@ export function VoucherEntry() {
                               />
                             </td>
                           )}
-                          <td className={cn("text-right text-foreground font-bold w-32", tablePaddingClass)}>
-                            <input 
-                              type="number"
-                              tabIndex={17 + idx * 10}
-                              className={cn("bg-transparent border-none text-foreground outline-none w-full text-right font-bold", tableTextClass)} 
-                              value={entry.amount || ''}
-                              onFocus={e => e.target.value === '0' && e.target.select()}
-                              onChange={e => {
-                                const next = [...invEntries];
-                                const newAmount = Number(e.target.value);
-                                next[idx].amount = newAmount;
-                                
-                                if (next[idx].qty > 0) {
-                                  const taxFactor = 1 + (next[idx].tax_percent / 100);
-                                  const discFactor = 1 - (next[idx].disc_percent / 100);
-                                  next[idx].rate = newAmount / (taxFactor * discFactor * next[idx].qty);
-                                }
-                                setInvEntries(next);
-                              }}
-                            />
+                          <td data-valign="top" className={cn("text-right text-foreground font-bold w-32", tableTopPaddingClass)}>
+                            <div className={cn("flex items-center justify-end", tableControlHeightClass)}>
+                              <input 
+                                type="number"
+                                tabIndex={17 + idx * 10}
+                                className={cn("bg-transparent border-none text-foreground outline-none w-full h-full text-right font-bold tabular-nums", tableTextClass)} 
+                                value={entry.amount || ''}
+                                onFocus={e => e.target.value === '0' && e.target.select()}
+                                onChange={e => {
+                                  const next = [...invEntries];
+                                  const newAmount = Number(e.target.value);
+                                  next[idx].amount = newAmount;
+                                  
+                                  if (next[idx].qty > 0) {
+                                    const taxFactor = 1 + (next[idx].tax_percent / 100);
+                                    const discFactor = 1 - (next[idx].disc_percent / 100);
+                                    next[idx].rate = newAmount / (taxFactor * discFactor * next[idx].qty);
+                                  }
+                                  setInvEntries(next);
+                                }}
+                              />
+                            </div>
                           </td>
                         </>
                       )}
-                      <td className={cn("text-center align-middle", tablePaddingClass)}><button onClick={() => setInvEntries(invEntries.filter((_, i) => i !== idx))} className="inline-flex items-center justify-center"><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
+                      <td data-valign="top" className={cn("text-center", tableTopPaddingClass)}>
+                        <div className={cn("flex items-center justify-center", tableControlHeightClass)}>
+                          <button
+                            type="button"
+                            onClick={() => setInvEntries(invEntries.filter((_, i) => i !== idx))}
+                            className="inline-flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                            title={t('common.deleteItem')}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {/* ADD ITEM Button Row */}
@@ -2115,13 +2163,13 @@ export function VoucherEntry() {
                           onClick={() => setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: vType.toLowerCase() === 'sales' || vType.toLowerCase() === 'physical stock' ? 'Outward' : 'Inward' }])}
                           tabIndex={500}
                           className={cn(
-                            "text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
-                            isLayout2 ? "px-2.5 py-1 text-[8px]" : "px-4 py-1.5 text-[9px]",
+                            "text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center gap-2 shadow-xs cursor-pointer",
+                            isLayout2 ? "px-3 py-1.5 text-[9px]" : "px-4 py-2 text-[10px]",
                             getVoucherBgColor(vType),
                             getVoucherHoverBgColor(vType)
                           )}
                         >
-                          <PlusCircle className="w-3 h-3" /> {t('common.addItem')}
+                          <PlusCircle className="w-3.5 h-3.5" /> {t('common.addItem')}
                         </button>
                       </div>
                     </td>
@@ -2205,7 +2253,7 @@ export function VoucherEntry() {
                       )}
                     </div>
 
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap items-start gap-3">
                       <div className="flex-1 min-w-[140px] space-y-1">
                         <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('common.godown')}</label>
                         <SearchableSelect
@@ -2383,7 +2431,7 @@ export function VoucherEntry() {
                     type="button"
                     onClick={() => setInvEntries([...invEntries, { item_id: '', godown_id: '', qty: 0, free_qty: 0, rate: 0, disc_percent: 0, tax_percent: 0, amount: 0, unit: 'pcs', batch_no: '', expiry_date: '', entry_type: vType === 'Sales' ? 'Outward' : 'Inward' }])}
                     className={cn(
-                      "w-full py-3 text-black text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm",
+                      "w-full py-3 rounded-xl text-white text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer",
                       getVoucherBgColor(vType),
                       getVoucherHoverBgColor(vType)
                     )}
@@ -2395,16 +2443,16 @@ export function VoucherEntry() {
             </div>
           ) : isSingleEntry ? (
             <table className="w-full text-left text-xs border-collapse min-w-[600px]">
-              <thead className={cn("bg-foreground/5 text-gray-500 uppercase", isLayout2 ? "text-[8px]" : "text-[9px]")}>
+              <thead className={cn("bg-muted/60 text-muted-foreground uppercase sticky top-0 z-10", isLayout2 ? "text-[9px]" : "text-[10px]")}>
                 <tr>
-                  <th className={cn("border-b border-border font-bold tracking-widest", tableHeaderPaddingClass)}>{t('common.particulars')}</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-32", tableHeaderPaddingClass)}>{t('common.amount')}</th>
+                  <th className={cn("border-b border-border font-semibold tracking-wider", tableHeaderPaddingClass)}>{t('common.particulars')}</th>
+                  <th className={cn("border-b border-border font-semibold tracking-wider text-right w-40", tableHeaderPaddingClass)}>{t('common.amount')}</th>
                   <th className={cn("border-b border-border w-10", tableHeaderPaddingClass)}></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border/70">
                 {accEntries.map((entry, idx) => (
-                  <tr key={idx} className="group hover:bg-muted/80 transition-colors">
+                  <tr key={idx} className="group hover:bg-muted/40 focus-within:bg-primary/[0.03] transition-colors">
                     <td className={tablePaddingClass}>
                       <div className="flex items-center gap-2">
                         <SearchableSelect
@@ -2454,7 +2502,16 @@ export function VoucherEntry() {
                         }}
                       />
                     </td>
-                    <td className={cn("w-10 text-center align-middle", tablePaddingClass)}><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))} className="inline-flex items-center justify-center"><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
+                    <td className={cn("w-10 text-center align-middle", tablePaddingClass)}>
+                      <button
+                        type="button"
+                        onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}
+                        className="inline-flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                        title={t('common.deleteItem')}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {/* ADD ITEM Button Row */}
@@ -2472,13 +2529,13 @@ export function VoucherEntry() {
                           }
                         }}
                         className={cn(
-                          "text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
-                          isLayout2 ? "px-2.5 py-1 text-[8px]" : "px-4 py-1.5 text-[9px]",
+                          "text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center gap-2 shadow-xs cursor-pointer",
+                          isLayout2 ? "px-3 py-1.5 text-[9px]" : "px-4 py-2 text-[10px]",
                           getVoucherBgColor(vType),
                           getVoucherHoverBgColor(vType)
                         )}
                       >
-                        <PlusCircle className="w-3 h-3" /> {t('common.addItem')}
+                        <PlusCircle className="w-3.5 h-3.5" /> {t('common.addItem')}
                       </button>
                     </div>
                   </td>
@@ -2487,18 +2544,18 @@ export function VoucherEntry() {
             </table>
           ) : (
             <table className="w-full text-left text-xs border-collapse min-w-[800px]">
-              <thead className={cn("bg-foreground/5 text-gray-500 uppercase", isLayout2 ? "text-[8px]" : "text-[9px]")}>
+              <thead className={cn("bg-muted/60 text-muted-foreground uppercase sticky top-0 z-10", isLayout2 ? "text-[9px]" : "text-[10px]")}>
                 <tr>
                   <th className={cn("border-b border-border w-20", tableHeaderPaddingClass)}>{t('common.drCr')}</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest", tableHeaderPaddingClass)}>{t('common.particulars')}</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", tableHeaderPaddingClass)}>{t('common.debit')}</th>
-                  <th className={cn("border-b border-border font-bold tracking-widest text-right w-48", tableHeaderPaddingClass)}>{t('common.credit')}</th>
+                  <th className={cn("border-b border-border font-semibold tracking-wider", tableHeaderPaddingClass)}>{t('common.particulars')}</th>
+                  <th className={cn("border-b border-border font-semibold tracking-wider text-right w-48", tableHeaderPaddingClass)}>{t('common.debit')}</th>
+                  <th className={cn("border-b border-border font-semibold tracking-wider text-right w-48", tableHeaderPaddingClass)}>{t('common.credit')}</th>
                   <th className={cn("border-b border-border w-10", tableHeaderPaddingClass)}></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border/70">
                 {accEntries.map((entry, idx) => (
-                  <tr key={idx} className="group hover:bg-muted/80 transition-colors">
+                  <tr key={idx} className="group hover:bg-muted/40 focus-within:bg-primary/[0.03] transition-colors">
                     <td className={cn("w-20", tablePaddingClass)}>
                       <select 
                         value={entry.type}
@@ -2606,7 +2663,16 @@ export function VoucherEntry() {
                         }}
                       />
                     </td>
-                    <td className={cn("w-10", tablePaddingClass)}><button onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}><Trash2 className="w-3 h-3 text-rose-900 group-hover:text-rose-500" /></button></td>
+                    <td className={cn("w-10 text-center align-middle", tablePaddingClass)}>
+                      <button
+                        type="button"
+                        onClick={() => setAccEntries(accEntries.filter((_, i) => i !== idx))}
+                        className="inline-flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                        title={t('common.deleteItem')}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {/* ADD ITEM Button Row */}
@@ -2624,13 +2690,13 @@ export function VoucherEntry() {
                           }
                         }}
                         className={cn(
-                          "text-black text-[9px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-sm",
-                          isLayout2 ? "px-2.5 py-1 text-[8px]" : "px-4 py-1.5 text-[9px]",
+                          "text-white text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all flex items-center gap-2 shadow-xs cursor-pointer",
+                          isLayout2 ? "px-3 py-1.5 text-[9px]" : "px-4 py-2 text-[10px]",
                           getVoucherBgColor(vType),
                           getVoucherHoverBgColor(vType)
                         )}
                       >
-                        <PlusCircle className="w-3 h-3" /> {t('common.addItem')}
+                        <PlusCircle className="w-3.5 h-3.5" /> {t('common.addItem')}
                       </button>
                     </div>
                   </td>
@@ -2755,14 +2821,14 @@ export function VoucherEntry() {
         )}
         {/* Footer Section */}
         <div className={cn(
-          "bg-foreground/5 shrink-0 transition-all",
+          "bg-muted/25 shrink-0 transition-all border-t border-border",
           isLayout2 
-            ? "sticky bottom-0 bg-background border-t border-border p-1.5 lg:p-2.5 space-y-2 lg:space-y-3 z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]"
-            : (voucherHeaderCompact ? "p-2 lg:p-3 space-y-3" : "p-4 lg:p-6 space-y-6")
+            ? "sticky bottom-0 bg-card/95 backdrop-blur-md p-2 lg:p-3 space-y-2 z-30 shadow-[0_-4px_14px_rgba(0,0,0,0.06)]"
+            : (voucherHeaderCompact ? "p-3 lg:p-4 space-y-3" : "p-4 lg:p-6 space-y-5")
         )}>
           <div className={cn("grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6", isLayout2 && "gap-2.5 lg:gap-4")}>
-            <div className="space-y-1 lg:col-span-3">
-              <label className="text-[8px] text-gray-500 uppercase font-bold tracking-widest">{t('common.narration')}</label>
+            <div className="space-y-1.5 lg:col-span-3">
+              <label className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">{t('common.narration')}</label>
               <textarea
                 ref={narrationRef}
                 value={narration || ''}
@@ -2775,18 +2841,18 @@ export function VoucherEntry() {
                 }}
                 tabIndex={1000}
                 className={cn(
-                  "w-full bg-background border border-border text-foreground p-2 text-xs outline-none focus:border-foreground transition-colors resize-none",
-                  isLayout2 ? "h-11 lg:h-14 text-[11px] p-1.5" : "h-16 lg:h-20"
+                  "w-full bg-background border border-border rounded-xl text-foreground p-2.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all resize-none",
+                  isLayout2 ? "h-12 lg:h-14 text-[11px] p-2" : "h-16 lg:h-20"
                 )}
                 placeholder={t('common.narration')}
               />
             </div>
-            <div className="flex flex-col justify-end items-end space-y-2 lg:col-span-2">
+            <div className="flex flex-col justify-end items-end space-y-2.5 lg:col-span-2">
               <div className={cn(
-                "flex items-center gap-4 bg-background border border-border p-3 rounded mb-1 w-full lg:w-auto justify-between lg:justify-end",
-                isLayout2 && "p-2 mb-0.5 rounded-sm"
+                "flex items-center gap-4 bg-background border border-border px-3.5 py-2.5 rounded-xl mb-1 w-full lg:w-auto justify-between lg:justify-end",
+                isLayout2 && "px-3 py-1.5 mb-0.5 rounded-lg"
               )}>
-                <label htmlFor="globalDiscount" className={cn("text-[10px] text-gray-500 uppercase font-bold cursor-pointer tracking-widest", isLayout2 && "text-[9px]")}>{t('common.disc')}</label>
+                <label htmlFor="globalDiscount" className={cn("text-[10px] text-muted-foreground uppercase font-semibold cursor-pointer tracking-wider", isLayout2 && "text-[9px]")}>{t('common.disc')}</label>
                 <div className="flex items-center gap-2">
                   <input 
                     id="globalDiscount"
@@ -2796,7 +2862,7 @@ export function VoucherEntry() {
                     onChange={e => setGlobalDiscount(Number(e.target.value))}
                     tabIndex={1001}
                     className={cn(
-                      "w-24 bg-transparent border-none text-right outline-none font-bold",
+                      "w-24 bg-transparent border-none text-right outline-none font-bold tabular-nums",
                       isLayout2 ? "text-sm" : "text-lg"
                     )}
                     placeholder="0"
@@ -2805,7 +2871,7 @@ export function VoucherEntry() {
                     value={globalDiscountType}
                     onChange={e => setGlobalDiscountType(e.target.value as 'fixed' | 'percent')}
                     tabIndex={1002}
-                    className="bg-transparent border-none text-xs outline-none font-bold text-gray-500"
+                    className="bg-transparent border-none text-xs outline-none font-semibold text-muted-foreground cursor-pointer"
                   >
                     <option value="fixed">{baseCurrencySymbol} {t('common.taka')}</option>
                     <option value="percent">% {t('common.percent')}</option>
@@ -2814,30 +2880,30 @@ export function VoucherEntry() {
               </div>
               <div className="text-right space-y-0.5 w-full">
                 {totalTaxAmount > 0 && (
-                  <p className={cn("text-[10px] text-emerald-500 font-bold", isLayout2 && "text-[9px]")}>
+                  <p className={cn("text-xs text-emerald-600 dark:text-emerald-400 font-semibold tabular-nums", isLayout2 && "text-[10px]")}>
                     {t('common.tax')}: {currency} {formatNumber(totalTaxAmount)}
                   </p>
                 )}
-                <p className="text-[8px] text-gray-500 uppercase tracking-widest">{t('common.totalAmount')}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{t('common.totalAmount')}</p>
                 <p className={cn(
-                  "text-foreground font-bold tracking-tighter",
+                  "text-foreground font-bold tracking-tight tabular-nums",
                   isLayout2 ? "text-xl lg:text-2xl" : "text-2xl lg:text-3xl"
                 )}>
                   {currency} {formatNumber(finalTotal)}
                 </p>
               </div>
-              <div className={cn("flex flex-wrap gap-2 w-full lg:w-auto justify-end", isLayout2 && "gap-1")}>
+              <div className={cn("flex flex-wrap gap-2 w-full lg:w-auto justify-end", isLayout2 && "gap-1.5")}>
                 {isEdit && (
                   <button 
                     type="button"
                     onClick={handleDelete}
                     disabled={loading}
                     className={cn(
-                      "flex-1 lg:flex-none border border-rose-900/50 text-[10px] text-rose-500 uppercase tracking-widest hover:bg-rose-500/10 transition-colors flex items-center justify-center gap-2",
-                      isLayout2 ? "px-4 lg:px-6 py-1 text-[9px]" : "px-6 lg:px-8 py-2"
+                      "flex-1 lg:flex-none rounded-lg border border-rose-500/30 text-[10px] font-semibold text-rose-500 uppercase tracking-wider hover:bg-rose-500/10 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer",
+                      isLayout2 ? "px-4 py-1.5 text-[9.5px]" : "px-5 py-2"
                     )}
                   >
-                    <Trash className="w-3 h-3" /> {t('common.delete')}
+                    <Trash className="w-3.5 h-3.5" /> {t('common.delete')}
                   </button>
                 )}
                 {(isEdit || isBalanced()) && (
@@ -2846,24 +2912,26 @@ export function VoucherEntry() {
                       type="button"
                       onClick={() => setShowShareMenu(!showShareMenu)}
                       className={cn(
-                        "w-full border border-border text-[10px] text-gray-500 uppercase tracking-widest hover:text-foreground transition-colors flex items-center justify-center gap-2",
-                        isLayout2 ? "px-4 lg:px-6 py-1 text-[9px]" : "px-6 lg:px-8 py-2"
+                        "w-full rounded-lg border border-border bg-background text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground hover:bg-muted transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer",
+                        isLayout2 ? "px-4 py-1.5 text-[9.5px]" : "px-5 py-2"
                       )}
                     >
-                      <Share2 className="w-3 h-3" /> {t('common.share')}
+                      <Share2 className="w-3.5 h-3.5" /> {t('common.share')}
                     </button>
                     {showShareMenu && (
-                      <div className="absolute bottom-full left-0 mb-2 w-48 bg-card border border-border shadow-xl z-50">
+                      <div className="absolute bottom-full left-0 mb-2 w-48 bg-card border border-border rounded-xl shadow-[var(--shadow-modal)] overflow-hidden z-50">
                         <button 
+                          type="button"
                           onClick={() => handleShare('whatsapp')}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-[10px] uppercase tracking-widest hover:bg-foreground/5 text-left"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-xs font-medium hover:bg-muted text-left cursor-pointer"
                         >
                           <MessageSquare className="w-4 h-4 text-emerald-500" />
                           {t('common.whatsapp')}
                         </button>
                         <button 
+                          type="button"
                           onClick={() => handleShare('email')}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-[10px] uppercase tracking-widest hover:bg-foreground/5 text-left"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-xs font-medium hover:bg-muted text-left cursor-pointer border-t border-border/60"
                         >
                           <Mail className="w-4 h-4 text-blue-500" />
                           {t('common.email')}
@@ -2878,8 +2946,8 @@ export function VoucherEntry() {
                   disabled={loading || !isBalanced()}
                   tabIndex={1003}
                   className={cn(
-                    "flex-1 lg:flex-none border border-border text-[10px] text-gray-500 uppercase tracking-widest hover:text-foreground transition-colors disabled:opacity-50",
-                    isLayout2 ? "px-4 lg:px-6 py-1 text-[9px]" : "px-6 lg:px-8 py-2"
+                    "flex-1 lg:flex-none rounded-lg border border-border bg-background text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 whitespace-nowrap cursor-pointer",
+                    isLayout2 ? "px-4 py-1.5 text-[9.5px]" : "px-5 py-2"
                   )}
                 >
                   {t('common.print')}
@@ -2888,13 +2956,14 @@ export function VoucherEntry() {
                   type="button"
                   onClick={() => setIsClearModalOpen(true)}
                   className={cn(
-                    "flex-1 lg:flex-none border border-amber-500/50 text-[10px] text-amber-600 uppercase tracking-widest hover:bg-amber-500/10 transition-colors flex items-center justify-center gap-2",
-                    isLayout2 ? "px-4 lg:px-6 py-1 text-[9px]" : "px-6 lg:px-8 py-2"
+                    "flex-1 lg:flex-none rounded-lg border border-amber-500/40 text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider hover:bg-amber-500/10 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer",
+                    isLayout2 ? "px-4 py-1.5 text-[9.5px]" : "px-5 py-2"
                   )}
                 >
-                  <X className="w-3 h-3" /> {t('common.clear')}
+                  <X className="w-3.5 h-3.5" /> {t('common.clear')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     if (quotaLocked) {
                       showNotification(
@@ -2912,16 +2981,16 @@ export function VoucherEntry() {
                   tabIndex={1004}
                   title={quotaLocked ? (language === 'bn' ? 'কোটা সীমা শেষ হয়ে গেছে' : 'Database quota exceeded') : undefined}
                   className={cn(
-                    "flex-1 lg:flex-none font-bold uppercase tracking-widest transition-all",
-                    isLayout2 ? "px-6 lg:px-8 py-1 text-[9px]" : "px-8 lg:px-12 py-2 text-[10px]",
+                    "flex-1 lg:flex-none rounded-lg font-bold uppercase tracking-wider transition-all whitespace-nowrap flex items-center justify-center gap-2",
+                    isLayout2 ? "px-6 py-1.5 text-[10px]" : "px-8 py-2 text-[11px]",
                     quotaLocked
-                      ? "bg-rose-600 hover:bg-rose-700 text-white shadow-lg cursor-pointer"
+                      ? "bg-rose-600 hover:bg-rose-700 text-white shadow-sm cursor-pointer"
                       : isBalanced() 
-                        ? "bg-foreground text-background hover:opacity-90 shadow-lg" 
-                        : "bg-border text-gray-600 cursor-not-allowed"
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm cursor-pointer" 
+                        : "bg-muted text-muted-foreground border border-border cursor-not-allowed"
                   )}
                 >
-                  {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : quotaLocked ? (language === 'bn' ? 'কোটা শেষ' : 'Quota Exceeded') : (isEdit ? t('common.update') : t('common.saveVoucher'))}
+                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : quotaLocked ? (language === 'bn' ? 'কোটা শেষ' : 'Quota Exceeded') : (isEdit ? t('common.update') : t('common.saveVoucher'))}
                 </button>
               </div>
           </div>
@@ -2942,8 +3011,8 @@ export function VoucherEntry() {
         const errorMsg = getValidationError();
         if (!errorMsg) return null;
         return (
-          <div className="bg-red-50 border-t border-red-200 dark:bg-red-950/60 dark:border-red-900/50 px-6 py-2.5 text-[10px] md:text-[11px] text-red-800 dark:text-red-300 tracking-wider text-center flex items-center justify-center gap-2 font-bold uppercase">
-            <AlertCircle className="w-3.5 h-3.5 text-red-500 dark:text-red-400 shrink-0 animate-pulse" />
+          <div className="bg-red-50 border-t border-red-200 dark:bg-red-950/60 dark:border-red-900/50 px-6 py-2.5 text-xs text-red-800 dark:text-red-300 text-center flex items-center justify-center gap-2 font-medium tabular-nums">
+            <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         );
@@ -2968,146 +3037,105 @@ export function VoucherEntry() {
       onConfirm={handleClearVoucher}
     />
 
-    {/* Voucher Settings Shortcut Modal */}
-    {isVoucherSettingsOpen && (
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-border w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-border bg-foreground/5">
-              <div className="flex items-center gap-2">
-                <Settings2 className="w-4 h-4 text-gray-500" />
-                <h3 className="text-[10px] uppercase font-bold tracking-widest">{t('voucher.config')}</h3>
-              </div>
-              <button onClick={() => setIsVoucherSettingsOpen(false)} className="text-gray-500 hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
+      {/* Voucher Settings Shortcut Modal */}
+      <EnterpriseModal
+        isOpen={isVoucherSettingsOpen}
+        onClose={() => setIsVoucherSettingsOpen(false)}
+        title={t('voucher.config')}
+        subtitle={t('voucher.invSettings') + ' • ' + t('voucher.displaySettings')}
+        icon={<Settings2 className="w-4 h-4" />}
+        size="lg"
+        footer={
+          <div className="w-full flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsVoucherSettingsOpen(false)}
+              className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors cursor-pointer"
+            >
+              {t('common.close')}
+            </button>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider mb-2">{t('voucher.invSettings')}</p>
+            <div className="bg-muted/20 border border-border rounded-xl px-4 py-1">
+              <Toggle 
+                label={t('voucher.maintainInv')} 
+                enabled={isInventoryEnabled} 
+                onChange={() => toggleFeature('inv')} 
+              />
+              <Toggle 
+                label={t('voucher.maintainGodowns')} 
+                enabled={features.find(f => f.id === 'godown')?.enabled ?? false} 
+                onChange={() => toggleFeature('godown')} 
+              />
+              <Toggle 
+                label={t('voucher.maintainBatches')} 
+                enabled={isBatchEnabled} 
+                onChange={() => toggleFeature('batch')} 
+              />
+              <Toggle 
+                label={t('voucher.trackExpiry')} 
+                enabled={isExpiryEnabled} 
+                onChange={() => toggleFeature('expiry')} 
+              />
+              <Toggle 
+                label={t('voucher.barcodeScanning')} 
+                enabled={isBarcodeEnabled} 
+                onChange={() => toggleFeature('barcode')} 
+              />
+              <Toggle 
+                label="Show Salesperson/Received by" 
+                enabled={showSalesperson} 
+                onChange={() => updateSettings({ showSalesperson: !showSalesperson })} 
+              />
             </div>
-            
-            <div className="p-6 space-y-6 overflow-y-auto max-h-[70vh]">
-              <div className="space-y-1">
-                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mb-2">{t('voucher.invSettings')}</p>
-                <Toggle 
-                  label={t('voucher.maintainInv')} 
-                  enabled={isInventoryEnabled} 
-                  onChange={() => toggleFeature('inv')} 
-                />
-                <Toggle 
-                  label={t('voucher.maintainGodowns')} 
-                  enabled={features.find(f => f.id === 'godown')?.enabled ?? false} 
-                  onChange={() => toggleFeature('godown')} 
-                />
-                <Toggle 
-                  label={t('voucher.maintainBatches')} 
-                  enabled={isBatchEnabled} 
-                  onChange={() => toggleFeature('batch')} 
-                />
-                <Toggle 
-                  label={t('voucher.trackExpiry')} 
-                  enabled={isExpiryEnabled} 
-                  onChange={() => toggleFeature('expiry')} 
-                />
-                <Toggle 
-                  label={t('voucher.barcodeScanning')} 
-                  enabled={isBarcodeEnabled} 
-                  onChange={() => toggleFeature('barcode')} 
-                />
-                <Toggle 
-                  label="Show Salesperson/Received by" 
-                  enabled={showSalesperson} 
-                  onChange={() => updateSettings({ showSalesperson: !showSalesperson })} 
-                />
-              </div>
+          </div>
 
-              <div className="space-y-1 pt-4 border-t border-border">
-                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mb-2">{t('voucher.displaySettings')}</p>
-                <Toggle 
-                  label={t('voucher.showFreeQty')} 
-                  enabled={showFreeQty} 
-                  onChange={() => updateSettings({ showFreeQty: !showFreeQty })} 
-                />
-                <Toggle 
-                  label={t('voucher.showDiscPercent')} 
-                  enabled={showDiscPercent} 
-                  onChange={() => updateSettings({ showDiscPercent: !showDiscPercent })} 
-                />
-                <Toggle 
-                  label={t('voucher.showTaxPercent')} 
-                  enabled={showTaxPercent} 
-                  onChange={() => updateSettings({ showTaxPercent: !showTaxPercent })} 
-                />
-                <Toggle 
-                  label="Show Currency" 
-                  enabled={showCurrency} 
-                  onChange={() => updateSettings({ showCurrency: !showCurrency })} 
-                />
-                <Toggle 
-                  label="Show Exchange Rate" 
-                  enabled={showExRate} 
-                  onChange={() => updateSettings({ showExRate: !showExRate })} 
-                />
-                <Toggle 
-                  label={t('voucher.enableMultiCurrency')} 
-                  enabled={isMultiCurrencyEnabled} 
-                  onChange={() => toggleFeature('curr')} 
-                />
-                <Toggle 
-                  label={t('voucher.enableTaxCalc')} 
-                  enabled={isTaxEnabled} 
-                  onChange={() => toggleFeature('tax')} 
-                />
-              </div>
-
-              <div className="space-y-4 pt-4 border-t border-border">
-                <p className="text-[8px] text-gray-500 uppercase font-bold tracking-widest mb-2">{t('voucher.printPreviewMock')}</p>
-                <div className="bg-background border border-border p-4 rounded space-y-4 scale-90 origin-top">
-                  {/* Mock Header */}
-                  <div className="border-b border-border pb-2 text-center space-y-1">
-                    <div className="h-2 w-24 bg-foreground/20 mx-auto rounded" />
-                    <div className="h-1.5 w-32 bg-foreground/10 mx-auto rounded" />
-                  </div>
-                  
-                  {/* Mock Table */}
-                  <div className="space-y-1">
-                    <div className="flex gap-1 border-b border-border pb-1">
-                      <div className="h-1.5 flex-1 bg-foreground/20 rounded" />
-                      <div className="h-1.5 w-8 bg-foreground/20 rounded" />
-                      <div className="h-1.5 w-8 bg-foreground/20 rounded" />
-                    </div>
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="flex gap-1">
-                        <div className="h-1.5 flex-1 bg-foreground/5 rounded" />
-                        <div className="h-1.5 w-8 bg-foreground/5 rounded" />
-                        <div className="h-1.5 w-8 bg-foreground/5 rounded" />
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Mock Footer */}
-                  <div className="flex justify-between pt-2 border-t border-border">
-                    <div className="space-y-1">
-                      <div className="h-1.5 w-16 bg-foreground/10 rounded" />
-                      <div className="h-3 w-24 bg-foreground/5 rounded" />
-                    </div>
-                    <div className="text-right space-y-1">
-                      <div className="h-1.5 w-12 bg-foreground/10 rounded ml-auto" />
-                      <div className="h-3 w-20 bg-foreground/20 rounded ml-auto" />
-                    </div>
-                  </div>
-                </div>
-                <p className="text-[7px] text-gray-400 uppercase text-center">{t('voucher.printPreviewDesc')}</p>
-              </div>
-            </div>
-
-            <div className="p-4 bg-foreground/5 border-t border-border flex justify-end">
-              <button 
-                onClick={() => setIsVoucherSettingsOpen(false)}
-                className="px-6 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90"
-              >
-                {t('common.close')}
-              </button>
+          <div className="space-y-2">
+            <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider mb-2">{t('voucher.displaySettings')}</p>
+            <div className="bg-muted/20 border border-border rounded-xl px-4 py-1">
+              <Toggle 
+                label={t('voucher.showFreeQty')} 
+                enabled={showFreeQty} 
+                onChange={() => updateSettings({ showFreeQty: !showFreeQty })} 
+              />
+              <Toggle 
+                label={t('voucher.showDiscPercent')} 
+                enabled={showDiscPercent} 
+                onChange={() => updateSettings({ showDiscPercent: !showDiscPercent })} 
+              />
+              <Toggle 
+                label={t('voucher.showTaxPercent')} 
+                enabled={showTaxPercent} 
+                onChange={() => updateSettings({ showTaxPercent: !showTaxPercent })} 
+              />
+              <Toggle 
+                label="Show Currency" 
+                enabled={showCurrency} 
+                onChange={() => updateSettings({ showCurrency: !showCurrency })} 
+              />
+              <Toggle 
+                label="Show Exchange Rate" 
+                enabled={showExRate} 
+                onChange={() => updateSettings({ showExRate: !showExRate })} 
+              />
+              <Toggle 
+                label={t('voucher.enableMultiCurrency')} 
+                enabled={isMultiCurrencyEnabled} 
+                onChange={() => toggleFeature('curr')} 
+              />
+              <Toggle 
+                label={t('voucher.enableTaxCalc')} 
+                enabled={isTaxEnabled} 
+                onChange={() => toggleFeature('tax')} 
+              />
             </div>
           </div>
         </div>
-      )}
+      </EnterpriseModal>
     </div>
     </div>
   );
@@ -3115,32 +3143,35 @@ export function VoucherEntry() {
 
 function ClearModal({ isOpen, onClose, onConfirm }: { isOpen: boolean, onClose: () => void, onConfirm: () => void }) {
   const { t } = useLanguage();
-  if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-card border border-border shadow-2xl w-full max-w-sm p-6 space-y-6">
-        <div className="flex items-center gap-3 text-rose-500">
-          <AlertCircle className="w-6 h-6" />
-          <h3 className="text-lg font-bold uppercase tracking-tighter">{t('common.warning')}</h3>
-        </div>
-        <p className="text-xs text-gray-500 uppercase tracking-widest leading-relaxed">
-          {t('common.clearVoucherConfirm')}
-        </p>
-        <div className="flex gap-3 pt-2">
+    <EnterpriseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('common.warning')}
+      icon={<AlertCircle className="w-4 h-4 text-rose-500" />}
+      size="md"
+      footer={
+        <div className="flex justify-end gap-3 w-full">
           <button
+            type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-border text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/5 transition-colors"
+            className="px-5 py-2 border border-border rounded-lg text-xs font-semibold uppercase tracking-wider hover:bg-muted transition-colors cursor-pointer"
           >
             {t('common.back')}
           </button>
           <button
+            type="button"
             onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-rose-500 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-rose-600 transition-colors"
+            className="px-5 py-2 bg-rose-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-rose-500 transition-colors cursor-pointer"
           >
             {t('common.clearVoucher')}
           </button>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        {t('common.clearVoucherConfirm')}
+      </p>
+    </EnterpriseModal>
   );
 }

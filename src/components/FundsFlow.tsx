@@ -229,23 +229,24 @@ export function FundsFlow() {
   };
 
   if (loading) {
-    return <SkeletonLoader type="table" />;
+    return <SkeletonLoader type="table" pageKey="reports" />;
   }
 
   return (
-    <div className="h-full flex flex-col bg-background font-mono transition-colors overflow-hidden">
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 z-30">
+    <div className="h-full flex flex-col bg-background transition-colors overflow-hidden">
+      <div className="flex-none bg-card/90 backdrop-blur-sm border-b border-border shadow-xs px-4 lg:px-6 py-4 z-30">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3.5">
             <button 
               onClick={() => navigate(-1)}
-              className="p-2 hover:bg-foreground/5 rounded-full transition-colors"
+              className="p-2 bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+              title={t('common.back')}
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Funds Flow Statement</h1>
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest">Analysis of changes in financial position</p>
+              <h1 className="text-2xl font-bold text-foreground tracking-tight">Funds Flow Statement</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">Analysis of changes in financial position</p>
             </div>
           </div>
           <div className="flex flex-wrap items-end gap-2">
@@ -267,30 +268,30 @@ export function FundsFlow() {
             </div>
             <button
               onClick={handleDownloadExcel}
-              className="flex items-center gap-2 px-3.5 py-2 text-[10px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors"
             >
               <FileSpreadsheet className="w-4 h-4" />
               Excel
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 bg-background border border-border rounded-lg hover:bg-foreground/5 transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-foreground bg-card border border-border rounded-lg hover:bg-muted transition-colors"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-4 h-4 text-muted-foreground" />
               {t('common.print')}
             </button>
             <button
               onClick={handleDownloadPDF}
-              className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white bg-foreground rounded-lg hover:opacity-90 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors shadow-xs"
             >
               <Download className="w-4 h-4" />
               {t('common.downloadPdf')}
             </button>
             <button
               onClick={handleEmailReport}
-              className="flex items-center gap-2 px-3.5 py-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 bg-background border border-border rounded-lg hover:bg-foreground/5 transition-colors"
+              className="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-foreground bg-card border border-border rounded-lg hover:bg-muted transition-colors"
             >
-              <Mail className="w-4 h-4" />
+              <Mail className="w-4 h-4 text-muted-foreground" />
               Email
             </button>
           </div>
@@ -298,73 +299,73 @@ export function FundsFlow() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 lg:p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Sources of Funds */}
-          <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-border bg-blue-500/5 flex items-center gap-2 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
-              <PlusCircle className="w-4 h-4 text-blue-600" />
-              <h3 className="font-bold text-blue-600 uppercase tracking-widest text-[10px]">Sources of Funds</h3>
+          <div className="bg-card rounded-xl border border-border overflow-hidden shadow-[var(--shadow-surface)]">
+            <div className="px-6 py-3.5 border-b border-border bg-blue-500/10 flex items-center gap-2 sticky top-0 z-10 backdrop-blur-sm">
+              <PlusCircle className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <h3 className="font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider text-xs">Sources of Funds</h3>
             </div>
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border/60">
               {sources.length > 0 ? sources.map((item, idx) => (
-                <div key={idx} className="px-6 py-4 flex justify-between items-center hover:bg-foreground/5 transition-colors">
-                  <span className="text-foreground/70 text-sm">{item.name}</span>
-                  <span className="font-bold text-foreground font-mono">{formatCurrency(item.amount)}</span>
+                <div key={idx} className="px-6 py-3.5 flex justify-between items-center hover:bg-muted/40 transition-colors">
+                  <span className="text-foreground/85 text-sm">{item.name}</span>
+                  <span className="font-semibold text-foreground text-sm tabular-nums">{formatCurrency(item.amount)}</span>
                 </div>
               )) : (
-                <div className="px-6 py-8 text-center text-gray-500 text-sm">No sources found</div>
+                <div className="px-6 py-8 text-center text-muted-foreground text-sm">No sources found</div>
               )}
-              <div className="px-6 py-4 bg-blue-500/10 flex justify-between items-center font-bold text-blue-700 uppercase tracking-wider text-[10px] sticky bottom-0 border-t-2 border-blue-200">
+              <div className="px-6 py-3.5 bg-blue-500/10 flex justify-between items-center font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider text-xs sticky bottom-0 border-t border-blue-500/20">
                 <span>Total Sources</span>
-                <span className="text-sm font-mono">{formatCurrency(totalSources)}</span>
+                <span className="text-sm tabular-nums">{formatCurrency(totalSources)}</span>
               </div>
             </div>
           </div>
 
           {/* Applications of Funds */}
-          <div className="bg-background rounded-xl border border-border overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-border bg-rose-500/5 flex items-center gap-2 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
-              <MinusCircle className="w-4 h-4 text-rose-600" />
-              <h3 className="font-bold text-rose-600 uppercase tracking-widest text-[10px]">Applications of Funds</h3>
+          <div className="bg-card rounded-xl border border-border overflow-hidden shadow-[var(--shadow-surface)]">
+            <div className="px-6 py-3.5 border-b border-border bg-rose-500/10 flex items-center gap-2 sticky top-0 z-10 backdrop-blur-sm">
+              <MinusCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+              <h3 className="font-bold text-rose-700 dark:text-rose-300 uppercase tracking-wider text-xs">Applications of Funds</h3>
             </div>
-            <div className="divide-y divide-border">
+            <div className="divide-y divide-border/60">
               {applications.length > 0 ? applications.map((item, idx) => (
-                <div key={idx} className="px-6 py-4 flex justify-between items-center hover:bg-foreground/5 transition-colors">
-                  <span className="text-foreground/70 text-sm">{item.name}</span>
-                  <span className="font-bold text-foreground font-mono">{formatCurrency(item.amount)}</span>
+                <div key={idx} className="px-6 py-3.5 flex justify-between items-center hover:bg-muted/40 transition-colors">
+                  <span className="text-foreground/85 text-sm">{item.name}</span>
+                  <span className="font-semibold text-foreground text-sm tabular-nums">{formatCurrency(item.amount)}</span>
                 </div>
               )) : (
-                <div className="px-6 py-8 text-center text-gray-500 text-sm">No applications found</div>
+                <div className="px-6 py-8 text-center text-muted-foreground text-sm">No applications found</div>
               )}
-              <div className="px-6 py-4 bg-rose-500/10 flex justify-between items-center font-bold text-rose-700 uppercase tracking-wider text-[10px] sticky bottom-0 border-t-2 border-rose-200">
+              <div className="px-6 py-3.5 bg-rose-500/10 flex justify-between items-center font-bold text-rose-700 dark:text-rose-300 uppercase tracking-wider text-xs sticky bottom-0 border-t border-rose-500/20">
                 <span>Total Applications</span>
-                <span className="text-sm font-mono">{formatCurrency(totalApplications)}</span>
+                <span className="text-sm tabular-nums">{formatCurrency(totalApplications)}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 bg-background p-6 rounded-xl border border-border shadow-md flex items-center justify-between">
+        <div className="mt-6 bg-card p-6 rounded-xl border border-border shadow-[var(--shadow-surface)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className={cn(
-              "p-4 rounded-full shadow-inner",
-              workingCapitalChange >= 0 ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
+              "p-3.5 rounded-xl",
+              workingCapitalChange >= 0 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
             )}>
               <Wallet className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Net Change in Working Capital</h4>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Net Change in Working Capital</h4>
               <p className={cn(
-                "text-2xl font-bold font-mono tracking-tight",
-                workingCapitalChange >= 0 ? "text-emerald-600" : "text-rose-600"
+                "text-2xl font-bold tabular-nums tracking-tight mt-0.5",
+                workingCapitalChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
               )}>
                 {workingCapitalChange >= 0 ? 'Increase of ' : 'Decrease of '}
                 {formatCurrency(Math.abs(workingCapitalChange))}
               </p>
             </div>
           </div>
-          <div className="text-[10px] text-gray-400 max-w-xs text-right uppercase leading-relaxed font-bold tracking-tighter">
-            This represents the net change in current assets and current liabilities during the period.
+          <div className="text-xs text-muted-foreground max-w-xs sm:text-right leading-relaxed">
+            Represents the net change in current assets and current liabilities during the selected period.
           </div>
         </div>
       </div>

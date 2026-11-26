@@ -1984,8 +1984,19 @@ export function BusinessIntelligence() {
     return inventoryAnalytics.allStockCategories.filter(c => c.name.toLowerCase().includes(q));
   }, [inventoryAnalytics.allStockCategories, categoryModalSearch]);
 
+  useEffect(() => {
+    const isModalVisible = Boolean(ledgerModalType || activeGraphModal);
+    if (!isModalVisible) return;
+    document.body.classList.add('erp-modal-open');
+    return () => {
+      if (!document.querySelector('[data-enterprise-modal="true"]')) {
+        document.body.classList.remove('erp-modal-open');
+      }
+    };
+  }, [ledgerModalType, activeGraphModal]);
+
   if (loading) {
-    return <SkeletonLoader type="cards" />;
+    return <SkeletonLoader type="cards" pageKey="analytics" />;
   }
 
   return (
@@ -3190,7 +3201,10 @@ export function BusinessIntelligence() {
       {/* 3. Detailed Top Ledgers Modal (Sundry Debtors / Sundry Creditors) */}
       <AnimatePresence>
         {ledgerModalType && (
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 bg-black/75 backdrop-blur-md">
+          <div
+            data-enterprise-modal="true"
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-md"
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -3459,11 +3473,12 @@ export function BusinessIntelligence() {
       <AnimatePresence>
         {activeGraphModal && (
           <div 
+            data-enterprise-modal="true"
             onClick={() => {
               setActiveGraphModal(null);
               setGraphModalSearch('');
             }}
-            className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 backdrop-blur-md"
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-2 sm:p-4 md:p-6 bg-slate-950/65 backdrop-blur-md"
           >
             <motion.div
               onClick={e => e.stopPropagation()}

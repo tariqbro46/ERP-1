@@ -489,66 +489,33 @@ export function RatioAnalysis() {
     });
   };
 
-  const dummyGroups = [
-    { name: 'Working Capital', value: 0, formula: '(Current Assets-Current Liabilities)' },
-    { name: 'Cash-in-Hand', value: 0 },
-    { name: 'Bank Accounts', value: 0 },
-    { name: 'Bank OD A/c', value: 0 },
-    { name: 'Sundry Debtors', value: 0 },
-    { name: 'Sundry Creditors', value: 0 },
-    { name: 'Sales Accounts', value: 0 },
-    { name: 'Purchase Accounts', value: 0 },
-    { name: 'Stock-in-Hand', value: 0 },
-    { name: 'Nett Profit', value: 0 },
-    { name: 'Wkg. Capital Turnover', value: 0, formula: '(Sales Accounts / Working Capital)', isRatio: true },
-    { name: 'Inventory Turnover', value: 0, formula: '(Sales Accounts / Closing Stock)', isRatio: true },
-  ];
-
-  const dummyRatios = [
-    { name: 'Current Ratio', value: 0, formula: '(Current Assets : Current Liabilities)', type: 'ratio' },
-    { name: 'Quick Ratio', value: 0, formula: '(Current Assets-Stock-in-Hand : Current Liabilities)', type: 'ratio' },
-    { name: 'Debt/Equity Ratio', value: 0, formula: '(Loans (Liability) : Capital Account + Nett Profit)', type: 'ratio' },
-    { name: 'Gross Profit %', value: 0, formula: '(Gross Profit / Sales Accounts) %', type: 'percent' },
-    { name: 'Nett Profit %', value: 0, formula: '(Nett Profit / Sales Accounts) %', type: 'percent' },
-    { name: 'Operating Cost %', value: 0, formula: '((COGS + Indirect Expenses) / Sales Accounts) %', type: 'percent' },
-    { name: 'Recv. Turnover in days', value: 0, formula: '(payment performance of Debtors)', type: 'days' },
-    { name: 'Return on Investment %', value: 0, formula: '(Nett Profit / Capital Account + Nett Profit) %', type: 'percent' },
-    { name: 'Return on Wkg. Capital %', value: 0, formula: '(Nett Profit / Working Capital) %', type: 'percent' },
-  ];
-
-  const activeData = loading ? { groups: dummyGroups, ratios: dummyRatios } : (data || { groups: [], ratios: [] });
+  const activeData = data || { groups: [], ratios: [] };
 
   const renderGroups = () => (
     <div className="flex flex-col">
-      <div className="bg-muted px-4 py-2 border-b border-border flex justify-between items-center group">
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Principal Groups :</span>
+      <div className="bg-muted px-4 py-2.5 border-b border-border flex justify-between items-center">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Principal Groups</span>
       </div>
-      <div className="flex-1 divide-y divide-border/30">
+      <div className="flex-1 divide-y divide-border/40">
         {activeData.groups.map((group: any) => (
-          <div key={group.name} className="px-4 py-2 group hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary">
-            <div className="flex justify-between items-center">
-              <div className="flex flex-col">
-                <span className="text-[13px] font-bold text-foreground transition-colors leading-tight">
+          <div key={group.name} className="px-4 py-2.5 group hover:bg-muted/70 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary">
+            <div className="flex justify-between items-center gap-3">
+              <div className="flex flex-col min-w-0">
+                <span className="text-[13px] font-semibold text-foreground leading-tight">
                   {group.name}
                 </span>
                 {showExplanation && group.formula && (
-                  <span className="text-[10px] italic text-muted-foreground leading-tight">{group.formula}</span>
+                  <span className="text-[11px] italic text-muted-foreground leading-tight mt-0.5">{group.formula}</span>
                 )}
               </div>
-              <div className="flex items-center gap-1">
-                {loading ? (
-                  <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded" />
-                ) : (
-                  <>
-                    <span className="text-[13px] font-bold text-foreground font-mono tracking-tighter">
-                      {group.isRatio ? group.value.toFixed(2) : formatNumber(Math.abs(group.value))}
-                    </span>
-                    {!group.isRatio && (
-                      <span className="text-[11px] font-bold text-muted-foreground min-w-[20px]">
-                        {group.value >= 0 ? 'Dr' : 'Cr'}
-                      </span>
-                    )}
-                  </>
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-[13px] font-bold text-foreground tabular-nums">
+                  {group.isRatio ? group.value.toFixed(2) : formatNumber(Math.abs(group.value))}
+                </span>
+                {!group.isRatio && (
+                  <span className="text-[11px] font-semibold text-muted-foreground min-w-[20px]">
+                    {group.value >= 0 ? 'Dr' : 'Cr'}
+                  </span>
                 )}
               </div>
             </div>
@@ -560,30 +527,26 @@ export function RatioAnalysis() {
 
   const renderRatios = () => (
     <div className={cn("flex flex-col", viewVertical ? "" : "bg-muted/5")}>
-      <div className="bg-muted px-4 py-2 border-b border-border flex justify-between items-center group">
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Principal Ratios :</span>
+      <div className="bg-muted px-4 py-2.5 border-b border-border flex justify-between items-center">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Principal Ratios</span>
       </div>
-      <div className="flex-1 divide-y divide-border/30">
+      <div className="flex-1 divide-y divide-border/40">
         {activeData.ratios.map((ratio: any) => (
-          <div key={ratio.name} className="px-4 py-2 group hover:bg-muted/80 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary">
-            <div className="flex justify-between items-center">
-              <div className="flex flex-col">
-                <span className="text-[13px] font-bold text-foreground transition-colors leading-tight">
+          <div key={ratio.name} className="px-4 py-2.5 group hover:bg-muted/70 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary">
+            <div className="flex justify-between items-center gap-3">
+              <div className="flex flex-col min-w-0">
+                <span className="text-[13px] font-semibold text-foreground leading-tight">
                   {ratio.name}
                 </span>
                 {showExplanation && ratio.formula && (
-                  <span className="text-[10px] italic text-muted-foreground leading-tight">{ratio.formula}</span>
+                  <span className="text-[11px] italic text-muted-foreground leading-tight mt-0.5">{ratio.formula}</span>
                 )}
               </div>
-              {loading ? (
-                <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded" />
-              ) : (
-                <span className="text-[13px] font-bold text-foreground font-mono">
-                  {ratio.type === 'ratio' ? `${ratio.value.toFixed(2)} : 1` : 
-                   ratio.type === 'percent' ? `${ratio.value.toFixed(2)} %` : 
-                   `${ratio.value.toFixed(2)} days`}
-                </span>
-              )}
+              <span className="text-[13px] font-bold text-foreground tabular-nums shrink-0">
+                {ratio.type === 'ratio' ? `${ratio.value.toFixed(2)} : 1` : 
+                 ratio.type === 'percent' ? `${ratio.value.toFixed(2)} %` : 
+                 `${ratio.value.toFixed(2)} days`}
+              </span>
             </div>
           </div>
         ))}
@@ -594,37 +557,33 @@ export function RatioAnalysis() {
   return (
     <div className="flex flex-col min-h-screen bg-background transition-colors">
       {/* Fixed Header Section */}
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-30">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
+      <div className="flex-none bg-card/90 backdrop-blur-sm border-b border-border shadow-xs px-4 lg:px-6 py-4 sticky top-0 z-30">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div className="flex-1 w-full sm:max-w-xs">
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <DateInput
-                  label={t('reports.asOnDate')}
-                  value={asOnDate}
-                  onChange={setAsOnDate}
-                  className="w-full"
-                />
-              </div>
-            </div>
+            <DateInput
+              label={t('reports.asOnDate')}
+              value={asOnDate}
+              onChange={setAsOnDate}
+              className="w-full"
+            />
           </div>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
             <button 
               onClick={() => setShowExplanation(!showExplanation)}
-              className={cn("px-3 py-2 border flex items-center gap-2 text-[10px] font-bold uppercase transition-colors", showExplanation ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-gray-500 hover:text-foreground")}
+              className={cn("px-3 py-2 rounded-lg border flex items-center gap-1.5 text-[11px] font-semibold transition-colors", showExplanation ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted")}
             >
-              <Info className="w-3 h-3" /> {showExplanation ? 'Hide Explanation' : 'Show Explanation'}
+              <Info className="w-3.5 h-3.5" /> {showExplanation ? 'Hide Explanation' : 'Show Explanation'}
             </button>
             <button 
               onClick={() => setViewVertical(!viewVertical)}
-              className={cn("px-3 py-2 border flex items-center gap-2 text-[10px] font-bold uppercase transition-colors", viewVertical ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-gray-500 hover:text-foreground")}
+              className={cn("px-3 py-2 rounded-lg border flex items-center gap-1.5 text-[11px] font-semibold transition-colors", viewVertical ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted")}
             >
-              <BarChart2 className="w-3 h-3" /> {viewVertical ? 'Standard View' : 'Vertical Analysis'}
+              <BarChart2 className="w-3.5 h-3.5" /> {viewVertical ? 'Standard View' : 'Vertical Analysis'}
             </button>
             <button
               onClick={handleDownloadExcel}
               disabled={loading || !data}
-              className="px-3 py-2 bg-emerald-50/70 border border-emerald-200 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              className="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-1.5 text-[11px] font-semibold disabled:opacity-50"
               title="Export Excel (.xlsx)"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" /> EXCEL
@@ -632,15 +591,15 @@ export function RatioAnalysis() {
             <button
               onClick={handleDownloadCSV}
               disabled={loading || !data}
-              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              className="px-3 py-2 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center gap-1.5 text-[11px] font-semibold disabled:opacity-50"
               title="Export CSV"
             >
-              <Download className="w-3 h-3" /> CSV
+              <Download className="w-3.5 h-3.5" /> CSV
             </button>
             <button 
               onClick={handlePrint}
               disabled={loading || !data}
-              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              className="px-3 py-2 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center gap-1.5 text-[11px] font-semibold disabled:opacity-50"
               title={t('common.print')}
             >
               <Printer className="w-3.5 h-3.5" /> {t('common.print')}
@@ -648,7 +607,7 @@ export function RatioAnalysis() {
             <button
               onClick={handleDownloadPDF}
               disabled={loading || !data}
-              className="px-3 py-2 bg-primary text-primary-foreground border border-primary hover:opacity-90 transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              className="px-3.5 py-2 rounded-lg bg-primary text-primary-foreground border border-primary hover:bg-primary/90 transition-colors flex items-center gap-1.5 text-[11px] font-semibold shadow-xs disabled:opacity-50"
               title="Print to PDF"
             >
               <Download className="w-3.5 h-3.5" /> PDF
@@ -656,10 +615,10 @@ export function RatioAnalysis() {
             <button
               onClick={handleEmailReport}
               disabled={loading || !data}
-              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              className="px-3 py-2 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center gap-1.5 text-[11px] font-semibold disabled:opacity-50"
               title="Share Summary via Email"
             >
-              <Mail className="w-3.5 h-3.5" /> EMAIL
+              <Mail className="w-3.5 h-3.5" /> Email
             </button>
           </div>
         </div>
@@ -668,19 +627,23 @@ export function RatioAnalysis() {
       {/* Scrollable Content Section */}
       <div className="flex-1 overflow-y-auto no-scrollbar p-0 bg-background">
         <div id="ratio-analysis-report" className="p-4 lg:p-6 space-y-6 pb-20">
-          <div className="border border-border bg-card shadow-sm rounded-lg overflow-hidden">
-            {viewVertical ? (
-              <div className="flex flex-col divide-y divide-border">
-                {renderGroups()}
-                {renderRatios()}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x divide-border">
-                {renderGroups()}
-                {renderRatios()}
-              </div>
-            )}
-          </div>
+          {loading ? (
+            <SkeletonLoader type="table" pageKey="reports" isFullPage={false} />
+          ) : (
+            <div className="border border-border bg-card shadow-[var(--shadow-surface)] rounded-xl overflow-hidden">
+              {viewVertical ? (
+                <div className="flex flex-col divide-y divide-border">
+                  {renderGroups()}
+                  {renderRatios()}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x divide-border">
+                  {renderGroups()}
+                  {renderRatios()}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

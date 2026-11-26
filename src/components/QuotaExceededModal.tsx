@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ShieldAlert, RefreshCw, X, Database, Clock, Mail, Phone, AlertCircle, RotateCcw, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -142,18 +143,26 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
     }, 800);
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <>
       <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <div
+          data-enterprise-modal="true"
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[99990] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+        >
           {/* Full-screen backdrop */}
           <motion.div
+            data-modal-ignore="true"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/75 dark:bg-black/85 backdrop-blur-md cursor-pointer"
+            className="fixed inset-0 z-0 bg-slate-950/65 backdrop-blur-md cursor-pointer"
           />
 
           {/* Modal Container matching App Theme */}
@@ -162,14 +171,14 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.98, opacity: 0, y: 8 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="relative w-full max-w-3xl max-h-[92vh] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden text-foreground font-sans select-none z-10 flex flex-col my-auto"
+            className="relative w-full max-w-3xl max-h-[92vh] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden text-foreground font-sans select-none z-20 flex flex-col my-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header Bar matching QuotaDashboardModal */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/90 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20 shrink-0">
-                  <Database className="w-5 h-5 animate-pulse" />
+                  <Database className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -251,7 +260,7 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
               <div className="bg-muted/40 border border-border rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-primary/10 border border-primary/20 text-primary rounded-lg shrink-0">
-                    <Clock className="w-4.5 h-4.5 animate-pulse" />
+                    <Clock className="w-4.5 h-4.5" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-foreground">স্বয়ংক্রিয় রিসেট সময়সূচি (Automatic Reset Schedule)</h4>
@@ -383,11 +392,12 @@ export default function QuotaExceededModal({ isOpen, onClose, company }: QuotaEx
     </AnimatePresence>
 
     {/* Quota Reset Request Contact Modal for Users */}
-    <QuotaResetRequestModal
-      isOpen={showRequestModal}
-      onClose={() => setShowRequestModal(false)}
-      companyName={company?.name || 'Your Company'}
-    />
-  </>
-);
+      <QuotaResetRequestModal
+        isOpen={showRequestModal}
+        onClose={() => setShowRequestModal(false)}
+        companyName={company?.name || 'Your Company'}
+      />
+    </>,
+    document.body
+  );
 }

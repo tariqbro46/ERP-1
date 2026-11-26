@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Printer, Download, FileSpreadsheet, Mail, FileText, Settings as SettingsIcon, Calculator, Layout, MoreVertical, X } from 'lucide-react';
+import { Search, Printer, Download, FileSpreadsheet, Mail, FileText, Settings as SettingsIcon, Calculator, Layout, MoreVertical } from 'lucide-react';
+import { SkeletonLoader } from './SkeletonLoader';
+import { EnterpriseModal } from './ui/EnterpriseModal';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { cn, formatNumber, formatQuantity, formatVoucherNo, compareLedgerVouchers } from '../lib/utils';
 import { erpService } from '../services/erpService';
@@ -488,14 +490,14 @@ export function LedgerStatement() {
 
   return (
     <div className={cn(
-      "h-screen flex flex-col font-mono transition-colors overflow-hidden",
-      settings.reportsPageUiStyle === 'modern' ? "bg-slate-50/50" : "bg-background"
+      "h-screen flex flex-col transition-colors overflow-hidden",
+      settings.reportsPageUiStyle === 'modern' ? "bg-muted/30" : "bg-background"
     )}>
       {/* Fixed Header Section */}
       <div className={cn(
         "flex-none border-b shadow-sm px-4 lg:px-6 py-4 space-y-4 z-30",
         settings.reportsPageUiStyle === 'modern'
-          ? "bg-white/95 backdrop-blur-md border-slate-200/60"
+          ? "bg-card/95 backdrop-blur-md border-border"
           : "bg-background border-border"
       )}>
         {/* Line 1: Search box and From-to date picker in 1 line */}
@@ -503,7 +505,7 @@ export function LedgerStatement() {
           {/* Search box */}
           <div className="flex-1 w-full relative">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
                 type="text"
                 placeholder={t('ledger.searchLedgers')}
@@ -519,12 +521,12 @@ export function LedgerStatement() {
                 }}
                 onKeyDown={handleKeyDown}
                 onFocus={() => setShowLedgerList(true)}
-                className="w-full bg-gray-50 border border-border text-foreground pl-11 pr-4 py-2.5 text-sm outline-none focus:border-foreground transition-all rounded-lg"
+                className="w-full bg-muted/40 border border-border text-foreground pl-11 pr-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all rounded-lg"
               />
             </div>
             
             {showLedgerList && ledgerSearch && (
-              <div className="absolute z-50 w-full mt-1 bg-white border border-border shadow-xl max-h-60 overflow-y-auto rounded-lg">
+              <div className="absolute z-50 w-full mt-1 bg-card border border-border shadow-xl max-h-60 overflow-y-auto rounded-xl">
                 {filteredLedgers.length > 0 ? (
                   filteredLedgers.map((l, idx) => (
                     <button
@@ -532,20 +534,21 @@ export function LedgerStatement() {
                       onClick={() => handleLedgerSelect(l)}
                       onMouseEnter={() => setActiveIndex(idx)}
                       className={cn(
-                        "w-full text-left px-4 py-3 text-sm text-foreground hover:bg-gray-50 border-b border-border/50 last:border-none transition-colors",
-                        activeIndex === idx && "bg-blue-50 text-blue-700"
+                        "w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/60 border-b border-border/50 last:border-none transition-colors",
+                        activeIndex === idx && "bg-primary/10 text-primary"
                       )}
                     >
                       {l.name}
                     </button>
                   ))
                 ) : (
-                  <div className="px-4 py-3 text-sm text-gray-500">No matching ledgers</div>
+                  <div className="px-4 py-3 text-sm text-muted-foreground">No matching ledgers</div>
                 )}
               </div>
             )}
             {showLedgerList && (
               <div 
+                data-modal-ignore="true"
                 className="fixed inset-0 z-40" 
                 onClick={() => setShowLedgerList(false)}
               />
@@ -579,7 +582,7 @@ export function LedgerStatement() {
           <button 
             onClick={() => setShowAdjustmentModal(true)}
             disabled={!selectedLedger}
-            className="px-3 py-2 bg-emerald-600/10 border border-emerald-600/20 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase tracking-widest"
+            className="px-3 py-2 bg-emerald-600/10 border border-emerald-600/20 rounded-lg text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase tracking-widest"
             title="Quick Adjustment"
           >
             <Calculator className="w-3.5 h-3.5" /> Adjust
@@ -588,7 +591,7 @@ export function LedgerStatement() {
           {/* Elementor Report Designer Button */}
           <button 
             onClick={() => setIsReportBuilderOpen(true)}
-            className="px-3 py-2 bg-blue-600/10 border border-blue-600/30 text-blue-600 hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider"
+            className="px-3 py-2 bg-blue-600/10 border border-blue-600/30 rounded-lg text-blue-600 hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider"
             title="Visual Elementor-style Drag & Drop Report Designer"
           >
             <Layout className="w-3.5 h-3.5" /> DESIGN REPORT
@@ -597,7 +600,7 @@ export function LedgerStatement() {
           {/* Configure Button */}
           <button 
             onClick={() => setIsConfigOpen(true)}
-            className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
+            className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase"
             title="Configure Report"
           >
             <SettingsIcon className="w-3 h-3" /> F12: CONFIGURE
@@ -607,7 +610,7 @@ export function LedgerStatement() {
           <button 
             onClick={fetchEntries}
             disabled={loading || !selectedLedger}
-            className="p-2 border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center disabled:opacity-50"
+            className="p-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex justify-center disabled:opacity-50"
             title="Refresh Data"
           >
             <Search className={cn("w-4 h-4", loading && "animate-spin")} />
@@ -617,7 +620,7 @@ export function LedgerStatement() {
           <button 
             onClick={handlePrint}
             disabled={!selectedLedger}
-            className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+            className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
           >
             <Printer className="w-4 h-4" />
             {t('common.print')}
@@ -627,7 +630,7 @@ export function LedgerStatement() {
           <button
             onClick={handleDownloadExcel}
             disabled={!selectedLedger}
-            className="px-3 py-2 border border-border text-emerald-700 bg-emerald-50/70 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+            className="px-3 py-2 border border-border rounded-lg text-emerald-700 bg-emerald-50/70 hover:bg-emerald-600 hover:text-white transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
             title="Export Excel (.xlsx)"
           >
             <FileSpreadsheet className="w-3.5 h-3.5" /> EXCEL
@@ -637,7 +640,7 @@ export function LedgerStatement() {
           <button 
             onClick={handleDownloadCSV}
             disabled={!selectedLedger}
-            className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+            className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
             title="Export CSV"
           >
             <Download className="w-3 h-3" /> CSV
@@ -647,7 +650,7 @@ export function LedgerStatement() {
           <button 
             onClick={handleDownloadPDF}
             disabled={!selectedLedger}
-            className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+            className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
             title="Print to PDF (Save professional financial statement offline)"
           >
             <Download className="w-3 h-3" /> PRINT TO PDF
@@ -657,7 +660,7 @@ export function LedgerStatement() {
           <button
             onClick={handleEmailReport}
             disabled={!selectedLedger}
-            className="px-3 py-2 border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
+            className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase"
             title="Share Summary via Email"
           >
             <Mail className="w-3.5 h-3.5" /> EMAIL
@@ -667,7 +670,7 @@ export function LedgerStatement() {
           <button 
             onClick={handleFullPageView}
             disabled={!selectedLedger}
-            className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 bg-foreground text-background rounded-lg text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <FileText className="w-3.5 h-3.5" /> Full Page View
           </button>
@@ -684,10 +687,16 @@ export function LedgerStatement() {
 
       {/* Report Content Section */}
       <div className="flex-1 overflow-y-auto no-scrollbar p-0 scroll-smooth">
-        <div className="p-4 lg:p-6 space-y-6 min-h-full flex flex-col bg-white">
+        <div className={cn(
+          "p-4 lg:p-6 space-y-6 min-h-full flex flex-col",
+          settings.reportLayout === 'Layout 2' ? "bg-white" : "bg-background"
+        )}>
+          {selectedLedger && loading ? (
+            <SkeletonLoader type="table" pageKey="ledgers" isFullPage={false} />
+          ) : (
           <div id="ledger-report" className={cn(
             "bg-card border border-border relative flex-1 flex flex-col",
-            settings.reportLayout === 'Layout 2' && "bg-white text-black p-8 min-h-[800px] pb-32"
+            settings.reportLayout === 'Layout 2' ? "bg-white text-black p-8 min-h-[800px] pb-32" : "rounded-xl overflow-hidden shadow-xs"
           )}>
           {settings.reportLayout === 'Layout 2' && (
             <div className="relative text-center mb-6 border-b-2 border-black pb-4">
@@ -719,9 +728,12 @@ export function LedgerStatement() {
               "w-full text-left text-xs min-w-[700px] border-separate border-spacing-0 h-full",
               settings.reportLayout === 'Layout 2' ? "border-y border-black table-fixed" : ""
             )}>
-              <thead className="sticky top-0 z-20 bg-white shadow-[0_2px_10px_-3px_rgba(0,0,0,0.1)]">
+              <thead className={cn(
+                "sticky top-0 z-20 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.1)]",
+                settings.reportLayout === 'Layout 2' ? "bg-white" : "bg-card"
+              )}>
               <tr className={cn(
-                "border-b border-border text-gray-500 uppercase bg-gray-50/50",
+                "border-b border-border text-muted-foreground uppercase bg-muted/50",
                 settings.reportLayout === 'Layout 2' && "border-y-2 border-black text-black font-bold bg-white"
               )}>
                 <th className={cn("px-6 py-4 font-medium border-b border-border align-middle", settings.reportLayout === 'Layout 2' ? "w-[12%] border-black" : "w-[120px]")}>{t('common.date')}</th>
@@ -741,9 +753,7 @@ export function LedgerStatement() {
               settings.reportLayout === 'Layout 2' && "text-black"
             )}>
               {!selectedLedger ? (
-                <tr><td colSpan={config.showRunningBalance ? 8 : 7} className="px-6 py-10 text-center text-gray-600 align-middle">{t('ledger.selectToView')}</td></tr>
-              ) : loading ? (
-                <tr><td colSpan={config.showRunningBalance ? 8 : 7} className="px-6 py-10 text-center text-gray-600 align-middle">{t('ledger.loadingEntries')}</td></tr>
+                <tr><td colSpan={config.showRunningBalance ? 8 : 7} className="px-6 py-10 text-center text-muted-foreground align-middle">{t('ledger.selectToView')}</td></tr>
               ) : (
                 <>
                   {/* Opening Balance Row */}
@@ -764,20 +774,20 @@ export function LedgerStatement() {
                           <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                           <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                           <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
-                          <td className={cn("px-6 py-4 text-right align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                          <td className={cn("px-6 py-4 text-right tabular-nums align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
                             {openingBalance > 0 ? formatNumber(openingBalance) : ''}
                           </td>
-                          <td className={cn("px-6 py-4 text-right align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                          <td className={cn("px-6 py-4 text-right tabular-nums align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
                             {openingBalance < 0 ? formatNumber(Math.abs(openingBalance)) : ''}
                           </td>
                           {config.showRunningBalance && (
-                            <td className={cn("px-6 py-4 text-right text-foreground align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                            <td className={cn("px-6 py-4 text-right text-foreground tabular-nums align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
                             </td>
                           )}
                         </tr>
 
                         {entries.length === 0 ? (
-                          <tr><td colSpan={config.showRunningBalance ? 8 : 7} className="px-6 py-10 text-center text-gray-600 italic">{t('ledger.noTransactions')}</td></tr>
+                          <tr><td colSpan={config.showRunningBalance ? 8 : 7} className="px-6 py-10 text-center text-muted-foreground italic">{t('ledger.noTransactions')}</td></tr>
                         ) : entries.map((e, idx) => {
                           runningBalance += (e.debit || 0) - (e.credit || 0);
                           const currentBalance = runningBalance;
@@ -789,9 +799,9 @@ export function LedgerStatement() {
                             <React.Fragment key={e.id}>
                               <tr 
                                 className={cn(
-                                  "border-b border-black/10 hover:bg-muted/80 transition-colors cursor-pointer group border-l-4 border-transparent hover:border-primary",
-                                  config.enableStripeView && !settings.reportLayout && idx % 2 !== 0 && "bg-muted/30",
-                                  settings.reportLayout === 'Layout 2' && "bg-white text-black hover:bg-gray-50",
+                                  "border-b border-border/50 hover:bg-muted/80 transition-colors cursor-pointer group border-l-4 border-transparent hover:border-primary",
+                                  config.enableStripeView && settings.reportLayout !== 'Layout 2' && idx % 2 !== 0 && "bg-muted/30",
+                                  settings.reportLayout === 'Layout 2' && "bg-white text-black border-black/10 hover:bg-gray-50",
                                   settings.reportLayout === 'Layout 2' && mainRowIsStripe && "bg-[#F3F4F6]"
                                 )}
                                 onClick={() => navigate(`/vouchers/view/${e.id}`)}
@@ -807,10 +817,10 @@ export function LedgerStatement() {
                                   });
                                 }}
                               >
-                                <td className="px-6 py-4 whitespace-nowrap text-black align-middle">{formatReportDate(e.vouchers?.v_date, settings.dateFormat)}</td>
+                                <td className={cn("px-6 py-4 whitespace-nowrap align-middle", settings.reportLayout === 'Layout 2' ? "text-black" : "text-foreground")}>{formatReportDate(e.vouchers?.v_date, settings.dateFormat)}</td>
                                 <td className="px-6 py-4 align-middle">
                                   <div className="flex items-center justify-between gap-2">
-                                    <span className="text-black font-bold">
+                                    <span className={cn("font-bold", settings.reportLayout === 'Layout 2' ? "text-black" : "text-foreground")}>
                                       {settings.reportLayout === 'Layout 2' ? `${e.debit > 0 ? 'Dr' : 'Cr'} ` : ''}{e.particulars}
                                     </span>
                                     <button
@@ -827,24 +837,24 @@ export function LedgerStatement() {
                                           date: e.vouchers?.v_date
                                         });
                                       }}
-                                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted/80 rounded transition-all text-gray-400 hover:text-foreground shrink-0"
+                                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted/80 rounded transition-all text-muted-foreground hover:text-foreground shrink-0"
                                       title="Actions (Right-click)"
                                     >
                                       <MoreVertical className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 </td>
-                                <td className="px-6 py-4 uppercase text-[10px] text-black align-middle">{e.vouchers?.v_type}</td>
-                                <td className="px-6 py-4 text-[10px] text-black align-middle">
+                                <td className={cn("px-6 py-4 uppercase text-[10px] align-middle", settings.reportLayout === 'Layout 2' ? "text-black" : "text-muted-foreground")}>{e.vouchers?.v_type}</td>
+                                <td className={cn("px-6 py-4 text-[10px] tabular-nums align-middle", settings.reportLayout === 'Layout 2' ? "text-black" : "text-foreground")}>
                                   {formatVoucherNo(e.vouchers?.v_no || e.vouchers?.ref_no || e.vouchers?.reference_no)}
                                 </td>
-                                <td className="px-6 py-4 text-black font-mono text-[10px] align-middle">
+                                <td className={cn("px-6 py-4 tabular-nums text-[10px] align-middle", settings.reportLayout === 'Layout 2' ? "text-black" : "text-foreground")}>
                                   {e.vouchers?.serial_no || e.vouchers?.auto_serial_no || '-'}
                                 </td>
-                                <td className="px-6 py-4 text-right text-black align-middle">{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
-                                <td className="px-6 py-4 text-right text-black align-middle">{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                <td className={cn("px-6 py-4 text-right tabular-nums align-middle", settings.reportLayout === 'Layout 2' ? "text-black" : "text-foreground")}>{e.debit > 0 ? e.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
+                                <td className={cn("px-6 py-4 text-right tabular-nums align-middle", settings.reportLayout === 'Layout 2' ? "text-black" : "text-foreground")}>{e.credit > 0 ? e.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</td>
                                 {config.showRunningBalance && (
-                                  <td className="px-6 py-4 text-right text-black font-bold align-middle">
+                                  <td className={cn("px-6 py-4 text-right font-bold tabular-nums align-middle", settings.reportLayout === 'Layout 2' ? "text-black" : "text-foreground")}>
                                     {Math.abs(currentBalance).toLocaleString(undefined, { minimumFractionDigits: 2 })} {currentBalance >= 0 ? 'Dr' : 'Cr'}
                                   </td>
                                 )}
@@ -864,20 +874,20 @@ export function LedgerStatement() {
                                       <div className="flex flex-col">
                                         <div className="flex justify-between items-center gap-4">
                                           <span className="text-[11px] font-medium">{items.find(i => i.id === item.item_id)?.name || item.item_name}</span>
-                                          <span className="text-[10px] text-gray-600 whitespace-nowrap">{formatQuantity(item.qty, unitLabel)} {unitLabel}</span>
+                                          <span className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">{formatQuantity(item.qty, unitLabel)} {unitLabel}</span>
                                         </div>
                                         {config.showStockDescriptions && item.description && (
-                                          <span className="text-[9px] italic text-gray-400">{item.description}</span>
+                                          <span className="text-[9px] italic text-muted-foreground">{item.description}</span>
                                         )}
                                       </div>
                                     </td>
                                     <td className="align-middle"></td>
                                     <td className="align-middle"></td>
                                     <td className="align-middle"></td>
-                                    <td className="px-6 py-1 text-right text-[11px] font-mono text-gray-400 italic align-middle">
+                                    <td className="px-6 py-1 text-right text-[11px] tabular-nums text-muted-foreground italic align-middle">
                                       {formatNumber(item.rate)}
                                     </td>
-                                    <td className="px-6 py-1 text-right text-[11px] font-mono align-middle">
+                                    <td className="px-6 py-1 text-right text-[11px] tabular-nums align-middle">
                                       {formatNumber(item.amount ?? (Number(item.qty || 0) * Number(item.rate || 0)))}
                                     </td>
                                     {config.showRunningBalance && <td className="align-middle"></td>}
@@ -894,7 +904,7 @@ export function LedgerStatement() {
                                     settings.reportLayout === 'Layout 2' && narrationRowIsStripe && "bg-[#F3F4F6]"
                                   )}>
                                     <td className="align-middle"></td>
-                                    <td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-1 pl-10 italic text-[10px] text-black align-middle">
+                                    <td className={cn("px-6 py-1 pl-10 italic text-[10px] align-middle", settings.reportLayout === 'Layout 2' ? "text-black" : "text-muted-foreground")}>
                                       {e.vouchers.narration}
                                     </td>
                                   </tr>
@@ -910,7 +920,7 @@ export function LedgerStatement() {
                                     settings.reportLayout === 'Layout 2' && enteredByRowIsStripe && "bg-[#F3F4F6]"
                                   )}>
                                     <td className="align-middle"></td>
-                                    <td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-1 pl-16 uppercase text-[8px] text-gray-400 align-middle">
+                                    <td colSpan={config.showRunningBalance ? 7 : 6} className="px-6 py-1 pl-16 uppercase text-[8px] text-muted-foreground align-middle">
                                       By: {users.find(u => u.uid === e.vouchers?.createdBy)?.displayName || 'System'}
                                     </td>
                                   </tr>
@@ -921,22 +931,22 @@ export function LedgerStatement() {
                         })}
                   
                   <tr className={cn(
-                    "border-t border-black/50 font-bold",
-                    settings.reportLayout === 'Layout 2' ? "bg-white text-black border border-black shadow-[0_-2px_10px_-3px_rgba(0,0,0,0.1)]" : "bg-foreground/5 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]"
+                    "border-t border-border font-bold",
+                    settings.reportLayout === 'Layout 2' ? "bg-white text-black border border-black shadow-[0_-2px_10px_-3px_rgba(0,0,0,0.1)]" : "bg-muted/40 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]"
                   )}>
                     <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                     <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>{t('common.grandTotal')}</td>
                     <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                     <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
                     <td className={cn("px-6 py-4 align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}></td>
-                    <td className={cn("px-6 py-4 text-right align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                    <td className={cn("px-6 py-4 text-right tabular-nums align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
                       {displayTotalDebit > 0 ? formatNumber(displayTotalDebit) : ''}
                     </td>
-                    <td className={cn("px-6 py-4 text-right align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
+                    <td className={cn("px-6 py-4 text-right tabular-nums align-middle", settings.reportLayout === 'Layout 2' && "border border-black")}>
                       {displayTotalCredit > 0 ? formatNumber(displayTotalCredit) : ''}
                     </td>
                     {config.showRunningBalance && (
-                      <td className={cn("px-6 py-4 text-right text-foreground font-bold bg-muted/10 align-middle", settings.reportLayout === 'Layout 2' && "border border-black bg-white")}>
+                      <td className={cn("px-6 py-4 text-right text-foreground font-bold bg-muted/10 tabular-nums align-middle", settings.reportLayout === 'Layout 2' && "border border-black bg-white")}>
                       </td>
                     )}
                   </tr>
@@ -966,6 +976,7 @@ export function LedgerStatement() {
           )}
         </div>
       </div>
+          )}
 
       {selectedLedger && (
         <QuickAdjustmentModal
@@ -1014,43 +1025,40 @@ export function LedgerStatement() {
         onDeleted={fetchEntries}
       />
 
-      {fullPageHtml && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-gray-200 rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 shrink-0">
-              <div className="font-bold text-sm text-gray-900">
-                Full Page Preview — {currentLedger?.name || 'Ledger Statement'}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handlePrint}
-                  className="px-3 py-1.5 text-xs font-bold uppercase border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 rounded flex items-center gap-1.5"
-                >
-                  <Printer className="w-3.5 h-3.5" /> {t('common.print')}
-                </button>
-                <button
-                  onClick={handleDownloadPDF}
-                  className="px-3 py-1.5 text-xs font-bold uppercase bg-gray-900 text-white hover:opacity-90 rounded flex items-center gap-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" /> PDF
-                </button>
-                <button
-                  onClick={() => setFullPageHtml(null)}
-                  className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-200 rounded"
-                  aria-label="Close preview"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            <iframe
-              title="Ledger Statement Full Page Preview"
-              srcDoc={fullPageHtml}
-              className="flex-1 w-full border-0 bg-white"
-            />
+      <EnterpriseModal
+        isOpen={!!fullPageHtml}
+        onClose={() => setFullPageHtml(null)}
+        title={`Full Page Preview — ${currentLedger?.name || 'Ledger Statement'}`}
+        size="full"
+        className="h-[90vh]"
+        bodyClassName="p-0 overflow-hidden bg-white"
+        headerExtra={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="px-3 py-1.5 text-xs font-bold uppercase border border-border bg-card text-foreground hover:bg-muted rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Printer className="w-3.5 h-3.5" /> {t('common.print')}
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadPDF}
+              className="px-3 py-1.5 text-xs font-bold uppercase bg-primary text-primary-foreground hover:opacity-90 rounded-lg flex items-center gap-1.5 transition-opacity cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" /> PDF
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        {fullPageHtml && (
+          <iframe
+            title="Ledger Statement Full Page Preview"
+            srcDoc={fullPageHtml}
+            className="w-full h-full border-0 bg-white"
+          />
+        )}
+      </EnterpriseModal>
     </div>
   </div>
 </div>

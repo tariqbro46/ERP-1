@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Database, Clock, Eye, Edit2, Trash2, ShieldCheck, X, HelpCircle, 
   CheckCircle2, RotateCcw, Loader2, Sliders, Users, 
@@ -114,15 +115,21 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      document.body.classList.add('has-active-modal');
+      document.body.classList.add('has-active-modal', 'erp-modal-open');
       setSelectedLimit(company?.quotaLimit !== undefined ? company.quotaLimit : 10000);
     } else {
       document.body.style.overflow = '';
       document.body.classList.remove('has-active-modal');
+      if (!document.querySelector('[data-enterprise-modal="true"]')) {
+        document.body.classList.remove('erp-modal-open');
+      }
     }
     return () => {
       document.body.style.overflow = '';
       document.body.classList.remove('has-active-modal');
+      if (!document.querySelector('[data-enterprise-modal="true"]')) {
+        document.body.classList.remove('erp-modal-open');
+      }
     };
   }, [isOpen, company?.quotaLimit]);
 
@@ -364,36 +371,34 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <>
       <AnimatePresence>
         {isOpen && (
           <motion.div 
             id="quota-dashboard-overlay" 
             data-modal="true"
+            data-enterprise-modal="true"
             role="dialog"
             aria-modal="true"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 md:p-6"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) onClose();
+            }}
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/75 dark:bg-black/85 backdrop-blur-md"
           >
-            {/* Full-screen backdrop covering top-bar, sidebars, and viewport */}
-            <div 
-              onClick={onClose}
-              className="fixed inset-0 bg-black/75 dark:bg-black/85 backdrop-blur-md"
-            />
-
             {/* Main Modal Card matching App Theme */}
             <motion.div 
               initial={{ scale: 0.96, opacity: 0, y: 12 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.98, opacity: 0, y: 8 }}
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="relative w-full max-w-4xl max-h-[92vh] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden text-foreground font-sans select-none z-10 flex flex-col"
+              className="relative w-full max-w-4xl max-h-[92vh] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden text-foreground font-sans select-none z-20 flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header Bar */}
@@ -608,7 +613,7 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                               : "bg-muted hover:bg-muted/80 text-foreground border-border"
                           )}
                         >
-                          <span className={cn("w-2 h-2 rounded-full", showTimelineGraph ? "bg-white animate-pulse" : "bg-slate-400")} />
+                          <span className={cn("w-2 h-2 rounded-full", showTimelineGraph ? "bg-white" : "bg-slate-400")} />
                           <span>{showTimelineGraph ? 'Timeline Graph: ON' : 'Timeline Graph: OFF'}</span>
                         </button>
                       </div>
@@ -1331,7 +1336,7 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
                                 : "bg-muted hover:bg-muted/80 text-foreground border border-border"
                             )}
                           >
-                            <span className={cn("w-2 h-2 rounded-full", showTimelineGraph ? "bg-white animate-pulse" : "bg-slate-400")} />
+                            <span className={cn("w-2 h-2 rounded-full", showTimelineGraph ? "bg-white" : "bg-slate-400")} />
                             <span>{showTimelineGraph ? 'Graph Display: Active (ON)' : 'Graph Display: Inactive (OFF)'}</span>
                           </button>
                         </div>
@@ -1368,19 +1373,22 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
       <AnimatePresence>
         {isConfirmResetModalOpen && (
           <motion.div
+            data-enterprise-modal="true"
+            role="dialog"
+            aria-modal="true"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+            className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-md"
             onClick={() => !isSubmittingReset && setIsConfirmResetModalOpen(false)}
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              initial={{ scale: 0.96, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.96, opacity: 0, y: 8 }}
+              exit={{ scale: 0.97, opacity: 0, y: 8 }}
               transition={{ duration: 0.18 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden text-foreground flex flex-col"
+              className="w-full max-w-xl bg-card border border-border rounded-2xl shadow-2xl overflow-hidden text-foreground flex flex-col"
             >
               {/* Header */}
               <div className="p-5 border-b border-border bg-muted/40 flex items-start justify-between gap-3">
@@ -1523,6 +1531,7 @@ export default function QuotaDashboardModal({ isOpen, onClose, company }: QuotaD
         onClose={() => setShowRequestModal(false)}
         companyName={company?.name || 'Your Company'}
       />
-    </>
+    </>,
+    document.body
   );
 }

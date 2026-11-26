@@ -537,81 +537,8 @@ export function BalanceSheet() {
     });
   };
 
-  const dummyLiabilityGroups = [
-    {
-      name: 'Capital Account',
-      total: 0,
-      subItems: [
-        { name: 'Share Capital', balance: 0, isLoading: true },
-        { name: 'Reserves & Surplus', balance: 0, isLoading: true }
-      ],
-      isLoading: true
-    },
-    {
-      name: 'Loans (Liability)',
-      total: 0,
-      subItems: [
-        { name: 'Secured Loans', balance: 0, isLoading: true },
-        { name: 'Unsecured Loans', balance: 0, isLoading: true }
-      ],
-      isLoading: true
-    },
-    {
-      name: 'Current Liabilities',
-      total: 0,
-      subItems: [
-        { name: 'Sundry Creditors', balance: 0, isLoading: true },
-        { name: 'Duties & Taxes', balance: 0, isLoading: true }
-      ],
-      isLoading: true
-    },
-    {
-      name: 'Profit & Loss A/c',
-      total: 0,
-      subItems: [
-        { name: 'Opening Balance', balance: 0, isPLSub: true, isLoading: true },
-        { name: 'Current Period', balance: 0, isPLSub: true, isLoading: true }
-      ],
-      isPLContainer: true,
-      isLoading: true
-    }
-  ];
-
-  const dummyAssetGroups = [
-    {
-      name: 'Fixed Assets',
-      total: 0,
-      subItems: [
-        { name: 'Plant & Machinery', balance: 0, isLoading: true },
-        { name: 'Office Equipments', balance: 0, isLoading: true }
-      ],
-      isLoading: true
-    },
-    {
-      name: 'Investments',
-      total: 0,
-      subItems: [
-        { name: 'Mutual Funds / Shares', balance: 0, isLoading: true }
-      ],
-      isLoading: true
-    },
-    {
-      name: 'Current Assets',
-      total: 0,
-      subItems: [
-        { name: 'Closing Stock', balance: 0, isSystem: true, type: 'Stock', isLoading: true },
-        { name: 'Bank Accounts', balance: 0, isLoading: true },
-        { name: 'Cash-in-hand', balance: 0, isLoading: true },
-        { name: 'Sundry Debtors', balance: 0, isLoading: true }
-      ],
-      isLoading: true
-    }
-  ];
-
-  const liabilitiesToRender = loading ? dummyLiabilityGroups : liabilityGroups;
-  const assetsToRender = loading ? dummyAssetGroups : assetGroups;
-
-  const finalTotal = Math.max(Math.abs(totalAssets), absTotalLiabilities);
+  const liabilitiesToRender = liabilityGroups;
+  const assetsToRender = assetGroups;
 
   return (
     <div className="flex flex-col h-screen bg-background transition-colors overflow-hidden">
@@ -634,7 +561,7 @@ export function BalanceSheet() {
             <button 
               onClick={handlePrint}
               disabled={loading}
-              className="p-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex justify-center items-center disabled:opacity-50"
+              className="p-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex justify-center items-center disabled:opacity-50"
               title="Print Balance Sheet"
               id="print-btn"
             >
@@ -643,7 +570,7 @@ export function BalanceSheet() {
             <button 
               onClick={handleDownloadExcel}
               disabled={loading}
-              className="px-3 py-2 bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              className="px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
               title="Export Genuine Excel (.xlsx)"
               id="excel-btn"
             >
@@ -652,7 +579,7 @@ export function BalanceSheet() {
             <button 
               onClick={handleDownload}
               disabled={loading}
-              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase disabled:opacity-50"
+              className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase disabled:opacity-50"
               title={t('common.downloadCsv')}
               id="csv-btn"
             >
@@ -661,7 +588,7 @@ export function BalanceSheet() {
             <button 
               onClick={handleDownloadPDF}
               disabled={loading}
-              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase disabled:opacity-50"
+              className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase disabled:opacity-50"
               title="Print to PDF (Save professional financial statement offline)"
               id="pdf-btn"
             >
@@ -670,7 +597,7 @@ export function BalanceSheet() {
             <button 
               onClick={handleEmailReport}
               disabled={loading}
-              className="px-3 py-2 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
+              className="px-3 py-2 bg-card border border-border rounded-lg text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase disabled:opacity-50"
               title="Share Balance Sheet Summary via Email"
               id="email-btn"
             >
@@ -682,8 +609,11 @@ export function BalanceSheet() {
 
       {/* Report Content Section */}
       <div className="flex-1 overflow-y-auto no-scrollbar p-0 bg-background scroll-smooth">
-        <div id="balance-sheet-report" className="p-4 lg:p-6 min-h-full flex flex-col bg-white">
-          <div className="flex-1 border border-border bg-card shadow-sm rounded-lg overflow-hidden flex flex-col">
+        <div id="balance-sheet-report" className="p-4 lg:p-6 min-h-full flex flex-col bg-background">
+          {loading ? (
+            <SkeletonLoader type="table" pageKey="reports" isFullPage={false} />
+          ) : (
+          <div className="flex-1 border border-border bg-card shadow-sm rounded-xl overflow-hidden flex flex-col">
             <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x divide-border flex-1">
             {/* Liabilities Side */}
             <div className="flex flex-col border-r border-border">
@@ -697,58 +627,42 @@ export function BalanceSheet() {
                   <div key={group.name} className="flex flex-col">
                     <div 
                       onClick={() => {
-                        if (loading) return;
                         if (group.isPLContainer) navigate(`/reports/pl?to=${asOnDate}`);
                         else navigate(`/reports/group-summary?groupId=${group.groupId || ''}&groupName=${encodeURIComponent(group.name)}&to=${asOnDate}`);
                       }}
-                      className={cn(
-                        "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
-                        loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
-                      )}
+                      className="px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent cursor-pointer hover:bg-muted/80 hover:border-primary"
                     >
                       <span className="text-sm font-medium text-foreground uppercase tracking-tight">
                         {group.name}
                       </span>
-                      {group.isLoading ? (
-                        <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
-                      ) : (
-                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(group.total))}</span>
-                      )}
+                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(group.total))}</span>
                     </div>
 
                     {group.subItems.map((item: any) => (
                       <div 
                         key={item.name}
                         onClick={() => {
-                          if (loading) return;
                           if (item.isPLSub) navigate(`/reports/pl?to=${asOnDate}`);
                           else navigate(item.groupId ? `/reports/group-summary?groupId=${item.groupId}&groupName=${encodeURIComponent(item.name)}&to=${asOnDate}` : `/reports/ledger?ledgerId=${item.id}`);
                         }}
-                        className={cn(
-                          "px-8 py-1.5 flex justify-between items-center group/item transition-colors border-l-4 border-transparent",
-                          loading ? "cursor-default" : "cursor-pointer hover:bg-muted/60 hover:border-primary/40"
-                        )}
+                        className="px-8 py-1.5 flex justify-between items-center group/item transition-colors border-l-4 border-transparent cursor-pointer hover:bg-muted/60 hover:border-primary/40"
                       >
                         <span className="text-[13px] italic text-muted-foreground font-medium group-hover/item:text-primary transition-colors">
                           {item.name}
                         </span>
-                        {item.isLoading ? (
-                          <div className="h-3.5 w-16 bg-muted-foreground/10 animate-pulse rounded" />
-                        ) : (
-                          <span className="text-[13px] text-muted-foreground font-mono italic">
-                            {item.balance < 0 ? `(-)${formatNumber(Math.abs(item.balance))}` : formatNumber(item.balance)}
-                          </span>
-                        )}
+                        <span className="text-[13px] text-muted-foreground tabular-nums italic">
+                          {item.balance < 0 ? `(-)${formatNumber(Math.abs(item.balance))}` : formatNumber(item.balance)}
+                        </span>
                       </div>
                     ))}
                   </div>
                 ))}
 
-                {openingBalanceDiff > 0 && !loading && (
+                {openingBalanceDiff > 0 && (
                   <div className="px-4 py-3 border-t border-border/5 mt-4">
-                    <div className="flex justify-between items-center bg-rose-500/5 p-2 rounded">
+                    <div className="flex justify-between items-center bg-rose-500/5 p-2 rounded-lg">
                       <span className="text-sm text-rose-600 italic font-medium">Difference in opening balances</span>
-                      <span className="text-sm text-rose-600 font-bold">{formatNumber(Math.abs(openingBalanceDiff))}</span>
+                      <span className="text-sm text-rose-600 font-bold tabular-nums">{formatNumber(Math.abs(openingBalanceDiff))}</span>
                     </div>
                   </div>
                 )}
@@ -756,11 +670,7 @@ export function BalanceSheet() {
 
               <div className="mt-auto px-4 py-3 border-t border-border bg-muted/20 flex justify-between items-center">
                 <span className="text-sm font-black uppercase tracking-tight text-foreground pl-4">Total</span>
-                {loading ? (
-                  <div className="h-5 w-24 bg-muted-foreground/20 animate-pulse rounded" />
-                ) : (
-                  <span className="text-sm font-black text-foreground tabular-nums border-b-2 border-double border-foreground py-0.5">{formatNumber(finalBalanceValue)}</span>
-                )}
+                <span className="text-sm font-black text-foreground tabular-nums border-b-2 border-double border-foreground py-0.5">{formatNumber(finalBalanceValue)}</span>
               </div>
             </div>
 
@@ -776,54 +686,38 @@ export function BalanceSheet() {
                   <div key={group.name} className="flex flex-col">
                     <div 
                       onClick={() => {
-                        if (loading) return;
                         navigate(`/reports/group-summary?groupId=${group.groupId || ''}&groupName=${encodeURIComponent(group.name)}&to=${asOnDate}`);
                       }}
-                      className={cn(
-                        "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
-                        loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
-                      )}
+                      className="px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent cursor-pointer hover:bg-muted/80 hover:border-primary"
                     >
                       <span className="text-sm font-medium text-foreground uppercase tracking-tight">{group.name}</span>
-                      {group.isLoading ? (
-                        <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
-                      ) : (
-                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(group.total))}</span>
-                      )}
+                      <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(group.total))}</span>
                     </div>
 
                     {group.subItems.map((item: any) => (
                       <div 
                         key={item.name}
                         onClick={() => {
-                          if (loading) return;
                           navigate(item.type === 'Stock' ? `/reports/stock?to=${asOnDate}` : (item.groupId ? `/reports/group-summary?groupId=${item.groupId}&groupName=${encodeURIComponent(item.name)}&to=${asOnDate}` : `/reports/ledger?ledgerId=${item.id}`));
                         }}
-                        className={cn(
-                          "px-8 py-1.5 flex justify-between items-center group/item transition-colors border-l-4 border-transparent",
-                          loading ? "cursor-default" : "cursor-pointer hover:bg-muted/60 hover:border-primary/40"
-                        )}
+                        className="px-8 py-1.5 flex justify-between items-center group/item transition-colors border-l-4 border-transparent cursor-pointer hover:bg-muted/60 hover:border-primary/40"
                       >
                         <span className="text-[13px] italic text-muted-foreground font-medium group-hover/item:text-primary transition-colors">
                           {item.name}
                         </span>
-                        {item.isLoading ? (
-                          <div className="h-3.5 w-16 bg-muted-foreground/10 animate-pulse rounded" />
-                        ) : (
-                          <span className="text-[13px] text-muted-foreground font-mono italic">
-                            {item.balance < 0 ? `(-)${formatNumber(Math.abs(item.balance))}` : formatNumber(item.balance)}
-                          </span>
-                        )}
+                        <span className="text-[13px] text-muted-foreground tabular-nums italic">
+                          {item.balance < 0 ? `(-)${formatNumber(Math.abs(item.balance))}` : formatNumber(item.balance)}
+                        </span>
                       </div>
                     ))}
                   </div>
                 ))}
 
-                {openingBalanceDiff < 0 && !loading && (
+                {openingBalanceDiff < 0 && (
                   <div className="px-4 py-3 border-t border-border/5 mt-4">
-                    <div className="flex justify-between items-center bg-rose-500/5 p-2 rounded">
+                    <div className="flex justify-between items-center bg-rose-500/5 p-2 rounded-lg">
                       <span className="text-sm text-rose-600 italic font-medium">Difference in opening balances</span>
-                      <span className="text-sm text-rose-600 font-bold">{formatNumber(Math.abs(openingBalanceDiff))}</span>
+                      <span className="text-sm text-rose-600 font-bold tabular-nums">{formatNumber(Math.abs(openingBalanceDiff))}</span>
                     </div>
                   </div>
                 )}
@@ -831,16 +725,13 @@ export function BalanceSheet() {
 
               <div className="mt-auto px-4 py-3 border-t border-border bg-muted/20 flex justify-between items-center">
                 <span className="text-sm font-black uppercase tracking-tight text-foreground pl-4">Total</span>
-                {loading ? (
-                  <div className="h-5 w-24 bg-muted-foreground/20 animate-pulse rounded" />
-                ) : (
-                  <span className="text-sm font-black text-foreground tabular-nums border-b-2 border-double border-foreground py-0.5">{formatNumber(finalBalanceValue)}</span>
-                )}
+                <span className="text-sm font-black text-foreground tabular-nums border-b-2 border-double border-foreground py-0.5">{formatNumber(finalBalanceValue)}</span>
               </div>
             </div>
           </div>
           
         </div>
+          )}
       </div>
     </div>
   </div>

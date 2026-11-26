@@ -593,39 +593,15 @@ export function ProfitAndLoss() {
     });
   };
 
-  const dummyTradingData = {
-    openingStock: 0,
-    closingStock: 0,
-    purchaseGroups: [
-      { name: 'Purchase Accounts', balance: 0, isLoading: true }
-    ],
-    salesGroups: [
-      { name: 'Sales Accounts', balance: 0, isLoading: true }
-    ],
-    directExpenseGroups: [
-      { name: 'Direct Expenses', balance: 0, isLoading: true }
-    ],
-    directIncomeGroups: []
-  };
-
-  const dummyPlData = {
-    indirectExpenseGroups: [
-      { name: 'Indirect Expenses', balance: 0, isLoading: true }
-    ],
-    indirectIncomeGroups: [
-      { name: 'Indirect Incomes', balance: 0, isLoading: true }
-    ]
-  };
-
-  const activeTradingData = loading ? dummyTradingData : tradingData;
-  const activePlData = loading ? dummyPlData : plData;
+  const activeTradingData = tradingData;
+  const activePlData = plData;
 
   const finalTotal = Math.max(debitTotal + (netProfit > 0 ? netProfit : 0), creditTotal + (netProfit < 0 ? Math.abs(netProfit) : 0));
 
   return (
     <div className="flex flex-col h-screen bg-background transition-colors overflow-hidden">
-      <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-6 sticky top-0 z-30">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-border pb-4 gap-4">
+      <div className="flex-none bg-card/90 backdrop-blur-sm border-b border-border shadow-xs px-4 lg:px-6 py-4 sticky top-0 z-30">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div className="flex-1 w-full sm:max-w-md">
             <div className="flex items-center gap-2">
               <div className="flex-1">
@@ -650,34 +626,34 @@ export function ProfitAndLoss() {
             <button
               onClick={handleDownloadExcel}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-2 text-emerald-700 bg-emerald-50/70 border border-emerald-200 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors text-xs font-bold uppercase disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors text-xs font-semibold disabled:opacity-50"
               title="Export Excel (.xlsx)"
             >
               <FileSpreadsheet className="w-4 h-4" />
-              EXCEL
+              Excel
             </button>
             <button
               onClick={handleDownload}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-2 hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors border border-border text-xs font-bold uppercase disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 bg-card hover:bg-muted text-foreground rounded-lg transition-colors border border-border text-xs font-semibold disabled:opacity-50"
               title="Export CSV"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5 text-muted-foreground" />
               CSV
             </button>
             <button 
               onClick={handlePrint}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-2 hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors border border-border text-xs font-bold uppercase disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 bg-card hover:bg-muted text-foreground rounded-lg transition-colors border border-border text-xs font-semibold disabled:opacity-50"
               title={t('common.print')}
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-4 h-4 text-muted-foreground" />
               {t('common.print')}
             </button>
             <button 
               onClick={handleDownloadPDF}
               disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all font-medium text-sm shadow-sm active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-all font-semibold text-xs shadow-xs active:scale-95 disabled:opacity-50"
               title="Print to PDF (Save professional financial statement offline)"
             >
               <Download className="w-4 h-4" />
@@ -686,10 +662,10 @@ export function ProfitAndLoss() {
             <button
               onClick={handleEmailReport}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-2 hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors border border-border text-xs font-bold uppercase disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-2 bg-card hover:bg-muted text-foreground rounded-lg transition-colors border border-border text-xs font-semibold disabled:opacity-50"
               title="Share Summary via Email"
             >
-              <Mail className="w-4 h-4" />
+              <Mail className="w-4 h-4 text-muted-foreground" />
               Email
             </button>
           </div>
@@ -698,213 +674,139 @@ export function ProfitAndLoss() {
 
       <div className="flex-1 overflow-y-auto no-scrollbar p-0">
         <div id="pl-report" className="p-4 lg:p-6 space-y-6 pb-20">
-          <div className="border border-border bg-card shadow-sm rounded-lg overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x divide-border">
-              {/* Left Side: Debit (Expenses) */}
-              <div className="flex flex-col min-h-[400px]">
-                <div className="bg-muted px-4 py-2 border-b border-border flex justify-between items-center group">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('common.particulars')}</span>
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('common.amount')}</span>
-                </div>
-                
-                <div className="flex-1 divide-y divide-border/30">
-                  {/* Opening Stock */}
-                  <div 
-                    onClick={() => {
-                      if (loading) return;
-                      navigate(`/reports/stock?from=${startDate}&to=${endDate}`);
-                    }}
-                    className={cn(
-                      "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
-                      loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
-                    )}
-                  >
-                    <span className="text-sm font-medium text-foreground">{t('reports.openingStock')}</span>
-                    {loading ? (
-                      <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
-                    ) : (
+          {loading ? (
+            <SkeletonLoader type="table" pageKey="reports" isFullPage={false} />
+          ) : (
+            <div className="border border-border bg-card shadow-[var(--shadow-surface)] rounded-xl overflow-hidden">
+              <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x divide-border">
+                {/* Left Side: Debit (Expenses) */}
+                <div className="flex flex-col min-h-[400px]">
+                  <div className="bg-muted px-4 py-2.5 border-b border-border flex justify-between items-center">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('common.particulars')}</span>
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('common.amount')}</span>
+                  </div>
+                  
+                  <div className="flex-1 divide-y divide-border/40">
+                    {/* Opening Stock */}
+                    <div 
+                      onClick={() => navigate(`/reports/stock?from=${startDate}&to=${endDate}`)}
+                      className="px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent cursor-pointer hover:bg-muted/70 hover:border-primary"
+                    >
+                      <span className="text-sm font-medium text-foreground">{t('reports.openingStock')}</span>
                       <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(tradingData.openingStock)}</span>
+                    </div>
+
+                    {/* Purchase Accounts */}
+                    {activeTradingData.purchaseGroups.map((g: any) => (
+                      <div 
+                        key={g.name} 
+                        onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                        className="px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent cursor-pointer hover:bg-muted/70 hover:border-primary"
+                      >
+                        <span className="text-sm font-medium text-foreground">{g.name}</span>
+                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
+                      </div>
+                    ))}
+
+                    {/* Direct Expenses */}
+                    {activeTradingData.directExpenseGroups.map((g: any) => (
+                      <div 
+                        key={g.name} 
+                        onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                        className="px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent cursor-pointer hover:bg-muted/70 hover:border-primary"
+                      >
+                        <span className="text-sm font-medium text-foreground">{g.name}</span>
+                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
+                      </div>
+                    ))}
+
+                    {/* Indirect Expenses */}
+                    {activePlData.indirectExpenseGroups.map((g: any) => (
+                      <div 
+                        key={g.name} 
+                        onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                        className="px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent cursor-pointer hover:bg-muted/70 hover:border-primary"
+                      >
+                        <span className="text-sm font-medium text-foreground">{g.name}</span>
+                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
+                      </div>
+                    ))}
+
+                    {/* Nett Profit */}
+                    {netProfit > 0 && (
+                      <div className="px-4 py-3 flex justify-between items-center bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors cursor-pointer border-l-4 border-emerald-500">
+                        <span className="text-sm font-bold italic text-emerald-600 dark:text-emerald-400">Nett Profit</span>
+                        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums underline decoration-emerald-500/30 underline-offset-4">{formatNumber(netProfit)}</span>
+                      </div>
                     )}
                   </div>
 
-                  {/* Purchase Accounts */}
-                  {activeTradingData.purchaseGroups.map((g: any) => (
-                    <div 
-                      key={g.name} 
-                      onClick={() => {
-                        if (loading) return;
-                        navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`);
-                      }}
-                      className={cn(
-                        "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
-                        loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
-                      )}
-                    >
-                      <span className="text-sm font-medium text-foreground">{g.name}</span>
-                      {g.isLoading ? (
-                        <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
-                      ) : (
-                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Direct Expenses */}
-                  {activeTradingData.directExpenseGroups.map((g: any) => (
-                    <div 
-                      key={g.name} 
-                      onClick={() => {
-                        if (loading) return;
-                        navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`);
-                      }}
-                      className={cn(
-                        "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
-                        loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
-                      )}
-                    >
-                      <span className="text-sm font-medium text-foreground">{g.name}</span>
-                      {g.isLoading ? (
-                        <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
-                      ) : (
-                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Indirect Expenses */}
-                  {activePlData.indirectExpenseGroups.map((g: any) => (
-                    <div 
-                      key={g.name} 
-                      onClick={() => {
-                        if (loading) return;
-                        navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`);
-                      }}
-                      className={cn(
-                        "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
-                        loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
-                      )}
-                    >
-                      <span className="text-sm font-medium text-foreground">{g.name}</span>
-                      {g.isLoading ? (
-                        <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
-                      ) : (
-                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(g.balance)}</span>
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Nett Profit */}
-                  {netProfit > 0 && !loading && (
-                    <div className="px-4 py-3 flex justify-between items-center bg-emerald-500/5 group hover:bg-emerald-500/10 transition-colors cursor-pointer border-l-4 border-emerald-500">
-                      <span className="text-sm font-bold italic text-emerald-600">Nett Profit</span>
-                      <span className="text-sm font-bold text-emerald-600 tabular-nums underline decoration-emerald-500/30 underline-offset-4">{formatNumber(netProfit)}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Total Left */}
-                <div className="px-4 py-3 border-t border-border bg-muted/20 flex justify-between items-center mt-auto">
-                  <span className="text-sm font-black uppercase tracking-tight text-foreground">Total</span>
-                  {loading ? (
-                    <div className="h-5 w-24 bg-muted-foreground/20 animate-pulse rounded" />
-                  ) : (
+                  {/* Total Left */}
+                  <div className="px-4 py-3 border-t border-border bg-muted/30 flex justify-between items-center mt-auto">
+                    <span className="text-sm font-black uppercase tracking-tight text-foreground">Total</span>
                     <span className="text-sm font-black text-foreground tabular-nums border-b-2 border-double border-foreground py-0.5">{formatNumber(finalTotal)}</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Right Side: Credit (Incomes) */}
-              <div className="flex flex-col min-h-[400px]">
-                <div className="bg-muted px-4 py-2 border-b border-border flex justify-between items-center">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('common.particulars')}</span>
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t('common.amount')}</span>
+                  </div>
                 </div>
 
-                <div className="flex-1 divide-y divide-border/30">
-                  {/* Sales Accounts */}
-                  {activeTradingData.salesGroups.map((g: any) => (
-                    <div 
-                      key={g.name} 
-                      onClick={() => {
-                        if (loading) return;
-                        navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`);
-                      }}
-                      className={cn(
-                        "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
-                        loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
-                      )}
-                    >
-                      <span className="text-sm font-medium text-foreground">{g.name}</span>
-                      {g.isLoading ? (
-                        <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
-                      ) : (
-                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(g.balance))}</span>
-                      )}
-                    </div>
-                  ))}
+                {/* Right Side: Credit (Incomes) */}
+                <div className="flex flex-col min-h-[400px]">
+                  <div className="bg-muted px-4 py-2.5 border-b border-border flex justify-between items-center">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('common.particulars')}</span>
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t('common.amount')}</span>
+                  </div>
 
-                  {/* Indirect Incomes */}
-                  {activePlData.indirectIncomeGroups.map((g: any) => (
-                    <div 
-                      key={g.name} 
-                      onClick={() => {
-                        if (loading) return;
-                        navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`);
-                      }}
-                      className={cn(
-                        "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
-                        loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
-                      )}
-                    >
-                      <span className="text-sm font-medium text-foreground">{g.name}</span>
-                      {g.isLoading ? (
-                        <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
-                      ) : (
+                  <div className="flex-1 divide-y divide-border/40">
+                    {/* Sales Accounts */}
+                    {activeTradingData.salesGroups.map((g: any) => (
+                      <div 
+                        key={g.name} 
+                        onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                        className="px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent cursor-pointer hover:bg-muted/70 hover:border-primary"
+                      >
+                        <span className="text-sm font-medium text-foreground">{g.name}</span>
                         <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(g.balance))}</span>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    ))}
 
-                  {/* Closing Stock */}
-                  <div 
-                    onClick={() => {
-                      if (loading) return;
-                      navigate(`/reports/stock?from=${startDate}&to=${endDate}`);
-                    }}
-                    className={cn(
-                      "px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent",
-                      loading ? "cursor-default" : "cursor-pointer hover:bg-muted/80 hover:border-primary"
-                    )}
-                  >
-                    <span className="text-sm font-medium text-foreground">Closing Stock</span>
-                    {loading ? (
-                      <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded" />
-                    ) : (
+                    {/* Indirect Incomes */}
+                    {activePlData.indirectIncomeGroups.map((g: any) => (
+                      <div 
+                        key={g.name} 
+                        onClick={() => navigate(`/reports/group-summary?groupId=${g.groupId}&groupName=${encodeURIComponent(g.name)}&from=${startDate}&to=${endDate}`)}
+                        className="px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent cursor-pointer hover:bg-muted/70 hover:border-primary"
+                      >
+                        <span className="text-sm font-medium text-foreground">{g.name}</span>
+                        <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(Math.abs(g.balance))}</span>
+                      </div>
+                    ))}
+
+                    {/* Closing Stock */}
+                    <div 
+                      onClick={() => navigate(`/reports/stock?from=${startDate}&to=${endDate}`)}
+                      className="px-4 py-3 flex justify-between items-center transition-colors border-l-4 border-transparent cursor-pointer hover:bg-muted/70 hover:border-primary"
+                    >
+                      <span className="text-sm font-medium text-foreground">Closing Stock</span>
                       <span className="text-sm font-bold text-foreground tabular-nums">{formatNumber(tradingData.closingStock)}</span>
+                    </div>
+
+                    {/* Nett Loss */}
+                    {netProfit < 0 && (
+                      <div className="px-4 py-3 flex justify-between items-center bg-rose-500/5 hover:bg-rose-500/10 transition-colors cursor-pointer border-l-4 border-rose-500">
+                        <span className="text-sm font-bold italic text-rose-600 dark:text-rose-400">Nett Loss</span>
+                        <span className="text-sm font-bold text-rose-600 dark:text-rose-400 tabular-nums underline decoration-rose-500/30 underline-offset-4">{formatNumber(Math.abs(netProfit))}</span>
+                      </div>
                     )}
                   </div>
 
-                  {/* Nett Loss */}
-                  {netProfit < 0 && !loading && (
-                    <div className="px-4 py-3 flex justify-between items-center bg-rose-500/5 hover:bg-rose-500/10 transition-colors cursor-pointer border-l-4 border-rose-500">
-                      <span className="text-sm font-bold italic text-rose-600">Nett Loss</span>
-                      <span className="text-sm font-bold text-rose-600 tabular-nums underline decoration-rose-500/30 underline-offset-4">{formatNumber(Math.abs(netProfit))}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Total Right */}
-                <div className="px-4 py-3 border-t border-border bg-muted/20 flex justify-between items-center mt-auto">
-                  <span className="text-sm font-black uppercase tracking-tight text-foreground">Total</span>
-                  {loading ? (
-                    <div className="h-5 w-24 bg-muted-foreground/20 animate-pulse rounded" />
-                  ) : (
+                  {/* Total Right */}
+                  <div className="px-4 py-3 border-t border-border bg-muted/30 flex justify-between items-center mt-auto">
+                    <span className="text-sm font-black uppercase tracking-tight text-foreground">Total</span>
                     <span className="text-sm font-black text-foreground tabular-nums border-b-2 border-double border-foreground py-0.5">{formatNumber(finalTotal)}</span>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

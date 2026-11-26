@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader2, Calculator } from 'lucide-react';
+import { Save, Loader2, Calculator } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { EnterpriseModal } from './ui/EnterpriseModal';
 
 interface QuickAdjustmentModalProps {
   isOpen: boolean;
@@ -25,16 +26,6 @@ export function QuickAdjustmentModal({ isOpen, onClose, onSuccess, partyLedgerId
     date: new Date().toLocaleDateString('en-CA')
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -123,103 +114,98 @@ export function QuickAdjustmentModal({ isOpen, onClose, onSuccess, partyLedgerId
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed top-14 left-0 lg:left-64 right-0 bottom-0 z-40 flex justify-center items-center p-4 md:p-6 bg-slate-950/30 backdrop-blur-[1px]">
-      <div className="bg-card border border-border w-full max-w-xl max-h-[calc(100vh-8rem)] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <div className="flex items-center gap-2">
-            <Calculator className="w-4 h-4 text-emerald-500" />
-            <h2 className="text-xs font-bold text-foreground uppercase tracking-widest">Quick Balance Adjustment</h2>
-          </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-foreground transition-colors">
-            <X className="w-4 h-4" />
+    <EnterpriseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="md"
+      title="Quick Balance Adjustment"
+      icon={<Calculator className="w-4 h-4 text-emerald-500" />}
+      bodyClassName="p-6"
+      footer={
+        <div className="flex justify-end gap-3 w-full">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="quick-adjustment-form"
+            disabled={loading || !formData.adjustmentLedgerId || formData.amount <= 0}
+            className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-all disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            Post Adjustment
           </button>
         </div>
-
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
-          <div className="p-4 bg-foreground/5 border border-border space-y-1">
-            <div className="text-[10px] text-gray-500 uppercase tracking-widest">Party Name</div>
-            <div className="text-sm font-bold text-foreground">{partyName}</div>
-            <div className="text-[10px] text-gray-500 uppercase tracking-widest mt-2">Current Balance</div>
-            <div className="text-sm font-bold text-foreground">
-              ৳ {Math.abs(currentBalance).toLocaleString()} {currentBalance >= 0 ? 'Dr' : 'Cr'}
-            </div>
+      }
+    >
+      <form id="quick-adjustment-form" onSubmit={handleSubmit} className="space-y-5">
+        <div className="p-4 rounded-xl bg-muted/40 border border-border space-y-1">
+          <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Party Name</div>
+          <div className="text-sm font-bold text-foreground">{partyName}</div>
+          <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider pt-2">Current Balance</div>
+          <div className="text-sm font-bold text-foreground tabular-nums">
+            ৳ {Math.abs(currentBalance).toLocaleString()} {currentBalance >= 0 ? 'Dr' : 'Cr'}
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Adjustment Date</label>
-              <input
-                type="date"
-                required
-                value={formData.date}
-                onChange={e => setFormData({ ...formData, date: e.target.value })}
-                className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Amount to Reduce (৳)</label>
-              <input
-                autoFocus
-                type="number"
-                required
-                min="0.01"
-                step="0.01"
-                value={formData.amount || ''}
-                onChange={e => setFormData({ ...formData, amount: Number(e.target.value) })}
-                className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right font-bold"
-                placeholder="e.g., 10"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Adjustment Account (Debit)</label>
-            <select
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground block">Adjustment Date</label>
+            <input
+              type="date"
               required
-              value={formData.adjustmentLedgerId}
-              onChange={e => setFormData({ ...formData, adjustmentLedgerId: e.target.value })}
-              className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
-            >
-              <option value="">Select Expense Ledger...</option>
-              {adjustmentLedgers.map(l => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-            <p className="text-[9px] text-gray-500 italic">This will be debited as an expense.</p>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Narration</label>
-            <textarea
-              value={formData.narration}
-              onChange={e => setFormData({ ...formData, narration: e.target.value })}
-              rows={2}
-              className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors resize-none"
+              value={formData.date}
+              onChange={e => setFormData({ ...formData, date: e.target.value })}
+              className="w-full rounded-lg bg-background border border-border text-foreground px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
             />
           </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-[10px] text-gray-500 hover:text-foreground uppercase tracking-widest transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !formData.adjustmentLedgerId || formData.amount <= 0}
-              className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-              Post Adjustment
-            </button>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground block">Amount to Reduce (৳)</label>
+            <input
+              autoFocus
+              type="number"
+              required
+              min="0.01"
+              step="0.01"
+              value={formData.amount || ''}
+              onChange={e => setFormData({ ...formData, amount: Number(e.target.value) })}
+              className="w-full rounded-lg bg-background border border-border text-foreground px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all text-right font-bold tabular-nums"
+              placeholder="e.g., 10"
+            />
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground block">Adjustment Account (Debit)</label>
+          <select
+            required
+            value={formData.adjustmentLedgerId}
+            onChange={e => setFormData({ ...formData, adjustmentLedgerId: e.target.value })}
+            className="w-full rounded-lg bg-background border border-border text-foreground px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
+          >
+            <option value="">Select Expense Ledger...</option>
+            {adjustmentLedgers.map(l => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
+          </select>
+          <p className="text-[11px] text-muted-foreground">This will be debited as an expense.</p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-muted-foreground block">Narration</label>
+          <textarea
+            value={formData.narration}
+            onChange={e => setFormData({ ...formData, narration: e.target.value })}
+            rows={2}
+            className="w-full rounded-lg bg-background border border-border text-foreground px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all resize-none"
+          />
+        </div>
+      </form>
+    </EnterpriseModal>
   );
 }

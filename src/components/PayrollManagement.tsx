@@ -30,7 +30,6 @@ import {
   Search, 
   Filter, 
   Download, 
-  Sparkles, 
   Percent, 
   Timer,
   Info,
@@ -40,6 +39,7 @@ import {
   BookOpen,
   HelpCircle
 } from 'lucide-react';
+import { EnterpriseModal } from './ui/EnterpriseModal';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
@@ -1377,7 +1377,7 @@ export function PayrollManagement() {
                   className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
                   title="Remove duplicate employee rows for this month"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Filter className="w-3.5 h-3.5" />
                   {cleaningDuplicates ? 'Cleaning...' : 'Clean Duplicates'}
                 </button>
 
@@ -2568,7 +2568,7 @@ export function PayrollManagement() {
                   disabled={loading}
                   className="px-4 py-2 bg-primary text-primary-foreground font-bold text-xs rounded-lg transition-colors flex items-center gap-2 shadow-xs cursor-pointer"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Gift className="w-4 h-4" />
                   Generate Festival Bonus Batch
                 </button>
               </div>
@@ -2703,684 +2703,664 @@ export function PayrollManagement() {
       {/* 3. MODALS */}
 
       {/* MODAL A: PAY COMPONENT CONFIGURATION */}
-      {isPayComponentModalOpen && (
-        <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md p-6 animate-fadeIn">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h3 className="font-bold text-base">
-                {editingPayHead ? 'Edit Pay Component' : 'Add Pay Component'}
-              </h3>
-              <button onClick={() => setIsPayComponentModalOpen(false)} className="text-muted-foreground hover:text-foreground cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
+      <EnterpriseModal
+        isOpen={isPayComponentModalOpen}
+        onClose={() => setIsPayComponentModalOpen(false)}
+        title={editingPayHead ? 'Edit Pay Component' : 'Add Pay Component'}
+        icon={<Coins className="w-4 h-4" />}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <button
+              type="button"
+              onClick={() => setIsPayComponentModalOpen(false)}
+              className="px-4 py-2 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="payroll-component-form"
+              disabled={loading}
+              className="px-5 py-2 bg-primary text-primary-foreground font-bold text-xs rounded-lg hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Save Component
+            </button>
+          </div>
+        }
+      >
+        <form id="payroll-component-form" onSubmit={handleSavePayComponent} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">Component Name</label>
+            <input
+              type="text"
+              required
+              value={componentForm.name}
+              onChange={e => setComponentForm({ ...componentForm, name: e.target.value })}
+              placeholder="e.g. House Rent, Medical Allowance, Provident Fund"
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 font-medium"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Component Type</label>
+              <select
+                value={componentForm.type}
+                onChange={e => setComponentForm({ ...componentForm, type: e.target.value as any })}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-medium focus:outline-none focus:border-primary"
+              >
+                <option value="Earning">Earning (আয়)</option>
+                <option value="Deduction">Deduction (কর্তন)</option>
+              </select>
             </div>
 
-            <form onSubmit={handleSavePayComponent} className="space-y-4 mt-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Component Name</label>
-                <input
-                  type="text"
-                  required
-                  value={componentForm.name}
-                  onChange={e => setComponentForm({ ...componentForm, name: e.target.value })}
-                  placeholder="e.g. House Rent, Medical Allowance, Provident Fund"
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs focus:outline-none font-medium"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Component Type</label>
-                  <select
-                    value={componentForm.type}
-                    onChange={e => setComponentForm({ ...componentForm, type: e.target.value as any })}
-                    className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-medium focus:outline-none"
-                  >
-                    <option value="Earning">Earning (আয়)</option>
-                    <option value="Deduction">Deduction (কর্তন)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Calculation Method</label>
-                  <select
-                    value={componentForm.calculationType}
-                    onChange={e => setComponentForm({ ...componentForm, calculationType: e.target.value as any })}
-                    className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-medium focus:outline-none"
-                  >
-                    <option value="Fixed">Fixed / Flat Amount</option>
-                    <option value="On Attendance">On Attendance (Pro-rata)</option>
-                    <option value="Percentage">Percentage (% of Basic)</option>
-                    <option value="On Overtime">On Overtime (Hourly)</option>
-                  </select>
-                </div>
-              </div>
-
-              {componentForm.calculationType === 'Percentage' && (
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Percentage Rate (%)</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={componentForm.percentage}
-                      onChange={e => setComponentForm({ ...componentForm, percentage: e.target.value })}
-                      placeholder="e.g. 50 (for 50% of Basic)"
-                      className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs focus:outline-none font-bold"
-                    />
-                    <Percent className="w-3.5 h-3.5 text-muted-foreground absolute right-3 top-2.5" />
-                  </div>
-                </div>
-              )}
-
-              {componentForm.calculationType === 'On Overtime' && (
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Hourly Overtime Rate</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={componentForm.ratePerHour}
-                      onChange={e => setComponentForm({ ...componentForm, ratePerHour: e.target.value })}
-                      placeholder="Leave blank for automatic 1.5x basic"
-                      className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs focus:outline-none font-bold"
-                    />
-                    <Timer className="w-3.5 h-3.5 text-muted-foreground absolute right-3 top-2.5" />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Mapped Accounting Ledger</label>
-                <select
-                  value={componentForm.expenseLedgerId}
-                  onChange={e => setComponentForm({ ...componentForm, expenseLedgerId: e.target.value })}
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-medium focus:outline-none"
-                >
-                  <option value="">Salaries & Wages (Default Expense)</option>
-                  {ledgers.map(l => (
-                    <option key={l.id} value={l.id}>{l.name} ({l.group_name})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setIsPayComponentModalOpen(false)}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-1.5 bg-primary text-primary-foreground font-bold text-xs rounded-lg cursor-pointer"
-                >
-                  Save Component
-                </button>
-              </div>
-            </form>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Calculation Method</label>
+              <select
+                value={componentForm.calculationType}
+                onChange={e => setComponentForm({ ...componentForm, calculationType: e.target.value as any })}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-medium focus:outline-none focus:border-primary"
+              >
+                <option value="Fixed">Fixed / Flat Amount</option>
+                <option value="On Attendance">On Attendance (Pro-rata)</option>
+                <option value="Percentage">Percentage (% of Basic)</option>
+                <option value="On Overtime">On Overtime (Hourly)</option>
+              </select>
+            </div>
           </div>
-        </div>
-      )}
+
+          {componentForm.calculationType === 'Percentage' && (
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Percentage Rate (%)</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  value={componentForm.percentage}
+                  onChange={e => setComponentForm({ ...componentForm, percentage: e.target.value })}
+                  placeholder="e.g. 50 (for 50% of Basic)"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs focus:outline-none focus:border-primary font-bold tabular-nums"
+                />
+                <Percent className="w-3.5 h-3.5 text-muted-foreground absolute right-3 top-2.5" />
+              </div>
+            </div>
+          )}
+
+          {componentForm.calculationType === 'On Overtime' && (
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Hourly Overtime Rate</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={componentForm.ratePerHour}
+                  onChange={e => setComponentForm({ ...componentForm, ratePerHour: e.target.value })}
+                  placeholder="Leave blank for automatic 1.5x basic"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs focus:outline-none focus:border-primary font-bold tabular-nums"
+                />
+                <Timer className="w-3.5 h-3.5 text-muted-foreground absolute right-3 top-2.5" />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">Mapped Accounting Ledger</label>
+            <select
+              value={componentForm.expenseLedgerId}
+              onChange={e => setComponentForm({ ...componentForm, expenseLedgerId: e.target.value })}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-medium focus:outline-none focus:border-primary"
+            >
+              <option value="">Salaries & Wages (Default Expense)</option>
+              {ledgers.map(l => (
+                <option key={l.id} value={l.id}>{l.name} ({l.group_name})</option>
+              ))}
+            </select>
+          </div>
+        </form>
+      </EnterpriseModal>
 
       {/* MODAL B: EMPLOYEE GROUP MODAL */}
-      {isGroupModalOpen && (
-        <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-sm p-6 animate-fadeIn">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h3 className="font-bold text-base">Create Employee Group</h3>
-              <button onClick={() => setIsGroupModalOpen(false)} className="text-muted-foreground hover:text-foreground cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveGroup} className="space-y-4 mt-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Group / Department Name</label>
-                <input
-                  type="text"
-                  required
-                  value={groupForm.name}
-                  onChange={e => setGroupForm({ ...groupForm, name: e.target.value })}
-                  placeholder="e.g. Sales, Production, Accounts"
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs focus:outline-none font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Description</label>
-                <textarea
-                  rows={2}
-                  value={groupForm.description}
-                  onChange={e => setGroupForm({ ...groupForm, description: e.target.value })}
-                  placeholder="Optional notes or department roles"
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs focus:outline-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setIsGroupModalOpen(false)}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-1.5 bg-primary text-primary-foreground font-bold text-xs rounded-lg cursor-pointer"
-                >
-                  Create Group
-                </button>
-              </div>
-            </form>
+      <EnterpriseModal
+        isOpen={isGroupModalOpen}
+        onClose={() => setIsGroupModalOpen(false)}
+        title="Create Employee Group"
+        icon={<Users className="w-4 h-4" />}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <button
+              type="button"
+              onClick={() => setIsGroupModalOpen(false)}
+              className="px-4 py-2 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="payroll-group-form"
+              disabled={loading}
+              className="px-5 py-2 bg-primary text-primary-foreground font-bold text-xs rounded-lg hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Create Group
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <form id="payroll-group-form" onSubmit={handleSaveGroup} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">Group / Department Name</label>
+            <input
+              type="text"
+              required
+              value={groupForm.name}
+              onChange={e => setGroupForm({ ...groupForm, name: e.target.value })}
+              placeholder="e.g. Sales, Production, Accounts"
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 font-medium"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">Description</label>
+            <textarea
+              rows={2}
+              value={groupForm.description}
+              onChange={e => setGroupForm({ ...groupForm, description: e.target.value })}
+              placeholder="Optional notes or department roles"
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+            />
+          </div>
+        </form>
+      </EnterpriseModal>
 
       {/* MODAL C: CONFIGURE SALARY STRUCTURE */}
-      {isStructureModalOpen && (
-        <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-lg p-6 animate-fadeIn">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <div>
-                <h3 className="font-bold text-base">
-                  Configure Salary Structure ({structureTargetType})
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Assign pay components and rate formulas to this {structureTargetType.toLowerCase()}
-                </p>
-              </div>
-              <button onClick={() => setIsStructureModalOpen(false)} className="text-muted-foreground hover:text-foreground cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 mt-4 max-h-[60vh] overflow-y-auto pr-1">
-              {payHeads.length === 0 ? (
-                <div className="text-center py-6 text-xs text-muted-foreground">
-                  No pay components configured. Please add components in the "Pay Components" tab first.
-                </div>
-              ) : (
-                payHeads.map(ph => {
-                  const existingEntry = structureEntries.find(e => e.payHeadId === ph.id);
-                  const isChecked = Boolean(existingEntry);
-
-                  return (
-                    <div key={ph.id} className="p-3 border border-border rounded-lg bg-muted/20 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={e => {
-                            if (e.target.checked) {
-                              setStructureEntries([...structureEntries, { payHeadId: ph.id, amount: 0, percentage: ph.percentage || 0 }]);
-                            } else {
-                              setStructureEntries(structureEntries.filter(entry => entry.payHeadId !== ph.id));
-                            }
-                          }}
-                          className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer"
-                        />
-                        <div>
-                          <span className="font-semibold text-xs text-foreground block">{ph.name}</span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {ph.type} · {ph.calculationType}
-                          </span>
-                        </div>
-                      </div>
-
-                      {isChecked && (
-                        <div className="flex items-center gap-2">
-                          {ph.calculationType === 'Percentage' ? (
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={existingEntry?.percentage ?? ph.percentage ?? 0}
-                                onChange={e => {
-                                  const val = parseFloat(e.target.value) || 0;
-                                  setStructureEntries(structureEntries.map(entry => 
-                                    entry.payHeadId === ph.id ? { ...entry, percentage: val } : entry
-                                  ));
-                                }}
-                                className="w-20 px-2 py-1 text-right bg-background border border-border rounded text-xs font-bold tabular-nums"
-                              />
-                              <span className="text-xs text-muted-foreground">%</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1">
-                              <span className="text-xs text-muted-foreground">{baseCurrencySymbol}</span>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={existingEntry?.amount ?? 0}
-                                onChange={e => {
-                                  const val = parseFloat(e.target.value) || 0;
-                                  setStructureEntries(structureEntries.map(entry => 
-                                    entry.payHeadId === ph.id ? { ...entry, amount: val } : entry
-                                  ));
-                                }}
-                                placeholder="Amount"
-                                className="w-24 px-2 py-1 text-right bg-background border border-border rounded text-xs font-bold tabular-nums"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4 border-t border-border mt-4">
-              <button
-                type="button"
-                onClick={() => setIsStructureModalOpen(false)}
-                className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveStructure}
-                disabled={loading}
-                className="px-4 py-1.5 bg-primary text-primary-foreground font-bold text-xs rounded-lg cursor-pointer"
-              >
-                Save Structure
-              </button>
-            </div>
+      <EnterpriseModal
+        isOpen={isStructureModalOpen}
+        onClose={() => setIsStructureModalOpen(false)}
+        title={`Configure Salary Structure (${structureTargetType})`}
+        subtitle={`Assign pay components and rate formulas to this ${structureTargetType.toLowerCase()}`}
+        icon={<Layers className="w-4 h-4" />}
+        size="lg"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <button
+              type="button"
+              onClick={() => setIsStructureModalOpen(false)}
+              className="px-4 py-2 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveStructure}
+              disabled={loading}
+              className="px-5 py-2 bg-primary text-primary-foreground font-bold text-xs rounded-lg hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Save Structure
+            </button>
           </div>
-        </div>
-      )}
-
-      {/* MODAL D: DISBURSEMENT PAYMENT */}
-      {isDisbursementModalOpen && (
-        <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-sm p-6 animate-fadeIn">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h3 className="font-bold text-base">Disburse Salary Payment</h3>
-              <button onClick={() => setIsDisbursementModalOpen(false)} className="text-muted-foreground hover:text-foreground cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
+        }
+      >
+        <div className="space-y-3">
+          {payHeads.length === 0 ? (
+            <div className="text-center py-8 text-xs text-muted-foreground">
+              No pay components configured. Please add components in the "Pay Components" tab first.
             </div>
+          ) : (
+            payHeads.map(ph => {
+              const existingEntry = structureEntries.find(e => e.payHeadId === ph.id);
+              const isChecked = Boolean(existingEntry);
 
-            <form onSubmit={handleDisbursementSubmit} className="space-y-4 mt-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Disbursement Date</label>
-                <input
-                  type="date"
-                  required
-                  value={disbursementForm.paymentDate}
-                  onChange={e => setDisbursementForm({ ...disbursementForm, paymentDate: e.target.value })}
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-semibold focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Pay From (Bank / Cash Account)</label>
-                <select
-                  required
-                  value={disbursementForm.paymentLedgerId}
-                  onChange={e => setDisbursementForm({ ...disbursementForm, paymentLedgerId: e.target.value })}
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-semibold focus:outline-none"
-                >
-                  <option value="">Select Cash or Bank Account</option>
-                  {bankAndCashLedgers.map(l => (
-                    <option key={l.id} value={l.id}>{l.name} ({l.group_name})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="p-3 bg-muted/40 rounded-lg border border-border text-xs">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Total Net Disbursement:</span>
-                  <span className="font-bold text-foreground tabular-nums">{formatCurrency(totalNet, baseCurrencySymbol)}</span>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setIsDisbursementModalOpen(false)}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg cursor-pointer"
-                >
-                  Confirm & Post Payment
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL E: PAYSLIP PREVIEW & PRINT */}
-      {isPayslipModalOpen && payslipData && (
-        <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto animate-fadeIn">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h3 className="font-bold text-base">Employee Payslip</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => window.print()}
-                  className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  Print Payslip
-                </button>
-                <button onClick={() => setIsPayslipModalOpen(false)} className="text-muted-foreground hover:text-foreground cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            <div id="formal-payslip-print" className="mt-6 p-6 border border-border rounded-lg bg-card text-foreground space-y-6">
-              <div className="text-center pb-4 border-b border-border">
-                <h2 className="text-lg font-bold tracking-tight uppercase">Monthly Salary & Compensation Statement</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Pay Period: {payslipData.month}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-xs bg-muted/20 p-4 rounded-lg border border-border">
-                <div>
-                  <div className="text-muted-foreground">Employee Name: <span className="font-bold text-foreground">{payslipData.employeeName}</span></div>
-                  <div className="text-muted-foreground mt-1">Designation: <span className="font-semibold text-foreground">{payslipData.employee?.designation || 'Staff'}</span></div>
-                  <div className="text-muted-foreground mt-1">Department: <span className="font-semibold text-foreground">{payslipData.employee?.department || '—'}</span></div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">Days Worked: <span className="font-bold text-foreground tabular-nums">{payslipData.presentDays ?? 26} / {payslipData.totalDays ?? 30} Days</span></div>
-                  {payslipData.overtimeHours > 0 && (
-                    <div className="text-muted-foreground mt-1">Overtime: <span className="font-semibold text-foreground tabular-nums">{payslipData.overtimeHours} Hours</span></div>
-                  )}
-                  <div className="text-muted-foreground mt-1">Payment Status: <span className="font-bold text-emerald-600">{payslipData.paymentStatus || 'Pending'}</span></div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <div className="bg-muted px-3 py-2 font-bold text-xs uppercase text-emerald-600 dark:text-emerald-400">
-                    Earnings
-                  </div>
-                  <div className="p-3 space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Basic Pay</span>
-                      <span className="font-semibold tabular-nums">{formatCurrency(payslipData.basicSalary, baseCurrencySymbol)}</span>
-                    </div>
-                    {payslipData.payBreakdown?.filter((b: any) => b.type === 'Earning').map((b: any, i: number) => (
-                      <div key={i} className="flex justify-between">
-                        <span className="text-muted-foreground">{b.payHeadName}</span>
-                        <span className="font-semibold tabular-nums">{formatCurrency(b.amount, baseCurrencySymbol)}</span>
-                      </div>
-                    ))}
-                    <div className="pt-2 border-t border-border flex justify-between font-bold">
-                      <span>Total Gross</span>
-                      <span className="tabular-nums">{formatCurrency(payslipData.basicSalary + payslipData.allowances, baseCurrencySymbol)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border border-border rounded-lg overflow-hidden">
-                  <div className="bg-muted px-3 py-2 font-bold text-xs uppercase text-rose-600 dark:text-rose-400">
-                    Deductions
-                  </div>
-                  <div className="p-3 space-y-2 text-xs">
-                    {payslipData.advanceDeduction > 0 && (
-                      <div className="flex justify-between text-rose-500">
-                        <span>Staff Advance Recovery</span>
-                        <span className="tabular-nums">-{formatCurrency(payslipData.advanceDeduction, baseCurrencySymbol)}</span>
-                      </div>
-                    )}
-                    {payslipData.loanDeduction > 0 && (
-                      <div className="flex justify-between text-rose-500">
-                        <span>Loan EMI Recovery</span>
-                        <span className="tabular-nums">-{formatCurrency(payslipData.loanDeduction, baseCurrencySymbol)}</span>
-                      </div>
-                    )}
-                    {payslipData.payBreakdown?.filter((b: any) => b.type === 'Deduction').map((b: any, i: number) => (
-                      <div key={i} className="flex justify-between text-rose-500">
-                        <span>{b.payHeadName}</span>
-                        <span className="tabular-nums">-{formatCurrency(b.amount, baseCurrencySymbol)}</span>
-                      </div>
-                    ))}
-                    <div className="pt-2 border-t border-border flex justify-between font-bold text-rose-600">
-                      <span>Total Deductions</span>
-                      <span className="tabular-nums">
-                        -{formatCurrency(payslipData.deductions + (payslipData.advanceDeduction || 0) + (payslipData.loanDeduction || 0), baseCurrencySymbol)}
+              return (
+                <div key={ph.id} className="p-3 border border-border rounded-xl bg-muted/20 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          setStructureEntries([...structureEntries, { payHeadId: ph.id, amount: 0, percentage: ph.percentage || 0 }]);
+                        } else {
+                          setStructureEntries(structureEntries.filter(entry => entry.payHeadId !== ph.id));
+                        }
+                      }}
+                      className="w-4 h-4 rounded text-primary focus:ring-primary cursor-pointer"
+                    />
+                    <div>
+                      <span className="font-semibold text-xs text-foreground block">{ph.name}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {ph.type} · {ph.calculationType}
                       </span>
                     </div>
                   </div>
+
+                  {isChecked && (
+                    <div className="flex items-center gap-2">
+                      {ph.calculationType === 'Percentage' ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={existingEntry?.percentage ?? ph.percentage ?? 0}
+                            onChange={e => {
+                              const val = parseFloat(e.target.value) || 0;
+                              setStructureEntries(structureEntries.map(entry => 
+                                entry.payHeadId === ph.id ? { ...entry, percentage: val } : entry
+                              ));
+                            }}
+                            className="w-20 px-2 py-1 text-right bg-background border border-border rounded text-xs font-bold tabular-nums"
+                          />
+                          <span className="text-xs text-muted-foreground">%</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">{baseCurrencySymbol}</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={existingEntry?.amount ?? 0}
+                            onChange={e => {
+                              const val = parseFloat(e.target.value) || 0;
+                              setStructureEntries(structureEntries.map(entry => 
+                                entry.payHeadId === ph.id ? { ...entry, amount: val } : entry
+                              ));
+                            }}
+                            placeholder="Amount"
+                            className="w-24 px-2 py-1 text-right bg-background border border-border rounded text-xs font-bold tabular-nums"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </EnterpriseModal>
+
+      {/* MODAL D: DISBURSEMENT PAYMENT */}
+      <EnterpriseModal
+        isOpen={isDisbursementModalOpen}
+        onClose={() => setIsDisbursementModalOpen(false)}
+        title="Disburse Salary Payment"
+        icon={<CreditCard className="w-4 h-4" />}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <button
+              type="button"
+              onClick={() => setIsDisbursementModalOpen(false)}
+              className="px-4 py-2 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="payroll-disbursement-form"
+              disabled={loading}
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Confirm & Post Payment
+            </button>
+          </div>
+        }
+      >
+        <form id="payroll-disbursement-form" onSubmit={handleDisbursementSubmit} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">Disbursement Date</label>
+            <input
+              type="date"
+              required
+              value={disbursementForm.paymentDate}
+              onChange={e => setDisbursementForm({ ...disbursementForm, paymentDate: e.target.value })}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:outline-none focus:border-primary tabular-nums"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">Pay From (Bank / Cash Account)</label>
+            <select
+              required
+              value={disbursementForm.paymentLedgerId}
+              onChange={e => setDisbursementForm({ ...disbursementForm, paymentLedgerId: e.target.value })}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:outline-none focus:border-primary"
+            >
+              <option value="">Select Cash or Bank Account</option>
+              {bankAndCashLedgers.map(l => (
+                <option key={l.id} value={l.id}>{l.name} ({l.group_name})</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="p-3 bg-muted/40 rounded-xl border border-border text-xs">
+            <div className="flex justify-between text-muted-foreground">
+              <span>Total Net Disbursement:</span>
+              <span className="font-bold text-foreground tabular-nums">{formatCurrency(totalNet, baseCurrencySymbol)}</span>
+            </div>
+          </div>
+        </form>
+      </EnterpriseModal>
+
+      {/* MODAL E: PAYSLIP PREVIEW & PRINT */}
+      <EnterpriseModal
+        isOpen={Boolean(isPayslipModalOpen && payslipData)}
+        onClose={() => setIsPayslipModalOpen(false)}
+        title="Employee Payslip"
+        subtitle={payslipData ? `Pay Period: ${payslipData.month}` : undefined}
+        icon={<Printer className="w-4 h-4" />}
+        size="xl"
+        headerExtra={
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="px-3.5 py-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-lg flex items-center gap-1.5 hover:bg-primary/90 transition-colors cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print Payslip
+          </button>
+        }
+      >
+        {payslipData && (
+          <div id="formal-payslip-print" className="p-6 border border-border rounded-xl bg-card text-foreground space-y-6">
+            <div className="text-center pb-4 border-b border-border">
+              <h2 className="text-lg font-bold tracking-tight uppercase">Monthly Salary & Compensation Statement</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Pay Period: {payslipData.month}</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-muted/20 p-4 rounded-lg border border-border">
+              <div>
+                <div className="text-muted-foreground">Employee Name: <span className="font-bold text-foreground">{payslipData.employeeName}</span></div>
+                <div className="text-muted-foreground mt-1">Designation: <span className="font-semibold text-foreground">{payslipData.employee?.designation || 'Staff'}</span></div>
+                <div className="text-muted-foreground mt-1">Department: <span className="font-semibold text-foreground">{payslipData.employee?.department || '—'}</span></div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Days Worked: <span className="font-bold text-foreground tabular-nums">{payslipData.presentDays ?? 26} / {payslipData.totalDays ?? 30} Days</span></div>
+                {payslipData.overtimeHours > 0 && (
+                  <div className="text-muted-foreground mt-1">Overtime: <span className="font-semibold text-foreground tabular-nums">{payslipData.overtimeHours} Hours</span></div>
+                )}
+                <div className="text-muted-foreground mt-1">Payment Status: <span className="font-bold text-emerald-600">{payslipData.paymentStatus || 'Pending'}</span></div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="bg-muted px-3 py-2 font-bold text-xs uppercase text-emerald-600 dark:text-emerald-400">
+                  Earnings
+                </div>
+                <div className="p-3 space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Basic Pay</span>
+                    <span className="font-semibold tabular-nums">{formatCurrency(payslipData.basicSalary, baseCurrencySymbol)}</span>
+                  </div>
+                  {payslipData.payBreakdown?.filter((b: any) => b.type === 'Earning').map((b: any, i: number) => (
+                    <div key={i} className="flex justify-between">
+                      <span className="text-muted-foreground">{b.payHeadName}</span>
+                      <span className="font-semibold tabular-nums">{formatCurrency(b.amount, baseCurrencySymbol)}</span>
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t border-border flex justify-between font-bold">
+                    <span>Total Gross</span>
+                    <span className="tabular-nums">{formatCurrency(payslipData.basicSalary + payslipData.allowances, baseCurrencySymbol)}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="p-4 bg-muted/30 border border-border rounded-lg flex items-center justify-between">
-                <div>
-                  <span className="text-xs uppercase text-muted-foreground font-semibold">Net Salary Payable</span>
-                  <div className="text-xs text-muted-foreground mt-0.5">Payable in official currency</div>
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="bg-muted px-3 py-2 font-bold text-xs uppercase text-rose-600 dark:text-rose-400">
+                  Deductions
                 </div>
-                <div className="text-xl font-bold text-foreground tabular-nums">
-                  {formatCurrency(payslipData.netSalary, baseCurrencySymbol)}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-8 pt-8">
-                <div className="text-center">
-                  <div className="border-t border-border/80 pt-2 text-xs text-muted-foreground">Employee Signature</div>
-                </div>
-                <div className="text-center">
-                  <div className="border-t border-border/80 pt-2 text-xs text-muted-foreground">Authorized Signature & Seal</div>
+                <div className="p-3 space-y-2 text-xs">
+                  {payslipData.advanceDeduction > 0 && (
+                    <div className="flex justify-between text-rose-500">
+                      <span>Staff Advance Recovery</span>
+                      <span className="tabular-nums">-{formatCurrency(payslipData.advanceDeduction, baseCurrencySymbol)}</span>
+                    </div>
+                  )}
+                  {payslipData.loanDeduction > 0 && (
+                    <div className="flex justify-between text-rose-500">
+                      <span>Loan EMI Recovery</span>
+                      <span className="tabular-nums">-{formatCurrency(payslipData.loanDeduction, baseCurrencySymbol)}</span>
+                    </div>
+                  )}
+                  {payslipData.payBreakdown?.filter((b: any) => b.type === 'Deduction').map((b: any, i: number) => (
+                    <div key={i} className="flex justify-between text-rose-500">
+                      <span>{b.payHeadName}</span>
+                      <span className="tabular-nums">-{formatCurrency(b.amount, baseCurrencySymbol)}</span>
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t border-border flex justify-between font-bold text-rose-600">
+                    <span>Total Deductions</span>
+                    <span className="tabular-nums">
+                      -{formatCurrency(payslipData.deductions + (payslipData.advanceDeduction || 0) + (payslipData.loanDeduction || 0), baseCurrencySymbol)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
+
+            <div className="p-4 bg-muted/30 border border-border rounded-lg flex items-center justify-between">
+              <div>
+                <span className="text-xs uppercase text-muted-foreground font-semibold">Net Salary Payable</span>
+                <div className="text-xs text-muted-foreground mt-0.5">Payable in official currency</div>
+              </div>
+              <div className="text-xl font-bold text-foreground tabular-nums">
+                {formatCurrency(payslipData.netSalary, baseCurrencySymbol)}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-8 pt-8">
+              <div className="text-center">
+                <div className="border-t border-border/80 pt-2 text-xs text-muted-foreground">Employee Signature</div>
+              </div>
+              <div className="text-center">
+                <div className="border-t border-border/80 pt-2 text-xs text-muted-foreground">Authorized Signature & Seal</div>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </EnterpriseModal>
 
       {/* MODAL F: STAFF ADVANCE */}
-      {isAdvanceModalOpen && (
-        <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-sm p-6 animate-fadeIn">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h3 className="font-bold text-base">Issue Staff Advance</h3>
-              <button onClick={() => setIsAdvanceModalOpen(false)} className="text-muted-foreground hover:text-foreground cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveAdvance} className="space-y-4 mt-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Select Employee</label>
-                <select
-                  required
-                  value={advanceForm.employeeId}
-                  onChange={e => setAdvanceForm({ ...advanceForm, employeeId: e.target.value })}
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-semibold focus:outline-none"
-                >
-                  <option value="">Choose Staff Member</option>
-                  {employees.map(e => (
-                    <option key={e.id} value={e.id}>{e.name} ({e.designation || 'Staff'})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Advance Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={advanceForm.amount}
-                  onChange={e => setAdvanceForm({ ...advanceForm, amount: e.target.value })}
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-bold tabular-nums focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Date</label>
-                <input
-                  type="date"
-                  required
-                  value={advanceForm.date}
-                  onChange={e => setAdvanceForm({ ...advanceForm, date: e.target.value })}
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-semibold focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Reason / Purpose</label>
-                <input
-                  type="text"
-                  value={advanceForm.reason}
-                  onChange={e => setAdvanceForm({ ...advanceForm, reason: e.target.value })}
-                  placeholder="e.g. Medical emergency, urgent travel"
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs focus:outline-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setIsAdvanceModalOpen(false)}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-1.5 bg-primary text-primary-foreground font-bold text-xs rounded-lg cursor-pointer"
-                >
-                  Save Advance
-                </button>
-              </div>
-            </form>
+      <EnterpriseModal
+        isOpen={isAdvanceModalOpen}
+        onClose={() => setIsAdvanceModalOpen(false)}
+        title="Issue Staff Advance"
+        icon={<HandCoins className="w-4 h-4" />}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <button
+              type="button"
+              onClick={() => setIsAdvanceModalOpen(false)}
+              className="px-4 py-2 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="payroll-advance-form"
+              disabled={loading}
+              className="px-5 py-2 bg-primary text-primary-foreground font-bold text-xs rounded-lg hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Save Advance
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <form id="payroll-advance-form" onSubmit={handleSaveAdvance} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">Select Employee</label>
+            <select
+              required
+              value={advanceForm.employeeId}
+              onChange={e => setAdvanceForm({ ...advanceForm, employeeId: e.target.value })}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:outline-none focus:border-primary"
+            >
+              <option value="">Choose Staff Member</option>
+              {employees.map(e => (
+                <option key={e.id} value={e.id}>{e.name} ({e.designation || 'Staff'})</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">Advance Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              value={advanceForm.amount}
+              onChange={e => setAdvanceForm({ ...advanceForm, amount: e.target.value })}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-bold tabular-nums focus:outline-none focus:border-primary"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">Date</label>
+            <input
+              type="date"
+              required
+              value={advanceForm.date}
+              onChange={e => setAdvanceForm({ ...advanceForm, date: e.target.value })}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:outline-none focus:border-primary tabular-nums"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">Reason / Purpose</label>
+            <input
+              type="text"
+              value={advanceForm.reason}
+              onChange={e => setAdvanceForm({ ...advanceForm, reason: e.target.value })}
+              placeholder="e.g. Medical emergency, urgent travel"
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs focus:outline-none focus:border-primary"
+            />
+          </div>
+        </form>
+      </EnterpriseModal>
 
       {/* MODAL G: EMPLOYEE LOAN */}
-      {isLoanModalOpen && (
-        <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-sm p-6 animate-fadeIn">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h3 className="font-bold text-base">Issue Employee Loan</h3>
-              <button onClick={() => setIsLoanModalOpen(false)} className="text-muted-foreground hover:text-foreground cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveLoan} className="space-y-4 mt-4">
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Select Employee</label>
-                <select
-                  required
-                  value={loanForm.employeeId}
-                  onChange={e => setLoanForm({ ...loanForm, employeeId: e.target.value })}
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-semibold focus:outline-none"
-                >
-                  <option value="">Choose Staff Member</option>
-                  {employees.map(e => (
-                    <option key={e.id} value={e.id}>{e.name} ({e.designation || 'Staff'})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground block mb-1">Principal Loan Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={loanForm.amount}
-                  onChange={e => setLoanForm({ ...loanForm, amount: e.target.value })}
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-bold tabular-nums focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Duration (Months)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={loanForm.emiDuration}
-                    onChange={e => setLoanForm({ ...loanForm, emiDuration: e.target.value })}
-                    className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground block mb-1">Interest Rate (%)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={loanForm.interestRate}
-                    onChange={e => setLoanForm({ ...loanForm, interestRate: e.target.value })}
-                    className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-semibold focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="p-3 bg-muted/40 rounded-lg border border-border">
-                <span className="text-xs text-muted-foreground block">Calculated Monthly EMI:</span>
-                <span className="text-sm font-bold text-foreground tabular-nums">
-                  {loanForm.monthlyEMI ? formatCurrency(parseFloat(loanForm.monthlyEMI), baseCurrencySymbol) : '—'}
-                </span>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setIsLoanModalOpen(false)}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-1.5 bg-primary text-primary-foreground font-bold text-xs rounded-lg cursor-pointer"
-                >
-                  Save Loan
-                </button>
-              </div>
-            </form>
+      <EnterpriseModal
+        isOpen={isLoanModalOpen}
+        onClose={() => setIsLoanModalOpen(false)}
+        title="Issue Employee Loan"
+        icon={<CreditCard className="w-4 h-4" />}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <button
+              type="button"
+              onClick={() => setIsLoanModalOpen(false)}
+              className="px-4 py-2 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="payroll-loan-form"
+              disabled={loading}
+              className="px-5 py-2 bg-primary text-primary-foreground font-bold text-xs rounded-lg hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Save Loan
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <form id="payroll-loan-form" onSubmit={handleSaveLoan} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">Select Employee</label>
+            <select
+              required
+              value={loanForm.employeeId}
+              onChange={e => setLoanForm({ ...loanForm, employeeId: e.target.value })}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:outline-none focus:border-primary"
+            >
+              <option value="">Choose Staff Member</option>
+              {employees.map(e => (
+                <option key={e.id} value={e.id}>{e.name} ({e.designation || 'Staff'})</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-1">Principal Loan Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              value={loanForm.amount}
+              onChange={e => setLoanForm({ ...loanForm, amount: e.target.value })}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-bold tabular-nums focus:outline-none focus:border-primary"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Duration (Months)</label>
+              <input
+                type="number"
+                min="1"
+                required
+                value={loanForm.emiDuration}
+                onChange={e => setLoanForm({ ...loanForm, emiDuration: e.target.value })}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:outline-none focus:border-primary tabular-nums"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Interest Rate (%)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={loanForm.interestRate}
+                onChange={e => setLoanForm({ ...loanForm, interestRate: e.target.value })}
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:outline-none focus:border-primary tabular-nums"
+              />
+            </div>
+          </div>
+
+          <div className="p-3 bg-muted/40 rounded-xl border border-border">
+            <span className="text-xs text-muted-foreground block">Calculated Monthly EMI:</span>
+            <span className="text-sm font-bold text-foreground tabular-nums">
+              {loanForm.monthlyEMI ? formatCurrency(parseFloat(loanForm.monthlyEMI), baseCurrencySymbol) : '—'}
+            </span>
+          </div>
+        </form>
+      </EnterpriseModal>
 
       {/* MODAL H: EMPLOYEE SALARY INCREMENT */}
-      {isIncrementModalOpen && selectedEmployeeForService && (
-        <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-md p-6 animate-fadeIn">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base">Record Salary Increment</h3>
-                  <p className="text-xs text-muted-foreground">Adjust pay scale and maintain revision history</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsIncrementModalOpen(false)} 
-                className="text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
+      <EnterpriseModal
+        isOpen={Boolean(isIncrementModalOpen && selectedEmployeeForService)}
+        onClose={() => setIsIncrementModalOpen(false)}
+        title="Record Salary Increment"
+        subtitle="Adjust pay scale and maintain revision history"
+        icon={<TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+        size="lg"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <button
+              type="button"
+              onClick={() => setIsIncrementModalOpen(false)}
+              className="px-4 py-2 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="payroll-increment-form"
+              disabled={loading}
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Confirm & Update Salary
+            </button>
+          </div>
+        }
+      >
+        {selectedEmployeeForService && (
+          <div className="space-y-4">
             {/* Staff info card */}
-            <div className="my-4 p-3 bg-muted/40 rounded-lg border border-border flex items-center justify-between">
+            <div className="p-3.5 bg-muted/40 rounded-xl border border-border flex items-center justify-between">
               <div>
                 <p className="font-bold text-sm text-foreground">{selectedEmployeeForService.name}</p>
                 <p className="text-xs text-muted-foreground">
@@ -3395,7 +3375,7 @@ export function PayrollManagement() {
               </div>
             </div>
 
-            <form onSubmit={handleSaveIncrement} className="space-y-4">
+            <form id="payroll-increment-form" onSubmit={handleSaveIncrement} className="space-y-4">
               <div>
                 <label className="text-xs font-semibold text-muted-foreground block mb-1">Effective Date</label>
                 <input
@@ -3403,17 +3383,17 @@ export function PayrollManagement() {
                   required
                   value={incrementForm.effectiveDate}
                   onChange={e => setIncrementForm({ ...incrementForm, effectiveDate: e.target.value })}
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-semibold focus:outline-none"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:outline-none focus:border-primary tabular-nums"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-muted-foreground block mb-1">Increment Type</label>
                   <select
                     value={incrementForm.incrementType}
                     onChange={e => setIncrementForm({ ...incrementForm, incrementType: e.target.value as 'Fixed' | 'Percentage' })}
-                    className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-semibold focus:outline-none"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:outline-none focus:border-primary"
                   >
                     <option value="Fixed">Fixed Amount ({baseCurrencySymbol})</option>
                     <option value="Percentage">Percentage (%)</option>
@@ -3432,14 +3412,14 @@ export function PayrollManagement() {
                     placeholder={incrementForm.incrementType === 'Percentage' ? 'e.g. 10' : 'e.g. 2000'}
                     value={incrementForm.amount}
                     onChange={e => setIncrementForm({ ...incrementForm, amount: e.target.value })}
-                    className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-bold tabular-nums focus:outline-none"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-bold tabular-nums focus:outline-none focus:border-primary"
                   />
                 </div>
               </div>
 
               {/* Real-time Calculation Preview */}
               {parseFloat(incrementForm.amount) > 0 && (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center justify-between text-xs">
+                <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center justify-between text-xs">
                   <div>
                     <span className="text-muted-foreground block text-[11px]">Revised Basic Salary:</span>
                     <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm tabular-nums">
@@ -3451,7 +3431,7 @@ export function PayrollManagement() {
                       )}
                     </span>
                   </div>
-                  <div className="text-right text-[11px] text-muted-foreground">
+                  <div className="text-right text-[11px] text-muted-foreground tabular-nums">
                     <span>Increase: </span>
                     <span className="font-semibold text-foreground">
                       {incrementForm.incrementType === 'Percentage'
@@ -3469,211 +3449,183 @@ export function PayrollManagement() {
                   placeholder="e.g. Annual appraisal, promotion, merit bonus"
                   value={incrementForm.notes}
                   onChange={e => setIncrementForm({ ...incrementForm, notes: e.target.value })}
-                  className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs focus:outline-none"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs focus:outline-none focus:border-primary"
                 />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setIsIncrementModalOpen(false)}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg cursor-pointer"
-                >
-                  Confirm & Update Salary
-                </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </EnterpriseModal>
 
       {/* MODAL I: EMPLOYEE SERVICE RECORD & INCREMENT AUDIT TIMELINE */}
-      {isServiceHistoryModalOpen && selectedEmployeeForService && (
-        <div className="fixed inset-0 z-[99999] bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col p-6 animate-fadeIn">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-primary/10 text-primary rounded-lg">
-                  <UserCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-base">Employee Service & Increment Record</h3>
-                  <p className="text-xs text-muted-foreground">Joining, resignation, employment status and salary history</p>
-                </div>
+      <EnterpriseModal
+        isOpen={Boolean(isServiceHistoryModalOpen && selectedEmployeeForService)}
+        onClose={() => setIsServiceHistoryModalOpen(false)}
+        title="Employee Service & Increment Record"
+        subtitle="Joining, resignation, employment status and salary history"
+        icon={<UserCheck className="w-4 h-4" />}
+        size="xl"
+        footer={
+          <div className="flex justify-end w-full">
+            <button
+              type="button"
+              onClick={() => setIsServiceHistoryModalOpen(false)}
+              className="px-5 py-2 bg-muted text-foreground hover:bg-muted/80 border border-border font-bold text-xs rounded-lg cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+        }
+      >
+        {selectedEmployeeForService && (
+          <div className="space-y-6">
+            {/* Employee Summary Banner */}
+            <div className="p-4 bg-muted/40 rounded-xl border border-border flex items-center justify-between">
+              <div>
+                <h4 className="font-bold text-sm text-foreground">{selectedEmployeeForService.name}</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {selectedEmployeeForService.designation || 'Staff'} • {selectedEmployeeForService.department || 'General'}
+                </p>
               </div>
-              <button 
-                onClick={() => setIsServiceHistoryModalOpen(false)} 
-                className="text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="text-right">
+                <span className="text-[11px] text-muted-foreground block">Current Basic Salary</span>
+                <span className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  {formatCurrency(Number(selectedEmployeeForService.salary || selectedEmployeeForService.basicSalary || 0), baseCurrencySymbol)}
+                </span>
+              </div>
             </div>
 
-            <div className="overflow-y-auto flex-1 pr-1 space-y-6 my-4">
-              {/* Employee Summary Banner */}
-              <div className="p-4 bg-muted/40 rounded-xl border border-border flex items-center justify-between">
-                <div>
-                  <h4 className="font-bold text-sm text-foreground">{selectedEmployeeForService.name}</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {selectedEmployeeForService.designation || 'Staff'} • {selectedEmployeeForService.department || 'General'}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="text-[11px] text-muted-foreground block">Current Basic Salary</span>
-                  <span className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                    {formatCurrency(Number(selectedEmployeeForService.salary || selectedEmployeeForService.basicSalary || 0), baseCurrencySymbol)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Service Details Form */}
-              <div className="bg-card border border-border rounded-xl p-4 shadow-2xs">
-                <h5 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-primary" /> Service Dates & Employment Status
-                </h5>
-                <form onSubmit={handleSaveServiceStatus} className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Joining Date</label>
-                      <input
-                        type="date"
-                        required
-                        value={serviceStatusForm.joining_date}
-                        onChange={e => setServiceStatusForm({ ...serviceStatusForm, joining_date: e.target.value })}
-                        className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-semibold focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Employment Status</label>
-                      <select
-                        value={serviceStatusForm.status}
-                        onChange={e => setServiceStatusForm({ ...serviceStatusForm, status: e.target.value })}
-                        className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-semibold focus:outline-none"
-                      >
-                        <option value="Active">Active</option>
-                        <option value="Resigned">Resigned</option>
-                        <option value="On Leave">On Leave</option>
-                        <option value="Suspended">Suspended</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Resignation / Exit Date</label>
-                      <input
-                        type="date"
-                        value={serviceStatusForm.resignation_date}
-                        onChange={e => setServiceStatusForm({ ...serviceStatusForm, resignation_date: e.target.value })}
-                        className="w-full px-3 py-2 bg-muted/60 border border-border rounded-lg text-xs font-semibold focus:outline-none"
-                      />
-                    </div>
+            {/* Service Details Form */}
+            <div className="bg-card border border-border rounded-xl p-4 shadow-2xs">
+              <h5 className="font-bold text-xs uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-primary" /> Service Dates & Employment Status
+              </h5>
+              <form onSubmit={handleSaveServiceStatus} className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Joining Date</label>
+                    <input
+                      type="date"
+                      required
+                      value={serviceStatusForm.joining_date}
+                      onChange={e => setServiceStatusForm({ ...serviceStatusForm, joining_date: e.target.value })}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:outline-none focus:border-primary tabular-nums"
+                    />
                   </div>
 
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="px-4 py-1.5 bg-primary text-primary-foreground font-bold text-xs rounded-lg cursor-pointer"
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Employment Status</label>
+                    <select
+                      value={serviceStatusForm.status}
+                      onChange={e => setServiceStatusForm({ ...serviceStatusForm, status: e.target.value })}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:outline-none focus:border-primary"
                     >
-                      Update Service Record
-                    </button>
+                      <option value="Active">Active</option>
+                      <option value="Resigned">Resigned</option>
+                      <option value="On Leave">On Leave</option>
+                      <option value="Suspended">Suspended</option>
+                    </select>
                   </div>
-                </form>
-              </div>
 
-              {/* Increment History Log Table */}
-              <div className="bg-card border border-border rounded-xl shadow-2xs overflow-hidden">
-                <div className="p-3 bg-muted/30 border-b border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <History className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <h5 className="font-bold text-xs">Salary Increment History Audit Log</h5>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Resignation / Exit Date</label>
+                    <input
+                      type="date"
+                      value={serviceStatusForm.resignation_date}
+                      onChange={e => setServiceStatusForm({ ...serviceStatusForm, resignation_date: e.target.value })}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-semibold focus:outline-none focus:border-primary tabular-nums"
+                    />
                   </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
                   <button
-                    onClick={() => {
-                      setIsServiceHistoryModalOpen(false);
-                      handleOpenIncrementModal(selectedEmployeeForService);
-                    }}
-                    className="inline-flex items-center gap-1 text-xs text-primary font-bold hover:underline cursor-pointer"
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-1.5 bg-primary text-primary-foreground font-bold text-xs rounded-lg hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    <Plus className="w-3.5 h-3.5" /> New Increment
+                    Update Service Record
                   </button>
                 </div>
+              </form>
+            </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead className="bg-muted/70 text-muted-foreground font-semibold uppercase tracking-wider text-[10px] border-b border-border">
-                      <tr>
-                        <th className="py-2 px-3" style={{ verticalAlign: 'middle' }}>Effective Date</th>
-                        <th className="py-2 px-3" style={{ verticalAlign: 'middle' }}>Type</th>
-                        <th className="py-2 px-3 text-right" style={{ verticalAlign: 'middle' }}>Previous Salary</th>
-                        <th className="py-2 px-3 text-right" style={{ verticalAlign: 'middle' }}>Increment</th>
-                        <th className="py-2 px-3 text-right font-bold" style={{ verticalAlign: 'middle' }}>New Salary</th>
-                        <th className="py-2 px-3" style={{ verticalAlign: 'middle' }}>Reason / Notes</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/60">
-                      {(!selectedEmployeeForService.salaryIncrements || selectedEmployeeForService.salaryIncrements.length === 0) ? (
-                        <tr>
-                          <td colSpan={6} className="py-8 text-center text-muted-foreground italic">
-                            No salary increments recorded yet. Initial base salary: {formatCurrency(Number(selectedEmployeeForService.salary || selectedEmployeeForService.basicSalary || 0), baseCurrencySymbol)}
-                          </td>
-                        </tr>
-                      ) : (
-                        [...selectedEmployeeForService.salaryIncrements]
-                          .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime())
-                          .map((inc, idx) => (
-                            <tr key={inc.id || idx} className="hover:bg-muted/20">
-                              <td className="py-2.5 px-3 font-semibold text-foreground whitespace-nowrap" style={{ verticalAlign: 'middle' }}>
-                                {format(new Date(inc.effectiveDate), 'dd MMM yyyy')}
-                              </td>
-                              <td className="py-2.5 px-3 whitespace-nowrap" style={{ verticalAlign: 'middle' }}>
-                                <span className={cn(
-                                  "px-2 py-0.5 rounded text-[10px] font-bold",
-                                  inc.incrementType === 'Percentage' ? "bg-purple-500/10 text-purple-600 dark:text-purple-400" : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                                )}>
-                                  {inc.incrementType}
-                                </span>
-                              </td>
-                              <td className="py-2.5 px-3 text-right tabular-nums text-muted-foreground" style={{ verticalAlign: 'middle' }}>
-                                {formatCurrency(inc.previousSalary, baseCurrencySymbol)}
-                              </td>
-                              <td className="py-2.5 px-3 text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400" style={{ verticalAlign: 'middle' }}>
-                                +{inc.incrementType === 'Percentage' ? `${inc.incrementAmount}%` : formatCurrency(inc.incrementAmount, baseCurrencySymbol)}
-                              </td>
-                              <td className="py-2.5 px-3 text-right tabular-nums font-bold text-foreground" style={{ verticalAlign: 'middle' }}>
-                                {formatCurrency(inc.newSalary, baseCurrencySymbol)}
-                              </td>
-                              <td className="py-2.5 px-3 text-muted-foreground max-w-[180px] truncate" style={{ verticalAlign: 'middle' }}>
-                                {inc.notes || '—'}
-                              </td>
-                            </tr>
-                          ))
-                      )}
-                    </tbody>
-                  </table>
+            {/* Increment History Log Table */}
+            <div className="bg-card border border-border rounded-xl shadow-2xs overflow-hidden">
+              <div className="p-3 bg-muted/30 border-b border-border flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <History className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <h5 className="font-bold text-xs">Salary Increment History Audit Log</h5>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsServiceHistoryModalOpen(false);
+                    handleOpenIncrementModal(selectedEmployeeForService);
+                  }}
+                  className="inline-flex items-center gap-1 text-xs text-primary font-bold hover:underline cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> New Increment
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-muted/70 text-muted-foreground font-semibold uppercase tracking-wider text-[10px] border-b border-border">
+                    <tr>
+                      <th className="py-2 px-3 align-middle">Effective Date</th>
+                      <th className="py-2 px-3 align-middle">Type</th>
+                      <th className="py-2 px-3 text-right align-middle">Previous Salary</th>
+                      <th className="py-2 px-3 text-right align-middle">Increment</th>
+                      <th className="py-2 px-3 text-right font-bold align-middle">New Salary</th>
+                      <th className="py-2 px-3 align-middle">Reason / Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {(!selectedEmployeeForService.salaryIncrements || selectedEmployeeForService.salaryIncrements.length === 0) ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-muted-foreground italic align-middle">
+                          No salary increments recorded yet. Initial base salary: {formatCurrency(Number(selectedEmployeeForService.salary || selectedEmployeeForService.basicSalary || 0), baseCurrencySymbol)}
+                        </td>
+                      </tr>
+                    ) : (
+                      [...selectedEmployeeForService.salaryIncrements]
+                        .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime())
+                        .map((inc, idx) => (
+                          <tr key={inc.id || idx} className="hover:bg-muted/20">
+                            <td className="py-2.5 px-3 font-semibold text-foreground whitespace-nowrap tabular-nums align-middle">
+                              {format(new Date(inc.effectiveDate), 'dd MMM yyyy')}
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap align-middle">
+                              <span className={cn(
+                                "px-2 py-0.5 rounded text-[10px] font-bold",
+                                inc.incrementType === 'Percentage' ? "bg-purple-500/10 text-purple-600 dark:text-purple-400" : "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                              )}>
+                                {inc.incrementType}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-right tabular-nums text-muted-foreground align-middle">
+                              {formatCurrency(inc.previousSalary, baseCurrencySymbol)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right tabular-nums font-bold text-emerald-600 dark:text-emerald-400 align-middle">
+                              +{inc.incrementType === 'Percentage' ? `${inc.incrementAmount}%` : formatCurrency(inc.incrementAmount, baseCurrencySymbol)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right tabular-nums font-bold text-foreground align-middle">
+                              {formatCurrency(inc.newSalary, baseCurrencySymbol)}
+                            </td>
+                            <td className="py-2.5 px-3 text-muted-foreground max-w-[180px] truncate align-middle">
+                              {inc.notes || '—'}
+                            </td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
-
-            <div className="flex justify-end pt-3 border-t border-border">
-              <button
-                type="button"
-                onClick={() => setIsServiceHistoryModalOpen(false)}
-                className="px-4 py-1.5 bg-muted text-foreground hover:bg-muted/80 font-bold text-xs rounded-lg cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </EnterpriseModal>
     </div>
   );
 }

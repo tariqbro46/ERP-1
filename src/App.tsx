@@ -813,6 +813,47 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     }
   };
   
+  // Sync body.erp-modal-open for all open dialog/modal overlays across the app (including legacy modals)
+  React.useEffect(() => {
+    const syncModalState = () => {
+      const enterpriseOpen = !!document.querySelector('[data-enterprise-modal="true"]');
+      let legacyOpen = false;
+      const fixedOverlays = document.querySelectorAll('.fixed.inset-0:not([data-modal-ignore="true"])');
+      for (let i = 0; i < fixedOverlays.length; i++) {
+        const el = fixedOverlays[i] as HTMLElement;
+        const cls = typeof el.className === 'string' ? el.className : '';
+        const hasModalBackdrop =
+          cls.includes('backdrop-blur') ||
+          cls.includes('bg-black/') ||
+          cls.includes('bg-slate-9') ||
+          cls.includes('bg-background/') ||
+          el.getAttribute('role') === 'dialog';
+        if (!hasModalBackdrop) continue;
+        const style = window.getComputedStyle(el);
+        if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+          legacyOpen = true;
+          break;
+        }
+      }
+      const hasModal = enterpriseOpen || legacyOpen;
+      document.body.classList.toggle('erp-modal-open', hasModal);
+    };
+
+    syncModalState();
+    const observer = new MutationObserver(syncModalState);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'data-enterprise-modal', 'data-modal-ignore'],
+    });
+
+    return () => {
+      observer.disconnect();
+      document.body.classList.remove('erp-modal-open');
+    };
+  }, []);
+
   // Close sidebar and scroll to top on navigation
   React.useEffect(() => {
     setIsSidebarOpen(false);
@@ -953,7 +994,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
     return (
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 flex flex-col transition-transform duration-300",
+        "app-sidebar fixed inset-y-0 left-0 z-50 flex flex-col transition-transform duration-300",
         customBgOpt
           ? customBgOpt.className
           : isColorful 
@@ -1021,11 +1062,11 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
         <nav className="flex-1 py-2 overflow-y-auto no-scrollbar overflow-x-hidden">
           {menuLoading ? (
-            <div className="px-4 py-3 space-y-6 animate-pulse">
+            <div className="px-4 py-3 space-y-6">
               {/* Dashboard item skeleton */}
               <div className="flex items-center gap-3 py-2 px-2">
-                <div className="h-5 w-5 bg-muted/20 rounded-md"></div>
-                <div className="h-4 bg-muted/15 rounded-md w-28"></div>
+                <div className="h-5 w-5 bg-muted/25 rounded-md erp-skeleton-item"></div>
+                <div className="h-4 bg-muted/20 rounded-md w-28 erp-skeleton-item"></div>
               </div>
               
               {/* Group 1 */}
@@ -1139,13 +1180,13 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                 title="Click to view detailed Database operational metrics"
               >
                 <div className="flex items-center justify-between text-[10px] tracking-wider text-slate-300 uppercase p-0 m-0 font-bold group-hover:text-white">
-                  <span className="select-none flex items-center gap-1 text-slate-300">
-                    <Database className="w-3 h-3 text-indigo-400 group-hover:animate-pulse" />
+                  <span className="select-none flex items-center gap-1 text-slate-300 whitespace-nowrap">
+                    <Database className="w-3 h-3 text-indigo-400" />
                     Usage (Today):
                   </span>
                   <span className={cn(
-                    "font-extrabold",
-                    pct >= 90 ? "text-rose-400 animate-pulse" : 
+                    "font-extrabold tabular-nums",
+                    pct >= 90 ? "text-rose-400" : 
                     pct >= 75 ? "text-amber-400" : "text-emerald-400"
                   )}>
                     {pct}%
@@ -1162,7 +1203,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                     style={{ width: `${Math.min(100, pct)}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-[8px] text-slate-400 p-0 m-0 font-bold tracking-tight">
+                <div className="flex justify-between text-[8px] text-slate-400 p-0 m-0 font-bold tracking-tight tabular-nums">
                   <span className="text-slate-500 group-hover:text-slate-300 transition-colors">Details ↗</span>
                   <span>{used.toLocaleString()} / {limitVal.toLocaleString()}</span>
                 </div>
@@ -1171,7 +1212,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
           })()}
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               <span className={cn(
                 "text-[8px] font-mono uppercase tracking-widest", 
                 customBgOpt ? (customBgOpt.isDark ? "text-slate-400" : "text-stone-500") : isColorful ? "text-slate-400" : "text-gray-400"
@@ -1201,7 +1242,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
     return (
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300 ease-in-out font-sans select-none",
+          "app-sidebar fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-300 ease-in-out font-sans select-none",
           isDarkTheme
             ? "bg-slate-900 border-r border-slate-800 text-slate-300 shadow-2xl"
             : "bg-[#f8f9fa] border-r border-slate-200 text-slate-700 shadow-xl",
@@ -1760,13 +1801,13 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent('open_whats_new'))}
                 className={cn(
-                  "flex items-center gap-1.5 text-[9px] font-mono px-1.5 py-0.5 rounded cursor-pointer transition-all hover:scale-105 group border border-transparent hover:border-border/60",
+                  "flex items-center gap-1.5 text-[9px] font-mono px-1.5 py-0.5 rounded cursor-pointer transition-colors group border border-transparent hover:border-border/60 whitespace-nowrap",
                   isDarkTheme ? "text-slate-400 hover:text-white hover:bg-slate-800" : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/80"
                 )}
                 title={language === 'bn' ? `বর্তমান সংস্করণ ${appVersion}-এর রিলিজ নোট দেখুন` : `View What's New in Version ${appVersion}`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse group-hover:bg-indigo-400" />
-                <span className="font-bold">{appVersion}</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:bg-indigo-400" />
+                <span className="font-bold tabular-nums">{appVersion}</span>
               </button>
             </div>
           ) : (
@@ -1797,7 +1838,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
 
   const renderRibbonMenu = () => {
     return (
-      <div className="bg-card border-b border-border hidden lg:block">
+      <div className="app-ribbon bg-card border-b border-border hidden lg:block">
         <div className="flex border-b border-border px-4 items-center justify-between">
           <div className="flex">
             <button
@@ -1889,7 +1930,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
   };
 
   const renderMacOSMenu = () => (
-    <div className="bg-background/80 backdrop-blur-md border-b border-border h-10 px-4 flex items-center justify-between hidden lg:flex fixed top-0 left-0 right-0 z-[60]">
+    <div className="app-macos-bar bg-background/80 backdrop-blur-md border-b border-border h-10 px-4 flex items-center justify-between hidden lg:flex fixed top-0 left-0 right-0 z-[60]">
       <div className="flex items-center gap-6">
         {location.pathname !== '/dashboard' && (
           <button 
@@ -2037,7 +2078,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                 />
               </div>
               {showTopbarNotifications && unreadNotificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[9px] font-black font-mono w-4 h-4 flex items-center justify-center border border-background shadow-sm animate-pulse z-20">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[9px] font-black font-mono tabular-nums w-4 h-4 flex items-center justify-center border border-background shadow-sm z-20">
                   {unreadNotificationCount}
                 </span>
               )}
@@ -2068,6 +2109,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       <>
         {isWinStartOpen && (
           <div 
+            data-modal-ignore="true"
             className="fixed inset-0 z-[60]"
             onClick={() => setIsWinStartOpen(false)}
           >
@@ -2178,7 +2220,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
           </div>
         )}
         
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-xl border border-border/50 h-14 px-2 rounded-2xl flex items-center gap-1 shadow-2xl z-50 hidden lg:flex">
+        <div className="app-win11-bar fixed bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-xl border border-border/50 h-14 px-2 rounded-2xl flex items-center gap-1 shadow-2xl z-50 hidden lg:flex">
           {showTopbarSearch && (
             <button 
               onClick={onOpenSearch}
@@ -2268,6 +2310,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
+          data-modal-ignore="true"
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
@@ -2284,7 +2327,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
       <main className="flex-1 flex flex-col w-full overflow-hidden h-full">
         {menuBarStyle !== 'macos' && (
           <header className={cn(
-            "h-14 flex-none border-b border-border bg-background flex items-center px-4 lg:px-6 z-[500] transition-colors relative",
+            "app-topbar h-14 flex-none border-b border-border bg-background flex items-center px-4 lg:px-6 z-[500] transition-colors relative",
             uiStyle === 'UI/UX 2' && "bg-blue-600 border-blue-700 text-white"
           )}>
             <div className="flex-1 flex items-center justify-start gap-3 lg:gap-4 z-10 min-w-0">
@@ -2375,15 +2418,15 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                     <Link
                       to="/release-notes"
                       className={cn(
-                        "px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-mono font-bold tracking-wider flex items-center gap-1 transition-all hover:scale-105 border shrink-0",
+                        "px-2 py-0.5 rounded-md text-[9px] font-mono font-semibold tracking-wider flex items-center gap-1.5 transition-colors border shrink-0 whitespace-nowrap",
                         uiStyle === 'UI/UX 2'
                           ? "bg-emerald-500/25 text-emerald-100 border-emerald-400/30 hover:bg-emerald-500/40"
                           : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/20"
                       )}
                       title={language === 'bn' ? `বর্তমান সিস্টেম সংস্করণ: ${LATEST_VERSION} (রিলিজ নোট দেখতে ক্লিক করুন)` : `Current App Version: ${LATEST_VERSION} (Click to view release notes)`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>{LATEST_VERSION}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      <span className="tabular-nums">{LATEST_VERSION}</span>
                     </Link>
                   </div>
                 </div>
@@ -2433,8 +2476,8 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                     type="button"
                     onClick={() => window.dispatchEvent(new CustomEvent('open_goto_search'))}
                     className={cn(
-                      "flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded-lg border transition-all hover:scale-102 cursor-pointer",
-                      uiStyle === 'UI/UX 2' ? "bg-white/10 hover:bg-white/20 border-white/20 text-white" : "bg-muted/60 hover:bg-muted text-gray-500 hover:text-foreground border-border"
+                      "flex items-center gap-1.5 h-8 text-[10px] font-mono px-2.5 rounded-lg border transition-colors cursor-pointer whitespace-nowrap shrink-0",
+                      uiStyle === 'UI/UX 2' ? "bg-white/10 hover:bg-white/20 border-white/20 text-white" : "bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border-border"
                     )}
                     title={language === 'bn' ? "যেকোনো মেনু বা পেজে যেতে Alt+G চাপুন" : "Press Alt+G to jump anywhere"}
                   >
@@ -2447,20 +2490,20 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                       "px-1 py-0.2 border rounded text-[9px] font-bold",
                       uiStyle === 'UI/UX 2' ? "bg-white/15 border-white/30 text-white" : "bg-card border-border text-foreground"
                     )}>G</kbd>
-                    <span className="ml-0.5 uppercase tracking-widest font-bold">{t('common.goTo')}</span>
+                    <span className="ml-0.5 uppercase tracking-wider font-semibold">{t('common.goTo')}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => window.dispatchEvent(new CustomEvent('open_keyboard_shortcuts'))}
                     className={cn(
-                      "flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded-lg border transition-all hover:scale-102 cursor-pointer",
+                      "flex items-center gap-1.5 h-8 text-[10px] font-mono px-2.5 rounded-lg border transition-colors cursor-pointer whitespace-nowrap shrink-0",
                       uiStyle === 'UI/UX 2' ? "bg-white/10 hover:bg-white/20 border-white/20 text-white" : "bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border-border"
                     )}
                     title={language === 'bn' ? "সকল কিবোর্ড শর্টকাট গাইড ও বিশ্লেষণ (Alt+H অথবা ?)" : "View All Keyboard Shortcuts (Alt+H or ?)"}
                   >
                     <Keyboard className="w-3.5 h-3.5 text-primary" />
-                    <span className="font-bold">{language === 'bn' ? 'শর্টকাট' : 'Shortcuts'}</span>
+                    <span className="font-semibold">{language === 'bn' ? 'শর্টকাট' : 'Shortcuts'}</span>
                     <kbd className={cn(
                       "px-1 py-0.2 border rounded text-[9px] font-bold",
                       uiStyle === 'UI/UX 2' ? "bg-white/15 border-white/30 text-white" : "bg-card border-border text-foreground"
@@ -2485,7 +2528,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
                     />
                   </div>
                   {showTopbarNotifications && unreadNotificationCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[9px] font-black font-mono w-4 h-4 flex items-center justify-center border border-background shadow-sm animate-pulse z-20">
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-[9px] font-black font-mono tabular-nums w-4 h-4 flex items-center justify-center border border-background shadow-sm z-20">
                       {unreadNotificationCount}
                     </span>
                   )}
@@ -2512,7 +2555,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         {isQuotaExceeded && (
           <div id="quota-warning-banner" className="bg-rose-600 dark:bg-rose-950/95 border-b border-rose-500/30 px-4 lg:px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-3 text-white dark:text-rose-200 text-xs font-semibold animate-fadeIn z-[400] relative">
             <div className="flex items-center gap-3 w-full md:w-auto">
-              <LucideIcons.ShieldAlert className="w-5 h-5 text-white dark:text-rose-400 animate-pulse shrink-0" />
+              <LucideIcons.ShieldAlert className="w-5 h-5 text-white dark:text-rose-400 shrink-0" />
               <div className="flex-1">
                 {bannerLang === 'bn' ? (
                   <span>
@@ -2594,7 +2637,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         {menuBarStyle === 'windows11' && renderWindows11Menu()}
 
         {/* Mobile Bottom Navigation */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border h-16 flex items-center justify-around px-2 z-40">
+        <nav className="app-mobile-nav lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border h-16 flex items-center justify-around px-2 z-40">
           <Link 
             to="/dashboard" 
             className={cn(
@@ -2721,7 +2764,7 @@ function Layout({ children, onOpenSearch }: { children: React.ReactNode, onOpenS
         )}>
           <div className="bg-slate-900/95 border border-rose-500/50 text-slate-100 pl-4 pr-3.5 py-2.5 rounded-xl shadow-2xl flex items-center gap-3.5 backdrop-blur-md">
             <div className="p-1.5 bg-rose-950/80 border border-rose-500/30 rounded-lg text-rose-400 shrink-0">
-              <LucideIcons.Database className="w-4 h-4 text-rose-400 animate-pulse" />
+              <LucideIcons.Database className="w-4 h-4 text-rose-400" />
             </div>
             <div className="flex items-center gap-3">
               <div>
@@ -2770,73 +2813,32 @@ function AppContent() {
   }, [language, englishFont, banglaFont]);
   
   if (loading || settingsLoading) {
-    const defaultPhrases = [
-      'Connecting to server...',
-      'Requesting to server...',
-      'Waiting for response...',
-      'Almost Done...',
-      'Here We go!'
-    ];
-    const phrases = loaderPhrases ? loaderPhrases.split(',').map(p => p.trim()).filter(Boolean) : defaultPhrases;
-    
-    // Choose icon based on user settings
     const renderLoaderIcon = () => {
       switch (loaderIconStyle) {
         case 'dots':
           return (
-            <div className="flex items-center gap-1.5 h-10">
-              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-bounce" />
+            <div className="flex items-center gap-1.5 h-8">
+              <span className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+              <span className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+              <span className="w-2 h-2 rounded-full bg-primary animate-bounce" />
             </div>
           );
         case 'circle-bar':
-          return (
-            <div className="relative w-12 h-12 flex items-center justify-center">
-              <LucideIcons.RefreshCw className="w-8 h-8 animate-spin text-primary/80 stroke-[2]" />
-              <LucideIcons.CircleDot className="absolute w-4 h-4 text-primary animate-pulse" />
-            </div>
-          );
         case 'quantum':
-          return (
-            <div className="relative w-12 h-12 flex items-center justify-center">
-              <div className="absolute inset-0 border-2 border-primary/20 rounded-full" />
-              <div className="absolute inset-0 border-2 border-t-primary rounded-full animate-spin" />
-              <div className="absolute inset-2 border-2 border-dashed border-primary/40 rounded-full animate-spin [animation-duration:3s]" />
-              <LucideIcons.Cpu className="w-4 h-4 text-primary animate-pulse" />
-            </div>
-          );
         case 'spinner':
         default:
-          return <LucideIcons.Loader2 className="w-10 h-10 animate-spin text-primary stroke-[1.5]" />;
+          return <LucideIcons.Loader2 className="w-7 h-7 animate-spin text-primary stroke-[1.75]" />;
       }
     };
 
     return (
-      <div className="h-screen flex items-center justify-center bg-background relative overflow-hidden">
-        {/* Animated ambient backdrop halo */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-muted/20 opacity-40 animate-pulse [animation-duration:4s]" />
-        
-        <div className="flex flex-col items-center gap-3 relative z-10 animate-pulse [animation-duration:2.5s]">
+      <div className="h-screen flex items-center justify-center bg-background text-foreground">
+        <div className="flex flex-col items-center gap-3 px-6 py-5 rounded-2xl border border-border bg-card shadow-[var(--shadow-surface)]">
           {renderLoaderIcon()}
-          <span className="text-[10px] font-mono tracking-widest text-muted-foreground uppercase mt-2">Loading Core Engine...</span>
+          <span className="text-xs font-medium text-muted-foreground tracking-wide">
+            {language === 'bn' ? 'প্রস্তুত হচ্ছে...' : 'Preparing workspace...'}
+          </span>
         </div>
-
-        {/* Floating status block on the bottom right corner */}
-        {adaptiveLoaderEnabled && (
-          <div 
-            className="absolute bottom-6 right-6 flex items-center gap-3 px-4 py-3 rounded-xl border border-border/50 font-mono text-[11px] uppercase tracking-widest shadow-lg bg-background/40 backdrop-blur-md text-foreground"
-          >
-            <div className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[9px] text-muted-foreground font-black tracking-tighter">BOOTING PIPELINE</span>
-              <span className="text-foreground font-bold">{phrases[0]}</span>
-            </div>
-          </div>
-        )}
       </div>
     );
   }

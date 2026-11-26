@@ -10,6 +10,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 import { useSubscription } from '../hooks/useSubscription';
 import { cn } from '../lib/utils';
+import { EnterpriseModal } from './ui/EnterpriseModal';
 
 export function ItemCreation() {
   const navigate = useNavigate();
@@ -377,10 +378,10 @@ export function ItemCreation() {
                       type="button"
                       onClick={() => setShowGodownAlloc(true)}
                       className={cn(
-                        "px-3 text-[10px] border font-bold uppercase tracking-widest transition-all",
+                        "px-3 text-[10px] border rounded-lg font-bold uppercase tracking-wider transition-all cursor-pointer",
                         (formData.opening_godowns?.reduce((sum: number, g: any) => sum + (g.qty || 0), 0) === formData.opening_qty)
                           ? "border-emerald-500 text-emerald-500 bg-emerald-500/10"
-                          : "border-rose-500 text-rose-500 bg-rose-500/10 animate-pulse"
+                          : "border-rose-500 text-rose-500 bg-rose-500/10"
                       )}
                       title={t('item.allocateGodown')}
                     >
@@ -525,167 +526,155 @@ export function ItemCreation() {
       </div>
 
       {/* Godown Allocation Modal */}
-      {showGodownAlloc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 text-mono">
-          <div className="bg-card border border-border w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-4 border-b border-border bg-foreground/5 flex justify-between items-center">
-              <div>
-                <h3 className="text-sm font-bold uppercase tracking-widest text-foreground">Godown Allocation</h3>
-                <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-widest">
-                  Total Opening Quantity: <span className="text-foreground font-bold">{formData.opening_qty}</span>
-                </p>
-              </div>
-              <button onClick={() => setShowGodownAlloc(false)} className="text-gray-500 hover:text-foreground">
-                <Trash2 className="w-4 h-4 rotate-45" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div className="grid grid-cols-12 gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-400 pb-2 border-b border-border">
-                <div className="col-span-8">Godown</div>
-                <div className="col-span-4 text-right">Quantity</div>
-              </div>
-
-              {(formData.opening_godowns || []).map((alloc: any, idx: number) => (
-                <div key={idx} className="grid grid-cols-12 gap-4 items-center animate-in slide-in-from-left-2 duration-200">
-                  <div className="col-span-7">
-                    <select
-                      value={alloc.godown_id}
-                      onChange={e => {
-                        const newAlloc = [...(formData.opening_godowns || [])];
-                        newAlloc[idx].godown_id = e.target.value;
-                        setFormData({ ...formData, opening_godowns: newAlloc });
-                      }}
-                      className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground transition-colors"
-                    >
-                      <option value="">Select Godown</option>
-                      {godowns.map(g => (
-                        <option key={g.id} value={g.id}>{g.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-span-4">
-                    <input
-                      type="number"
-                      value={alloc.qty}
-                      onChange={e => {
-                        const newAlloc = [...(formData.opening_godowns || [])];
-                        newAlloc[idx].qty = Number(e.target.value);
-                        setFormData({ ...formData, opening_godowns: newAlloc });
-                      }}
-                      className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground transition-colors text-right"
-                    />
-                  </div>
-                  <div className="col-span-1 flex justify-end">
-                    <button
-                      onClick={() => {
-                        const newAlloc = (formData.opening_godowns || []).filter((_: any, i: number) => i !== idx);
-                        setFormData({ ...formData, opening_godowns: newAlloc });
-                      }}
-                      className="text-rose-500 hover:text-rose-600 p-1"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData({
-                    ...formData,
-                    opening_godowns: [...(formData.opening_godowns || []), { godown_id: '', qty: 0 }]
-                  });
-                }}
-                className="w-full py-2 border border-dashed border-border text-[10px] text-gray-500 uppercase tracking-widest hover:border-foreground/30 hover:text-foreground transition-all flex items-center justify-center gap-2"
-              >
-                <Package className="w-3 h-3" /> Add Godown
-              </button>
-
-              {/* Summary */}
-              <div className="mt-8 pt-4 border-t border-border space-y-2">
-                <div className="flex justify-between text-[11px] uppercase tracking-widest text-gray-500">
-                  <span>Allocated Qty:</span>
-                  <span className={cn(
-                    "font-bold",
-                    formData.opening_godowns?.reduce((sum: number, g: any) => sum + (g.qty || 0), 0) === formData.opening_qty
-                      ? "text-emerald-500"
-                      : "text-rose-500"
-                  )}>
-                    {formData.opening_godowns?.reduce((sum: number, g: any) => sum + (g.qty || 0), 0)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-[11px] uppercase tracking-widest text-gray-400">
-                  <span>Balance to Allocate:</span>
-                  <span>{formData.opening_qty - (formData.opening_godowns?.reduce((sum: number, g: any) => sum + (g.qty || 0), 0) || 0)}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-border bg-foreground/5 flex justify-end gap-3">
-              <button
-                onClick={() => setShowGodownAlloc(false)}
-                className="px-8 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-all"
-              >
-                Confirm Allocation
-              </button>
-            </div>
+      <EnterpriseModal
+        isOpen={showGodownAlloc}
+        onClose={() => setShowGodownAlloc(false)}
+        title="Godown Allocation"
+        subtitle={`Total Opening Quantity: ${formData.opening_qty}`}
+        icon={<MapPin className="w-4 h-4" />}
+        size="lg"
+        footer={
+          <div className="flex justify-end w-full">
+            <button
+              type="button"
+              onClick={() => setShowGodownAlloc(false)}
+              className="px-6 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-all cursor-pointer"
+            >
+              Confirm Allocation
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-12 gap-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground pb-2 border-b border-border">
+            <div className="col-span-7">Godown</div>
+            <div className="col-span-4 text-right">Quantity</div>
+            <div className="col-span-1"></div>
+          </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-card border border-border w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="p-6 space-y-6">
-              <div className="flex items-center gap-4 text-rose-500">
-                <div className="p-3 bg-rose-500/10 rounded-full">
-                  <AlertTriangle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold uppercase tracking-widest">{t('common.confirmDeletion')}</h3>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1">{t('common.cannotUndone')}</p>
-                </div>
+          {(formData.opening_godowns || []).map((alloc: any, idx: number) => (
+            <div key={idx} className="grid grid-cols-12 gap-4 items-center">
+              <div className="col-span-7">
+                <select
+                  value={alloc.godown_id}
+                  onChange={e => {
+                    const newAlloc = [...(formData.opening_godowns || [])];
+                    newAlloc[idx].godown_id = e.target.value;
+                    setFormData({ ...formData, opening_godowns: newAlloc });
+                  }}
+                  className="w-full bg-background border border-border rounded-lg text-foreground px-3 py-2 text-sm outline-none focus:border-primary transition-colors"
+                >
+                  <option value="">Select Godown</option>
+                  {godowns.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
               </div>
-
-              {hasTransactions ? (
-                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded space-y-2">
-                  <p className="text-[11px] text-rose-500 leading-relaxed">
-                    <span className="font-bold uppercase">{t('common.warning')}:</span> {t('item.deleteWarning')}
-                  </p>
-                  <p className="text-[10px] text-rose-500 uppercase tracking-widest font-bold">
-                    {t('item.recommendKeep')}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-[11px] text-gray-400 leading-relaxed">
-                  {t('item.deleteConfirmText', { name: formData.name })}
-                </p>
-              )}
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-border">
+              <div className="col-span-4">
+                <input
+                  type="number"
+                  value={alloc.qty}
+                  onChange={e => {
+                    const newAlloc = [...(formData.opening_godowns || [])];
+                    newAlloc[idx].qty = Number(e.target.value);
+                    setFormData({ ...formData, opening_godowns: newAlloc });
+                  }}
+                  className="w-full bg-background border border-border rounded-lg text-foreground px-3 py-2 text-sm outline-none focus:border-primary transition-colors text-right tabular-nums"
+                />
+              </div>
+              <div className="col-span-1 flex justify-end">
                 <button
                   type="button"
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2 text-[10px] text-gray-500 hover:text-foreground uppercase tracking-widest transition-colors"
+                  onClick={() => {
+                    const newAlloc = (formData.opening_godowns || []).filter((_: any, i: number) => i !== idx);
+                    setFormData({ ...formData, opening_godowns: newAlloc });
+                  }}
+                  className="text-rose-500 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-500/10 cursor-pointer"
                 >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className="flex items-center gap-2 px-6 py-2 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-rose-500 transition-all disabled:opacity-50"
-                >
-                  {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                  {t('common.confirmDelete')}
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                ...formData,
+                opening_godowns: [...(formData.opening_godowns || []), { godown_id: '', qty: 0 }]
+              });
+            }}
+            className="w-full py-2.5 rounded-lg border border-dashed border-border text-xs text-muted-foreground uppercase tracking-wider hover:border-primary/40 hover:text-foreground transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Package className="w-3.5 h-3.5" /> Add Godown
+          </button>
+
+          {/* Summary */}
+          <div className="mt-6 pt-4 border-t border-border space-y-2 tabular-nums">
+            <div className="flex justify-between text-xs uppercase tracking-wider text-muted-foreground">
+              <span>Allocated Qty:</span>
+              <span className={cn(
+                "font-bold",
+                formData.opening_godowns?.reduce((sum: number, g: any) => sum + (g.qty || 0), 0) === formData.opening_qty
+                  ? "text-emerald-500"
+                  : "text-rose-500"
+              )}>
+                {formData.opening_godowns?.reduce((sum: number, g: any) => sum + (g.qty || 0), 0)}
+              </span>
+            </div>
+            <div className="flex justify-between text-xs uppercase tracking-wider text-muted-foreground">
+              <span>Balance to Allocate:</span>
+              <span className="font-semibold text-foreground">{formData.opening_qty - (formData.opening_godowns?.reduce((sum: number, g: any) => sum + (g.qty || 0), 0) || 0)}</span>
+            </div>
           </div>
         </div>
-      )}
+      </EnterpriseModal>
+
+      {/* Delete Confirmation Modal */}
+      <EnterpriseModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title={t('common.confirmDeletion')}
+        subtitle={t('common.cannotUndone')}
+        icon={<AlertTriangle className="w-4 h-4 text-rose-500" />}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-3 w-full">
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(false)}
+              className="px-4 py-2 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex items-center gap-2 px-6 py-2 rounded-lg bg-rose-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-rose-500 transition-all disabled:opacity-50 cursor-pointer"
+            >
+              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              {t('common.confirmDelete')}
+            </button>
+          </div>
+        }
+      >
+        {hasTransactions ? (
+          <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-2">
+            <p className="text-xs text-rose-500 leading-relaxed">
+              <span className="font-bold uppercase">{t('common.warning')}:</span> {t('item.deleteWarning')}
+            </p>
+            <p className="text-xs text-rose-500 uppercase tracking-wider font-bold">
+              {t('item.recommendKeep')}
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {t('item.deleteConfirmText', { name: formData.name })}
+          </p>
+        )}
+      </EnterpriseModal>
     </div>
   );
 }

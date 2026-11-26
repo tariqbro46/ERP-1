@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useLayoutEffect, useState } from 'react';
 
 export type Theme = 'light' | 'dark' | 'emerald' | 'amber' | 'rose' | 'slate' | 'classic';
 
@@ -9,17 +9,31 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+const ALL_THEMES: Theme[] = ['light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic'];
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('theme');
-    return (saved as Theme) || 'classic';
+    try {
+      const saved = localStorage.getItem('theme') as Theme | null;
+      return saved && ALL_THEMES.includes(saved) ? saved : 'classic';
+    } catch {
+      return 'classic';
+    }
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove('light', 'dark', 'emerald', 'amber', 'rose', 'slate', 'classic');
-    root.classList.add(theme);
-    localStorage.setItem('theme', theme);
+    ALL_THEMES.forEach((t) => {
+      if (t !== theme) root.classList.remove(t);
+    });
+    if (!root.classList.contains(theme)) {
+      root.classList.add(theme);
+    }
+    root.style.backgroundColor = '';
+    root.style.color = '';
+    try {
+      localStorage.setItem('theme', theme);
+    } catch {}
   }, [theme]);
 
   return (

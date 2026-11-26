@@ -17,6 +17,7 @@ import { formatCurrency, formatQuantity } from '../lib/utils';
 import { buildReportPrintHtml, executePrint } from '../utils/printUtils';
 import { printToPDF } from '../utils/pdfExportService';
 import { exportStructuredExcel, shareReportViaEmail } from '../utils/exportUtils';
+import { SkeletonLoader } from './SkeletonLoader';
 
 interface NegativeReportsProps {
   type: 'ledger' | 'stock';
@@ -195,21 +196,22 @@ export const NegativeReports: React.FC<NegativeReportsProps> = ({ type }) => {
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      <div className="p-6 pb-4 shrink-0">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-4">
+    <div className="h-full flex flex-col overflow-hidden bg-background">
+      <div className="p-6 pb-4 shrink-0 border-b border-border bg-card/80 backdrop-blur-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
             <button 
               onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+              title={t('common.back')}
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-foreground tracking-tight">
                 {type === 'ledger' ? t('nav.negativeLedger') : t('nav.negativeStock')}
               </h1>
-              <p className="text-gray-500">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {type === 'ledger' 
                   ? 'List of ledgers with abnormal balances' 
                   : 'List of items with negative physical stock'}
@@ -220,119 +222,116 @@ export const NegativeReports: React.FC<NegativeReportsProps> = ({ type }) => {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleDownloadExcel}
-              className="flex items-center gap-2 px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors text-sm font-medium"
+              className="flex items-center gap-2 px-3.5 py-2 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors text-xs font-semibold"
             >
               <FileSpreadsheet className="w-4 h-4" /> Excel
             </button>
             <button
               onClick={handleDownloadPDF}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+              className="flex items-center gap-2 px-3.5 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-xs font-semibold shadow-xs"
             >
               <Download className="w-4 h-4" /> PDF
             </button>
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+              className="flex items-center gap-2 px-3.5 py-2 bg-card border border-border text-foreground rounded-lg hover:bg-muted transition-colors text-xs font-semibold"
             >
-              <Printer className="w-4 h-4" /> Print
+              <Printer className="w-4 h-4 text-muted-foreground" /> Print
             </button>
             <button
               onClick={handleEmailReport}
-              className="flex items-center gap-2 px-3.5 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+              className="flex items-center gap-2 px-3.5 py-2 bg-card border border-border text-foreground rounded-lg hover:bg-muted transition-colors text-xs font-semibold"
             >
-              <Mail className="w-4 h-4" /> Email
+              <Mail className="w-4 h-4 text-muted-foreground" /> Email
             </button>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden p-6 pt-0">
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm h-full flex flex-col min-h-0">
-          <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+      <div className="flex-1 overflow-hidden p-6">
+        <div className="bg-card rounded-xl border border-border shadow-[var(--shadow-surface)] h-full flex flex-col min-h-0">
+          <div className="p-4 border-b border-border bg-muted/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder={t('common.search')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full pl-9 pr-4 py-2 bg-background border border-border text-foreground text-sm rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/15 outline-none transition-all"
               />
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
               <AlertCircle className="w-4 h-4 text-amber-500" />
-              <span>Found {filteredItems.length} exceptions</span>
+              <span className="tabular-nums">Found {filteredItems.length} exceptions</span>
             </div>
           </div>
 
           <div className="flex-1 overflow-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 z-20 bg-background shadow-sm">
-                <tr className="border-b border-border">
-                  <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 align-middle">
-                    {type === 'ledger' ? t('ledger.name') : t('item.name')}
-                  </th>
-                  <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 align-middle">
-                    {type === 'ledger' ? t('ledger.group') : t('item.category')}
-                  </th>
-                  <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 text-right align-middle">
-                    {type === 'ledger' ? t('common.amount') : t('common.quantity')}
-                  </th>
-                  <th className="px-6 py-4 text-[10px] uppercase tracking-widest font-mono text-gray-500 text-center align-middle">
-                    {t('common.actions')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {loading ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500 align-middle">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                        <span>{t('common.loading')}</span>
-                      </div>
-                    </td>
+            {loading ? (
+              <div className="p-6">
+                <SkeletonLoader type="table" pageKey="reports" isFullPage={false} />
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 z-20 bg-muted/90 backdrop-blur-sm">
+                  <tr className="border-b border-border">
+                    <th className="px-6 py-3.5 text-xs uppercase tracking-wider font-semibold text-muted-foreground align-middle">
+                      {type === 'ledger' ? t('ledger.name') : t('item.name')}
+                    </th>
+                    <th className="px-6 py-3.5 text-xs uppercase tracking-wider font-semibold text-muted-foreground align-middle">
+                      {type === 'ledger' ? t('ledger.group') : t('item.category')}
+                    </th>
+                    <th className="px-6 py-3.5 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right align-middle">
+                      {type === 'ledger' ? t('common.amount') : t('common.quantity')}
+                    </th>
+                    <th className="px-6 py-3.5 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-center align-middle">
+                      {t('common.actions')}
+                    </th>
                   </tr>
-                ) : filteredItems.length > 0 ? (
-                  filteredItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-red-50/30 transition-colors">
-                      <td className="px-6 py-4 align-middle">
-                        <div className="font-semibold text-gray-900">{item.name}</div>
-                        {item.alias && <div className="text-xs text-gray-500">{item.alias}</div>}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 align-middle">
-                        {getGroupOrCategory(item)}
-                      </td>
-                      <td className="px-6 py-4 text-right align-middle">
-                        <span className="font-mono font-bold text-red-600">
-                          {getFormattedBalanceOrQty(item)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center align-middle">
-                        <button 
-                          onClick={() => navigate(type === 'ledger' ? `/reports/ledger?ledgerId=${item.id}` : `/reports/stock-item?id=${item.id}`)}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          View Details
-                        </button>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {filteredItems.length > 0 ? (
+                    filteredItems.map((item) => (
+                      <tr key={item.id} className="hover:bg-rose-500/5 transition-colors">
+                        <td className="px-6 py-3.5 align-middle">
+                          <div className="font-semibold text-sm text-foreground">{item.name}</div>
+                          {item.alias && <div className="text-xs text-muted-foreground">{item.alias}</div>}
+                        </td>
+                        <td className="px-6 py-3.5 text-sm text-muted-foreground align-middle">
+                          {getGroupOrCategory(item)}
+                        </td>
+                        <td className="px-6 py-3.5 text-right align-middle">
+                          <span className="font-semibold text-sm text-rose-600 dark:text-rose-400 tabular-nums">
+                            {getFormattedBalanceOrQty(item)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3.5 text-center align-middle">
+                          <button 
+                            onClick={() => navigate(type === 'ledger' ? `/reports/ledger?ledgerId=${item.id}` : `/reports/stock-item?id=${item.id}`)}
+                            className="text-primary hover:underline text-xs font-semibold"
+                          >
+                            View Details
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground align-middle">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center mb-2">
+                            <AlertCircle className="w-6 h-6 text-emerald-500" />
+                          </div>
+                          <p className="font-semibold text-foreground">No Negative {type === 'ledger' ? 'Balances' : 'Stock'} Found</p>
+                          <p className="text-xs text-muted-foreground">Everything looks good!</p>
+                        </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500 align-middle">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center mb-2">
-                          <AlertCircle className="w-6 h-6 text-green-500" />
-                        </div>
-                        <p className="font-medium text-gray-900">No Negative {type === 'ledger' ? 'Balances' : 'Stock'} Found</p>
-                        <p className="text-sm">Everything looks good!</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>

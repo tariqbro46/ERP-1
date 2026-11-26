@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { HELP_CONTENT, HelpSection } from '../constants/helpContent';
 import { cn } from '../lib/utils';
 import { useSettings } from '../contexts/SettingsContext';
+import { EnterpriseModal } from './ui/EnterpriseModal';
 
 const DEFAULT_HELP: HelpSection = {
   en: "Welcome to this module. This section allows you to manage and view your business records effectively. Use the available actions and tools to process your data.",
@@ -60,67 +61,58 @@ export function PageHelp() {
         )} />
       </button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div 
-            className="bg-card border border-border shadow-2xl w-full max-w-md rounded-2xl overflow-hidden animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 border-b border-border flex items-center justify-between bg-foreground/5">
-              <div className="flex items-center gap-2">
-                <Info className="w-5 h-5 text-primary" />
-                <h3 className="text-sm font-bold uppercase tracking-widest">Instructions</h3>
-              </div>
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-foreground/5 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            
-            <div className="p-1 flex border-b border-border bg-card">
-              <button 
-                onClick={() => setActiveTab('en')}
-                className={cn(
-                  "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all rounded",
-                  activeTab === 'en' ? "bg-primary text-white" : "text-gray-500 hover:bg-foreground/5"
-                )}
-              >
-                English
-              </button>
-              <button 
-                onClick={() => setActiveTab('bn')}
-                className={cn(
-                  "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-all rounded",
-                  activeTab === 'bn' ? "bg-primary text-white" : "text-gray-500 hover:bg-foreground/5"
-                )}
-              >
-                বাংলা
-              </button>
-            </div>
-
-            <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
-              <div className={cn(
-                "text-sm leading-relaxed whitespace-pre-wrap",
-                activeTab === 'bn' ? "font-hindi" : "font-sans text-gray-600"
-              )}>
-                {help[activeTab]}
-              </div>
-              
-              <div className="mt-8 pt-4 border-t border-border flex justify-end">
-                <button 
-                  onClick={() => setIsOpen(false)}
-                  className="px-6 py-2.5 bg-primary text-white text-[10px] font-bold uppercase tracking-widest rounded-lg hover:opacity-90 shadow-lg shadow-primary/20 transition-all flex items-center gap-2 group"
-                >
-                  <span>Got It</span>
-                  <X className="w-3 h-3 transition-transform group-hover:rotate-90" />
-                </button>
-              </div>
-            </div>
+      <EnterpriseModal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        title="Module Instructions & Guide"
+        subtitle={`Context guide for ${path}`}
+        icon={<Info className="w-5 h-5" />}
+        size="lg"
+        headerExtra={
+          <div className="inline-flex items-center p-1 rounded-lg bg-muted border border-border">
+            <button
+              type="button"
+              onClick={() => setActiveTab('en')}
+              className={cn(
+                "px-3 py-1 text-[11px] font-semibold rounded-md transition-colors whitespace-nowrap",
+                activeTab === 'en' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('bn')}
+              className={cn(
+                "px-3 py-1 text-[11px] font-semibold rounded-md transition-colors whitespace-nowrap",
+                activeTab === 'bn' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              বাংলা
+            </button>
           </div>
+        }
+        footer={
+          <div className="flex justify-end w-full">
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="px-5 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 whitespace-nowrap"
+            >
+              <span>{activeTab === 'bn' ? 'বুঝেছি' : 'Got It'}</span>
+            </button>
+          </div>
+        }
+      >
+        <div
+          className={cn(
+            "text-sm leading-relaxed whitespace-pre-wrap text-foreground/90",
+            activeTab === 'bn' ? "font-hindi" : "font-sans"
+          )}
+        >
+          {help[activeTab]}
         </div>
-      )}
+      </EnterpriseModal>
     </>
   );
 }

@@ -29,6 +29,7 @@ import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { SearchableSelect } from './SearchableSelect';
+import { SkeletonLoader } from './SkeletonLoader';
 
 export function OrderManagement() {
   const { user } = useAuth();
@@ -204,7 +205,7 @@ export function OrderManagement() {
           
           <button 
             onClick={handleNewOrder}
-            className="px-4 md:px-6 py-3 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all flex items-center gap-2"
+            className="px-4 md:px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-all flex items-center gap-2 whitespace-nowrap shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             {t('production.newOrder')}
@@ -212,53 +213,53 @@ export function OrderManagement() {
         </div>
       </div>
 
-      <div className="flex-1 p-4 lg:p-8">
+      <div className="flex-1 p-4 lg:p-6">
         {/* Machine Status Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
         {machines.map(machine => (
-          <div key={machine.id} className="bg-card border border-border p-4 relative overflow-hidden group">
+          <div key={machine.id} className="bg-card border border-border rounded-xl p-4 relative overflow-hidden group shadow-[var(--shadow-surface)]">
             <div className={cn(
               "absolute top-0 left-0 w-1 h-full",
               machine.status === 'Idle' ? "bg-emerald-500" : machine.status === 'Busy' ? "bg-blue-500" : "bg-rose-500"
             )} />
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{machine.name}</span>
-              <Cpu className={cn("w-4 h-4", machine.status === 'Busy' ? "text-blue-500 animate-pulse" : "text-muted-foreground")} />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{machine.name}</span>
+              <Cpu className={cn("w-4 h-4", machine.status === 'Busy' ? "text-blue-500" : "text-muted-foreground")} />
             </div>
             <div className="space-y-1">
               <p className="text-xs font-bold text-foreground uppercase">
                 {machine.status === 'Busy' ? machine.currentOrderName : t('production.idle')}
               </p>
-              <p className="text-[9px] text-muted-foreground uppercase tracking-tighter">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-tight">
                 {machine.status === 'Busy' ? t('production.processingJob') : t('production.readyForAssignment')}
               </p>
             </div>
           </div>
         ))}
         {machines.length === 0 && (
-          <div className="col-span-full py-4 text-center border border-dashed border-border text-[10px] uppercase tracking-widest text-muted-foreground">
+          <div className="col-span-full py-4 text-center rounded-xl border border-dashed border-border text-[10px] uppercase tracking-wider text-muted-foreground">
             {t('production.noMachinesConfigured')}
           </div>
         )}
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-row gap-2 mb-8 items-center justify-between bg-muted/30 p-2 border border-border overflow-x-auto no-scrollbar">
+      <div className="flex flex-row gap-2 mb-6 items-center justify-between bg-muted/30 p-2 rounded-xl border border-border overflow-x-auto no-scrollbar">
         <div className="flex items-center gap-2 min-w-max">
-          <div className="relative w-40 md:w-64">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+          <div className="relative w-44 md:w-64">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input 
               type="text"
               placeholder={t('production.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-background border border-border py-1.5 pl-8 pr-2 text-[9px] uppercase tracking-widest outline-none focus:border-primary"
+              className="w-full bg-background border border-border rounded-lg py-1.5 pl-8 pr-2.5 text-xs outline-none focus:border-primary"
             />
           </div>
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="bg-background border border-border py-1.5 px-2 text-[9px] uppercase tracking-widest outline-none focus:border-primary"
+            className="bg-background border border-border rounded-lg py-1.5 px-2.5 text-xs uppercase outline-none focus:border-primary cursor-pointer"
           >
             <option value="All">{t('common.all')}</option>
             <option value="Pending">{t('production.status.Pending')}</option>
@@ -269,29 +270,27 @@ export function OrderManagement() {
           </select>
         </div>
         
-        <div className="flex items-center border border-border bg-background min-w-max">
+        <div className="flex items-center border border-border rounded-lg overflow-hidden bg-background min-w-max">
           <button 
             onClick={() => setViewMode('list')}
-            className={cn("p-1.5 transition-colors", viewMode === 'list' ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}
+            className={cn("p-1.5 transition-colors cursor-pointer", viewMode === 'list' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
           >
-            <List className="w-3 h-3 md:w-4 md:h-4" />
+            <List className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </button>
           <button 
             onClick={() => setViewMode('grid')}
-            className={cn("p-1.5 transition-colors", viewMode === 'grid' ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}
+            className={cn("p-1.5 transition-colors cursor-pointer", viewMode === 'grid' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
           >
-            <LayoutGrid className="w-3 h-3 md:w-4 md:h-4" />
+            <LayoutGrid className="w-3.5 h-3.5 md:w-4 md:h-4" />
           </button>
         </div>
       </div>
 
       {/* Orders View */}
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Printer className="w-8 h-8 text-primary animate-bounce" />
-        </div>
+        <SkeletonLoader type="table" pageKey="payroll" isFullPage={false} />
       ) : viewMode === 'list' ? (
-        <div className="border border-border bg-card overflow-x-auto no-scrollbar">
+        <div className="border border-border rounded-xl bg-card overflow-x-auto no-scrollbar shadow-[var(--shadow-surface)]">
           <table className="w-full min-w-[820px] text-left border-collapse">
             <thead className="bg-muted/95 backdrop-blur-sm border-b border-border text-[9px] font-bold uppercase tracking-widest text-muted-foreground sticky top-0 z-20">
               <tr>
@@ -356,7 +355,7 @@ export function OrderManagement() {
                         </>
                       )}
                     </td>
-                    <td className="p-3 text-center text-xs font-bold text-foreground align-middle whitespace-nowrap">
+                    <td className="p-3 text-center text-xs font-bold text-foreground align-middle whitespace-nowrap tabular-nums">
                       {Math.round(totalQty).toLocaleString()}
                     </td>
                     <td className="p-3 text-center align-middle whitespace-nowrap">
@@ -373,9 +372,9 @@ export function OrderManagement() {
                         </span>
                       )}
                     </td>
-                    <td className="p-3 text-center align-middle whitespace-nowrap">
-                      <p className="text-[9px] font-bold">{formattedDelivery}</p>
-                      <p className="text-[8px] text-muted-foreground uppercase">{order.deliveryTime || '12:00'}</p>
+                    <td className="p-3 text-center align-middle whitespace-nowrap tabular-nums">
+                      <p className="text-[10px] font-bold">{formattedDelivery}</p>
+                      <p className="text-[9px] text-muted-foreground uppercase">{order.deliveryTime || '12:00'}</p>
                     </td>
                     <td className="p-3 text-center align-middle" onClick={(e) => e.stopPropagation()}>
                       <select
@@ -448,54 +447,54 @@ export function OrderManagement() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredOrders.map(order => (
-            <div key={order.id} className="bg-card border border-border p-6 space-y-4 hover:border-primary transition-colors group relative">
+            <div key={order.id} className="bg-card border border-border rounded-xl p-5 space-y-4 hover:border-primary/40 transition-colors group relative shadow-[var(--shadow-surface)]">
               <div className="flex justify-between items-start">
                 <div className={cn(
-                  "text-[8px] font-bold uppercase px-2 py-0.5 rounded border",
+                  "text-[9px] font-bold uppercase px-2 py-0.5 rounded border",
                   getStatusColor(order.status)
                 )}>
                   {order.status}
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEditOrder(order)} className="p-1.5 hover:bg-foreground/5 text-muted-foreground hover:text-foreground"><Edit2 className="w-3 h-3" /></button>
-                  <button onClick={() => handleDelete(order.id)} className="p-1.5 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500"><Trash2 className="w-3 h-3" /></button>
+                  <button onClick={() => handleEditOrder(order)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"><Edit2 className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => handleDelete(order.id)} className="p-1.5 rounded hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               </div>
               
               <div className="space-y-1">
                 <h3 className="text-sm font-bold text-foreground uppercase leading-tight">{order.clientName}</h3>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{order.itemName}</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{order.itemName}</p>
                 {order.printDesign && (
-                  <p className="text-[9px] text-primary uppercase font-bold italic">Design: {order.printDesign}</p>
+                  <p className="text-[10px] text-primary uppercase font-bold italic">Design: {order.printDesign}</p>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border">
                 <div className="space-y-0.5">
-                  <p className="text-[8px] text-muted-foreground uppercase font-bold">{t('common.quantity')}</p>
-                  <p className="text-xs font-bold">{order.quantity} Pcs</p>
+                  <p className="text-[9px] text-muted-foreground uppercase font-bold">{t('common.quantity')}</p>
+                  <p className="text-xs font-bold tabular-nums">{order.quantity} Pcs</p>
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-[8px] text-muted-foreground uppercase font-bold">{t('production.printType')}</p>
+                  <p className="text-[9px] text-muted-foreground uppercase font-bold">{t('production.printType')}</p>
                   <p className="text-xs font-bold">{order.printType}</p>
                 </div>
               </div>
 
               <div className="space-y-2 pt-2">
-                <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
-                  <Clock className="w-3 h-3" />
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground tabular-nums">
+                  <Clock className="w-3.5 h-3.5" />
                   <span>DELIVERY: {format(new Date(order.deliveryDate), 'dd MMM')} @ {order.deliveryTime || '12:00'}</span>
                 </div>
-                <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
-                  <Truck className="w-3 h-3" />
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                  <Truck className="w-3.5 h-3.5" />
                   <span className="truncate">{order.deliveryLocation}</span>
                 </div>
               </div>
 
               {order.status === 'Printing' && order.machineName && (
-                <div className="mt-4 p-2 bg-blue-500/5 border border-blue-500/20 flex items-center gap-2">
-                  <Printer className="w-3 h-3 text-blue-500 animate-pulse" />
-                  <span className="text-[9px] font-bold text-blue-500 uppercase">ON {order.machineName}</span>
+                <div className="mt-4 p-2 rounded-lg bg-blue-500/5 border border-blue-500/20 flex items-center gap-2">
+                  <Printer className="w-3.5 h-3.5 text-blue-500" />
+                  <span className="text-[10px] font-bold text-blue-500 uppercase">ON {order.machineName}</span>
                 </div>
               )}
             </div>

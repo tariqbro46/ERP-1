@@ -331,7 +331,7 @@ export default function FacebookProfileMenu({ isOpen, onClose, uiStyle, onNotifi
                   </div>
                 </div>
                 {isClearingCache ? (
-                  <span className="text-[10px] font-bold text-muted-foreground animate-pulse">Clearing...</span>
+                  <span className="text-[10px] font-bold text-muted-foreground">Clearing...</span>
                 ) : (
                   <span className="text-[9px] font-mono font-extrabold uppercase bg-muted px-2 py-0.5 rounded text-muted-foreground border border-border">Clear</span>
                 )}

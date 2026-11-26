@@ -5,6 +5,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Building2, Plus, Check, Loader2, ArrowRight, Trash2, X, Upload } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { EnterpriseModal } from './ui/EnterpriseModal';
 
 export function CompanyManagement() {
   const { user } = useAuth();
@@ -334,101 +335,110 @@ export function CompanyManagement() {
                 </div>
               ))}
 
-                {/* Edit Modal / Inline Form */}
-                {editingId && (
-                  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-start md:items-center justify-center p-4 overflow-y-auto">
-                    <div className="bg-card border border-border p-6 w-full max-w-md space-y-6 animate-in zoom-in-95 duration-200 my-auto md:my-8">
-                      <div className="flex items-center justify-between border-b border-border pb-4 sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
-                        <h2 className="text-xs font-bold uppercase tracking-widest">Edit Company</h2>
-                        <button onClick={() => setEditingId(null)} className="text-gray-500 hover:text-foreground">
-                          <X className="w-4 h-4" />
-                        </button>
+                {/* Edit Modal */}
+                <EnterpriseModal
+                  isOpen={!!editingId}
+                  onClose={() => setEditingId(null)}
+                  title="Edit Company Details"
+                  subtitle="Update organization name, registered address, contact details, and workspace branding"
+                  icon={<Building2 className="w-5 h-5" />}
+                  size="lg"
+                  footer={
+                    <div className="flex items-center justify-end gap-3 w-full">
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        className="px-4 py-2 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors whitespace-nowrap"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        form="edit-company-enterprise-form"
+                        disabled={!!switching}
+                        className="px-5 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-60"
+                      >
+                        {switching === editingId ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                        Save Changes
+                      </button>
+                    </div>
+                  }
+                >
+                  <form id="edit-company-enterprise-form" onSubmit={handleUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Company Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={editForm.name}
+                          onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                          className="w-full bg-background border border-border rounded-lg text-foreground px-3.5 py-2.5 text-sm outline-none focus:border-primary"
+                        />
                       </div>
-                      <form onSubmit={handleUpdate} className="space-y-4">
-                        <div className="space-y-1">
-                          <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Company Name</label>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Phone</label>
                           <input
                             type="text"
-                            required
-                            value={editForm.name}
-                            onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                            className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
+                            value={editForm.phone}
+                            onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                            className="w-full bg-background border border-border rounded-lg text-foreground px-3.5 py-2.5 text-sm outline-none focus:border-primary"
                           />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Email</label>
+                          <input
+                            type="email"
+                            value={editForm.email}
+                            onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                            className="w-full bg-background border border-border rounded-lg text-foreground px-3.5 py-2.5 text-sm outline-none focus:border-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Address</label>
+                        <textarea
+                          value={editForm.address}
+                          onChange={e => setEditForm({ ...editForm, address: e.target.value })}
+                          className="w-full bg-background border border-border rounded-lg text-foreground px-3.5 py-2.5 text-sm outline-none focus:border-primary min-h-[96px]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl border border-border bg-muted/30 space-y-3">
+                        <label className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Company Logo</label>
+                        <div className="flex items-center gap-4">
+                          <div className="w-16 h-16 rounded-xl border border-dashed border-border flex items-center justify-center bg-background overflow-hidden shrink-0">
+                            {editForm.logo_url ? (
+                              <img src={editForm.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                            ) : (
+                              <Building2 className="w-6 h-6 text-muted-foreground/40" />
+                            )}
+                          </div>
+                          <label className="flex-1 cursor-pointer bg-background border border-border hover:bg-muted rounded-lg transition-all px-3.5 py-2.5 text-center flex items-center justify-center gap-2">
+                            <Upload className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="text-xs font-semibold text-foreground">Upload New Logo</span>
+                            <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, true)} className="hidden" />
+                          </label>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Address</label>
-                          <textarea
-                            value={editForm.address}
-                            onChange={e => setEditForm({ ...editForm, address: e.target.value })}
-                            className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground min-h-[80px]"
+                          <label className="text-[11px] text-muted-foreground font-medium block">Or enter Logo URL</label>
+                          <input 
+                            type="text"
+                            value={editForm.logo_url.startsWith('data:') ? '' : editForm.logo_url}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, logo_url: e.target.value }))}
+                            placeholder="https://example.com/logo.png"
+                            className="w-full bg-background border border-border rounded-lg text-foreground px-3 py-2 text-xs outline-none focus:border-primary"
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Phone</label>
-                            <input
-                              type="text"
-                              value={editForm.phone}
-                              onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                              className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Email</label>
-                            <input
-                              type="email"
-                              value={editForm.email}
-                              onChange={e => setEditForm({ ...editForm, email: e.target.value })}
-                              className="w-full bg-background border border-border text-foreground p-2 text-sm outline-none focus:border-foreground"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">Company Logo</label>
-                            <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 border border-dashed border-border flex items-center justify-center bg-background overflow-hidden">
-                                {editForm.logo_url ? (
-                                  <img src={editForm.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                                ) : (
-                                  <Building2 className="w-5 h-5 text-gray-400 opacity-20" />
-                                )}
-                              </div>
-                              <label className="flex-1 cursor-pointer bg-foreground/5 border border-border hover:bg-foreground/10 transition-all p-2 text-center">
-                                <span className="text-[9px] font-bold uppercase tracking-widest text-foreground">Change Logo</span>
-                                <input type="file" accept="image/*" onChange={(e) => handleLogoUpload(e, true)} className="hidden" />
-                              </label>
-                            </div>
-                            <div className="mt-2">
-                              <input 
-                                type="text"
-                                value={editForm.logo_url.startsWith('data:') ? '' : editForm.logo_url}
-                                onChange={(e) => setEditForm(prev => ({ ...prev, logo_url: e.target.value }))}
-                                placeholder="Or enter Logo URL"
-                                className="w-full bg-background border border-border text-foreground p-2 text-[10px] outline-none focus:border-foreground"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex gap-3 pt-4">
-                          <button
-                            type="submit"
-                            disabled={!!switching}
-                            className="flex-1 bg-foreground text-background py-2 text-[10px] uppercase font-bold tracking-widest hover:bg-foreground/90 transition-colors flex items-center justify-center gap-2"
-                          >
-                            {switching === editingId ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-                            Save Changes
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingId(null)}
-                            className="flex-1 border border-border text-foreground py-2 text-[10px] uppercase font-bold tracking-widest hover:bg-foreground/5 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  </form>
+                </EnterpriseModal>
                 {companies.length === 0 && (
                   <div className="text-center py-10 border border-dashed border-border text-gray-500 text-[10px] uppercase tracking-widest">
                     No other companies found

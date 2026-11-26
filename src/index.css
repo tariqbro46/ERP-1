@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Montserrat:wght@400;600;700&family=Lato:wght@400;700&family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;700&family=Tiro+Bangla&family=Mina:wght@400;700&family=Anek+Bangla:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans: var(--app-font), ui-sans-serif, system-ui, sans-serif;
@@ -16,86 +17,123 @@
 
 :root {
   --app-font: "Inter", sans-serif;
-  --background: #ffffff;
-  --foreground: #0a0a0a;
-  --card: #f5f5f5;
-  --border: #e5e5e5;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --border: #e2e8f0;
   --primary: #2563eb;
   --primary-foreground: #ffffff;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
+
+  /* Human-crafted enterprise design tokens */
+  --surface-canvas: var(--background);
+  --surface-card: var(--card);
+  --surface-elevated: #ffffff;
+  --surface-subtle: #f1f5f9;
+  --border-hairline: rgba(15, 23, 42, 0.09);
+  --border-strong: rgba(15, 23, 42, 0.16);
+  --ring-focus: rgba(37, 99, 235, 0.22);
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+  --radius-modal: 1rem;
+  --shadow-surface: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.03);
+  --shadow-modal: 0 24px 60px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.06);
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ffffff;
-  --card: #141414;
-  --border: #222222;
+  --background: #090d16;
+  --foreground: #f1f5f9;
+  --card: #111622;
+  --border: #1e2636;
   --primary: #3b82f6;
   --primary-foreground: #ffffff;
-  --muted: #1e293b;
+  --muted: #171e2e;
   --muted-foreground: #94a3b8;
+  --surface-elevated: #161d2d;
+  --surface-subtle: #151c2b;
+  --border-hairline: rgba(148, 163, 184, 0.14);
+  --border-strong: rgba(148, 163, 184, 0.24);
+  --ring-focus: rgba(59, 130, 246, 0.3);
+  --shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 24px 64px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(148, 163, 184, 0.16);
   color-scheme: dark;
 }
 
+.light {
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --muted: #f8fafc;
+  --muted-foreground: #64748b;
+}
+
 .emerald {
-  --background: #f0fdf4;
+  --background: #f2fbf6;
   --foreground: #064e3b;
   --card: #ffffff;
-  --border: #dcfce7;
-  --primary: #10b981;
+  --border: #d1fae5;
+  --primary: #059669;
   --primary-foreground: #ffffff;
   --muted: #ecfdf5;
-  --muted-foreground: #059669;
+  --muted-foreground: #047857;
+  --ring-focus: rgba(5, 150, 105, 0.22);
 }
 
 .amber {
-  --background: #fffbeb;
+  --background: #fffcf2;
   --foreground: #78350f;
   --card: #ffffff;
-  --border: #fef3c7;
-  --primary: #f59e0b;
+  --border: #fde68a;
+  --primary: #d97706;
   --primary-foreground: #ffffff;
-  --muted: #fff9db;
-  --muted-foreground: #d97706;
+  --muted: #fef9e7;
+  --muted-foreground: #b45309;
+  --ring-focus: rgba(217, 119, 6, 0.22);
 }
 
 .rose {
-  --background: #fff1f2;
+  --background: #fff5f6;
   --foreground: #881337;
   --card: #ffffff;
-  --border: #ffe4e6;
-  --primary: #f43f5e;
+  --border: #fecdd3;
+  --primary: #e11d48;
   --primary-foreground: #ffffff;
   --muted: #fff1f2;
-  --muted-foreground: #e11d48;
+  --muted-foreground: #be123c;
+  --ring-focus: rgba(225, 29, 72, 0.22);
 }
 
 .slate {
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
-  --border: #f1f5f9;
-  --primary: #64748b;
+  --border: #e2e8f0;
+  --primary: #475569;
   --primary-foreground: #ffffff;
   --muted: #f1f5f9;
   --muted-foreground: #475569;
+  --ring-focus: rgba(71, 85, 105, 0.22);
 }
 
 .classic {
   --background: #f1f5f9;
   --foreground: #1e293b;
   --card: #ffffff;
-  --border: #e2e8f0;
+  --border: #dbe3ee;
   --primary: #0f172a;
   --primary-foreground: #ffffff;
   --muted: #f8fafc;
-  --muted-foreground: #334155;
+  --muted-foreground: #475569;
+  --ring-focus: rgba(15, 23, 42, 0.18);
 }
 
 .dark select option {
-  background-color: #141414;
-  color: #ffffff;
+  background-color: #111622;
+  color: #f1f5f9;
 }
 
 /* Modern Scrollbars & Sticky Headers for Tables */
@@ -184,19 +222,33 @@
   }
 
   /* Microsoft Word Table Properties: Cell Vertical Alignment = Center */
-  table td,
-  table th {
+  table td:not([data-valign="top"]),
+  table th:not([data-valign="top"]) {
+    vertical-align: middle !important;
+    font-variant-numeric: tabular-nums;
+  }
+
+  table tbody tr:not([data-valign="top"]) {
     vertical-align: middle !important;
   }
 
-  table tbody tr {
-    vertical-align: middle !important;
+  table tbody tr[data-valign="top"],
+  table tbody tr[data-valign="top"] > td,
+  table td[data-valign="top"] {
+    vertical-align: top !important;
+    font-variant-numeric: tabular-nums;
   }
 
   /* Ensure flex items inside table cells are also centered vertically */
   table td > .flex:not(.flex-col),
   table th > .flex:not(.flex-col) {
     align-items: center;
+  }
+
+  [data-numeric="true"],
+  .tabular-nums,
+  input[type="number"] {
+    font-variant-numeric: tabular-nums;
   }
 
   /* Hide number input arrows */
@@ -294,431 +346,263 @@
     animation: shimmer-sweep 2s infinite;
   }
 
-  /* UI/UX 3: Glassmorphism */
+  /* Global Enterprise Skeleton Shimmer (no per-instance style tags) */
+  @keyframes erp-skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .erp-skeleton-item {
+    background-image: var(--skeleton-shimmer, linear-gradient(110deg, transparent 25%, rgba(148, 163, 184, 0.16) 50%, transparent 75%));
+    background-size: 200% 100%;
+    animation: erp-skeleton-shimmer var(--skeleton-duration, 1.8s) infinite linear;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .erp-skeleton-item {
+      animation: none;
+    }
+  }
+
+  /* ==========================================================================
+     UI/UX 1: Crisp Enterprise Ledger (Clean hairline surfaces & high legibility)
+     ========================================================================== */
+  [data-ui-style="UI/UX 1"] .bg-card {
+    border-color: var(--border-hairline);
+    box-shadow: var(--shadow-surface);
+  }
+
+  /* ==========================================================================
+     UI/UX 2: Structured Modern Workspace
+     ========================================================================== */
+  [data-ui-style="UI/UX 2"] {
+    --primary: #2563eb;
+    --ring-focus: rgba(37, 99, 235, 0.22);
+  }
+
+  [data-ui-style="UI/UX 2"] .bg-card {
+    border-radius: 0.75rem;
+    border: 1px solid rgba(37, 99, 235, 0.12);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(37, 99, 235, 0.03);
+  }
+
+  [data-ui-style="UI/UX 2"] button.bg-foreground {
+    background-color: var(--primary) !important;
+    color: #ffffff !important;
+    border-radius: 0.5rem;
+  }
+
+  [data-ui-style="UI/UX 2"] header,
+  [data-ui-style="UI/UX 2"] aside {
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  /* ==========================================================================
+     UI/UX 3: Soft Frosted Workspace (Calm Nordic glass, zero rainbow gimmicks)
+     Note: Never place backdrop-filter on <main> so fixed modals aren't trapped.
+     ========================================================================== */
   [data-ui-style="UI/UX 3"] {
-    --glass-bg: rgba(255, 255, 255, 0.65);
-    --glass-border: rgba(255, 255, 255, 0.4);
-    --glass-blur: blur(20px);
-    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
-    --glass-text: #1a1a1a;
-    --glass-overlay: rgba(255, 255, 255, 0.82);
+    --glass-bg: rgba(255, 255, 255, 0.78);
+    --glass-border: rgba(148, 163, 184, 0.26);
+    --glass-blur: blur(14px);
+    --glass-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
+    --glass-text: #0f172a;
+    background-color: #f1f5f9 !important;
+    color: var(--glass-text);
   }
 
   [data-ui-style="UI/UX 3"].dark {
-    --glass-bg: rgba(15, 15, 15, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-    --glass-text: #f0f0f0;
-    --glass-overlay: rgba(10, 10, 10, 0.82);
+    --glass-bg: rgba(17, 24, 39, 0.78);
+    --glass-border: rgba(148, 163, 184, 0.16);
+    --glass-shadow: 0 8px 28px -4px rgba(0, 0, 0, 0.45);
+    --glass-text: #f1f5f9;
+    background-color: #090d16 !important;
   }
 
-  [data-ui-style="UI/UX 3"] {
-    background-attachment: fixed !important;
-    color: var(--glass-text);
-    animation: gradient-bg 15s ease infinite;
-  }
-
-  /* Default Dynamic Gradient */
   [data-ui-style="UI/UX 3"][data-glass-bg="default"] {
-    background: linear-gradient(var(--glass-overlay), var(--glass-overlay)), 
-                linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab) !important;
-    background-size: 100% 100%, 400% 400% !important;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.08) 0px, transparent 52%),
+      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.07) 0px, transparent 52%) !important;
     background-attachment: fixed !important;
   }
 
-  /* Sunset Glow */
   [data-ui-style="UI/UX 3"][data-glass-bg="sunset"] {
-    background: linear-gradient(var(--glass-overlay), var(--glass-overlay)), 
-                linear-gradient(-45deg, #f093fb 0%, #f5576c 100%) !important;
-    background-size: 100% 100%, 400% 400% !important;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(244, 63, 94, 0.07) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.08) 0px, transparent 50%) !important;
     background-attachment: fixed !important;
   }
 
-  /* Deep Ocean */
   [data-ui-style="UI/UX 3"][data-glass-bg="ocean"] {
-    background: linear-gradient(var(--glass-overlay), var(--glass-overlay)), 
-                linear-gradient(-45deg, #2af598 0%, #009efd 100%) !important;
-    background-size: 100% 100%, 400% 400% !important;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.09) 0px, transparent 52%),
+      radial-gradient(at 100% 100%, rgba(37, 99, 235, 0.07) 0px, transparent 52%) !important;
     background-attachment: fixed !important;
   }
 
-  /* Aurora Borealis */
   [data-ui-style="UI/UX 3"][data-glass-bg="aurora"] {
-    background: linear-gradient(var(--glass-overlay), var(--glass-overlay)), 
-                linear-gradient(-45deg, #00cdac 0%, #8ddad5 100%) !important;
-    background-size: 100% 100%, 400% 400% !important;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 52%),
+      radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.07) 0px, transparent 52%) !important;
     background-attachment: fixed !important;
   }
 
-  /* Minimal Soft Gray */
   [data-ui-style="UI/UX 3"][data-glass-bg="minimal"] {
-    background: linear-gradient(var(--glass-overlay), var(--glass-overlay)), 
-                linear-gradient(-45deg, #e6e9f0 0%, #eef1f5 100%) !important;
-    background-size: 100% 100%, 400% 400% !important;
-    background-attachment: fixed !important;
-  }
-
-  [data-ui-style="UI/UX 3"][data-glass-bg="minimal"].dark {
-    background: linear-gradient(var(--glass-overlay), var(--glass-overlay)), 
-                linear-gradient(-45deg, #2c3e50 0%, #000000 100%) !important;
-    background-size: 100% 100%, 400% 400% !important;
-    background-attachment: fixed !important;
-  }
-
-  @keyframes gradient-bg {
-    0% { background-position: 0% 50%, 0% 50%; }
-    50% { background-position: 0% 50%, 100% 50%; }
-    100% { background-position: 0% 50%, 0% 50%; }
-  }
-
-  /* UI/UX 3 Glassmorphism Card Backgrounds */
-
-  [data-ui-style="UI/UX 3"].bg-background {
-    background-color: transparent !important;
+    background-image: none !important;
   }
 
   [data-ui-style="UI/UX 3"] .bg-card,
-  [data-ui-style="UI/UX 3"] .bg-background,
-  [data-ui-style="UI/UX 3"] .bg-background\/95,
-  [data-ui-style="UI/UX 3"] .bg-background\/80,
-  [data-ui-style="UI/UX 3"] aside,
-  [data-ui-style="UI/UX 3"] header,
-  [data-ui-style="UI/UX 3"] main,
-  [data-ui-style="UI/UX 3"] section,
-  [data-ui-style="UI/UX 3"] .bg-white,
-  [data-ui-style="UI/UX 3"] .bg-slate-50,
-  [data-ui-style="UI/UX 3"] .bg-gray-50,
-  [data-ui-style="UI/UX 3"].dark .bg-zinc-900,
-  [data-ui-style="UI/UX 3"].dark .bg-slate-900,
-  [data-ui-style="UI/UX 3"] div:not([data-ui-style]) > .bg-background {
+  [data-ui-style="UI/UX 3"] section.bg-card {
     background-color: var(--glass-bg) !important;
-    backdrop-filter: var(--glass-blur) !important;
-    -webkit-backdrop-filter: var(--glass-blur) !important;
-    border: 1px solid var(--glass-border) !important;
-    box-shadow: var(--glass-shadow) !important;
-    border-radius: 24px !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    color: var(--glass-text) !important;
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-color: var(--glass-border) !important;
+    box-shadow: var(--glass-shadow);
+    border-radius: 0.875rem;
   }
 
   [data-ui-style="UI/UX 3"] aside,
   [data-ui-style="UI/UX 3"] header {
-    border-radius: 0 !important;
-    border-top: none !important;
-    border-bottom: 1px solid var(--glass-border) !important;
-  }
-
-  [data-ui-style="UI/UX 3"] aside {
-    border-right: 1px solid var(--glass-border) !important;
-    border-left: none !important;
-  }
-
-  [data-ui-style="UI/UX 3"] .bg-card:hover {
-    background-color: rgba(255, 255, 255, 0.8) !important;
-    transform: translateY(-4px);
-    box-shadow: 0 15px 45px 0 rgba(0, 0, 0, 0.12) !important;
-  }
-
-  [data-ui-style="UI/UX 3"].dark .bg-card:hover {
-    background-color: rgba(30, 30, 30, 0.8) !important;
-  }
-
-  [data-ui-style="UI/UX 3"] button {
-    border-radius: 16px !important;
-  }
-
-  [data-ui-style="UI/UX 3"] button:not(.bg-primary):not(.bg-emerald-500):not(.bg-rose-500):not(.bg-amber-500):not(.bg-blue-600):not(.bg-indigo-600):not(.bg-purple-600) {
     background-color: var(--glass-bg) !important;
-    backdrop-filter: var(--glass-blur) !important;
-    border: 1px solid var(--glass-border) !important;
-    transition: all 0.2s ease !important;
-    color: var(--glass-text) !important;
-    font-weight: 500 !important;
-  }
-
-  [data-ui-style="UI/UX 3"] button:hover:not(.bg-primary):not(.bg-emerald-500):not(.bg-rose-500):not(.bg-amber-500):not(.bg-blue-600):not(.bg-indigo-600):not(.bg-purple-600) {
-    background-color: rgba(255, 255, 255, 0.9) !important;
-    transform: scale(1.03);
-  }
-
-  [data-ui-style="UI/UX 3"].dark button:hover:not(.bg-primary):not(.bg-emerald-500):not(.bg-rose-500):not(.bg-amber-500):not(.bg-blue-600):not(.bg-indigo-600):not(.bg-purple-600) {
-    background-color: rgba(40, 40, 40, 0.9) !important;
-  }
-
-  [data-ui-style="UI/UX 3"] .border,
-  [data-ui-style="UI/UX 3"] .border-border,
-  [data-ui-style="UI/UX 3"] .border-t,
-  [data-ui-style="UI/UX 3"] .border-b,
-  [data-ui-style="UI/UX 3"] .border-l,
-  [data-ui-style="UI/UX 3"] .border-r {
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     border-color: var(--glass-border) !important;
   }
 
   [data-ui-style="UI/UX 3"] input,
   [data-ui-style="UI/UX 3"] select,
   [data-ui-style="UI/UX 3"] textarea {
-    background-color: rgba(255, 255, 255, 0.4) !important;
-    backdrop-filter: var(--glass-blur) !important;
-    -webkit-backdrop-filter: var(--glass-blur) !important;
-    border: 1px solid var(--glass-border) !important;
-    border-radius: 14px !important;
-    color: var(--glass-text) !important;
-    padding: 0.75rem 1rem !important;
+    background-color: rgba(255, 255, 255, 0.72);
+    border-color: var(--glass-border);
+    border-radius: 0.625rem;
   }
 
   [data-ui-style="UI/UX 3"].dark input,
   [data-ui-style="UI/UX 3"].dark select,
   [data-ui-style="UI/UX 3"].dark textarea {
-    background-color: rgba(20, 20, 20, 0.4) !important;
+    background-color: rgba(15, 23, 42, 0.68);
   }
 
   [data-ui-style="UI/UX 3"] input:focus,
   [data-ui-style="UI/UX 3"] select:focus,
   [data-ui-style="UI/UX 3"] textarea:focus {
-    background-color: rgba(255, 255, 255, 0.6) !important;
     border-color: var(--primary) !important;
-    outline: none !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+    box-shadow: 0 0 0 3px var(--ring-focus);
   }
 
-  [data-ui-style="UI/UX 3"] button:not(.rounded-full),
-  [data-ui-style="UI/UX 3"] input,
-  [data-ui-style="UI/UX 3"] select,
-  [data-ui-style="UI/UX 3"] .rounded-lg,
-  [data-ui-style="UI/UX 3"] .rounded-xl,
-  [data-ui-style="UI/UX 3"] .rounded-md {
-    border-radius: 16px !important;
-  }
-
-  [data-ui-style="UI/UX 3"] .shadow-sm,
-  [data-ui-style="UI/UX 3"] .shadow,
-  [data-ui-style="UI/UX 3"] .shadow-md,
-  [data-ui-style="UI/UX 3"] .shadow-lg,
-  [data-ui-style="UI/UX 3"] .shadow-xl {
-    box-shadow: var(--glass-shadow) !important;
-  }
-
-  /* Specific fixes for UI/UX 3 */
-  [data-ui-style="UI/UX 3"] aside,
-  [data-ui-style="UI/UX 3"] header,
-  [data-ui-style="UI/UX 3"] nav {
-    background-color: var(--glass-bg) !important;
-    backdrop-filter: var(--glass-blur) !important;
-    -webkit-backdrop-filter: var(--glass-blur) !important;
-    color: var(--glass-text) !important;
-  }
-
-  [data-ui-style="UI/UX 3"] aside {
-    border-right: 1px solid var(--glass-border) !important;
-  }
-
-  [data-ui-style="UI/UX 3"] header {
-    border-bottom: 1px solid var(--glass-border) !important;
-  }
-
-  [data-ui-style="UI/UX 3"] .text-gray-500,
-  [data-ui-style="UI/UX 3"] .text-muted-foreground {
-    color: rgba(0, 0, 0, 0.5) !important;
-  }
-
-  [data-ui-style="UI/UX 3"].dark .text-gray-500,
-  [data-ui-style="UI/UX 3"].dark .text-muted-foreground {
-    color: rgba(255, 255, 255, 0.5) !important;
-  }
-
-  /* Glassmorphic Scrollbar */
-  [data-ui-style="UI/UX 3"] ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  [data-ui-style="UI/UX 3"] ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  [data-ui-style="UI/UX 3"] ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-  }
-
-  [data-ui-style="UI/UX 3"].dark ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  /* Modal and Dropdown Glassmorphism */
-  [data-ui-style="UI/UX 3"] .fixed.inset-0,
-  [data-ui-style="UI/UX 3"] .absolute.top-full {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-
-  [data-ui-style="UI/UX 3"] .bg-card.shadow-2xl,
-  [data-ui-style="UI/UX 3"] .bg-card.shadow-xl {
-    background-color: rgba(255, 255, 255, 0.9) !important;
-    backdrop-filter: blur(30px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.5) !important;
-  }
-
-  [data-ui-style="UI/UX 3"].dark .bg-card.shadow-2xl,
-  [data-ui-style="UI/UX 3"].dark .bg-card.shadow-xl {
-    background-color: rgba(20, 20, 20, 0.9) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  }
-
-  /* UI/UX 2: Modern Colorized Refinements */
-  [data-ui-style="UI/UX 2"] {
-    --primary: #2563eb;
-  }
-
-  [data-ui-style="UI/UX 2"] .bg-card {
-    border-radius: 12px;
-    border: 1px solid rgba(37, 99, 235, 0.1);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  }
-
-  [data-ui-style="UI/UX 2"] button.bg-foreground {
-    background-color: var(--primary) !important;
-    color: white !important;
-    border-radius: 8px;
-  }
-
-  [data-ui-style="UI/UX 2"] header,
-  [data-ui-style="UI/UX 2"] aside {
-    transition: all 0.3s ease;
-  }
-
-  /* UI/UX 4: Aurora Holographic Carbon */
+  /* ==========================================================================
+     UI/UX 4: Balanced Obsidian Slate Dark (Crisp Enterprise Dark Workspace)
+     ========================================================================== */
   [data-ui-style="UI/UX 4"] {
     --primary: #6366f1;
-    --background: #030712;
-    --foreground: #f3f4f6;
-    --card: #0b0f19;
-    --border: rgba(99, 102, 241, 0.2);
-    --muted: #111827;
-    --muted-foreground: #9ca3af;
-    background-attachment: fixed !important;
-    background-size: cover !important;
-    color: #f3f4f6 !important;
+    --primary-foreground: #ffffff;
+    --background: #070b14;
+    --foreground: #f1f5f9;
+    --card: #0f1624;
+    --border: rgba(148, 163, 184, 0.16);
+    --muted: #151e30;
+    --muted-foreground: #94a3b8;
+    --ring-focus: rgba(99, 102, 241, 0.28);
+    background-color: #070b14 !important;
+    color: #f1f5f9 !important;
+    color-scheme: dark;
   }
 
-  /* Different background presets for UI/UX 4 based on user background choice */
   [data-ui-style="UI/UX 4"][data-glass-bg="default"],
   [data-ui-style="UI/UX 4"]:not([data-glass-bg]) {
-    background-color: #030712 !important;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(59, 130, 246, 0.1) 0px, transparent 50%) !important;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.08) 0px, transparent 50%) !important;
+    background-attachment: fixed !important;
   }
 
   [data-ui-style="UI/UX 4"][data-glass-bg="sunset"] {
-    background-color: #05020c !important;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(244, 63, 94, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(245, 158, 11) 0px, transparent 50%),
-      radial-gradient(at 50% 50%, rgba(219, 39, 119, 0.1) 0px, transparent 50%) !important;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(244, 63, 94, 0.09) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.08) 0px, transparent 50%) !important;
+    background-attachment: fixed !important;
   }
 
   [data-ui-style="UI/UX 4"][data-glass-bg="ocean"] {
-    background-color: #010618 !important;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(13, 148, 136, 0.1) 0px, transparent 50%) !important;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.11) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.09) 0px, transparent 50%) !important;
+    background-attachment: fixed !important;
   }
 
   [data-ui-style="UI/UX 4"][data-glass-bg="aurora"] {
-    background-color: #020806 !important;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
-      radial-gradient(at 50% 50%, rgba(6, 182, 212, 0.1) 0px, transparent 50%) !important;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.09) 0px, transparent 50%) !important;
+    background-attachment: fixed !important;
   }
 
   [data-ui-style="UI/UX 4"][data-glass-bg="minimal"] {
-    background-color: #0a0e1a !important;
     background-image: none !important;
   }
-  
+
   [data-ui-style="UI/UX 4"] .bg-card,
   [data-ui-style="UI/UX 4"] aside,
   [data-ui-style="UI/UX 4"] header,
-  [data-ui-style="UI/UX 4"] section,
+  [data-ui-style="UI/UX 4"] section.bg-card,
   [data-ui-style="UI/UX 4"] .bg-background,
   [data-ui-style="UI/UX 4"] .bg-background\/95,
   [data-ui-style="UI/UX 4"] .bg-background\/80,
   [data-ui-style="UI/UX 4"] .bg-white,
   [data-ui-style="UI/UX 4"] .bg-slate-50,
-  [data-ui-style="UI/UX 4"] .bg-gray-50,
-  [data-ui-style="UI/UX 4"] .bg-muted\/50,
-  [data-ui-style="UI/UX 4"] .bg-muted\/30 {
-    background-color: rgba(11, 15, 25, 0.85) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(99, 102, 241, 0.25) !important;
-    box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.5), 0 0 15px 0 rgba(99, 102, 241, 0.04) !important;
-    color: #f3f4f6 !important;
-    border-radius: 16px !important;
+  [data-ui-style="UI/UX 4"] .bg-gray-50 {
+    background-color: #0f1624 !important;
+    border-color: rgba(148, 163, 184, 0.16) !important;
+    color: #f1f5f9 !important;
+  }
+
+  [data-ui-style="UI/UX 4"] .bg-card {
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
   }
 
   [data-ui-style="UI/UX 4"] aside,
   [data-ui-style="UI/UX 4"] header {
     border-radius: 0 !important;
-    background-color: rgba(6, 9, 17, 0.9) !important;
+    background-color: rgba(9, 13, 22, 0.94) !important;
   }
 
   [data-ui-style="UI/UX 4"] .bg-primary,
   [data-ui-style="UI/UX 4"] .bg-blue-600 {
-    background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    box-shadow: 0 0 15px rgba(99, 102, 241, 0.3) !important;
+    background-color: #4f46e5 !important;
     color: #ffffff !important;
   }
-  
+
   [data-ui-style="UI/UX 4"] .text-primary,
   [data-ui-style="UI/UX 4"] .text-blue-600 {
     color: #818cf8 !important;
-    text-shadow: 0 0 10px rgba(129, 140, 248, 0.25) !important;
   }
 
   [data-ui-style="UI/UX 4"] input,
   [data-ui-style="UI/UX 4"] select,
   [data-ui-style="UI/UX 4"] textarea {
-    background-color: rgba(17, 24, 39, 0.72) !important;
-    border: 1px solid rgba(99, 102, 241, 0.25) !important;
-    border-radius: 10px !important;
-    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.5) !important;
-    color: #f3f4f6 !important;
-    outline: none !important;
+    background-color: #131b2c !important;
+    border: 1px solid rgba(148, 163, 184, 0.22) !important;
+    border-radius: 0.5rem !important;
+    color: #f1f5f9 !important;
   }
 
   [data-ui-style="UI/UX 4"] input:focus,
   [data-ui-style="UI/UX 4"] select:focus,
   [data-ui-style="UI/UX 4"] textarea:focus {
     border-color: #6366f1 !important;
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4), inset 0 2px 4px 0 rgba(0, 0, 0, 0.5) !important;
-  }
-
-  [data-ui-style="UI/UX 4"] .bg-card:hover {
-    border-color: rgba(99, 102, 241, 0.5) !important;
-    box-shadow: 0 4px 30px 0 rgba(99, 102, 241, 0.15), 0 0 20px 0 rgba(99, 102, 241, 0.1) !important;
-    transform: translateY(-2px);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25) !important;
+    outline: none !important;
   }
 
   [data-ui-style="UI/UX 4"] tr:hover {
-    background-color: rgba(99, 102, 241, 0.08) !important;
+    background-color: rgba(99, 102, 241, 0.06) !important;
   }
 
   [data-ui-style="UI/UX 4"] table thead {
-    background: #0d121f !important;
-    background-color: #0d121f !important;
-    border-bottom: 2px solid rgba(99, 102, 241, 0.4) !important;
-    color: #ffffff !important;
+    background-color: #0b101b !important;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22) !important;
+    color: #e2e8f0 !important;
   }
 
-  /* High contrast text overrides specifically targeting light-fallback text components */
   [data-ui-style="UI/UX 4"] .text-gray-900,
   [data-ui-style="UI/UX 4"] .text-slate-900,
   [data-ui-style="UI/UX 4"] .text-neutral-900,
@@ -726,14 +610,14 @@
   [data-ui-style="UI/UX 4"] .text-gray-800,
   [data-ui-style="UI/UX 4"] .text-slate-800,
   [data-ui-style="UI/UX 4"] .text-foreground {
-    color: #ffffff !important;
+    color: #f8fafc !important;
   }
 
   [data-ui-style="UI/UX 4"] .text-gray-700,
   [data-ui-style="UI/UX 4"] .text-slate-700,
   [data-ui-style="UI/UX 4"] .text-gray-600,
   [data-ui-style="UI/UX 4"] .text-slate-600 {
-    color: #f1f5f9 !important;
+    color: #e2e8f0 !important;
   }
 
   [data-ui-style="UI/UX 4"] .text-gray-500,
@@ -742,30 +626,15 @@
   [data-ui-style="UI/UX 4"] .text-slate-400,
   [data-ui-style="UI/UX 4"] .text-muted-foreground,
   [data-ui-style="UI/UX 4"] .text-foreground\/60 {
-    color: #cbd5e1 !important;
-  }
-
-  [data-ui-style="UI/UX 4"] .text-gray-300,
-  [data-ui-style="UI/UX 4"] .text-slate-300 {
     color: #94a3b8 !important;
   }
 
-  /* Ensure hover effect pops nicely for list controls and dropdown items */
-  [data-ui-style="UI/UX 4"] .hover\:text-foreground:hover,
-  [data-ui-style="UI/UX 4"] .hover\:text-gray-900:hover,
-  [data-ui-style="UI/UX 4"] .group:hover .group-hover\:text-foreground {
-    color: #ffffff !important;
-  }
-
-  /* Ensure border colors remain dark, sleek and holographic indigo */
   [data-ui-style="UI/UX 4"] .border-border,
   [data-ui-style="UI/UX 4"] .border-gray-100,
-  [data-ui-style="UI/UX 4"] .border-gray-200,
-  [data-ui-style="UI/UX 4"] .border {
-    border-color: rgba(99, 102, 241, 0.25) !important;
+  [data-ui-style="UI/UX 4"] .border-gray-200 {
+    border-color: rgba(148, 163, 184, 0.16) !important;
   }
 
-  /* Specific background utilities used inside card list grids or transaction tables */
   [data-ui-style="UI/UX 4"] .bg-slate-100,
   [data-ui-style="UI/UX 4"] .bg-gray-100,
   [data-ui-style="UI/UX 4"] .bg-zinc-100,
@@ -776,35 +645,56 @@
   [data-ui-style="UI/UX 4"] .bg-gray-50\/50,
   [data-ui-style="UI/UX 4"] .bg-muted\/10,
   [data-ui-style="UI/UX 4"] .bg-card\/50 {
-    background-color: rgba(17, 24, 39, 0.6) !important;
-    color: #ffffff !important;
+    background-color: rgba(21, 30, 48, 0.72) !important;
+    color: #f1f5f9 !important;
   }
 
   [data-ui-style="UI/UX 4"] td,
   [data-ui-style="UI/UX 4"] th {
-    border-color: rgba(99, 102, 241, 0.15) !important;
-    color: #f3f4f6 !important;
+    border-color: rgba(148, 163, 184, 0.14) !important;
+    color: #f1f5f9 !important;
   }
 
   [data-ui-style="UI/UX 4"] .bg-muted {
-    background-color: #111827 !important;
-    color: #f3f4f6 !important;
+    background-color: #151e30 !important;
+    color: #f1f5f9 !important;
   }
 
-  /* Custom high-contrast scrollbars for perfect styling integration */
-  [data-ui-style="UI/UX 4"] ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  /* ==========================================================================
+     Voucher Entry Layout Guardrails (Header / Lines / Totals / Actions)
+     ========================================================================== */
+  .voucher-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
-  [data-ui-style="UI/UX 4"] ::-webkit-scrollbar-track {
-    background: rgba(11, 15, 25, 0.3);
+  .voucher-header-zone {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-surface);
   }
-  [data-ui-style="UI/UX 4"] ::-webkit-scrollbar-thumb {
-    background: rgba(99, 102, 241, 0.25);
-    border-radius: 99px;
+  .voucher-lines-zone {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    overflow: hidden;
   }
-  [data-ui-style="UI/UX 4"] ::-webkit-scrollbar-thumb:hover {
-    background: rgba(99, 102, 241, 0.45);
+  .voucher-lines-zone input:focus,
+  .voucher-lines-zone select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--ring-focus);
+  }
+  .voucher-totals-zone {
+    background-color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    font-variant-numeric: tabular-nums;
+  }
+  .voucher-actions-zone {
+    border-top: 1px solid var(--border);
+    background-color: var(--card);
   }
 }
 
@@ -934,4 +824,43 @@ body.audit-inspector-open [id="quota-warning-banner"],
 body.audit-inspector-open main > header {
   display: none !important;
 }
+
+/* ==========================================================================
+   Global Full-Screen Modal Backdrop Blur (Includes Topbar, Sidebar & Banners)
+   ========================================================================== */
+body.erp-modal-open header:not(.modal-header):not([data-enterprise-modal="true"] *):not([role="dialog"] *),
+body.erp-modal-open .app-topbar,
+body.erp-modal-open aside.app-sidebar,
+body.erp-modal-open .app-ribbon,
+body.erp-modal-open .app-macos-bar,
+body.erp-modal-open .app-win11-bar,
+body.erp-modal-open .app-mobile-nav,
+body.erp-modal-open [id="quota-warning-banner"] {
+  z-index: 10 !important;
+  filter: blur(8px) saturate(0.92);
+  pointer-events: none !important;
+  user-select: none !important;
+  transition: filter 150ms ease-out;
+}
+
+/* Ensure top-level legacy modal overlays sit above shell chrome without hijacking nested backdrop layers */
+body.erp-modal-open .fixed.inset-0:not([data-modal-ignore="true"]):not([data-enterprise-modal="true"]):not(.fixed.inset-0 .fixed.inset-0):not([data-enterprise-modal="true"] .fixed.inset-0):not([role="dialog"] .fixed.inset-0) {
+  z-index: 99980 !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+/* Keep enterprise modal overlays blurred behind dialog without altering their explicit stacking order */
+body.erp-modal-open [data-enterprise-modal="true"] {
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+/* Guarantee active modal containers and cards themselves are never blurred */
+[data-enterprise-modal="true"],
+[data-enterprise-modal="true"] > *,
+[role="dialog"] {
+  filter: none !important;
+}
+
 

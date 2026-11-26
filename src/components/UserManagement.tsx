@@ -8,6 +8,8 @@ import { erpService } from '../services/erpService';
 import { useSubscription } from '../hooks/useSubscription';
 import { APP_FEATURES } from '../constants/features';
 import { useNotification } from '../contexts/NotificationContext';
+import { EnterpriseModal } from './ui/EnterpriseModal';
+import { SkeletonLoader } from './SkeletonLoader';
 
 export const UserManagement: React.FC = () => {
   const { isAdmin, isSuperAdmin, user, rolePermissions } = useAuth();
@@ -326,8 +328,8 @@ export const UserManagement: React.FC = () => {
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
-                    <Loader2 className="w-6 h-6 text-gray-500 animate-spin mx-auto" />
+                  <td colSpan={5} className="p-4">
+                    <SkeletonLoader type="table" pageKey="settings" isFullPage={false} rows={4} />
                   </td>
                 </tr>
               ) : filteredProfiles.length === 0 ? (
@@ -548,151 +550,178 @@ export const UserManagement: React.FC = () => {
     </div>
 
       {/* Add User Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-start md:items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl overflow-hidden my-auto md:my-8">
-            <div className="p-6 border-b border-border flex items-center justify-between sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
-              <h3 className="text-lg font-bold text-foreground">Add New User</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-foreground">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleAddUser} className="p-6 space-y-4">
-              {addError && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-[11px] font-medium flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4" />
-                  {addError}
-                </div>
-              )}
-              <div>
-                <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={newUser.displayName}
-                  onChange={(e) => setNewUser({ ...newUser, displayName: e.target.value })}
-                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
-                  placeholder="John Doe"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
-                  placeholder="john@example.com"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Password</label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                  className={cn(
-                    "w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500",
-                    newUser.password.length > 0 && newUser.password.length < 6 && "border-red-500/50 focus:border-red-500"
-                  )}
-                  placeholder="••••••••"
-                />
-                {newUser.password.length > 0 && newUser.password.length < 6 && (
-                  <p className="text-[10px] text-red-500 mt-1">Password must be at least 6 characters</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Initial Role</label>
-                <select
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
-                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="Staff">Staff</option>
-                  <option value="Manager">Manager</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Marketing Manager">Marketing Manager</option>
-                  {isSuperAdmin && (
-                    <option value="Founder">Founder</option>
-                  )}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Monthly Sales Target</label>
-                <input
-                  type="number"
-                  value={newUser.target_amount}
-                  onFocus={e => e.target.value === '0' && e.target.select()}
-                  onChange={(e) => setNewUser({ ...newUser, target_amount: Number(e.target.value) })}
-                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
-                  placeholder="0"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[10px] uppercase tracking-widest text-gray-500 font-bold">
-                    Daily Quota Limit (Ops) / দৈনিক কোটা
-                  </label>
-                  <span className="text-[10px] text-muted-foreground font-mono">
-                    {newUser.quotaLimit === -1 ? 'Unlimited' : `${newUser.quotaLimit.toLocaleString()} Ops`}
-                  </span>
-                </div>
-                <div className="flex gap-1.5 mb-2">
-                  {[
-                    { label: '5k', val: 5000 },
-                    { label: '10k', val: 10000 },
-                    { label: '25k', val: 25000 },
-                    { label: '50k', val: 50000 },
-                    { label: '∞ Unlimited', val: -1 },
-                  ].map(item => (
-                    <button
-                      key={item.val}
-                      type="button"
-                      onClick={() => setNewUser({ ...newUser, quotaLimit: item.val })}
-                      className={cn(
-                        "flex-1 py-1 text-xs rounded border transition-colors text-center font-mono",
-                        newUser.quotaLimit === item.val
-                          ? "bg-indigo-600 text-white border-indigo-600 font-bold"
-                          : "bg-background border-border text-foreground hover:bg-foreground/5"
-                      )}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="number"
-                  value={newUser.quotaLimit}
-                  onChange={(e) => setNewUser({ ...newUser, quotaLimit: Number(e.target.value) })}
-                  className="w-full bg-background border border-border rounded-lg px-4 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500 font-mono"
-                  placeholder="10000 (-1 for Unlimited)"
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">Set specific operations quota for this user. -1 = Unlimited Ops.</p>
-              </div>
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 px-4 py-2 border border-border rounded-lg text-sm font-semibold text-foreground hover:bg-foreground/5 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={addLoading}
-                  className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
-                >
-                  {addLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create User"}
-                </button>
-              </div>
-            </form>
+      <EnterpriseModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="Add New User"
+        subtitle="Create a team account with role access, sales target, and daily operations quota"
+        icon={<UserPlus className="w-5 h-5" />}
+        size="lg"
+        footer={
+          <div className="flex items-center justify-end gap-3 w-full">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-muted transition-colors whitespace-nowrap"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="add-user-enterprise-form"
+              disabled={addLoading}
+              className="px-5 py-2 bg-primary hover:opacity-90 text-primary-foreground rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-60"
+            >
+              {addLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create User"}
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <form id="add-user-enterprise-form" onSubmit={handleAddUser} className="space-y-5">
+          {addError && (
+            <div className="p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs font-medium flex items-center gap-2.5">
+              <ShieldAlert className="w-4 h-4 shrink-0" />
+              <span>{addError}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
+                Full Name
+              </label>
+              <input
+                type="text"
+                required
+                value={newUser.displayName}
+                onChange={(e) => setNewUser({ ...newUser, displayName: e.target.value })}
+                className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary"
+                placeholder="John Doe"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary"
+                placeholder="john@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                className={cn(
+                  "w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary",
+                  newUser.password.length > 0 && newUser.password.length < 6 && "border-red-500/50 focus:border-red-500"
+                )}
+                placeholder="••••••••"
+              />
+              {newUser.password.length > 0 && newUser.password.length < 6 && (
+                <p className="text-[11px] text-red-500 mt-1">Password must be at least 6 characters</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
+                Initial Role
+              </label>
+              <select
+                value={newUser.role}
+                onChange={(e) => setNewUser({ ...newUser, role: e.target.value as UserRole })}
+                className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary"
+              >
+                <option value="Staff">Staff</option>
+                <option value="Manager">Manager</option>
+                <option value="Admin">Admin</option>
+                <option value="Marketing Manager">Marketing Manager</option>
+                {isSuperAdmin && (
+                  <option value="Founder">Founder</option>
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
+                Monthly Sales Target
+              </label>
+              <input
+                type="number"
+                value={newUser.target_amount}
+                onFocus={e => e.target.value === '0' && e.target.select()}
+                onChange={(e) => setNewUser({ ...newUser, target_amount: Number(e.target.value) })}
+                className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-sm text-foreground tabular-nums focus:outline-none focus:border-primary"
+                placeholder="0"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Daily Quota Limit (Ops) / দৈনিক কোটা
+                </label>
+                <span className="text-[11px] text-muted-foreground font-mono tabular-nums">
+                  {newUser.quotaLimit === -1 ? 'Unlimited' : `${newUser.quotaLimit.toLocaleString()} Ops`}
+                </span>
+              </div>
+              <input
+                type="number"
+                value={newUser.quotaLimit}
+                onChange={(e) => setNewUser({ ...newUser, quotaLimit: Number(e.target.value) })}
+                className="w-full bg-background border border-border rounded-lg px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary font-mono tabular-nums"
+                placeholder="10000 (-1 for Unlimited)"
+              />
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-muted/40 border border-border space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Quick Quota Presets
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                -1 = Unlimited Ops
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: '5k Ops', val: 5000 },
+                { label: '10k Ops', val: 10000 },
+                { label: '25k Ops', val: 25000 },
+                { label: '50k Ops', val: 50000 },
+                { label: '∞ Unlimited', val: -1 },
+              ].map(item => (
+                <button
+                  key={item.val}
+                  type="button"
+                  onClick={() => setNewUser({ ...newUser, quotaLimit: item.val })}
+                  className={cn(
+                    "px-3 py-1.5 text-xs rounded-lg border transition-colors text-center font-mono tabular-nums whitespace-nowrap",
+                    newUser.quotaLimit === item.val
+                      ? "bg-primary text-primary-foreground border-primary font-semibold"
+                      : "bg-background border-border text-foreground hover:bg-muted"
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </form>
+      </EnterpriseModal>
 
       <div className="mt-8 bg-amber-500/5 border border-amber-500/10 rounded-lg p-4">
         <div className="flex gap-3">

@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, BookOpen } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { EnterpriseModal } from './ui/EnterpriseModal';
 
 interface QuickLedgerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (ledger: any) => void;
-  initialGroup?: string; // Optional filter for groups
+  initialGroup?: string;
 }
 
 export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: QuickLedgerModalProps) {
@@ -24,17 +25,6 @@ export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: Q
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
       fetchGroups();
     }
   }, [isOpen]);
@@ -45,13 +35,12 @@ export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: Q
       const data = await erpService.getLedgerGroups(user.companyId);
       const unique = Array.from(new Map<string, any>(data.map((g: any) => [g.name.trim().toLowerCase(), g])).values());
       setGroups(unique);
-      
-      // Try to find a matching group based on initialGroup hint
+
       if (initialGroup) {
         const matchingGroup = unique.find(g => g.name.toLowerCase().includes(initialGroup.toLowerCase()));
         if (matchingGroup) {
-          setFormData(prev => ({ 
-            ...prev, 
+          setFormData(prev => ({
+            ...prev,
             group_id: matchingGroup.id,
             group_name: matchingGroup.name,
             parent_group_id: matchingGroup.parent_id || matchingGroup.parent_group_id || matchingGroup.id
@@ -59,10 +48,10 @@ export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: Q
           return;
         }
       }
-      
+
       if (unique.length > 0 && !formData.group_id) {
-        setFormData(prev => ({ 
-          ...prev, 
+        setFormData(prev => ({
+          ...prev,
           group_id: unique[0].id,
           group_name: unique[0].name,
           parent_group_id: unique[0].parent_id || unique[0].parent_group_id || unique[0].id
@@ -97,39 +86,41 @@ export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: Q
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed top-14 left-0 lg:left-64 right-0 bottom-0 z-40 flex justify-center items-center p-4 md:p-6 bg-slate-950/30 backdrop-blur-[1px]">
-      <div className="bg-card border border-border w-full max-w-xl max-h-[calc(100vh-8rem)] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/95 backdrop-blur-sm shrink-0">
-          <h2 className="text-xs font-bold text-foreground uppercase tracking-widest">Quick Ledger Creation</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-foreground transition-colors">
-            <X className="w-4 h-4" />
-          </button>
+    <EnterpriseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="lg"
+      icon={<BookOpen className="w-4 h-4" />}
+      title="Quick Ledger Creation"
+      subtitle="Create a new ledger account and immediately attach it to your active entry."
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-2">
+          <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+            Ledger Name
+          </label>
+          <input
+            autoFocus
+            type="text"
+            required
+            value={formData.name || ''}
+            onChange={e => setFormData({ ...formData, name: e.target.value })}
+            className="w-full bg-background border border-border rounded-lg text-foreground px-3.5 py-2.5 text-sm outline-none focus:border-primary transition-colors"
+            placeholder="e.g., Office Rent"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Ledger Name</label>
-            <input
-              autoFocus
-              type="text"
-              required
-              value={formData.name || ''}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
-              placeholder="e.g., Office Rent"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Under (Group)</label>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+              Under (Group)
+            </label>
             <select
               required
               value={formData.group_id}
               onChange={e => setFormData({ ...formData, group_id: e.target.value })}
-              className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors"
+              className="w-full bg-background border border-border rounded-lg text-foreground px-3.5 py-2.5 text-sm outline-none focus:border-primary transition-colors"
             >
               <option value="">Select Group...</option>
               {groups.map(group => (
@@ -139,35 +130,38 @@ export function QuickLedgerModal({ isOpen, onClose, onSuccess, initialGroup }: Q
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] text-gray-500 uppercase tracking-widest block">Opening Balance (৳)</label>
+            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+              Opening Balance (৳)
+            </label>
             <input
               type="number"
               value={formData.opening_balance ?? ''}
               onFocus={e => e.target.value === '0' && e.target.select()}
               onChange={e => setFormData({ ...formData, opening_balance: Number(e.target.value) })}
-              className="w-full bg-background border border-border text-foreground p-3 text-sm outline-none focus:border-foreground transition-colors text-right"
+              className="w-full bg-background border border-border rounded-lg text-foreground px-3.5 py-2.5 text-sm outline-none focus:border-primary transition-colors text-right tabular-nums"
             />
           </div>
+        </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-[10px] text-gray-500 hover:text-foreground uppercase tracking-widest transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center gap-2 px-6 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest hover:bg-foreground/90 transition-all disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-              Create
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end gap-3 pt-4 border-t border-border">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-all disabled:opacity-50 cursor-pointer"
+          >
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            Create Ledger
+          </button>
+        </div>
+      </form>
+    </EnterpriseModal>
   );
 }
+

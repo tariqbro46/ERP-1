@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { cn, formatCurrency, formatNumber } from '../lib/utils';
 import { AuditTrailDetailView } from './AuditTrailDetailView';
+import { EnterpriseModal } from './ui/EnterpriseModal';
 
 interface AuditLogEntry {
   id: string;
@@ -401,7 +402,7 @@ export const AuditTrail: React.FC = () => {
   // When Audit Record Inspector popup is open, hide all top bars and lock body scroll
   useEffect(() => {
     if (selectedLog) {
-      document.body.classList.add('audit-inspector-open');
+      document.body.classList.add('audit-inspector-open', 'erp-modal-open');
       document.body.style.overflow = 'hidden';
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') setSelectedLog(null);
@@ -409,11 +410,17 @@ export const AuditTrail: React.FC = () => {
       window.addEventListener('keydown', handleKeyDown);
       return () => {
         document.body.classList.remove('audit-inspector-open');
+        if (!document.querySelector('[data-enterprise-modal="true"]')) {
+          document.body.classList.remove('erp-modal-open');
+        }
         document.body.style.overflow = '';
         window.removeEventListener('keydown', handleKeyDown);
       };
     } else {
       document.body.classList.remove('audit-inspector-open');
+      if (!document.querySelector('[data-enterprise-modal="true"]')) {
+        document.body.classList.remove('erp-modal-open');
+      }
       document.body.style.overflow = '';
     }
   }, [selectedLog]);
@@ -1140,10 +1147,11 @@ export const AuditTrail: React.FC = () => {
         return (
           <div 
             id="audit-record-inspector-modal"
+            data-enterprise-modal="true"
             onClick={(e) => {
               if (e.target === e.currentTarget) setSelectedLog(null);
             }}
-            className="fixed inset-0 z-[999999] w-screen h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/40 backdrop-blur-sm animate-in fade-in"
+            className="fixed inset-0 z-[999999] w-screen h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/60 backdrop-blur-md animate-in fade-in"
           >
             <div 
               onClick={(e) => e.stopPropagation()}
@@ -1383,7 +1391,7 @@ export const AuditTrail: React.FC = () => {
                         <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.02] dark:bg-rose-950/[0.05] overflow-hidden flex flex-col shadow-xs">
                           <div className="px-4 py-2.5 bg-rose-500/10 border-b border-rose-500/20 flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                              <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
                               <span className="font-black text-xs uppercase tracking-wider text-rose-700 dark:text-rose-400">
                                 {isBn ? 'পূর্বে ছিল (BEFORE - Old State)' : 'BEFORE (Old State)'}
                               </span>
@@ -1486,7 +1494,7 @@ export const AuditTrail: React.FC = () => {
                         <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.02] dark:bg-rose-950/[0.05] overflow-hidden shadow-xs">
                           <div className="px-4 py-2.5 bg-rose-500/10 border-b border-rose-500/20 flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+                              <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
                               <span className="font-black text-xs uppercase tracking-wider text-rose-700 dark:text-rose-400">
                                 {isBn ? '১. পূর্বে ছিল (BEFORE - Old State)' : '1. BEFORE (Old State)'}
                               </span>
@@ -1714,82 +1722,73 @@ export const AuditTrail: React.FC = () => {
       {/* ========================================================================= */}
       {/* 4. MANUAL AUDIT REMARK MODAL */}
       {/* ========================================================================= */}
-      {isNoteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/40">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-purple-600" />
-                <h3 className="text-sm font-black">{isBn ? 'অফিশিয়াল অডিট মন্তব্য সংরক্ষণ' : 'Log Formal Audit Remark'}</h3>
-              </div>
-              <button
-                onClick={() => setIsNoteModalOpen(false)}
-                className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveAuditNote} className="p-6 space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-muted-foreground mb-1.5">
-                  {isBn ? 'অডিট ক্যাটাগরি' : 'Audit Category'}
-                </label>
-                <select
-                  value={noteCategory}
-                  onChange={(e) => setNoteCategory(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-background border border-border font-medium outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="Stock Verification">Stock Verification (ফিজিক্যাল স্টক যাচাই)</option>
-                  <option value="Bank Reconciliation">Bank Reconciliation (ব্যাংক স্টেটমেন্ট রিকনসিলিয়েশন)</option>
-                  <option value="Cash Count">Cash In Hand Count (ক্যাশ গণনা)</option>
-                  <option value="Voucher Review">Voucher Audit & Compliance (ভাউচার অডিট)</option>
-                  <option value="Tax & VAT Filing">Tax & VAT Filing (ট্যাক্স ও ভ্যাট দাখিল)</option>
-                  <option value="General Remark">General Audit Remark (সাধারণ অডিট নোট)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-muted-foreground mb-1.5">
-                  {isBn ? 'অডিট পর্যবেক্ষণ ও মন্তব্য' : 'Audit Observation & Notes'}
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  placeholder={isBn ? 'অডিট সংক্রান্ত আনুষ্ঠানিক পর্যবেক্ষণ লিপিবদ্ধ করুন...' : 'Enter formal audit observation or compliance note...'}
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-background border border-border font-medium outline-none focus:ring-2 focus:ring-primary/20 resize-none leading-relaxed"
-                />
-              </div>
-
-              <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20 text-[11px] text-purple-700 dark:text-purple-300">
-                {isBn 
-                  ? 'এই মন্তব্যটি কোম্পানির অডিট ট্রেইলে অপরিবর্তনীয় রেকর্ড হিসেবে সংরক্ষিত থাকবে এবং অডিট রিপোর্টে দৃশ্যমান হবে।'
-                  : 'This remark will be permanently logged into company compliance audit trail with your timestamp.'}
-              </div>
-
-              <div className="flex justify-end gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsNoteModalOpen(false)}
-                  className="px-4 py-2 border border-border rounded-xl font-bold hover:bg-muted"
-                >
-                  {isBn ? 'বাতিল' : 'Cancel'}
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingNote || !noteText.trim()}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-xs disabled:opacity-50"
-                >
-                  {submittingNote && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
-                  <span>{isBn ? 'সংরক্ষণ করুন' : 'Log Audit Remark'}</span>
-                </button>
-              </div>
-            </form>
+      <EnterpriseModal
+        isOpen={isNoteModalOpen}
+        onClose={() => setIsNoteModalOpen(false)}
+        title={isBn ? 'অফিশিয়াল অডিট মন্তব্য সংরক্ষণ' : 'Log Formal Audit Remark'}
+        icon={<ShieldCheck className="w-4 h-4 text-purple-600" />}
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2.5 w-full">
+            <button
+              type="button"
+              onClick={() => setIsNoteModalOpen(false)}
+              className="px-4 py-2 border border-border rounded-xl text-xs font-bold hover:bg-muted cursor-pointer"
+            >
+              {isBn ? 'বাতিল' : 'Cancel'}
+            </button>
+            <button
+              type="submit"
+              form="audit-remark-form"
+              disabled={submittingNote || !noteText.trim()}
+              className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs disabled:opacity-50 cursor-pointer"
+            >
+              {submittingNote && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+              <span>{isBn ? 'সংরক্ষণ করুন' : 'Log Audit Remark'}</span>
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <form id="audit-remark-form" onSubmit={handleSaveAuditNote} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-bold text-muted-foreground mb-1.5">
+              {isBn ? 'অডিট ক্যাটাগরি' : 'Audit Category'}
+            </label>
+            <select
+              value={noteCategory}
+              onChange={(e) => setNoteCategory(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-background border border-border font-medium outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="Stock Verification">Stock Verification (ফিজিক্যাল স্টক যাচাই)</option>
+              <option value="Bank Reconciliation">Bank Reconciliation (ব্যাংক স্টেটমেন্ট রিকনসিলিয়েশন)</option>
+              <option value="Cash Count">Cash In Hand Count (ক্যাশ গণনা)</option>
+              <option value="Voucher Review">Voucher Audit & Compliance (ভাউচার অডিট)</option>
+              <option value="Tax & VAT Filing">Tax & VAT Filing (ট্যাক্স ও ভ্যাট দাখিল)</option>
+              <option value="General Remark">General Audit Remark (সাধারণ অডিট নোট)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-bold text-muted-foreground mb-1.5">
+              {isBn ? 'অডিট পর্যবেক্ষণ ও মন্তব্য' : 'Audit Observation & Notes'}
+            </label>
+            <textarea
+              required
+              rows={4}
+              placeholder={isBn ? 'অডিট সংক্রান্ত আনুষ্ঠানিক পর্যবেক্ষণ লিপিবদ্ধ করুন...' : 'Enter formal audit observation or compliance note...'}
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              className="w-full p-3 rounded-xl bg-background border border-border font-medium outline-none focus:ring-2 focus:ring-primary/20 resize-none leading-relaxed"
+            />
+          </div>
+
+          <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20 text-[11px] text-purple-700 dark:text-purple-300">
+            {isBn 
+              ? 'এই মন্তব্যটি কোম্পানির অডিট ট্রেইলে অপরিবর্তনীয় রেকর্ড হিসেবে সংরক্ষিত থাকবে এবং অডিট রিপোর্টে দৃশ্যমান হবে।'
+              : 'This remark will be permanently logged into company compliance audit trail with your timestamp.'}
+          </div>
+        </form>
+      </EnterpriseModal>
 
       {/* ========================================================================= */}
       {/* 5. FORMAL CERTIFIED PRINT / PDF LAYOUT */}

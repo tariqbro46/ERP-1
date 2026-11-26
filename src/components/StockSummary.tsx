@@ -524,23 +524,8 @@ export function StockSummary() {
     });
   };
 
-  const dummyStockGroups = ['Raw Materials', 'Finished Goods', 'Packaging Materials'];
-  const dummyGroupedItems: Record<string, any[]> = {
-    'Raw Materials': [
-      { id: 'dummy-1', name: 'Premium Plastic Pellets', opening: 0, inward: 0, outward: 0, displayStock: 0, avg_cost: 0, isLoading: true },
-      { id: 'dummy-2', name: 'Color Masterbatch (Blue)', opening: 0, inward: 0, outward: 0, displayStock: 0, avg_cost: 0, isLoading: true }
-    ],
-    'Finished Goods': [
-      { id: 'dummy-3', name: 'Standard Delivery Box 12x12', opening: 0, inward: 0, outward: 0, displayStock: 0, avg_cost: 0, isLoading: true },
-      { id: 'dummy-4', name: 'Eco-friendly Carry Bags', opening: 0, inward: 0, outward: 0, displayStock: 0, avg_cost: 0, isLoading: true }
-    ],
-    'Packaging Materials': [
-      { id: 'dummy-5', name: 'Heavy Duty Adhesive Tape', opening: 0, inward: 0, outward: 0, displayStock: 0, avg_cost: 0, isLoading: true }
-    ]
-  };
-
-  const groupsToRender = loading ? dummyStockGroups : filteredGroups;
-  const activeGroupedItems = loading ? dummyGroupedItems : groupedItems;
+  const groupsToRender = filteredGroups;
+  const activeGroupedItems = groupedItems;
 
   const now = new Date();
   const asOnDate = formatReportDate(endDate, settings.dateFormat);
@@ -562,7 +547,7 @@ export function StockSummary() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background font-mono transition-colors overflow-hidden">
+    <div className="flex flex-col h-screen bg-background transition-colors overflow-hidden">
       {/* Fixed Header Section */}
       <div className="flex-none bg-background border-b border-border shadow-sm px-4 lg:px-6 py-4 space-y-4 z-30">
         <div className="flex flex-col sm:flex-row justify-between items-start md:items-end border-b border-border pb-4 gap-4">
@@ -579,7 +564,7 @@ export function StockSummary() {
             )}
             <div className="flex flex-col">
               <h1 className="text-xl text-foreground uppercase tracking-tighter">{t('stock.title')}</h1>
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest">{legal.companyName || 'ERP System'} • {t('reports.asOnDate')} {asOnDate}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{legal.companyName || 'ERP System'} • {t('reports.asOnDate')} {asOnDate}</p>
             </div>
           </div>
           <div className="flex-1 max-w-sm">
@@ -604,18 +589,16 @@ export function StockSummary() {
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 w-full sm:w-auto">
             <div className="text-left sm:text-right">
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest">{t('common.totalValue')}</p>
-              {loading ? (
-                <div className="h-6 w-24 bg-muted-foreground/20 animate-pulse rounded mt-1" />
-              ) : (
-                <p className="text-lg text-foreground font-bold">৳ {formatNumber(totalStockValue)}</p>
-              )}
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest">{t('common.totalValue')}</p>
+              <p className="text-lg text-foreground font-bold tabular-nums">
+                {loading ? '—' : `৳ ${formatNumber(totalStockValue)}`}
+              </p>
             </div>
             <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
               <button 
                 onClick={handlePrint}
                 disabled={loading}
-                className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase rounded-sm shadow-sm disabled:opacity-50"
+                className="px-3 py-1.5 bg-card border border-border text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 text-[10px] font-bold uppercase rounded-lg shadow-sm disabled:opacity-50"
               >
                 <Printer className="w-3.5 h-3.5" />
                 {t('common.print')}
@@ -623,7 +606,7 @@ export function StockSummary() {
               <button 
                 onClick={handleDownloadExcel}
                 disabled={loading || finalFilteredItems.length === 0}
-                className="px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1.5 disabled:opacity-50 text-[10px] font-bold uppercase rounded-sm shadow-sm"
+                className="px-3 py-1.5 bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1.5 disabled:opacity-50 text-[10px] font-bold uppercase rounded-lg shadow-sm"
                 title="Export Genuine Excel (.xlsx)"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" /> EXCEL
@@ -631,7 +614,7 @@ export function StockSummary() {
               <button 
                 onClick={handleDownload}
                 disabled={loading || finalFilteredItems.length === 0}
-                className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase rounded-sm shadow-sm"
+                className="px-3 py-1.5 bg-card border border-border text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase rounded-lg shadow-sm"
                 title={t('common.csv')}
               >
                 <Download className="w-3 h-3" /> {t('common.csv')}
@@ -639,7 +622,7 @@ export function StockSummary() {
               <button 
                 onClick={handleDownloadPDF}
                 disabled={loading || finalFilteredItems.length === 0}
-                className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase rounded-sm shadow-sm"
+                className="px-3 py-1.5 bg-card border border-border text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 disabled:opacity-50 text-[10px] font-bold uppercase rounded-lg shadow-sm"
                 title={t('common.pdf')}
               >
                 <Download className="w-3 h-3" /> {t('common.pdf')}
@@ -647,7 +630,7 @@ export function StockSummary() {
               <button 
                 onClick={handleEmailReport}
                 disabled={loading || finalFilteredItems.length === 0}
-                className="px-3 py-1.5 bg-card border border-border text-gray-500 hover:text-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50 text-[10px] font-bold uppercase rounded-sm shadow-sm"
+                className="px-3 py-1.5 bg-card border border-border text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 disabled:opacity-50 text-[10px] font-bold uppercase rounded-lg shadow-sm"
                 title="Share Stock Summary via Email"
               >
                 <Mail className="w-3.5 h-3.5" /> EMAIL
@@ -655,7 +638,7 @@ export function StockSummary() {
               <button 
                 onClick={() => setIsQuickItemOpen(true)}
                 disabled={loading}
-                className="px-3 py-1.5 bg-amber-600/10 border border-amber-600/20 text-amber-600 hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 text-[10px] font-bold uppercase rounded-sm shadow-sm disabled:opacity-50"
+                className="px-3 py-1.5 bg-amber-600/10 border border-amber-600/20 text-amber-600 hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 text-[10px] font-bold uppercase rounded-lg shadow-sm disabled:opacity-50"
                 title={t('stock.quickCreateItem')}
               >
                 <Package className="w-3.5 h-3.5" /> {t('item.new')}
@@ -665,16 +648,16 @@ export function StockSummary() {
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center bg-card border border-border px-4 py-2 gap-4">
+        <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center bg-card border border-border rounded-xl px-4 py-2.5 gap-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 flex-1">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 z-10" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
               <input
                 type="text"
                 placeholder={t('stock.searchPlaceholder')}
                 value={search || ''}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-background border border-border text-foreground pl-10 pr-4 py-2 text-xs outline-none focus:border-foreground transition-colors"
+                className="w-full bg-background border border-border rounded-lg text-foreground pl-10 pr-4 py-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-colors"
               />
             </div>
             <div className="flex flex-wrap items-center gap-4">
@@ -690,7 +673,7 @@ export function StockSummary() {
                 <select
                   value={selectedGodown}
                   onChange={(e) => setSelectedGodown(e.target.value)}
-                  className="bg-background border border-border text-foreground px-3 py-1.5 text-[10px] uppercase tracking-widest outline-none focus:border-foreground transition-colors"
+                  className="bg-background border border-border rounded-lg text-foreground px-3 py-1.5 text-[10px] uppercase tracking-widest outline-none focus:border-primary transition-colors"
                 >
                   <option value="">{t('stock.allGodowns')}</option>
                   {godowns.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -704,7 +687,7 @@ export function StockSummary() {
                   onChange={e => setShowLowStockOnly(e.target.checked)}
                   className="w-3.5 h-3.5 accent-foreground"
                 />
-                <label htmlFor="lowStockOnly" className="text-[10px] text-gray-500 uppercase tracking-widest cursor-pointer whitespace-nowrap">
+                <label htmlFor="lowStockOnly" className="text-[10px] text-muted-foreground uppercase tracking-widest cursor-pointer whitespace-nowrap">
                   {t('stock.lowStockOnly')}
                 </label>
               </div>
@@ -714,12 +697,12 @@ export function StockSummary() {
             <button 
               onClick={handleRecalculateAll}
               disabled={recalculating || loading}
-              className="flex items-center gap-2 text-[10px] text-gray-500 uppercase tracking-widest hover:text-foreground disabled:opacity-50"
+              className="flex items-center gap-2 text-[10px] text-muted-foreground uppercase tracking-widest hover:text-foreground disabled:opacity-50"
             >
               {recalculating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Activity className="w-3 h-3" />}
               {t('common.recalculate')}
             </button>
-            <button className="flex items-center gap-2 text-[10px] text-gray-500 uppercase tracking-widest hover:text-foreground">
+            <button className="flex items-center gap-2 text-[10px] text-muted-foreground uppercase tracking-widest hover:text-foreground">
               <Filter className="w-3 h-3" /> {t('common.f12Configure')}
             </button>
           </div>
@@ -728,10 +711,14 @@ export function StockSummary() {
 
       {/* Report Content Section */}
       <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
-        <div id="stock-summary-report" className="min-h-full flex flex-col bg-white">
+        <div id="stock-summary-report" className="min-h-full flex flex-col bg-background">
           <div className="p-4 lg:p-6 flex-1 flex flex-col">
+          {loading ? (
+            <SkeletonLoader type="table" pageKey="inventory" isFullPage={false} />
+          ) : (
+          <>
           {/* Mobile View: Cards */}
-          <div className="block lg:hidden divide-y divide-border/50">
+          <div className="block lg:hidden divide-y divide-border/50 bg-card border border-border rounded-xl overflow-hidden">
             {groupsToRender.map(groupName => {
               const groupItems = activeGroupedItems[groupName] || [];
               const groupOpening = groupItems.reduce((sum, i) => sum + (i.opening || 0), 0);
@@ -748,18 +735,14 @@ export function StockSummary() {
                     className="p-4 bg-muted/20 flex justify-between items-center cursor-pointer hover:bg-muted/80 transition-colors border-l-4 border-transparent hover:border-primary"
                   >
                     <div className="flex items-center gap-2">
-                      {isExpanded ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
+                      {isExpanded ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
                       <span className="text-xs font-bold text-foreground uppercase tracking-tight">
                         {highlightText(groupName, search)}
                       </span>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] text-gray-500 uppercase">{t('common.totalValue')}</p>
-                      {loading ? (
-                        <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto mt-0.5" />
-                      ) : (
-                        <p className="text-xs font-bold text-foreground font-mono">৳ {formatNumber(groupValue)}</p>
-                      )}
+                      <p className="text-[10px] text-muted-foreground uppercase">{t('common.totalValue')}</p>
+                      <p className="text-xs font-bold text-foreground tabular-nums">৳ {formatNumber(groupValue)}</p>
                     </div>
                   </div>
                   {isExpanded && groupItems.map(item => {
@@ -768,7 +751,6 @@ export function StockSummary() {
                     <div 
                       key={item.id} 
                       onClick={() => {
-                        if (loading) return;
                         navigate(`/reports/stock-item?id=${item.id}&from=${startDate}&to=${endDate}`);
                       }}
                       className="p-4 pl-8 border-t border-border/30 space-y-2 hover:bg-muted/60 transition-colors cursor-pointer border-l-4 border-transparent hover:border-primary/40"
@@ -777,40 +759,20 @@ export function StockSummary() {
                         <span className="text-xs text-foreground/80 italic">
                           {highlightText(item.name, search)}
                         </span>
-                        {item.isLoading ? (
-                          <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded" />
-                        ) : (
-                          <span className="text-xs font-bold text-foreground font-mono">{formatQuantity(item.displayStock, itemUnit)}</span>
-                        )}
+                        <span className="text-xs font-bold text-foreground tabular-nums">{formatQuantity(item.displayStock, itemUnit)}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 mt-1">
-                        <div className="text-[9px] text-gray-500 uppercase">
-                          Op: {item.isLoading ? (
-                            <span className="inline-block h-3 w-8 bg-muted-foreground/20 animate-pulse rounded align-middle" />
-                          ) : (
-                            <span className="text-foreground font-bold">{formatQuantity(item.opening, itemUnit)}</span>
-                          )}
+                        <div className="text-[9px] text-muted-foreground uppercase">
+                          Op: <span className="text-foreground font-bold tabular-nums">{formatQuantity(item.opening, itemUnit)}</span>
                         </div>
-                        <div className="text-[9px] text-gray-500 uppercase text-right">
-                          In: {item.isLoading ? (
-                            <span className="inline-block h-3 w-8 bg-muted-foreground/20 animate-pulse rounded align-middle" />
-                          ) : (
-                            <span className="text-foreground font-bold">{formatQuantity(item.inward, itemUnit)}</span>
-                          )}
+                        <div className="text-[9px] text-muted-foreground uppercase text-right">
+                          In: <span className="text-foreground font-bold tabular-nums">{formatQuantity(item.inward, itemUnit)}</span>
                         </div>
-                        <div className="text-[9px] text-gray-500 uppercase">
-                          Out: {item.isLoading ? (
-                            <span className="inline-block h-3 w-8 bg-muted-foreground/20 animate-pulse rounded align-middle" />
-                          ) : (
-                            <span className="text-foreground font-bold">{formatQuantity(item.outward, itemUnit)}</span>
-                          )}
+                        <div className="text-[9px] text-muted-foreground uppercase">
+                          Out: <span className="text-foreground font-bold tabular-nums">{formatQuantity(item.outward, itemUnit)}</span>
                         </div>
-                        <div className="text-[9px] text-gray-500 uppercase text-right font-bold text-foreground">
-                          Val: {item.isLoading ? (
-                            <span className="inline-block h-3 w-12 bg-muted-foreground/20 animate-pulse rounded align-middle" />
-                          ) : (
-                            <span>৳ {formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))}</span>
-                          )}
+                        <div className="text-[9px] text-muted-foreground uppercase text-right font-bold text-foreground">
+                          Val: <span className="tabular-nums">৳ {formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))}</span>
                         </div>
                       </div>
                     </div>
@@ -819,27 +781,23 @@ export function StockSummary() {
                 </div>
               );
             })}
-            {!loading && filteredGroups.length === 0 && (
-              <div className="p-10 text-center text-gray-500 uppercase tracking-widest text-[10px]">{t('stock.noItems')}</div>
+            {filteredGroups.length === 0 && (
+              <div className="p-10 text-center text-muted-foreground uppercase tracking-widest text-[10px]">{t('stock.noItems')}</div>
             )}
             {/* Grand Total Mobile */}
-            <div className="p-4 bg-foreground/10 flex justify-between items-center font-bold">
-              <span className="text-[10px] text-gray-500 uppercase tracking-widest">{t('common.grandTotal')}</span>
+            <div className="p-4 bg-muted/40 flex justify-between items-center font-bold">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{t('common.grandTotal')}</span>
               <div className="text-right">
-                {loading ? (
-                  <div className="h-5 w-24 bg-muted-foreground/20 animate-pulse rounded" />
-                ) : (
-                  <p className="text-sm text-foreground font-mono">৳ {formatNumber(totalStockValue)}</p>
-                )}
+                <p className="text-sm text-foreground tabular-nums">৳ {formatNumber(totalStockValue)}</p>
               </div>
             </div>
           </div>
 
           {/* Desktop View: Table */}
-          <div className="hidden lg:block relative flex-1">
+          <div className="hidden lg:block relative flex-1 bg-card border border-border rounded-xl overflow-hidden shadow-xs">
             <table className="w-full text-left text-[11px] min-w-[800px] border-separate border-spacing-0 h-full">
               <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur-sm shadow-sm ring-1 ring-border">
-                <tr className="text-gray-500 uppercase text-[9px] font-bold tracking-widest">
+                <tr className="text-muted-foreground uppercase text-[9px] font-bold tracking-widest">
                   <th className="px-4 py-3 font-medium border-b border-border sticky top-0 bg-inherit align-middle">{t('common.particulars')}</th>
                   <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 bg-inherit border-l align-middle">Opening</th>
                   <th className="px-4 py-3 font-medium text-right w-24 border-b border-border sticky top-0 bg-inherit border-l align-middle">Inward</th>
@@ -849,7 +807,7 @@ export function StockSummary() {
                   <th className="px-4 py-3 font-medium text-right w-32 border-b border-border sticky top-0 bg-inherit border-l align-middle">{t('common.value')} (৳)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/50 bg-white">
+              <tbody className="divide-y divide-border/50 bg-card">
                 {groupsToRender.map(groupName => {
                   const groupItems = activeGroupedItems[groupName] || [];
                   const groupOpening = groupItems.reduce((sum, i) => sum + (i.opening || 0), 0);
@@ -868,49 +826,29 @@ export function StockSummary() {
                       >
                         <td className="px-4 py-3 align-middle">
                           <div className="flex items-center gap-2">
-                            {isExpanded ? <ChevronDown className="w-3 h-3 text-gray-600" /> : <ChevronRight className="w-3 h-3 text-gray-600" />}
+                            {isExpanded ? <ChevronDown className="w-3 h-3 text-muted-foreground" /> : <ChevronRight className="w-3 h-3 text-muted-foreground" />}
                             <span className="text-foreground font-bold uppercase tracking-tight">
                               {highlightText(groupName, search)}
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10 align-middle">
-                          {loading ? (
-                            <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                          ) : (
-                            formatQuantity(groupOpening, groupAggregateUnit || undefined)
-                          )}
+                        <td className="px-4 py-3 text-right text-foreground tabular-nums font-bold border-l border-border/10 align-middle">
+                          {formatQuantity(groupOpening, groupAggregateUnit || undefined)}
                         </td>
-                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10 align-middle">
-                          {loading ? (
-                            <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                          ) : (
-                            formatQuantity(groupInward, groupAggregateUnit || undefined)
-                          )}
+                        <td className="px-4 py-3 text-right text-foreground tabular-nums font-bold border-l border-border/10 align-middle">
+                          {formatQuantity(groupInward, groupAggregateUnit || undefined)}
                         </td>
-                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10 align-middle">
-                          {loading ? (
-                            <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                          ) : (
-                            formatQuantity(groupOutward, groupAggregateUnit || undefined)
-                          )}
+                        <td className="px-4 py-3 text-right text-foreground tabular-nums font-bold border-l border-border/10 align-middle">
+                          {formatQuantity(groupOutward, groupAggregateUnit || undefined)}
                         </td>
-                        <td className="px-4 py-3 text-right text-amber-700 font-mono font-bold border-l border-amber-500/10 bg-amber-500/5 align-middle">
-                          {loading ? (
-                            <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                          ) : (
-                            formatQuantity(groupQty, groupAggregateUnit || undefined)
-                          )}
+                        <td className="px-4 py-3 text-right text-amber-700 tabular-nums font-bold border-l border-amber-500/10 bg-amber-500/5 align-middle">
+                          {formatQuantity(groupQty, groupAggregateUnit || undefined)}
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-600 border-l border-border/10 align-middle">
+                        <td className="px-4 py-3 text-right text-muted-foreground border-l border-border/10 align-middle">
                           -
                         </td>
-                        <td className="px-4 py-3 text-right text-foreground font-mono font-bold border-l border-border/10 align-middle">
-                          {loading ? (
-                            <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                          ) : (
-                            formatNumber(groupValue)
-                          )}
+                        <td className="px-4 py-3 text-right text-foreground tabular-nums font-bold border-l border-border/10 align-middle">
+                          {formatNumber(groupValue)}
                         </td>
                       </tr>
                       {isExpanded && groupItems.map(item => {
@@ -919,7 +857,6 @@ export function StockSummary() {
                         <tr 
                           key={item.id} 
                           onClick={() => {
-                            if (loading) return;
                             navigate(`/reports/stock-item?id=${item.id}&from=${startDate}&to=${endDate}`);
                           }}
                           className={cn("bg-muted/5 hover:bg-muted/60 transition-colors group/item cursor-pointer border-l-4 border-transparent hover:border-primary/40", item.isLowStock && "bg-rose-500/5")}
@@ -935,47 +872,23 @@ export function StockSummary() {
                             )}
                           </div>
                         </td>
-                         <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5 align-middle">
-                           {item.isLoading ? (
-                             <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                           ) : (
-                             formatQuantity(item.opening, itemUnit)
-                           )}
+                         <td className="px-4 py-2.5 text-right text-foreground/60 tabular-nums border-l border-border/5 align-middle">
+                           {formatQuantity(item.opening, itemUnit)}
                          </td>
-                         <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5 align-middle">
-                           {item.isLoading ? (
-                             <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                           ) : (
-                             formatQuantity(item.inward, itemUnit)
-                           )}
+                         <td className="px-4 py-2.5 text-right text-foreground/60 tabular-nums border-l border-border/5 align-middle">
+                           {formatQuantity(item.inward, itemUnit)}
                          </td>
-                         <td className="px-4 py-2.5 text-right text-foreground/60 font-mono border-l border-border/5 align-middle">
-                           {item.isLoading ? (
-                             <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                           ) : (
-                             formatQuantity(item.outward, itemUnit)
-                           )}
+                         <td className="px-4 py-2.5 text-right text-foreground/60 tabular-nums border-l border-border/5 align-middle">
+                           {formatQuantity(item.outward, itemUnit)}
                          </td>
-                         <td className="px-4 py-2.5 text-right text-amber-700 font-bold font-mono border-l border-amber-500/20 bg-amber-500/10 align-middle">
-                           {item.isLoading ? (
-                             <div className="h-4 w-12 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                           ) : (
-                             formatQuantity(item.displayStock, itemUnit)
-                           )}
+                         <td className="px-4 py-2.5 text-right text-amber-700 font-bold tabular-nums border-l border-amber-500/20 bg-amber-500/10 align-middle">
+                           {formatQuantity(item.displayStock, itemUnit)}
                          </td>
-                           <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5 align-middle">
-                             {item.isLoading ? (
-                               <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                             ) : (
-                               formatNumber(item.avg_cost || item.opening_rate || 0)
-                             )}
+                           <td className="px-4 py-2.5 text-right text-foreground/80 tabular-nums border-l border-border/5 align-middle">
+                             {formatNumber(item.avg_cost || item.opening_rate || 0)}
                            </td>
-                           <td className="px-4 py-2.5 text-right text-foreground/80 font-mono border-l border-border/5 align-middle">
-                             {item.isLoading ? (
-                               <div className="h-4 w-20 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                             ) : (
-                               formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))
-                             )}
+                           <td className="px-4 py-2.5 text-right text-foreground/80 tabular-nums border-l border-border/5 align-middle">
+                             {formatNumber(item.displayStock * (item.avg_cost || item.opening_rate || 0))}
                            </td>
                         </tr>
                         );
@@ -983,61 +896,43 @@ export function StockSummary() {
                     </React.Fragment>
                   );
                 })}
-                {!loading && filteredGroups.length === 0 && (
+                {filteredGroups.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-10 text-center text-gray-500 uppercase tracking-widest align-middle">{t('stock.noItems')}</td>
+                    <td colSpan={7} className="px-6 py-10 text-center text-muted-foreground uppercase tracking-widest align-middle">{t('stock.noItems')}</td>
                   </tr>
                 )}
               </tbody>
               <tfoot className="bg-background border-t-2 border-border sticky bottom-0 text-[10px] z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
                 <tr className="font-bold text-foreground bg-background">
-                  <td className="px-4 py-3 uppercase text-[9px] text-gray-500 tracking-widest bg-background align-middle">{t('common.grandTotal')}</td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background align-middle">
-                    {loading ? (
-                      <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                    ) : (
-                      formatQuantity(grandOpening, grandAggregateUnit || undefined)
-                    )}
+                  <td className="px-4 py-3 uppercase text-[9px] text-muted-foreground tracking-widest bg-background align-middle">{t('common.grandTotal')}</td>
+                  <td className="px-4 py-3 text-right tabular-nums border-l border-border bg-background align-middle">
+                    {formatQuantity(grandOpening, grandAggregateUnit || undefined)}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background align-middle">
-                    {loading ? (
-                      <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                    ) : (
-                      formatQuantity(grandInward, grandAggregateUnit || undefined)
-                    )}
+                  <td className="px-4 py-3 text-right tabular-nums border-l border-border bg-background align-middle">
+                    {formatQuantity(grandInward, grandAggregateUnit || undefined)}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background align-middle">
-                    {loading ? (
-                      <div className="h-4 w-16 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                    ) : (
-                      formatQuantity(grandOutward, grandAggregateUnit || undefined)
-                    )}
+                  <td className="px-4 py-3 text-right tabular-nums border-l border-border bg-background align-middle">
+                    {formatQuantity(grandOutward, grandAggregateUnit || undefined)}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-amber-600 bg-amber-600 text-white align-middle">
-                    {loading ? (
-                      <div className="h-4 w-16 bg-white/30 animate-pulse rounded ml-auto" />
-                    ) : (
-                      formatQuantity(grandClosing, grandAggregateUnit || undefined)
-                    )}
+                  <td className="px-4 py-3 text-right tabular-nums border-l border-amber-600 bg-amber-600 text-white align-middle">
+                    {formatQuantity(grandClosing, grandAggregateUnit || undefined)}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background align-middle">
+                  <td className="px-4 py-3 text-right tabular-nums border-l border-border bg-background align-middle">
                     -
                   </td>
-                  <td className="px-4 py-3 text-right font-mono border-l border-border bg-background align-middle">
-                    {loading ? (
-                      <div className="h-4 w-24 bg-muted-foreground/20 animate-pulse rounded ml-auto" />
-                    ) : (
-                      <span>৳ {formatNumber(totalStockValue)}</span>
-                    )}
+                  <td className="px-4 py-3 text-right tabular-nums border-l border-border bg-background align-middle">
+                    <span>৳ {formatNumber(totalStockValue)}</span>
                   </td>
                 </tr>
               </tfoot>
             </table>
           </div>
+          </>
+          )}
         </div>
 
         {/* Stock Valuation Method Note */}
-        <div className="flex justify-between items-center text-[9px] text-gray-500 uppercase tracking-[0.2em]">
+        <div className="flex justify-between items-center px-4 lg:px-6 pb-3 text-[9px] text-muted-foreground uppercase tracking-[0.2em]">
           <span>{t('stock.valuationMethod')}: {t('stock.weightedAvg')}</span>
           <span>{t('common.f1Help')}</span>
         </div>

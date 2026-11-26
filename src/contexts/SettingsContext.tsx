@@ -80,6 +80,20 @@ export const SIDEBAR_TEXT_OPTIONS: SidebarTextOption[] = [
   { id: 'sleek-stark', label: 'Minimal Stark Charcoal', labelBn: 'মিনিমাল ডার্ক চারকোল', textClass: 'text-slate-400 hover:text-white', activeClass: 'text-white bg-white/10 border-white', mutedClass: 'text-slate-400', lightTextClass: 'text-stone-600 hover:text-stone-900', lightActiveClass: 'text-stone-950 bg-stone-100 border-stone-800', lightMutedClass: 'text-stone-500' }
 ];
 
+export const SKELETON_PAGE_MODULES = [
+  { id: 'dashboard', label: 'Dashboard', labelBn: 'ড্যাশবোর্ড' },
+  { id: 'vouchers', label: 'Voucher Entry & Detail', labelBn: 'ভাউচার এন্ট্রি ও বিবরণ' },
+  { id: 'daybook', label: 'Daybook & Registers', labelBn: 'ডেবুক ও রেজিস্টার' },
+  { id: 'reports', label: 'Financial Reports (BS, P&L, TB, Ratio)', labelBn: 'আর্থিক রিপোর্ট (BS, P&L, TB, রেশিও)' },
+  { id: 'inventory', label: 'Inventory & Stock Summary', labelBn: 'ইনভেন্টরি ও স্টক সামারি' },
+  { id: 'ledgers', label: 'Ledgers, Statements & Alerts', labelBn: 'লেজার, স্টেটমেন্ট ও অ্যালার্ট' },
+  { id: 'payroll', label: 'Payroll & Production', labelBn: 'পেরোল ও প্রোডাকশন' },
+  { id: 'analytics', label: 'Business Intelligence & Statistics', labelBn: 'বিআই অ্যানালিটিক্স ও পরিসংখ্যান' },
+  { id: 'settings', label: 'Settings & Masters', labelBn: 'সেটিংস ও মাস্টার্স' },
+] as const;
+
+export type SkeletonPageModuleId = typeof SKELETON_PAGE_MODULES[number]['id'];
+
 interface WhatsAppTemplates {
   Sales: string;
   Purchase: string;
@@ -205,6 +219,7 @@ interface SettingsContextType {
   splashSubDesign?: 'grid' | 'neon' | 'editorial';
   skeletonEnabled?: boolean;
   skeletonDashboardOnly?: boolean;
+  skeletonPageOverrides?: Record<string, boolean>;
   skeletonType?: 'automatic' | 'table' | 'cards' | 'profile' | 'form';
   skeletonSpeed?: 'slow' | 'normal' | 'fast';
   skeletonTheme?: 'classic' | 'modern' | 'glass' | 'neon';
@@ -396,6 +411,7 @@ const defaultSettings: SettingsContextType = {
   splashSubDesign: 'grid',
   skeletonEnabled: true,
   skeletonDashboardOnly: true,
+  skeletonPageOverrides: {},
   skeletonType: 'automatic',
   skeletonSpeed: 'normal',
   skeletonTheme: 'modern',
@@ -543,6 +559,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const cachedAppIdentity = appIdentityPersisted ? JSON.parse(appIdentityPersisted) : {};
       const resolvedIdentity = resolveAppBranding(cachedAppIdentity, cachedSystem);
 
+      let cachedFeatures = defaultSettings.appFeatures;
+      try {
+        const fRaw = localStorage.getItem('swr_system_features');
+        if (fRaw) cachedFeatures = JSON.parse(fRaw);
+      } catch {}
+
+      let cachedPlans = defaultSettings.subscriptionPlans;
+      try {
+        const pRaw = localStorage.getItem('swr_subscription_plans');
+        if (pRaw) cachedPlans = JSON.parse(pRaw);
+      } catch {}
+
       // Normalize legacy hero styles to 'monochrome-parallax'
       if (cachedSystem.heroDesignStyle === 'three-matrix' || cachedSystem.heroDesignStyle === 'three-interactive') {
         cachedSystem.heroDesignStyle = 'monochrome-parallax';
@@ -558,8 +586,25 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         } catch (e) {}
       }
 
-      const keys = Object.keys(localStorage);
-      const companyKey = keys.find(k => k.startsWith('swr_settings_'));
+      // Prefer the active cached auth profile's companyId so we never hydrate a stale company's theme/UI preset
+      let targetCompanyKey: string | undefined;
+      try {
+        const isDemo = localStorage.getItem('erp_is_demo_mode') === 'true';
+        if (isDemo) {
+          targetCompanyKey = 'swr_settings_demo_company_id';
+        } else {
+          const authProfileRaw = localStorage.getItem('cached_auth_profile');
+          const authProfile = authProfileRaw ? JSON.parse(authProfileRaw) : null;
+          if (authProfile?.companyId) {
+            targetCompanyKey = `swr_settings_${authProfile.companyId}`;
+          }
+        }
+      } catch {}
+
+      const companyKey = (targetCompanyKey && localStorage.getItem(targetCompanyKey))
+        ? targetCompanyKey
+        : Object.keys(localStorage).find(k => k.startsWith('swr_settings_'));
+
       if (companyKey) {
         const cachedCompany = localStorage.getItem(companyKey);
         if (cachedCompany) {
@@ -580,8 +625,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             updateSystemSettings: defaultSettings.updateSystemSettings,
             updateAppIdentity: defaultSettings.updateAppIdentity,
             updateFeaturesSettings: defaultSettings.updateFeaturesSettings,
-            appFeatures: defaultSettings.appFeatures,
-            subscriptionPlans: defaultSettings.subscriptionPlans
+            appFeatures: cachedFeatures,
+            subscriptionPlans: cachedPlans
           };
         }
       }
@@ -597,13 +642,30 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           developerContactText: resolvedIdentity.softwareFooterText,
           developerContactAlignment: resolvedIdentity.softwareFooterAlignment,
           appVersion: resolvedAppVersion,
+          appFeatures: cachedFeatures,
+          subscriptionPlans: cachedPlans,
           loading: false
         };
       }
     } catch (e) {}
     return defaultSettings;
   });
-  const [userSettings, setUserSettings] = useState<any>({});
+  const [userSettings, setUserSettings] = useState<any>(() => {
+    try {
+      const isDemo = localStorage.getItem('erp_is_demo_mode') === 'true';
+      if (isDemo) {
+        const raw = localStorage.getItem('swr_usersettings_demo_user_uid');
+        return raw ? JSON.parse(raw) : {};
+      }
+      const profRaw = localStorage.getItem('cached_auth_profile');
+      const prof = profRaw ? JSON.parse(profRaw) : null;
+      if (prof?.uid) {
+        const raw = localStorage.getItem(`swr_usersettings_${prof.uid}`);
+        return raw ? JSON.parse(raw) : {};
+      }
+    } catch {}
+    return {};
+  });
 
   // Synchronize soundService state dynamically with audio preferences
   useEffect(() => {
@@ -653,18 +715,30 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Hydrate cached user settings immediately while snapshot attaches
+    try {
+      const persistedUser = localStorage.getItem(`swr_usersettings_${user.uid}`);
+      if (persistedUser) {
+        setUserSettings(JSON.parse(persistedUser));
+      }
+    } catch {}
+
     const userRef = doc(db, 'users', user.uid);
     const unsubscribeUser = onSnapshot(userRef, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        setUserSettings(data.settings || {});
+        const nextUserSettings = data.settings || {};
+        setUserSettings(nextUserSettings);
+        try {
+          localStorage.setItem(`swr_usersettings_${user.uid}`, JSON.stringify(nextUserSettings));
+        } catch {}
       }
     }, (error) => {
       console.error("User settings snapshot error:", error);
     });
 
     return () => unsubscribeUser();
-  }, [user?.uid]);    // Cache for global settings to avoid redundant fetches across tabs/sessions
+  }, [user?.uid, authLoading]);    // Cache for global settings to avoid redundant fetches across tabs/sessions
     const globalConfigLoaded = React.useRef(false);
     let unsubSystem: (() => void) | null = null;
     let unsubAppIdentity: (() => void) | null = null;
@@ -897,6 +971,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         const plansRef = collection(db, 'subscription_plans');
         const snap = await getDocs(plansRef);
         const plans = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SubscriptionPlan));
+        try {
+          localStorage.setItem('swr_subscription_plans', JSON.stringify(plans));
+        } catch {}
         setSettings(prev => ({ ...prev, subscriptionPlans: plans }));
       } catch (error: any) {
         if (!error.message?.includes('Quota exceeded') && !error.message?.includes('offline') && !error.message?.includes('backend')) {
@@ -912,7 +989,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         const snap = await getDoc(featuresRef);
         if (snap.exists()) {
           const data = snap.data();
-          setSettings(prev => ({ ...prev, appFeatures: data.categories || APP_FEATURES }));
+          const cats = data.categories || APP_FEATURES;
+          try {
+            localStorage.setItem('swr_system_features', JSON.stringify(cats));
+          } catch {}
+          setSettings(prev => ({ ...prev, appFeatures: cats }));
         } else {
           setSettings(prev => ({ ...prev, appFeatures: APP_FEATURES }));
         }
@@ -1389,14 +1470,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const updateUserSettings = async (newSettings: any) => {
     if (!user?.uid) return;
 
+    setUserSettings(prev => {
+      const next = { ...prev, ...newSettings };
+      try {
+        localStorage.setItem(`swr_usersettings_${user.uid}`, JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+
     if (localStorage.getItem('erp_is_demo_mode') === 'true') {
-      setUserSettings(prev => {
-        const next = { ...prev, ...newSettings };
-        try {
-          localStorage.setItem(`swr_usersettings_${user.uid}`, JSON.stringify(next));
-        } catch (e) {}
-        return next;
-      });
       return;
     }
 
@@ -1434,6 +1516,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       soundDelete: userSettings.soundDelete || settings.soundDelete || '',
       soundClick: userSettings.soundClick || settings.soundClick || '',
       soundNavigation: userSettings.soundNavigation || settings.soundNavigation || '',
+      skeletonEnabled: userSettings.skeletonEnabled !== undefined ? userSettings.skeletonEnabled : (settings.skeletonEnabled ?? true),
+      skeletonDashboardOnly: userSettings.skeletonDashboardOnly !== undefined ? userSettings.skeletonDashboardOnly : (settings.skeletonDashboardOnly ?? true),
+      skeletonTheme: userSettings.skeletonTheme || settings.skeletonTheme || 'modern',
+      skeletonSpeed: userSettings.skeletonSpeed || settings.skeletonSpeed || 'normal',
+      skeletonPageOverrides: {
+        ...(settings.skeletonPageOverrides || {}),
+        ...(userSettings.skeletonPageOverrides || {}),
+      },
       userSettings,
       updateSettings, 
       updateSystemSettings,

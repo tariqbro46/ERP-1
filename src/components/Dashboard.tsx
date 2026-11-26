@@ -4,7 +4,7 @@ import {
   AreaChart, Area, LineChart, Line, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { motion } from 'motion/react';
-import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, AlertCircle, Clock, Hammer, CheckCircle2, ListTodo, TrendingUp, RefreshCw, ChevronRight, Calculator, Bookmark, Pin, Layers, FileText, BookOpen, Sparkles, Cpu, Coins, Trash2, BellRing, Wallet, Landmark, PieChart as PieChartIcon } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Activity, Users, Package, CreditCard, Loader2, Plus, Calendar, ShieldCheck, AlertTriangle, AlertCircle, Clock, Hammer, CheckCircle2, ListTodo, TrendingUp, RefreshCw, ChevronRight, Calculator, Bookmark, Pin, Layers, FileText, BookOpen, BarChart3, LayoutDashboard, Cpu, Coins, Trash2, BellRing, Wallet, Landmark, PieChart as PieChartIcon } from 'lucide-react';
 import { erpService } from '../services/erpService';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -22,31 +22,31 @@ const StatCard = ({ title, value, change, icon: Icon, trend, loading, color, uiS
   <motion.div 
     initial={{ opacity: 0, y: 12 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.35, delay: index * 0.05, ease: [0.25, 0.1, 0.25, 1.0] }}
+    transition={{ duration: 0.3, delay: index * 0.04, ease: [0.25, 0.1, 0.25, 1.0] }}
     className={cn(
-      "bg-card border border-border p-4 flex flex-col gap-2 transition-all",
+      "bg-card border border-border rounded-xl p-4 flex flex-col gap-2 transition-colors shadow-[var(--shadow-surface)]",
       uiStyle === 'UI/UX 2' && color ? `${color} border-transparent shadow-md hover:brightness-95` : ""
     )}
   >
-    <div className="flex justify-between items-center">
+    <div className="flex justify-between items-center gap-2">
       <span className={cn(
-        "text-[10px] uppercase tracking-wider font-mono",
-        uiStyle === 'UI/UX 2' ? "text-white/70" : "text-gray-500"
+        "text-[11px] uppercase tracking-wider font-medium truncate",
+        uiStyle === 'UI/UX 2' ? "text-white/80" : "text-muted-foreground"
       )}>{title}</span>
-      <Icon className={cn("w-4 h-4", uiStyle === 'UI/UX 2' ? "text-white/80" : "text-gray-600")} />
+      <Icon className={cn("w-4 h-4 shrink-0", uiStyle === 'UI/UX 2' ? "text-white/80" : "text-muted-foreground")} />
     </div>
     <div className="flex items-baseline justify-between gap-2 flex-wrap mt-auto">
       {loading ? (
-        <div className="h-8 w-24 bg-foreground/5 animate-pulse rounded" />
+        <div className="h-8 w-24 bg-foreground/10 erp-skeleton-item rounded" />
       ) : (
         <>
           <span className={cn(
-            "text-xl sm:text-2xl font-mono",
+            "text-xl sm:text-2xl font-mono font-semibold tabular-nums tracking-tight",
             uiStyle === 'UI/UX 2' ? "text-white" : "text-foreground"
           )}>{value}</span>
           {change && (
             <span className={cn(
-              "text-[9px] sm:text-[10px] font-mono flex items-center whitespace-nowrap",
+              "text-[10px] font-mono tabular-nums flex items-center whitespace-nowrap",
               uiStyle === 'UI/UX 2' ? "text-white/90" : trend === 'up' ? 'text-emerald-500' : 'text-rose-500'
             )}>
               {trend === 'up' ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
@@ -452,6 +452,10 @@ export function Dashboard() {
     localStorage.setItem('tallyflow_zero_bookmarks', JSON.stringify(updated));
   };
 
+  if (loading) {
+    return <SkeletonLoader type="cards" pageKey="dashboard" />;
+  }
+
   if (dashboardDesign === 'Design 5') {
     const calculatedProfit = (calcCost * (calcMarkup / 100));
     const calculatedPrice = calcCost + calculatedProfit;
@@ -526,11 +530,11 @@ export function Dashboard() {
           {showDashboardLowStockAlert !== false && lowStockCount > 0 && (
             <div className="p-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all">
               <div className="flex items-start gap-3.5">
-                <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-600 shrink-0">
-                  <AlertTriangle className="w-5 h-5 animate-pulse" />
+                <div className="p-2.5 rounded-xl bg-rose-500/15 text-rose-600 shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-xs font-black uppercase tracking-tight text-rose-600">
+                  <p className="text-xs font-bold uppercase tracking-tight text-rose-600 tabular-nums">
                     Low Stock Warning: {lowStockCount} Item{lowStockCount > 1 ? 's' : ''} Below Reorder Level
                   </p>
                   <p className="text-[11px] text-rose-700/80 dark:text-rose-300/80 leading-relaxed">
@@ -540,7 +544,7 @@ export function Dashboard() {
               </div>
               <button
                 onClick={() => navigate('/inventory?filter=lowStock')}
-                className="px-4 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-rose-700 transition-colors flex items-center gap-1.5 shrink-0 shadow-xs"
+                className="px-4 py-2 bg-rose-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-rose-700 transition-colors flex items-center gap-1.5 shrink-0 shadow-xs whitespace-nowrap"
               >
                 <span>Review Stock & Reorder</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
@@ -552,11 +556,11 @@ export function Dashboard() {
           {showDashboardDueAlert !== false && dueSummary.customerCount > 0 && (
             <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all">
               <div className="flex items-start gap-3.5">
-                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-600 shrink-0">
-                  <AlertCircle className="w-5 h-5 animate-pulse" />
+                <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-600 shrink-0">
+                  <AlertCircle className="w-5 h-5" />
                 </div>
                 <div className="space-y-0.5">
-                  <p className="text-xs font-black uppercase tracking-tight text-amber-600">
+                  <p className="text-xs font-bold uppercase tracking-tight text-amber-600 tabular-nums">
                     {t('dash.duePaymentReminder')}: {dueSummary.customerCount} ({dueSummary.totalDue.toLocaleString()} BDT)
                   </p>
                   <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
@@ -566,7 +570,7 @@ export function Dashboard() {
               </div>
               <button
                 onClick={() => navigate('/reports/due-payments')}
-                className="px-4 py-2 bg-amber-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-amber-700 transition-colors flex items-center gap-1.5 shrink-0 shadow-xs"
+                className="px-4 py-2 bg-amber-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-amber-700 transition-colors flex items-center gap-1.5 shrink-0 shadow-xs whitespace-nowrap"
               >
                 <span>{t('dash.sendDueReminders')}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -577,11 +581,11 @@ export function Dashboard() {
           {/* Active Alert Desk */}
           <div className={cn("p-4.5 rounded-2xl border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all", isDark ? "bg-cyan-950/10 border-cyan-500/20" : "bg-white border-border shadow-sm")}>
             <div className="flex items-start gap-3.5">
-              <div className={cn("p-2.5 rounded-xl bg-opacity-10 shrink-0", isDark ? "bg-cyan-400/10 text-cyan-400" : "bg-primary/5 text-primary")}>
-                <ShieldCheck className="w-5 h-5 animate-pulse" />
+              <div className={cn("p-2.5 rounded-xl shrink-0", isDark ? "bg-cyan-400/10 text-cyan-400" : "bg-primary/5 text-primary")}>
+                <ShieldCheck className="w-5 h-5" />
               </div>
               <div className="space-y-0.5">
-                <p className="text-xs font-black uppercase tracking-tight text-foreground">{t('dash.interactiveControl')}</p>
+                <p className="text-xs font-bold uppercase tracking-tight text-foreground">{t('dash.interactiveControl')}</p>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                   Welcome back! Pin key reports to your local pinboard, calculate dynamic margins, and quickly manage core accounting transaction modules.
                 </p>
@@ -609,19 +613,19 @@ export function Dashboard() {
                   <div className={cn("p-5 rounded-2xl border transition-all flex flex-col justify-between group", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm", scheme.cardHover)}>
                     <div>
                       <div className="flex justify-between items-start mb-3.5">
-                        <div className={cn("p-2.5 rounded-xl bg-blue-500/10 text-blue-500")}>
+                        <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
                           <BookOpen className="w-5 h-5" />
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">{t('nav.accounting')}</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('nav.accounting')}</span>
                       </div>
-                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground">{t('dash.accountsControl')}</h4>
+                      <h4 className="text-xs font-bold uppercase tracking-tight text-foreground">{t('dash.accountsControl')}</h4>
                       <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                         Establish general ledgers, monitor chart of accounts, adjust matching credits, and set opening balances.
                       </p>
                     </div>
                     <button 
                       onClick={() => navigate('/accounts')} 
-                      className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
+                      className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
                     >
                       {t('dash.enterAccounts')}
                       <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -632,19 +636,19 @@ export function Dashboard() {
                   <div className={cn("p-5 rounded-2xl border transition-all flex flex-col justify-between group", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm", scheme.cardHover)}>
                     <div>
                       <div className="flex justify-between items-start mb-3.5">
-                        <div className={cn("p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500")}>
+                        <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500">
                           <FileText className="w-5 h-5" />
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">{t('nav.transactions')}</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('nav.transactions')}</span>
                       </div>
-                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground font-sans">{t('dash.doubleEntryVouchers')}</h4>
+                      <h4 className="text-xs font-bold uppercase tracking-tight text-foreground font-sans">{t('dash.doubleEntryVouchers')}</h4>
                       <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                         Log cash sales, purchase receipts, payments, general receipts, contra transfers, and general journal vouchers.
                       </p>
                     </div>
                     <button 
                       onClick={() => navigate('/vouchers/new')} 
-                      className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
+                      className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
                     >
                       {t('dash.postVouchers')}
                       <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -655,19 +659,19 @@ export function Dashboard() {
                   <div className={cn("p-5 rounded-2xl border transition-all flex flex-col justify-between group", isDark ? "bg-slate-900 border-cyan-950" : "bg-white border-border shadow-sm", scheme.cardHover)}>
                     <div>
                       <div className="flex justify-between items-start mb-3.5">
-                        <div className={cn("p-2.5 rounded-xl bg-orange-500/10 text-orange-500")}>
+                        <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-500">
                           <Package className="w-5 h-5" />
                         </div>
-                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground bg-muted/40 px-2 py-0.5 rounded-full">Inventory</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Inventory</span>
                       </div>
-                      <h4 className="text-xs font-black uppercase tracking-tight text-foreground font-sans">Stock Control</h4>
+                      <h4 className="text-xs font-bold uppercase tracking-tight text-foreground font-sans">Stock Control</h4>
                       <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                         Configure batch items, view stock value logs, track multi-godown storage allocations, and set unit definitions.
                       </p>
                     </div>
                     <button 
                       onClick={() => navigate('/inventory/items')} 
-                      className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
+                      className="mt-6 w-full py-2 border border-border group-hover:border-foreground/20 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 bg-background hover:bg-muted"
                     >
                       Explore Inventory
                       <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -696,8 +700,8 @@ export function Dashboard() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs font-black text-foreground font-mono">৳{v.total_amount?.toLocaleString()}</p>
-                          <span className="text-[8px] font-black uppercase text-muted-foreground tracking-widest">{v.v_type}</span>
+                          <p className="text-xs font-bold text-foreground font-mono tabular-nums">৳{v.total_amount?.toLocaleString()}</p>
+                          <span className="text-[8px] font-semibold uppercase text-muted-foreground tracking-widest">{v.v_type}</span>
                         </div>
                       </div>
                     )) : (
@@ -722,11 +726,11 @@ export function Dashboard() {
                           <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl">
                             <Landmark className="w-4 h-4" />
                           </div>
-                          <h4 className="text-xs font-black uppercase tracking-tight text-foreground">
+                          <h4 className="text-xs font-bold uppercase tracking-tight text-foreground">
                             {language === 'bn' ? 'ক্যাশ বনাম ব্যাংক ব্যালেন্স' : 'Cash vs. Bank Balance'}
                           </h4>
                         </div>
-                        <span className="text-[9px] font-mono text-muted-foreground uppercase bg-muted/30 px-2 py-0.5 rounded-full">Liquidity</span>
+                        <span className="text-[10px] font-mono text-muted-foreground uppercase">Liquidity</span>
                       </div>
                       <div className="h-[190px] w-full flex items-center justify-center">
                         {cashBankData.length > 0 && cashBankData.some(d => d.value > 0) ? (
@@ -765,12 +769,12 @@ export function Dashboard() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border/60 text-xs">
                         <div className="bg-emerald-500/5 p-2 rounded-xl border border-emerald-500/10">
-                          <span className="text-[9px] text-emerald-600 uppercase font-black block">Cash:</span>
-                          <span className="font-mono font-bold text-foreground">৳{formatNumber(cashBankData.find(d => d.name === 'Cash in Hand')?.value || 0)}</span>
+                          <span className="text-[9px] text-emerald-600 uppercase font-bold block">Cash:</span>
+                          <span className="font-mono font-bold tabular-nums text-foreground">৳{formatNumber(cashBankData.find(d => d.name === 'Cash in Hand')?.value || 0)}</span>
                         </div>
                         <div className="bg-blue-500/5 p-2 rounded-xl border border-blue-500/10">
-                          <span className="text-[9px] text-blue-600 uppercase font-black block">Bank:</span>
-                          <span className="font-mono font-bold text-foreground">৳{formatNumber(cashBankData.find(d => d.name === 'Bank Accounts')?.value || 0)}</span>
+                          <span className="text-[9px] text-blue-600 uppercase font-bold block">Bank:</span>
+                          <span className="font-mono font-bold tabular-nums text-foreground">৳{formatNumber(cashBankData.find(d => d.name === 'Bank Accounts')?.value || 0)}</span>
                         </div>
                       </div>
                     </div>
@@ -783,11 +787,11 @@ export function Dashboard() {
                           <div className="p-2 bg-rose-500/10 text-rose-500 rounded-xl">
                             <PieChartIcon className="w-4 h-4" />
                           </div>
-                          <h4 className="text-xs font-black uppercase tracking-tight text-foreground">
+                          <h4 className="text-xs font-bold uppercase tracking-tight text-foreground">
                             {language === 'bn' ? 'শীর্ষ ৫টি ব্যয় খাত' : 'Top 5 Expenses'}
                           </h4>
                         </div>
-                        <span className="text-[9px] font-mono text-rose-500 font-bold uppercase bg-rose-500/10 px-2 py-0.5 rounded-full">Monthly</span>
+                        <span className="text-[10px] font-mono text-rose-500 font-semibold uppercase">Monthly</span>
                       </div>
                       <div className="h-[190px] w-full">
                         {topExpensesData.length > 0 ? (
@@ -816,7 +820,7 @@ export function Dashboard() {
                           </div>
                         )}
                       </div>
-                      <div className="flex justify-between items-center text-[10px] font-mono pt-3 border-t border-border/60 text-muted-foreground">
+                      <div className="flex justify-between items-center text-[10px] font-mono tabular-nums pt-3 border-t border-border/60 text-muted-foreground">
                         <span>Top 5 Total:</span>
                         <span className="font-bold text-rose-500">৳{formatNumber(topExpensesData.reduce((acc, curr) => acc + curr.amount, 0))}</span>
                       </div>
@@ -1088,11 +1092,11 @@ export function Dashboard() {
           
           <div className="max-w-5xl mx-auto w-full flex-grow flex flex-col justify-center space-y-10 relative z-10">
             
-            {/* Cyber Header with neon decorations */}
+            {/* Header */}
             <div className="text-center space-y-3">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-950/40 border border-cyan-500/30 rounded-lg text-[9px] font-black uppercase tracking-widest text-cyan-400 font-mono shadow-[0_0_15px_rgba(6,182,212,0.15)] animate-pulse">
-                <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-                ENTERPRISE HUB
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-950/40 border border-cyan-500/30 rounded-lg text-[10px] font-semibold uppercase tracking-widest text-cyan-400 font-mono">
+                <LayoutDashboard className="w-3.5 h-3.5 text-cyan-400" />
+                Enterprise Workspace
               </div>
               
               <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-fuchsia-200 tracking-tight leading-none uppercase">
@@ -1100,11 +1104,11 @@ export function Dashboard() {
               </h1>
               
               <p className="text-xs text-cyan-400/80 uppercase tracking-wider font-mono">
-                {companyName || "Modina Enterprise"} {slogan ? `| ${slogan}` : ""}
+                {companyName || "Enterprise"} {slogan ? `| ${slogan}` : ""}
               </p>
               
-              {/* Dynamic glass telemetry widget */}
-              <div className="inline-flex items-center gap-4 px-4 py-1.5 bg-slate-900/60 border border-slate-800 rounded-xl text-[11px] font-mono text-cyan-300 mt-2">
+              {/* Clock & Date */}
+              <div className="inline-flex items-center gap-4 px-4 py-1.5 bg-slate-900/60 border border-slate-800 rounded-xl text-[11px] font-mono tabular-nums text-cyan-300 mt-2">
                 <span className="flex items-center gap-1.5 text-cyan-400"><Clock className="w-3.5 h-3.5" /> {timeString}</span>
                 <span className="text-slate-800">|</span>
                 <span className="text-fuchsia-400">{dateString.toUpperCase()}</span>
@@ -1113,41 +1117,41 @@ export function Dashboard() {
 
             <div className="h-px bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent w-full" />
 
-            {/* Critical Telemetry Alerts in Neon Minimalist Splash */}
+            {/* Critical Alerts in Dark Minimalist Splash */}
             {( (showDashboardLowStockAlert !== false && lowStockCount > 0) || (showDashboardDueAlert !== false && dueSummary.customerCount > 0) ) && (
               <div className="space-y-2">
                 {showDashboardLowStockAlert !== false && lowStockCount > 0 && (
                   <button
                     onClick={() => navigate('/inventory?filter=lowStock')}
-                    className="w-full flex items-center justify-between p-3.5 bg-rose-950/40 border border-rose-500/40 hover:border-rose-400 rounded-xl text-left text-rose-300 font-mono text-xs transition-all shadow-[0_0_15px_rgba(244,63,94,0.15)] group"
+                    className="w-full flex items-center justify-between p-3.5 bg-rose-950/40 border border-rose-500/40 hover:border-rose-400 rounded-xl text-left text-rose-300 font-mono text-xs transition-all group"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <AlertTriangle className="w-4 h-4 text-rose-400 animate-pulse shrink-0" />
-                      <span><strong>[STOCK DEFICIT ALERT]:</strong> {lowStockCount} inventory items at or below reorder threshold</span>
+                    <div className="flex items-center gap-2.5 tabular-nums">
+                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span><strong>Low Stock Alert:</strong> {lowStockCount} inventory items at or below reorder threshold</span>
                     </div>
-                    <span className="text-[10px] text-rose-400 uppercase font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                      REQUISITION STREAM &rarr;
+                    <span className="text-[10px] text-rose-400 uppercase font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1 whitespace-nowrap">
+                      Review Stock &rarr;
                     </span>
                   </button>
                 )}
                 {showDashboardDueAlert !== false && dueSummary.customerCount > 0 && (
                   <button
                     onClick={() => navigate('/reports/due-payments')}
-                    className="w-full flex items-center justify-between p-3.5 bg-amber-950/40 border border-amber-500/40 hover:border-amber-400 rounded-xl text-left text-amber-300 font-mono text-xs transition-all shadow-[0_0_15px_rgba(245,158,11,0.15)] group"
+                    className="w-full flex items-center justify-between p-3.5 bg-amber-950/40 border border-amber-500/40 hover:border-amber-400 rounded-xl text-left text-amber-300 font-mono text-xs transition-all group"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <BellRing className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
-                      <span><strong>[RECEIVABLES OVERDUE]:</strong> {dueSummary.customerCount} customers have overdue balance (৳{dueSummary.totalDue.toLocaleString()})</span>
+                    <div className="flex items-center gap-2.5 tabular-nums">
+                      <BellRing className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span><strong>Due Receivables Alert:</strong> {dueSummary.customerCount} customers have overdue balance (৳{dueSummary.totalDue.toLocaleString()})</span>
                     </div>
-                    <span className="text-[10px] text-amber-400 uppercase font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                      DISPATCH NOTICES &rarr;
+                    <span className="text-[10px] text-amber-400 uppercase font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1 whitespace-nowrap">
+                      Send Reminders &rarr;
                     </span>
                   </button>
                 )}
               </div>
             )}
 
-            {/* Bento cybergrid */}
+            {/* Bento grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {shortcuts.map(sc => {
                 const Icon = sc.icon;
@@ -1155,27 +1159,27 @@ export function Dashboard() {
                   <button
                     key={sc.id}
                     onClick={() => navigate(sc.url)}
-                    className="p-6 bg-slate-900/30 backdrop-blur-md border border-cyan-500/10 hover:border-cyan-400/80 rounded-2xl text-left flex flex-col justify-between group hover:shadow-[0_0_20px_rgba(6,182,212,0.12)] transition-all duration-300 transform hover:-translate-y-0.5 outline-none"
+                    className="p-6 bg-slate-900/40 backdrop-blur-md border border-cyan-500/15 hover:border-cyan-400/70 rounded-2xl text-left flex flex-col justify-between group transition-all duration-200 hover:-translate-y-0.5 outline-none"
                   >
                     <div className="w-full">
                       <div className="flex justify-between items-center mb-4">
                         <div className="p-2.5 rounded-xl bg-cyan-950/60 border border-cyan-500/20 text-cyan-400 group-hover:text-fuchsia-400 group-hover:border-fuchsia-500/30 transition-colors">
                           <Icon className="w-5 h-5" />
                         </div>
-                        <span className="text-[10px] font-mono uppercase font-black tracking-widest text-cyan-500/80">
-                          [{sc.badge}]
+                        <span className="text-[10px] font-mono uppercase font-semibold tracking-wider text-cyan-500/80">
+                          {sc.badge}
                         </span>
                       </div>
-                      <h3 className="text-xs font-black text-white hover:text-cyan-400 uppercase tracking-wider font-mono transition-colors">
-                        &gt;_ {sc.title}
+                      <h3 className="text-xs font-bold text-white group-hover:text-cyan-400 uppercase tracking-wider font-mono transition-colors">
+                        {sc.title}
                       </h3>
-                      <p className="text-[10px] text-cyan-200/50 mt-1.5 font-mono leading-relaxed uppercase">
-                        {sc.descNeon}
+                      <p className="text-[11px] text-cyan-200/60 mt-1.5 leading-relaxed">
+                        {sc.desc}
                       </p>
                     </div>
                     
-                    <div className="flex items-center gap-1.5 mt-5 text-[9px] uppercase font-black tracking-wider text-cyan-600 group-hover:text-cyan-300 font-mono transition-colors">
-                      INITIATE ACCESS
+                    <div className="flex items-center gap-1.5 mt-5 text-[10px] uppercase font-bold tracking-wider text-cyan-500 group-hover:text-cyan-300 font-mono transition-colors">
+                      Open Module
                       <ChevronRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
                     </div>
                   </button>
@@ -1306,29 +1310,29 @@ export function Dashboard() {
       <div className="flex flex-col min-h-[calc(100vh-120px)] bg-background text-foreground p-6 sm:p-8 md:p-12 font-sans transition-all">
         <div className="max-w-5xl mx-auto w-full flex-grow flex flex-col justify-center space-y-10">
           
-          {/* Header section with top badge */}
+          {/* Header section */}
           <div className="text-center space-y-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-200/60 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-600 font-mono shadow-sm">
-              <Sparkles className="w-3.5 h-3.5 animate-pulse text-blue-500" />
-              Enterprise Hub
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-200/60 rounded-lg text-[10px] font-semibold uppercase tracking-widest text-blue-600 font-mono">
+              <LayoutDashboard className="w-3.5 h-3.5 text-blue-500" />
+              Enterprise Workspace
             </div>
             
-            <h1 className="text-3xl md:text-4.5xl font-black text-slate-900 tracking-tight leading-none">
+            <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight leading-none">
               {greeting}, {user?.displayName || "User"}
             </h1>
             
-            <p className="text-xs md:text-sm text-slate-500 font-medium uppercase tracking-wider">
-              {companyName || "Modina Enterprise"} {slogan ? `| ${slogan}` : ""}
+            <p className="text-xs md:text-sm text-muted-foreground font-medium uppercase tracking-wider">
+              {companyName || "Enterprise"} {slogan ? `| ${slogan}` : ""}
             </p>
             
-            <div className="flex items-center justify-center gap-3 pt-2 text-xs text-muted-foreground font-mono">
+            <div className="flex items-center justify-center gap-3 pt-2 text-xs text-muted-foreground font-mono tabular-nums">
               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-blue-500" /> {timeString}</span>
-              <span className="text-slate-300">|</span>
+              <span className="text-border">|</span>
               <span>{dateString}</span>
             </div>
           </div>
 
-          <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent w-full" />
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent w-full" />
 
           {/* Alert banners in Minimalist Splash Grid */}
           {( (showDashboardLowStockAlert !== false && lowStockCount > 0) || (showDashboardDueAlert !== false && dueSummary.customerCount > 0) ) && (
@@ -1338,11 +1342,11 @@ export function Dashboard() {
                   onClick={() => navigate('/inventory?filter=lowStock')}
                   className="w-full flex items-center justify-between p-3.5 bg-rose-50 border border-rose-200/90 hover:border-rose-400 rounded-xl text-left text-rose-800 text-xs font-medium transition-all shadow-xs group cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <AlertTriangle className="w-4 h-4 text-rose-600 animate-bounce shrink-0" />
+                  <div className="flex items-center gap-2.5 tabular-nums">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                     <span><strong>Low Stock Warning:</strong> {lowStockCount} Item{lowStockCount > 1 ? 's' : ''} currently below reorder level.</span>
                   </div>
-                  <span className="text-[11px] font-bold text-rose-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                  <span className="text-[11px] font-bold text-rose-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform whitespace-nowrap">
                     Review Stock & Reorder <ChevronRight className="w-3.5 h-3.5" />
                   </span>
                 </button>
@@ -1352,11 +1356,11 @@ export function Dashboard() {
                   onClick={() => navigate('/reports/due-payments')}
                   className="w-full flex items-center justify-between p-3.5 bg-amber-50/80 border border-amber-200/90 hover:border-amber-400 rounded-xl text-left text-amber-900 text-xs font-medium transition-all shadow-xs group cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2.5 tabular-nums">
                     <BellRing className="w-4 h-4 text-amber-600 shrink-0" />
                     <span><strong>Due Receivables Alert:</strong> {dueSummary.customerCount} customers have overdue balance (৳{dueSummary.totalDue.toLocaleString()}).</span>
                   </div>
-                  <span className="text-[11px] font-bold text-amber-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                  <span className="text-[11px] font-bold text-amber-700 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform whitespace-nowrap">
                     Send Reminders <ChevronRight className="w-3.5 h-3.5" />
                   </span>
                 </button>
@@ -1364,7 +1368,7 @@ export function Dashboard() {
             </div>
           )}
 
-          {/* Advanced Visual Telemetry Strip: Cash vs. Bank & Top 5 Expenses */}
+          {/* Cash vs. Bank & Top 5 Expenses */}
           {(showDashboardCashBank || showDashboardTopExpenses) && (
             <div className={cn(
               "grid gap-4",
@@ -1378,7 +1382,7 @@ export function Dashboard() {
                         <Landmark className="w-4 h-4" />
                       </div>
                       <div>
-                        <h3 className="text-xs font-black uppercase tracking-tight text-slate-800">
+                        <h3 className="text-xs font-bold uppercase tracking-tight text-slate-800">
                           {language === 'bn' ? 'ক্যাশ বনাম ব্যাংক ব্যালেন্স' : 'Cash vs. Bank Balance'}
                         </h3>
                         <p className="text-[9px] text-slate-400 font-mono">
@@ -1386,7 +1390,7 @@ export function Dashboard() {
                         </p>
                       </div>
                     </div>
-                    <span className="text-[9px] font-mono uppercase bg-emerald-50 text-emerald-600 font-bold px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-mono uppercase text-emerald-600 font-semibold">
                       Liquidity
                     </span>
                   </div>
@@ -1454,7 +1458,7 @@ export function Dashboard() {
                         </p>
                       </div>
                     </div>
-                    <span className="text-[9px] font-mono uppercase bg-rose-50 text-rose-600 font-bold px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-mono uppercase text-rose-600 font-semibold">
                       Monthly
                     </span>
                   </div>
@@ -1481,7 +1485,7 @@ export function Dashboard() {
                       </div>
                     )}
                   </div>
-                  <div className="flex justify-between items-center text-[10px] font-mono pt-2 border-t border-slate-100 text-slate-500 mt-1">
+                  <div className="flex justify-between items-center text-[10px] font-mono tabular-nums pt-2 border-t border-slate-100 text-slate-500 mt-1">
                     <span>Top 5 Total:</span>
                     <span className="font-bold text-rose-600">৳{formatNumber(topExpensesData.reduce((acc, curr) => acc + curr.amount, 0))}</span>
                   </div>
@@ -1498,18 +1502,18 @@ export function Dashboard() {
                 <button
                   key={sc.id}
                   onClick={() => navigate(sc.url)}
-                  className="p-6 bg-white border border-slate-200/80 rounded-2xl text-left flex flex-col justify-between group hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/[0.04] transition-all duration-300 transform hover:-translate-y-0.5 outline-none"
+                  className="p-6 bg-white border border-slate-200/80 rounded-2xl text-left flex flex-col justify-between group hover:border-blue-500 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 outline-none"
                 >
                   <div className="w-full">
                     <div className="flex justify-between items-center mb-4">
-                      <div className={cn("p-2.5 rounded-xl bg-gradient-to-br text-white shadow-md", sc.color)}>
+                      <div className={cn("p-2.5 rounded-xl bg-gradient-to-br text-white shadow-sm", sc.color)}>
                         <Icon className="w-5 h-5" />
                       </div>
-                      <span className="text-[9px] uppercase font-black tracking-widest bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                      <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 group-hover:text-blue-600 transition-colors">
                         {sc.badge}
                       </span>
                     </div>
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide group-hover:text-blue-600 transition-colors">
+                    <h3 className="text-sm font-bold text-slate-800 tracking-tight group-hover:text-blue-600 transition-colors">
                       {sc.title}
                     </h3>
                     <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
@@ -1517,8 +1521,8 @@ export function Dashboard() {
                     </p>
                   </div>
                   
-                  <div className="flex items-center gap-1.5 mt-5 text-[10px] uppercase font-black tracking-wider text-slate-400 group-hover:text-blue-600 font-mono transition-colors">
-                    Launch Console
+                  <div className="flex items-center gap-1.5 mt-5 text-[10px] uppercase font-bold tracking-wider text-slate-400 group-hover:text-blue-600 font-mono transition-colors">
+                    Open Module
                     <ChevronRight className="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" />
                   </div>
                 </button>
@@ -1832,57 +1836,57 @@ export function Dashboard() {
                  className="bg-slate-800/50 border border-slate-700 p-6 rounded-3xl hover:bg-slate-800 transition-all"
                >
                   <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">{card.title}</p>
-                  <p className="text-xl font-mono font-bold">
+                   <p className="text-xl font-mono font-bold tabular-nums">
                      {card.key === 'activeLedgers' ? stats[card.key as keyof typeof stats] : formatNumber(stats[card.key as keyof typeof stats] as number)}
-                  </p>
-               </motion.div>
-             ))}
+                   </p>
+                </motion.div>
+              ))}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-             <div className="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-[2rem] p-8 space-y-6">
+             <div className="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-6 sm:p-8 space-y-6">
                 <div className="flex justify-between items-center">
                    <h3 className="text-sm font-bold uppercase tracking-widest">{t('dash.recentActivity')}</h3>
-                   <span className="text-[9px] font-bold text-slate-500 uppercase px-3 py-1 border border-slate-700 rounded-full">{t('dash.top5Records')}</span>
+                   <span className="text-[10px] font-semibold text-slate-400 uppercase px-3 py-1 border border-slate-700 rounded-lg">{t('dash.top5Records')}</span>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3">
                    {recentVouchers.length > 0 ? recentVouchers.map((v) => (
-                     <div key={v.id} className="flex items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-slate-700/50 hover:border-slate-600 transition-all">
-                        <div className="flex items-center gap-4">
-                           <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                           <span className="text-xs font-bold w-16">{v.v_date ? v.v_date.split('-').slice(1).join('/') : '—'}</span>
-                           <span className="text-xs text-slate-300 font-medium truncate max-w-[150px]">{v.particulars}</span>
+                     <div key={v.id} className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-slate-700/50 hover:border-slate-600 transition-all">
+                        <div className="flex items-center gap-4 min-w-0">
+                           <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                           <span className="text-xs font-mono tabular-nums font-semibold w-16 shrink-0">{v.v_date ? v.v_date.split('-').slice(1).join('/') : '—'}</span>
+                           <span className="text-xs text-slate-300 font-medium truncate max-w-[180px] sm:max-w-[260px]">{v.particulars}</span>
                         </div>
-                        <span className="text-xs font-mono font-bold">৳{formatNumber(v.total_amount)}</span>
+                        <span className="text-xs font-mono tabular-nums font-bold shrink-0">৳{formatNumber(v.total_amount)}</span>
                      </div>
                    )) : (
-                     <div className="p-8 text-center text-slate-400 text-xs font-mono border border-dashed border-slate-700/60 rounded-2xl">
+                     <div className="p-8 text-center text-slate-400 text-xs font-mono border border-dashed border-slate-700/60 rounded-xl">
                        {t('dash.noRecentTransactions') || (language === 'bn' ? 'নির্বাচিত সময়কালে কোনো লেনদেন নেই' : 'No transactions in period')}
                      </div>
                    )}
                 </div>
              </div>
 
-             <div className="bg-slate-800 border border-slate-700 rounded-[2rem] p-8 flex flex-col justify-between">
+             <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 sm:p-8 flex flex-col justify-between">
                 <div className="space-y-6">
                    <h3 className="text-sm font-bold uppercase tracking-widest">{t('dash.financialSnapshot')}</h3>
                    <div className="space-y-4">
                       <div className="flex justify-between items-center">
                          <span className="text-[10px] text-slate-400 uppercase font-bold">{t('dash.activeLedgers') || 'Active Ledgers'}</span>
-                         <span className="text-xs font-mono text-emerald-400 font-bold">{stats.activeLedgers}</span>
+                         <span className="text-xs font-mono tabular-nums text-emerald-400 font-bold">{stats.activeLedgers}</span>
                       </div>
                       <div className="flex justify-between items-center">
                          <span className="text-[10px] text-slate-400 uppercase font-bold">{t('dash.stockValue') || 'Stock Value'}</span>
-                         <span className="text-xs font-mono text-slate-200 font-bold">৳{formatNumber(stats.stockValue)}</span>
+                         <span className="text-xs font-mono tabular-nums text-slate-200 font-bold">৳{formatNumber(stats.stockValue)}</span>
                       </div>
                       <div className="flex justify-between items-center">
                          <span className="text-[10px] text-slate-400 uppercase font-bold">{t('dash.collectionEfficiency') || 'Collection Rate'}</span>
-                         <span className="text-xs font-mono text-blue-400 font-bold">{collectionEfficiencyPct}%</span>
+                         <span className="text-xs font-mono tabular-nums text-blue-400 font-bold">{collectionEfficiencyPct}%</span>
                       </div>
                       <div className="h-1.5 bg-slate-900 rounded-full overflow-hidden">
                          <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${collectionEfficiencyPct}%` }} />
                       </div>
-                      <p className="text-[10px] text-slate-400 uppercase leading-relaxed">
+                      <p className="text-[10px] text-slate-400 uppercase leading-relaxed tabular-nums">
                         {language === 'bn' ? `বকেয়া প্রাপ্য: ৳${formatNumber(dueSummary.totalDue)}` : `Receivables due: ৳${formatNumber(dueSummary.totalDue)}`}
                       </p>
                    </div>
@@ -2066,7 +2070,7 @@ export function Dashboard() {
                     <card.icon className={cn("w-6 h-6", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/60" : "text-white/60")} />
                     <p className={cn("text-[10px] font-bold uppercase leading-tight", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/60" : "text-white/60")}>{card.title}</p>
                   </div>
-                  <span className={cn("text-2xl font-light", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/80" : "text-white/90")}>
+                  <span className={cn("text-2xl font-normal font-mono tabular-nums", (card.color === 'bg-[#ffbf00]' || !card.color) ? "text-black/80" : "text-white/95")}>
                     {card.key === 'activeLedgers' ? stats[card.key as keyof typeof stats] : `৳ ${formatNumber(stats[card.key as keyof typeof stats] as number)}`}
                   </span>
                 </motion.div>
@@ -2322,17 +2326,13 @@ export function Dashboard() {
     );
   }
 
-  if (loading) {
-    return <SkeletonLoader type="cards" />;
-  }
-
   return (
-    <div className="flex flex-col min-h-full bg-background transition-colors font-mono tracking-tight">
+    <div className="flex flex-col min-h-full bg-background transition-colors font-sans tracking-tight">
       {/* Experience Hub Demo Mode Notice Banner */}
       {localStorage.getItem('erp_is_demo_mode') === 'true' && (
         <div className="bg-emerald-950/25 border-b border-emerald-500/25 px-4 lg:px-6 py-2.5 flex items-center justify-between text-emerald-400 text-xs font-semibold gap-3 animate-fadeIn">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse shrink-0" />
+            <Activity className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>
               {localStorage.getItem('erp_demo_visitor') ? (
                 <>
@@ -2355,7 +2355,7 @@ export function Dashboard() {
               localStorage.removeItem('erp_demo_db_initialized');
               window.location.href = '/';
             }}
-            className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 transition-all cursor-pointer shrink-0"
+            className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 transition-all cursor-pointer shrink-0 whitespace-nowrap"
           >
             {language === 'bn' ? 'আসল অ্যাপে ফিরুন' : 'Exit Hub'}
           </button>
@@ -2542,22 +2542,22 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Spotlight: Business Intelligence & Telemetry Hub Banner */}
-      <div className="bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-emerald-600/10 border border-primary/20 p-3.5 rounded-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+      {/* Spotlight: Business Intelligence Hub Banner */}
+      <div className="bg-card border border-border rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-[var(--shadow-surface)]">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded bg-primary text-primary-foreground">
-            <Sparkles className="w-4 h-4" />
+          <div className="p-2.5 rounded-lg bg-primary/10 text-primary border border-primary/15 shrink-0">
+            <BarChart3 className="w-4 h-4" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                {language === 'bn' ? 'বিজনেস ইন্টেলিজেন্স ও অ্যাডভান্সড অ্যানালিটিক্স হাব' : 'Business Intelligence & Telemetry Hub'}
+                {language === 'bn' ? 'বিজনেস ইন্টেলিজেন্স ও অ্যাডভান্সড অ্যানালিটিক্স হাব' : 'Business Intelligence & Analytics Hub'}
               </h4>
-              <span className="text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.2 rounded font-bold uppercase">
-                Zero Extra Quota
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider">
+                Real-Time In-Memory
               </span>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               {language === 'bn' 
                 ? 'Trading Details, Ratios, Assets/Liabilities, All Trends, Inventory & Banking কার্যক্রমের বিস্তারিত বিশ্লেষণ দেখুন' 
                 : 'Deep dive into Trading Details, Ratios, Balance Trends, Inventory Dynamics & Banking Activities'}
@@ -2566,9 +2566,9 @@ export function Dashboard() {
         </div>
         <button
           onClick={() => navigate('/business-intelligence')}
-          className="px-3.5 py-1.5 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider rounded hover:opacity-90 transition-opacity flex items-center gap-1.5 shrink-0"
+          className="px-3.5 py-2 bg-primary text-primary-foreground text-[11px] font-semibold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-1.5 shrink-0 whitespace-nowrap"
         >
-          <span>{language === 'bn' ? 'অ্যানালিটিক্স ওপেন করুন' : 'Launch BI Console'}</span>
+          <span>{language === 'bn' ? 'অ্যানালিটিক্স ওপেন করুন' : 'Open Analytics'}</span>
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -2968,7 +2968,7 @@ export function Dashboard() {
                   className="border-b border-border/50 hover:bg-foreground/5 transition-colors cursor-pointer"
                   onClick={() => navigate(`/reports/daybook`)}
                 >
-                  <td className="px-4 py-3 align-middle whitespace-nowrap">{formatDate(v.v_date)}</td>
+                  <td className="px-4 py-3 align-middle whitespace-nowrap tabular-nums">{formatDate(v.v_date)}</td>
                   <td className="px-4 py-3 align-middle">
                     <div className="flex flex-col justify-center">
                       <span className="text-foreground font-bold">
@@ -2980,7 +2980,7 @@ export function Dashboard() {
                     </div>
                   </td>
                   <td className="px-4 py-3 align-middle whitespace-nowrap">{v.v_type}</td>
-                  <td className="px-4 py-3 text-right align-middle whitespace-nowrap">৳ {formatNumber(v.total_amount)}</td>
+                  <td className="px-4 py-3 text-right align-middle whitespace-nowrap font-mono tabular-nums font-semibold">৳ {formatNumber(v.total_amount)}</td>
                 </tr>
               ))}
               {recentVouchers.length === 0 && !loading && (

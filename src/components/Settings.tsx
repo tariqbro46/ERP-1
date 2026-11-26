@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Settings as SettingsIcon, Shield, Bell, Database, Keyboard, Globe, Check, AlertCircle, Save, Printer, Cloud, Share2, MessageSquare, Mail, Download, Upload, History, Loader2, Trash2, Building2, ClipboardList, LayoutDashboard, Palette, CreditCard, Zap, CheckCircle2, Package, Volume2, Layout, GitBranch, GitCommit, UploadCloud, Terminal, ExternalLink, RefreshCw } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS } from '../contexts/SettingsContext';
+import { useSettings, SIDEBAR_BG_OPTIONS, SIDEBAR_TEXT_OPTIONS, SKELETON_PAGE_MODULES } from '../contexts/SettingsContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { erpService } from '../services/erpService';
@@ -120,6 +120,11 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     soundDelete,
     soundClick,
     soundNavigation,
+    skeletonEnabled,
+    skeletonDashboardOnly,
+    skeletonTheme,
+    skeletonSpeed,
+    skeletonPageOverrides,
     updateSettings,
     updateUserSettings
   } = useSettings();
@@ -200,6 +205,11 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const [localSoundDelete, setLocalSoundDelete] = useState(soundDelete || '');
   const [localSoundClick, setLocalSoundClick] = useState(soundClick || '');
   const [localSoundNavigation, setLocalSoundNavigation] = useState(soundNavigation || '');
+  const [localSkeletonEnabled, setLocalSkeletonEnabled] = useState(skeletonEnabled ?? true);
+  const [localSkeletonDashboardOnly, setLocalSkeletonDashboardOnly] = useState(skeletonDashboardOnly ?? true);
+  const [localSkeletonTheme, setLocalSkeletonTheme] = useState<'classic' | 'modern' | 'glass' | 'neon'>(skeletonTheme || 'modern');
+  const [localSkeletonSpeed, setLocalSkeletonSpeed] = useState<'slow' | 'normal' | 'fast'>(skeletonSpeed || 'normal');
+  const [localSkeletonPageOverrides, setLocalSkeletonPageOverrides] = useState<Record<string, boolean>>(skeletonPageOverrides || {});
 
   // Apply fonts immediately for preview
   React.useEffect(() => {
@@ -331,6 +341,11 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     setLocalSoundDelete(soundDelete || '');
     setLocalSoundClick(soundClick || '');
     setLocalSoundNavigation(soundNavigation || '');
+    setLocalSkeletonEnabled(skeletonEnabled ?? true);
+    setLocalSkeletonDashboardOnly(skeletonDashboardOnly ?? true);
+    setLocalSkeletonTheme(skeletonTheme || 'modern');
+    setLocalSkeletonSpeed(skeletonSpeed || 'normal');
+    setLocalSkeletonPageOverrides(skeletonPageOverrides || {});
   }, [
     companyName, companyAddress, slogan, printHeader, printFooter, printPhone, 
     printEmail, printWebsite, showPrintHeader, showPrintPhone, showPrintEmail, 
@@ -340,7 +355,8 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
     baseCurrencySymbol, timezone, refNoFormat, showFreeQty, showDiscPercent, 
     showTaxPercent, showRunningBalance, showMobileNav, mobileBottomNavItems, reportLayout, dashboardDesign, globalDashboardDesign, uiStyle, glassBackground, customControlCenterTheme, splashSubDesign, menuBarStyle, layoutWidth, sidebarDefaultExpanded, notifications, whatsappTemplates, sidebarBgColor, sidebarTextColor,
     notificationStyle, notificationPosition, notificationDuration, notificationAnimationStyle,
-    soundEnabled, soundVolume, soundScheme, soundSuccess, soundError, soundWarning, soundDelete, soundClick, soundNavigation
+    soundEnabled, soundVolume, soundScheme, soundSuccess, soundError, soundWarning, soundDelete, soundClick, soundNavigation,
+    skeletonEnabled, skeletonDashboardOnly, skeletonTheme, skeletonSpeed, skeletonPageOverrides
   ]);
 
   const handleSaveSounds = () => {
@@ -400,7 +416,12 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       notificationAnimationStyle: localNotificationAnimationStyle,
       notificationStyle: localNotificationStyle,
       notificationPosition: localNotificationPosition,
-      notificationDuration: localNotificationDuration
+      notificationDuration: localNotificationDuration,
+      skeletonEnabled: localSkeletonEnabled,
+      skeletonDashboardOnly: localSkeletonDashboardOnly,
+      skeletonTheme: localSkeletonTheme,
+      skeletonSpeed: localSkeletonSpeed,
+      skeletonPageOverrides: localSkeletonPageOverrides
     });
 
     updateSettings({
@@ -418,7 +439,12 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
       notificationStyle: localNotificationStyle,
       notificationPosition: localNotificationPosition,
       notificationDuration: localNotificationDuration,
-      notificationAnimationStyle: localNotificationAnimationStyle
+      notificationAnimationStyle: localNotificationAnimationStyle,
+      skeletonEnabled: localSkeletonEnabled,
+      skeletonDashboardOnly: localSkeletonDashboardOnly,
+      skeletonTheme: localSkeletonTheme,
+      skeletonSpeed: localSkeletonSpeed,
+      skeletonPageOverrides: localSkeletonPageOverrides
     });
 
     showNotification('UI Customization saved successfully!');
@@ -1586,7 +1612,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
                           <h3 className="text-xs font-bold text-foreground uppercase tracking-widest flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
                             Popup Notification Design & Themes
                           </h3>
                           <p className="text-[11px] text-gray-500">
@@ -1869,6 +1895,165 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                               </span>
                             </button>
                           ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Skeleton Loading Controls (Global & Per-Page) */}
+                    <div className="space-y-4 pt-5 border-t border-border md:col-span-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <h3 className="text-xs font-bold text-foreground uppercase tracking-widest flex items-center gap-2">
+                            <Layout className="w-3.5 h-3.5 text-primary" />
+                            {t('settings.skeletonTitle')}
+                          </h3>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {t('settings.skeletonDesc')}
+                          </p>
+                        </div>
+                        {Object.keys(localSkeletonPageOverrides).length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setLocalSkeletonPageOverrides({})}
+                            className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-border bg-background hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer self-start sm:self-auto"
+                          >
+                            {t('settings.skeletonResetOverrides')}
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-foreground/[0.03] border border-border">
+                          <div className="pr-3">
+                            <h4 className="text-xs font-bold text-foreground uppercase">{t('settings.skeletonGlobalToggle')}</h4>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">{t('settings.skeletonGlobalToggleDesc')}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setLocalSkeletonEnabled(!localSkeletonEnabled)}
+                            className={cn(
+                              "w-11 h-6 rounded-full transition-colors relative shrink-0 cursor-pointer",
+                              localSkeletonEnabled ? "bg-emerald-500" : "bg-gray-600"
+                            )}
+                          >
+                            <div className={cn(
+                              "absolute top-1 w-4 h-4 rounded-full bg-white transition-all",
+                              localSkeletonEnabled ? "right-1" : "left-1"
+                            )} />
+                          </button>
+                        </div>
+
+                        <div className={cn(
+                          "flex items-center justify-between p-4 rounded-xl bg-foreground/[0.03] border border-border transition-opacity",
+                          !localSkeletonEnabled && "opacity-50 pointer-events-none"
+                        )}>
+                          <div className="pr-3">
+                            <h4 className="text-xs font-bold text-foreground uppercase">{t('settings.skeletonDashboardOnly')}</h4>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">{t('settings.skeletonDashboardOnlyDesc')}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setLocalSkeletonDashboardOnly(!localSkeletonDashboardOnly)}
+                            className={cn(
+                              "w-11 h-6 rounded-full transition-colors relative shrink-0 cursor-pointer",
+                              localSkeletonDashboardOnly ? "bg-emerald-500" : "bg-gray-600"
+                            )}
+                          >
+                            <div className={cn(
+                              "absolute top-1 w-4 h-4 rounded-full bg-white transition-all",
+                              localSkeletonDashboardOnly ? "right-1" : "left-1"
+                            )} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className={cn(
+                        "grid grid-cols-1 sm:grid-cols-2 gap-4 transition-opacity",
+                        !localSkeletonEnabled && "opacity-50 pointer-events-none"
+                      )}>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                            {t('settings.skeletonTheme')}
+                          </label>
+                          <select
+                            value={localSkeletonTheme}
+                            onChange={(e) => setLocalSkeletonTheme(e.target.value as any)}
+                            className="w-full bg-background border border-border text-foreground p-2.5 text-sm rounded-lg outline-none focus:border-primary"
+                          >
+                            <option value="modern">Modern Enterprise</option>
+                            <option value="glass">Glass Surface</option>
+                            <option value="classic">Classic Solid</option>
+                            <option value="neon">High Contrast Dark</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                            {t('settings.skeletonSpeed')}
+                          </label>
+                          <select
+                            value={localSkeletonSpeed}
+                            onChange={(e) => setLocalSkeletonSpeed(e.target.value as any)}
+                            className="w-full bg-background border border-border text-foreground p-2.5 text-sm rounded-lg outline-none focus:border-primary"
+                          >
+                            <option value="fast">Fast (1.15s)</option>
+                            <option value="normal">Normal (1.75s)</option>
+                            <option value="slow">Gentle (2.6s)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className={cn(
+                        "space-y-2.5 pt-1 transition-opacity",
+                        !localSkeletonEnabled && "opacity-50 pointer-events-none"
+                      )}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t('settings.skeletonPerPageTitle')}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                          {SKELETON_PAGE_MODULES.map((mod) => {
+                            const hasOverride = typeof localSkeletonPageOverrides[mod.id] === 'boolean';
+                            const effectiveOn = !localSkeletonEnabled
+                              ? false
+                              : hasOverride
+                                ? localSkeletonPageOverrides[mod.id]
+                                : localSkeletonDashboardOnly
+                                  ? mod.id === 'dashboard'
+                                  : true;
+
+                            return (
+                              <button
+                                key={mod.id}
+                                type="button"
+                                onClick={() => {
+                                  setLocalSkeletonPageOverrides((prev) => ({
+                                    ...prev,
+                                    [mod.id]: !effectiveOn,
+                                  }));
+                                }}
+                                className={cn(
+                                  "flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border text-left transition-all cursor-pointer",
+                                  effectiveOn
+                                    ? "bg-emerald-500/[0.06] border-emerald-500/40 text-foreground"
+                                    : "bg-background border-border text-muted-foreground hover:border-foreground/30"
+                                )}
+                              >
+                                <span className="text-xs font-medium truncate">
+                                  {language === 'bn' ? mod.labelBn : mod.label}
+                                </span>
+                                <span className={cn(
+                                  "text-[10px] font-bold uppercase px-2 py-0.5 rounded-md shrink-0 border",
+                                  effectiveOn
+                                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                    : "bg-muted text-muted-foreground border-border"
+                                )}>
+                                  {effectiveOn ? t('settings.skeletonStatusOn') : t('settings.skeletonStatusOff')}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     </div>
@@ -2565,7 +2750,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         type="text"
                         value={gitVersionInput}
                         onChange={(e) => setGitVersionInput(e.target.value)}
-                        placeholder="e.g. v1.9.9.30"
+                        placeholder="e.g. v1.9.9.31"
                         className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                       <p className="text-[10px] text-muted-foreground">
