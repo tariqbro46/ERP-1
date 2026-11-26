@@ -143,6 +143,12 @@ import { Features } from './pages/landing/Features';
 import { About } from './pages/landing/About';
 import { Contact } from './pages/landing/Contact';
 import { Pricing } from './pages/landing/Pricing';
+import { PrivacyPolicy } from './pages/landing/PrivacyPolicy';
+import { TermsOfService } from './pages/landing/TermsOfService';
+import { DataSecurity } from './pages/landing/DataSecurity';
+import { UserGuide } from './pages/landing/UserGuide';
+import { RefundPolicy } from './pages/landing/RefundPolicy';
+import { SystemStatus } from './pages/landing/SystemStatus';
 
 const getColorfulItemStyle = (to: string, active: boolean) => {
   const isDashboard = to === '/dashboard';
@@ -2860,17 +2866,26 @@ function AppContent() {
         <Route path="/about" element={
           landingPageEnabled ? <About /> : (user ? <Navigate to="/dashboard" replace /> : <LoginWrapper />)
         } />
-        <Route path="/contact" element={
-          landingPageEnabled ? <Contact /> : (user ? <Navigate to="/dashboard" replace /> : <LoginWrapper />)
-        } />
+        <Route path="/contact" element={<Contact />} />
         <Route path="/pricing" element={
           landingPageEnabled ? <Pricing /> : (user ? <Navigate to="/dashboard" replace /> : <LoginWrapper />)
         } />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/refund-policy" element={<RefundPolicy />} />
+        <Route path="/refund" element={<RefundPolicy />} />
+        <Route path="/cancellation-policy" element={<RefundPolicy />} />
+        <Route path="/security" element={<DataSecurity />} />
+        <Route path="/status" element={<SystemStatus />} />
+        <Route path="/system-health" element={<SystemStatus />} />
+        <Route path="/guide" element={<UserGuide />} />
+        <Route path="/faq" element={<UserGuide />} />
         <Route path="/docs" element={<HelpPage />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/instructions" element={<HelpPage />} />
         <Route path="/release-notes" element={<ReleaseNotes />} />
         <Route path="/whats-new" element={<ReleaseNotes />} />
+        <Route path="/changelog" element={<ReleaseNotes />} />
         
         {/* Auth Pages */}
         <Route path="/login" element={

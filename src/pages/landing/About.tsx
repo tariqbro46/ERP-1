@@ -1,247 +1,361 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Navbar } from '../../components/landing/Navbar';
 import { Footer } from '../../components/landing/Footer';
+import {
+  ArrowRight,
+  BookOpen,
+  Building2,
+  Check,
+  FileSpreadsheet,
+  Lock,
+  ShieldCheck,
+  Warehouse,
+} from 'lucide-react';
 import { motion } from 'motion/react';
-import { Award, Users, Globe, Zap, CheckCircle, ShieldCheck, Sparkles, ArrowRight } from 'lucide-react';
-import { useSiteContent } from '../../hooks/useSiteContent';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { cn } from '../../lib/utils';
-import { Link } from 'react-router-dom';
+import { useSettings } from '../../contexts/SettingsContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { LATEST_VERSION } from '../../data/releaseNotes';
 
 export const About = () => {
-  const { t } = useLanguage();
-  const DEFAULT_CONTENT = {
-    missionTitle: t('about.missionTitle') || "Our Mission",
-    missionTitleColor: "#0f172a",
-    missionDesc: t('about.missionDesc') || "We are dedicated to empowering businesses of all sizes with the tools they need to thrive in a digital-first world. Our goal is to simplify complex operations and provide clarity through intelligent data.",
-    missionDescColor: "#64748b",
-    missionBgColor: "#ffffff",
-    missionImage: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80",
-    bannerTitle: t('about.bannerTitle') || "Built for Business",
-    bannerTitleColor: "#ffffff",
-    bannerSubtitle: t('about.bannerSubtitle') || "Founded in 2026, serving over 500+ companies worldwide.",
-    bannerSubtitleColor: "rgba(255,255,255,0.9)",
-    bannerBgColor: "#0f172a",
-    leadershipTitle: t('about.leadershipTitle') || "Our Leadership Team",
-    leadershipTitleColor: "#0f172a",
-    showLeadership: true,
-    pageBgColor: "#ffffff",
-    // Core Values Data
-    value1Title: t('about.value1Title') || "Operational Clarity",
-    value1Desc: t('about.value1Desc') || "We build intuitive interfaces allowing rapid understanding over double entry finances in milliseconds.",
-    value2Title: t('about.value2Title') || "Enterprise Growth",
-    value2Desc: t('about.value2Desc') || "Supporting scaling ventures across multi-godown networks without performance compromises.",
-    value3Title: t('about.value3Title') || "Global Alignment",
-    value3Desc: t('about.value3Desc') || "Engineered for international statutory regulations with support for multi-currency transactions.",
-    value4Title: t('about.value4Title') || "Uncompromised Trust",
-    value4Desc: t('about.value4Desc') || "Rigid compliance rules with role-based permissions preventing leakages and tracking actions.",
-    // Leadership Data
-    leader1Name: "John Doe",
-    leader1Role: t('about.roleCEO') || "Chief Executive Officer",
-    leader1Img: "https://api.dicebear.com/7.x/micah/svg?seed=John&backgroundType=gradientLinear&backgroundRotation=140",
-    leader2Name: "Jane Smith",
-    leader2Role: t('about.roleCTO') || "Chief Technology Officer",
-    leader2Img: "https://api.dicebear.com/7.x/micah/svg?seed=Jane&backgroundType=gradientLinear&backgroundRotation=140",
-    leader3Name: "Mike Johnson",
-    leader3Role: t('about.roleProduct') || "VP Product",
-    leader3Img: "https://api.dicebear.com/7.x/micah/svg?seed=Mike&backgroundType=gradientLinear&backgroundRotation=140"
-  };
+  const { language } = useLanguage();
+  const { appIdentity, appVersion } = useSettings();
+  const { user } = useAuth();
+  const isBn = language === 'bn';
 
-  const { content: rawContent } = useSiteContent('about', DEFAULT_CONTENT);
+  const appName = appIdentity?.appName || 'TallyFlow ERP';
+  const resolvedVersion = (appVersion || LATEST_VERSION || 'v1.9.9.31').startsWith('v')
+    ? appVersion || LATEST_VERSION || 'v1.9.9.31'
+    : `v${appVersion || LATEST_VERSION || '1.9.9.31'}`;
 
-  // Normalize content to clean light theme
-  const content = {
-    ...rawContent,
-    pageBgColor: "#ffffff",
-    missionTitleColor: "#0f172a",
-    missionDescColor: "#64748b",
-    leadershipTitleColor: "#0f172a"
-  };
+  const systemFoundations = isBn
+    ? [
+        {
+          label: 'হিসাবরক্ষণ ইঞ্জিন',
+          value: 'ডাবল-এন্ট্রি প্যারিটি · ৮ ভাউচার ধরন',
+        },
+        {
+          label: 'মজুদ মূল্যায়ন',
+          value: 'FIFO ব্যাচ কস্টিং ও মাল্টি-গোডাউন',
+        },
+        {
+          label: 'রিপোর্ট পোর্টেবিলিটি',
+          value: 'কাঠামোবদ্ধ .xlsx, A4 প্রিন্ট, PDF ও ইমেইল',
+        },
+        {
+          label: 'ডেটা বিচ্ছিন্নতা',
+          value: 'companyId ভিত্তিক আলাদা ওয়ার্কস্পেস',
+        },
+        {
+          label: 'অপারেশন ও পেরোল',
+          value: 'উৎপাদন অর্ডার, মেশিন ও মাসিক স্যালারি শিট',
+        },
+        {
+          label: 'ভাষা ও অ্যাক্সেস',
+          value: 'পূর্ণ বাংলা / English প্যারিটি ও RBAC',
+        },
+      ]
+    : [
+        {
+          label: 'Accounting Engine',
+          value: 'Double-Entry Parity · 8 Voucher Types',
+        },
+        {
+          label: 'Stock Valuation',
+          value: 'FIFO Batch Costing & Multi-Godown Transfers',
+        },
+        {
+          label: 'Report Portability',
+          value: 'Structured .xlsx, A4 Print Layouts 1 & 2, PDF & Email',
+        },
+        {
+          label: 'Tenant Isolation',
+          value: 'Strict companyId Scoping & Activity Audit Trail',
+        },
+        {
+          label: 'Operations & HRM',
+          value: 'Production Orders, Machine Tracking & Monthly Payroll',
+        },
+        {
+          label: 'Localization & RBAC',
+          value: 'Full EN / বাংলা Parity · Granular Role Access',
+        },
+      ];
+
+  const principles = isBn
+    ? [
+        {
+          num: '01.',
+          title: 'অপরিবর্তনীয় হিসাব সমতা',
+          desc: 'প্রতিটি ভাউচার এন্ট্রিতে প্রারম্ভিক ব্যালেন্স + ডেবিট − ক্রেডিট সমীকরণ কঠোরভাবে যাচাই করা হয়। কোনো কাল্পনিক বা অনুমাননির্ভর সংখ্যার বদলে প্রকৃত ট্রানজেকশন থেকেই Trial Balance, Balance Sheet এবং Profit & Loss তৈরি হয়।',
+          icon: Check,
+        },
+        {
+          num: '02.',
+          title: 'গুদাম ও ব্যাচ পর্যায়ের নির্ভুলতা',
+          desc: 'একাধিক গোডাউনের মধ্যে পণ্য স্থানান্তর, FIFO ভিত্তিক মজুদ মূল্যায়ন এবং পরিমাপের একক অনুযায়ী শূন্য দশমিক (Pcs, Pc, Nos) অথবা সর্বোচ্চ দুই দশমিকের (Kg, Ltr) নির্ভুলতা বজায় রাখা হয়।',
+          icon: Warehouse,
+        },
+        {
+          num: '03.',
+          title: 'কোম্পানি আইসোলেশন ও রোল কন্ট্রোল',
+          desc: 'প্রতিটি প্রতিষ্ঠানের হিসাব সম্পূর্ণ পৃথক থাকে। অ্যাডমিন, অ্যাকাউন্ট্যান্ট, স্টোরকিপার এবং মার্কেটিং ম্যানেজারসহ প্রতিটি ভূমিকার জন্য গ্রানুলার অনুমোদন এবং প্রতিটি পরিবর্তনের অডিট লগ সংরক্ষিত হয়।',
+          icon: ShieldCheck,
+        },
+        {
+          num: '04.',
+          title: 'অফিস-প্রস্তুত এক্সপোর্ট ও দ্বিভাষিক স্পষ্টতা',
+          desc: 'এক ক্লিকেই ১০টি মূল রিপোর্ট .xlsx স্প্রেডশিট বা পরিচ্ছন্ন A4 প্রিন্ট ও PDF-এ নেওয়া যায়। অ্যাকাউন্টস টিম থেকে ম্যানেজমেন্ট—সবাই বাংলা বা ইংরেজি যেকোনো ভাষায় নির্বিঘ্নে কাজ করতে পারেন।',
+          icon: FileSpreadsheet,
+        },
+      ]
+    : [
+        {
+          num: '01.',
+          title: 'Uncompromising Double-Entry Parity',
+          desc: 'Every ledger calculation resolves strictly from real transaction entries using opening balance + debit − credit. Trial Balance, Profit & Loss, and Balance Sheet never fall back on synthetic multipliers.',
+          icon: Check,
+        },
+        {
+          num: '02.',
+          title: 'Warehouse & Unit Precision',
+          desc: 'Multi-godown transfers and FIFO valuation respect strict measurement rules: whole integers for discrete units (Pcs, Pc, Nos) and capped two-decimal precision for weights and currency.',
+          icon: Warehouse,
+        },
+        {
+          num: '03.',
+          title: 'Strict Company & Role Isolation',
+          desc: 'Organization records stay partitioned by companyId, paired with granular role-based access permissions—including Marketing Manager, Storekeeper, Accountant, and Admin—plus an immutable Audit Trail.',
+          icon: ShieldCheck,
+        },
+        {
+          num: '04.',
+          title: 'Audit-Grade Portability & Bilingual UX',
+          desc: 'Teams move effortlessly between English and Bangla across all entry screens and export any core statement into structured .xlsx workbooks, unified A4 PDF files, or direct email dispatches.',
+          icon: FileSpreadsheet,
+        },
+      ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-slate-900 selection:bg-blue-100">
+    <div
+      className="min-h-screen flex flex-col bg-white dark:bg-[#090d16] text-slate-950 dark:text-slate-100 selection:bg-blue-100 selection:text-blue-900"
+      style={{ fontFamily: "'DM Sans', 'Hind Siliguri', sans-serif" }}
+    >
       <Navbar />
-      
-      <main className="flex-1 pt-32 pb-24 relative overflow-hidden bg-white">
-        {/* Geometric Grid Pattern matching Login & Home */}
-        <div 
-          className="absolute inset-0 pointer-events-none -z-10"
+
+      <main className="flex-1 pt-24 sm:pt-28 pb-24 relative overflow-x-clip">
+        {/* Subtle Architectural Hairline Grid */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-100 dark:opacity-20"
           style={{
-            backgroundImage: `
-              radial-gradient(circle at 50% 0%, rgba(241, 245, 249, 0.8) 0%, rgba(255, 255, 255, 1) 75%),
-              linear-gradient(to right, #f1f5f9 1px, transparent 1px),
-              linear-gradient(to bottom, #f1f5f9 1px, transparent 1px)
-            `,
-            backgroundSize: '100% 100%, 88px 88px, 88px 88px'
+            backgroundImage:
+              'linear-gradient(to right, rgba(15, 23, 42, 0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(15, 23, 42, 0.04) 1px, transparent 1px)',
+            backgroundSize: '72px 72px',
+            maskImage: 'radial-gradient(ellipse 85% 65% at 50% 8%, black 30%, transparent 82%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 85% 65% at 50% 8%, black 30%, transparent 82%)',
           }}
         />
 
-        {/* Ambient Pastel Glows */}
-        <div className="absolute top-12 left-1/3 w-[500px] h-[500px] bg-indigo-100/40 rounded-full blur-[140px] pointer-events-none -z-10" />
-        <div className="absolute top-24 right-1/4 w-[400px] h-[400px] bg-blue-100/40 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Top Monospace Metadata Rail */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200/85 dark:border-slate-800">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-mono font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
+              <span className="text-slate-900 dark:text-white font-semibold">{appName}</span>
+              <span aria-hidden="true">·</span>
+              <span>{resolvedVersion}</span>
+              <span aria-hidden="true">·</span>
+              <span>{isBn ? 'আর্কিটেকচার ও উদ্দেশ্য' : 'Architecture & Purpose'}</span>
+            </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          
-          {/* Mission Section */}
-          <div className="text-center mb-16">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6 }}
+            <nav
+              aria-label="Breadcrumb"
+              className="text-[11.5px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1.5 shrink-0"
             >
-              <span className="text-[11px] font-bold uppercase tracking-[0.25em] bg-indigo-50 text-indigo-700 px-3.5 py-1.5 rounded-full border border-indigo-100 mb-6 inline-block shadow-2xs">
-                COMPANY MISSION & VISION
+              <Link to="/" className="hover:text-slate-950 dark:hover:text-white transition-colors">
+                {isBn ? 'হোম' : 'Home'}
+              </Link>
+              <span aria-hidden="true">/</span>
+              <span className="text-slate-900 dark:text-slate-200 font-medium">
+                {isBn ? 'আমাদের সম্পর্কে' : 'About'}
               </span>
-              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight mb-6 text-slate-900">
-                {content.missionTitle}
-              </h1>
-              <p className="text-base sm:text-lg max-w-3xl mx-auto leading-relaxed font-normal text-slate-600">
-                {content.missionDesc}
-              </p>
-            </motion.div>
+            </nav>
           </div>
 
-          {/* Banner Graphic Section */}
-          <div className="relative h-[380px] md:h-[440px] rounded-2xl overflow-hidden mb-24 border border-slate-200 shadow-xl shadow-slate-200/50 group bg-slate-900">
-            <img 
-              src={content.missionImage} 
-              alt="Our Corporate Workspace" 
-              className="w-full h-full object-cover opacity-60 group-hover:scale-102 transition-transform duration-700"
-              referrerPolicy="no-referrer"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
-            
-            <div className="absolute inset-0 flex flex-col justify-end p-8 md:p-12">
-              <div className="max-w-2xl">
-                <span className="text-[11px] font-bold uppercase text-blue-400 tracking-[0.2em] mb-2 block">
-                  ESTABLISHED EXCELLENCE
-                </span>
-                <h2 className="text-3xl md:text-5xl font-extrabold mb-3 text-white">
-                  {content.bannerTitle}
-                </h2>
-                <p className="text-sm md:text-base font-normal leading-relaxed text-slate-200">
-                  {content.bannerSubtitle}
+          {/* Editorial Mission + Architectural Spec Split */}
+          <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="pt-10 sm:pt-14 pb-14 border-b border-slate-200/85 dark:border-slate-800"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+              {/* Left Narrative Column */}
+              <div className="lg:col-span-7 space-y-5">
+                <p className="text-[11.5px] font-mono uppercase tracking-[0.14em] text-blue-700 dark:text-blue-400 font-semibold">
+                  {isBn ? 'আমাদের লক্ষ্য ও নির্মাণ দর্শন' : 'Why TallyFlow ERP Exists'}
+                </p>
+                <h1
+                  className="font-bold tracking-[-0.03em] text-slate-950 dark:text-white leading-[1.09]"
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', 'Hind Siliguri', sans-serif",
+                    fontSize: 'clamp(2rem, 3.8vw, 3.25rem)',
+                    textWrap: 'balance',
+                  }}
+                >
+                  {isBn ? (
+                    <>
+                      দ্রুতগতির দৈনন্দিন বুককিপিং এবং{' '}
+                      <span className="text-blue-700 dark:text-blue-400">নিরীক্ষা-সম্মত শৃঙ্খলার</span> সমন্বয়।
+                    </>
+                  ) : (
+                    <>
+                      Designed for daily ledger speed without sacrificing{' '}
+                      <span className="text-blue-700 dark:text-blue-400">accounting rigor.</span>
+                    </>
+                  )}
+                </h1>
+                <p className="text-[15px] sm:text-base leading-[1.72] text-slate-600 dark:text-slate-300 max-w-[64ch]">
+                  {isBn
+                    ? `ট্রেডিং, ডিস্ট্রিবিউশন ও ম্যানুফ্যাকচারিং প্রতিষ্ঠানগুলোর দৈনন্দিন বাস্তবতা মাথায় রেখে ${appName} তৈরি করা হয়েছে। পুরোনো ডেস্কটপ সফটওয়্যারের সীমাবদ্ধতা বা জটিল এন্টারপ্রাইজ টুলের ধীরগতি ছাড়াই এখানে ভাউচার এন্ট্রি, একাধিক গুদামের FIFO স্টক, উৎপাদন অর্ডার, পেরোল এবং ১০টি আর্থিক বিবরণী একত্রে পরিচালিত হয়।`
+                    : `${appName} is engineered for commercial enterprises, wholesalers, and manufacturers that outgrow spreadsheets yet reject bloated legacy tools. From keyboard-first double-entry voucher entry to FIFO godown costing, payroll runs, and 10 verifiable financial reports, every workflow is built around speed and audit clarity.`}
+                </p>
+                <p className="text-sm leading-[1.72] text-slate-600 dark:text-slate-400 max-w-[64ch]">
+                  {isBn
+                    ? 'সিস্টেমটি মাল্টি-কোম্পানি ডেটা আইসোলেশন, লোকাল-ক্যাশ সমর্থিত দ্রুতগতির কুয়েরি এবং বাংলা ও ইংরেজি—উভয় ভাষায় সমান অভিজ্ঞতা দেওয়ার লক্ষ্যে নির্মিত, যাতে হিসাবরক্ষক, গুদাম কর্মকর্তা এবং ব্যবস্থাপনা কর্তৃপক্ষ একই সত্য তথ্যের ওপর ভিত্তি করে সিদ্ধান্ত নিতে পারেন।'
+                    : 'Every tenant workspace is cleanly partitioned by company identity, backed by quota-resilient caching and full English and Bangla parity so accountants, storekeepers, and directors work from one consistent ledger of truth.'}
                 </p>
               </div>
-            </div>
-          </div>
 
-          {/* Core Values Section */}
-          <div className="mb-28">
-            <div className="text-center mb-14">
-              <span className="text-[11px] font-bold uppercase tracking-[0.25em] bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full border border-blue-100 mb-3 inline-block shadow-2xs">
-                CORE PRINCIPLES
-              </span>
-              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">Our Operating Philosophy</h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                {
-                  icon: Zap,
-                  title: content.value1Title !== undefined ? content.value1Title : "Operational Clarity",
-                  desc: content.value1Desc !== undefined ? content.value1Desc : "We build intuitive interfaces allowing rapid understanding over double entry finances in milliseconds.",
-                  iconColor: 'bg-blue-50 text-blue-600 border-blue-100'
-                },
-                {
-                  icon: Users,
-                  title: content.value2Title !== undefined ? content.value2Title : "Enterprise Growth",
-                  desc: content.value2Desc !== undefined ? content.value2Desc : "Supporting scaling ventures across multi-godown networks without performance compromises.",
-                  iconColor: 'bg-purple-50 text-purple-600 border-purple-100'
-                },
-                {
-                  icon: Globe,
-                  title: content.value3Title !== undefined ? content.value3Title : "Global Alignment",
-                  desc: content.value3Desc !== undefined ? content.value3Desc : "Engineered for international statutory regulations with support for multi-currency transactions.",
-                  iconColor: 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                },
-                {
-                  icon: Award,
-                  title: content.value4Title !== undefined ? content.value4Title : "Uncompromised Trust",
-                  desc: content.value4Desc !== undefined ? content.value4Desc : "Rigid compliance rules with role-based permissions preventing leakages and tracking actions.",
-                  iconColor: 'bg-amber-50 text-amber-600 border-amber-100'
-                }
-              ].map((value, i) => (
-                <div 
-                  key={i} 
-                  className="p-7 border border-slate-200/90 rounded-2xl bg-white hover:bg-slate-50/50 transition-all duration-300 hover:translate-y-[-2px] shadow-xs hover:shadow-md"
-                >
-                  <div className={cn("w-12 h-12 rounded-xl border flex items-center justify-center mb-5", value.iconColor)}>
-                    <value.icon className="w-5 h-5" />
+              {/* Right System Specification Ledger Card */}
+              <div className="lg:col-span-5">
+                <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#0d1320] overflow-hidden shadow-[0_18px_48px_-16px_rgba(15,23,42,0.06)]">
+                  <div className="px-5 py-3.5 bg-slate-50/80 dark:bg-slate-900/70 border-b border-slate-200/85 dark:border-slate-800 flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                      {isBn ? 'সিস্টেম স্থাপত্য সারাংশ' : 'Architectural Specification'}
+                    </span>
+                    <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                      {resolvedVersion}
+                    </span>
                   </div>
-                  {value.title && <h3 className="text-base font-bold mb-2 text-slate-900">{value.title}</h3>}
-                  {value.desc && (
-                    <p className="text-slate-600 text-xs leading-relaxed font-normal">
-                      {value.desc}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
- 
-          {/* Leaders Section */}
-          {content.showLeadership && (
-            <div className="py-20 border-t border-slate-100">
-              <div className="text-center mb-14">
-                <span className="text-[11px] font-bold uppercase tracking-[0.25em] bg-blue-50 text-blue-700 px-3.5 py-1.5 rounded-full border border-blue-100 mb-4 inline-block shadow-2xs">
-                  LEADERSHIP
-                </span>
-                {content.leadershipTitle && (
-                  <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-2 text-slate-900">
-                    {content.leadershipTitle}
-                  </h2>
-                )}
-                <p className="text-slate-600 text-sm font-medium">Empowering enterprise scalability through digital precision.</p>
-              </div>
- 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                {[
-                  { name: content.leader1Name !== undefined ? content.leader1Name : "John Doe", role: content.leader1Role !== undefined ? content.leader1Role : "Chief Executive Officer", img: content.leader1Img !== undefined ? content.leader1Img : "https://api.dicebear.com/7.x/micah/svg?seed=John&backgroundType=gradientLinear&backgroundRotation=140" },
-                  { name: content.leader2Name !== undefined ? content.leader2Name : "Jane Smith", role: content.leader2Role !== undefined ? content.leader2Role : "Chief Technology Officer", img: content.leader2Img !== undefined ? content.leader2Img : "https://api.dicebear.com/7.x/micah/svg?seed=Jane&backgroundType=gradientLinear&backgroundRotation=140" },
-                  { name: content.leader3Name !== undefined ? content.leader3Name : "Mike Johnson", role: content.leader3Role !== undefined ? content.leader3Role : "VP Product", img: content.leader3Img !== undefined ? content.leader3Img : "https://api.dicebear.com/7.x/micah/svg?seed=Mike&backgroundType=gradientLinear&backgroundRotation=140" }
-                ].map((member, i) => (
-                  <div key={i} className="p-7 bg-white border border-slate-200/90 hover:border-slate-300 rounded-2xl text-center transition-all hover:shadow-md shadow-xs">
-                    {member.img && (
-                      <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4 border-2 border-slate-100 bg-slate-50 shadow-xs">
-                        <img src={member.img} alt={member.name || 'Leader'} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  <div className="divide-y divide-slate-200/80 dark:divide-slate-800">
+                    {systemFoundations.map((item) => (
+                      <div key={item.label} className="px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
+                        <span className="font-mono text-slate-500 dark:text-slate-400">{item.label}</span>
+                        <span className="font-semibold text-slate-950 dark:text-slate-100 sm:text-right">
+                          {item.value}
+                        </span>
                       </div>
-                    )}
-                    {member.name && <h3 className="text-base font-bold text-slate-900 mb-0.5">{member.name}</h3>}
-                    {member.role && <p className="text-xs text-blue-700 font-semibold tracking-wide">{member.role}</p>}
-                    <div className="mt-4 flex justify-center">
-                      <span className="text-[9px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-mono font-medium">TALLYFLOW EXECUTIVE</span>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
-          )}
+          </motion.section>
 
-          {/* Quick CTA Banner */}
-          <div className="mt-16 p-8 md:p-12 rounded-2xl bg-slate-900 text-white text-center flex flex-col items-center justify-center gap-4 relative overflow-hidden shadow-xl">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-indigo-600/10 pointer-events-none" />
-            <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight">Ready to elevate your business operations?</h3>
-            <p className="text-slate-300 text-sm max-w-xl">
-              Experience the fast, reliable, double-entry financial platform tailored for scaling enterprises.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
-              <Link
-                to="/register"
-                className="px-6 py-2.5 bg-white text-slate-900 hover:bg-slate-100 font-bold rounded-lg text-xs shadow-sm transition-all flex items-center gap-1.5 active:scale-[0.99]"
+          {/* Operating Principles 01 - 04 */}
+          <section className="py-14 border-b border-slate-200/85 dark:border-slate-800">
+            <div className="mb-10">
+              <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400 font-semibold">
+                {isBn ? 'মূল প্রকৌশল নীতিমালা' : 'Engineering & Accounting Principles'}
+              </p>
+              <h2
+                className="mt-2 text-2xl sm:text-3xl font-bold tracking-[-0.025em] text-slate-950 dark:text-white"
+                style={{ fontFamily: "'Plus Jakarta Sans', 'Hind Siliguri', sans-serif" }}
               >
-                Get Started Free
-                <ArrowRight className="w-3.5 h-3.5" />
+                {isBn ? 'চারটি ভিত্তি যার ওপর আমাদের প্ল্যাটফর্ম দাঁড়িয়ে' : 'Four foundations guiding every screen and calculation'}
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {principles.map((p) => {
+                const Icon = p.icon;
+                return (
+                  <div
+                    key={p.num}
+                    className="p-6 sm:p-7 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#0d1320] space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400 tabular-nums">
+                        {p.num}
+                      </span>
+                      <div className="w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                        <Icon className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <h3 className="text-base sm:text-lg font-bold text-slate-950 dark:text-white">
+                      {p.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                      {p.desc}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Grounded Closing Action Strip */}
+          <section className="mt-14 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/80 dark:bg-[#0d1320] p-7 sm:p-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2 max-w-2xl">
+              <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-slate-500 dark:text-slate-400">
+                <span className="inline-flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-blue-700 dark:text-blue-400" />
+                  <span>{isBn ? 'কোম্পানি ওয়ার্কস্পেস' : 'Multi-Company Ready'}</span>
+                </span>
+                <span aria-hidden="true">·</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                  <span>{isBn ? 'অডিট-রেডি ডেটা' : 'Audit-Ready Books'}</span>
+                </span>
+              </div>
+              <h2
+                className="text-xl sm:text-2xl font-bold tracking-tight text-slate-950 dark:text-white"
+                style={{ fontFamily: "'Plus Jakarta Sans', 'Hind Siliguri', sans-serif" }}
+              >
+                {isBn
+                  ? 'আপনার প্রতিষ্ঠানের হিসাব ও মজুদ পরিচালনা শুরু করতে প্রস্তুত?'
+                  : 'Ready to bring structured ledger precision to your organization?'}
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                {isBn
+                  ? 'সরাসরি নতুন কর্মক্ষেত্র তৈরি করুন, অথবা ইউজার গাইড ও সাপোর্ট টিমের সাথে কথা বলুন।'
+                  : 'Create your company workspace, review the User Guide, or reach our onboarding desk directly.'}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <Link
+                to={user ? '/dashboard' : '/register'}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-slate-950 dark:bg-blue-600 text-white text-xs sm:text-[13px] font-semibold hover:opacity-95 transition-opacity whitespace-nowrap"
+              >
+                <span>
+                  {user
+                    ? isBn
+                      ? 'ড্যাশবোর্ডে যান'
+                      : 'Open Dashboard'
+                    : isBn
+                      ? 'ফ্রি শুরু করুন'
+                      : 'Get Started Free'}
+                </span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                to="/guide"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-[13px] font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors whitespace-nowrap"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-slate-500" />
+                <span>{isBn ? 'ইউজার গাইড' : 'User Guide'}</span>
               </Link>
               <Link
                 to="/contact"
-                className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs border border-slate-700 transition-all"
+                className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-[13px] font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors whitespace-nowrap"
               >
-                Contact Support
+                {isBn ? 'যোগাযোগ ও সাপোর্ট' : 'Contact Support'}
               </Link>
             </div>
-          </div>
-
+          </section>
         </div>
       </main>
 

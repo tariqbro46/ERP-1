@@ -10,7 +10,7 @@ import {
 import { erpService } from '../services/erpService';
 import { doc, setDoc, getDoc, collection, serverTimestamp, query, where, getDocs, limit } from 'firebase/firestore';
 import { Loader2, AlertCircle, Eye, EyeOff, Mail, Lock, Building, MapPin, Globe, Phone, FileText, User } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useSiteContent } from '../hooks/useSiteContent';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -118,7 +118,7 @@ export const REGISTER_DEFAULT = {
 
 export const Login: React.FC<{ onToggle: () => void; overrideTemplate?: AuthTemplate }> = ({ onToggle, overrideTemplate }) => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { appIdentity } = useSettings();
   const { content } = useSiteContent('login', LOGIN_DEFAULT);
   const { content: globalSettings } = useSiteContent('global', { registrationEnabled: true, systemLogo: '', authTemplate: 'softr' });
@@ -516,6 +516,18 @@ export const Login: React.FC<{ onToggle: () => void; overrideTemplate?: AuthTemp
           <span>{content.signInButtonText || "Sign in"}</span>
         )}
       </button>
+
+      <p className="text-[11px] leading-relaxed text-slate-500 text-center pt-1.5">
+        {language === 'bn' ? 'সাইন ইন করার মাধ্যমে আপনি আমাদের ' : 'By signing in, you agree to our '}
+        <Link to="/terms" className="text-blue-600 hover:underline font-medium">
+          {language === 'bn' ? 'পরিষেবার শর্তাবলী' : 'Terms of Service'}
+        </Link>
+        {language === 'bn' ? ' এবং ' : ' and '}
+        <Link to="/privacy" className="text-blue-600 hover:underline font-medium">
+          {language === 'bn' ? 'গোপনীয়তা নীতি' : 'Privacy Policy'}
+        </Link>
+        {language === 'bn' ? '-তে সম্মতি দিচ্ছেন।' : '.'}
+      </p>
     </form>
   );
 
@@ -570,7 +582,7 @@ export const Login: React.FC<{ onToggle: () => void; overrideTemplate?: AuthTemp
 
 export const Register: React.FC<{ onToggle: () => void; overrideTemplate?: AuthTemplate }> = ({ onToggle, overrideTemplate }) => {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { appIdentity } = useSettings();
   const { content } = useSiteContent('register', REGISTER_DEFAULT);
   const { content: globalSettings } = useSiteContent('global', { registrationEnabled: true, systemLogo: '', authTemplate: 'softr' });
@@ -1012,6 +1024,22 @@ export const Register: React.FC<{ onToggle: () => void; overrideTemplate?: AuthT
           )}
         </button>
       </div>
+
+      <p className="text-[11px] leading-relaxed text-slate-500 text-center pt-1.5">
+        {language === 'bn' ? 'অ্যাকাউন্ট তৈরি করার মাধ্যমে আপনি আমাদের ' : 'By creating an account, you agree to our '}
+        <Link to="/terms" className="text-blue-600 hover:underline font-medium">
+          {language === 'bn' ? 'পরিষেবার শর্তাবলী' : 'Terms of Service'}
+        </Link>
+        {language === 'bn' ? ', ' : ', '}
+        <Link to="/privacy" className="text-blue-600 hover:underline font-medium">
+          {language === 'bn' ? 'গোপনীয়তা নীতি' : 'Privacy Policy'}
+        </Link>
+        {language === 'bn' ? ' এবং ' : ' & '}
+        <Link to="/security" className="text-blue-600 hover:underline font-medium">
+          {language === 'bn' ? 'ডেটা নিরাপত্তা নীতি' : 'Data Security'}
+        </Link>
+        {language === 'bn' ? ' মেনে নিচ্ছেন।' : '.'}
+      </p>
     </form>
   );
 

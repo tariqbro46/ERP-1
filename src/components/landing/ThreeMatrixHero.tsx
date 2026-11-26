@@ -43,7 +43,7 @@ const MATRIX_STATIONS: MatrixStation[] = [
   { id: 'ledger-flow', label: '02 • Ledger Flow', xPct: 80, yPct: 100 },
   { id: 'analytics', label: '03 • BI Telemetry', xPct: 0, yPct: 200 },
   { id: 'security', label: '04 • Zero-Trust Cloud', xPct: -80, yPct: 300 },
-  { id: 'action', label: '05 • Launch Nexus', xPct: 0, yPct: 400 }
+  { id: 'action', label: '05 • Dashboard Nexus', xPct: 0, yPct: 400 }
 ];
 
 export const ThreeMatrixHero: React.FC<ThreeMatrixHeroProps> = ({
@@ -396,7 +396,7 @@ export const ThreeMatrixHero: React.FC<ThreeMatrixHeroProps> = ({
           </div>
         </section>
 
-        {/* Station 5: Launch Nexus */}
+        {/* Station 5: Dashboard Nexus */}
         <section className="absolute top-[400vh] left-0 w-screen h-screen flex flex-col items-center justify-center p-6 text-center">
           <div className="max-w-2xl space-y-6 bg-slate-950/80 border border-emerald-500/30 p-10 sm:p-14 rounded-3xl backdrop-blur-2xl">
             <h2 className="text-3xl sm:text-5xl font-black text-white">Ready for Pure Efficiency?</h2>

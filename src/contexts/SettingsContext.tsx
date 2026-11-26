@@ -80,6 +80,39 @@ export const SIDEBAR_TEXT_OPTIONS: SidebarTextOption[] = [
   { id: 'sleek-stark', label: 'Minimal Stark Charcoal', labelBn: 'মিনিমাল ডার্ক চারকোল', textClass: 'text-slate-400 hover:text-white', activeClass: 'text-white bg-white/10 border-white', mutedClass: 'text-slate-400', lightTextClass: 'text-stone-600 hover:text-stone-900', lightActiveClass: 'text-stone-950 bg-stone-100 border-stone-800', lightMutedClass: 'text-stone-500' }
 ];
 
+export const HERO_DESIGN_STYLE_OPTIONS = [
+  {
+    id: 'monochrome-parallax',
+    label: 'Monochrome Parallax 3D',
+    labelBn: 'মনোক্রম প্যারালাক্স ৩ডি',
+  },
+  {
+    id: 'precision-enterprise',
+    label: 'Precision Editorial ERP',
+    labelBn: 'প্রিসিশন এডিটোরিয়াল ইআরপি',
+  },
+  {
+    id: 'enterprise-ledger',
+    label: 'Enterprise Ledger & Workbench',
+    labelBn: 'এন্টারপ্রাইজ লেজার ও ওয়ার্কবেঞ্চ',
+  },
+  {
+    id: 'enterprise-saas',
+    label: 'Enterprise SaaS Mockup',
+    labelBn: 'এন্টারপ্রাইজ স্যাস মকআপ',
+  },
+  {
+    id: 'threeui',
+    label: 'ThreeUI 3D Hologram',
+    labelBn: 'থ্রি-ইউআই ৩ডি হলোগ্রাম',
+  },
+  {
+    id: 'default',
+    label: 'Classic Clean Light SaaS',
+    labelBn: 'ক্লাসিক ক্লিন লাইট স্যাস',
+  },
+] as const;
+
 export const SKELETON_PAGE_MODULES = [
   { id: 'dashboard', label: 'Dashboard', labelBn: 'ড্যাশবোর্ড' },
   { id: 'vouchers', label: 'Voucher Entry & Detail', labelBn: 'ভাউচার এন্ট্রি ও বিবরণ' },
@@ -253,7 +286,7 @@ interface SettingsContextType {
   maintenanceReason?: string;
   maintenanceUpdates?: string;
   landingPageEnabled?: boolean;
-  heroDesignStyle?: 'enterprise-saas' | 'precision-enterprise' | 'three-interactive' | 'three-matrix' | 'threeui' | 'monochrome-parallax' | 'classic-saas' | 'default';
+  heroDesignStyle?: 'enterprise-ledger' | 'enterprise-saas' | 'precision-enterprise' | 'three-interactive' | 'three-matrix' | 'threeui' | 'monochrome-parallax' | 'classic-saas' | 'default';
   heroThreeUiTheme?: 'cyber-dark' | 'glass-light' | 'aurora-navy' | 'emerald-obsidian';
   heroThreeUiGlowColor?: 'cyan' | 'emerald' | 'indigo' | 'amber';
   heroThreeUiPerspective?: 'subtle' | 'cinematic' | 'extreme';
@@ -264,6 +297,7 @@ interface SettingsContextType {
   heroThreeUiEnableTiltDefault?: boolean;
   heroShowExperienceHubDemo?: boolean;
   heroShowExploreLiveDemo?: boolean;
+  heroShowFloatingQuickNav?: boolean;
   heroEyebrowText?: string;
   heroTitleText?: string;
   heroSubtitleText?: string;
@@ -291,6 +325,7 @@ interface SettingsContextType {
   soundDelete?: string;
   soundClick?: string;
   soundNavigation?: string;
+  systemConfig: Record<string, any>;
   updateSettings: (newSettings: Partial<SettingsContextType>) => void;
   updateSystemSettings: (newSettings: any) => Promise<void>;
   updateAppIdentity: (newBranding: Partial<AppBrandingConfig>) => Promise<void>;
@@ -475,12 +510,13 @@ const defaultSettings: SettingsContextType = {
   heroThreeUiEnableTiltDefault: false,
   heroShowExperienceHubDemo: false,
   heroShowExploreLiveDemo: true,
+  heroShowFloatingQuickNav: true,
   heroEyebrowText: 'ERP ARCHITECTURE // SOVEREIGN FINANCIAL KERNEL',
   heroTitleText: 'Absolute Truth in Commercial Ledgering.',
   heroSubtitleText: 'Atomic double-entry balance computation, multi-location godown stock velocity, and board-level liquidity reporting on zero-overhead in-memory persistence. Pure accounting truth.',
-  heroCtaPrimaryText: 'Enter Production Console',
+  heroCtaPrimaryText: 'Enter Dashboard',
   heroCtaDemoText: 'Experience Hub Demo',
-  heroNavActionText: 'Launch Console',
+  heroNavActionText: 'Dashboard',
   heroMetric1Value: '0 ms',
   heroMetric1Label: 'Balance Drift Latency',
   heroMetric2Value: '100%',
@@ -491,6 +527,7 @@ const defaultSettings: SettingsContextType = {
   appFeatures: [],
   subscriptionPlans: [],
   userSettings: {},
+  systemConfig: {},
   loading: true,
   updateSettings: () => {},
   updateSystemSettings: async () => {},
@@ -528,6 +565,9 @@ const sanitizeCompanySettingsPayload = (raw: Record<string, any> | null | undefi
   delete cleaned.heroMetric3Value;
   delete cleaned.heroMetric3Label;
   delete cleaned.landingPageEnabled;
+  delete cleaned.heroShowExperienceHubDemo;
+  delete cleaned.heroShowExploreLiveDemo;
+  delete cleaned.heroShowFloatingQuickNav;
   if (typeof cleaned.companyName === 'string' && isLegacyAppBrandString(cleaned.companyName)) {
     delete cleaned.companyName;
   }
@@ -543,12 +583,102 @@ const sanitizeCompanySettingsPayload = (raw: Record<string, any> | null | undefi
   return cleaned;
 };
 
+const pickPref = <T,>(userVal: T | undefined, sysVal: T | undefined, fallback: T): T => {
+  if (userVal !== undefined && userVal !== null && userVal !== '' && (userVal as unknown) !== 'default') {
+    return userVal;
+  }
+  if (sysVal !== undefined && sysVal !== null && sysVal !== '') {
+    return sysVal;
+  }
+  return fallback;
+};
+
+const normalizeHeroStyle = (style: any): SettingsContextType['heroDesignStyle'] | undefined => {
+  if (!style) return undefined;
+  if (style === 'three-matrix' || style === 'three-interactive') return 'monochrome-parallax';
+  return style;
+};
+
+const normalizeSystemConfig = (raw: Record<string, any> | null | undefined): Partial<SettingsContextType> => {
+  if (!raw || typeof raw !== 'object') return {};
+  const out: Record<string, any> = {};
+  const copyIfDefined = (key: string, transform?: (val: any) => any) => {
+    if (raw[key] !== undefined) {
+      out[key] = transform ? transform(raw[key]) : raw[key];
+    }
+  };
+
+  [
+    'statusOnlineText', 'statusOfflineText', 'statusErrorText',
+    'showGoToShortcut', 'showTopbarSearch', 'showTopbarNotifications', 'showTopbarInstructions',
+    'englishFont', 'banglaFont', 'logoBgColor', 'glassBackground',
+    'notificationAnimationStyle', 'notificationStyle', 'notificationPosition',
+    'searchPlaceholder', 'searchHelpText', 'showSearchShortcut', 'searchIconColor',
+    'loaderBlurStyle', 'loaderIconStyle', 'loaderPhrases', 'loaderTheme', 'adaptiveLoaderEnabled',
+    'showQuickCalculator', 'showPinnedBookmarks',
+    'showDashboardLowStockAlert', 'showDashboardDueAlert', 'showDashboardCashBank', 'showDashboardTopExpenses',
+    'customControlCenterTheme', 'customWelcomeMessage', 'splashSubDesign',
+    'skeletonEnabled', 'skeletonDashboardOnly', 'skeletonPageOverrides', 'skeletonType', 'skeletonSpeed', 'skeletonTheme', 'skeletonWaveColor',
+    'voucherLayout', 'voucherFieldSize',
+    'warningSelectItemsInPhysicalStock', 'warningInvalidQtyInPhysicalStock', 'warningPrefixSelectFill',
+    'warningPartyName', 'warningSupplierName', 'warningSalesLedger', 'warningPurchaseLedger',
+    'warningItemsListEmpty', 'warningItemNameEmpty', 'warningQuantityEmpty', 'warningRateEmpty',
+    'warningConsumptionItems', 'warningSourceItemName', 'warningSourceItemQty',
+    'warningProductionItems', 'warningDestItemName', 'warningDestItemQty',
+    'warningSingleAccount', 'warningSingleParticulars', 'warningSingleAmount',
+    'warningJournalLedgerName', 'warningJournalDebitCreditAmount', 'warningJournalNotBalanced',
+    'alterPageUiStyle', 'reportsPageUiStyle', 'searchPageUiStyle', 'enableUserSortViewPref',
+    'sidebarBgColor', 'sidebarTextColor', 'sidebarDefaultExpanded', 'layoutWidth', 'showScrollingBar',
+    'showQuickActions', 'dashboardQuickActions', 'dashboardCards',
+    'landingPageEnabled', 'heroThreeUiTheme', 'heroThreeUiGlowColor', 'heroThreeUiPerspective',
+    'heroThreeUiShowParticles', 'heroThreeUiShowFloatingBadges', 'heroThreeUiShowExperienceHubDemo',
+    'heroThreeUiShowSimulateVoucher', 'heroThreeUiEnableTiltDefault',
+    'heroShowExperienceHubDemo', 'heroShowExploreLiveDemo', 'heroShowFloatingQuickNav',
+    'heroEyebrowText', 'heroTitleText', 'heroSubtitleText', 'heroCtaPrimaryText', 'heroCtaDemoText', 'heroNavActionText',
+    'heroMetric1Value', 'heroMetric1Label', 'heroMetric2Value', 'heroMetric2Label', 'heroMetric3Value', 'heroMetric3Label',
+    'maintenanceEnabled', 'maintenanceEndTime', 'maintenanceReason', 'maintenanceUpdates',
+    'soundEnabled', 'soundScheme', 'soundSuccess', 'soundError', 'soundWarning', 'soundDelete', 'soundClick', 'soundNavigation',
+    'features'
+  ].forEach((k) => copyIfDefined(k));
+
+  copyIfDefined('notificationDuration', (v) => Number(v) || 5000);
+  copyIfDefined('reportsColumnsPerRow', (v) => Number(v) || 4);
+  copyIfDefined('alterColumnsPerRow', (v) => Number(v) || 3);
+  copyIfDefined('skeletonRows', (v) => Number(v) || 5);
+  copyIfDefined('soundVolume', (v) => (typeof v === 'number' ? v : Number(v ?? 0.5)));
+
+  if (raw.heroDesignStyle !== undefined) {
+    out.heroDesignStyle = normalizeHeroStyle(raw.heroDesignStyle) || 'monochrome-parallax';
+  }
+  if (raw.uiStyle) {
+    out.uiStyle = raw.uiStyle;
+    out.systemUiStyle = raw.uiStyle;
+  }
+  if (raw.menuBarStyle) {
+    out.menuBarStyle = raw.menuBarStyle;
+    out.systemMenuBarStyle = raw.menuBarStyle;
+  }
+  if (raw.dashboardDesign) {
+    out.dashboardDesign = raw.dashboardDesign;
+    out.globalDashboardDesign = raw.dashboardDesign;
+  }
+
+  return out;
+};
+
 const SettingsContext = createContext<SettingsContextType>(defaultSettings);
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const prevManifestBlobUrlRef = React.useRef<string | null>(null);
-  const systemConfigCacheRef = React.useRef<Record<string, any>>({});
+  const systemConfigCacheRef = React.useRef<Record<string, any>>((() => {
+    try {
+      const persisted = localStorage.getItem('swr_system_config');
+      return persisted ? JSON.parse(persisted) : {};
+    } catch {
+      return {};
+    }
+  })());
   const appIdentityDocCacheRef = React.useRef<Partial<AppBrandingConfig>>({});
   const [settings, setSettings] = useState<SettingsContextType>(() => {
     try {
@@ -605,14 +735,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         ? targetCompanyKey
         : Object.keys(localStorage).find(k => k.startsWith('swr_settings_'));
 
+      const normalizedSystem = normalizeSystemConfig(cachedSystem);
+
       if (companyKey) {
         const cachedCompany = localStorage.getItem(companyKey);
         if (cachedCompany) {
           const cachedData = sanitizeCompanySettingsPayload(JSON.parse(cachedCompany));
           return {
             ...defaultSettings,
-            ...cachedSystem,
             ...cachedData,
+            ...normalizedSystem,
+            systemConfig: cachedSystem,
             appIdentity: resolvedIdentity,
             systemLogo: resolvedIdentity.appLogoUrl,
             systemFavicon: resolvedIdentity.faviconUrl,
@@ -634,7 +767,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       if (systemPersisted || appIdentityPersisted) {
         return {
           ...defaultSettings,
-          ...cachedSystem,
+          ...normalizedSystem,
+          systemConfig: cachedSystem,
           appIdentity: resolvedIdentity,
           systemLogo: resolvedIdentity.appLogoUrl,
           systemFavicon: resolvedIdentity.faviconUrl,
@@ -792,20 +926,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         appIdentityDocCacheRef.current = cachedIdentity;
 
         if (persisted || persistedAppIdentity) {
-          if (cachedSystem.heroDesignStyle === 'three-matrix' || cachedSystem.heroDesignStyle === 'three-interactive') {
-            cachedSystem.heroDesignStyle = 'monochrome-parallax';
-          }
+          const normalizedCachedSystem = normalizeSystemConfig(cachedSystem);
           const resolvedIdentity = resolveAppBranding(cachedIdentity, cachedSystem);
           setSettings(prev => ({
             ...prev,
-            ...cachedSystem,
+            ...normalizedCachedSystem,
+            systemConfig: cachedSystem,
             appIdentity: resolvedIdentity,
             systemLogo: resolvedIdentity.appLogoUrl,
             systemFavicon: resolvedIdentity.faviconUrl,
             systemLogoBgColor: resolvedIdentity.appLogoBgColor,
             developerContactText: resolvedIdentity.softwareFooterText,
             developerContactAlignment: resolvedIdentity.softwareFooterAlignment,
-            heroDesignStyle: cachedSystem.heroDesignStyle || prev.heroDesignStyle || 'monochrome-parallax'
+            heroDesignStyle: normalizedCachedSystem.heroDesignStyle || prev.heroDesignStyle || 'monochrome-parallax'
           }));
         }
       } catch (e) {}
@@ -851,109 +984,23 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
               localStorage.setItem('swr_app_version', effectiveVer);
               localStorage.setItem('tallyflow_active_version', effectiveVer);
             } catch (e) {}
+            const normalizedData = normalizeSystemConfig(data);
             setSettings(prev => ({
               ...prev,
+              ...normalizedData,
+              systemConfig: data,
               appIdentity: resolvedIdentity,
-              statusOnlineText: data.statusOnlineText || prev.statusOnlineText,
-              statusOfflineText: data.statusOfflineText || prev.statusOfflineText,
-              statusErrorText: data.statusErrorText || prev.statusErrorText,
-              showGoToShortcut: data.showGoToShortcut !== undefined ? data.showGoToShortcut : prev.showGoToShortcut,
-              showTopbarSearch: data.showTopbarSearch !== undefined ? data.showTopbarSearch : true,
-              showTopbarNotifications: data.showTopbarNotifications !== undefined ? data.showTopbarNotifications : true,
-              showTopbarInstructions: data.showTopbarInstructions !== undefined ? data.showTopbarInstructions : true,
               developerContactText: resolvedIdentity.softwareFooterText,
               developerContactAlignment: resolvedIdentity.softwareFooterAlignment,
               appVersion: effectiveVer,
-              englishFont: data.englishFont || prev.englishFont,
-              banglaFont: data.banglaFont || prev.banglaFont,
               systemLogo: resolvedIdentity.appLogoUrl,
               systemLogoBgColor: resolvedIdentity.appLogoBgColor,
               logoBgColor: data.logoBgColor || resolvedIdentity.appLogoBgColor,
               systemFavicon: resolvedIdentity.faviconUrl,
-              glassBackground: data.glassBackground || prev.glassBackground,
-              notificationDuration: data.notificationDuration || prev.notificationDuration,
-              notificationAnimationStyle: data.notificationAnimationStyle || prev.notificationAnimationStyle,
-              notificationStyle: data.notificationStyle || prev.notificationStyle || 'default',
-              notificationPosition: data.notificationPosition || prev.notificationPosition || 'bottom-right',
-              searchPlaceholder: data.searchPlaceholder || prev.searchPlaceholder,
-              searchHelpText: data.searchHelpText || prev.searchHelpText,
-              showSearchShortcut: data.showSearchShortcut !== undefined ? data.showSearchShortcut : prev.showSearchShortcut,
-              searchIconColor: data.searchIconColor || prev.searchIconColor,
-              loaderBlurStyle: data.loaderBlurStyle || prev.loaderBlurStyle || 'md',
-              loaderIconStyle: data.loaderIconStyle || prev.loaderIconStyle || 'spinner',
-              loaderPhrases: data.loaderPhrases || prev.loaderPhrases || 'Connecting to server, Requesting data, Waiting for response, Almost done, Here we go!',
-              loaderTheme: data.loaderTheme || prev.loaderTheme || 'glass',
-              adaptiveLoaderEnabled: data.adaptiveLoaderEnabled !== undefined ? data.adaptiveLoaderEnabled : prev.adaptiveLoaderEnabled,
-              showQuickCalculator: data.showQuickCalculator !== undefined ? data.showQuickCalculator : prev.showQuickCalculator,
-              showPinnedBookmarks: data.showPinnedBookmarks !== undefined ? data.showPinnedBookmarks : prev.showPinnedBookmarks,
-              showDashboardLowStockAlert: data.showDashboardLowStockAlert !== undefined ? data.showDashboardLowStockAlert : prev.showDashboardLowStockAlert,
-              showDashboardDueAlert: data.showDashboardDueAlert !== undefined ? data.showDashboardDueAlert : prev.showDashboardDueAlert,
-              showDashboardCashBank: data.showDashboardCashBank !== undefined ? data.showDashboardCashBank : (prev.showDashboardCashBank !== undefined ? prev.showDashboardCashBank : false),
-              showDashboardTopExpenses: data.showDashboardTopExpenses !== undefined ? data.showDashboardTopExpenses : (prev.showDashboardTopExpenses !== undefined ? prev.showDashboardTopExpenses : false),
-              customControlCenterTheme: data.customControlCenterTheme || prev.customControlCenterTheme || 'emerald',
-              customWelcomeMessage: data.customWelcomeMessage || prev.customWelcomeMessage || 'Executive Command Center',
-              splashSubDesign: data.splashSubDesign || prev.splashSubDesign || 'grid',
-              skeletonEnabled: data.skeletonEnabled !== undefined ? data.skeletonEnabled : prev.skeletonEnabled,
-              skeletonDashboardOnly: data.skeletonDashboardOnly !== undefined ? data.skeletonDashboardOnly : prev.skeletonDashboardOnly,
-              skeletonType: data.skeletonType || prev.skeletonType || 'automatic',
-              skeletonSpeed: data.skeletonSpeed || prev.skeletonSpeed || 'normal',
-              skeletonTheme: data.skeletonTheme || prev.skeletonTheme || 'modern',
-              skeletonRows: data.skeletonRows !== undefined ? Number(data.skeletonRows) : prev.skeletonRows,
-              skeletonWaveColor: data.skeletonWaveColor || prev.skeletonWaveColor || 'indigo',
-              voucherLayout: data.voucherLayout || prev.voucherLayout,
-              voucherFieldSize: data.voucherFieldSize || prev.voucherFieldSize || 'medium',
-              warningSelectItemsInPhysicalStock: data.warningSelectItemsInPhysicalStock || prev.warningSelectItemsInPhysicalStock,
-              warningInvalidQtyInPhysicalStock: data.warningInvalidQtyInPhysicalStock || prev.warningInvalidQtyInPhysicalStock,
-              warningPrefixSelectFill: data.warningPrefixSelectFill || prev.warningPrefixSelectFill,
-              warningPartyName: data.warningPartyName || prev.warningPartyName,
-              warningSupplierName: data.warningSupplierName || prev.warningSupplierName,
-              warningSalesLedger: data.warningSalesLedger || prev.warningSalesLedger,
-              warningPurchaseLedger: data.warningPurchaseLedger || prev.warningPurchaseLedger,
-              warningItemsListEmpty: data.warningItemsListEmpty || prev.warningItemsListEmpty,
-              warningItemNameEmpty: data.warningItemNameEmpty || prev.warningItemNameEmpty,
-              warningQuantityEmpty: data.warningQuantityEmpty || prev.warningQuantityEmpty,
-              warningRateEmpty: data.warningRateEmpty || prev.warningRateEmpty,
-              warningConsumptionItems: data.warningConsumptionItems || prev.warningConsumptionItems,
-              warningSourceItemName: data.warningSourceItemName || prev.warningSourceItemName,
-              warningSourceItemQty: data.warningSourceItemQty || prev.warningSourceItemQty,
-              warningProductionItems: data.warningProductionItems || prev.warningProductionItems,
-              warningDestItemName: data.warningDestItemName || prev.warningDestItemName,
-              warningDestItemQty: data.warningDestItemQty || prev.warningDestItemQty,
-              warningSingleAccount: data.warningSingleAccount || prev.warningSingleAccount,
-              warningSingleParticulars: data.warningSingleParticulars || prev.warningSingleParticulars,
-              warningSingleAmount: data.warningSingleAmount || prev.warningSingleAmount,
-              warningJournalLedgerName: data.warningJournalLedgerName || prev.warningJournalLedgerName,
-              warningJournalDebitCreditAmount: data.warningJournalDebitCreditAmount || prev.warningJournalDebitCreditAmount,
-              warningJournalNotBalanced: data.warningJournalNotBalanced || prev.warningJournalNotBalanced,
-              systemUiStyle: data.uiStyle || prev.systemUiStyle,
-              systemMenuBarStyle: data.menuBarStyle || prev.systemMenuBarStyle,
-              alterPageUiStyle: data.alterPageUiStyle || 'modern',
-              reportsPageUiStyle: (data.reportsPageUiStyle as any) || 'modern',
-              searchPageUiStyle: data.searchPageUiStyle || 'classic',
-              reportsColumnsPerRow: Number(data.reportsColumnsPerRow || 4),
-              alterColumnsPerRow: Number(data.alterColumnsPerRow || 3),
-              enableUserSortViewPref: data.enableUserSortViewPref !== undefined ? !!data.enableUserSortViewPref : false,
-              sidebarBgColor: data.sidebarBgColor || prev.sidebarBgColor || 'default',
-              sidebarTextColor: data.sidebarTextColor || prev.sidebarTextColor || 'default',
-              globalDashboardDesign: data.dashboardDesign || prev.globalDashboardDesign,
-              landingPageEnabled: data.landingPageEnabled !== undefined ? !!data.landingPageEnabled : (prev.landingPageEnabled !== undefined ? prev.landingPageEnabled : true),
-              heroDesignStyle: (data.heroDesignStyle === 'three-matrix' || data.heroDesignStyle === 'three-interactive')
-                ? 'monochrome-parallax'
-                : (data.heroDesignStyle || prev.heroDesignStyle || 'monochrome-parallax'),
-              heroThreeUiTheme: data.heroThreeUiTheme || prev.heroThreeUiTheme || 'aurora-navy',
-              heroThreeUiGlowColor: data.heroThreeUiGlowColor || prev.heroThreeUiGlowColor || 'cyan',
-              heroThreeUiPerspective: data.heroThreeUiPerspective || prev.heroThreeUiPerspective || 'cinematic',
-              heroThreeUiShowParticles: data.heroThreeUiShowParticles !== undefined ? !!data.heroThreeUiShowParticles : (prev.heroThreeUiShowParticles !== undefined ? prev.heroThreeUiShowParticles : true),
-              heroThreeUiShowFloatingBadges: data.heroThreeUiShowFloatingBadges !== undefined ? !!data.heroThreeUiShowFloatingBadges : (prev.heroThreeUiShowFloatingBadges !== undefined ? prev.heroThreeUiShowFloatingBadges : true),
-              heroThreeUiShowExperienceHubDemo: data.heroThreeUiShowExperienceHubDemo !== undefined ? !!data.heroThreeUiShowExperienceHubDemo : (prev.heroThreeUiShowExperienceHubDemo !== undefined ? prev.heroThreeUiShowExperienceHubDemo : true),
-              heroThreeUiShowSimulateVoucher: data.heroThreeUiShowSimulateVoucher !== undefined ? !!data.heroThreeUiShowSimulateVoucher : (prev.heroThreeUiShowSimulateVoucher !== undefined ? prev.heroThreeUiShowSimulateVoucher : true),
-              heroThreeUiEnableTiltDefault: data.heroThreeUiEnableTiltDefault !== undefined ? !!data.heroThreeUiEnableTiltDefault : (prev.heroThreeUiEnableTiltDefault !== undefined ? prev.heroThreeUiEnableTiltDefault : false),
-              heroShowExperienceHubDemo: data.heroShowExperienceHubDemo !== undefined ? !!data.heroShowExperienceHubDemo : (prev.heroShowExperienceHubDemo !== undefined ? prev.heroShowExperienceHubDemo : false),
-              heroShowExploreLiveDemo: data.heroShowExploreLiveDemo !== undefined ? !!data.heroShowExploreLiveDemo : (prev.heroShowExploreLiveDemo !== undefined ? prev.heroShowExploreLiveDemo : true),
-              maintenanceEnabled: data.maintenanceEnabled !== undefined ? !!data.maintenanceEnabled : false,
-              maintenanceEndTime: data.maintenanceEndTime || '',
-              maintenanceReason: data.maintenanceReason || '',
-              maintenanceUpdates: data.maintenanceUpdates || ''
+              systemUiStyle: data.uiStyle || undefined,
+              systemMenuBarStyle: data.menuBarStyle || undefined,
+              globalDashboardDesign: data.dashboardDesign || undefined,
+              heroDesignStyle: normalizedData.heroDesignStyle || prev.heroDesignStyle || 'monochrome-parallax',
             }));
             globalConfigLoaded.current = true;
           }
@@ -1038,6 +1085,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         heroThreeUiEnableTiltDefault: prev.heroThreeUiEnableTiltDefault,
         heroShowExperienceHubDemo: prev.heroShowExperienceHubDemo,
         heroShowExploreLiveDemo: prev.heroShowExploreLiveDemo,
+        heroShowFloatingQuickNav: prev.heroShowFloatingQuickNav,
         heroEyebrowText: prev.heroEyebrowText,
         heroTitleText: prev.heroTitleText,
         heroSubtitleText: prev.heroSubtitleText,
@@ -1084,9 +1132,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       const persisted = localStorage.getItem(`swr_settings_${user.companyId}`);
       if (persisted) {
         const cachedData = sanitizeCompanySettingsPayload(JSON.parse(persisted));
+        const sysOverlay = normalizeSystemConfig(systemConfigCacheRef.current);
         setSettings(prev => ({
           ...prev,
           ...cachedData,
+          ...sysOverlay,
+          systemConfig: systemConfigCacheRef.current,
           appIdentity: prev.appIdentity,
           systemLogo: prev.systemLogo,
           systemLogoBgColor: prev.systemLogoBgColor,
@@ -1119,9 +1170,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         try {
           localStorage.setItem(`swr_settings_${user.companyId}`, JSON.stringify(snapData));
         } catch (e) {}
+        const sysOverlay = normalizeSystemConfig(systemConfigCacheRef.current);
         setSettings(prev => ({ 
           ...prev, 
-          ...snapData, 
+          ...snapData,
+          ...sysOverlay,
+          systemConfig: systemConfigCacheRef.current,
           appIdentity: prev.appIdentity,
           systemLogo: prev.systemLogo,
           systemLogoBgColor: prev.systemLogoBgColor,
@@ -1164,6 +1218,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           heroThreeUiEnableTiltDefault: prev.heroThreeUiEnableTiltDefault,
           heroShowExperienceHubDemo: prev.heroShowExperienceHubDemo,
           heroShowExploreLiveDemo: prev.heroShowExploreLiveDemo,
+          heroShowFloatingQuickNav: prev.heroShowFloatingQuickNav,
           heroEyebrowText: prev.heroEyebrowText,
           heroTitleText: prev.heroTitleText,
           heroSubtitleText: prev.heroSubtitleText,
@@ -1409,19 +1464,28 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {}
     }
 
-    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
-      setSettings(prev => ({
-        ...prev,
-        ...newSettings,
-        appIdentity: nextIdentity,
-        systemUiStyle: newSettings.uiStyle !== undefined ? newSettings.uiStyle : prev.systemUiStyle,
-        systemMenuBarStyle: newSettings.menuBarStyle !== undefined ? newSettings.menuBarStyle : prev.systemMenuBarStyle,
-        globalDashboardDesign: newSettings.dashboardDesign || prev.globalDashboardDesign
-      }));
-      return;
-    }
     if (newSettings.heroDesignStyle === 'three-matrix' || newSettings.heroDesignStyle === 'three-interactive') {
       newSettings.heroDesignStyle = 'monochrome-parallax';
+    }
+
+    const mergedSystemConfig = {
+      ...systemConfigCacheRef.current,
+      ...newSettings,
+    };
+    systemConfigCacheRef.current = mergedSystemConfig;
+    const normalizedPatch = normalizeSystemConfig(mergedSystemConfig);
+
+    if (localStorage.getItem('erp_is_demo_mode') === 'true') {
+      try {
+        localStorage.setItem('swr_system_config', JSON.stringify(mergedSystemConfig));
+      } catch (e) {}
+      setSettings(prev => ({
+        ...prev,
+        ...normalizedPatch,
+        systemConfig: mergedSystemConfig,
+        appIdentity: nextIdentity,
+      }));
+      return;
     }
 
     try {
@@ -1439,15 +1503,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           updatedBy: user?.email || user?.uid || 'founder',
         }, { merge: true });
       }
-      // Update local state to reflect changes immediately
+      // Update local state immediately so changes render cleanly across views with zero flash
       setSettings(prev => ({
         ...prev,
-        ...newSettings,
+        ...normalizedPatch,
+        systemConfig: mergedSystemConfig,
         appIdentity: nextIdentity,
-        systemUiStyle: newSettings.uiStyle !== undefined ? newSettings.uiStyle : prev.systemUiStyle,
-        systemMenuBarStyle: newSettings.menuBarStyle !== undefined ? newSettings.menuBarStyle : prev.systemMenuBarStyle,
-        // Map dashboardDesign back to globalDashboardDesign if it's in the payload
-        globalDashboardDesign: newSettings.dashboardDesign || prev.globalDashboardDesign
       }));
     } catch (err) {
       console.error('Error updating system settings:', err);
@@ -1499,14 +1560,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       reportsColumnsPerRow: settings.reportsColumnsPerRow || 4,
       alterColumnsPerRow: settings.alterColumnsPerRow || 3,
       enableUserSortViewPref: settings.enableUserSortViewPref !== undefined ? settings.enableUserSortViewPref : false,
-      uiStyle: settings.systemUiStyle || userSettings.uiStyle || settings.uiStyle || 'UI/UX 1',
-      menuBarStyle: settings.systemMenuBarStyle || userSettings.menuBarStyle || settings.menuBarStyle || 'classic',
-      sidebarBgColor: userSettings.sidebarBgColor || settings.sidebarBgColor || 'default',
-      sidebarTextColor: userSettings.sidebarTextColor || settings.sidebarTextColor || 'default',
-      notificationStyle: userSettings.notificationStyle || settings.notificationStyle || 'default',
+      uiStyle: settings.systemUiStyle || pickPref(userSettings.uiStyle, settings.uiStyle, 'UI/UX 1'),
+      menuBarStyle: settings.systemMenuBarStyle || pickPref(userSettings.menuBarStyle, settings.menuBarStyle, 'classic'),
+      dashboardDesign: settings.globalDashboardDesign || pickPref(userSettings.dashboardDesign, settings.dashboardDesign, 'Design 1'),
+      glassBackground: pickPref(userSettings.glassBackground, settings.glassBackground, 'default'),
+      sidebarBgColor: pickPref(userSettings.sidebarBgColor, settings.sidebarBgColor, 'default'),
+      sidebarTextColor: pickPref(userSettings.sidebarTextColor, settings.sidebarTextColor, 'default'),
+      notificationStyle: pickPref(userSettings.notificationStyle, settings.notificationStyle, 'default'),
       notificationPosition: userSettings.notificationPosition || settings.notificationPosition || 'bottom-right',
       notificationDuration: userSettings.notificationDuration !== undefined ? userSettings.notificationDuration : (settings.notificationDuration ?? 5000),
-      notificationAnimationStyle: userSettings.notificationAnimationStyle || settings.notificationAnimationStyle || 'default',
+      notificationAnimationStyle: pickPref(userSettings.notificationAnimationStyle, settings.notificationAnimationStyle, 'default'),
       soundEnabled: userSettings.soundEnabled !== undefined ? userSettings.soundEnabled : (settings.soundEnabled ?? true),
       soundVolume: userSettings.soundVolume !== undefined ? userSettings.soundVolume : (settings.soundVolume ?? 0.5),
       soundScheme: userSettings.soundScheme || settings.soundScheme || 'system',
@@ -1520,10 +1583,14 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       skeletonDashboardOnly: userSettings.skeletonDashboardOnly !== undefined ? userSettings.skeletonDashboardOnly : (settings.skeletonDashboardOnly ?? true),
       skeletonTheme: userSettings.skeletonTheme || settings.skeletonTheme || 'modern',
       skeletonSpeed: userSettings.skeletonSpeed || settings.skeletonSpeed || 'normal',
+      skeletonRows: userSettings.skeletonRows !== undefined ? userSettings.skeletonRows : (settings.skeletonRows ?? 5),
+      skeletonWaveColor: userSettings.skeletonWaveColor || settings.skeletonWaveColor || 'indigo',
+      skeletonType: userSettings.skeletonType || settings.skeletonType || 'automatic',
       skeletonPageOverrides: {
         ...(settings.skeletonPageOverrides || {}),
         ...(userSettings.skeletonPageOverrides || {}),
       },
+      systemConfig: settings.systemConfig || systemConfigCacheRef.current || {},
       userSettings,
       updateSettings, 
       updateSystemSettings,

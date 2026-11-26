@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 
 interface EnterpriseSaaSHeroProps {
@@ -35,6 +36,7 @@ interface EnterpriseSaaSHeroProps {
 
 export function EnterpriseSaaSHero({ content, onOpenDemoModal, showExploreLiveDemo = true }: EnterpriseSaaSHeroProps) {
   const { language } = useLanguage();
+  const { user } = useAuth();
   const isBn = language === 'bn';
 
   // Active showcase tab for interactive MacBook display
@@ -137,10 +139,14 @@ export function EnterpriseSaaSHero({ content, onOpenDemoModal, showExploreLiveDe
             className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2"
           >
             <Link
-              to="/auth"
+              to={user ? '/dashboard' : '/auth'}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base shadow-lg shadow-blue-600/25 hover:shadow-blue-600/35 transition-all transform hover:-translate-y-0.5 cursor-pointer"
             >
-              <span>{isBn ? '১৪ দিনের ফ্রি ট্রায়াল শুরু করুন' : 'Start Free 14-Day Trial'}</span>
+              <span>
+                {user
+                  ? (isBn ? 'ড্যাশবোর্ড' : 'Dashboard')
+                  : (isBn ? '১৪ দিনের ফ্রি ট্রায়াল শুরু করুন' : 'Start Free 14-Day Trial')}
+              </span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 
@@ -180,10 +186,11 @@ export function EnterpriseSaaSHero({ content, onOpenDemoModal, showExploreLiveDe
 
         {/* ================= 2. CENTERPIECE: MACBOOK PRO & TABLET ERP MOCKUP ================= */}
         <motion.div 
+          id="telemetry"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.35 }}
-          className="mt-12 sm:mt-16 lg:mt-20 relative max-w-6xl mx-auto"
+          className="mt-12 sm:mt-16 lg:mt-20 relative max-w-6xl mx-auto scroll-mt-24"
         >
           {/* Subtle Ambient Shadow and Depth */}
           <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-teal-500/10 rounded-[40px] blur-2xl opacity-70 -z-10" />

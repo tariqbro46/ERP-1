@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { Navbar } from '../../components/landing/Navbar';
@@ -26,6 +26,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { erpService } from '../../services/erpService';
 import { EnterpriseSaaSHero } from '../../components/landing/EnterpriseSaaSHero';
 import { PrecisionEnterpriseHero } from '../../components/landing/PrecisionEnterpriseHero';
+import { EnterpriseLedgerHero } from '../../components/landing/EnterpriseLedgerHero';
 import { ErpModuleHighlights } from '../../components/landing/ErpModuleHighlights';
 import { ThreeUiHeroDashboard } from '../../components/landing/ThreeUiHeroDashboard';
 import { MonochromeParallaxHero } from '../../components/landing/MonochromeParallaxHero';
@@ -51,11 +52,19 @@ export const Home = () => {
     heroThreeUiShowExperienceHubDemo = true,
     heroThreeUiShowSimulateVoucher = true,
     heroThreeUiEnableTiltDefault = false,
-    heroShowExploreLiveDemo = true
+    heroShowExploreLiveDemo = true,
+    heroShowFloatingQuickNav = true
   } = settings;
 
+  const location = useLocation();
+  const queryHero = React.useMemo(() => {
+    const param = new URLSearchParams(location.search).get('hero');
+    const valid = ['enterprise-ledger', 'enterprise-saas', 'precision-enterprise', 'threeui', 'monochrome-parallax', 'default'];
+    return param && valid.includes(param) ? param : null;
+  }, [location.search]);
+
   // Normalize hero style: any legacy 'three-matrix' / 'three-interactive' or falsy strictly maps to 'monochrome-parallax'
-  const rawStyle = heroDesignStyle || 'monochrome-parallax';
+  const rawStyle = queryHero || heroDesignStyle || 'monochrome-parallax';
   const effectiveHeroStyle = (rawStyle === 'three-matrix' || rawStyle === 'three-interactive')
     ? 'monochrome-parallax'
     : rawStyle;
@@ -356,15 +365,15 @@ export const Home = () => {
       {!isMonochrome && <Navbar />}
       
       {/* Floating Quick Navigation Dock on Right-Center for Telemetry, Capabilities, Architecture */}
-      {!isMonochrome && (
+      {!isMonochrome && heroShowFloatingQuickNav !== false && (
         <div 
           className="fixed right-3 sm:right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col items-end gap-2.5 pointer-events-auto select-none"
           aria-label="Section Quick Navigation"
         >
           {[
-            { id: 'telemetry', label: language === 'bn' ? 'টেলিমেট্রি' : 'Telemetry', icon: Activity },
-            { id: 'modules', label: language === 'bn' ? 'ক্যাপাবিলিটিজ' : 'Capabilities', icon: Layers },
-            { id: 'architecture', label: language === 'bn' ? 'আর্কিটেকচার' : 'Architecture', icon: Cpu }
+            { id: 'telemetry', targets: ['telemetry'], label: language === 'bn' ? 'টেলিমেট্রি ও ওয়ার্কবেঞ্চ' : 'Telemetry & Workbench', icon: Activity },
+            { id: 'capabilities', targets: ['erp-modules', 'modules'], label: language === 'bn' ? 'ক্যাপাবিলিটিজ ও মডিউল' : 'Capabilities & Modules', icon: Layers },
+            { id: 'architecture', targets: ['architecture', 'modules', 'cta-section'], label: language === 'bn' ? 'আর্কিটেকচার ও ইকোসিস্টেম' : 'Architecture & Ecosystem', icon: Cpu }
           ].map((item) => {
             const Icon = item.icon;
             return (
@@ -372,9 +381,11 @@ export const Home = () => {
                 key={item.id}
                 type="button"
                 onClick={() => {
-                  const el = document.getElementById(item.id);
-                  if (el) {
-                    const topOffset = el.getBoundingClientRect().top + window.pageYOffset - 80;
+                  const targetEl = item.targets
+                    .map((targetId) => document.getElementById(targetId))
+                    .find((el): el is HTMLElement => el !== null);
+                  if (targetEl) {
+                    const topOffset = Math.max(0, targetEl.getBoundingClientRect().top + window.scrollY - 84);
                     window.scrollTo({ top: topOffset, behavior: 'smooth' });
                   }
                 }}
@@ -396,7 +407,13 @@ export const Home = () => {
       <main className="flex-1">
         {/* Hero Section */}
         {content.showHero && (
-          effectiveHeroStyle === 'enterprise-saas' ? (
+          effectiveHeroStyle === 'enterprise-ledger' ? (
+            <EnterpriseLedgerHero
+              content={content}
+              onOpenDemoModal={() => setShowDemoModal(true)}
+              showExploreLiveDemo={heroShowExploreLiveDemo}
+            />
+          ) : effectiveHeroStyle === 'enterprise-saas' ? (
             <EnterpriseSaaSHero
               content={content}
               onOpenDemoModal={() => setShowDemoModal(true)}
@@ -477,7 +494,7 @@ export const Home = () => {
                       id="hero-primary-cta"
                       className="w-full sm:w-auto px-7 py-3 rounded-lg text-[13px] font-semibold bg-[#1e293b] hover:bg-[#0f172a] text-white transition-all shadow-[0_1px_2px_rgba(0,0,0,0.08)] active:scale-[0.99] flex items-center justify-center gap-2 group cursor-pointer"
                     >
-                      {user ? (language === 'bn' ? 'লঞ্চ কনসোল' : 'Launch Console') : content.heroCtaPrimary}
+                      {user ? (language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard') : content.heroCtaPrimary}
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Link>
 
@@ -812,7 +829,7 @@ export const Home = () => {
         {/* Trending Bento Grid Features Section */}
         {!isMonochrome && content.showFeatures && (
           <section 
-            id="modules"
+            id="architecture"
             className="py-24 sm:py-32 relative overflow-hidden bg-white border-b border-slate-100 scroll-mt-20" 
           >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -935,7 +952,7 @@ export const Home = () => {
         {/* CTA Section */}
         {!isMonochrome && content.showCta && (
           <section 
-            id="architecture"
+            id="cta-section"
             className="relative py-24 sm:py-32 overflow-hidden text-center bg-[#fafafa] border-t border-slate-100 scroll-mt-20"
           >
             {/* Subtle grid pattern */}
@@ -958,7 +975,7 @@ export const Home = () => {
                 to={user ? "/dashboard" : "/register"}
                 className="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg text-sm font-semibold bg-[#1e293b] hover:bg-[#0f172a] text-white shadow-sm hover:shadow-md transition-all active:scale-[0.99]"
               >
-                {user ? (language === 'bn' ? 'লঞ্চ কনসোল' : 'Launch Console') : content.ctaButton}
+                {user ? (language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard') : content.ctaButton}
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -1100,7 +1117,7 @@ export const Home = () => {
                   ) : (
                     <>
                       <Sparkles className="w-3.5 h-3.5" />
-                      {language === 'bn' ? 'এক্সপেরিয়েন্স হাব শুরু করুন' : 'Launch Experience Hub'}
+                      {language === 'bn' ? 'এক্সপেরিয়েন্স হাব শুরু করুন' : 'Start Experience Hub'}
                     </>
                   )}
                 </button>

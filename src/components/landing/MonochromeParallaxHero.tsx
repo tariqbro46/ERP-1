@@ -21,6 +21,7 @@ import {
   Maximize2,
   RefreshCw,
   Globe,
+  LayoutDashboard,
   Menu,
   X
 } from 'lucide-react';
@@ -60,6 +61,7 @@ export const MonochromeParallaxHero: React.FC<MonochromeParallaxHeroProps> = ({
     companyLogo: settingsCompanyLogo,
     systemLogo: settingsSystemLogo,
     heroShowExperienceHubDemo,
+    heroShowFloatingQuickNav = true,
     heroEyebrowText,
     heroTitleText,
     heroSubtitleText,
@@ -96,7 +98,7 @@ export const MonochromeParallaxHero: React.FC<MonochromeParallaxHeroProps> = ({
     setIsMobileMenuOpen(false);
     const element = document.getElementById(sectionId);
     if (element) {
-      const topOffset = element.getBoundingClientRect().top + window.pageYOffset - 90;
+      const topOffset = Math.max(0, element.getBoundingClientRect().top + window.scrollY - 88);
       window.scrollTo({ top: topOffset, behavior: 'smooth' });
     }
   };
@@ -369,6 +371,20 @@ export const MonochromeParallaxHero: React.FC<MonochromeParallaxHeroProps> = ({
     ]
   };
 
+  const sanitizeHeroCopy = (val: string | undefined): string => {
+    if (!val) return '';
+    return val
+      .replace(/\bLaunch\s+Console\b/gi, language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard')
+      .replace(/\bOpen\s+Production\s+Console\b/gi, language === 'bn' ? 'ড্যাশবোর্ড খুলুন' : 'Open Dashboard')
+      .replace(/\bEnter\s+Production\s+Console\b/gi, language === 'bn' ? 'ড্যাশবোর্ডে প্রবেশ করুন' : 'Enter Dashboard')
+      .replace(/\bProduction\s+Console\b/gi, language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard')
+      .replace(/\bOpen\s+Console\b/gi, language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard')
+      .replace(/\bConsole\b/gi, language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard')
+      .replace(/\bLaunch\b/gi, language === 'bn' ? 'খুলুন' : 'Open')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  };
+
   // Resolve dynamic texts customizable from Founder Panel
   const displayTitle = heroTitleText || content.heroTitle || (
     language === 'bn' ? 'বাণিজ্যিক হিসাববিজ্ঞানের পরম নির্ভুলতা ও নিয়ন্ত্রণ।' : 'Absolute Truth in Commercial Ledgering.'
@@ -380,12 +396,12 @@ export const MonochromeParallaxHero: React.FC<MonochromeParallaxHeroProps> = ({
       : 'Atomic double-entry balance computation, multi-location godown stock velocity, and board-level liquidity reporting on zero-overhead in-memory persistence. Pure accounting truth.'
   );
 
-  const displayPrimaryCta = heroCtaPrimaryText || (
-    user ? (language === 'bn' ? 'ERP ড্যাশবোর্ড' : 'Open Production Console') : (language === 'bn' ? 'উৎপাদন কনসোলে যান' : 'Enter Production Console')
+  const displayPrimaryCta = sanitizeHeroCopy(heroCtaPrimaryText) || (
+    user ? (language === 'bn' ? 'ড্যাশবোর্ড খুলুন' : 'Open Dashboard') : (language === 'bn' ? 'ড্যাশবোর্ডে প্রবেশ করুন' : 'Enter Dashboard')
   );
 
-  const displayNavAction = heroNavActionText || (
-    user ? (language === 'bn' ? 'কনসোল' : 'Open Console') : (language === 'bn' ? 'সাইন ইন' : 'Launch Console')
+  const displayNavAction = sanitizeHeroCopy(heroNavActionText) || (
+    user ? (language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard') : (language === 'bn' ? 'সাইন ইন' : 'Dashboard')
   );
 
   const displayDemoCta = heroCtaDemoText || (
@@ -413,7 +429,7 @@ export const MonochromeParallaxHero: React.FC<MonochromeParallaxHeroProps> = ({
     >
       {/* =========================================================================
           1. DEDICATED NEOMORPHISM (SOFT UI) FLOATING TOP MENU
-          Includes REAL Company Logo or Brand Emblem, smooth section scrolling, and customizable launch button
+          Includes REAL Company Logo or Brand Emblem, smooth section scrolling, and customizable dashboard button
           ========================================================================= */}
       <header 
         className={cn(
@@ -538,7 +554,8 @@ export const MonochromeParallaxHero: React.FC<MonochromeParallaxHeroProps> = ({
                     boxShadow: '4px 4px 10px rgba(0,0,0,0.65), -2px -2px 8px rgba(255,255,255,0.05)'
                   }}
                 >
-                  <span>{language === 'bn' ? 'লঞ্চ কনসোল' : 'Launch Console'}</span>
+                  <LayoutDashboard className="w-3.5 h-3.5 text-neutral-300" />
+                  <span>{language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard'}</span>
                   <ArrowRight className="w-3.5 h-3.5 text-neutral-400 group-hover:translate-x-0.5 group-hover:text-white transition-all" />
                 </Link>
               ) : (
@@ -607,7 +624,18 @@ export const MonochromeParallaxHero: React.FC<MonochromeParallaxHeroProps> = ({
                 ))}
               </div>
 
-              {!user && (
+              {user ? (
+                <div className="pt-2 border-t border-white/[0.06]">
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="w-full py-2.5 rounded-xl bg-[#1c1e28] text-xs font-bold text-white text-center border border-white/[0.1] flex items-center justify-center gap-2"
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5 text-neutral-300" />
+                    <span>{language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard'}</span>
+                  </Link>
+                </div>
+              ) : (
                 <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between gap-2">
                   <Link
                     to="/login"
@@ -634,37 +662,39 @@ export const MonochromeParallaxHero: React.FC<MonochromeParallaxHeroProps> = ({
           FLOATING QUICK-NAV DOCK ON RIGHT-CENTER OF SCREEN
           Smoothly scrolls to Telemetry, Capabilities, and Architecture sections
           ========================================================================= */}
-      <div 
-        className="fixed right-3 sm:right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col items-end gap-2.5 pointer-events-auto select-none"
-        aria-label="Section Quick Navigation"
-      >
-        {[
-          { id: 'telemetry', label: language === 'bn' ? 'টেলিমেট্রি' : 'Telemetry', icon: Activity },
-          { id: 'modules', label: language === 'bn' ? 'ক্যাপাবিলিটিজ' : 'Capabilities', icon: Layers },
-          { id: 'architecture', label: language === 'bn' ? 'আর্কিটেকচার' : 'Architecture', icon: Cpu }
-        ].map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => scrollToSection(item.id)}
-              className="group relative flex items-center justify-end p-2 sm:p-2.5 rounded-2xl bg-[#121316]/95 hover:bg-[#181a20] border border-white/[0.08] hover:border-white/[0.2] text-neutral-300 hover:text-white transition-all cursor-pointer backdrop-blur-md active:scale-95"
-              style={{
-                boxShadow: '6px 6px 14px rgba(0,0,0,0.7), -3px -3px 8px rgba(255,255,255,0.035)'
-              }}
-              title={item.label}
-            >
-              <span className="hidden md:inline-block max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-300 ease-out text-xs font-mono font-bold text-neutral-200 px-0 group-hover:px-2.5">
-                {item.label}
-              </span>
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#16181f] flex items-center justify-center text-white border border-white/[0.06] group-hover:border-white/[0.18] transition-all">
-                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-300 group-hover:text-white transition-colors" />
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      {heroShowFloatingQuickNav !== false && (
+        <div 
+          className="fixed right-3 sm:right-6 top-1/2 -translate-y-1/2 z-40 flex flex-col items-end gap-2.5 pointer-events-auto select-none"
+          aria-label="Section Quick Navigation"
+        >
+          {[
+            { id: 'telemetry', label: language === 'bn' ? 'টেলিমেট্রি' : 'Telemetry', icon: Activity },
+            { id: 'modules', label: language === 'bn' ? 'ক্যাপাবিলিটিজ' : 'Capabilities', icon: Layers },
+            { id: 'architecture', label: language === 'bn' ? 'আর্কিটেকচার' : 'Architecture', icon: Cpu }
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => scrollToSection(item.id)}
+                className="group relative flex items-center justify-end p-2 sm:p-2.5 rounded-2xl bg-[#121316]/95 hover:bg-[#181a20] border border-white/[0.08] hover:border-white/[0.2] text-neutral-300 hover:text-white transition-all cursor-pointer backdrop-blur-md active:scale-95"
+                style={{
+                  boxShadow: '6px 6px 14px rgba(0,0,0,0.7), -3px -3px 8px rgba(255,255,255,0.035)'
+                }}
+                title={item.label}
+              >
+                <span className="hidden md:inline-block max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-300 ease-out text-xs font-mono font-bold text-neutral-200 px-0 group-hover:px-2.5">
+                  {item.label}
+                </span>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#16181f] flex items-center justify-center text-white border border-white/[0.06] group-hover:border-white/[0.18] transition-all">
+                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-300 group-hover:text-white transition-colors" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* =========================================================================
           2. WEBGL THREE.JS CANVAS (Background Spatial Monolith)
@@ -943,14 +973,14 @@ export const MonochromeParallaxHero: React.FC<MonochromeParallaxHeroProps> = ({
                 )}
               </div>
 
-              {/* Bottom Tactile Quick Link to Live Console */}
+              {/* Bottom Tactile Quick Link to Live Dashboard */}
               <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-neutral-400">
                 <span>{language === 'bn' ? 'সরাসরি ডাটাবেস লিঙ্ক' : 'Indexed Storage Verified'}</span>
                 <Link 
-                  to="/login"
+                  to={user ? "/dashboard" : "/login"}
                   className="text-white hover:text-neutral-300 flex items-center gap-1 transition-colors"
                 >
-                  <span>{language === 'bn' ? 'কনসোল লগইন' : 'Console Login'}</span>
+                  <span>{user ? (language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard') : (language === 'bn' ? 'ড্যাশবোর্ড লগইন' : 'Dashboard Login')}</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>

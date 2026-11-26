@@ -534,8 +534,8 @@ export const PrecisionEnterpriseHero: React.FC<PrecisionEnterpriseHeroProps> = (
               <span>
                 {user
                   ? isBn
-                    ? 'প্রোডাকশন কনসোল খুলুন'
-                    : 'Open Production Console'
+                    ? 'ড্যাশবোর্ড খুলুন'
+                    : 'Open Dashboard'
                   : isBn
                     ? 'বিনামূল্যে ট্রায়াল শুরু করুন'
                     : 'Start Free Trial'}

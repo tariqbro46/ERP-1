@@ -49,7 +49,7 @@ const STATIONS: Station[] = [
   { id: 'operations', name: 'Operational Matrix', code: '02 // ARCHITECTURE', xPct: 90, yPct: 100 },
   { id: 'intelligence', name: 'Financial Stream', code: '03 // TELEMETRY', xPct: 0, yPct: 200 },
   { id: 'resilience', name: 'Zero-Trust Shield', code: '04 // RESILIENCE', xPct: -90, yPct: 300 },
-  { id: 'nexus', name: 'Launch Nexus', code: '05 // ONBOARDING', xPct: 0, yPct: 400 }
+  { id: 'nexus', name: 'Dashboard Nexus', code: '05 // ONBOARDING', xPct: 0, yPct: 400 }
 ];
 
 export const ThreeInteractiveHero: React.FC<ThreeInteractiveHeroProps> = ({
@@ -691,7 +691,7 @@ export const ThreeInteractiveHero: React.FC<ThreeInteractiveHeroProps> = ({
         </section>
 
         {/* ------------------------------------------------------------- */}
-        {/* STATION 5: LAUNCH NEXUS (X: 0vw, Y: +400vh)                   */}
+        {/* STATION 5: DASHBOARD NEXUS (X: 0vw, Y: +400vh)                */}
         {/* ------------------------------------------------------------- */}
         <section className="absolute top-[400vh] left-0 w-screen h-screen flex flex-col items-center justify-center p-6 sm:p-12 text-center">
           <div className="max-w-3xl space-y-6 bg-slate-950/85 border border-white/20 p-10 sm:p-14 rounded-3xl backdrop-blur-2xl shadow-2xl shadow-black/80">

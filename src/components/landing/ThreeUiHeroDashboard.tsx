@@ -557,7 +557,7 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
                   id="threeui-hero-primary-cta"
                   className="w-full sm:w-auto px-7 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-[0_0_30px_rgba(6,182,212,0.4)] hover:shadow-[0_0_40px_rgba(6,182,212,0.6)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 group cursor-pointer border border-cyan-300/30"
                 >
-                  {user ? (language === 'bn' ? 'লঞ্চ কনসোল' : 'Launch Console') : content.heroCtaPrimary}
+                  {user ? (language === 'bn' ? 'ড্যাশবোর্ড' : 'Dashboard') : content.heroCtaPrimary}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               )}
@@ -1091,9 +1091,9 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
                           </p>
                         </div>
 
-                        {/* Bottom Launch Link */}
+                        {/* Bottom Dashboard Link */}
                         <div className="mt-4 pt-2 border-t border-slate-100 flex items-center gap-1 text-[9px] sm:text-[10px] uppercase font-bold tracking-wider text-slate-400 group-hover:text-blue-600 font-mono transition-colors">
-                          <span>LAUNCH CONSOLE</span>
+                          <span>OPEN DASHBOARD</span>
                           <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                         </div>
                       </div>

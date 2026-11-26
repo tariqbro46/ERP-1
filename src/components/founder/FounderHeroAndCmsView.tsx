@@ -28,6 +28,7 @@ import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../lib/firestore-errors';
 import { erpService } from '../../services/erpService';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { SiteContentEditor } from '../SiteContentEditor';
 import { AppNotification, UserProfile } from '../../types';
 import { cn } from '../../lib/utils';
@@ -52,8 +53,11 @@ export const FounderHeroAndCmsView: React.FC<FounderHeroAndCmsViewProps> = ({
   onDirtyChange,
   showNotification,
 }) => {
+  const { language } = useLanguage();
+  const isBn = language === 'bn';
   const {
     uiStyle,
+    systemConfig,
     updateSystemSettings,
     landingPageEnabled,
     heroDesignStyle,
@@ -67,6 +71,7 @@ export const FounderHeroAndCmsView: React.FC<FounderHeroAndCmsViewProps> = ({
     heroThreeUiEnableTiltDefault,
     heroShowExperienceHubDemo,
     heroShowExploreLiveDemo,
+    heroShowFloatingQuickNav,
     heroEyebrowText,
     heroTitleText,
     heroSubtitleText,
@@ -101,15 +106,16 @@ export const FounderHeroAndCmsView: React.FC<FounderHeroAndCmsViewProps> = ({
     scheduledAt: Timestamp.now(),
   });
 
-  // Hero Engine draft state
+  // Hero Engine draft state (read authoritatively from systemConfig first, fallback to resolved context)
+  const rawSavedHeroStyle = systemConfig?.heroDesignStyle ?? heroDesignStyle;
   const normalizedHeroStyle =
-    heroDesignStyle === 'three-matrix' || heroDesignStyle === 'three-interactive'
+    rawSavedHeroStyle === 'three-matrix' || rawSavedHeroStyle === 'three-interactive'
       ? 'monochrome-parallax'
-      : heroDesignStyle || 'monochrome-parallax';
+      : rawSavedHeroStyle || 'monochrome-parallax';
 
   const initialHeroSnapshot = useMemo(
     () => ({
-      landingPageEnabled: landingPageEnabled !== false,
+      landingPageEnabled: (systemConfig?.landingPageEnabled ?? landingPageEnabled) !== false,
       heroDesignStyle: normalizedHeroStyle,
       heroThreeUiTheme: heroThreeUiTheme || 'aurora-navy',
       heroThreeUiGlowColor: heroThreeUiGlowColor || 'cyan',
@@ -121,6 +127,7 @@ export const FounderHeroAndCmsView: React.FC<FounderHeroAndCmsViewProps> = ({
       heroThreeUiEnableTiltDefault: heroThreeUiEnableTiltDefault ?? false,
       heroShowExperienceHubDemo: heroShowExperienceHubDemo ?? false,
       heroShowExploreLiveDemo: heroShowExploreLiveDemo ?? true,
+      heroShowFloatingQuickNav: (systemConfig?.heroShowFloatingQuickNav ?? heroShowFloatingQuickNav) !== false,
       heroEyebrowText: heroEyebrowText || 'ERP ARCHITECTURE // SOVEREIGN FINANCIAL KERNEL',
       heroTitleText: heroTitleText || 'Absolute Truth in Commercial Ledgering.',
       heroSubtitleText:
@@ -137,6 +144,7 @@ export const FounderHeroAndCmsView: React.FC<FounderHeroAndCmsViewProps> = ({
       heroMetric3Label: heroMetric3Label || 'Quota Protection',
     }),
     [
+      systemConfig?.landingPageEnabled,
       landingPageEnabled,
       normalizedHeroStyle,
       heroThreeUiTheme,
@@ -149,6 +157,8 @@ export const FounderHeroAndCmsView: React.FC<FounderHeroAndCmsViewProps> = ({
       heroThreeUiEnableTiltDefault,
       heroShowExperienceHubDemo,
       heroShowExploreLiveDemo,
+      systemConfig?.heroShowFloatingQuickNav,
+      heroShowFloatingQuickNav,
       heroEyebrowText,
       heroTitleText,
       heroSubtitleText,
@@ -410,6 +420,54 @@ export const FounderHeroAndCmsView: React.FC<FounderHeroAndCmsViewProps> = ({
               </button>
             </div>
 
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-border bg-muted/20">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Sliders className={cn('w-4 h-4', heroDraft.heroShowFloatingQuickNav ? 'text-blue-500' : 'text-muted-foreground')} />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    {isBn ? 'ফ্লোটিং কুইক-ন্যাভ ডক (৩টি বাটন)' : 'Hero Floating Quick-Nav Buttons (3 Icons)'}
+                  </h4>
+                  <span
+                    className={cn(
+                      'text-[9px] uppercase px-2 py-0.5 rounded font-mono font-bold',
+                      heroDraft.heroShowFloatingQuickNav
+                        ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/20'
+                        : 'bg-slate-500/15 text-slate-400 border border-slate-500/20'
+                    )}
+                  >
+                    {heroDraft.heroShowFloatingQuickNav
+                      ? isBn ? 'চালু (ENABLED)' : 'ENABLED'
+                      : isBn ? 'বন্ধ (DISABLED)' : 'DISABLED'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {isBn
+                    ? 'হিরো পেজের ডান পাশে ভাসমান ৩টি সেকশন ন্যাভিগেশন বাটন (টেলিমেট্রি, ক্যাপাবিলিটিজ, আর্কিটেকচার) দেখান বা বন্ধ করুন।'
+                    : 'Enable or disable the 3 floating right-edge section jump buttons (Telemetry, Capabilities, Architecture) across Hero designs.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={heroDraft.heroShowFloatingQuickNav}
+                aria-label={isBn ? 'ফ্লোটিং কুইক-ন্যাভ বাটন চালু বা বন্ধ করুন' : 'Toggle Hero Floating Quick-Nav Buttons'}
+                onClick={() =>
+                  setHeroDraft((p) => ({ ...p, heroShowFloatingQuickNav: !p.heroShowFloatingQuickNav }))
+                }
+                className={cn(
+                  'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors',
+                  heroDraft.heroShowFloatingQuickNav ? 'bg-emerald-500' : 'bg-neutral-600'
+                )}
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition',
+                    heroDraft.heroShowFloatingQuickNav ? 'translate-x-5' : 'translate-x-0'
+                  )}
+                />
+              </button>
+            </div>
+
             <div className="flex items-center gap-2 border-b border-border pb-3">
               <LayoutDashboard className="w-4 h-4 text-primary" />
               <div>
@@ -425,34 +483,52 @@ export const FounderHeroAndCmsView: React.FC<FounderHeroAndCmsViewProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
                 {
+                  id: 'enterprise-ledger',
+                  title: isBn ? 'এন্টারপ্রাইজ লেজার ও ওয়ার্কবেঞ্চ' : 'Enterprise Ledger & Workbench',
+                  badge: isBn ? 'ওভারভিউ + ওয়ার্কস্পেস' : 'Entry + Workspace',
+                  desc: isBn
+                    ? 'এন্ট্রি/ওভারভিউ ও ওয়ার্কস্পেস মোডসহ দ্বি-তরফা ভাউচার, FIFO মাল্টি-গোডাউন স্টক, ১০টি কোর রিপোর্ট ও .xlsx এক্সপোর্ট প্রিভিউ।'
+                    : 'Editorial ERP ledger workbench with Entry/Overview & Workspace lens, interactive Dr/Cr voucher preview, FIFO multi-godown stock, and 10 Core Reports.',
+                },
+                {
                   id: 'precision-enterprise',
-                  title: 'Precision Editorial ERP',
-                  badge: 'Editorial Enterprise',
-                  desc: 'Architectural light editorial hero with live ERP workspace, General Ledger, FIFO Stock, and Mushak VAT modules.',
+                  title: isBn ? 'প্রিসিশন এডিটোরিয়াল ইআরপি' : 'Precision Editorial ERP',
+                  badge: isBn ? 'এডিটোরিয়াল এন্টারপ্রাইজ' : 'Editorial Enterprise',
+                  desc: isBn
+                    ? 'লাইভ ইআরপি ওয়ার্কস্পেস, জেনারেল লেজার, FIFO স্টক এবং মুশক ভ্যাট মডিউলসহ পরিচ্ছন্ন এডিটোরিয়াল হিরো।'
+                    : 'Architectural light editorial hero with live ERP workspace, General Ledger, FIFO Stock, and Mushak VAT modules.',
                 },
                 {
                   id: 'enterprise-saas',
-                  title: 'QuickBooks & Xero',
-                  badge: 'Enterprise SaaS',
-                  desc: 'Royal Blue & White enterprise SaaS hero with interactive MacBook Pro & tablet mockup and metric cards.',
+                  title: isBn ? 'এন্টারপ্রাইজ স্যাস মকআপ' : 'QuickBooks & Xero',
+                  badge: isBn ? 'এন্টারপ্রাইজ স্যাস' : 'Enterprise SaaS',
+                  desc: isBn
+                    ? 'ইন্টারেক্টিভ ল্যাপটপ ও ট্যাবলেট মকআপ এবং মেট্রিক কার্ডসহ রয়্যাল ব্লু ও হোয়াইট এন্টারপ্রাইজ স্যাস হিরো।'
+                    : 'Royal Blue & White enterprise SaaS hero with interactive MacBook Pro & tablet mockup and metric cards.',
                 },
                 {
                   id: 'monochrome-parallax',
-                  title: 'Monochrome Parallax 3D',
-                  badge: 'Three.js + Parallax',
-                  desc: 'Black & white monochromatic design with Three.js crystal monolith and dual-axis parallax scrolling.',
+                  title: isBn ? 'মনোক্রম প্যারালাক্স ৩ডি' : 'Monochrome Parallax 3D',
+                  badge: isBn ? 'Three.js + প্যারালাক্স' : 'Three.js + Parallax',
+                  desc: isBn
+                    ? 'Three.js ক্রিস্টাল মনোলিথ এবং ডুয়াল-অ্যাক্সিস প্যারালাক্স স্ক্রলিংসহ ব্ল্যাক অ্যান্ড হোয়াইট মনোক্রোম ডিজাইন।'
+                    : 'Black & white monochromatic design with Three.js crystal monolith and dual-axis parallax scrolling.',
                 },
                 {
                   id: 'threeui',
-                  title: 'ThreeUI 3D Hologram',
-                  badge: 'Isometric 3D Tilt',
-                  desc: 'Isometric 3D tilt perspective with particle constellation, live telemetry counters, and holographic aura.',
+                  title: isBn ? 'থ্রি-ইউআই ৩ডি হলোগ্রাম' : 'ThreeUI 3D Hologram',
+                  badge: isBn ? 'আইসোমেট্রিক ৩ডি টিল্ট' : 'Isometric 3D Tilt',
+                  desc: isBn
+                    ? 'পার্টিকেল কনস্টেলেশন, লাইভ টেলিমেট্রি কাউন্টার এবং হলোগ্রাফিক অরাসহ আইসোমেট্রিক ৩ডি টিল্ট পার্সপেক্টিভ।'
+                    : 'Isometric 3D tilt perspective with particle constellation, live telemetry counters, and holographic aura.',
                 },
                 {
                   id: 'default',
-                  title: 'Classic Clean Light SaaS',
-                  badge: 'Minimalist White',
-                  desc: 'Standard bright aesthetic with soft geometric vectors, flat dashboard card preview, and department tabs.',
+                  title: isBn ? 'ক্লাসিক ক্লিন লাইট স্যাস' : 'Classic Clean Light SaaS',
+                  badge: isBn ? 'মিনিমালিস্ট হোয়াইট' : 'Minimalist White',
+                  desc: isBn
+                    ? 'সফট জ্যামিতিক ভেক্টর, ফ্ল্যাট ড্যাশবোর্ড কার্ড প্রিভিউ এবং ডিপার্টমেন্ট ট্যাবসহ স্ট্যান্ডার্ড ব্রাইট লেআউট।'
+                    : 'Standard bright aesthetic with soft geometric vectors, flat dashboard card preview, and department tabs.',
                 },
               ].map((styleOpt) => {
                 const isSelected = heroDraft.heroDesignStyle === styleOpt.id;
@@ -482,7 +558,7 @@ export const FounderHeroAndCmsView: React.FC<FounderHeroAndCmsViewProps> = ({
                     <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
                       <span>{styleOpt.badge}</span>
                       <span className={isSelected ? 'text-primary font-bold' : ''}>
-                        {isSelected ? 'ACTIVE' : 'Select'}
+                        {isSelected ? (isBn ? 'সক্রিয় / ডিফল্ট' : 'ACTIVE') : (isBn ? 'নির্বাচন করুন' : 'Select')}
                       </span>
                     </div>
                   </button>
