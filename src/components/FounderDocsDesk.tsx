@@ -38,7 +38,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { cn } from '../lib/utils';
 import { Navbar } from './landing/Navbar';
 import { Footer } from './landing/Footer';
-import { ImageNotFoundFrame } from './ImageNotFoundFrame';
+import { AppScreenshotCard } from './AppScreenshotCard';
 
 type FilterMode = 'all' | 'linked' | 'pending';
 
@@ -976,34 +976,29 @@ export default function FounderDocsDesk() {
                       )}
                     </div>
 
-                    {selectedEffectiveUrl && !forcePendingPreview && imageState !== 'error' ? (
-                      <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-950/80 p-3 sm:p-4 flex items-center justify-center min-h-[220px]">
-                        <img
-                          src={selectedEffectiveUrl}
-                          alt={isBn ? selectedTarget.bnAlt : selectedTarget.alt}
-                          referrerPolicy="no-referrer"
-                          onLoad={(e) => {
-                            const img = e.currentTarget;
-                            setImageState('loaded');
-                            setImageDims({ w: img.naturalWidth, h: img.naturalHeight });
-                          }}
-                          onError={() => {
-                            setImageState('error');
-                            setImageDims(null);
-                          }}
-                          className="w-full h-auto max-h-[420px] object-contain rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900"
-                        />
-                      </div>
-                    ) : (
-                      <ImageNotFoundFrame
-                        className="w-full min-h-[240px] sm:min-h-[300px] rounded-xl"
-                        sublabel={
-                          imageState === 'error'
-                            ? t('docs.screenshot.loadError')
-                            : t('founderDesk.previewPendingDesc')
-                        }
-                      />
-                    )}
+                    <AppScreenshotCard
+                      src={selectedEffectiveUrl}
+                      alt={isBn ? selectedTarget.bnAlt : selectedTarget.alt}
+                      caption={isBn ? selectedTarget.bnCaption : selectedTarget.caption}
+                      route={selectedTarget.route}
+                      forcePending={forcePendingPreview}
+                      imageContainerClassName="p-3 sm:p-4"
+                      imageClassName="max-h-[420px]"
+                      fallbackClassName="min-h-[240px] sm:min-h-[300px]"
+                      fallbackSublabel={
+                        imageState === 'error'
+                          ? t('docs.screenshot.loadError')
+                          : t('founderDesk.previewPendingDesc')
+                      }
+                      onImageLoad={({ width, height }) => {
+                        setImageState('loaded');
+                        setImageDims({ w: width, h: height });
+                      }}
+                      onImageError={() => {
+                        setImageState('error');
+                        setImageDims(null);
+                      }}
+                    />
                   </div>
                 </div>
               </div>

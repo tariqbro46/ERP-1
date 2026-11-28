@@ -18,7 +18,6 @@ import {
   Layers,
   Lightbulb,
   Link2,
-  Maximize2,
   Monitor,
   Package,
   Printer,
@@ -29,7 +28,6 @@ import {
   ThumbsDown,
   ThumbsUp,
   Users,
-  X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -49,7 +47,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Navbar } from './landing/Navbar';
 import { Footer } from './landing/Footer';
 import ScreenshotManagerModal from './ScreenshotManagerModal';
-import { ImageNotFoundFrame } from './ImageNotFoundFrame';
+import { AppScreenshotCard } from './AppScreenshotCard';
 
 const isFounderOnlySection = (sec: DocSubSection) =>
   sec.id === 'set-screenshots' ||
@@ -242,8 +240,6 @@ export default function HelpPage() {
   const [storedScreenshots, setStoredScreenshots] = useState<Record<string, string>>(() =>
     readStoredScreenshots()
   );
-  const [hasImageError, setHasImageError] = useState(false);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [feedbackGiven, setFeedbackGiven] = useState<Record<string, 'yes' | 'no'>>({});
 
   useEffect(() => {
@@ -449,22 +445,6 @@ export default function HelpPage() {
 
     return { src, alt, caption, route };
   }, [activeSection, activeCategoryId, storedScreenshots, isBn, appName, t]);
-
-  useEffect(() => {
-    setHasImageError(false);
-    setIsLightboxOpen(false);
-  }, [resolvedScreenshot?.src, activeSection?.id]);
-
-  useEffect(() => {
-    if (!isLightboxOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsLightboxOpen(false);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isLightboxOpen]);
 
   return (
     <div
@@ -979,86 +959,22 @@ export default function HelpPage() {
                         )}
                       </div>
 
-                      {resolvedScreenshot && !hasImageError ? (
-                        <figure className="bg-white dark:bg-[#0d1320] rounded-xl border border-slate-200/90 dark:border-slate-800 overflow-hidden">
-                          <div className="px-4 sm:px-5 py-2.5 bg-slate-50/90 dark:bg-slate-900/70 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2 min-w-0 text-[11px] font-mono text-slate-600 dark:text-slate-300">
-                              <span className="truncate">{resolvedScreenshot.route}</span>
-                              <span aria-hidden="true">·</span>
-                              <span className="text-emerald-700 dark:text-emerald-400 font-semibold whitespace-nowrap shrink-0">
-                                {t('docs.screenshot.verifiedBadge')}
-                              </span>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => setIsLightboxOpen(true)}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer whitespace-nowrap shrink-0"
-                            >
-                              <Maximize2 className="w-3 h-3" />
-                              <span>{t('docs.screenshot.zoomIn')}</span>
-                            </button>
-                          </div>
-
-                          <div className="p-3 sm:p-5 bg-slate-100/70 dark:bg-slate-950/80 flex items-center justify-center">
-                            <img
-                              src={resolvedScreenshot.src}
-                              alt={resolvedScreenshot.alt}
-                              referrerPolicy="no-referrer"
-                              onClick={() => setIsLightboxOpen(true)}
-                              onError={() => setHasImageError(true)}
-                              className="w-full h-auto max-h-[540px] object-contain rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 cursor-zoom-in"
-                            />
-                          </div>
-
-                          <figcaption className="px-4 sm:px-5 py-3 border-t border-slate-200/80 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 leading-relaxed flex flex-wrap items-center justify-between gap-2">
-                            <span>{resolvedScreenshot.caption}</span>
-                            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                              {appName}
-                            </span>
-                          </figcaption>
-                        </figure>
-                      ) : (
-                        <figure className="bg-white dark:bg-[#0d1320] rounded-xl border border-slate-200/90 dark:border-slate-800 overflow-hidden">
-                          <div className="px-4 sm:px-5 py-2.5 bg-slate-50/90 dark:bg-slate-900/70 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2 min-w-0 text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                              <span className="truncate">
-                                {activeSection.path || `/${activeCategoryId}`}
-                              </span>
-                              <span aria-hidden="true">·</span>
-                              <span className="font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap shrink-0">
-                                {t('docs.screenshot.pendingBadge')}
-                              </span>
-                            </div>
-
-                            {isFounder && (
-                              <button
-                                type="button"
-                                onClick={() => setIsScreenshotModalOpen(true)}
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold text-slate-800 dark:text-slate-200 transition-colors cursor-pointer whitespace-nowrap shrink-0"
-                              >
-                                <Link2 className="w-3 h-3 text-blue-700 dark:text-blue-400" />
-                                <span>{t('docs.screenshot.upload')}</span>
-                              </button>
-                            )}
-                          </div>
-
-                          <ImageNotFoundFrame
-                            className="min-h-[240px] sm:min-h-[320px] rounded-none border-0"
-                          />
-
-                          <figcaption className="px-4 sm:px-5 py-3 border-t border-slate-200/80 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 leading-relaxed flex flex-wrap items-center justify-between gap-2">
-                            <span>
-                              {hasImageError
-                                ? t('docs.screenshot.loadError')
-                                : t('docs.screenshot.pendingDesc')}
-                            </span>
-                            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                              {appName}
-                            </span>
-                          </figcaption>
-                        </figure>
-                      )}
+                      <AppScreenshotCard
+                        src={resolvedScreenshot?.src}
+                        alt={
+                          resolvedScreenshot?.alt ||
+                          (isBn ? activeSection.bnTitle : activeSection.title)
+                        }
+                        caption={resolvedScreenshot?.caption || t('docs.screenshot.pendingDesc')}
+                        route={
+                          resolvedScreenshot?.route ||
+                          activeSection.path ||
+                          `/${activeCategoryId}`
+                        }
+                        imageContainerClassName="p-3 sm:p-5"
+                        imageClassName="max-h-[540px]"
+                        fallbackClassName="min-h-[240px] sm:min-h-[320px]"
+                      />
                     </div>
 
                     {/* Main Description & Purpose */}
@@ -1480,52 +1396,6 @@ export default function HelpPage() {
       </main>
 
       <Footer />
-
-      {isLightboxOpen && resolvedScreenshot && !hasImageError && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={resolvedScreenshot.alt}
-          onClick={() => setIsLightboxOpen(false)}
-          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-4 sm:p-8"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-w-5xl w-full bg-white dark:bg-[#0d1320] rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-2xl"
-          >
-            <div className="px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-950 dark:text-white truncate">
-                  {resolvedScreenshot.caption}
-                </p>
-                <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">
-                  {resolvedScreenshot.route}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsLightboxOpen(false)}
-                aria-label={t('docs.screenshot.closeLightbox')}
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-3 sm:p-5 bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
-              <img
-                src={resolvedScreenshot.src}
-                alt={resolvedScreenshot.alt}
-                referrerPolicy="no-referrer"
-                onError={() => {
-                  setHasImageError(true);
-                  setIsLightboxOpen(false);
-                }}
-                className="max-w-full max-h-[80vh] object-contain rounded-lg"
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {isFounder && (
         <ScreenshotManagerModal

@@ -8,9 +8,7 @@ import {
   FileText,
   Image as ImageIcon,
   LayoutDashboard,
-  Maximize2,
   Warehouse,
-  X,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -23,7 +21,7 @@ import {
   readStoredScreenshots,
   resolveShowcaseScreenshot,
 } from '../../constants/helpContent';
-import { ResilientImage } from '../ImageNotFoundFrame';
+import { AppScreenshotCard } from '../AppScreenshotCard';
 
 interface EnterpriseLedgerHeroProps {
   content?: Record<string, any>;
@@ -75,8 +73,6 @@ export const EnterpriseLedgerHero: React.FC<EnterpriseLedgerHeroProps> = ({
   const [storedScreenshots, setStoredScreenshots] = useState<Record<string, string>>(() =>
     readStoredScreenshots()
   );
-  const [hasImageError, setHasImageError] = useState(false);
-  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
   useEffect(() => {
     if (!hasManualFocusToggle) {
@@ -96,20 +92,6 @@ export const EnterpriseLedgerHero: React.FC<EnterpriseLedgerHeroProps> = ({
 
   const activeMeta = CAPABILITY_SLOTS[activeCapability];
   const resolved = resolveShowcaseScreenshot(activeMeta.slotKey, storedScreenshots);
-
-  useEffect(() => {
-    setHasImageError(false);
-    setIsLightboxOpen(false);
-  }, [activeMeta.slotKey, resolved.src]);
-
-  useEffect(() => {
-    if (!isLightboxOpen) return;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsLightboxOpen(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isLightboxOpen]);
 
   const activePlatformName = appIdentity?.appName || 'TallyFlow ERP';
   const activeTenantName = company?.name || settingsCompanyName || activePlatformName;
@@ -155,8 +137,6 @@ export const EnterpriseLedgerHero: React.FC<EnterpriseLedgerHeroProps> = ({
       icon: Factory,
     },
   ];
-
-  const isScreenshotReady = Boolean(resolved.src && !hasImageError);
 
   return (
     <section
@@ -520,114 +500,23 @@ export const EnterpriseLedgerHero: React.FC<EnterpriseLedgerHeroProps> = ({
                   </div>
                 </div>
 
-                {/* Real Application Screenshot Frame (falls back to ImageNotFoundFrame when URL is missing/broken) */}
-                <figure className="rounded-xl border border-slate-200/90 bg-white overflow-hidden">
-                  <div className="px-3.5 py-2 bg-slate-50/90 border-b border-slate-200/80 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0 text-[11px] font-mono text-slate-600">
-                      <span className="truncate">{resolved.route}</span>
-                      <span aria-hidden="true">·</span>
-                      <span
-                        className={cn(
-                          'font-semibold whitespace-nowrap shrink-0',
-                          isScreenshotReady ? 'text-emerald-700' : 'text-slate-500'
-                        )}
-                      >
-                        {isScreenshotReady
-                          ? t('docs.screenshot.verifiedBadge')
-                          : t('docs.screenshot.pendingBadge')}
-                      </span>
-                    </div>
-
-                    {isScreenshotReady && (
-                      <button
-                        type="button"
-                        onClick={() => setIsLightboxOpen(true)}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-slate-200 bg-white hover:bg-slate-100 text-[11px] font-semibold text-slate-700 transition-colors cursor-pointer whitespace-nowrap shrink-0"
-                      >
-                        <Maximize2 className="w-3 h-3" />
-                        <span>{t('docs.screenshot.zoomIn')}</span>
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="p-2.5 sm:p-3.5 bg-slate-100/70 flex items-center justify-center">
-                    <ResilientImage
-                      src={resolved.src || ''}
-                      alt={isBn ? resolved.bnAlt : resolved.alt}
-                      onError={() => setHasImageError(true)}
-                      onClick={isScreenshotReady ? () => setIsLightboxOpen(true) : undefined}
-                      className={cn(
-                        'w-full h-auto max-h-[340px] object-contain rounded-lg border border-slate-200/80 bg-white',
-                        isScreenshotReady && 'cursor-zoom-in'
-                      )}
-                      fallbackClassName="w-full min-h-[260px] sm:min-h-[320px] rounded-lg"
-                      fallbackSublabel={
-                        hasImageError
-                          ? t('docs.screenshot.loadError')
-                          : isBn
-                            ? resolved.bnCaption
-                            : resolved.caption
-                      }
-                    />
-                  </div>
-
-                  <figcaption className="px-3.5 py-2.5 border-t border-slate-200/80 text-[11.5px] text-slate-600 leading-relaxed flex flex-wrap items-center justify-between gap-2">
-                    <span>{isBn ? resolved.bnCaption : resolved.caption}</span>
-                    <span className="text-[10.5px] font-mono text-slate-400">
-                      {activePlatformName}
-                    </span>
-                  </figcaption>
-                </figure>
+                {/* Real Application Screenshot Frame (image first, route badge + caption below, hover zoom & click-to-expand) */}
+                <AppScreenshotCard
+                  forceLightSurface
+                  src={resolved.src}
+                  alt={isBn ? resolved.bnAlt : resolved.alt}
+                  caption={isBn ? resolved.bnCaption : resolved.caption}
+                  route={resolved.route}
+                  imageContainerClassName="p-2.5 sm:p-3.5"
+                  imageClassName="max-h-[340px]"
+                  fallbackClassName="min-h-[260px] sm:min-h-[320px]"
+                  fallbackSublabel={isBn ? resolved.bnCaption : resolved.caption}
+                />
               </div>
             </div>
           </motion.div>
         </div>
       </div>
-
-      {/* Lightbox Preview Modal */}
-      {isLightboxOpen && isScreenshotReady && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={isBn ? resolved.bnAlt : resolved.alt}
-          onClick={() => setIsLightboxOpen(false)}
-          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-4 sm:p-8"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-w-5xl w-full bg-white rounded-xl border border-slate-200/80 overflow-hidden shadow-2xl"
-          >
-            <div className="px-4 sm:px-5 py-3 border-b border-slate-200 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-950 truncate">
-                  {isBn ? resolved.bnCaption : resolved.caption}
-                </p>
-                <p className="text-[11px] font-mono text-slate-500 truncate">{resolved.route}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsLightboxOpen(false)}
-                aria-label={t('docs.screenshot.closeLightbox')}
-                className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-3 sm:p-5 bg-slate-100 flex items-center justify-center">
-              <img
-                src={resolved.src || ''}
-                alt={isBn ? resolved.bnAlt : resolved.alt}
-                referrerPolicy="no-referrer"
-                onError={() => {
-                  setHasImageError(true);
-                  setIsLightboxOpen(false);
-                }}
-                className="max-w-full max-h-[80vh] object-contain rounded-lg"
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 };
