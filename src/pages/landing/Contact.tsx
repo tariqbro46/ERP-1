@@ -8,14 +8,28 @@ import {
   CheckCircle2,
   AlertCircle,
   BookOpen,
+  Copy,
+  Check,
+  ExternalLink,
 } from 'lucide-react';
 import { Navbar } from '../../components/landing/Navbar';
 import { Footer } from '../../components/landing/Footer';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useSettings } from '../../contexts/SettingsContext';
-import { db } from '../../firebase';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { LATEST_VERSION } from '../../data/releaseNotes';
+
+type SupportTopicId = 'technical' | 'access' | 'billing' | 'onboarding';
+
+interface ComposedSupportRequest {
+  name: string;
+  email: string;
+  topicLabel: string;
+  subject: string;
+  message: string;
+  fullSubject: string;
+  formattedBody: string;
+  mailtoUrl: string;
+}
 
 export const Contact = () => {
   const { language, t } = useLanguage();
@@ -23,66 +37,127 @@ export const Contact = () => {
   const isBn = language === 'bn';
   const appName = appIdentity?.appName || 'TallyFlow ERP';
   const supportEmail = appIdentity.supportEmail;
-  const resolvedVersion = (appVersion || LATEST_VERSION || 'v1.9.9.31').startsWith('v')
-    ? appVersion || LATEST_VERSION || 'v1.9.9.31'
-    : `v${appVersion || LATEST_VERSION || '1.9.9.31'}`;
+  const resolvedVersion = (appVersion || LATEST_VERSION || 'v1.9.9.32').startsWith('v')
+    ? appVersion || LATEST_VERSION || 'v1.9.9.32'
+    : `v${appVersion || LATEST_VERSION || '1.9.9.32'}`;
 
-  const [formState, setFormState] = React.useState({
+  const [formState, setFormState] = React.useState<{
+    name: string;
+    email: string;
+    topicId: SupportTopicId;
+    subject: string;
+    message: string;
+  }>({
     name: '',
     email: '',
-    topic: isBn ? 'কারিগরি সহায়তা' : 'Technical Support',
+    topicId: 'technical',
     subject: '',
     message: '',
   });
-  const [isSubmitted, setIsSubmitted] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [submittedRequest, setSubmittedRequest] = React.useState<ComposedSupportRequest | null>(null);
   const [submitError, setSubmitError] = React.useState('');
+  const [copied, setCopied] = React.useState(false);
 
-  const topics = isBn
-    ? ['কারিগরি সহায়তা', 'অ্যাকাউন্ট ও অ্যাক্সেস রিকভারি', 'বিলিং ও সাবস্ক্রিপশন', 'নতুন কোম্পানি অনবোর্ডিং']
-    : ['Technical Support', 'Account & Access Recovery', 'Billing & Subscription', 'Company Onboarding'];
+  const topicOptions: { id: SupportTopicId; label: string }[] = [
+    { id: 'technical', label: t('contact.topic.technical') },
+    { id: 'access', label: t('contact.topic.access') },
+    { id: 'billing', label: t('contact.topic.billing') },
+    { id: 'onboarding', label: t('contact.topic.onboarding') },
+  ];
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
 
+    const trimmedName = formState.name.trim();
     const trimmedEmail = formState.email.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setSubmitError(
-        isBn
-          ? 'অনুগ্রহ করে একটি সঠিক ইমেইল ঠিকানা লিখুন।'
-          : 'Please enter a valid email address.'
-      );
+    const trimmedSubject = formState.subject.trim();
+    const trimmedMessage = formState.message.trim();
+
+    if (!trimmedName) {
+      setSubmitError(t('contact.error.nameRequired'));
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      await addDoc(collection(db, 'inquiries'), {
-        name: formState.name.trim(),
-        email: trimmedEmail,
-        subject: `[${formState.topic}] ${formState.subject.trim()}`,
-        message: formState.message.trim(),
-        createdAt: Timestamp.now(),
-      });
-      setIsSubmitted(true);
-      setFormState({
-        name: '',
-        email: '',
-        topic: topics[0],
-        subject: '',
-        message: '',
-      });
-    } catch (err) {
-      console.error('Error submitting inquiry:', err);
-      setSubmitError(
-        isBn
-          ? `বার্তা পাঠানো যায়নি। অনুগ্রহ করে সরাসরি ${supportEmail} ঠিকানায় ইমেইল করুন।`
-          : `Could not submit inquiry right now. Please email ${supportEmail} directly.`
-      );
-    } finally {
-      setIsSubmitting(false);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setSubmitError(t('contact.error.emailInvalid'));
+      return;
     }
+
+    if (!trimmedSubject) {
+      setSubmitError(t('contact.error.subjectRequired'));
+      return;
+    }
+
+    if (!trimmedMessage) {
+      setSubmitError(t('contact.error.messageRequired'));
+      return;
+    }
+
+    const topicLabel =
+      topicOptions.find((opt) => opt.id === formState.topicId)?.label || t('contact.topic.technical');
+    const fullSubject = `[${appName} - ${topicLabel}] ${trimmedSubject}`;
+    const formattedBody = [
+      `Name: ${trimmedName}`,
+      `Reply Email: ${trimmedEmail}`,
+      `Category: ${topicLabel}`,
+      `Application: ${appName} (${resolvedVersion})`,
+      '',
+      'Message:',
+      trimmedMessage,
+    ].join('\n');
+
+    const mailtoUrl = `mailto:${encodeURIComponent(supportEmail)}?subject=${encodeURIComponent(
+      fullSubject
+    )}&body=${encodeURIComponent(formattedBody)}`;
+
+    setSubmittedRequest({
+      name: trimmedName,
+      email: trimmedEmail,
+      topicLabel,
+      subject: trimmedSubject,
+      message: trimmedMessage,
+      fullSubject,
+      formattedBody,
+      mailtoUrl,
+    });
+    setCopied(false);
+
+    // Open user's configured email app cleanly without window.open or popup blockers
+    const mailLink = document.createElement('a');
+    mailLink.href = mailtoUrl;
+    mailLink.click();
+  };
+
+  const handleCopyMessage = async () => {
+    if (!submittedRequest) return;
+    const clipboardText = [
+      `To: ${supportEmail}`,
+      `Subject: ${submittedRequest.fullSubject}`,
+      '',
+      submittedRequest.formattedBody,
+    ].join('\n');
+
+    try {
+      await navigator.clipboard.writeText(clipboardText);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const handleNewRequest = () => {
+    setSubmittedRequest(null);
+    setSubmitError('');
+    setCopied(false);
+    setFormState({
+      name: '',
+      email: '',
+      topicId: 'technical',
+      subject: '',
+      message: '',
+    });
   };
 
   return (
@@ -158,8 +233,8 @@ export const Contact = () => {
               </h1>
               <p className="mt-4 text-[15px] sm:text-base text-slate-600 dark:text-slate-300 leading-[1.68] max-w-[60ch]">
                 {isBn
-                  ? 'কোম্পানি অনবোর্ডিং, অ্যাকাউন্ট রিকভারি, বিলিং বা কারিগরি সমস্যার জন্য নিচের ফর্মের মাধ্যমে অথবা সরাসরি সাপোর্ট ইমেইলে আমাদের সাথে যোগাযোগ করুন।'
-                  : 'Reach our support team for workspace onboarding, account access assistance, subscription licensing, or technical troubleshooting.'}
+                  ? 'কোম্পানি অনবোর্ডিং, অ্যাকাউন্ট রিকভারি, বিলিং বা কারিগরি সমস্যার জন্য নিচের বার্তা প্রস্তুতকারক ফর্ম অথবা সরাসরি সাপোর্ট ইমেইলের মাধ্যমে যোগাযোগ করুন।'
+                  : 'Use the support message composer below or email our support address directly for workspace onboarding, account access assistance, licensing, or technical troubleshooting.'}
               </p>
               <p className="mt-4 text-xs font-mono font-medium text-slate-500 dark:text-slate-400 tabular-nums">
                 {isBn
@@ -263,66 +338,162 @@ export const Contact = () => {
                   <div className="px-6 py-4 bg-slate-50/80 dark:bg-slate-900/70 border-b border-slate-200/85 dark:border-slate-800 flex items-center justify-between gap-2">
                     <div>
                       <h2 className="text-sm font-bold text-slate-950 dark:text-white">
-                        {isBn ? 'সাপোর্ট অনুরোধ ফর্ম' : 'Submit Support Request'}
+                        {t('contact.formTitle')}
                       </h2>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {isBn
-                          ? 'নিচের তথ্যগুলো পূরণ করে পাঠান, আমাদের টিম দ্রুত উত্তর দেবে।'
-                          : 'Complete the fields below and our support specialist will reply via email.'}
+                        {t('contact.formSubtitle', { email: supportEmail })}
                       </p>
                     </div>
-                    <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:inline">
-                      {isBn ? '২৪ কর্মঘণ্টা SLA' : '24h Response Target'}
+                    <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:inline whitespace-nowrap shrink-0">
+                      {t('contact.slaTarget')}
                     </span>
                   </div>
 
                   <div className="p-6 sm:p-8">
-                    {isSubmitted ? (
-                      <div className="py-12 text-center space-y-4 max-w-md mx-auto">
-                        <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950/60 rounded-full border border-emerald-200 dark:border-emerald-800 flex items-center justify-center mx-auto text-emerald-700 dark:text-emerald-400">
-                          <CheckCircle2 className="w-6 h-6" />
+                    {submittedRequest ? (
+                      <div className="space-y-6">
+                        <div className="flex items-start gap-3.5">
+                          <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-950/60 rounded-lg border border-emerald-200 dark:border-emerald-800 flex items-center justify-center shrink-0 text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-950 dark:text-white">
+                              {t('contact.confirm.title')}
+                            </h3>
+                            <p className="mt-1 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                              {t('contact.confirm.desc', { email: supportEmail })}
+                            </p>
+                          </div>
                         </div>
-                        <h3 className="text-xl font-bold text-slate-950 dark:text-white">
-                          {isBn ? 'আপনার বার্তা গৃহীত হয়েছে' : 'Inquiry Received'}
-                        </h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                          {isBn
-                            ? `ধন্যবাদ। ${appName} সাপোর্ট টিম আপনার বার্তাটি পেয়েছে এবং নির্ধারিত ইমেইলে উত্তর পাঠানো হবে।`
-                            : `Thank you. The ${appName} team has recorded your inquiry and will reply to your email address shortly.`}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => setIsSubmitted(false)}
-                          className="px-5 py-2.5 bg-slate-950 dark:bg-blue-600 text-white rounded-lg text-xs font-semibold hover:opacity-95 transition-opacity cursor-pointer"
-                        >
-                          {isBn ? 'নতুন বার্তা পাঠান' : 'Send Another Message'}
-                        </button>
+
+                        {/* Composed Request Details Preview */}
+                        <div className="rounded-lg border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 divide-y divide-slate-200/80 dark:divide-slate-800 text-xs">
+                          <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <span className="font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              {t('contact.confirm.to')}
+                            </span>
+                            <span className="font-mono font-semibold text-blue-700 dark:text-blue-400 select-all">
+                              {supportEmail}
+                            </span>
+                          </div>
+                          <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <span className="font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              {t('contact.confirm.from')}
+                            </span>
+                            <span className="font-medium text-slate-900 dark:text-slate-100">
+                              {submittedRequest.name} ({submittedRequest.email})
+                            </span>
+                          </div>
+                          <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <span className="font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              {t('contact.confirm.category')}
+                            </span>
+                            <span className="font-medium text-slate-900 dark:text-slate-100">
+                              {submittedRequest.topicLabel}
+                            </span>
+                          </div>
+                          <div className="px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <span className="font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              {t('contact.confirm.subject')}
+                            </span>
+                            <span className="font-semibold text-slate-950 dark:text-white break-words">
+                              {submittedRequest.fullSubject}
+                            </span>
+                          </div>
+                          <div className="p-4 space-y-1.5">
+                            <span className="font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
+                              {t('contact.confirm.message')}
+                            </span>
+                            <p className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                              {submittedRequest.message}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Clear Client Actions */}
+                        <div className="flex flex-wrap items-center gap-3 pt-1">
+                          <a
+                            href={submittedRequest.mailtoUrl}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-950 dark:bg-blue-600 text-white rounded-lg text-xs font-semibold hover:opacity-95 transition-opacity whitespace-nowrap"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            <span>{t('contact.confirm.openEmail')}</span>
+                          </a>
+
+                          <button
+                            type="button"
+                            onClick={handleCopyMessage}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                          >
+                            {copied ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                <span>{t('contact.confirm.copied')}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5" />
+                                <span>{t('contact.confirm.copyText')}</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setSubmittedRequest(null)}
+                            className="px-3.5 py-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors cursor-pointer whitespace-nowrap"
+                          >
+                            {t('contact.confirm.editDraft')}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleNewRequest}
+                            className="px-3.5 py-2.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer whitespace-nowrap ml-auto"
+                          >
+                            {t('contact.confirm.newRequest')}
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <form onSubmit={handleSubmit} className="space-y-5">
+                      <form onSubmit={handleSubmit} noValidate className="space-y-5">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
-                              {isBn ? 'আপনার নাম' : 'Full Name'}
+                            <label
+                              htmlFor="contact-full-name"
+                              className="text-xs font-semibold text-slate-700 dark:text-slate-300 block"
+                            >
+                              {t('contact.field.name')} <span className="text-rose-600">*</span>
                             </label>
                             <input
+                              id="contact-full-name"
                               type="text"
                               required
                               value={formState.name}
-                              onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+                              onChange={(e) => {
+                                setFormState({ ...formState, name: e.target.value });
+                                if (submitError) setSubmitError('');
+                              }}
                               className="w-full bg-slate-50/70 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 rounded-lg px-3.5 py-2.5 text-sm text-slate-950 dark:text-white outline-none transition-colors"
-                              placeholder={isBn ? 'যেমন: রফিকুল ইসলাম' : 'e.g. Rafiqul Islam'}
+                              placeholder={t('contact.field.namePlaceholder')}
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
-                              {isBn ? 'ইমেইল ঠিকানা' : 'Email Address'}
+                            <label
+                              htmlFor="contact-email"
+                              className="text-xs font-semibold text-slate-700 dark:text-slate-300 block"
+                            >
+                              {t('contact.field.email')} <span className="text-rose-600">*</span>
                             </label>
                             <input
+                              id="contact-email"
                               type="email"
                               required
                               value={formState.email}
-                              onChange={(e) => setFormState({ ...formState, email: e.target.value })}
+                              onChange={(e) => {
+                                setFormState({ ...formState, email: e.target.value });
+                                if (submitError) setSubmitError('');
+                              }}
                               className="w-full bg-slate-50/70 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 rounded-lg px-3.5 py-2.5 text-sm text-slate-950 dark:text-white outline-none transition-colors"
                               placeholder="name@company.com"
                             />
@@ -331,74 +502,90 @@ export const Contact = () => {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
-                              {isBn ? 'সহায়তার ধরন' : 'Support Category'}
+                            <label
+                              htmlFor="contact-category"
+                              className="text-xs font-semibold text-slate-700 dark:text-slate-300 block"
+                            >
+                              {t('contact.field.category')}
                             </label>
                             <select
-                              value={formState.topic}
-                              onChange={(e) => setFormState({ ...formState, topic: e.target.value })}
+                              id="contact-category"
+                              value={formState.topicId}
+                              onChange={(e) =>
+                                setFormState({ ...formState, topicId: e.target.value as SupportTopicId })
+                              }
                               className="w-full bg-slate-50/70 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 focus:border-blue-600 rounded-lg px-3.5 py-2.5 text-sm text-slate-950 dark:text-white outline-none transition-colors"
                             >
-                              {topics.map((topic) => (
-                                <option key={topic} value={topic}>
-                                  {topic}
+                              {topicOptions.map((topic) => (
+                                <option key={topic.id} value={topic.id}>
+                                  {topic.label}
                                 </option>
                               ))}
                             </select>
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
-                              {isBn ? 'বিষয়' : 'Subject'}
+                            <label
+                              htmlFor="contact-subject"
+                              className="text-xs font-semibold text-slate-700 dark:text-slate-300 block"
+                            >
+                              {t('contact.field.subject')} <span className="text-rose-600">*</span>
                             </label>
                             <input
+                              id="contact-subject"
                               type="text"
                               required
                               value={formState.subject}
-                              onChange={(e) => setFormState({ ...formState, subject: e.target.value })}
+                              onChange={(e) => {
+                                setFormState({ ...formState, subject: e.target.value });
+                                if (submitError) setSubmitError('');
+                              }}
                               className="w-full bg-slate-50/70 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 rounded-lg px-3.5 py-2.5 text-sm text-slate-950 dark:text-white outline-none transition-colors"
-                              placeholder={isBn ? 'সংক্ষিপ্ত বিষয় লিখুন' : 'Brief summary of your request'}
+                              placeholder={t('contact.field.subjectPlaceholder')}
                             />
                           </div>
                         </div>
 
                         <div className="space-y-1.5">
-                          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
-                            {isBn ? 'বিস্তারিত বার্তা' : 'Message'}
+                          <label
+                            htmlFor="contact-message"
+                            className="text-xs font-semibold text-slate-700 dark:text-slate-300 block"
+                          >
+                            {t('contact.field.message')} <span className="text-rose-600">*</span>
                           </label>
                           <textarea
+                            id="contact-message"
                             required
                             rows={5}
                             value={formState.message}
-                            onChange={(e) => setFormState({ ...formState, message: e.target.value })}
+                            onChange={(e) => {
+                              setFormState({ ...formState, message: e.target.value });
+                              if (submitError) setSubmitError('');
+                            }}
                             className="w-full bg-slate-50/70 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 focus:border-blue-600 focus:bg-white dark:focus:bg-slate-900 rounded-lg px-3.5 py-2.5 text-sm text-slate-950 dark:text-white outline-none transition-colors resize-none"
-                            placeholder={
-                              isBn
-                                ? 'আপনার প্রতিষ্ঠানের প্রয়োজন, অ্যাকাউন্ট ইস্যু বা কারিগরি প্রশ্ন বিস্তারিত লিখুন...'
-                                : 'Describe your organization requirement, account issue, or technical question...'
-                            }
+                            placeholder={t('contact.field.messagePlaceholder')}
                           />
                         </div>
 
                         {submitError && (
-                          <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2 font-medium">
+                          <div
+                            role="alert"
+                            className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-xs text-rose-700 dark:text-rose-300 flex items-center gap-2 font-medium"
+                          >
                             <AlertCircle className="w-4 h-4 shrink-0" />
                             <span>{submitError}</span>
                           </div>
                         )}
 
+                        <p className="text-[11.5px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                          {t('contact.submitNote')}
+                        </p>
+
                         <button
                           type="submit"
-                          disabled={isSubmitting}
-                          className="w-full py-3 bg-slate-950 dark:bg-blue-600 hover:opacity-95 text-white rounded-lg font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-opacity disabled:opacity-50"
+                          className="w-full py-3 bg-slate-950 dark:bg-blue-600 hover:opacity-95 text-white rounded-lg font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-opacity"
                         >
-                          {isSubmitting ? (
-                            <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                          ) : (
-                            <>
-                              <Send className="w-4 h-4" />
-                              <span>{isBn ? 'বার্তা পাঠান' : 'Send Message'}</span>
-                            </>
-                          )}
+                          <Send className="w-4 h-4" />
+                          <span>{t('contact.submitBtn')}</span>
                         </button>
                       </form>
                     )}

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { DEFAULT_APP_BRANDING, sanitizeAssetUrl } from '../../constants/appIdentity';
+import { ResilientImage } from '../ImageNotFoundFrame';
 
 export interface AuthLayoutProps {
   template: AuthTemplate;
@@ -211,15 +212,11 @@ export function ClientLogosRow({ clientLogosText }: { clientLogosText?: string }
   if (items.length === 1 && isUrlCheck(items[0])) {
     return (
       <div className="pt-5 border-t border-slate-100 w-full flex items-center justify-center">
-        <img 
-          src={items[0]} 
-          alt="Client Logos" 
+        <ResilientImage
+          src={items[0]}
+          alt="Client Logos"
           className="w-full h-auto max-h-24 sm:max-h-28 object-contain filter grayscale hover:grayscale-0 opacity-80 hover:opacity-100 transition-all"
-          referrerPolicy="no-referrer"
-          onError={(e) => {
-            const target = e.currentTarget;
-            target.style.display = 'none';
-          }}
+          fallbackClassName="w-full h-24 rounded-lg"
         />
       </div>
     );
@@ -554,11 +551,12 @@ export function ClassicSplitAuthLayout({
     <div className="min-h-screen w-full flex bg-background text-foreground overflow-hidden">
       {/* Left side art banner */}
       <div className="hidden lg:block lg:w-[52%] relative overflow-hidden bg-slate-950">
-        <img 
-          src={bgImage || "https://picsum.photos/seed/dribbble-login/1200/1600"} 
-          alt="Auth Backdrop" 
+        <ResilientImage
+          src={bgImage || "https://picsum.photos/seed/dribbble-login/1200/1600"}
+          alt="Auth Backdrop"
           className="absolute inset-0 w-full h-full object-cover opacity-80"
-          referrerPolicy="no-referrer"
+          fallbackClassName="absolute inset-0 w-full h-full rounded-none border-0"
+          fallbackTone="dark"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         <div className="absolute top-8 left-8 z-20">

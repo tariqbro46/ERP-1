@@ -30,9 +30,9 @@ export function ReleaseNotes() {
   const { isFounder } = useAuth();
 
   const appDisplayName = appIdentity?.appName || DEFAULT_APP_BRANDING.appName;
-  const resolvedVersion = (appVersion || LATEST_VERSION || 'v1.9.9.31').startsWith('v')
-    ? appVersion || LATEST_VERSION || 'v1.9.9.31'
-    : `v${appVersion || LATEST_VERSION || '1.9.9.31'}`;
+  const resolvedVersion = (appVersion || LATEST_VERSION || 'v1.9.9.32').startsWith('v')
+    ? appVersion || LATEST_VERSION || 'v1.9.9.32'
+    : `v${appVersion || LATEST_VERSION || '1.9.9.32'}`;
 
   const [selectedVersion, setSelectedVersion] = useState<string>(LATEST_VERSION);
   const [searchTerm, setSearchTerm] = useState('');

@@ -34,9 +34,9 @@ export const SystemStatus: React.FC = () => {
 
   const appName = appIdentity?.appName || 'TallyFlow ERP';
   const supportEmail = appIdentity.supportEmail;
-  const resolvedVersion = (appVersion || LATEST_VERSION || 'v1.9.9.31').startsWith('v')
-    ? appVersion || LATEST_VERSION || 'v1.9.9.31'
-    : `v${appVersion || LATEST_VERSION || '1.9.9.31'}`;
+  const resolvedVersion = (appVersion || LATEST_VERSION || 'v1.9.9.32').startsWith('v')
+    ? appVersion || LATEST_VERSION || 'v1.9.9.32'
+    : `v${appVersion || LATEST_VERSION || '1.9.9.32'}`;
 
   const subsystems = isBn
     ? [

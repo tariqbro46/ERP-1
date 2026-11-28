@@ -6,6 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { Building2, Plus, Check, Loader2, ArrowRight, Trash2, X, Upload } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { EnterpriseModal } from './ui/EnterpriseModal';
+import { ResilientImage } from './ImageNotFoundFrame';
 
 export function CompanyManagement() {
   const { user } = useAuth();
@@ -211,12 +212,14 @@ export function CompanyManagement() {
               <div className="space-y-1">
                 <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">{t('company.logo')}</label>
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 border border-dashed border-border flex items-center justify-center bg-background overflow-hidden">
-                    {newCompany.logo_url ? (
-                      <img src={newCompany.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                    ) : (
-                      <Building2 className="w-5 h-5 text-gray-400 opacity-20" />
-                    )}
+                  <div className="w-16 h-16 border border-dashed border-border rounded-lg flex items-center justify-center bg-background overflow-hidden shrink-0">
+                    <ResilientImage
+                      src={newCompany.logo_url}
+                      alt="Logo"
+                      className="w-full h-full object-contain"
+                      fallbackClassName="w-full h-full border-0 rounded-none"
+                      compact
+                    />
                   </div>
                   <label className="flex-1 cursor-pointer bg-foreground/5 border border-border hover:bg-foreground/10 transition-all p-2 text-center">
                     <span className="text-[9px] font-bold uppercase tracking-widest text-foreground">{t('common.upload')} {t('company.logo')}</span>
@@ -270,7 +273,13 @@ export function CompanyManagement() {
                         user?.companyId === company.id ? "border-foreground" : "border-border hover:border-gray-500"
                       )}>
                         {company.logo_url ? (
-                          <img src={company.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                          <ResilientImage
+                            src={company.logo_url}
+                            alt="Logo"
+                            className="w-full h-full object-contain"
+                            fallbackClassName="w-full h-full border-0 rounded-none"
+                            compact
+                          />
                         ) : (
                           <div className={cn(
                             "w-full h-full flex items-center justify-center",
@@ -413,11 +422,13 @@ export function CompanyManagement() {
                         <label className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Company Logo</label>
                         <div className="flex items-center gap-4">
                           <div className="w-16 h-16 rounded-xl border border-dashed border-border flex items-center justify-center bg-background overflow-hidden shrink-0">
-                            {editForm.logo_url ? (
-                              <img src={editForm.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                            ) : (
-                              <Building2 className="w-6 h-6 text-muted-foreground/40" />
-                            )}
+                            <ResilientImage
+                              src={editForm.logo_url}
+                              alt="Logo"
+                              className="w-full h-full object-contain"
+                              fallbackClassName="w-full h-full border-0 rounded-none"
+                              compact
+                            />
                           </div>
                           <label className="flex-1 cursor-pointer bg-background border border-border hover:bg-muted rounded-lg transition-all px-3.5 py-2.5 text-center flex items-center justify-center gap-2">
                             <Upload className="w-3.5 h-3.5 text-muted-foreground" />

@@ -22,10 +22,80 @@ export interface ReleaseVersion {
   bugFixes: ReleaseNoteItem[];
 }
 
-export const LATEST_VERSION = "v1.9.9.31";
+export const LATEST_VERSION = "v1.9.9.32";
 export const LAST_SEEN_VERSION_KEY = "tallyflow_last_seen_release_version";
 
 export const RELEASE_NOTES: ReleaseVersion[] = [
+  {
+    version: "v1.9.9.32",
+    releaseDate: "November 27, 2026",
+    bnReleaseDate: "২৭ নভেম্বর, ২০২৬",
+    title: "Enterprise Ledger & Workbench Public Suite, Authentic App Screen Captures, Founder Docs Desk & Resilient Image Frames",
+    bnTitle: "এন্টারপ্রাইজ লেজার ও ওয়ার্কবেঞ্চ পাবলিক সুইট, আসল অ্যাপ স্ক্রিনশট, ফাউন্ডার ডকস ডেস্ক ও রেজিলিয়েন্ট ইমেজ ফ্রেম",
+    summary: "Completed the public-facing Enterprise Ledger & Workbench visual unification across Docs (13 chapters, 42 sections), Home Hero, Features Explorer, Contact, and supporting pages—replacing simulated mockups with external-URL real screenshot slots, adding a dedicated lightweight Founder Docs & Link Desk (/founder-desk), introducing the global ImageNotFoundFrame fallback, and upgrading Contact support submission to a transparent browser email draft flow with zero extra Firestore reads.",
+    bnSummary: "পাবলিক ডকুমেন্টেশন (১৩টি অধ্যায়, ৪২টি সেকশন), হোম হিরো, ফিচার্স এক্সপ্লোরার ও কন্টাক্ট পেজসহ সব পাবলিক পৃষ্ঠায় এন্টারপ্রাইজ লেজার ও ওয়ার্কবেঞ্চ ডিজাইন সম্পন্ন করা হয়েছে। সিমুলেটেড মকআপ সরিয়ে এক্সটার্নাল URL-ভিত্তিক আসল স্ক্রিনশট স্লট, স্বতন্ত্র ফাউন্ডার ডকস ডেস্ক (/founder-desk), গ্লোবাল ImageNotFoundFrame ফলব্যাক এবং কন্টাক্ট পেজে স্বচ্ছ ব্রাউজার ইমেইল ড্রাফট প্রবাহ যুক্ত করা হয়েছে—কোনো অতিরিক্ত Firestore রিড ছাড়াই।",
+    isLatest: true,
+    newFeatures: [
+      {
+        id: "feat-enterprise-ledger-docs-public",
+        title: "Enterprise Ledger & Workbench Docs & Public Pages Suite",
+        bnTitle: "ডকুমেন্টেশন ও পাবলিক পেজে এন্টারপ্রাইজ লেজার ও ওয়ার্কবেঞ্চ শেল",
+        description: "Upgraded Docs (/docs) with the sticky left chapter index, Ctrl+K quick search, On-This-Page anchor rail, and polished content blocks across all 13 chapters and 42 sections—aligned with unified Navbar, breadcrumb, and Footer across all public pages.",
+        bnDescription: "ডকুমেন্টেশন পেজে (/docs) স্টিকি বাম সাইডবার, Ctrl+K সার্চ, ডানদিকের অ্যাংকর রেল এবং ১৩টি অধ্যায় ও ৪২টি সেকশনের সম্পূর্ণ কন্টেন্ট ব্লক এন্টারপ্রাইজ লেজার ও ওয়ার্কবেঞ্চ স্ট্যান্ডার্ডে উন্নীত করা হয়েছে।",
+        module: "Public & Docs",
+        badge: "NEW"
+      },
+      {
+        id: "feat-real-screenshot-slots-hero-features-docs",
+        title: "Authentic App Screenshot Showcase Across Home Hero, Features & Docs",
+        bnTitle: "হোম হিরো, ফিচার্স ও ডকুমেন্টেশনে আসল অ্যাপ স্ক্রিনশট স্লট",
+        description: "Replaced simulated UI mockups in Docs, the Home Hero architecture workbench, and the Features Functional Module Explorer with real application screenshot slots driven by validated external https:// image URLs and interactive lightbox previews.",
+        bnDescription: "ডকুমেন্টেশন, হোম হিরো প্রিভিউ এবং ফিচার্স পেজের Functional Module Explorer-এর সিমুলেটেড মকআপগুলো সরিয়ে এক্সটার্নাল https:// ইমেজ URL-চালিত আসল স্ক্রিনশট ভিউয়ার ও লাইটবক্স যুক্ত করা হয়েছে।",
+        module: "Showcase & Media",
+        badge: "UI"
+      },
+      {
+        id: "feat-founder-docs-desk",
+        title: "Dedicated Lightweight Founder Docs & Link Desk (/founder-desk)",
+        bnTitle: "স্বতন্ত্র ও হালকা ফাউন্ডার ডকস ও লিংক ডেস্ক (/founder-desk)",
+        description: "Added a founder-guarded workspace separate from FounderPanel to assign, live-verify, and export external screenshot URLs across Docs chapters, Home Hero tabs, and Features modules as TypeScript or JSON with zero Firestore reads.",
+        bnDescription: "FounderPanel-কে ভারী না করে ফাউন্ডার-সুরক্ষিত আলাদা ওয়ার্কস্পেস (/founder-desk) যুক্ত করা হয়েছে, যেখান থেকে ডকস, হোম হিরো ও ফিচার্সের স্ক্রিনশট URL যুক্ত, লাইভ যাচাই ও এক্সপোর্ট করা যায়।",
+        module: "Founder Workspace",
+        badge: "FOUNDER"
+      },
+      {
+        id: "feat-global-image-not-found-frame",
+        title: "Global ResilientImage & ImageNotFoundFrame Standard",
+        bnTitle: "গ্লোবাল ResilientImage ও ImageNotFoundFrame ফলব্যাক ফ্রেম",
+        description: "Replaced broken image placeholders and raw error icons across Docs, public showcases, dashboard charts, auth headers, and report branding headers with a crisp frame displaying the ImageOff symbol above 'image not found' text.",
+        bnDescription: "ছবি না থাকলে বা লোড ব্যর্থ হলে ডকস, পাবলিক প্রিভিউ, অথেনটিকেশন ও রিপোর্ট হেডারসহ সর্বত্র ভাঙা ছবির বদলে পরিচ্ছন্ন ফ্রেমে আইকন ও 'image not found' বার্তা প্রদর্শনের ব্যবস্থা করা হয়েছে।",
+        module: "Media Resilience",
+        badge: "CORE"
+      }
+    ],
+    improvements: [
+      {
+        id: "imp-contact-honest-email-draft",
+        title: "Honest Contact Support Request Draft & Copy Workflow",
+        bnTitle: "কন্টাক্ট পেজে স্বচ্ছ সাপোর্ট মেসেজ ড্রাফট ও কপি প্রবাহ",
+        description: "Updated the Contact page support form with 1-to-1 EN/BN validation, formatted mailto dispatch, one-click message copy for webmail, and clear transparency notes without unverified backend promises or extra database calls.",
+        bnDescription: "কন্টাক্ট পেজের সাপোর্ট ফর্মে বাংলা ও ইংরেজি ভ্যালিডেশন, সরাসরি ইমেইল অ্যাপ খোলার ব্যবস্থা, ওয়েবমেইলের জন্য এক-ক্লিক কপি এবং স্বচ্ছ নির্দেশনা যুক্ত করা হয়েছে।",
+        module: "Support & Contact",
+        badge: "IMPROVEMENT"
+      }
+    ],
+    bugFixes: [
+      {
+        id: "fix-zero-base64-screenshot-urls",
+        title: "Blocked Data URI / Base64 Screenshot Bloat & Preserved .xlsx Parity",
+        bnTitle: "Base64 ইমেজ ব্লব প্রতিরোধ ও .xlsx এক্সপোর্ট মানদণ্ড সুরক্ষা",
+        description: "Enforced external URL normalization (https://, http://, or root /paths) across screenshot storage helpers while maintaining full .xlsx export standards and 1-to-1 English/Bangla localization parity.",
+        bnDescription: "স্ক্রিনশট স্টোরেজে বড় base64 বা ফাইল ব্লব নিষিদ্ধ করে কেবল বৈধ এক্সটার্নাল URL অনুমোদন নিশ্চিত করা হয়েছে এবং সর্বত্র .xlsx মানদণ্ড ও বাংলা/ইংরেজি সমতা বজায় রাখা হয়েছে।",
+        module: "Validation & Quota",
+        badge: "FIX"
+      }
+    ]
+  },
   {
     version: "v1.9.9.31",
     releaseDate: "November 25, 2026",
@@ -34,7 +104,7 @@ export const RELEASE_NOTES: ReleaseVersion[] = [
     bnTitle: "এন্টারপ্রাইজ UI/UX আপগ্রেড, প্রশস্ত মডাল ও ফুল ব্লার, ফ্ল্যাশ-মুক্ত ওপেনিং এবং রিপোর্ট প্রিসিশন",
     summary: "Complete enterprise UI/UX transformation across the application shell, navigation, Dashboard, Voucher Entry, operational masters, and all 10 core accounting reports—featuring unified wide EnterpriseModal dialogs with crisp topbar/sidebar backdrop blur, global and per-page SkeletonLoader ON/OFF controls, flash-free default landing resolution, tabular-nums alignment, and top-aligned Voucher Entry inventory rows.",
     bnSummary: "পুরো অ্যাপের শেল, নেভিগেশন, ড্যাশবোর্ড, ভাউচার এন্ট্রি, অপারেশনাল স্ক্রিন এবং ১০টি মূল অ্যাকাউন্টিং রিপোর্টে সম্পূর্ণ এন্টারপ্রাইজ UI/UX আপগ্রেড সম্পন্ন করা হয়েছে। এতে রয়েছে প্রশস্ত EnterpriseModal পপআপ ও টপবার/সাইডবার ব্লার, গ্লোবাল ও পেজ-ভিত্তিক SkeletonLoader অন/অফ নিয়ন্ত্রণ, ফ্ল্যাশ-মুক্ত ডিফল্ট পেজ ওপেনিং, tabular-nums সারিবদ্ধকরণ এবং ভাউচার এন্ট্রির আইটেম সারির নির্ভুল টপ-অ্যালাইনমেন্ট।",
-    isLatest: true,
+    isLatest: false,
     newFeatures: [
       {
         id: "feat-enterprise-ui-overhaul",

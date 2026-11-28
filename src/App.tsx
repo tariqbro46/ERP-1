@@ -79,6 +79,7 @@ import OrderEntry from './components/OrderEntry';
 import { MachineManagement } from './components/MachineManagement';
 import OrderReports from './components/OrderReports';
 import FounderPanel from './components/FounderPanel';
+import FounderDocsDesk from './components/FounderDocsDesk';
 import SubscriptionRequired from './components/SubscriptionRequired';
 import { SubscriptionPage } from './components/SubscriptionPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -2886,6 +2887,16 @@ function AppContent() {
         <Route path="/release-notes" element={<ReleaseNotes />} />
         <Route path="/whats-new" element={<ReleaseNotes />} />
         <Route path="/changelog" element={<ReleaseNotes />} />
+
+        {/* Dedicated Lightweight Founder Docs & Link Desk (Strictly Founder-Gated) */}
+        <Route
+          path="/founder-desk"
+          element={isFounder ? <FounderDocsDesk /> : <Navigate to={user ? '/dashboard' : '/login'} replace />}
+        />
+        <Route
+          path="/founder-content-desk"
+          element={isFounder ? <FounderDocsDesk /> : <Navigate to={user ? '/dashboard' : '/login'} replace />}
+        />
         
         {/* Auth Pages */}
         <Route path="/login" element={

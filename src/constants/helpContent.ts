@@ -79,6 +79,229 @@ export interface FieldDefinition {
   required?: boolean;
 }
 
+export interface DocScreenshotSpec {
+  /** External image URL (e.g. 'https://cdn.example.com/screenshots/dashboard.png') or path under /public */
+  src: string;
+  alt: string;
+  bnAlt: string;
+  caption: string;
+  bnCaption: string;
+  route?: string;
+}
+
+/**
+ * Validates and normalizes screenshot URLs (accepts http://, https://, or root-relative /... paths;
+ * rejects empty strings and base64 data: blobs to avoid storing images inside app state).
+ */
+export function normalizeScreenshotUrl(raw?: string | null): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (/^data:/i.test(trimmed) || /^javascript:/i.test(trimmed)) return null;
+  if (trimmed.startsWith('/')) return trimmed;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+      return parsed.toString();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Centralized mapping of real TallyFlow ERP screenshots by section ID (preferred)
+ * or category ID fallback. Link externally hosted screenshots (https://...) or
+ * root-relative static assets here.
+ *
+ * Example:
+ * 'gs-interface': {
+ *   src: 'https://assets.example.com/tallyflow/dashboard-overview.png',
+ *   alt: 'TallyFlow ERP Executive Dashboard showing Cash, Bank, Sales, and Recent Activity',
+ *   bnAlt: 'TallyFlow ERP এক্সিকিউটিভ ড্যাশবোর্ড',
+ *   caption: 'Executive Dashboard with live Cash/Bank summary and pinned shortcuts.',
+ *   bnCaption: 'লাইভ ক্যাশ/ব্যাংক সারাংশ ও দ্রুত শর্টকাটসহ এক্সিকিউটিভ ড্যাশবোর্ড।',
+ *   route: '/dashboard',
+ * }
+ */
+export const DOC_SCREENSHOTS: Record<string, DocScreenshotSpec> = {};
+
+export type ShowcaseGroup = 'hero' | 'features';
+
+export interface ShowcaseScreenshotSlot {
+  key: string;
+  group: ShowcaseGroup;
+  tabId: string;
+  title: string;
+  bnTitle: string;
+  description: string;
+  bnDescription: string;
+  route: string;
+  alt: string;
+  bnAlt: string;
+}
+
+export const SHOWCASE_SCREENSHOT_SLOTS: ShowcaseScreenshotSlot[] = [
+  {
+    key: 'hero-vouchers',
+    group: 'hero',
+    tabId: 'accounting',
+    title: 'Home Hero · Vouchers & Double-Entry',
+    bnTitle: 'হোম হিরো · ভাউচার ও ডাবল-এন্ট্রি',
+    description: 'Balanced Sales, Purchase, Receipt, Payment, Contra, and Journal voucher entry with live running ledger balances.',
+    bnDescription: 'রানিং লেজার ব্যালেন্স ও অটো-সিরিয়ালসহ সেলস, পারচেজ, রিসিট, পেমেন্ট, কন্ট্রা ও জার্নাল ভাউচার এন্ট্রি।',
+    route: '/vouchers/new',
+    alt: 'TallyFlow ERP New Voucher Entry screen showing double-entry debit and credit lines',
+    bnAlt: 'TallyFlow ERP নতুন ভাউচার এন্ট্রি স্ক্রিন',
+  },
+  {
+    key: 'hero-godowns',
+    group: 'hero',
+    tabId: 'inventory',
+    title: 'Home Hero · Godowns & Stock Summary',
+    bnTitle: 'হোম হিরো · গোডাউন ও স্টক সামারি',
+    description: 'Multi-godown FIFO stock tracking, batch numbers, and warehouse-wise closing quantities and valuation.',
+    bnDescription: 'মাল্টি-গোডাউন FIFO স্টক ট্র্যাকিং, ব্যাচ নম্বর এবং গুদামভিত্তিক মজুদ ও মূল্যায়ন।',
+    route: '/reports/stock',
+    alt: 'TallyFlow ERP Stock Summary across multiple godowns with FIFO valuation',
+    bnAlt: 'TallyFlow ERP মাল্টি-গোডাউন স্টক সামারি স্ক্রিন',
+  },
+  {
+    key: 'hero-reports',
+    group: 'hero',
+    tabId: 'reports',
+    title: 'Home Hero · 10 Core Financial Reports',
+    bnTitle: 'হোম হিরো · ১০টি মূল আর্থিক রিপোর্ট',
+    description: 'Trial Balance, Daybook, Balance Sheet, P&L, Cash Flow, and Ratio Analysis with structured .xlsx and A4 PDF export.',
+    bnDescription: 'ট্রায়াল ব্যালেন্স, ডেবুক, ব্যালেন্স শিট, লাভ-ক্ষতি, ক্যাশ ফ্লো ও অনুপাত বিশ্লেষণ—.xlsx ও A4 PDF এক্সপোর্টসহ।',
+    route: '/reports',
+    alt: 'TallyFlow ERP Core Financial Reports directory and export workbench',
+    bnAlt: 'TallyFlow ERP মূল আর্থিক রিপোর্ট ও এক্সপোর্ট স্ক্রিন',
+  },
+  {
+    key: 'hero-operations',
+    group: 'hero',
+    tabId: 'operations',
+    title: 'Home Hero · Ops, Payroll & RBAC',
+    bnTitle: 'হোম হিরো · অপারেশনস, পেরোল ও RBAC',
+    description: 'Production orders, attendance & salary sheets, multi-company isolation, and role-based access control.',
+    bnDescription: 'উৎপাদন অর্ডার, উপস্থিতি ও মাসিক স্যালারি শিট, মাল্টি-কোম্পানি ও রোল-ভিত্তিক পারমিশন।',
+    route: '/payroll',
+    alt: 'TallyFlow ERP Payroll, Operations, and Role-Based Permissions screen',
+    bnAlt: 'TallyFlow ERP পেরোল, অপারেশনস ও পারমিশন স্ক্রিন',
+  },
+  {
+    key: 'features-vouchers',
+    group: 'features',
+    tabId: 'vouchers',
+    title: 'Features Explorer · 01. Vouchers & Ledgers',
+    bnTitle: 'ফিচার এক্সপ্লোরার · ০১. ভাউচার ও লেজার',
+    description: 'Full voucher entry workspace supporting all 8 accounting and stock voucher types with auto-serial counters.',
+    bnDescription: 'অটো-সিরিয়াল কাউন্টারসহ ৮ ধরনের অ্যাকাউন্টিং ও স্টক ভাউচার এন্ট্রি ওয়ার্কস্পেস।',
+    route: '/vouchers/new',
+    alt: 'TallyFlow ERP Voucher Entry and Ledger posting workspace',
+    bnAlt: 'TallyFlow ERP ভাউচার ও লেজার পোস্টিং স্ক্রিন',
+  },
+  {
+    key: 'features-inventory',
+    group: 'features',
+    tabId: 'inventory',
+    title: 'Features Explorer · 02. Multi-Godown Stock',
+    bnTitle: 'ফিচার এক্সপ্লোরার · ০২. মাল্টি-গোডাউন স্টক',
+    description: 'Live inventory health monitor with warehouse stock distribution, reorder alerts, and integer/decimal unit rules.',
+    bnDescription: 'গোডাউনভিত্তিক স্টক, লো-স্টক অ্যালার্ট এবং Pcs/Kg ইউনিট নিয়ন্ত্রণসহ ইনভেন্টরি ড্যাশবোর্ড।',
+    route: '/inventory',
+    alt: 'TallyFlow ERP Inventory Overview and Multi-Godown Stock monitor',
+    bnAlt: 'TallyFlow ERP ইনভেন্টরি ও মাল্টি-গোডাউন স্টক স্ক্রিন',
+  },
+  {
+    key: 'features-production',
+    group: 'features',
+    tabId: 'production',
+    title: 'Features Explorer · 03. Production & Orders',
+    bnTitle: 'ফিচার এক্সপ্লোরার · ০৩. উৎপাদন ও অর্ডার',
+    description: 'Customer production orders, machine allocation, raw material consumption, and finished goods stock conversion.',
+    bnDescription: 'গ্রাহক উৎপাদন অর্ডার, মেশিন বরাদ্দ, কাঁচামাল খরচ ও ফিনিশড গুডস রূপান্তর।',
+    route: '/production/orders',
+    alt: 'TallyFlow ERP Production Orders and Manufacturing tracking screen',
+    bnAlt: 'TallyFlow ERP উৎপাদন অর্ডার ও ম্যানুফ্যাকচারিং স্ক্রিন',
+  },
+  {
+    key: 'features-payroll',
+    group: 'features',
+    tabId: 'payroll',
+    title: 'Features Explorer · 04. Payroll & Attendance',
+    bnTitle: 'ফিচার এক্সপ্লোরার · ০৪. পেরোল ও উপস্থিতি',
+    description: 'Monthly salary sheet generation, daily attendance register, pay-heads, employee advances, and printable payslips.',
+    bnDescription: 'মাসিক স্যালারি শিট, দৈনিক উপস্থিতি, পে-হেড, অগ্রিম সমন্বয় এবং প্রিন্টযোগ্য পে-স্লিপ।',
+    route: '/payroll',
+    alt: 'TallyFlow ERP Payroll Processing and Attendance Register screen',
+    bnAlt: 'TallyFlow ERP পেরোল ও উপস্থিতি রেজিস্টার স্ক্রিন',
+  },
+];
+
+export const SHOWCASE_SCREENSHOTS: Record<string, DocScreenshotSpec> = {};
+
+export function resolveShowcaseScreenshot(
+  slotKey: string,
+  storedMap?: Record<string, string>
+): {
+  slot: ShowcaseScreenshotSlot | undefined;
+  src: string | null;
+  alt: string;
+  bnAlt: string;
+  caption: string;
+  bnCaption: string;
+  route: string;
+} {
+  const slot = SHOWCASE_SCREENSHOT_SLOTS.find((item) => item.key === slotKey);
+  const spec = SHOWCASE_SCREENSHOTS[slotKey] || DOC_SCREENSHOTS[slotKey];
+  const storedSrc = storedMap ? normalizeScreenshotUrl(storedMap[slotKey]) : null;
+  const staticSrc = normalizeScreenshotUrl(spec?.src);
+  return {
+    slot,
+    src: storedSrc || staticSrc,
+    alt: spec?.alt || slot?.alt || 'TallyFlow ERP screen preview',
+    bnAlt: spec?.bnAlt || slot?.bnAlt || 'TallyFlow ERP স্ক্রিন প্রিভিউ',
+    caption: spec?.caption || slot?.description || '',
+    bnCaption: spec?.bnCaption || slot?.bnDescription || '',
+    route: spec?.route || slot?.route || '/dashboard',
+  };
+}
+
+export const DOCS_SCREENSHOTS_STORAGE_KEY = 'erp_help_docs_screenshots';
+export const DOCS_SCREENSHOTS_UPDATED_EVENT = 'erp_docs_screenshots_updated';
+
+export function readStoredScreenshots(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(DOCS_SCREENSHOTS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    const cleaned: Record<string, string> = {};
+    Object.entries(parsed).forEach(([key, value]) => {
+      const normalized = normalizeScreenshotUrl(value);
+      if (normalized) cleaned[key] = normalized;
+    });
+    return cleaned;
+  } catch {
+    return {};
+  }
+}
+
+export function writeStoredScreenshots(nextMap: Record<string, string>): Record<string, string> {
+  const cleaned: Record<string, string> = {};
+  Object.entries(nextMap).forEach(([key, value]) => {
+    const normalized = normalizeScreenshotUrl(value);
+    if (normalized) cleaned[key] = normalized;
+  });
+  localStorage.setItem(DOCS_SCREENSHOTS_STORAGE_KEY, JSON.stringify(cleaned));
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(DOCS_SCREENSHOTS_UPDATED_EVENT));
+  }
+  return cleaned;
+}
+
 export interface DocSubSection {
   id: string;
   title: string;
@@ -103,7 +326,11 @@ export interface DocSubSection {
   bnTip?: string;
   warning?: string;
   bnWarning?: string;
-  screenshotMockupKey?: string;
+  screenshotSrc?: string;
+  screenshotAlt?: string;
+  screenshotBnAlt?: string;
+  screenshotCaption?: string;
+  screenshotBnCaption?: string;
 }
 
 export interface DocCategory {
@@ -672,8 +899,8 @@ export const HELP_DOCS: DocCategory[] = [
         planBadge: "All Plans",
         whereToFind: "Dashboard 'Due Payment Alerts' shortcut & alert badge (All layouts) | Sidebar > Reports > Due Payment Alerts | URL /reports/due-payments",
         bnWhereToFind: "ড্যাশবোর্ড 'Due Payment Alerts' শর্টকাট ও ব্যানার (সকল লেআউটেই) | সাইডবার > Reports > Due Payment Alerts | সরাসরি লিংক /reports/due-payments",
-        content: "Comprehensive receivables recovery engine and automated debt collection management.\n\n### Why Use This Feature (কেন ব্যবহার করবেন):\n1. Protect Business Liquidity: Eliminate cash shortages by speeding up debtor collections and lowering Days Sales Outstanding (DSO).\n2. Prevent Bad Debts: Track overdue invoices across aging brackets (0-15d, 16-30d, 31-60d, 60+d) before receivables become uncollectible.\n3. 1-Click Multi-Channel Reminders: Instantly dispatch pre-formatted payment notices via WhatsApp, SMS, or Email directly to customer contacts.\n4. Formal Legal Demand Notices: Generate lawyer-grade printed payment demand letters on company letterhead with bank routing and overdue invoices breakdown.\n5. Documented Call History: Log every phone follow-up with customer promises-to-pay and scheduled callback dates for internal team accountability.\n\n### How to Use Step-by-Step (কীভাবে ব্যবহার করবেন):\n1. Open Due Payment Alerts: Click the 'Due Payment Alerts' card on the Dashboard (works in both Standard and Minimalist Splash layouts) or navigate to Sidebar > Reports > Due Payment Alerts.\n2. Filter by Aging Bracket: Click filter chips (0-15 Days, 16-30 Days, 31-60 Days, 60+ Days Critical) to prioritize delinquent debtors.\n3. Send Instant Reminder: Click the WhatsApp, SMS, or Email button next to any debtor. The system generates a personalized message with exact balance, due date, and your company bank account details.\n4. Print Legal Demand Notice: Click the 'Legal Notice' button to generate a formal, lawyer-standard demand letter with official company header, invoice schedule, and signature block.\n5. Log Call Notes: Click 'Log Call' to enter summaries of phone commitments, check numbers promised, and repayment deadlines.\n6. Export Aging Sheet: Click 'Export CSV' to export the complete debtor list for management and recovery review.",
-        bnContent: "বকেয়া আদায় গতিশীলকরণ এবং স্বয়ংক্রিয় দেনাদার অনুসরণের পূর্ণাঙ্গ সমাধান।\n\n### কেন ব্যবহার করবেন (Why Use This Feature):\n১. তারল্য সংকট প্রতিরোধ: কাস্টমারদের কাছ থেকে সময়মতো বকেয়া টাকা তুলে আনার মাধ্যমে নগদ টাকার প্রবাহ স্বাভাবিক রাখে।\n২. মন্দ ঋণ (Bad Debt) দূরীকরণ: বকেয়ার বয়স অনুযায়ী (০-১৫ দিন, ১৬-৩০ দিন, ৩১-৬০ দিন, ৬০+ দিন) সময়মতো তাগাদা দিয়ে বকেয়া টাকা আটকে যাওয়া প্রতিরোধ করে।\n৩. ১ ক্লিকে মাল্টি-চ্যানেল রিমাইন্ডার: হোয়াটসঅ্যাপ, এসএমএস বা ইমেলের মাধ্যমে মুহূর্তেই কাস্টমারের মোবাইলে পাওনার পরিমাণ ও ব্যাংক একাউন্ট নম্বরসহ মেসেজ পাঠানোর সুবিধা।\n৪. প্রাতিষ্ঠানিক লিগ্যাল ডিমান্ড নোটিশ: কোম্পানির নিজস্ব প্যাডে ব্যাংক হিসাব নম্বর ও চালানের বিবরণসহ আইনজীবীর নোটিশের মতো আনুষ্ঠানিক ডিমান্ড লেটার প্রিন্ট করার ব্যবস্থা।\n৫. ফলো-আপ কল ডায়রি: দেনাদারের সাথে ফোনে কথা বলে তারা কী প্রতিশ্রুতি দিল এবং কবে টাকা পরিশোধ করবে তা সিস্টেমে নোট আকারে সংরক্ষণ করা যায়।\n\n### কীভাবে ব্যবহার করবেন (Step-by-Step Usage Guide):\n১. মডিউলে প্রবেশ: হোম ড্যাশবোর্ডের 'Due Payment Alerts' কার্ড বা ব্যানার থেকে (স্ট্যান্ডার্ড ও মিনিমালিস্ট স্প্ল্যাশ উভয় লেআউটেই রয়েছে) অথবা সাইডবার > Reports > Due Payment Alerts এ যান।\n২. বকেয়া ফিল্টারিং: ০-১৫ দিন, ১৬-৩০ দিন, ৩১-৬০ দিন বা ৬০+ দিন (ঝুঁকিপূর্ণ) ফিল্টারে ক্লিক করে সবচেয়ে পুরনো দেনাদারদের আলাদা করুন।\n৩. রিমাইন্ডার প্রেরণ: সংশ্লিষ্ট কাস্টমারের পাশে থাকা WhatsApp, SMS বা Email বাটনে ক্লিক করুন। স্বয়ংক্রিয়ভাবে মোট বকেয়া ও ব্যাংক হিসাব সহ মেসেজ প্রস্তুত হয়ে যাবে।\n৪. লিগ্যাল ডিমান্ড নোটিশ প্রিন্ট: 'Legal Notice' বাটনে ক্লিক করে প্রাতিষ্ঠানিক লেটারহেডে আনুষ্ঠানিক তাগাদাপত্র প্রস্তুত করুন এবং প্রিন্ট বা পিডিএফ সেভ করুন।\n৫. কল লগ সংরক্ষণ: 'Log Call' বাটনে ক্লিক করে কাস্টমারের আশ্বাস, চেক দেওয়ার তারিখ ইত্যাদি নোট লিখে রাখুন।\n৬. এক্সেল এক্সপোর্ট: 'Export CSV' ক্লিক করে মিটিং বা অডিটের জন্য সকল দেনাদারের তালিকা ডাউনলোড করুন।",
+        content: "Comprehensive receivables recovery engine and automated debt collection management.\n\n### Why Use This Feature (কেন ব্যবহার করবেন):\n1. Protect Business Liquidity: Eliminate cash shortages by speeding up debtor collections and lowering Days Sales Outstanding (DSO).\n2. Prevent Bad Debts: Track overdue invoices across aging brackets (0-15d, 16-30d, 31-60d, 60+d) before receivables become uncollectible.\n3. 1-Click Multi-Channel Reminders: Instantly dispatch pre-formatted payment notices via WhatsApp, SMS, or Email directly to customer contacts.\n4. Formal Legal Demand Notices: Generate lawyer-grade printed payment demand letters on company letterhead with bank routing and overdue invoices breakdown.\n5. Documented Call History: Log every phone follow-up with customer promises-to-pay and scheduled callback dates for internal team accountability.\n\n### How to Use Step-by-Step (কীভাবে ব্যবহার করবেন):\n1. Open Due Payment Alerts: Click the 'Due Payment Alerts' card on the Dashboard (works in both Standard and Minimalist Splash layouts) or navigate to Sidebar > Reports > Due Payment Alerts.\n2. Filter by Aging Bracket: Click filter chips (0-15 Days, 16-30 Days, 31-60 Days, 60+ Days Critical) to prioritize delinquent debtors.\n3. Send Instant Reminder: Click the WhatsApp, SMS, or Email button next to any debtor. The system generates a personalized message with exact balance, due date, and your company bank account details.\n4. Print Legal Demand Notice: Click the 'Legal Notice' button to generate a formal, lawyer-standard demand letter with official company header, invoice schedule, and signature block.\n5. Log Call Notes: Click 'Log Call' to enter summaries of phone commitments, check numbers promised, and repayment deadlines.\n6. Export Aging Sheet: Click 'Export .xlsx', 'Print', 'PDF', or 'Email' to share the debtor schedule for management and recovery review.",
+        bnContent: "বকেয়া আদায় গতিশীলকরণ এবং স্বয়ংক্রিয় দেনাদার অনুসরণের পূর্ণাঙ্গ সমাধান।\n\n### কেন ব্যবহার করবেন (Why Use This Feature):\n১. তারল্য সংকট প্রতিরোধ: কাস্টমারদের কাছ থেকে সময়মতো বকেয়া টাকা তুলে আনার মাধ্যমে নগদ টাকার প্রবাহ স্বাভাবিক রাখে।\n২. মন্দ ঋণ (Bad Debt) দূরীকরণ: বকেয়ার বয়স অনুযায়ী (০-১৫ দিন, ১৬-৩০ দিন, ৩১-৬০ দিন, ৬০+ দিন) সময়মতো তাগাদা দিয়ে বকেয়া টাকা আটকে যাওয়া প্রতিরোধ করে।\n৩. ১ ক্লিকে মাল্টি-চ্যানেল রিমাইন্ডার: হোয়াটসঅ্যাপ, এসএমএস বা ইমেলের মাধ্যমে মুহূর্তেই কাস্টমারের মোবাইলে পাওনার পরিমাণ ও ব্যাংক একাউন্ট নম্বরসহ মেসেজ পাঠানোর সুবিধা।\n৪. প্রাতিষ্ঠানিক লিগ্যাল ডিমান্ড নোটিশ: কোম্পানির নিজস্ব প্যাডে ব্যাংক হিসাব নম্বর ও চালানের বিবরণসহ আইনজীবীর নোটিশের মতো আনুষ্ঠানিক ডিমান্ড লেটার প্রিন্ট করার ব্যবস্থা।\n৫. ফলো-আপ কল ডায়রি: দেনাদারের সাথে ফোনে কথা বলে তারা কী প্রতিশ্রুতি দিল এবং কবে টাকা পরিশোধ করবে তা সিস্টেমে নোট আকারে সংরক্ষণ করা যায়।\n\n### কীভাবে ব্যবহার করবেন (Step-by-Step Usage Guide):\n১. মডিউলে প্রবেশ: হোম ড্যাশবোর্ডের 'Due Payment Alerts' কার্ড বা ব্যানার থেকে (স্ট্যান্ডার্ড ও মিনিমালিস্ট স্প্ল্যাশ উভয় লেআউটেই রয়েছে) অথবা সাইডবার > Reports > Due Payment Alerts এ যান।\n২. বকেয়া ফিল্টারিং: ০-১৫ দিন, ১৬-৩০ দিন, ৩১-৬০ দিন বা ৬০+ দিন (ঝুঁকিপূর্ণ) ফিল্টারে ক্লিক করে সবচেয়ে পুরনো দেনাদারদের আলাদা করুন।\n৩. রিমাইন্ডার প্রেরণ: সংশ্লিষ্ট কাস্টমারের পাশে থাকা WhatsApp, SMS বা Email বাটনে ক্লিক করুন। স্বয়ংক্রিয়ভাবে মোট বকেয়া ও ব্যাংক হিসাব সহ মেসেজ প্রস্তুত হয়ে যাবে।\n৪. লিগ্যাল ডিমান্ড নোটিশ প্রিন্ট: 'Legal Notice' বাটনে ক্লিক করে প্রাতিষ্ঠানিক লেটারহেডে আনুষ্ঠানিক তাগাদাপত্র প্রস্তুত করুন এবং প্রিন্ট বা পিডিএফ সেভ করুন।\n৫. কল লগ সংরক্ষণ: 'Log Call' বাটনে ক্লিক করে কাস্টমারের আশ্বাস, চেক দেওয়ার তারিখ ইত্যাদি নোট লিখে রাখুন।\n৬. রিপোর্ট এক্সপোর্ট: মিটিং বা অডিটের জন্য 'Export .xlsx', 'Print', 'PDF' বা 'Email' ব্যবহার করে সকল দেনাদারের তালিকা সংরক্ষণ বা শেয়ার করুন।",
         points: [
           "Dynamic Aging Buckets: Categorized into 0-15d, 16-30d, 31-60d, and 60+d critical exposure tiers.",
           "Automated Message Placeholders: Supports {{customerName}}, {{dueAmount}}, {{currency}}, and {{companyName}}.",
@@ -719,8 +946,8 @@ export const HELP_DOCS: DocCategory[] = [
         planBadge: "All Plans",
         whereToFind: "Dashboard 'Audit Trail & Logs' shortcut (All layouts) | Sidebar > Reports > Audit Trail (or Exception Reports) | URL /reports/audit-trail",
         bnWhereToFind: "ড্যাশবোর্ড 'Audit Trail & Logs' শর্টকাট (সকল লেআউটেই) | সাইডবার > Reports > Audit Trail | সরাসরি লিংক /reports/audit-trail",
-        content: "Statutory transaction audit logging, data forensics, and auditor review console.\n\n### Why Use This Feature (কেন ব্যবহার করবেন):\n1. Strict Statutory Compliance: Meets MCA, Income Tax, VAT, and ISO corporate accounting standards requiring continuous, tamper-evident audit logs.\n2. Internal Fraud & Error Prevention: Instantly know which staff member created, updated, or deleted a voucher, with exact timestamp and device IP.\n3. Before/After Field Comparison: Deep inspection reveals exactly what ledger amount, quantity, or narration was modified during voucher alterations.\n4. Independent Auditor Workspace: Qualified statutory or internal auditors can inspect logs and append certified review remarks without corrupting ledger balances.\n5. Complete System Transparency: Tracks non-voucher events as well, including ledger alterations, inventory edits, data exports, and logins.\n\n### How to Use Step-by-Step (কীভাবে ব্যবহার করবেন):\n1. Access Audit Trail: Click 'Audit Trail & Logs' on the Dashboard or go to Sidebar > Reports > Audit Trail.\n2. Filter Historical Events: Use quick filter buttons (Create, Update, Delete, Export) and date range presets (Today, 7 Days, 30 Days, Custom).\n3. Inspect Log Details: Click on any log row to open the Log Inspector modal. View author name, user ID, module, description, and exact timestamp.\n4. Compare Changes: For 'UPDATE' logs, view the before/after delta comparing previous values against new values.\n5. Append Auditor Remarks: Statutory auditors can type official verification notes and mark logs as 'Audited / Verified'.\n6. Export Compliance Report: Click 'Print Audit Report' or 'Export CSV' to create physical or digital proof for external tax and audit authorities.",
-        bnContent: "আর্থিক লেনদেনের ডিজিটাল অডিট ট্রেইল, ফরেনসিক ট্র্যাকিং এবং নিরীক্ষকদের রিভিউ কনসোল।\n\n### কেন ব্যবহার করবেন (Why Use This Feature):\n১. সরকারি ও আইনি বাধ্যবাধকতা: আয়কর, ভ্যাট আইন এবং ISO স্ট্যান্ডার্ডের আওতায় যেকোনো লেনদেনের অপরিবর্তনীয় পরিবর্তন ট্রেইল থাকা বাধ্যতামূলক।\n২. অভ্যন্তরীণ জালিয়াতি ও ভুল প্রতিরোধ: কোন কর্মী কখন কোন ভাউচার তৈরি, সংশোধন বা মুছে ফেলেছেন তা সুনির্দিষ্ট সময় ও আইপিসহ রেকর্ড থাকে।\n৩. পরিবর্তনের তুলনামূলক যাচাই (Before/After): কোনো ভাউচার এডিট করা হলে আগে কী পরিমাণ বা লেজার ছিল এবং পরে কী করা হয়েছে তার নিখুঁত পার্থক্য দেখা যায়।\n৪. স্বাধীন অডিটর প্যানেল: হিসাবের মূল বই পরিবর্তন না করেই অভ্যন্তরীণ বা সরকারি নিরীক্ষক অডিট ট্রেইলে নিজস্ব প্রত্যয়ন ও মন্তব্য যোগ করতে পারেন।\n৫. সার্বিক সিস্টেমের স্বচ্ছতা: ভাউচারের পাশাপাশি লেজার মাস্টার পরিবর্তন, স্টক এডিট এবং এক্সেল এক্সপোর্ট কার্যক্রমও নজরদারিতে থাকে।\n\n### কীভাবে ব্যবহার করবেন (Step-by-Step Usage Guide):\n১. অডিট ট্রেইলে প্রবেশ: ড্যাশবোর্ডের 'Audit Trail & Logs' শর্টকাট থেকে অথবা সাইডবার > Reports > Audit Trail এ ক্লিক করুন।\n২. ইভেন্ট ফিল্টারিং: অ্যাকশন ফিল্টার (Create, Update, Delete, Export) এবং তারিখের ফিল্টার (আজ, ৭ দিন, ৩০ দিন ইত্যাদি) দিয়ে নির্দিষ্ট ইভেন্ট খুঁজুন।\n৩. বিস্তারিত লগ পরিদর্শণ: যেকোনো লগ লাইনে ক্লিক করলে বিস্তারিত ইনস্পেক্টর ওপেন হবে যেখানে ইউজার নেম, তারিখ, আইপি ও বিবরণ দেখা যাবে।\n৪. পরিবর্তন পর্যালোচনা: 'Update' লগে ক্লিক করে আগের ডাটা এবং নতুন ডাটার হুবহু তুলনামূলক পার্থক্য পরীক্ষা করুন।\n৫. অডিটর মন্তব্য যোগ: নিরীক্ষক সরাসরি 'Add Auditor Note' এ গিয়ে ভাউচারটি যাচাই হয়েছে কিনা তা লিখে সিলমোহর দিতে পারেন।\n৬. অডিট রিপোর্ট তৈরি: অডিট কমিটি বা আয়কর কর্মকর্তার নিকট জমা দেওয়ার জন্য 'Print Audit Report' বা 'Export CSV' ক্লিক করে প্রাতিষ্ঠানিক রিপোর্ট প্রিন্ট করুন।",
+        content: "Statutory transaction audit logging, data forensics, and auditor review workbench.\n\n### Why Use This Feature (কেন ব্যবহার করবেন):\n1. Strict Statutory Compliance: Meets MCA, Income Tax, VAT, and ISO corporate accounting standards requiring continuous, tamper-evident audit logs.\n2. Internal Fraud & Error Prevention: Instantly know which staff member created, updated, or deleted a voucher, with exact timestamp and device IP.\n3. Before/After Field Comparison: Deep inspection reveals exactly what ledger amount, quantity, or narration was modified during voucher alterations.\n4. Independent Auditor Workspace: Qualified statutory or internal auditors can inspect logs and append certified review remarks without corrupting ledger balances.\n5. Complete System Transparency: Tracks non-voucher events as well, including ledger alterations, inventory edits, data exports, and logins.\n\n### How to Use Step-by-Step (কীভাবে ব্যবহার করবেন):\n1. Access Audit Trail: Click 'Audit Trail & Logs' on the Dashboard or go to Sidebar > Reports > Audit Trail.\n2. Filter Historical Events: Use quick filter buttons (Create, Update, Delete, Export) and date range presets (Today, 7 Days, 30 Days, Custom).\n3. Inspect Log Details: Click on any log row to open the Log Inspector modal. View author name, user ID, module, description, and exact timestamp.\n4. Compare Changes: For 'UPDATE' logs, view the before/after delta comparing previous values against new values.\n5. Append Auditor Remarks: Statutory auditors can type official verification notes and mark logs as 'Audited / Verified'.\n6. Export Compliance Report: Click 'Print Audit Report', 'PDF', or 'Export .xlsx' to create physical or digital proof for external tax and audit authorities.",
+        bnContent: "আর্থিক লেনদেনের ডিজিটাল অডিট ট্রেইল, ফরেনসিক ট্র্যাকিং এবং নিরীক্ষকদের রিভিউ ওয়ার্কবেঞ্চ।\n\n### কেন ব্যবহার করবেন (Why Use This Feature):\n১. সরকারি ও আইনি বাধ্যবাধকতা: আয়কর, ভ্যাট আইন এবং ISO স্ট্যান্ডার্ডের আওতায় যেকোনো লেনদেনের অপরিবর্তনীয় পরিবর্তন ট্রেইল থাকা বাধ্যতামূলক।\n২. অভ্যন্তরীণ জালিয়াতি ও ভুল প্রতিরোধ: কোন কর্মী কখন কোন ভাউচার তৈরি, সংশোধন বা মুছে ফেলেছেন তা সুনির্দিষ্ট সময় ও আইপিসহ রেকর্ড থাকে।\n৩. পরিবর্তনের তুলনামূলক যাচাই (Before/After): কোনো ভাউচার এডিট করা হলে আগে কী পরিমাণ বা লেজার ছিল এবং পরে কী করা হয়েছে তার নিখুঁত পার্থক্য দেখা যায়।\n৪. স্বাধীন অডিটর প্যানেল: হিসাবের মূল বই পরিবর্তন না করেই অভ্যন্তরীণ বা সরকারি নিরীক্ষক অডিট ট্রেইলে নিজস্ব প্রত্যয়ন ও মন্তব্য যোগ করতে পারেন।\n৫. সার্বিক সিস্টেমের স্বচ্ছতা: ভাউচারের পাশাপাশি লেজার মাস্টার পরিবর্তন, স্টক এডিট এবং .xlsx এক্সেল এক্সপোর্ট কার্যক্রমও নজরদারিতে থাকে।\n\n### কীভাবে ব্যবহার করবেন (Step-by-Step Usage Guide):\n১. অডিট ট্রেইলে প্রবেশ: ড্যাশবোর্ডের 'Audit Trail & Logs' শর্টকাট থেকে অথবা সাইডবার > Reports > Audit Trail এ ক্লিক করুন।\n২. ইভেন্ট ফিল্টারিং: অ্যাকশন ফিল্টার (Create, Update, Delete, Export) এবং তারিখের ফিল্টার (আজ, ৭ দিন, ৩০ দিন ইত্যাদি) দিয়ে নির্দিষ্ট ইভেন্ট খুঁজুন।\n৩. বিস্তারিত লগ পরিদর্শণ: যেকোনো লগ লাইনে ক্লিক করলে বিস্তারিত ইনস্পেক্টর ওপেন হবে যেখানে ইউজার নেম, তারিখ, আইপি ও বিবরণ দেখা যাবে।\n৪. পরিবর্তন পর্যালোচনা: 'Update' লগে ক্লিক করে আগের ডাটা এবং নতুন ডাটার হুবহু তুলনামূলক পার্থক্য পরীক্ষা করুন।\n৫. অডিটর মন্তব্য যোগ: নিরীক্ষক সরাসরি 'Add Auditor Note' এ গিয়ে ভাউচারটি যাচাই হয়েছে কিনা তা লিখে সিলমোহর দিতে পারেন।\n৬. অডিট রিপোর্ট তৈরি: অডিট কমিটি বা আয়কর কর্মকর্তার নিকট জমা দেওয়ার জন্য 'Print Audit Report', 'PDF' বা 'Export .xlsx' ক্লিক করে প্রাতিষ্ঠানিক রিপোর্ট তৈরি করুন।",
         points: [
           "Tamper-Evident Event Stream: Automated background recording for all vouchers, ledgers, items, and exports.",
           "Before vs. After Delta Comparison: Visual diff highlighting modified ledger rows and voucher totals.",
@@ -763,10 +990,10 @@ export const HELP_DOCS: DocCategory[] = [
     id: "settings",
     iconName: "settings",
     badge: "Admin",
-    title: "System Settings & Founder Controls",
-    bnTitle: "সিস্টেম সেটিংস ও প্রতিষ্ঠাতা প্যানেল",
-    description: "Configure company details, logo backgrounds, invoice print formats, theme styles (Firebase Console Light/Dark), roles, and help doc screenshot management.",
-    bnDescription: "কোম্পানি প্রোফাইল, লোগো ব্যাকগ্রাউন্ড, ইনভয়েস ফরম্যাট, ইউজার রোল পারমিশন এবং হেল্প ডক স্ক্রিনশট ম্যানেজমেন্ট গাইড।",
+    title: "System Settings & Workspace Controls",
+    bnTitle: "সিস্টেম সেটিংস ও ওয়ার্কস্পেস নিয়ন্ত্রণ",
+    description: "Configure company details, logo backgrounds, invoice print formats, theme styles (Workspace Light/Dark), and role permissions.",
+    bnDescription: "কোম্পানি প্রোফাইল, লোগো ব্যাকগ্রাউন্ড, ইনভয়েস ফরম্যাট, ইউআই থিম এবং ইউজার রোল পারমিশন গাইড।",
     sections: [
       {
         id: "set-branding",
@@ -775,21 +1002,21 @@ export const HELP_DOCS: DocCategory[] = [
         path: "/settings",
         hotkey: "Alt+S",
         planBadge: "All Plans",
-        whereToFind: "Sidebar > Settings > Company Tab (or Founder Panel > Branding)",
-        bnWhereToFind: "সাইডবার > Settings > Company Tab (অথবা Founder Panel > Branding)",
+        whereToFind: "Sidebar > Settings > Company Tab",
+        bnWhereToFind: "সাইডবার > Settings > Company Tab",
         content: "Upload corporate logos, set your brand slogan, and configure custom logo backgrounds (Transparent, Pure White, or Custom Colors) to guarantee crisp logo visibility in the sidebar.",
         bnContent: "কোম্পানির লোগো আপলোড করুন, স্লোগান দিন এবং সাইডবারে লোগো সুন্দরভাবে ফুটিয়ে তুলতে লোগো ব্যাকগ্রাউন্ড (স্বচ্ছ, সাদা বা কাস্টম কালার) নির্বাচন করুন।"
       },
       {
         id: "set-themes",
-        title: "9.2 UI Styles & Firebase Console Light Theme",
-        bnTitle: "৯.২ ইউআই স্টাইল ও ফায়ারবেস কনসোল লাইট থিম",
+        title: "9.2 UI Styles & Workspace Light/Dark Theme",
+        bnTitle: "৯.২ ইউআই স্টাইল ও ওয়ার্কস্পেস লাইট/ডার্ক থিম",
         path: "/settings/ui",
         planBadge: "All Plans",
         whereToFind: "Sidebar > Settings > UI Style Tab",
         bnWhereToFind: "সাইডবার > Settings > UI Style Tab",
-        content: "Choose between different navigation layouts: Firebase Console Light/Dark, Classic Tally, macOS, or Colorful modern themes.",
-        bnContent: "আপনার পছন্দের নেভিগেশন স্টাইল বেছে নিন: ফায়ারবেস কনসোল লাইট/ডার্ক, ক্ল্যাসিক ট্যালি, ম্যাক-ওএস বা কালারফুল থিম।"
+        content: "Choose between different navigation layouts: Workspace Light/Dark, Classic Tally, macOS, or Colorful modern themes.",
+        bnContent: "আপনার পছন্দের নেভিগেশন স্টাইল বেছে নিন: ওয়ার্কস্পেস লাইট/ডার্ক, ক্ল্যাসিক ট্যালি, ম্যাক-ওএস বা কালারফুল থিম।"
       },
       {
         id: "set-screenshots",
@@ -797,10 +1024,10 @@ export const HELP_DOCS: DocCategory[] = [
         bnTitle: "৯.৩ হেল্প ডক স্ক্রিনশট ম্যানেজার (প্রতিষ্ঠাতা বা অ্যাডমিনদের জন্য)",
         path: "/founder",
         planBadge: "Founder Only",
-        whereToFind: "Help Docs Header > 'Manage Screenshots' (or Founder Panel > Help Docs)",
-        bnWhereToFind: "হেল্প ডক হেডার > 'Manage Screenshots' (অথবা Founder Panel > Help Docs)",
-        content: "Founders and Admins can upload real screenshots (PNG/JPG/WebP) or paste image URLs for any specific documentation topic. The uploaded images automatically display in the public help center, overriding the default interactive emulator.",
-        bnContent: "প্রতিষ্ঠাতা ও অ্যাডমিনরা যেকোনো বিষয়ের জন্য সরাসরি বাস্তব স্ক্রিনশট আপলোড করতে পারবেন। আপলোড করা ছবিগুলো তাৎক্ষণিকভাবে পাবলিক হেল্প সেন্টারে প্রদর্শিত হবে।"
+        whereToFind: "Help Docs Header > 'Manage Screenshot URL' (or Founder Panel > Help Docs)",
+        bnWhereToFind: "হেল্প ডক হেডার > 'স্ক্রিনশট লিংক পরিবর্তন' (অথবা Founder Panel > Help Docs)",
+        content: "Founders and Admins can link externally hosted real screenshot URLs (https://...) for any documentation section or chapter. Linked screenshots display directly inside the Help Center viewer without storing image files in the app.",
+        bnContent: "প্রতিষ্ঠাতা ও অ্যাডমিনরা যেকোনো ডকুমেন্টেশন বিষয়ের জন্য বাইরে হোস্ট করা বাস্তব স্ক্রিনশটের ইমেজ লিংক (https://...) যুক্ত করতে পারবেন। অ্যাপের ভেতরে বড় ফাইল না রেখেই লিংক করা ছবিগুলো হেল্প সেন্টারে প্রদর্শিত হবে।"
       }
     ]
   },
@@ -829,7 +1056,7 @@ export const HELP_DOCS: DocCategory[] = [
           "Alt + L -> Open Chart of Accounts / Create New Ledger form",
           "Alt + I -> Access Stock Inventory items & Godown catalog",
           "Alt + B -> Open Business Intelligence Hub & Financial Ratios",
-          "Alt + G -> Launch 'Go To' Quick Navigation Palette",
+          "Alt + G -> Open 'Go To' Quick Navigation Palette",
           "Alt + R -> Open Daybook daily transactions report",
           "Alt + S -> Access Company Profile & System Settings",
           "Alt + N -> Open Scratchpad Notes & Audit Memos",
@@ -894,7 +1121,7 @@ export const HELP_DOCS: DocCategory[] = [
         content: "Accelerate everyday searching and document generation:",
         bnContent: "প্রতিদিনের সার্চ ও ডকুমেন্ট জেনারেশনের গতি বাড়াতে:",
         points: [
-          "Ctrl + K (or Cmd + K) -> Launch Universal Global Search modal across all entities",
+          "Ctrl + K (or Cmd + K) -> Open Universal Global Search modal across all entities",
           "/ (Slash) -> Focus search input box when not currently typing inside form fields",
           "Alt + P -> Instant clean print of current voucher, invoice, or ledger statement",
           "Alt + E -> Export high-fidelity vector PDF for email or WhatsApp sharing",
@@ -925,8 +1152,8 @@ export const HELP_DOCS: DocCategory[] = [
     sections: [
       {
         id: "faq-profit-cash",
-        title: "Q: Why does my Profit & Loss profit not match my physical Cash in Hand?",
-        bnTitle: "প্রশ্ন: লাভ-ক্ষতির মুনাফার পরিমাণ কেন ক্যাশ ইন হ্যান্ডের সাথে হুবহু মিলছে না?",
+        title: "11.1 Q: Why does my Profit & Loss profit not match my physical Cash in Hand?",
+        bnTitle: "১১.১ প্রশ্ন: লাভ-ক্ষতির মুনাফার পরিমাণ কেন ক্যাশ ইন হ্যান্ডের সাথে হুবহু মিলছে না?",
         content: "Accounting follows the Accrual model, not cash accounting. If you make credit sales (F8 Voucher) to customers, your revenue rises immediately in the P&L statement, but your cash in hand only increases when the customer actually pays via a Receipt Voucher (F6).",
         bnContent: "আমাদের সফটওয়্যার স্ট্যান্ডার্ড এক্রুয়াল (বকেয়া ভিত্তিক) হিসাববিজ্ঞান মডেল অনুসরণ করে। বাকিতে পণ্য বিক্রয় করলে লাভ-ক্ষতির স্টেটমেন্টে লাভ যোগ হয়, কিন্তু বাস্তবে কাস্টমার টাকা পরিশোধ না করা পর্যন্ত ক্যাশ ড্রয়ারে টাকা জমা হয় না। টাকা গ্রহণের পর রিসিট ভাউচারের মাধ্যমে ক্যাশ ব্যালেন্স বৃদ্ধি পায়।",
         tip: "Generate the Cash Flow report under Reports > Cash Flow to audit real-time cash inflows versus outflows.",
@@ -934,17 +1161,17 @@ export const HELP_DOCS: DocCategory[] = [
       },
       {
         id: "faq-negative-stock",
-        title: "Q: Can I sell items when physical stock balance is zero?",
-        bnTitle: "প্রশ্ন: স্টকে পণ্য না থাকলে বা ব্যালেন্স শূন্য থাকলে কি সেলস বিল করা সম্ভব?",
+        title: "11.2 Q: Can I sell items when physical stock balance is zero?",
+        bnTitle: "১১.২ প্রশ্ন: স্টকে পণ্য না থাকলে বা ব্যালেন্স শূন্য থাকলে কি সেলস বিল করা সম্ভব?",
         content: "By default, the ERP allows negative sales warning prompts if configured in Settings > Features > Negative Stock. However, we recommend entering the Purchase Voucher (F9) first to maintain strict audit integrity and average cost calculations.",
         bnContent: "ডিফল্টভাবে সেটিংসে অনুমতি থাকলে নেগেটিভ স্টকে ওয়ার্নিং দিয়ে বিল করা যায়। তবে অডিট এবং গড় ক্রয়মূল্য সঠিক রাখতে আগে পারচেজ ভাউচার (F9) এন্ট্রি দেওয়া উত্তম।"
       },
       {
         id: "faq-custom-screenshots",
-        title: "Q: Can I upload my own real screenshots into these Help Docs?",
-        bnTitle: "প্রশ্ন: আমি কি এই হেল্প ডকে আমার নিজের অ্যাপের আসল স্ক্রিনশট আপলোড করতে পারব?",
-        content: "Yes! Founders and Admins can click 'Manage Screenshots' in the top header or in the Founder Panel. You can upload high-resolution screenshots for any topic, and they will immediately be visible to all users in the public Help Center.",
-        bnContent: "হ্যাঁ! প্রতিষ্ঠাতা বা অ্যাডমিনরা টপ হেডারে থাকা 'Manage Screenshots' বাটনে ক্লিক করে যেকোনো বিষয়ের জন্য নিজস্ব স্ক্রিনশট আপলোড করতে পারবেন। আপলোড করার সাথে সাথে তা সবার জন্য দৃশ্যমান হবে।"
+        title: "11.3 Q: Can I link externally hosted real screenshots into these Help Docs?",
+        bnTitle: "১১.৩ প্রশ্ন: আমি কি এই হেল্প ডকে বাইরে হোস্ট করা অ্যাপের আসল স্ক্রিনশটের লিংক যুক্ত করতে পারব?",
+        content: "Yes! Founders and Admins can click 'Manage Screenshot URL' in the Docs header to link external screenshot URLs (https://...) for any topic, or configure them directly in DOC_SCREENSHOTS in helpContent.ts.",
+        bnContent: "হ্যাঁ! প্রতিষ্ঠাতা বা অ্যাডমিনরা ডক্স হেডারে থাকা 'স্ক্রিনশট লিংক পরিবর্তন' বাটনে ক্লিক করে যেকোনো বিষয়ের জন্য বাইরে হোস্ট করা বাস্তব স্ক্রিনশটের লিংক (https://...) যুক্ত করতে পারবেন।"
       }
     ]
   },
@@ -959,8 +1186,8 @@ export const HELP_DOCS: DocCategory[] = [
     sections: [
       {
         id: "payroll-overview-steps",
-        title: "1. Beginner's Guide: Complete 6-Step Payroll Workflow",
-        bnTitle: "১. নতুনদের জন্য পেরোলের প্রাথমিক ধারণা ও সহজ ৬-ধাপের নিয়ম",
+        title: "12.1 Beginner's Guide: Complete 6-Step Payroll Workflow",
+        bnTitle: "১২.১ নতুনদের জন্য পেরোলের প্রাথমিক ধারণা ও সহজ ৬-ধাপের নিয়ম",
         path: "/payroll",
         hotkey: "Alt+P",
         planBadge: "Gold & Above",
@@ -983,8 +1210,8 @@ export const HELP_DOCS: DocCategory[] = [
       },
       {
         id: "payroll-attendance-guide",
-        title: "2. Attendance Register, Overtime & Auto Recalculation",
-        bnTitle: "২. মাসিক হাজিরা খাতা, ওভারটাইম এবং স্বয়ংক্রিয় পুনঃগণনা",
+        title: "12.2 Attendance Register, Overtime & Auto Recalculation",
+        bnTitle: "১২.২ মাসিক হাজিরা খাতা, ওভারটাইম এবং স্বয়ংক্রিয় পুনঃগণনা",
         path: "/payroll",
         content: "Understanding the Attendance Register:\n- **Present Days**: Total days worked. In a 30-day month, if an employee worked 26 days, their attendance-based compensation will be calculated as (26 / 30) of basic.\n- **Leave / LWP (Days)**: Unpaid absence days.\n- **Overtime (Hours)**: Overtime production hours. Multiplied by hourly overtime rate.\n- **Auto Recalculation**: Whenever you modify attendance inputs and click 'Save Attendance Register & Recalculate', the system automatically updates the current month's salary sheet so net salary immediately matches the updated attendance.",
         bnContent: "হাজিরা খাতা ও ওভারটাইম ব্যবহারের নিয়মাবলী:\n- **উপস্থিতির দিন (Present Days)**: কর্মী মোট কতদিন কাজ করেছেন। ৩০ দিনের মাসে কর্মী ২৬ দিন কাজ করলে তার উপস্থিতি ভিত্তিক বেতন (২৬ / ৩০) অনুপাতে হিসাব হবে।\n- **ছুটি / অবৈতনিক ছুটি (LWP Days)**: যে কয়দিনের জন্য বেতন কাটা যাবে।\n- **ওভারটাইম ঘন্টা (Overtime Hours)**: অতিরিক্ত কাজের সময়। ঘণ্টার রেট অনুযায়ী ওভারটাইমের টাকা বেতনের সাথে যোগ হবে।\n- **স্বয়ংক্রিয় পুনঃগণনা (Auto Recalculation)**: হাজিরা খাতায় দিন বা ওভারটাইম পরিবর্তন করে 'Save Attendance Register & Recalculate' বাটনে ক্লিক করলেই সাথে সাথে চলতি মাসের স্যালারি শিট স্বয়ংক্রিয়ভাবে নতুন হাজিরা অনুযায়ী আপডেট হয়ে যাবে।",
@@ -1001,8 +1228,8 @@ export const HELP_DOCS: DocCategory[] = [
       },
       {
         id: "payroll-duplicates-fix",
-        title: "3. Duplicate Employee Cleanup & Single Row Deletion",
-        bnTitle: "৩. ডুপ্লিকেট কর্মী ডাটা ঠিক করা এবং একক সারি মুছে ফেলা",
+        title: "12.3 Duplicate Employee Cleanup & Single Row Deletion",
+        bnTitle: "১২.৩ ডুপ্লিকেট কর্মী ডাটা ঠিক করা এবং একক সারি মুছে ফেলা",
         path: "/payroll",
         content: "How to fix duplicate rows in Salary Processing:\n- **Why Duplicates Occur**: If multiple salary sheets were created for the same month previously without clearing, duplicate rows may appear (e.g. 26 staff instead of 13).\n- **One-Click Clean Duplicates**: Click the 'Clean Duplicates' button in the toolbar. The system detects multiple rows for the same employee, deletes the redundant documents, and restores the exact count (e.g. 13 / 13).\n- **Individual Row Delete**: In the table's 'Actions' column, click the Trash icon to remove any erroneous or unwanted employee record from that month's sheet.\n- **Built-in Protection**: Future Auto-Calculate runs automatically update the single existing record per employee, preventing duplicates permanently.",
         bnContent: "স্যালারি প্রসেসিং টেবিলে ডুপ্লিকেট ডাটা ঠিক করার নিয়ম:\n- **ডুপ্লিকেট হওয়ার কারণ**: পূর্বে একাধিকবার একই মাসের জন্য অটো-ক্যালকুলেট ক্লিক করলে বা পুরনো ক্যাশ থাকলে একই কর্মীর নাম দুইবার বা তার বেশি আসতে পারে (যেমন: ১৩ জনের জায়গায় ২৬ জন)।\n- **১-ক্লিক ক্লিন ডুপ্লিকেটস**: স্যালারি প্রসেসিং ফিল্টার বারে থাকা 'Clean Duplicates' বাটনে ক্লিক করুন। সিস্টেম মুহূর্তের মধ্যে অতিরিক্ত ডুপ্লিকেট এন্ট্রিগুলো মুছে ফেলে সঠিক সংখ্যা (১৩ / ১৩) ফিরিয়ে আনবে।\n- **একক সারি ডিলিট (Delete Row)**: টেবিলের ডানদিকের Actions কলামে থাকা লাল ট্র্যাশ/ডিলিট আইকনে ক্লিক করে যেকোনো কর্মীর সারি সরাসরি মুছে ফেলা যায়।\n- **স্থায়ী নিরাপত্তা**: কোডে স্বয়ংক্রিয় সুরক্ষা যুক্ত করা হয়েছে যাতে পরবর্তীতে অটো-ক্যালকুলেট করলেও কখনোই আর ডুপ্লিকেট সারি তৈরি না হয়।",
@@ -1019,8 +1246,8 @@ export const HELP_DOCS: DocCategory[] = [
       },
       {
         id: "payroll-increments-guide",
-        title: "4. Employee Salary Increments & Employment Service History",
-        bnTitle: "৪. কর্মচারীদের বেতন বৃদ্ধি (Increment) ও চাকরির ইতিহাস",
+        title: "12.4 Employee Salary Increments & Employment Service History",
+        bnTitle: "১২.৪ কর্মচারীদের বেতন বৃদ্ধি (Increment) ও চাকরির ইতিহাস",
         path: "/payroll",
         content: "Managing Employee Service Life Cycle and Salary Increments:\n- **Joining Date & Resignation Date**: Every employee has recorded joining dates and resignation dates. Status can be switched between Active, Resigned, and On Leave.\n- **Recording Salary Increment**: Click 'Employee Profiles & Increments'. Select employee and click 'Add Salary Increment'. Enter Effective Date, Increment Amount (or percentage), and reason/notes.\n- **Historical Increment Log**: All past increments are preserved in an immutable chronological history log, showing previous salary, increment granted, new salary, and notes.\n- **Future Payroll Sync**: When an increment is applied, the employee's active basic salary is automatically updated for all subsequent monthly payroll runs.",
         bnContent: "কর্মচারীদের চাকরির ইতিহাস এবং বেতন বৃদ্ধির (Increment) নিয়মাবলী:\n- **যোগদান ও পদত্যাগ তারিখ (Joining & Resignation Date)**: প্রতিটি কর্মীর যোগদানের তারিখ এবং চাকরি ছাড়ার তারিখ সিস্টেমে সংরক্ষিত থাকে। স্ট্যাটাস Active, Resigned অথবা On Leave রাখা যায়।\n- **বেতন বৃদ্ধি রেকর্ড করা (Add Increment)**: 'Employee Profiles & Increments' অপশনে গিয়ে কর্মী সিলেক্ট করে 'Add Salary Increment' এ ক্লিক করুন। কার্যকর হওয়ার তারিখ, বৃদ্ধির পরিমাণ (টাকা বা শতকরা) এবং বৃদ্ধির কারণ/মন্তব্য লিখে সেভ করুন।\n- **বেতন বৃদ্ধির ইতিহাস (Increment History Log)**: কর্মীর ইতিপূর্বে কতবার বেতন বেড়েছে, কোন তারিখে কত টাকা বেড়েছে এবং আগের বেতন কত ছিল তা বিস্তারিত তালিকায় চিরতরে সংরক্ষিত থাকবে।\n- **পরবর্তী মাসের বেতনে সমন্বয়**: ইনক্রিমেন্ট সেভ করার সাথে সাথে কর্মীর মূল বেতন আপডেট হয়ে যাবে, ফলে পরবর্তী মাসের অটো-ক্যালকুলেশনে স্বয়ংক্রিয়ভাবে নতুন বর্ধিত বেতন প্রযোজ্য হবে।",
@@ -1037,8 +1264,8 @@ export const HELP_DOCS: DocCategory[] = [
       },
       {
         id: "payroll-advances-loans-guide",
-        title: "5. Advances, Loans & Status Management (Pending / Settled)",
-        bnTitle: "৫. অগ্রিম বেতন, লোন এবং স্ট্যাটাস ম্যানেজমেন্ট (Pending / Settled)",
+        title: "12.5 Advances, Loans & Status Management (Pending / Settled)",
+        bnTitle: "১২.৫ অগ্রিম বেতন, লোন এবং স্ট্যাটাস ম্যানেজমেন্ট (Pending / Settled)",
         path: "/payroll",
         content: "Understanding Advances & Loans:\n- **Why Status is 'Pending'**: When an advance is issued (e.g. ৳5,000 to Md Shahidul Islam), its status starts as 'Pending' indicating it has not yet been recovered or settled.\n- **Auto-Deduction in Payroll**: When processing the monthly salary sheet, the pending advance is automatically included in the 'ADV / LOAN' deduction column, reducing net payable.\n- **Settling or Deleting Advances**: In the Advances & Loans tab, use the Action buttons to mark an advance as 'Settled' (recovered), approve it, edit the amount, or delete it if recorded by mistake.",
         bnContent: "অগ্রিম বেতন ও লোন ব্যবস্থাপনার নিয়মাবলী:\n- **পেন্ডিং (Pending) দেখানোর কারণ**: কোনো কর্মীকে অগ্রিম টাকা দেওয়া হলে (যেমন: মো: শহিদুল ইসলামকে ৫,০০০ টাকা) তা প্রাথমিকভাবে 'Pending' দেখায়, যার অর্থ এই টাকাটি এখনো তার বেতন থেকে সমন্বয় বা আদায় সম্পন্ন হয়নি।\n- **বেতন থেকে স্বয়ংক্রিয় কর্তন**: মাস শেষে যখন 'Salary Processing' চালানো হয়, তখন এই পেন্ডিং টাকাটি স্বয়ংক্রিয়ভাবে 'ADV / LOAN' ঘরে মাইনাস হিসেবে চলে আসে এবং নিট বেতন থেকে কেটে নেওয়া হয়।\n- **সেটেল বা ডিলিট করার নিয়ম**: Advances & Loans পেজে প্রতিটি এন্ট্রির পাশে অ্যাকশন বাটন যুক্ত রয়েছে। সেখান থেকে আপনি সরাসরি টিক চিহ্নে ক্লিক করে 'Settled' (আদায় হয়েছে) মার্ক করতে পারেন, অথবা ভুল এন্ট্রি হলে লাল ডিলিট বাটনে চাপ দিয়ে পুরোপুরি মুছে ফেলতে পারেন।",
@@ -1055,8 +1282,8 @@ export const HELP_DOCS: DocCategory[] = [
       },
       {
         id: "payroll-groups-departments-guide",
-        title: "6. Employee Groups & Departments Auto-Synchronization",
-        bnTitle: "৬. কর্মী গ্রুপ ও ডিপার্টমেন্ট স্বয়ংক্রিয় সিঙ্ক্রোনাইজেশন",
+        title: "12.6 Employee Groups & Departments Auto-Synchronization",
+        bnTitle: "১২.৬ কর্মী গ্রুপ ও ডিপার্টমেন্ট স্বয়ংক্রিয় সিঙ্ক্রোনাইজেশন",
         path: "/payroll",
         content: "How Employee Departments and Groups Work:\n- **Automatic Aggregation**: When you create employees in Employee Master or User Management with departments like 'Office', 'Accounts', 'Factory', or 'Staff', the system automatically aggregates them into the 'Employee Groups & Departments' tab.\n- **Department Headcount**: View how many active staff members belong to each department at a glance.\n- **Assign Department Pay Scales**: Click 'Set Pay Scale' on any department card to configure standardized pay heads and allowance rules for all employees within that department.",
         bnContent: "ডিপার্টমেন্ট ও কর্মী গ্রুপ স্বয়ংক্রিয় সিঙ্ক্রোনাইজেশন:\n- **স্বয়ংক্রিয় উপস্থিতি**: কর্মী তৈরি করার সময় আপনি যে ডিপার্টমেন্ট (যেমন: Office, Accounts, Factory, Staff) দিয়েছিলেন, সিস্টেম তা স্বয়ংক্রিয়ভাবে বিশ্লেষণ করে 'Employee Groups & Departments' পেজে কার্ড আকারে সাজিয়ে দেয়।\n- **ডিপার্টমেন্টভিত্তিক কর্মী সংখ্যা**: কোন ডিপার্টমেন্টে কতজন কর্মী কর্মরত আছেন তা এক নজরে দেখা যায়।\n- **ডিপার্টমেন্ট বেতন স্কেল নির্ধারণ**: যেকোনো ডিপার্টমেন্ট কার্ডে 'Set Pay Scale' বাটনে ক্লিক করে পুরো ডিপার্টমেন্টের সকল কর্মীর জন্য একবারে স্ট্যান্ডার্ড বেতন কাঠামো ও ভাতা নির্ধারণ করা যায়।",
@@ -1084,8 +1311,8 @@ export const HELP_DOCS: DocCategory[] = [
     sections: [
       {
         id: "desktop-overview",
-        title: "Desktop Application Software (.exe) Overview",
-        bnTitle: "ডেস্কটপ সফটওয়্যার (.exe) পরিচিতি ও সুবিধা",
+        title: "13.1 Desktop Application Software (.exe) Overview",
+        bnTitle: "১৩.১ ডেস্কটপ সফটওয়্যার (.exe) পরিচিতি ও সুবিধা",
         content: "You can run this ERP both as a Web Application in browsers and as a native Desktop Application Software on Windows/Mac. In desktop mode, data is securely stored right on the user's computer hard disk (Offline SQLite / Dexie), requiring zero internet connection.",
         bnContent: "আপনার এই সম্পূর্ণ ERP সিস্টেমটি একই সাথে ব্রাউজারে অনলাইন ওয়েব অ্যাপ হিসেবে এবং উইন্ডোজ পিসিতে ইনস্টল করা অফলাইন ডেস্কটপ সফটওয়্যার (.exe) হিসেবে চলতে পারে। ডেস্কটপ মোডে কোনো ইন্টারনেট সংযোগ লাগে না এবং সকল ডাটা সরাসরি কম্পিউটারের নিজস্ব হার্ডড্রাইভে নিরাপদে সংরক্ষিত থাকে।",
         whereToFind: "Electron Configuration / Settings > Data Management",
@@ -1107,8 +1334,8 @@ export const HELP_DOCS: DocCategory[] = [
       },
       {
         id: "desktop-packaging-steps",
-        title: "How to Build & Package into Windows Setup (.exe)",
-        bnTitle: "কীভাবে Windows Setup (.exe) তৈরি করবেন (Build Guide)",
+        title: "13.2 How to Build & Package into Windows Setup (.exe)",
+        bnTitle: "১৩.২ কীভাবে Windows Setup (.exe) তৈরি করবেন (Build Guide)",
         content: "Follow this simple 3-step packaging command to generate your standalone installer 'TallyFlow-Setup.exe' using Electron-Builder.",
         bnContent: "নিচের ৩টি সহজ কমান্ড দিয়ে আপনি আপনার প্রজেক্টকে সরাসরি উইন্ডোজ ইনস্টলার ফাইলে (.exe) রূপান্তর করতে পারেন:",
         whereToFind: "Terminal / Command Prompt in your project folder",
@@ -1131,7 +1358,7 @@ export const HELP_DOCS: DocCategory[] = [
           steps: [
             "1. Copy 'TallyFlow-Setup.exe' to a USB Pendrive.",
             "2. Plug into the shop's computer and double-click to install.",
-            "3. The desktop icon will appear on desktop. Launch and start creating companies and billing offline!"
+            "3. The desktop icon will appear on desktop. Open the app and start creating companies and billing offline!"
           ],
           bnSteps: [
             "১. পেনড্রাইভে 'TallyFlow-Setup.exe' ফাইলটি কপি করুন।",
@@ -1142,8 +1369,8 @@ export const HELP_DOCS: DocCategory[] = [
       },
       {
         id: "desktop-backup-restore",
-        title: "1-Click Offline Data Backup & Migration",
-        bnTitle: "১-ক্লিকে অফলাইন ডাটা ব্যাকআপ ও রিস্টোর করার নিয়ম",
+        title: "13.3 1-Click Offline Data Backup & Migration",
+        bnTitle: "১৩.৩ ১-ক্লিকে অফলাইন ডাটা ব্যাকআপ ও রিস্টোর করার নিয়ম",
         content: "To safeguard against computer hardware failure or Windows reinstall, use the built-in 1-Click Backup tool to save your database to USB drive or external storage.",
         bnContent: "কম্পিউটার নষ্ট হওয়া বা উইন্ডোজ পরিবর্তনের ঝুঁকি এড়াতে 'Settings > Data Backup' অপশন থেকে নিয়মিত ১-ক্লিকে পেনড্রাইভে ব্যাকআপ রাখুন।",
         whereToFind: "Settings > Data Management > Backup & Restore",

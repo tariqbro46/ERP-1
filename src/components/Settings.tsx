@@ -18,6 +18,7 @@ import { ReportBuilderModal } from './ReportBuilderModal';
 import { RELEASE_NOTES, LATEST_VERSION } from '../data/releaseNotes';
 import { ReleaseManagerModal } from './ReleaseManagerModal';
 import { DEFAULT_APP_BRANDING } from '../constants/appIdentity';
+import { ResilientImage } from './ImageNotFoundFrame';
 
 export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
   const { user, logout } = useAuth();
@@ -897,14 +898,13 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         <div className="flex items-center gap-6">
                           <div className="relative group">
                             <div className="w-24 h-24 border-2 border-dashed border-border rounded-xl flex items-center justify-center bg-background overflow-hidden transition-all group-hover:border-primary">
-                              {localCompanyLogo ? (
-                                <img src={localCompanyLogo} alt="Logo" className="w-full h-full object-contain p-2" referrerPolicy="no-referrer" />
-                              ) : (
-                                <div className="flex flex-col items-center gap-2">
-                                  <Building2 className="w-8 h-8 text-muted-foreground opacity-20" />
-                                  <span className="text-[8px] text-gray-400 uppercase font-bold">No Logo</span>
-                                </div>
-                              )}
+                              <ResilientImage
+                                src={localCompanyLogo}
+                                alt="Logo"
+                                className="w-full h-full object-contain p-2"
+                                fallbackClassName="w-full h-full border-0 rounded-none"
+                                compact
+                              />
                             </div>
                             <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-xl">
                               <Upload className="w-6 h-6 text-white" />
@@ -2750,7 +2750,7 @@ export function Settings({ activeTab: initialTab }: { activeTab?: string }) {
                         type="text"
                         value={gitVersionInput}
                         onChange={(e) => setGitVersionInput(e.target.value)}
-                        placeholder="e.g. v1.9.9.31"
+                        placeholder="e.g. v1.9.9.32"
                         className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs font-mono font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                       <p className="text-[10px] text-muted-foreground">

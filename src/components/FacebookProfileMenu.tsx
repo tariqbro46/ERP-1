@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Settings, HelpCircle, LogOut, ChevronRight, ChevronLeft, 
-  Camera, Bell, User, Shield, Building2, BookOpen, 
+  Camera, Bell, User, Shield, Building2, BookOpen, Link2,
   Moon, Sun, ArrowLeft, Check, Trash2, Clock, Loader2, Sparkles, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -15,6 +15,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { format } from 'date-fns';
 import { cn } from '../lib/utils';
+import { ResilientImage } from './ImageNotFoundFrame';
 
 interface FacebookProfileMenuProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ interface FacebookProfileMenuProps {
 type MenuSection = 'main' | 'help' | 'notifications' | 'theme';
 
 export default function FacebookProfileMenu({ isOpen, onClose, uiStyle, onNotificationsUpdated }: FacebookProfileMenuProps) {
-  const { user, logout, isAdmin, isSuperAdmin, company } = useAuth();
+  const { user, logout, isAdmin, isSuperAdmin, isFounder, company } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -207,11 +208,12 @@ export default function FacebookProfileMenu({ isOpen, onClose, uiStyle, onNotifi
                     {isUploading ? (
                       <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
                     ) : (
-                      <img 
+                      <ResilientImage 
                         src={profilePic || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
                         alt="Profile avatar" 
                         className="w-full h-full object-cover transition-transform group-hover/card:scale-105"
-                        referrerPolicy="no-referrer"
+                        fallbackClassName="w-full h-full border-0 rounded-none"
+                        compact
                       />
                     )}
                   </div>
@@ -351,6 +353,25 @@ export default function FacebookProfileMenu({ isOpen, onClose, uiStyle, onNotifi
                     <div>
                       <span className="font-bold text-xs block text-foreground">Founder Control</span>
                       <span className="text-[10px] text-muted-foreground">Licenses, company limits, features</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+              )}
+
+              {isFounder && (
+                <Link 
+                  to="/founder-desk" 
+                  onClick={onClose}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-muted transition-colors text-left group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                      <Link2 className="w-4.5 h-4.5" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-xs block text-foreground">Founder Docs Desk</span>
+                      <span className="text-[10px] text-muted-foreground">Docs screenshot URLs & editorial links</span>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />

@@ -9,6 +9,7 @@ import { printElement } from '../utils/printUtils';
 import { exportStructuredExcel } from '../utils/exportUtils';
 import { formatNumber, ensureDate, formatToYMD } from '../lib/utils';
 import { resolveCompanyLegalIdentity, sanitizeAssetUrl } from '../constants/appIdentity';
+import { ResilientImage } from './ImageNotFoundFrame';
 
 interface BankReconRow {
   id: string;
@@ -292,11 +293,12 @@ export function FinancialInsights() {
           <div className="flex items-center gap-4">
             {safeLogoUrl && (
               <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
-                <img
+                <ResilientImage
                   src={safeLogoUrl}
                   alt="Logo"
                   className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
+                  fallbackClassName="w-full h-full border-0 rounded-none"
+                  compact
                 />
               </div>
             )}

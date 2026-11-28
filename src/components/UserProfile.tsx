@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { cn } from '../lib/utils';
+import { ResilientImage } from './ImageNotFoundFrame';
 
 export default function UserProfile() {
   const { user } = useAuth();
@@ -240,11 +241,12 @@ export default function UserProfile() {
                     </div>
                   ) : (
                     <>
-                      <img 
+                      <ResilientImage 
                         src={profilePic || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.email || 'default'}`} 
                         alt="Profile avatar" 
                         className="w-full h-full object-cover transition-transform group-hover/avatar:scale-105"
-                        referrerPolicy="no-referrer"
+                        fallbackClassName="w-full h-full border-0 rounded-none"
+                        compact
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 flex flex-col items-center justify-center text-white transition-opacity text-[9px] font-bold">
                         <Camera className="w-4 h-4 mb-1" />

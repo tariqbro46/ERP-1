@@ -43,6 +43,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { cn } from '../../lib/utils';
 import { LATEST_VERSION } from '../../data/releaseNotes';
+import { ResilientImage } from '../ImageNotFoundFrame';
 
 interface ThreeUiHeroDashboardProps {
   content: {
@@ -614,7 +615,13 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
               <div className="flex items-center gap-3 min-w-[200px]">
                 {activeCompanyLogo ? (
                   <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center bg-white border border-slate-200 shadow-xs shrink-0 p-0.5">
-                    <img src={activeCompanyLogo} alt={activeCompanyName || 'Company Logo'} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                    <ResilientImage
+                      src={activeCompanyLogo}
+                      alt={activeCompanyName || 'Company Logo'}
+                      className="w-full h-full object-contain"
+                      fallbackClassName="w-full h-full border-0 rounded-none"
+                      compact
+                    />
                   </div>
                 ) : companyInitials ? (
                   <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white text-xs font-black shadow-xs shrink-0">
@@ -665,7 +672,13 @@ export const ThreeUiHeroDashboard: React.FC<ThreeUiHeroDashboardProps> = ({
                 {activeUserAvatarUrl ? (
                   <div className="relative">
                     <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border-2 border-white shadow-xs cursor-pointer hover:ring-2 hover:ring-rose-200 transition-all bg-slate-100">
-                      <img src={activeUserAvatarUrl} alt={user?.displayName || 'User'} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <ResilientImage
+                        src={activeUserAvatarUrl}
+                        alt={user?.displayName || 'User'}
+                        className="w-full h-full object-cover"
+                        fallbackClassName="w-full h-full border-0 rounded-full"
+                        compact
+                      />
                     </div>
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white absolute bottom-0 right-0" />
                   </div>

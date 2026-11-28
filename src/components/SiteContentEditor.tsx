@@ -23,6 +23,7 @@ import {
 import { cn } from '../lib/utils';
 import { AUTH_TEMPLATE_OPTIONS } from './auth/AuthLayouts';
 import { AuthTemplate } from '../types';
+import { ResilientImage } from './ImageNotFoundFrame';
 import { Login, Register } from './Auth';
 import { useNotification } from '../contexts/NotificationContext';
 import { updateSiteContentMemoryCache } from '../hooks/useSiteContent';
@@ -560,15 +561,13 @@ export const SiteContentEditor: React.FC<{ showNotification?: (msg: string, type
 
                   if (isUrl) {
                     return (
-                      <div key={idx} className="p-1.5 bg-white rounded border border-slate-200 flex items-center justify-center max-h-10 max-w-[140px] shadow-sm">
-                        <img 
-                          src={item} 
-                          alt={`Logo ${idx + 1}`} 
+                      <div key={idx} className="p-1.5 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-slate-800 flex items-center justify-center min-w-[68px] h-10 max-w-[140px] shadow-sm overflow-hidden">
+                        <ResilientImage
+                          src={item}
+                          alt={`Logo ${idx + 1}`}
                           className="max-h-8 max-w-full object-contain"
-                          referrerPolicy="no-referrer"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLElement).style.display = 'none';
-                          }}
+                          fallbackClassName="w-full h-full border-0 rounded-none"
+                          compact
                         />
                       </div>
                     );
@@ -638,13 +637,15 @@ export const SiteContentEditor: React.FC<{ showNotification?: (msg: string, type
             </div>
             {value && (
               <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 border border-border/70">
-                <img 
-                  src={value} 
-                  alt="Preview" 
-                  className="w-12 h-12 rounded-md object-cover border border-border bg-white"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
-                />
+                <div className="w-16 h-12 rounded-md overflow-hidden border border-border bg-white dark:bg-slate-900 shrink-0">
+                  <ResilientImage
+                    src={value}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                    fallbackClassName="w-full h-full border-0 rounded-none"
+                    compact
+                  />
+                </div>
                 <div className="text-[11px] text-muted-foreground truncate">
                   Image Preview
                 </div>

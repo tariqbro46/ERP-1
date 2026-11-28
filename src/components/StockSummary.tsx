@@ -15,6 +15,7 @@ import { DateInput } from './DateInput';
 import { buildReportPrintHtml, executePrint } from '../utils/printUtils';
 import { printToPDF } from '../utils/pdfExportService';
 import { resolveCompanyLegalIdentity, sanitizeAssetUrl } from '../constants/appIdentity';
+import { ResilientImage } from './ImageNotFoundFrame';
 
 export function StockSummary() {
   const { user, company } = useAuth();
@@ -554,11 +555,12 @@ export function StockSummary() {
           <div className="flex items-center gap-4">
             {sanitizeAssetUrl(legal.companyLogo || '') && (
               <div className="w-10 h-10 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
-                <img 
-                  src={sanitizeAssetUrl(legal.companyLogo || '')} 
-                  alt="Logo" 
+                <ResilientImage
+                  src={sanitizeAssetUrl(legal.companyLogo || '')}
+                  alt="Logo"
                   className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
+                  fallbackClassName="w-full h-full border-0 rounded-none"
+                  compact
                 />
               </div>
             )}

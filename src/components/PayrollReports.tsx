@@ -23,6 +23,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useSettings } from '../contexts/SettingsContext';
 import { formatCurrency, cn } from '../lib/utils';
 import { format } from 'date-fns';
+import { ResilientImage } from './ImageNotFoundFrame';
 import { EmptyState } from './EmptyState';
 
 import { printUtils } from '../utils/printUtils';
@@ -344,13 +345,13 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
               </div>
               <div className="absolute bottom-0 left-0 right-0 p-8 flex flex-col md:flex-row items-center md:items-end gap-6 translate-y-12">
                 <div className="w-32 h-32 lg:w-40 lg:h-40 bg-card rounded-full border-4 border-background overflow-hidden shadow-2xl relative z-10 shrink-0">
-                  {selectedEmployee.photo ? (
-                    <img src={selectedEmployee.photo} alt={selectedEmployee.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  ) : (
-                    <div className="w-full h-full bg-foreground flex items-center justify-center">
-                      <User className="w-16 h-16 lg:w-20 lg:h-20 text-background opacity-20" />
-                    </div>
-                  )}
+                  <ResilientImage
+                    src={selectedEmployee.photo}
+                    alt={selectedEmployee.name}
+                    className="w-full h-full object-cover"
+                    fallbackClassName="w-full h-full border-0 rounded-full"
+                    compact
+                  />
                 </div>
                 <div className="flex-1 text-center md:text-left mb-4 z-10">
                   <h2 className="text-3xl lg:text-4xl font-black text-white uppercase tracking-tighter drop-shadow-lg">{selectedEmployee.name || 'N/A'}</h2>
@@ -370,11 +371,13 @@ export function PayrollReports({ type: propType }: PayrollReportsProps) {
             {/* Print Only Header */}
             <div className="hidden print:flex items-center gap-8 mb-10 border-b-2 border-foreground pb-8">
               <div className="w-32 h-32 bg-gray-100 rounded-2xl flex items-center justify-center border-2 border-foreground overflow-hidden">
-                {selectedEmployee.photo ? (
-                  <img src={selectedEmployee.photo} alt={selectedEmployee.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                ) : (
-                  <User className="w-16 h-16 text-gray-300" />
-                )}
+                <ResilientImage
+                  src={selectedEmployee.photo}
+                  alt={selectedEmployee.name}
+                  className="w-full h-full object-cover"
+                  fallbackClassName="w-full h-full border-0 rounded-none"
+                  compact
+                />
               </div>
               <div className="space-y-2">
                 <h2 className="text-3xl font-black uppercase tracking-tight">{selectedEmployee.name || 'N/A'}</h2>

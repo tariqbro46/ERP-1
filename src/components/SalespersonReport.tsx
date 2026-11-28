@@ -7,6 +7,7 @@ import { cn } from '../lib/utils';
 import { format } from 'date-fns';
 
 import { SearchableSelect } from './SearchableSelect';
+import { ResilientImage } from './ImageNotFoundFrame';
 
 interface SalespersonStat {
   uid: string;
@@ -86,11 +87,12 @@ export function SalespersonReport() {
         <div className="flex items-center gap-4">
           {(settings.companyLogo || settings.systemLogo) && (
             <div className="w-12 h-12 bg-foreground/5 rounded-lg overflow-hidden flex items-center justify-center border border-border">
-              <img 
-                src={settings.companyLogo || settings.systemLogo} 
-                alt="Logo" 
+              <ResilientImage
+                src={settings.companyLogo || settings.systemLogo}
+                alt="Logo"
                 className="w-full h-full object-contain"
-                referrerPolicy="no-referrer"
+                fallbackClassName="w-full h-full border-0 rounded-none"
+                compact
               />
             </div>
           )}

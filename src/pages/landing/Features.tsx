@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Navbar } from '../../components/landing/Navbar';
 import { Footer } from '../../components/landing/Footer';
@@ -10,15 +10,16 @@ import {
   Factory,
   FileSpreadsheet,
   FileText,
+  Image as ImageIcon,
   Layers,
   Lock,
   Mail,
-  Package,
-  Plus,
+  Maximize2,
   Printer,
   ShieldCheck,
   Users,
   Warehouse,
+  X,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -27,55 +28,117 @@ import { useAuth } from '../../contexts/AuthContext';
 import { APP_FEATURES, FeatureCategory } from '../../constants/features';
 import { LATEST_VERSION } from '../../data/releaseNotes';
 import { cn } from '../../lib/utils';
+import {
+  DOCS_SCREENSHOTS_UPDATED_EVENT,
+  readStoredScreenshots,
+  resolveShowcaseScreenshot,
+} from '../../constants/helpContent';
+import { ResilientImage } from '../../components/ImageNotFoundFrame';
 
 type ModuleTab = 'vouchers' | 'inventory' | 'production' | 'payroll';
 
-interface SampleLedgerRow {
-  id: string;
-  descEn: string;
-  descBn: string;
-  groupEn: string;
-  groupBn: string;
-  amount: number;
-  side: 'Dr' | 'Cr';
-}
-
-interface StockSimulationItem {
-  sku: string;
-  nameEn: string;
-  nameBn: string;
-  godown: 'dhaka' | 'ctg';
-  qty: number;
-  unit: 'Pcs' | 'Nos' | 'Kg';
-  rate: number;
-  reorderLevel: number;
-}
-
-interface ProductionJob {
-  orderNo: string;
-  productEn: string;
-  productBn: string;
-  machineEn: string;
-  machineBn: string;
-  targetQty: number;
-  unit: string;
-  completedQty: number;
-  bomCost: number;
-  status: 'queued' | 'running' | 'completed';
-}
-
-interface PayrollRow {
-  id: string;
-  nameEn: string;
-  nameBn: string;
-  roleEn: string;
-  roleBn: string;
-  presentDays: number;
-  totalDays: number;
-  basic: number;
-  allowance: number;
-  deduction: number;
-}
+const MODULE_DETAILS: Record<
+  ModuleTab,
+  {
+    slotKey: string;
+    step: string;
+    titleEn: string;
+    titleBn: string;
+    descEn: string;
+    descBn: string;
+    bulletsEn: string[];
+    bulletsBn: string[];
+  }
+> = {
+  vouchers: {
+    slotKey: 'features-vouchers',
+    step: '01',
+    titleEn: 'Double-Entry Vouchers & Auto Serials',
+    titleBn: 'ডাবল-এন্ট্রি ভাউচার ও অটো সিরিয়াল',
+    descEn:
+      'Post balanced Sales, Purchase, Receipt, Payment, Contra, and Journal vouchers with atomic counter serials and live running ledger balances.',
+    descBn:
+      'বিক্রয়, ক্রয়, রিসিট, পেমেন্ট, কন্ট্রা ও জার্নালে অটো-সিরিয়াল এবং রানিং লেজার ব্যালেন্সসহ নির্ভুল ডাবল-এন্ট্রি হিসাব সংরক্ষণ করুন।',
+    bulletsEn: [
+      '8 Voucher Types (Sales, Purchase, Receipt, Payment, Contra, Journal, Transfer, Physical Stock)',
+      'Real-time Debit = Credit verification before posting',
+      'Instant A4 invoice & POS receipt printing',
+      'Optional cost centre & narration tracking',
+    ],
+    bulletsBn: [
+      '৮ ধরনের ভাউচার (বিক্রয়, ক্রয়, রিসিট, পেমেন্ট, কন্ট্রা, জার্নাল, স্টক ট্রান্সফার ও ফিজিক্যাল স্টক)',
+      'পোস্ট করার আগেই ডেবিট ও ক্রেডিট সমতা যাচাই',
+      'তাৎক্ষণিক A4 ইনভয়েস এবং POS রিসিট প্রিন্ট',
+      'কস্ট সেন্টার ও বিস্তারিত ন্যারেশন সংরক্ষণ',
+    ],
+  },
+  inventory: {
+    slotKey: 'features-inventory',
+    step: '02',
+    titleEn: 'Multi-Godown FIFO Stock & Unit Precision',
+    titleBn: 'মাল্টি-গোডাউন FIFO স্টক ও ব্যাচ নিয়ন্ত্রণ',
+    descEn:
+      'Track warehouse stock balances per godown with FIFO valuation, batch expiry dates, reorder thresholds, and whole-integer Pcs/Nos rules.',
+    descBn:
+      'প্রতিটি গোডাউনের স্টক ব্যালেন্স, FIFO মূল্যায়ন, ব্যাচ ও মেয়াদ, লো-স্টক সতর্কতা এবং Pcs/Nos-এ দশমিকবিহীন নির্ভুল হিসাব রাখুন।',
+    bulletsEn: [
+      'Warehouse-wise stock tracking and inter-godown transfers',
+      'Strict whole-number formatting for Pcs, Pc & Nos',
+      'Batch lot numbers, expiry tracking & reorder alerts',
+      'Physical stock audit adjustment & negative stock guard',
+    ],
+    bulletsBn: [
+      'গুদামভিত্তিক মজুদ পর্যবেক্ষণ ও আন্তঃগোডাউন ট্রান্সফার',
+      'Pcs, Pc ও Nos-এ পূর্ণসংখ্যা এবং ওজনে সর্বোচ্চ ২ দশমিক নিয়ম',
+      'ব্যাচ নম্বর, মেয়াদোত্তীর্ণ তারিখ এবং লো-স্টক সতর্কতা',
+      'ফিজিক্যাল স্টক সমন্বয় ও নেগেটিভ স্টক প্রতিরোধ',
+    ],
+  },
+  production: {
+    slotKey: 'features-production',
+    step: '03',
+    titleEn: 'Production Orders, Machine Tracking & Stock Journal',
+    titleBn: 'উৎপাদন অর্ডার, মেশিন ও কাঁচামাল কনভার্সন',
+    descEn:
+      'Manage customer production orders, assign factory machines, record raw material consumption, and log finished goods directly into stock.',
+    descBn:
+      'গ্রাহক অর্ডার থেকে মেশিন বরাদ্দ, কাঁচামাল খরচ এবং ফিনিশড গুডস উৎপাদন ধাপে ধাপে পরিচালনা ও স্টকে সংযুক্ত করুন।',
+    bulletsEn: [
+      'Customer order book & stage-by-stage completion tracking',
+      'Machine assignment, capacity & utilization records',
+      'Bill of Materials (BOM) raw material consumption logs',
+      'Direct Stock Journal posting for finished goods output',
+    ],
+    bulletsBn: [
+      'গ্রাহক অর্ডার বুক ও ধাপে ধাপে অগ্রগতি ট্র্যাকিং',
+      'মেশিন বরাদ্দ ও উৎপাদন সক্ষমতা পর্যবেক্ষণ',
+      'কাঁচামাল ব্যবহার ও BOM খরচ হিসাবরক্ষণ',
+      'ফিনিশড গুডস সরাসরি স্টক জার্নালে সংযুক্তি',
+    ],
+  },
+  payroll: {
+    slotKey: 'features-payroll',
+    step: '04',
+    titleEn: 'Payroll Processing, Attendance & Payslips',
+    titleBn: 'পেরোল, উপস্থিতি ও পে-স্লিপ রেজিস্টার',
+    descEn:
+      'Calculate monthly salary sheets from attendance registers, custom pay-heads, employee advances, deductions, and printable payment advice.',
+    descBn:
+      'মূল বেতন, ভাতা, কর্তন, অগ্রিম সমন্বয় এবং উপস্থিতির দিন অনুযায়ী স্বয়ংক্রিয় মাসিক স্যালারি শিট ও পে-স্লিপ তৈরি করুন।',
+    bulletsEn: [
+      'Daily Attendance Register & Attendance-linked Pay Heads',
+      'Automated loan & advance EMI deduction on monthly runs',
+      'One-click Bulk Salary Sheet generation & posting',
+      'Individual Employee Payslips & Bank Payment Advice',
+    ],
+    bulletsBn: [
+      'দৈনিক উপস্থিতি রেজিস্টার ও উপস্থিতি-ভিত্তিক পে-হেড',
+      'কর্মীদের অগ্রিম ও ঋণের কিস্তি স্বয়ংক্রিয় সমন্বয়',
+      'এক ক্লিকে মাসিক বাল্ক স্যালারি শিট জেনারেশন',
+      'পৃথক কর্মী পে-স্লিপ ও ব্যাংক পেমেন্ট অ্যাডভাইস প্রিন্ট',
+    ],
+  },
+};
 
 const TEN_CORE_REPORTS = [
   { code: '01', en: 'Daybook Register', bn: 'ডেবুক রেজিস্টার', scopeEn: 'Chronological vouchers by date & serial', scopeBn: 'তারিখ ও সিরিয়াল অনুযায়ী ধারাবাহিক ভাউচার' },
@@ -89,166 +152,6 @@ const TEN_CORE_REPORTS = [
   { code: '09', en: 'Ratio Analysis', bn: 'অনুপাত বিশ্লেষণ', scopeEn: 'Current ratio, quick ratio & debt turnover', scopeBn: 'কারেন্ট রেশিও, কুইক রেশিও ও টার্নওভার' },
   { code: '10', en: 'Negative Stock & Ledger', bn: 'নেগেটিভ স্টক ও লেজার', scopeEn: 'Exception report for anomalous balances', scopeBn: 'ব্যতিক্রমী স্টক বা লেজার ব্যালেন্স সতর্কতা' },
 ];
-
-const EIGHT_VOUCHER_TYPES = [
-  { code: 'V-01', en: 'Sales', bn: 'বিক্রয় (Sales)' },
-  { code: 'V-02', en: 'Purchase', bn: 'ক্রয় (Purchase)' },
-  { code: 'V-03', en: 'Receipt', bn: 'রিসিট (Receipt)' },
-  { code: 'V-04', en: 'Payment', bn: 'পেমেন্ট (Payment)' },
-  { code: 'V-05', en: 'Contra', bn: 'কন্ট্রা (Contra)' },
-  { code: 'V-06', en: 'Journal', bn: 'জার্নাল (Journal)' },
-  { code: 'V-07', en: 'Stock Transfer', bn: 'স্টক ট্রান্সফার' },
-  { code: 'V-08', en: 'Physical Stock', bn: 'ফিজিক্যাল স্টক' },
-];
-
-const INITIAL_LEDGER_LINES: SampleLedgerRow[] = [
-  {
-    id: 'row-1',
-    descEn: 'Meghna Trading Co. — Sales Receipt',
-    descBn: 'মেঘনা ট্রেডিং কোং — বিক্রয় আদায়',
-    groupEn: 'Sundry Debtors',
-    groupBn: 'দেনাদার হিসাব',
-    amount: 145000,
-    side: 'Dr',
-  },
-  {
-    id: 'row-2',
-    descEn: 'Eastern Bank Current A/C — Supplier Settlement',
-    descBn: 'ইস্টার্ন ব্যাংক কারেন্ট হিসাব — সরবরাহকারী পরিশোধ',
-    groupEn: 'Bank Accounts',
-    groupBn: 'ব্যাংক অ্যাকাউন্টস',
-    amount: 64500,
-    side: 'Cr',
-  },
-  {
-    id: 'row-3',
-    descEn: 'Dhaka Central Depot — Export Dispatch Fee',
-    descBn: 'ঢাকা সেন্ট্রাল ডিপো — ডিসপ্যাচ ফি',
-    groupEn: 'Direct Expenses',
-    groupBn: 'প্রত্যক্ষ ব্যয়',
-    amount: 18500,
-    side: 'Cr',
-  },
-];
-
-const INITIAL_STOCK_ITEMS: StockSimulationItem[] = [
-  {
-    sku: 'ITM-104',
-    nameEn: 'Industrial Servo Motor 2HP',
-    nameBn: 'ইন্ডাস্ট্রিয়াল সার্ভো মোটর ২HP',
-    godown: 'dhaka',
-    qty: 140,
-    unit: 'Pcs',
-    rate: 8450,
-    reorderLevel: 40,
-  },
-  {
-    sku: 'ITM-209',
-    nameEn: 'Copper Winding Coil (Batch B-19)',
-    nameBn: 'কপার ওয়াইন্ডিং কয়েল (ব্যাচ B-19)',
-    godown: 'dhaka',
-    qty: 285.5,
-    unit: 'Kg',
-    rate: 1120,
-    reorderLevel: 100,
-  },
-  {
-    sku: 'ITM-312',
-    nameEn: 'Hydraulic Valve Assembly',
-    nameBn: 'হাইড্রোলিক ভালভ অ্যাসেম্বলি',
-    godown: 'ctg',
-    qty: 18,
-    unit: 'Nos',
-    rate: 4200,
-    reorderLevel: 20,
-  },
-  {
-    sku: 'ITM-418',
-    nameEn: 'Cold-Rolled Steel Sheet',
-    nameBn: 'কোল্ড-রোল্ড স্টিল শিট',
-    godown: 'ctg',
-    qty: 162.25,
-    unit: 'Kg',
-    rate: 295,
-    reorderLevel: 75,
-  },
-];
-
-const INITIAL_JOBS: ProductionJob[] = [
-  {
-    orderNo: 'PO-2026-084',
-    productEn: 'Corrugated Export Carton (Lot A)',
-    productBn: 'করুগেটেড এক্সপোর্ট কার্টন (লট A)',
-    machineEn: 'Auto-Die Cutter M-02',
-    machineBn: 'অটো-ডাই কাটার M-02',
-    targetQty: 500,
-    unit: 'Pcs',
-    completedQty: 350,
-    bomCost: 112000,
-    status: 'running',
-  },
-  {
-    orderNo: 'PO-2026-085',
-    productEn: 'Heavy Duty Laminate Roll',
-    productBn: 'হেভি ডিউটি ল্যামিনেট রোল',
-    machineEn: 'Extrusion Press M-05',
-    machineBn: 'এক্সট্রুশন প্রেস M-05',
-    targetQty: 120,
-    unit: 'Kg',
-    completedQty: 120,
-    bomCost: 84500,
-    status: 'completed',
-  },
-];
-
-const INITIAL_STAFF: PayrollRow[] = [
-  {
-    id: 'EMP-01',
-    nameEn: 'Rafiqul Islam',
-    nameBn: 'রফিকুল ইসলাম',
-    roleEn: 'Production Supervisor',
-    roleBn: 'প্রোডাকশন সুপারভাইজার',
-    presentDays: 26,
-    totalDays: 26,
-    basic: 38000,
-    allowance: 7000,
-    deduction: 1500,
-  },
-  {
-    id: 'EMP-02',
-    nameEn: 'Farzana Akter',
-    nameBn: 'ফারজানা আক্তার',
-    roleEn: 'Senior Accounts Lead',
-    roleBn: 'সিনিয়র অ্যাকাউন্টস লিড',
-    presentDays: 26,
-    totalDays: 26,
-    basic: 56000,
-    allowance: 14000,
-    deduction: 2000,
-  },
-  {
-    id: 'EMP-03',
-    nameEn: 'Tasnim Ahmed',
-    nameBn: 'তাসনিম আহমেদ',
-    roleEn: 'Marketing Manager',
-    roleBn: 'মার্কেটিং ম্যানেজার',
-    presentDays: 25,
-    totalDays: 26,
-    basic: 44000,
-    allowance: 11000,
-    deduction: 1800,
-  },
-];
-
-const formatCurrency = (val: number) =>
-  val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const formatQty = (qty: number, unit: string) => {
-  const isWhole = ['Pcs', 'Pc', 'Nos'].includes(unit);
-  return isWhole
-    ? `${Math.round(qty).toLocaleString('en-US')} ${unit}`
-    : `${qty.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${unit}`;
-};
 
 const sanitizeFeatureLabel = (id: string, rawLabel: string, isBn: boolean): string => {
   if (id === 'ana_insights' || id === 'enableAI') {
@@ -319,7 +222,7 @@ const sanitizeFeatureDesc = (id: string, rawDesc: string | undefined, isBn: bool
     enableInventory: 'ব্যাচ, লট ও একাধিক গুদামের সমন্বিত নিয়ন্ত্রণ।',
     enableDataExport: 'কাঠামোবদ্ধ .xlsx, PDF এবং A4 প্রিন্ট এক্সপোর্ট সুবিধা।',
   };
-  return (isBn && bnDescMap[id]) ? bnDescMap[id] : (rawDesc || '');
+  return isBn && bnDescMap[id] ? bnDescMap[id] : rawDesc || '';
 };
 
 const sanitizeCategoryLabel = (cat: FeatureCategory, isBn: boolean): string => {
@@ -336,94 +239,50 @@ const sanitizeCategoryLabel = (cat: FeatureCategory, isBn: boolean): string => {
 };
 
 export const Features = () => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const { appIdentity, appVersion, appFeatures } = useSettings();
-  const { user } = useAuth();
+  const { user, isFounder } = useAuth();
   const isBn = language === 'bn';
 
   const appName = appIdentity?.appName || 'TallyFlow ERP';
-  const resolvedVersion = (appVersion || LATEST_VERSION || 'v1.9.9.31').startsWith('v')
-    ? appVersion || LATEST_VERSION || 'v1.9.9.31'
-    : `v${appVersion || LATEST_VERSION || '1.9.9.31'}`;
+  const resolvedVersion = (appVersion || LATEST_VERSION || 'v1.9.9.32').startsWith('v')
+    ? appVersion || LATEST_VERSION || 'v1.9.9.32'
+    : `v${appVersion || LATEST_VERSION || '1.9.9.32'}`;
 
-  // Interactive Workbench State
   const [activeTab, setActiveTab] = useState<ModuleTab>('vouchers');
-
-  // 1. Voucher Double-Entry Simulation
-  const [ledgerRows, setLedgerRows] = useState<SampleLedgerRow[]>(INITIAL_LEDGER_LINES);
-  const [entryDesc, setEntryDesc] = useState('');
-  const [entryAmount, setEntryAmount] = useState('25000');
-  const [entrySide, setEntrySide] = useState<'Dr' | 'Cr'>('Dr');
-
-  const handleAddSampleVoucher = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleaned = entryDesc.trim();
-    const num = Number(entryAmount);
-    if (!cleaned || !Number.isFinite(num) || num <= 0) return;
-    setLedgerRows((prev) => [
-      {
-        id: `row-${Date.now()}`,
-        descEn: cleaned,
-        descBn: cleaned,
-        groupEn: entrySide === 'Dr' ? 'Sundry Debtors' : 'Indirect Expenses',
-        groupBn: entrySide === 'Dr' ? 'দেনাদার হিসাব' : 'পরোক্ষ ব্যয়',
-        amount: num,
-        side: entrySide,
-      },
-      ...prev,
-    ]);
-    setEntryDesc('');
-  };
-
-  const voucherTotals = useMemo(() => {
-    const debit = ledgerRows.reduce((s, r) => s + (r.side === 'Dr' ? r.amount : 0), 0);
-    const credit = ledgerRows.reduce((s, r) => s + (r.side === 'Cr' ? r.amount : 0), 0);
-    return { debit, credit, net: debit - credit };
-  }, [ledgerRows]);
-
-  // 2. Multi-Godown Inventory Simulation
-  const [selectedGodown, setSelectedGodown] = useState<'all' | 'dhaka' | 'ctg'>('all');
-  const [stockItems, setStockItems] = useState<StockSimulationItem[]>(INITIAL_STOCK_ITEMS);
-
-  const visibleStock = useMemo(() => {
-    if (selectedGodown === 'all') return stockItems;
-    return stockItems.filter((item) => item.godown === selectedGodown);
-  }, [stockItems, selectedGodown]);
-
-  const adjustStockQty = (sku: string, delta: number) => {
-    setStockItems((prev) =>
-      prev.map((item) => {
-        if (item.sku !== sku) return item;
-        const step = item.unit === 'Kg' ? delta * 5.5 : delta * 5;
-        return { ...item, qty: Math.max(0, Number((item.qty + step).toFixed(2))) };
-      })
-    );
-  };
-
-  // 3. Production Orders State
-  const [jobs, setJobs] = useState<ProductionJob[]>(INITIAL_JOBS);
-  const advanceJob = (orderNo: string) => {
-    setJobs((prev) =>
-      prev.map((job) => {
-        if (job.orderNo !== orderNo) return job;
-        const step = Math.max(10, Math.round(job.targetQty * 0.2));
-        const nextQty = Math.min(job.targetQty, job.completedQty + step);
-        return {
-          ...job,
-          completedQty: nextQty,
-          status: nextQty >= job.targetQty ? 'completed' : 'running',
-        };
-      })
-    );
-  };
-
-  // 4. Payroll State
-  const [payrollApproved, setPayrollApproved] = useState(false);
-
-  const totalPayrollNet = useMemo(
-    () => INITIAL_STAFF.reduce((sum, s) => sum + (s.basic + s.allowance - s.deduction), 0),
-    []
+  const [storedScreenshots, setStoredScreenshots] = useState<Record<string, string>>(() =>
+    readStoredScreenshots()
   );
+  const [hasImageError, setHasImageError] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  useEffect(() => {
+    const syncStored = () => setStoredScreenshots(readStoredScreenshots());
+    window.addEventListener(DOCS_SCREENSHOTS_UPDATED_EVENT, syncStored);
+    window.addEventListener('storage', syncStored);
+    return () => {
+      window.removeEventListener(DOCS_SCREENSHOTS_UPDATED_EVENT, syncStored);
+      window.removeEventListener('storage', syncStored);
+    };
+  }, []);
+
+  const currentModule = MODULE_DETAILS[activeTab];
+  const resolved = resolveShowcaseScreenshot(currentModule.slotKey, storedScreenshots);
+  const isScreenshotReady = Boolean(resolved.src && !hasImageError);
+
+  useEffect(() => {
+    setHasImageError(false);
+    setIsLightboxOpen(false);
+  }, [currentModule.slotKey, resolved.src]);
+
+  useEffect(() => {
+    if (!isLightboxOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsLightboxOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isLightboxOpen]);
 
   const featureCategories = appFeatures && appFeatures.length > 0 ? appFeatures : APP_FEATURES;
 
@@ -583,26 +442,26 @@ export const Features = () => {
             </div>
           </motion.section>
 
-          {/* SECTION 01: INTERACTIVE CAPABILITY WORKBENCH */}
+          {/* SECTION 01: FUNCTIONAL MODULE SCREENSHOT EXPLORER */}
           <section className="py-14 border-b border-slate-200/85 dark:border-slate-800">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
               <div>
                 <p className="text-[11px] font-mono uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400 font-semibold">
-                  {isBn ? '০১. ইন্টারেক্টিভ ওয়ার্কবেঞ্চ প্রিভিউ' : '01. Interactive Architecture Workbench'}
+                  {isBn ? '০১. কার্যকরী মডিউল ও স্ক্রিন প্রদর্শনী' : '01. Functional Module Screen Explorer'}
                 </p>
                 <h2
                   className="mt-2 text-2xl sm:text-3xl font-bold tracking-[-0.025em] text-slate-950 dark:text-white"
                   style={{ fontFamily: "'Plus Jakarta Sans', 'Hind Siliguri', sans-serif" }}
                 >
                   {isBn
-                    ? 'বাস্তব কর্মপ্রবাহ পরীক্ষা করে দেখুন'
-                    : 'Test core accounting and stock workflows directly'}
+                    ? 'বাস্তব অ্যাপ স্ক্রিন ও কর্মপ্রবাহ দেখুন'
+                    : 'Inspect authentic application screens by module'}
                 </h2>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
                 {isBn
-                  ? 'নিচের ৪টি মডিউল ট্যাব পরিবর্তন করে ডাবল-এন্ট্রি ভাউচার, গোডাউন স্টক, উৎপাদন অর্ডার ও পেরোল গণনা যাচাই করুন।'
-                  : 'Switch between the four core module tabs below to test live ledger totals, godown stock adjustments, production batches, and payroll sheets.'}
+                  ? 'নিচের ৪টি মডিউল ট্যাব পরিবর্তন করে ডাবল-এন্ট্রি ভাউচার, গোডাউন স্টক, উৎপাদন অর্ডার ও পেরোলের প্রকৃত ইন্টারফেস দেখুন।'
+                  : 'Switch across the four module tabs below to inspect authentic application screens for vouchers, godown inventory, production orders, and payroll.'}
               </p>
             </div>
 
@@ -615,7 +474,7 @@ export const Features = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">
-                      {isBn ? 'কার্যকরী মডিউল সিমুলেটর' : 'Functional Module Explorer'}
+                      {isBn ? 'কার্যকরী মডিউল এক্সপ্লোরার' : 'Functional Module Explorer'}
                     </p>
                     <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">
                       {isBn ? 'লেজার · ইনভেন্টরি · উৎপাদন · পেরোল' : 'Ledgers · Inventory · Manufacturing · Payroll'}
@@ -623,7 +482,7 @@ export const Features = () => {
                   </div>
                 </div>
 
-                {/* Interactive Module Segmented Tabs */}
+                {/* Module Segmented Tabs */}
                 <div
                   role="tablist"
                   aria-label={isBn ? 'মডিউল নির্বাচন' : 'Select module explorer tab'}
@@ -660,480 +519,122 @@ export const Features = () => {
                 </div>
               </div>
 
-              {/* Workbench Inner Layout */}
+              {/* Workbench Inner Layout: Module Summary (Left) + Real App Screenshot Frame (Right) */}
               <div className="p-5 sm:p-7">
-                {/* TAB 1: VOUCHERS & DOUBLE-ENTRY */}
-                {activeTab === 'vouchers' && (
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                    <div className="lg:col-span-5 space-y-5">
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-950 dark:text-white">
-                          {isBn ? 'ডাবল-এন্ট্রি ভাউচার ও অটো সিরিয়াল' : 'Double-Entry Vouchers & Auto Serials'}
-                        </h3>
-                        <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                          {isBn
-                            ? 'বিক্রয়, ক্রয়, রিসিট, পেমেন্ট, কন্ট্রা ও জার্নালে রানিং ব্যালেন্স ও কস্ট সেন্টারসহ নির্ভুল হিসাব সংরক্ষণ করুন।'
-                            : 'Post balanced Sales, Purchase, Receipt, Payment, Contra, and Journal vouchers with real-time running ledger balances.'}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        {EIGHT_VOUCHER_TYPES.map((vt) => (
-                          <div
-                            key={vt.code}
-                            className="px-3 py-2 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 text-xs flex items-center justify-between"
-                          >
-                            <span className="font-medium text-slate-800 dark:text-slate-200">{isBn ? vt.bn : vt.en}</span>
-                            <span className="font-mono text-[10.5px] text-slate-400">{vt.code}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Quick Sample Line Composer */}
-                      <form
-                        onSubmit={handleAddSampleVoucher}
-                        className="p-4 rounded-lg border border-slate-200/90 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 space-y-3"
-                      >
-                        <p className="text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
-                          {isBn ? 'টেস্ট লেজার এন্ট্রি যোগ করুন' : 'Append Test Voucher Line'}
-                        </p>
-                        <input
-                          type="text"
-                          value={entryDesc}
-                          onChange={(e) => setEntryDesc(e.target.value)}
-                          placeholder={isBn ? 'যেমন: অফিস ভাড়া বা কাস্টমার জমা' : 'e.g. Office Rent or Party Settlement'}
-                          className="w-full px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white outline-none focus:border-blue-600"
-                        />
-                        <div className="flex flex-wrap items-center gap-2">
-                          <input
-                            type="number"
-                            min="1"
-                            step="0.01"
-                            value={entryAmount}
-                            onChange={(e) => setEntryAmount(e.target.value)}
-                            className="flex-1 min-w-[110px] px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-mono tabular-nums text-slate-900 dark:text-white outline-none focus:border-blue-600"
-                          />
-                          <select
-                            value={entrySide}
-                            onChange={(e) => setEntrySide(e.target.value as 'Dr' | 'Cr')}
-                            className="px-3 py-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-semibold text-slate-800 dark:text-slate-200"
-                          >
-                            <option value="Dr">{isBn ? 'ডেবিট (Dr)' : 'Debit (Dr)'}</option>
-                            <option value="Cr">{isBn ? 'ক্রেডিট (Cr)' : 'Credit (Cr)'}</option>
-                          </select>
-                          <button
-                            type="submit"
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-slate-950 dark:bg-blue-600 text-white text-xs font-semibold hover:opacity-95 transition-opacity cursor-pointer"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            <span>{isBn ? 'যোগ করুন' : 'Add Line'}</span>
-                          </button>
-                        </div>
-                      </form>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-7 lg:gap-8 items-start">
+                  {/* Left 4 Columns: Authentic Module Context & Route */}
+                  <div className="lg:col-span-4 space-y-5">
+                    <div>
+                      <p className="text-[11px] font-mono uppercase tracking-[0.12em] text-blue-700 dark:text-blue-400 font-semibold">
+                        {isBn ? `মডিউল ${currentModule.step}` : `Module ${currentModule.step}`} · {resolved.route}
+                      </p>
+                      <h3 className="mt-1.5 text-lg font-bold text-slate-950 dark:text-white leading-snug">
+                        {isBn ? currentModule.titleBn : currentModule.titleEn}
+                      </h3>
+                      <p className="mt-2 text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {isBn ? currentModule.descBn : currentModule.descEn}
+                      </p>
                     </div>
 
-                    <div className="lg:col-span-7 space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="p-3.5 rounded-lg border border-slate-200/85 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50">
-                          <span className="text-[10.5px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            {isBn ? 'মোট ডেবিট (Dr)' : 'Total Debit (Dr)'}
-                          </span>
-                          <p className="mt-1 text-base font-bold font-mono tabular-nums text-emerald-700 dark:text-emerald-400">
-                            ৳{formatCurrency(voucherTotals.debit)}
-                          </p>
-                        </div>
-                        <div className="p-3.5 rounded-lg border border-slate-200/85 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50">
-                          <span className="text-[10.5px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            {isBn ? 'মোট ক্রেডিট (Cr)' : 'Total Credit (Cr)'}
-                          </span>
-                          <p className="mt-1 text-base font-bold font-mono tabular-nums text-rose-700 dark:text-rose-400">
-                            ৳{formatCurrency(voucherTotals.credit)}
-                          </p>
-                        </div>
-                        <div className="p-3.5 rounded-lg border border-slate-200/85 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50">
-                          <span className="text-[10.5px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            {isBn ? 'নেট অবস্থান (Dr - Cr)' : 'Net Position (Dr - Cr)'}
-                          </span>
-                          <p className="mt-1 text-base font-bold font-mono tabular-nums text-slate-950 dark:text-white">
-                            ৳{formatCurrency(Math.abs(voucherTotals.net))}{' '}
-                            <span className="text-xs font-semibold">
-                              {voucherTotals.net >= 0 ? 'Dr' : 'Cr'}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
+                    <ul className="space-y-2.5 pt-2 border-t border-slate-200/80 dark:border-slate-800">
+                      {(isBn ? currentModule.bulletsBn : currentModule.bulletsEn).map((bullet) => (
+                        <li key={bullet} className="flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                          <Check className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0 mt-0.5" />
+                          <span>{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
 
-                      <div className="overflow-x-auto border border-slate-200/90 dark:border-slate-800 rounded-lg">
-                        <table className="w-full text-left border-collapse">
-                          <thead>
-                            <tr className="bg-slate-50/90 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-[10.5px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                              <th className="py-2.5 px-3.5 align-middle font-semibold">
-                                {isBn ? 'বিবরণ ও লেজার' : 'Particulars & Ledger'}
-                              </th>
-                              <th className="py-2.5 px-3.5 align-middle font-semibold hidden sm:table-cell">
-                                {isBn ? 'গ্রুপ' : 'Group'}
-                              </th>
-                              <th className="py-2.5 px-3.5 align-middle font-semibold text-right">
-                                {isBn ? 'ডেবিট (৳)' : 'Debit (৳)'}
-                              </th>
-                              <th className="py-2.5 px-3.5 align-middle font-semibold text-right">
-                                {isBn ? 'ক্রেডিট (৳)' : 'Credit (৳)'}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800 text-xs">
-                            {ledgerRows.map((row) => (
-                              <tr key={row.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/40">
-                                <td className="py-3 px-3.5 align-middle font-medium text-slate-900 dark:text-slate-100">
-                                  {isBn ? row.descBn : row.descEn}
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-slate-500 dark:text-slate-400 hidden sm:table-cell">
-                                  {isBn ? row.groupBn : row.groupEn}
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-right font-mono tabular-nums font-semibold text-emerald-700 dark:text-emerald-400">
-                                  {row.side === 'Dr' ? formatCurrency(row.amount) : '—'}
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-right font-mono tabular-nums font-semibold text-rose-700 dark:text-rose-400">
-                                  {row.side === 'Cr' ? formatCurrency(row.amount) : '—'}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                    <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center gap-3">
+                      <Link
+                        to={user ? resolved.route : '/register'}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-950 dark:bg-blue-600 hover:opacity-95 text-white text-xs font-semibold transition-opacity whitespace-nowrap"
+                      >
+                        <span>
+                          {user
+                            ? t('heroLedger.openModuleScreen')
+                            : isBn
+                              ? 'ফ্রি শুরু করুন'
+                              : 'Get Started'}
+                        </span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+
+                      {isFounder && (
+                        <Link
+                          to={`/founder-desk?target=${encodeURIComponent(currentModule.slotKey)}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-blue-700 dark:text-blue-400 transition-colors whitespace-nowrap"
+                        >
+                          <ImageIcon className="w-3.5 h-3.5" />
+                          <span>{t('heroLedger.manageScreenshot')}</span>
+                        </Link>
+                      )}
                     </div>
                   </div>
-                )}
 
-                {/* TAB 2: MULTI-GODOWN INVENTORY */}
-                {activeTab === 'inventory' && (
-                  <div className="space-y-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-950 dark:text-white">
-                          {isBn ? 'মাল্টি-গোডাউন FIFO স্টক ও ব্যাচ নিয়ন্ত্রণ' : 'Multi-Godown FIFO Stock & Unit Precision'}
-                        </h3>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                          {isBn
-                            ? 'গোডাউন অনুযায়ী স্টক ফিল্টার করুন এবং গ্রহণ (+) বা প্রেরণ (-) করে রিঅর্ডার অ্যালার্ট দেখুন।'
-                            : 'Filter inventory by godown and test stock receipt (+) or dispatch (-) with whole-unit Pcs/Nos rules.'}
-                        </p>
-                      </div>
-
-                      <div className="inline-flex items-center p-1 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 self-start">
-                        {(
-                          [
-                            { id: 'all', en: 'All Godowns', bn: 'সব গোডাউন' },
-                            { id: 'dhaka', en: 'Dhaka Central', bn: 'ঢাকা সেন্ট্রাল' },
-                            { id: 'ctg', en: 'Chattogram Port', bn: 'চট্টগ্রাম পোর্ট' },
-                          ] as const
-                        ).map((g) => (
-                          <button
-                            key={g.id}
-                            type="button"
-                            onClick={() => setSelectedGodown(g.id)}
+                  {/* Right 8 Columns: Real App Screenshot Viewer (or ImageNotFoundFrame fallback) */}
+                  <div className="lg:col-span-8">
+                    <figure className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden">
+                      <div className="px-4 py-2.5 bg-slate-50/90 dark:bg-slate-900/70 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0 text-[11px] font-mono text-slate-600 dark:text-slate-300">
+                          <span className="truncate">{resolved.route}</span>
+                          <span aria-hidden="true">·</span>
+                          <span
                             className={cn(
-                              'px-3 py-1 rounded-md text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap',
-                              selectedGodown === g.id
-                                ? 'bg-white dark:bg-slate-800 text-slate-950 dark:text-white shadow-2xs'
-                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
+                              'font-semibold whitespace-nowrap shrink-0',
+                              isScreenshotReady
+                                ? 'text-emerald-700 dark:text-emerald-400'
+                                : 'text-slate-500 dark:text-slate-400'
                             )}
                           >
-                            {isBn ? g.bn : g.en}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                            {isScreenshotReady
+                              ? t('docs.screenshot.verifiedBadge')
+                              : t('docs.screenshot.pendingBadge')}
+                          </span>
+                        </div>
 
-                    <div className="overflow-x-auto border border-slate-200/90 dark:border-slate-800 rounded-lg">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50/90 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-[10.5px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            <th className="py-2.5 px-3.5 align-middle font-semibold">{isBn ? 'আইটেম ও SKU' : 'Stock Item & SKU'}</th>
-                            <th className="py-2.5 px-3.5 align-middle font-semibold">{isBn ? 'গোডাউন' : 'Godown'}</th>
-                            <th className="py-2.5 px-3.5 align-middle font-semibold text-right">{isBn ? 'মজুদ পরিমাণ' : 'Closing Qty'}</th>
-                            <th className="py-2.5 px-3.5 align-middle font-semibold text-right">{isBn ? 'FIFO মূল্য (৳)' : 'FIFO Valuation (৳)'}</th>
-                            <th className="py-2.5 px-3.5 align-middle font-semibold text-right">{isBn ? 'স্ট্যাটাস' : 'Threshold'}</th>
-                            <th className="py-2.5 px-3.5 align-middle font-semibold text-right">{isBn ? 'সামঞ্জস্য' : 'Simulate'}</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800 text-xs">
-                          {visibleStock.map((item) => {
-                            const isLow = item.qty < item.reorderLevel;
-                            return (
-                              <tr key={item.sku} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/40">
-                                <td className="py-3 px-3.5 align-middle">
-                                  <p className="font-semibold text-slate-900 dark:text-slate-100">
-                                    {isBn ? item.nameBn : item.nameEn}
-                                  </p>
-                                  <p className="text-[10.5px] font-mono text-slate-500">{item.sku}</p>
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-slate-600 dark:text-slate-300">
-                                  {item.godown === 'dhaka'
-                                    ? isBn
-                                      ? 'ঢাকা সেন্ট্রাল'
-                                      : 'Dhaka Central'
-                                    : isBn
-                                      ? 'চট্টগ্রাম পোর্ট'
-                                      : 'Chattogram Port'}
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-right font-mono tabular-nums font-semibold text-slate-900 dark:text-white">
-                                  {formatQty(item.qty, item.unit)}
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-right font-mono tabular-nums font-semibold text-slate-900 dark:text-white">
-                                  {formatCurrency(item.qty * item.rate)}
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-right">
-                                  <span
-                                    className={cn(
-                                      'text-[11px] font-semibold font-mono',
-                                      isLow ? 'text-rose-700 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'
-                                    )}
-                                  >
-                                    {isLow
-                                      ? isBn
-                                        ? 'লো স্টক অ্যালার্ট'
-                                        : 'Low Stock Alert'
-                                      : isBn
-                                        ? 'স্বাভাবিক'
-                                        : 'Nominal'}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-right">
-                                  <div className="inline-flex items-center gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => adjustStockQty(item.sku, -1)}
-                                      className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 font-mono text-[11px] font-semibold cursor-pointer"
-                                      aria-label={`Dispatch ${item.nameEn}`}
-                                    >
-                                      -
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => adjustStockQty(item.sku, 1)}
-                                      className="px-2 py-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 font-mono text-[11px] font-semibold cursor-pointer"
-                                      aria-label={`Restock ${item.nameEn}`}
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 3: PRODUCTION & ORDERS */}
-                {activeTab === 'production' && (
-                  <div className="space-y-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-950 dark:text-white">
-                          {isBn ? 'উৎপাদন অর্ডার, মেশিন ও কাঁচামাল কনভার্সন' : 'Production Orders, Machine Tracking & Stock Journal'}
-                        </h3>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                          {isBn
-                            ? 'গ্রাহক অর্ডার থেকে মেশিন বরাদ্দ, কাঁচামাল খরচ এবং ফিনিশড গুডস উৎপাদন ধাপে ধাপে পরিচালনা করুন।'
-                            : 'Track customer orders, assign machines, record raw material consumption, and log finished goods output.'}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setJobs(INITIAL_JOBS)}
-                        className="px-3 py-1.5 rounded-md border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer self-start"
-                      >
-                        {isBn ? 'ডেমো রিসেট করুন' : 'Reset Sample Batch'}
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {jobs.map((job) => {
-                        const pct = Math.round((job.completedQty / job.targetQty) * 100);
-                        return (
-                          <div
-                            key={job.orderNo}
-                            className="p-5 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-4"
+                        {isScreenshotReady && (
+                          <button
+                            type="button"
+                            onClick={() => setIsLightboxOpen(true)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                                  {job.orderNo} · {isBn ? job.machineBn : job.machineEn}
-                                </p>
-                                <h4 className="text-sm font-bold text-slate-950 dark:text-white mt-0.5">
-                                  {isBn ? job.productBn : job.productEn}
-                                </h4>
-                              </div>
-                              <span
-                                className={cn(
-                                  'text-[11px] font-mono font-semibold whitespace-nowrap',
-                                  job.status === 'completed'
-                                    ? 'text-emerald-700 dark:text-emerald-400'
-                                    : 'text-blue-700 dark:text-blue-400'
-                                )}
-                              >
-                                {job.status === 'completed'
-                                  ? isBn
-                                    ? 'সম্পন্ন'
-                                    : 'Completed'
-                                  : isBn
-                                    ? 'চলমান'
-                                    : 'In Production'}
-                              </span>
-                            </div>
-
-                            <div className="space-y-1.5">
-                              <div className="flex justify-between text-xs font-mono tabular-nums text-slate-600 dark:text-slate-300">
-                                <span>
-                                  {formatQty(job.completedQty, job.unit)} / {formatQty(job.targetQty, job.unit)}
-                                </span>
-                                <span className="font-semibold text-slate-900 dark:text-white">{pct}%</span>
-                              </div>
-                              <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                                <div
-                                  className={cn(
-                                    'h-full transition-all duration-300',
-                                    job.status === 'completed' ? 'bg-emerald-600' : 'bg-blue-600'
-                                  )}
-                                  style={{ width: `${pct}%` }}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
-                              <span className="text-slate-600 dark:text-slate-400 font-mono tabular-nums">
-                                {isBn ? 'কাঁচামাল ব্যয়:' : 'BOM Cost:'} ৳{formatCurrency(job.bomCost)}
-                              </span>
-                              <button
-                                type="button"
-                                disabled={job.status === 'completed'}
-                                onClick={() => advanceJob(job.orderNo)}
-                                className="px-3 py-1.5 rounded-md bg-slate-950 dark:bg-blue-600 text-white font-semibold disabled:opacity-40 cursor-pointer disabled:cursor-default transition-opacity"
-                              >
-                                {job.status === 'completed'
-                                  ? isBn
-                                    ? 'সমাপ্ত'
-                                    : 'Finished'
-                                  : isBn
-                                    ? '+ ব্যাচ আপডেট'
-                                    : '+ Log Output'}
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB 4: PAYROLL & ATTENDANCE */}
-                {activeTab === 'payroll' && (
-                  <div className="space-y-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-950 dark:text-white">
-                          {isBn ? 'পেরোল, উপস্থিতি ও পে-স্লিপ রেজিস্টার' : 'Payroll Processing, Attendance & Payslips'}
-                        </h3>
-                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                          {isBn
-                            ? 'মূল বেতন, ভাতা, কর্তন এবং উপস্থিতির দিন অনুযায়ী মাসিক স্যালারি শিট ও পেমেন্ট অ্যাডভাইস।'
-                            : 'Calculate monthly salary sheets, deductions, attendance registers, employee payslips, and payment advice.'}
-                        </p>
+                            <Maximize2 className="w-3 h-3" />
+                            <span>{t('docs.screenshot.zoomIn')}</span>
+                          </button>
+                        )}
                       </div>
 
-                      <div className="flex items-center gap-3 self-start">
-                        <span className="text-xs font-mono tabular-nums text-slate-600 dark:text-slate-300">
-                          {isBn ? 'মোট নিট বেতন:' : 'Total Net:'}{' '}
-                          <strong className="text-slate-950 dark:text-white">৳{formatCurrency(totalPayrollNet)}</strong>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setPayrollApproved((p) => !p)}
+                      <div className="p-3 sm:p-4 bg-slate-100/70 dark:bg-slate-950/90 flex items-center justify-center">
+                        <ResilientImage
+                          src={resolved.src || ''}
+                          alt={isBn ? resolved.bnAlt : resolved.alt}
+                          onError={() => setHasImageError(true)}
+                          onClick={isScreenshotReady ? () => setIsLightboxOpen(true) : undefined}
                           className={cn(
-                            'px-3.5 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-colors',
-                            payrollApproved
-                              ? 'bg-emerald-700 text-white'
-                              : 'bg-slate-950 dark:bg-blue-600 text-white hover:opacity-95'
+                            'w-full h-auto max-h-[460px] object-contain rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900',
+                            isScreenshotReady && 'cursor-zoom-in'
                           )}
-                        >
-                          {payrollApproved
-                            ? isBn
-                              ? 'অনুমোদিত (পুনরায় দেখুন)'
-                              : 'Voucher Posted (Reset)'
-                            : isBn
-                              ? 'স্যালারি শিট অনুমোদন'
-                              : 'Post Salary Sheet'}
-                        </button>
+                          fallbackClassName="w-full min-h-[300px] sm:min-h-[380px] rounded-lg"
+                          fallbackSublabel={
+                            hasImageError
+                              ? t('docs.screenshot.loadError')
+                              : isBn
+                                ? resolved.bnCaption
+                                : resolved.caption
+                          }
+                        />
                       </div>
-                    </div>
 
-                    <div className="overflow-x-auto border border-slate-200/90 dark:border-slate-800 rounded-lg">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50/90 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-[10.5px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            <th className="py-2.5 px-3.5 align-middle font-semibold">{isBn ? 'কর্মী ও পদবী' : 'Employee & Role'}</th>
-                            <th className="py-2.5 px-3.5 align-middle font-semibold text-right">{isBn ? 'উপস্থিতি' : 'Attendance'}</th>
-                            <th className="py-2.5 px-3.5 align-middle font-semibold text-right">{isBn ? 'মূল ও ভাতা (৳)' : 'Gross (৳)'}</th>
-                            <th className="py-2.5 px-3.5 align-middle font-semibold text-right">{isBn ? 'কর্তন (৳)' : 'Deductions (৳)'}</th>
-                            <th className="py-2.5 px-3.5 align-middle font-semibold text-right">{isBn ? 'নিট প্রদেয় (৳)' : 'Net Payable (৳)'}</th>
-                            <th className="py-2.5 px-3.5 align-middle font-semibold text-right">{isBn ? 'অবস্থা' : 'Status'}</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800 text-xs">
-                          {INITIAL_STAFF.map((staff) => {
-                            const gross = staff.basic + staff.allowance;
-                            const net = gross - staff.deduction;
-                            return (
-                              <tr key={staff.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/40">
-                                <td className="py-3 px-3.5 align-middle">
-                                  <p className="font-semibold text-slate-900 dark:text-slate-100">
-                                    {isBn ? staff.nameBn : staff.nameEn}
-                                  </p>
-                                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                                    {staff.id} · {isBn ? staff.roleBn : staff.roleEn}
-                                  </p>
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-right font-mono tabular-nums text-slate-700 dark:text-slate-300">
-                                  {staff.presentDays}/{staff.totalDays} {isBn ? 'দিন' : 'Days'}
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-right font-mono tabular-nums text-slate-800 dark:text-slate-200">
-                                  {formatCurrency(gross)}
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-right font-mono tabular-nums text-rose-700 dark:text-rose-400">
-                                  {formatCurrency(staff.deduction)}
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-right font-mono tabular-nums font-bold text-slate-950 dark:text-white">
-                                  {formatCurrency(net)}
-                                </td>
-                                <td className="py-3 px-3.5 align-middle text-right font-mono text-[11px] font-semibold">
-                                  <span
-                                    className={
-                                      payrollApproved
-                                        ? 'text-emerald-700 dark:text-emerald-400'
-                                        : 'text-amber-700 dark:text-amber-400'
-                                    }
-                                  >
-                                    {payrollApproved
-                                      ? isBn
-                                        ? 'পোস্টেড'
-                                        : 'Posted'
-                                      : isBn
-                                        ? 'প্রস্তুত'
-                                        : 'Ready'}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                      <figcaption className="px-4 py-3 border-t border-slate-200/80 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 leading-relaxed flex flex-wrap items-center justify-between gap-2">
+                        <span>{isBn ? resolved.bnCaption : resolved.caption}</span>
+                        <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                          {appName}
+                        </span>
+                      </figcaption>
+                    </figure>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </section>
@@ -1326,6 +827,53 @@ export const Features = () => {
       </main>
 
       <Footer />
+
+      {/* Lightbox Preview Modal */}
+      {isLightboxOpen && isScreenshotReady && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={isBn ? resolved.bnAlt : resolved.alt}
+          onClick={() => setIsLightboxOpen(false)}
+          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-4 sm:p-8"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-5xl w-full bg-white dark:bg-[#0d1320] rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-2xl"
+          >
+            <div className="px-4 sm:px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-950 dark:text-white truncate">
+                  {isBn ? resolved.bnCaption : resolved.caption}
+                </p>
+                <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">
+                  {resolved.route}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLightboxOpen(false)}
+                aria-label={t('docs.screenshot.closeLightbox')}
+                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-3 sm:p-5 bg-slate-100 dark:bg-slate-950 flex items-center justify-center">
+              <img
+                src={resolved.src || ''}
+                alt={isBn ? resolved.bnAlt : resolved.alt}
+                referrerPolicy="no-referrer"
+                onError={() => {
+                  setHasImageError(true);
+                  setIsLightboxOpen(false);
+                }}
+                className="max-w-full max-h-[80vh] object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
