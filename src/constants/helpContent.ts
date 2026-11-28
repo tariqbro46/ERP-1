@@ -125,7 +125,32 @@ export function normalizeScreenshotUrl(raw?: string | null): string | null {
  *   route: '/dashboard',
  * }
  */
-export const DOC_SCREENSHOTS: Record<string, DocScreenshotSpec> = {};
+export const DOC_SCREENSHOTS: Record<string, DocScreenshotSpec> = {
+  'gs-interface': {
+    src: 'https://i.ibb.co.com/HTBmH0HN/dashboard.jpg',
+    alt: 'TallyFlow ERP Executive Dashboard showing Cash, Bank, Revenue Trends, and Recent Activity',
+    bnAlt: 'TallyFlow ERP এক্সিকিউটিভ ড্যাশবোর্ড—ক্যাশ, ব্যাংক, আয় ও সাম্প্রতিক কার্যক্রম',
+    caption: 'Executive Dashboard with live Cash & Bank balances, sales trends, and recent voucher stream.',
+    bnCaption: 'লাইভ ক্যাশ ও ব্যাংক স্থিতি, বিক্রয় চার্ট এবং সাম্প্রতিক ভাউচার তালিকা সহ এক্সিকিউটিভ ড্যাশবোর্ড।',
+    route: '/dashboard',
+  },
+  'gs-search': {
+    src: 'https://i.ibb.co.com/vCJRMcb6/search.jpg',
+    alt: 'TallyFlow ERP Global Search Commander and quick navigation screen',
+    bnAlt: 'TallyFlow ERP গ্লোবাল সার্চ কমান্ডার ও দ্রুত অনুসন্ধান স্ক্রিন',
+    caption: 'Global Search Commander for instant module navigation, ledgers, items, and voucher lookup.',
+    bnCaption: 'দ্রুত মডিউল নেভিগেশন, লেজার, স্টক আইটেম এবং ভাউচার খুঁজতে গ্লোবাল সার্চ কমান্ডার।',
+    route: '/search',
+  },
+  'gs-company': {
+    src: 'https://i.ibb.co.com/chXYXy1T/companies.jpg',
+    alt: 'TallyFlow ERP Multi-Company Switching and Company Profile Management screen',
+    bnAlt: 'TallyFlow ERP মাল্টি-কোম্পানি সুইচিং ও প্রোফাইল ব্যবস্থাপনা স্ক্রিন',
+    caption: 'Multi-Company Management workspace for isolated branch ledgers, stock, and company profiles.',
+    bnCaption: 'পৃথক লেজার, স্টক ও প্রোফাইল সহ মাল্টি-কোম্পানি সুইচিং ও ব্যবস্থাপনা স্ক্রিন।',
+    route: '/companies',
+  },
+};
 
 export type ShowcaseGroup = 'hero' | 'features';
 
@@ -241,7 +266,72 @@ export const SHOWCASE_SCREENSHOT_SLOTS: ShowcaseScreenshotSlot[] = [
   },
 ];
 
-export const SHOWCASE_SCREENSHOTS: Record<string, DocScreenshotSpec> = {};
+export const SHOWCASE_SCREENSHOTS: Record<string, DocScreenshotSpec> = {
+  'hero-vouchers': {
+    src: 'https://i.ibb.co.com/SwT4fSDP/vouchersnew.jpg',
+    alt: 'TallyFlow ERP New Voucher Entry screen showing double-entry debit and credit lines',
+    bnAlt: 'TallyFlow ERP নতুন ভাউচার এন্ট্রি স্ক্রিন',
+    caption: 'Balanced Sales, Purchase, Receipt, Payment, Contra, and Journal voucher entry with live running ledger balances.',
+    bnCaption: 'রানিং লেজার ব্যালেন্স ও অটো-সিরিয়ালসহ সেলস, পারচেজ, রিসিট, পেমেন্ট, কন্ট্রা ও জার্নাল ভাউচার এন্ট্রি।',
+    route: '/vouchers/new',
+  },
+  'hero-godowns': {
+    src: 'https://i.ibb.co.com/0pC2ms2p/reportsstock.jpg',
+    alt: 'TallyFlow ERP Stock Summary across multiple godowns with FIFO valuation',
+    bnAlt: 'TallyFlow ERP মাল্টি-গোডাউন স্টক সামারি স্ক্রিন',
+    caption: 'Multi-godown FIFO stock tracking, batch numbers, and warehouse-wise closing quantities and valuation.',
+    bnCaption: 'মাল্টি-গোডাউন FIFO স্টক ট্র্যাকিং, ব্যাচ নম্বর এবং গুদামভিত্তিক মজুদ ও মূল্যায়ন।',
+    route: '/reports/stock',
+  },
+  'hero-reports': {
+    src: 'https://i.ibb.co.com/VcG8LZRg/reports.jpg',
+    alt: 'TallyFlow ERP Core Financial Reports directory and export workbench',
+    bnAlt: 'TallyFlow ERP মূল আর্থিক রিপোর্ট ও এক্সপোর্ট স্ক্রিন',
+    caption: 'Trial Balance, Daybook, Balance Sheet, P&L, Cash Flow, and Ratio Analysis with structured .xlsx and A4 PDF export.',
+    bnCaption: 'ট্রায়াল ব্যালেন্স, ডেবুক, ব্যালেন্স শিট, লাভ-ক্ষতি, ক্যাশ ফ্লো ও অনুপাত বিশ্লেষণ—.xlsx ও A4 PDF এক্সপোর্টসহ।',
+    route: '/reports',
+  },
+  'hero-operations': {
+    src: 'https://i.ibb.co.com/9HW15d1R/payroll.jpg',
+    alt: 'TallyFlow ERP Payroll, Operations, and Role-Based Permissions screen',
+    bnAlt: 'TallyFlow ERP পেরোল, অপারেশনস ও পারমিশন স্ক্রিন',
+    caption: 'Production orders, attendance & salary sheets, multi-company isolation, and role-based access control.',
+    bnCaption: 'উৎপাদন অর্ডার, উপস্থিতি ও মাসিক স্যালারি শিট, মাল্টি-কোম্পানি ও রোল-ভিত্তিক পারমিশন।',
+    route: '/payroll',
+  },
+  'features-vouchers': {
+    src: 'https://i.ibb.co.com/SwT4fSDP/vouchersnew.jpg',
+    alt: 'TallyFlow ERP Voucher Entry and Ledger posting workspace',
+    bnAlt: 'TallyFlow ERP ভাউচার ও লেজার পোস্টিং স্ক্রিন',
+    caption: 'Full voucher entry workspace supporting all 8 accounting and stock voucher types with auto-serial counters.',
+    bnCaption: 'অটো-সিরিয়াল কাউন্টারসহ ৮ ধরনের অ্যাকাউন্টিং ও স্টক ভাউচার এন্ট্রি ওয়ার্কস্পেস।',
+    route: '/vouchers/new',
+  },
+  'features-inventory': {
+    src: 'https://i.ibb.co.com/HLSFvxz0/inventory.jpg',
+    alt: 'TallyFlow ERP Inventory Overview and Multi-Godown Stock monitor',
+    bnAlt: 'TallyFlow ERP ইনভেন্টরি ও মাল্টি-গোডাউন স্টক স্ক্রিন',
+    caption: 'Live inventory health monitor with warehouse stock distribution, reorder alerts, and integer/decimal unit rules.',
+    bnCaption: 'গোডাউনভিত্তিক স্টক, লো-স্টক অ্যালার্ট এবং Pcs/Kg ইউনিট নিয়ন্ত্রণসহ ইনভেন্টরি ড্যাশবোর্ড।',
+    route: '/inventory',
+  },
+  'features-production': {
+    src: 'https://i.ibb.co.com/N2VqZ3kS/productionorders.jpg',
+    alt: 'TallyFlow ERP Production Orders and Manufacturing tracking screen',
+    bnAlt: 'TallyFlow ERP উৎপাদন অর্ডার ও ম্যানুফ্যাকচারিং স্ক্রিন',
+    caption: 'Customer production orders, machine allocation, raw material consumption, and finished goods stock conversion.',
+    bnCaption: 'গ্রাহক উৎপাদন অর্ডার, মেশিন বরাদ্দ, কাঁচামাল খরচ ও ফিনিশড গুডস রূপান্তর।',
+    route: '/production/orders',
+  },
+  'features-payroll': {
+    src: 'https://i.ibb.co.com/9HW15d1R/payroll.jpg',
+    alt: 'TallyFlow ERP Payroll Processing and Attendance Register screen',
+    bnAlt: 'TallyFlow ERP পেরোল ও উপস্থিতি রেজিস্টার স্ক্রিন',
+    caption: 'Monthly salary sheet generation, daily attendance register, pay-heads, employee advances, and printable payslips.',
+    bnCaption: 'মাসিক স্যালারি শিট, দৈনিক উপস্থিতি, পে-হেড, অগ্রিম সমন্বয় এবং প্রিন্টযোগ্য পে-স্লিপ।',
+    route: '/payroll',
+  },
+};
 
 export function resolveShowcaseScreenshot(
   slotKey: string,

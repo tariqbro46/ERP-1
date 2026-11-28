@@ -109,6 +109,8 @@ export default function FounderDocsDesk() {
   const [forcePendingPreview, setForcePendingPreview] = useState(false);
   const [imageState, setImageState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [imageDims, setImageDims] = useState<{ w: number; h: number } | null>(null);
+  const [importJsonOpen, setImportJsonOpen] = useState(false);
+  const [importJsonText, setImportJsonText] = useState('');
 
   useEffect(() => {
     const syncStored = () => setStoredScreenshots(readStoredScreenshots());
@@ -436,6 +438,62 @@ export default function FounderDocsDesk() {
     URL.revokeObjectURL(url);
   };
 
+  const handleImportJson = () => {
+    const raw = importJsonText.trim();
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        showToast(
+          'error',
+          isBn
+            ? 'সঠিক JSON অবজেক্ট দিন, যেমন {"hero-vouchers": "https://..."}'
+            : 'Provide a valid JSON object mapping slot keys to external https:// URLs.'
+        );
+        return;
+      }
+
+      const validKeys = new Set(allTargets.map((item) => item.key));
+      const nextMap: Record<string, string> = { ...storedScreenshots };
+      let appliedCount = 0;
+
+      Object.entries(parsed as Record<string, unknown>).forEach(([key, val]) => {
+        if (!validKeys.has(key) || typeof val !== 'string') return;
+        const normalized = normalizeScreenshotUrl(val);
+        if (normalized) {
+          nextMap[key] = normalized;
+          appliedCount += 1;
+        }
+      });
+
+      if (appliedCount === 0) {
+        showToast(
+          'error',
+          isBn
+            ? 'JSON-এ কোনো বৈধ স্লট কী বা https:// URL পাওয়া যায়নি।'
+            : 'No matching slot keys with valid external URLs found in JSON.'
+        );
+        return;
+      }
+
+      const updated = writeStoredScreenshots(nextMap);
+      setStoredScreenshots(updated);
+      setImportJsonText('');
+      setImportJsonOpen(false);
+      showToast(
+        'success',
+        isBn
+          ? `${appliedCount}টি স্ক্রিনশট URL লোকাল প্রিভিউতে যুক্ত হয়েছে।`
+          : `Applied ${appliedCount} validated screenshot URL(s) to local preview.`
+      );
+    } catch {
+      showToast(
+        'error',
+        isBn ? 'অবৈধ JSON ফরম্যাট। অনুগ্রহ করে যাচাই করুন।' : 'Invalid JSON syntax. Please check and try again.'
+      );
+    }
+  };
+
   const liveViewLink =
     selectedTarget.groupKind === 'hero'
       ? '/'
@@ -577,6 +635,50 @@ export default function FounderDocsDesk() {
               </p>
             </div>
           </section>
+
+          {/* Local Override -> Repository Persistence Banner for Vercel Deployment */}
+          {stats.localOverrides > 0 && (
+            <div className="rounded-xl border border-amber-300/80 dark:border-amber-800/80 bg-amber-50/75 dark:bg-amber-950/25 p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex items-start gap-3 min-w-0">
+                <AlertCircle className="w-4 h-4 text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-950 dark:text-white">
+                    {t('founderDesk.vercelSyncTitle')}
+                  </p>
+                  <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                    {t('founderDesk.vercelSyncDesc', { count: stats.localOverrides })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleCopyAllRegistryTs}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950 dark:bg-blue-600 hover:opacity-95 text-white text-xs font-semibold transition-opacity cursor-pointer whitespace-nowrap"
+                >
+                  {copiedId === 'all-ts' ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                  <span>
+                    {copiedId === 'all-ts'
+                      ? t('founderDesk.copied')
+                      : t('founderDesk.copyAllTs')}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportJson}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900 hover:bg-amber-100/60 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>{t('founderDesk.exportJson')}</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Main 2-Column Screenshot URL Control Center */}
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -906,62 +1008,102 @@ export default function FounderDocsDesk() {
                 </div>
               </div>
 
-              {/* Bulk Registry Export & Clear Bar */}
-              <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-[#0d1320] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <h3 className="text-xs font-bold text-slate-950 dark:text-white flex items-center gap-1.5">
-                    <FileCode2 className="w-4 h-4 text-blue-700 dark:text-blue-400" />
-                    <span>
+              {/* Bulk Registry Export, Import & Clear Bar */}
+              <div className="rounded-xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-[#0d1320] p-4 sm:p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-bold text-slate-950 dark:text-white flex items-center gap-1.5">
+                      <FileCode2 className="w-4 h-4 text-blue-700 dark:text-blue-400" />
+                      <span>
+                        {isBn
+                          ? 'রেজিস্ট্রি এক্সপোর্ট ও ব্যাকআপ (DOC + SHOWCASE)'
+                          : 'Registry Export & Local Backup (DOC + SHOWCASE)'}
+                      </span>
+                    </h3>
+                    <p className="text-[11.5px] text-slate-600 dark:text-slate-400">
                       {isBn
-                        ? 'রেজিস্ট্রি এক্সপোর্ট ও ব্যাকআপ (DOC + SHOWCASE)'
-                        : 'Registry Export & Local Backup (DOC + SHOWCASE)'}
-                    </span>
-                  </h3>
-                  <p className="text-[11.5px] text-slate-600 dark:text-slate-400">
-                    {isBn
-                      ? 'সকল সংযুক্ত URL-এর TypeScript কোড বা JSON ফাইল কপি/ডাউনলোড করুন (শূন্য Firestore রিড)।'
-                      : 'Copy TypeScript mapping for helpContent.ts or download a local JSON backup with zero Firestore reads.'}
-                  </p>
-                </div>
+                        ? 'সকল সংযুক্ত URL-এর TypeScript কোড বা JSON ফাইল কপি/ডাউনলোড করুন (শূন্য Firestore রিড)।'
+                        : 'Copy TypeScript mapping for helpContent.ts or export/import validated URL JSON with zero Firestore reads.'}
+                    </p>
+                  </div>
 
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={handleCopyAllRegistryTs}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors cursor-pointer whitespace-nowrap"
-                  >
-                    {copiedId === 'all-ts' ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5" />
-                    )}
-                    <span>
-                      {copiedId === 'all-ts'
-                        ? t('founderDesk.copied')
-                        : t('founderDesk.copyAllTs')}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleExportJson}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors cursor-pointer whitespace-nowrap"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>{t('founderDesk.exportJson')}</span>
-                  </button>
-
-                  {stats.localOverrides > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
                     <button
                       type="button"
-                      onClick={handleClearAllOverrides}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-950/70 text-xs font-semibold text-rose-700 dark:text-rose-300 transition-colors cursor-pointer whitespace-nowrap"
+                      onClick={handleCopyAllRegistryTs}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>{t('founderDesk.resetAll')}</span>
+                      {copiedId === 'all-ts' ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                      <span>
+                        {copiedId === 'all-ts'
+                          ? t('founderDesk.copied')
+                          : t('founderDesk.copyAllTs')}
+                      </span>
                     </button>
-                  )}
+
+                    <button
+                      type="button"
+                      onClick={handleExportJson}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>{t('founderDesk.exportJson')}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setImportJsonOpen((prev) => !prev)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      <Link2 className="w-3.5 h-3.5 text-blue-700 dark:text-blue-400" />
+                      <span>{t('founderDesk.importJson')}</span>
+                    </button>
+
+                    {stats.localOverrides > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllOverrides}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-950/70 text-xs font-semibold text-rose-700 dark:text-rose-300 transition-colors cursor-pointer whitespace-nowrap"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>{t('founderDesk.resetAll')}</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {importJsonOpen && (
+                  <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800 space-y-2.5">
+                    <textarea
+                      rows={4}
+                      value={importJsonText}
+                      onChange={(e) => setImportJsonText(e.target.value)}
+                      placeholder={t('founderDesk.importJsonPlaceholder')}
+                      className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 focus:outline-hidden"
+                    />
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setImportJsonOpen(false)}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                      >
+                        {t('founderDesk.cancelJson')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleImportJson}
+                        disabled={!importJsonText.trim()}
+                        className="px-3.5 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        {t('founderDesk.applyJson')}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </section>
